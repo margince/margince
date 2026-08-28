@@ -145,7 +145,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 	// Workflows are deterministic system automations; their writes are
 	// attributed to the system actor and grouped per trigger event.
 	runCtx := principal.WithWorkspaceID(ctx, ws.UUID)
-	runCtx = principal.WithActor(runCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
+	runCtx = principal.WithActor(runCtx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
 	runCtx = principal.WithCorrelationID(runCtx, ids.NewV7())
 	runCtx = principal.WithCausationEvent(runCtx, env.EventID)
 
@@ -244,6 +244,26 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 // Create/Update calls and applyAssignOwner's (handlers_actions.go)
 // cannot drift into three independent spellings of the same fact.
 const systemSource = "system"
+
+// systemActor is the principal id every workflow write is attributed to, and
+// it is ONE id for both entries into runOne.
+//
+// captured_by is written from the acting principal's id and never from a
+// request body, which is what makes it the unforgeable half of "the system
+// wrote this row". Two selectors depend on that half being one value: the
+// last-touch scan excludes the engine's own reminders from what counts as
+// genuine engagement, and the follow-up resolver finds the open tasks the
+// engine minted so it can close them.
+//
+// The time-scan used to act as "system:time-scan". Nothing read that spelling
+// — it named which entry had fired, which the run row already records — and
+// both selectors looked for the other one, so every reminder the clock minted
+// counted as a touch on the record it was reminding about. One pass then made
+// the record look freshly worked, and it was never reminded about again; the
+// task it left open was never closed either.
+//
+// Held by TestTheEngineActsUnderTheIdItsOwnSelectorsLookFor.
+const systemActor = "system"
 
 // ApplyActions is the shared executor handlers delegate Apply to: each
 // typed action runs through the SAME set of seams every surface uses
