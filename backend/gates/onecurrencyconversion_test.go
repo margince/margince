@@ -292,9 +292,9 @@ func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
 		{
 			// A three-term chain, which Go parses left-nested as (a + b) + c.
 			// A walk that descended after flattening would meet the inner ADD
-			// and flatten it again, emitting `SELECT rate FROM ` as a second
-			// statement — the same offence reported twice, and the count of
-			// statements judged silently doubled.
+			// and flatten it again, emitting the left prefix — SELECT rate FROM
+			// fx_rate — as a second statement. The same offence reported twice,
+			// and the count of statements judged silently doubled.
 			"a chain of three, counted once",
 			"package p\nvar q = `SELECT rate FROM ` + `fx_rate` + ` WHERE from_currency = $1`\n",
 			true,
