@@ -50,8 +50,12 @@ const shellGateDir = "../scripts"
 var shellVariableIntoQuietGrep = regexp.MustCompile(
 	`(?:printf\s+'%s(?:\\n)?'|echo)\s+"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?"\s*\|\s*grep\s+-[A-Za-z]*q`)
 
-// The setting that turns a broken pipe into the pipeline's verdict.
-var pipefailSetting = regexp.MustCompile(`set\s+-[a-z]*o?\s*pipefail|set\s+-[a-z]*euo\s+pipefail`)
+// The setting that turns a broken pipe into the pipeline's verdict — recognised
+// by the word rather than by the flag letters around it. `set -Eeuo pipefail`,
+// `set -e -o pipefail` and `set -o pipefail` are the same setting, and a
+// prohibition that recognised only one spelling would let a script escape it by
+// being written the other way. Nothing but this setting says `pipefail`.
+var pipefailSetting = regexp.MustCompile(`(?m)^\s*set\s+.*\bpipefail\b`)
 
 func TestNoShellGateReadsAVerdictThroughAPipeThatCanBreak(t *testing.T) {
 	t.Parallel()
@@ -87,5 +91,28 @@ func TestNoShellGateReadsAVerdictThroughAPipeThatCanBreak(t *testing.T) {
 	}
 	if judged == 0 {
 		t.Fatalf("no script under %s sets pipefail, which is not a shape this tree has ever had — the setting is spelled some way this gate does not recognise", shellGateDir)
+	}
+}
+
+func TestEverySpellingOfPipefailIsRecognised(t *testing.T) {
+	t.Parallel()
+
+	// One setting, several spellings, and the gate above judges only the scripts
+	// where it is on. A matcher that missed a spelling would leave those scripts
+	// unjudged and say nothing — under-recognition, which is the same defect
+	// class the prohibition itself is about.
+	for setting, want := range map[string]bool{
+		"set -euo pipefail":   true,
+		"set -Eeuo pipefail":  true,
+		"set -e -o pipefail":  true,
+		"set -o pipefail":     true,
+		"\tset -eo pipefail":  true,
+		"set -eu":             false,
+		"# set -euo pipefail": false,
+		"echo 'set pipefail'": false,
+	} {
+		if got := pipefailSetting.MatchString(setting); got != want {
+			t.Errorf("pipefailSetting.MatchString(%q) = %v, want %v", setting, got, want)
+		}
 	}
 }
