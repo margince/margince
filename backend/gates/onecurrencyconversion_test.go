@@ -181,9 +181,9 @@ func conversionIn(where, sql string, fileNamesFXRate bool) (bool, string) {
 // second engine built that way is invisible. Under-recognition is the one
 // direction a prohibition may not fail in, and this is the shape it fails in.
 //
-// Each concatenation contributes its joined text AND its pieces stay available
-// through the walk, so a literal that is a whole statement is still read as
-// one.
+// A concatenation contributes its joined text ONCE: the walk does not descend
+// into a chain it has already flattened, and the literals it consumed are
+// marked so a fragment is not also read as a statement of its own.
 func fxSQLStatementsIn(file *ast.File) []string {
 	var out []string
 	joined := map[ast.Node]bool{}
@@ -197,7 +197,12 @@ func fxSQLStatementsIn(file *ast.File) []string {
 			if ok {
 				out = append(out, text)
 			}
-			return true
+			// Do NOT descend. Go parses `a + b + c` left-nested as
+			// `(a + b) + c`, so the walk would meet the inner ADD next and
+			// flatten it again — emitting the truncated prefix as a second
+			// statement, and reporting the same offence twice. The whole chain
+			// was just read; there is nothing left inside it to find.
+			return false
 		case *ast.BasicLit:
 			if joined[typed] {
 				return true
@@ -213,6 +218,9 @@ func fxSQLStatementsIn(file *ast.File) []string {
 
 // flattenConcatenation joins the string operands of one `+` chain, marking each
 // literal it consumed so the walk does not report it a second time on its own.
+//
+// The CHAIN, not the node: it recurses through nested ADDs itself, which is why
+// the caller must not descend into them afterwards.
 //
 // A non-literal operand — a variable, a call — contributes a space rather than
 // nothing: it stands where text the gate cannot see would be, and joining
@@ -282,6 +290,16 @@ func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
 			true,
 		},
 		{
+			// A three-term chain, which Go parses left-nested as (a + b) + c.
+			// A walk that descended after flattening would meet the inner ADD
+			// and flatten it again, emitting `SELECT rate FROM ` as a second
+			// statement — the same offence reported twice, and the count of
+			// statements judged silently doubled.
+			"a chain of three, counted once",
+			"package p\nvar q = `SELECT rate FROM ` + `fx_rate` + ` WHERE from_currency = $1`\n",
+			true,
+		},
+		{
 			// And the near miss that keeps it from being noise: a dynamic FROM
 			// in a file with no interest in rates at all.
 			"a dynamic FROM in a file that never names the rate table",
@@ -320,14 +338,21 @@ func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
 					namesRate = true
 				}
 			}
-			fired := false
+			hits := 0
 			for _, sql := range statements {
 				if found, _ := conversionIn(elsewhere, sql, namesRate); found {
-					fired = true
+					hits++
 				}
 			}
-			if fired != probe.fires {
-				t.Errorf("%s: the detector answered %t, want %t — %q", probe.what, fired, probe.fires, probe.src)
+			if (hits > 0) != probe.fires {
+				t.Errorf("%s: the detector answered %t, want %t — %q", probe.what, hits > 0, probe.fires, probe.src)
+			}
+			// ONCE, not merely at least once. A statement read twice reports
+			// its offence twice and doubles the count of statements judged,
+			// which is how a floor stops meaning what it says.
+			if probe.fires && hits != 1 {
+				t.Errorf("%s: the detector fired %d times on one statement, want once — %q",
+					probe.what, hits, probe.src)
 			}
 		})
 	}
