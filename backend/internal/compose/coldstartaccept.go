@@ -62,6 +62,8 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
+	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, people.NewStore(InstallationDB(pool))))
+	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its
 	// subject is already waiting: Accept re-arms it, Reject abandons it, and a
 	// card whose buttons only dismissed it would report a decision the message

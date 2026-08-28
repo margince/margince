@@ -27,6 +27,10 @@ type Handlers struct {
 	// WithMatchStager for why it is injected.
 	stageMatches func(context.Context) error
 
+	// stageVCardReview turns one imported card's near-match into a durable
+	// create proposal. See WithVCardReviewStager for why it is injected.
+	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.PersonID) error
+
 	store *Store
 	// blob serves the organization logo's bytes. Nil is a role that stores no
 	// objects: the logo endpoint then answers 501 rather than nil-derefing,
@@ -52,6 +56,19 @@ func NewHandlers(db *database.DB) Handlers {
 // simply wait for the hourly sweep, which is composed with the seam.
 func (h Handlers) WithMatchStager(stage func(context.Context) error) Handlers {
 	h.stageMatches = stage
+	return h
+}
+
+// WithVCardReviewStager wires the pass that turns an imported card's
+// near-match into a durable create proposal on the approvals queue.
+//
+// Injected rather than called directly because the approvals engine is a
+// sibling module and this one never imports a sibling. Nil means a role that
+// stages nothing: the import still answers needs_review per card, and the
+// reader acts on the transient report alone — exactly the behaviour every
+// installation had before the proposal existed.
+func (h Handlers) WithVCardReviewStager(stage func(ctx context.Context, entry VCardEntry, candidate *ids.PersonID) error) Handlers {
+	h.stageVCardReview = stage
 	return h
 }
 

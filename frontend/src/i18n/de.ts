@@ -1377,6 +1377,7 @@ export const de = {
   "approval.kind.site_lead": "Person von der Website aufnehmen",
   "approval.kind.capture_counterparty": "Person aus deiner Mail aufnehmen",
   "approval.kind.org_name_promotion": "Account umbenennen",
+  "approval.kind.vcard_create": "Kontakt aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus einem Transkript übernehmen",
@@ -1415,6 +1416,9 @@ export const de = {
   "approval.field.domain": "Domain",
   "approval.field.company": "Firma",
   "approval.field.title": "Position",
+  "approval.field.phone": "Telefon",
+  "approval.field.url": "Website",
+  "approval.field.address": "Adresse",
   "approval.field.published_email": "E-Mail auf der Seite",
   "approval.field.connection_name": "Auf LinkedIn",
   "approval.field.connection_company": "Arbeitet bei",

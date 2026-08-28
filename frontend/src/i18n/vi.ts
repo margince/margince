@@ -1377,6 +1377,7 @@ export const vi = {
   "approval.kind.site_lead": "Thêm người tìm thấy trên website",
   "approval.kind.capture_counterparty": "Thêm người từ email của bạn",
   "approval.kind.org_name_promotion": "Đổi tên một công ty",
+  "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn công ty",
   "approval.kind.transcript_proposal":
     "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
@@ -1413,6 +1414,9 @@ export const vi = {
   "approval.field.domain": "Tên miền",
   "approval.field.company": "Công ty",
   "approval.field.title": "Chức danh",
+  "approval.field.phone": "Điện thoại",
+  "approval.field.url": "Trang web",
+  "approval.field.address": "Địa chỉ",
   "approval.field.published_email": "Email trên trang",
   "approval.field.connection_name": "Trên LinkedIn",
   "approval.field.connection_company": "Làm việc tại",
