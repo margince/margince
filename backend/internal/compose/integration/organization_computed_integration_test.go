@@ -426,3 +426,86 @@ func TestOrganizationComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t
 // orgIDPtr matches int64Ptr/strPtr's convention (orgrollup_integration_test.go
 // / authz_integration_test.go): the *ids.OrganizationID CreateDealInput wants.
 func orgIDPtr(id ids.OrganizationID) *ids.OrganizationID { return &id }
+
+// TestOrganizationComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord
+// is the case that took a whole company record down.
+//
+// The view cast its converted amount straight to bigint, and Postgres raises
+// `numeric field overflow` on a result that does not fit — which failed the
+// statement, which failed GetOrganization, which made the organization
+// unreadable. One implausible amount against a large rate, and the record it
+// sits on could not be opened at all.
+//
+// The deal now contributes nothing and stays counted, exactly as a deal with no
+// usable rate does, and the record opens.
+func TestOrganizationComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	orgID := e.SeedOrg(t, "Overflow Logistics", nil)
+
+	// The largest rate the column can hold, against an amount near the top of
+	// its own range. Neither is a number anyone would type on purpose — which
+	// is the point: a data-entry mistake is precisely the input that must not
+	// be able to take a record offline.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(), `
+			INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
+			VALUES ('JPY', (SELECT (value #>> '{}')::text FROM setting WHERE key = 'installation.base_currency'),
+			        9999999999, CURRENT_DATE)
+			ON CONFLICT DO NOTHING`)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the outsized rate: %v", err)
+	}
+
+	for _, deal := range []struct {
+		name     string
+		amount   int64
+		currency string
+	}{
+		// Converts to roughly 9.2e27, which no bigint holds.
+		{"Unrepresentable deal", 9_200_000_000_000_000_000, "JPY"},
+		// And one in the installation's own base currency (harnessinstallation.go
+		// seeds EUR), so a partial total has something to be partial ABOUT — a
+		// test where nothing converts would pass on a view that refused
+		// everything.
+		{"Ordinary deal", 125_000, "EUR"},
+	} {
+		in := deals.CreateDealInput{
+			Name: deal.name, AmountMinor: int64Ptr(deal.amount),
+			PipelineID: pipeline, StageID: open,
+			OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		}
+		in.Currency = strPtr(deal.currency)
+		if _, err := e.Deals.CreateDeal(e.Admin(), in); err != nil {
+			t.Fatalf("seeding %s: %v", deal.name, err)
+		}
+	}
+
+	// The read that used to fail outright.
+	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("the organization could not be read at all: %v — one deal the view cannot represent "+
+			"must refuse one figure, never the record", err)
+	}
+
+	_, count, found := directOpenPipelineRead(e.Admin(), t, e, orgID)
+	if !found {
+		t.Fatal("the view returned no row for an organization with two open deals")
+	}
+	if count != 2 {
+		t.Errorf("open_deal_count = %d, want 2 — a deal that cannot be priced is still a deal", count)
+	}
+
+	// A total covering one of two deals is not a total. The field reports
+	// awaiting_fx rather than the ordinary deal's amount on its own, which
+	// would be a confident figure that is quietly short.
+	open0 := computedFieldByKey(*org.ComputedFields, "open_pipeline")
+	if open0.Computable {
+		t.Errorf("open_pipeline reads computable with one of two deals priced: %+v — a short total is "+
+			"worse than no total", open0)
+	}
+	if open0.ValueMinor != nil {
+		t.Errorf("open_pipeline.value_minor = %v, want absent", open0.ValueMinor)
+	}
+}
