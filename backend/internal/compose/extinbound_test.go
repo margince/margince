@@ -20,6 +20,12 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+// probeUnitName is the name every probe unit here mounts under, and the one the
+// literal paths below are written against. Named rather than passed in, because
+// a name a caller could vary would have to be threaded through every one of
+// those paths to stay true.
+const probeUnitName = "u"
+
 // inboundProbe is a unit whose handler records what it was given and answers a
 // chosen outcome.
 type inboundProbe struct {
@@ -33,7 +39,7 @@ type inboundProbe struct {
 	tryIngest bool
 }
 
-func (p *inboundProbe) unit(name string) extension.Extension {
+func (p *inboundProbe) unit() extension.Extension {
 	endpoint := inboundEndpointFixture("capture", "inbound")
 	endpoint.Handle = func(ctx context.Context, rt extension.Runtime, req extension.InboundRequest) (extension.InboundOutcome, error) {
 		p.calls++
@@ -48,7 +54,7 @@ func (p *inboundProbe) unit(name string) extension.Extension {
 		}
 		return p.outcome, p.err
 	}
-	e := unitWithInbound(name, endpoint)
+	e := unitWithInbound(probeUnitName, endpoint)
 	e.Ingress = []extension.IngressSource{{System: "probe", Lands: []extension.RecordKind{extension.KindActivity}}}
 	return e
 }
@@ -58,7 +64,7 @@ func mountProbe(t *testing.T, p *inboundProbe) (*http.ServeMux, []InboundRoute) 
 	t.Helper()
 	mux := http.NewServeMux()
 	ws := ids.From[ids.WorkspaceKind](ids.MustParse("00000000-0000-0000-0000-0000000000a1"))
-	routes := MountInboundEndpoints(mux, []extension.Extension{p.unit("u")},
+	routes := MountInboundEndpoints(mux, []extension.Extension{p.unit()},
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
 		extensionRuntimeBinding{}, quietLog())
 	return mux, routes
@@ -154,7 +160,7 @@ func TestInboundHandlerResolvesAgainstTheDeclarationItself(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted}
 	mux := http.NewServeMux()
 	ws := ids.From[ids.WorkspaceKind](ids.MustParse("00000000-0000-0000-0000-0000000000a1"))
-	MountInboundEndpoints(mux, []extension.Extension{p.unit("u")},
+	MountInboundEndpoints(mux, []extension.Extension{p.unit()},
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
 		extensionRuntimeBinding{}, quietLog())
 
@@ -198,7 +204,7 @@ func TestInboundMountsExactPatternsAndShadowsNothing(t *testing.T) {
 		})
 	}
 	ws := ids.From[ids.WorkspaceKind](ids.MustParse("00000000-0000-0000-0000-0000000000a1"))
-	MountInboundEndpoints(mux, []extension.Extension{p.unit("u")},
+	MountInboundEndpoints(mux, []extension.Extension{p.unit()},
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
 		extensionRuntimeBinding{}, quietLog())
 
@@ -321,7 +327,7 @@ func TestInboundCapsTheBody(t *testing.T) {
 func TestInboundTenantFailureIsOpaque(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted}
 	mux := http.NewServeMux()
-	MountInboundEndpoints(mux, []extension.Extension{p.unit("u")},
+	MountInboundEndpoints(mux, []extension.Extension{p.unit()},
 		func(context.Context) (ids.WorkspaceID, error) {
 			return ids.WorkspaceID{}, errors.New("identity: installation not bootstrapped")
 		},
@@ -358,7 +364,7 @@ func TestInboundCallerIsABareConnector(t *testing.T) {
 // one would be landed on nobody's behalf.
 func TestInboundCannotIngest(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted, tryIngest: true}
-	unit := p.unit("u")
+	unit := p.unit()
 	// Ingest resolves the caller's declared sources from the composed set, so
 	// the unit has to BE composed or the call stops at the source check and the
 	// test would pass on a refusal that says nothing about the edge's authority.
@@ -435,7 +441,7 @@ func TestInboundRefusesAnUngrammaticalRef(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted}
 	mux := http.NewServeMux()
 	ws := ids.From[ids.WorkspaceKind](ids.MustParse("00000000-0000-0000-0000-0000000000a1"))
-	MountInboundEndpoints(mux, []extension.Extension{p.unit("u")},
+	MountInboundEndpoints(mux, []extension.Extension{p.unit()},
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
 		extensionRuntimeBinding{}, quietLog())
 	h, _ := mux.Handler(signedRequest("/webhooks/ext/u/capture", time.Now(), "{}"))

@@ -294,10 +294,10 @@ func inboundRefuse(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusUnauthorized)
 }
 
-// readInboundBody reads at most max bytes, answering the caller directly on
+// readInboundBody reads at most limit bytes, answering the caller directly on
 // failure and reporting whether the body is usable.
-func readInboundBody(w http.ResponseWriter, r *http.Request, max int64) ([]byte, bool) {
-	r.Body = http.MaxBytesReader(w, r.Body, max)
+func readInboundBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		// Over-cap or truncated. 413 rather than the opaque 401: the size of a
