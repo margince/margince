@@ -578,7 +578,13 @@ a:not([class]):focus-visible {
    11px or 12px and 0.03em or 0.04em, and every copy looked right on its own.
    The tracking reads --tracking-eyebrow, which is the token named for exactly
    this: uppercase this small sets cramped at the default spacing.
-   `Eyebrow` (eyebrow.tsx) renders it with the element the caller means. */
+   `Eyebrow` (eyebrow.tsx) renders it with the element the caller means.
+
+   Held by: eyebrow-one-spelling.test.ts, which is a RATCHET rather than a
+   clean sweep: no sheet may newly restate this, and the sheets that still do
+   are counted and can only shrink. The prose above recounted a consolidation
+   and two more copies then appeared inside the design system itself, because
+   nothing failed when they did. */
 .t-eyebrow {
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
