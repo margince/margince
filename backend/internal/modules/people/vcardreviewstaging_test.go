@@ -69,6 +69,8 @@ func TestAStagingFaultDoesNotStopTheOtherCards(t *testing.T) {
 
 // A role with no stager wired stages nothing and fails nothing — the guard
 // is the nil check, and the failure mode this proves absent is the panic.
+//
+//craft:ignore assertion-free-test the property is "does not panic with no stager wired"; a panic fails the test and there is no observable effect a nil port could leave to assert on
 func TestNoStagerWiredMeansNoStagingAndNoFault(t *testing.T) {
 	results := []VCardResult{{Index: 0, Outcome: VCardNeedsReview}}
 	Handlers{}.stageVCardReviews(context.Background(), []VCardEntry{{FullName: "First"}}, results)
