@@ -226,7 +226,7 @@ func spellsTheIdleBase(_ string, file *ast.File) bool {
 		}
 		switch node := n.(type) {
 		case *ast.BasicLit:
-			if node.Kind == token.STRING && spellsIdleBaseSQL(node.Value) {
+			if node.Kind == token.STRING && spellsIdleBaseSQL(gatekit.TextOf(node)) {
 				found = true
 			}
 		case *ast.BinaryExpr:
@@ -394,7 +394,7 @@ func joinedLiterals(expr ast.Expr) string {
 	var parts []string
 	ast.Inspect(expr, func(n ast.Node) bool {
 		if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			parts = append(parts, strings.Trim(lit.Value, "`\""))
+			parts = append(parts, gatekit.TextOf(lit))
 		}
 		return true
 	})

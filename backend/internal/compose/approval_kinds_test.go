@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -334,7 +335,7 @@ func stagedKind(lit *ast.CompositeLit, consts map[string]string) (string, token.
 		switch v := kv.Value.(type) {
 		case *ast.BasicLit:
 			if v.Kind == token.STRING {
-				return strings.Trim(v.Value, `"`), v.Pos(), kindResolved
+				return gatekit.TextOf(v), v.Pos(), kindResolved
 			}
 		case *ast.Ident:
 			// A constant this package declares, resolved to its value.
@@ -390,7 +391,7 @@ func collectStringConsts(file *ast.File, into map[string]string) {
 				switch v := vs.Values[i].(type) {
 				case *ast.BasicLit:
 					if v.Kind == token.STRING {
-						into[name.Name] = strings.Trim(v.Value, `"`)
+						into[name.Name] = gatekit.TextOf(v)
 					}
 				case *ast.SelectorExpr:
 					// A local alias for another package's exported kind

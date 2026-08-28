@@ -43,7 +43,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -691,7 +690,7 @@ func statementWriteTarget(statement string) (string, bool) {
 // a statement a Go author split with `+` is still one statement.
 func statementsIn(file *ast.File) []string {
 	var out []string
-	for _, literal := range concatenatedStringsIn(file) {
+	for _, literal := range gatekit.SQLStatementsOf(file) {
 		// Split on `;` AFTER stripping comments, so a semicolon inside a `--`
 		// comment does not cut a statement in half.
 		//
@@ -720,51 +719,4 @@ func stripSQLComments(sql string) string {
 		kept = append(kept, line)
 	}
 	return strings.Join(kept, "\n")
-}
-
-// concatenatedStringsIn returns every string expression in one file with its
-// `+` concatenations folded, so a statement an author split across two literals
-// reads here as the one statement the database receives. A concatenation with a
-// non-literal operand folds to the literal halves joined by nothing, which
-// reads as an unplaceable table rather than as no statement at all.
-func concatenatedStringsIn(file *ast.File) []string {
-	var out []string
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch expr := node.(type) {
-		case *ast.BinaryExpr:
-			if expr.Op != token.ADD {
-				return true
-			}
-			out = append(out, foldStringExpr(expr))
-			return false // its literal halves are this one string, not two
-		case *ast.BasicLit:
-			if expr.Kind == token.STRING {
-				if unquoted, err := strconv.Unquote(expr.Value); err == nil {
-					out = append(out, unquoted)
-				}
-			}
-		}
-		return true
-	})
-	return out
-}
-
-// foldStringExpr renders a `+` expression as the string it builds, with every
-// operand this walk cannot read contributing nothing.
-func foldStringExpr(expr ast.Expr) string {
-	switch node := expr.(type) {
-	case *ast.BinaryExpr:
-		if node.Op != token.ADD {
-			return ""
-		}
-		return foldStringExpr(node.X) + foldStringExpr(node.Y)
-	case *ast.BasicLit:
-		if node.Kind != token.STRING {
-			return ""
-		}
-		if unquoted, err := strconv.Unquote(node.Value); err == nil {
-			return unquoted
-		}
-	}
-	return ""
 }

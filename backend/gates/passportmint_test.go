@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // passportOwner is the module that may write the passport table. The census in
@@ -249,7 +251,7 @@ func sqlStringsIn(t *testing.T, path string, body []byte) []string {
 	ast.Inspect(parsed, func(n ast.Node) bool {
 		lit, ok := n.(*ast.BasicLit)
 		if ok && lit.Kind == token.STRING {
-			out = append(out, strings.Trim(lit.Value, "`\""))
+			out = append(out, gatekit.TextOf(lit))
 		}
 		return true
 	})

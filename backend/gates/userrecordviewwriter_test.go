@@ -35,6 +35,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // viewBaselineOwner is the file that may write the table. Keyed to the FILE and
@@ -111,9 +113,9 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 				return readErr
 			}
 			judged++
-			for _, line := range sqlStatementsIn(t, path, string(source)) {
+			for _, line := range gatekit.SQLStatementsIn(t, path, string(source)) {
 				if writesViewBaseline.MatchString(line) {
-					findings = append(findings, rel+": "+firstSQLStatementLine(line))
+					findings = append(findings, rel+": "+gatekit.FirstLineOf(line))
 				}
 			}
 			return nil

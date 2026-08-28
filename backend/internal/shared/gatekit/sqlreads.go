@@ -66,6 +66,14 @@ func LiteralText(node ast.Expr) (string, bool) {
 	return value, true
 }
 
+// TextOf is LiteralText's string alone, for a condition that has already
+// established the node is a string literal — a match against `lit.Value` reads
+// the SOURCE, and this is the one-token way to stop it.
+func TextOf(node ast.Expr) string {
+	text, _ := LiteralText(node)
+	return text
+}
+
 // TableRead is one read of the table: the function whose body holds the
 // literal, and the SQL's first line for the failure message.
 //

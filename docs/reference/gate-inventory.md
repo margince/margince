@@ -118,6 +118,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `oneidlebase_test.go` | H2 | The idle base — a record's newest activity when one is recorded, else the instant it was created — is spelled once, in shared/kernel/idlebase. |
 | `onejitteredbackoff_test.go` | H2 | The jittered retry ladder is spelled once, in shared/kernel/backoff. |
 | `oneretryafter_test.go` | H2 | The Retry-After header is read in one place, shared/kernel/retryafter. |
+| `onesqlliteralreader_test.go` | H2 | A census over the censuses: whoever judges this tree's SQL must read it the way Postgres receives it. |
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |

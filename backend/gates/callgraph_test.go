@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // graphFunc is one function's reach: the statements its body can read, the
@@ -275,7 +277,7 @@ func packageLevelStatements(files []*ast.File) map[string][]string {
 					// walk happened to record first.
 					ast.Inspect(value.Values[i], func(node ast.Node) bool {
 						if binary, isBinary := node.(*ast.BinaryExpr); isBinary && binary.Op == token.ADD {
-							if folded, readable := concatenatedString(binary); readable {
+							if folded, readable := gatekit.ConcatenatedString(binary); readable {
 								held[name.Name] = append(held[name.Name], folded)
 							}
 							return true

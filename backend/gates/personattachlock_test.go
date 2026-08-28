@@ -39,6 +39,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two ways a writer takes the lock, one per shape.
@@ -108,7 +110,7 @@ func personRelationshipWriters(file *ast.File) []relationshipWriter {
 			if !ok || lit.Kind != token.STRING {
 				return true
 			}
-			sql := lit.Value
+			sql := gatekit.TextOf(lit)
 			if strings.Contains(sql, "INSERT INTO relationship") && strings.Contains(sql, "person_id") {
 				inserts = true
 			}
