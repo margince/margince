@@ -27884,6 +27884,18 @@ components:
         approval_token: { type: [string, 'null'], description: 'Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream 🟡 operation it is bound to.' }
         decided_by: { type: [string, 'null'], format: uuid }
         decided_at: { type: [string, 'null'], format: date-time }
+        effect_failed_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the work an APPROVED decision released failed to run. Absent on every
+            row whose effect ran — an approved row carrying this is a decision a person
+            made whose promised work never happened.
+        effect_failure:
+          type: [string, 'null']
+          description: |
+            The sentence a reader is shown about that failure — written for them, never
+            copied from the executor's error. Present exactly when `effect_failed_at` is.
         created_at: { type: string, format: date-time }
 
     ApproveRequest:
@@ -30132,9 +30144,25 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
+        did_not_run:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Decisions THIS reader approved whose released work then failed, reading
+            the queue newest-staged first. The row is not pending (it was decided) and not a receipt
+            (a person decided it), so no other lane can carry it; without this one the
+            person who pressed Accept is the last to learn nothing happened.
+
+            Each card carries the server's own sentence about what did not run, and
+            `open` when the decision named a record. Re-driving the failed work is a
+            separate decision the product has not made yet; this lane only ends the
+            silence.
+
+            Absent — not empty — on an installation whose feed does not read approvals'
+            failure marks.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30176,6 +30204,12 @@ components:
             How many lapsed relationships this lane is CARRYING — the bounded page, as the
             other lanes report. A rep past the bound sees the longest silences, which is the
             order the lane is in.
+        did_not_run:
+          type: integer
+          minimum: 0
+          description: >-
+            How many failed decisions this lane is CARRYING — the bounded page, as the
+            other lanes report.
 
 
     AttentionItem:
@@ -30190,7 +30224,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

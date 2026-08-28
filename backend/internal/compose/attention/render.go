@@ -419,6 +419,30 @@ func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 	return facts
 }
 
+// failedItem is one approved decision whose released work did not run,
+// carried back to the person who approved it. The sentence was written for
+// the reader when the failure was recorded; `open` is offered only when the
+// decision named a record the client can route to.
+func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
+	kind := failed.Kind
+	sentence := failed.Sentence
+	occurred := failed.FailedAt
+	subject := subjectOf(failed.TargetType, failed.TargetID)
+	actions := []crmcontracts.AttentionItemActions{}
+	if subject != nil {
+		actions = append(actions, actionOpen)
+	}
+	return crmcontracts.AttentionItem{
+		Id:         failed.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("failed_approval"),
+		Kind:       &kind,
+		Title:      &sentence,
+		Subject:    subject,
+		OccurredAt: &occurred,
+		Actions:    actions,
+	}
+}
+
 // subjectOf names the record an item concerns, when the producer named one.
 //
 // The label is deliberately absent here: resolving a display name is a read of

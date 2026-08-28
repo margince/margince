@@ -174,6 +174,8 @@ export const en = {
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
   "day.lead.promises": "You promised {count} — those come first.",
   "day.lead.meetings": "{count} on the calendar today.",
+  "day.lead.didNotRun":
+    "{count} you approved did not run. Look at those first.",
   "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
   "day.lead.decay":
     "{count} you have not spoken to in a while. Nothing is waiting on you.",
@@ -192,6 +194,8 @@ export const en = {
   "day.atRisk": "Going quiet",
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",
+  "day.didNotRun": "Approved, but did not run",
+  "day.didNotRun.empty": "Everything you approved actually ran.",
   "day.decay": "Relationships going quiet",
   "day.decay.empty": "You are in touch with everyone you were.",
   "day.decay.quiet": "You have not spoken in {days} days.",

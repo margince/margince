@@ -121,6 +121,26 @@ type Receipt struct {
 	TargetID   ids.UUID
 }
 
+// FailedEffects reads the decisions the acting rep approved whose released
+// work then failed — newest failure first, bounded.
+type FailedEffects interface {
+	Failed(ctx context.Context, limit int) ([]FailedEffect, error)
+}
+
+// FailedEffect is one approved decision whose promised work never happened.
+type FailedEffect struct {
+	ID   ids.UUID
+	Kind string
+	// Sentence is the server's own line about what did not run, written for
+	// the reader when the failure was recorded.
+	Sentence string
+	FailedAt time.Time
+	// The record the decision was about; empty TargetType when it named none,
+	// and the card offers `open` only when it did.
+	TargetType string
+	TargetID   ids.UUID
+}
+
 // Briefing is the overnight brief's queue for the acting rep, best-ranked
 // first.
 //

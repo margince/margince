@@ -52,19 +52,24 @@ type row struct {
 	// Evidence is what each claim was read out of, nil for a staging that read
 	// nothing (evidence.go).
 	Evidence json.RawMessage
+	// EffectFailedAt + EffectFailure are the mark decide.go leaves on an
+	// approved row whose released work did not run: when, and the sentence a
+	// reader is shown. Nil on every row whose effect ran.
+	EffectFailedAt *time.Time
+	EffectFailure  *string
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id,
 	target_entity_type, target_entity_id, target_version, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
-	bundle_id, evidence`
+	bundle_id, evidence, effect_failed_at, effect_failure`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
 	err := r.Scan(&a.ID, &a.Kind, &a.Status, &a.ProposedBy, &a.OnBehalfOf, &a.PassportID,
 		&a.TargetType, &a.TargetID, &a.TargetVersion, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
-		&a.BundleID, &a.Evidence)
+		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure)
 	return a, err
 }
 
@@ -136,10 +141,19 @@ type ListInput struct {
 	// page can discard everything the page held and hide the recent decision
 	// underneath. In SQL, the limit only ever counts rows inside the window.
 	DecidedAfter *time.Time
-	Limit        int
+	// FailedForDecider narrows to the approved rows THIS caller decided whose
+	// released work then failed (decide.go's mark) — the one lane that can
+	// carry a decision back to the person who made it. A flag rather than a
+	// caller-supplied decider id, so no caller can read another person's
+	// failures by naming them; List binds the acting user itself.
+	FailedForDecider bool
+	Limit            int
 	// Cursor continues a previous page: the opaque keyset token that page
 	// reported as next_cursor. Empty starts at the newest row.
 	Cursor string
+	// failedDecider is FailedForDecider resolved to the acting user — set by
+	// List from the principal, never by a caller.
+	failedDecider *ids.UUID
 }
 
 // targeted reports whether the read is scoped to one record.
@@ -163,6 +177,12 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 		return nil, storekit.Page{}, err
 	}
 	p, _ := principal.Actor(ctx)
+	if in.FailedForDecider {
+		if p.UserID.IsZero() {
+			return nil, storekit.Page{}, apperrors.ErrPermissionDenied
+		}
+		in.failedDecider = &p.UserID
+	}
 	if in.Limit <= 0 || in.Limit > inboxBatch {
 		in.Limit = 50
 	}
@@ -292,6 +312,9 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	}
 	if in.DecidedAfter != nil {
 		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
+	}
+	if in.failedDecider != nil {
+		terms = append(terms, fmt.Sprintf("effect_failed_at IS NOT NULL AND decided_by = $%d", arg(*in.failedDecider)))
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

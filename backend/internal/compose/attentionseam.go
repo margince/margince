@@ -336,6 +336,41 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 	return out
 }
 
+// attentionFailedEffects reads the decisions this rep approved whose released
+// work then failed — the mark decide.go leaves on the approved row. The
+// service binds the acting user itself (FailedForDecider), so this lane can
+// only ever carry the reader's own decisions back to them.
+type attentionFailedEffects struct{ svc *approvals.Service }
+
+func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attention.FailedEffect, error) {
+	rows, _, err := f.svc.ListWire(ctx, approvals.ListInput{FailedForDecider: true, Limit: limit})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.FailedEffect, 0, len(rows))
+	for _, row := range rows {
+		if row.EffectFailedAt == nil || row.EffectFailure == nil {
+			// The SQL filter guarantees the pair; the re-check is what makes
+			// the derefs safe in this package, where that SQL is elsewhere.
+			continue
+		}
+		failed := attention.FailedEffect{
+			ID:       ids.UUID(row.Id),
+			Kind:     row.Kind,
+			Sentence: *row.EffectFailure,
+			FailedAt: *row.EffectFailedAt,
+		}
+		// Both or neither: a type with no id names nothing, and an id with no
+		// type says where to look without saying at what.
+		if row.TargetEntityType != nil && row.TargetEntityId != nil {
+			failed.TargetType = *row.TargetEntityType
+			failed.TargetID = ids.UUID(*row.TargetEntityId)
+		}
+		out = append(out, failed)
+	}
+	return out, nil
+}
+
 // attentionBriefing binds the briefing lane to the same engine entry point Home
 // and the agent tool read, so all three read one queue rather than three
 // readings of it.
@@ -415,6 +450,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
+		attentionFailedEffects{svc: svc},
 		now,
 	)
 }

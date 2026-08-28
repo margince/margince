@@ -23,6 +23,11 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
 		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
 		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		&stubFailedEffects{rows: []FailedEffect{{
+			ID: ids.NewV7(), Kind: "send_email",
+			Sentence: "this was approved, but the work it released did not run",
+			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+		}}},
 		fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
@@ -73,6 +78,11 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
 		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
 		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		&stubFailedEffects{rows: []FailedEffect{{
+			ID: ids.NewV7(), Kind: "send_email",
+			Sentence: "this was approved, but the work it released did not run",
+			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+		}}},
 		fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
@@ -125,6 +135,11 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
 		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
 		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		&stubFailedEffects{rows: []FailedEffect{{
+			ID: ids.NewV7(), Kind: "send_email",
+			Sentence: "this was approved, but the work it released did not run",
+			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+		}}},
 		fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
@@ -139,6 +154,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		"meetings": out.Meetings, "at_risk": out.AtRisk,
 		"commitments": out.Commitments, "planned": &out.Planned,
 		"relationship_decay": out.RelationshipDecay,
+		"did_not_run":        out.DidNotRun,
 		"needs_you":          &out.NeedsYou,
 		"done_for_you":       &out.DoneForYou,
 	}

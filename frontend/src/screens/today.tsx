@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  ShieldAlert,
   Sparkles,
   Sunrise,
   TrendingDown,
@@ -112,6 +113,12 @@ function quietLead(
 ): string {
   // A drifting deal is money leaving on its own — nobody is waiting on the
   // reader for it, which is exactly why it needs saying.
+  // Above the drifting deals, because it is worse news: a rep already DECIDED
+  // these, was told they worked, and they did not.
+  const failed = day.counts.did_not_run ?? 0;
+  if (failed > 0) {
+    return t("day.lead.didNotRun", { count: formatNumber(failed, locale) });
+  }
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
@@ -148,6 +155,7 @@ function quietLead(
     day.counts.commitments === undefined ||
     day.counts.at_risk === undefined ||
     day.counts.relationship_decay === undefined ||
+    day.counts.did_not_run === undefined ||
     day.counts.meetings === undefined
   ) {
     return t("day.lead.clearOfWhatWasRead");
@@ -571,6 +579,10 @@ function TodayLanes({
   const commitments = day.commitments;
   // Same absent-versus-empty rule: no lane at all when nothing reads deals.
   const atRisk = day.at_risk;
+  // Decisions this reader approved whose released work then failed. Warn-toned
+  // whenever it holds anything: every row is a promise the product broke.
+  const failed = day.did_not_run;
+  const failedTone = (failed ?? []).length > 0 ? "warn" : undefined;
   const lapsed = day.relationship_decay;
   // Tinted only when the lane HAS a finding: a warn-toned panel drawn over "no
   // deal is drifting" would dress good news as bad.
@@ -671,6 +683,22 @@ function TodayLanes({
         lane="at_risk"
         total={day.counts.at_risk ?? 0}
         tone={driftingTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={failed}
+        shape={{
+          title: t("day.didNotRun"),
+          empty: t("day.didNotRun.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: ShieldAlert,
+        }}
+        omitted={omitted}
+        lane="did_not_run"
+        total={day.counts.did_not_run ?? 0}
+        tone={failedTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}
