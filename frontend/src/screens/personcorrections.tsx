@@ -5,7 +5,13 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Card,
+  SectionHeader,
+  TextInput,
+} from "../design-system/atoms";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -129,7 +135,10 @@ function EnrichedField({
       >
         <strong>{t(`person.enriched.field.${field.field}`)}</strong>
         {editing ? (
-          <input
+          // This field sits beside its label on one line rather than filling a
+          // form column, so it keeps its intrinsic width instead of the atom's.
+          <TextInput
+            style={{ width: "auto" }}
             aria-label={t(`person.enriched.field.${field.field}`)}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

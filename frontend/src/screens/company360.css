@@ -490,13 +490,6 @@
   align-items: flex-start;
   gap: var(--space-3);
 }
-.co-task-check {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-top: var(--space-1);
-  accent-color: var(--accent);
-}
 .co-task-body {
   display: flex;
   flex-direction: column;

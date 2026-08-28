@@ -22,15 +22,6 @@
   gap: var(--space-1);
 }
 
-.confirm-input {
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-  color: var(--textPrimary);
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
-}
-
 .confirm-readonly {
   color: var(--textSecondary);
   padding: var(--space-2) 0;

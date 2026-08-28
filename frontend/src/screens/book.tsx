@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import {
   Button,
   Card,
+  Checkbox,
   SectionHeader,
   SegmentedControl,
   TextInput,
@@ -300,22 +301,14 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           onChange={(event) => setEmail(event.target.value)}
         />
       </div>
-      <label
-        className="t-caption"
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "flex-start",
-          marginBottom: 12,
-        }}
-      >
-        <input
-          type="checkbox"
+      <div style={{ marginBottom: "var(--space-3)" }}>
+        <Checkbox
+          className="t-caption"
           checked={consented}
           onChange={(event) => setConsented(event.target.checked)}
+          label={<span data-consent-wording>{consentWording}</span>}
         />
-        <span data-consent-wording>{consentWording}</span>
-      </label>
+      </div>
       {book.isSuccess ? (
         <Card as="div" role="status">
           <p className="t-label">{t("book.confirmed")}</p>

@@ -1,7 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
-import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import {
+  Button,
+  Card,
+  EmptyState,
+  Skeleton,
+  TextInput,
+} from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -171,9 +177,8 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
               <label className="t-caption" htmlFor={`confirm-${field}`}>
                 {t(FIELD_LABELS[field])}
               </label>
-              <input
+              <TextInput
                 id={`confirm-${field}`}
-                className="confirm-input"
                 value={edits[field] ?? card[field]}
                 onChange={(event) =>
                   setEdits({ ...edits, [field]: event.target.value })
