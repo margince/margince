@@ -157,6 +157,15 @@
   color: var(--textSecondary);
   cursor: pointer;
 }
+/* Its box is native and sits outside a `.checkfield`, so without this it took
+   the PLATFORM's ring — the one control in a toolbar of eight drawing the blue
+   this product otherwise refuses, beside a tick already painted in the accent.
+   Same shape as the toolbar's other rings below: inset, because the toolbar
+   clips its own overflow. */
+.lt-toggle input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 
 /* The toolbar's buttons carry a pill silhouette so the row reads as one kind
  * of thing rather than several. */

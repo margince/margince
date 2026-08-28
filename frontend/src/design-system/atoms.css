@@ -1070,8 +1070,18 @@
   column-gap: var(--space-2);
   cursor: pointer;
 }
+/* Sized here rather than left to the platform. The box is native, so unsized it
+   is whatever the engine draws — around 13px in Blink, a different figure in
+   the next one — and the product then has a control whose size is decided by
+   the reader's browser while every other control on the row is sized by a
+   token. 16px is the on-scale rung nearest what the platforms draw, so this
+   settles the size without moving any form's rhythm. The list row's own 24px
+   box (listtable.css) is the deliberate exception, and its reason is written
+   there: it is a target with no label beside it to enlarge it. */
 .checkfield > input {
   grid-row: 1;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
 }
 .checkfield > span {
   grid-row: 1 / span 2;
