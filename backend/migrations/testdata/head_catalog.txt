@@ -2951,14 +2951,13 @@ END;
 
 public.organization_open_pipeline_rollup acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.organization_id,
-    sum(
         CASE
-            WHEN ((d.currency)::text = base.code) THEN d.amount_minor
-            ELSE (round(((d.amount_minor)::numeric * live.rate)))::bigint
-        END) AS open_pipeline_minor_base,
+            WHEN ((sum(conv.minor_base) >= ('-9223372036854775808'::bigint)::numeric) AND (sum(conv.minor_base) <= ('9223372036854775807'::bigint)::numeric)) THEN sum(conv.minor_base)
+            ELSE NULL::numeric
+        END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
-    count(*) FILTER (WHERE ((d.amount_minor IS NOT NULL) AND (((d.currency)::text = base.code) OR (live.rate IS NOT NULL)))) AS priced_deal_count
-   FROM ((deal d
+    count(*) FILTER (WHERE (conv.minor_base IS NOT NULL)) AS priced_deal_count
+   FROM (((deal d
      LEFT JOIN LATERAL ( SELECT (setting.value #>> '{}'::text[]) AS code
            FROM setting
           WHERE (setting.key = 'installation.base_currency'::text)) base ON (true))
@@ -2967,6 +2966,12 @@ public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.or
           WHERE (((d.currency)::text IS DISTINCT FROM base.code) AND (r.from_currency = d.currency) AND ((r.to_currency)::text = base.code) AND (r.rate_date <= CURRENT_DATE))
           ORDER BY r.rate_date DESC
          LIMIT 1) live ON (true))
+     LEFT JOIN LATERAL ( SELECT
+                CASE
+                    WHEN ((d.currency)::text = base.code) THEN d.amount_minor
+                    WHEN ((live.rate IS NOT NULL) AND ((round(((d.amount_minor)::numeric * live.rate)) >= ('-9223372036854775808'::bigint)::numeric) AND (round(((d.amount_minor)::numeric * live.rate)) <= ('9223372036854775807'::bigint)::numeric))) THEN (round(((d.amount_minor)::numeric * live.rate)))::bigint
+                    ELSE NULL::bigint
+                END AS minor_base) conv ON (true))
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
   GROUP BY d.organization_id;
 public.organization_open_pipeline_rollup.open_deal_count bigint gen=- def=-
