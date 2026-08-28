@@ -8,6 +8,7 @@ import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
@@ -152,11 +153,20 @@ function WriteEmailAction({
           button among two outlined ones says writing is what a reader came to
           do, and on an account it is one of several things they might — the
           move worth doing is the one the Brief names, and that one carries the
-          fill. The icon is what makes this one findable instead. */}
-      <Button reasonId={disabledReasonId} onClick={() => onOpen(true)}>
-        <Mail aria-hidden="true" />
-        {t("co.writeEmail")}
-      </Button>
+          fill. The icon is what makes this one findable instead.
+
+          The icon alone, in fact: mail is one of the glyphs the catalog names
+          as needing no gloss, and the words cost the record's own NAME the room
+          it needs on a tablet — the header truncated the account a reader came
+          to read in order to spell a verb its icon had already said.
+          `IconAction` is what keeps the name reachable for both readers, one
+          string spoken through `aria-label` and shown through the tooltip. */}
+      <IconAction
+        label={t("co.writeEmail")}
+        icon={<Mail aria-hidden="true" />}
+        reasonId={disabledReasonId}
+        onClick={() => onOpen(true)}
+      />
       {open && (
         // Keyed by the record, so navigating to another company while the
         // composer is open REMOUNTS it rather than re-pointing it. Without the
@@ -521,6 +531,8 @@ function CompanyEditAction({
   return (
     <EditAction<Organization>
       disabledReasonId={disabledReasonId}
+      // This one lives in the overflow menu, among rows that say what they do.
+      labelled
       label={t("record.edit")}
       savedMessage={(saved) =>
         t("record.saveDone", { name: saved.display_name })
@@ -681,8 +693,8 @@ export function CompanyActionBadges({
           disabledReasonId={refusedByState}
         />
         {/* Merge has no incumbent-first projection — the seam refuses it
-            outright (overlay/provider_writes.go Merge) — unlike
-            edit/archive above, which it serves, so it stays hidden here.
+            outright (overlay/provider_writes.go Merge) — unlike edit and
+            archive, which it serves, so it stays hidden here.
             Unsupported is the OTHER cause STATE-4a sorts, and absence is
             its answer: there is no fact about this account to report. */}
         {!overlay && (
@@ -716,24 +728,15 @@ export function CompanyActionBadges({
             })}
           />
         )}
-        <ArchiveAction
-          disabledReasonId={refusedByState}
-          label={t("record.archive")}
-          confirmText={t("record.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: org.display_name })}
-          archive={async () => {
-            const { data, error } = await api.DELETE("/organizations/{id}", {
-              params: { path: { id: org.id } },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
-          }}
-          invalidate="organizations"
-          recordKey="organization"
-          onArchived={() => navigate({ screen: "companies" })}
-        />
+        {/* The way in to the partner programme for an account that has none.
+            The tab only shows once there IS one, so without this the first
+            partner row would be unreachable — this is the same form, asked
+            for rather than offered. */}
+        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+            {t("org.partnerSetUp")}
+          </Button>
+        )}
         {/* A record grant probes the native row via auth.EnsureLinkTarget,
             which a mirrored record has no row for — sharing stays hidden
             in overlay regardless of record type (see deals.tsx's
@@ -744,15 +747,6 @@ export function CompanyActionBadges({
             recordId={org.id}
             disabledReasonId={refusedByState}
           />
-        )}
-        {/* The way in to the partner programme for an account that has none.
-            The tab only shows once there IS one, so without this the first
-            partner row would be unreachable — this is the same form, asked
-            for rather than offered. */}
-        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-            {t("org.partnerSetUp")}
-          </Button>
         )}
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
@@ -774,6 +768,28 @@ export function CompanyActionBadges({
         {onOpenDecisions && (
           <DecisionsChip view={view} onOpen={onOpenDecisions} />
         )}
+        {/* Last, and set apart by the panel's own seam (atoms.css). This is
+            the one verb here a reader cannot walk back from the header, so it
+            does not sit in the run of routine ones where a slipped pointer
+            reaches it. */}
+        <ArchiveAction
+          disabledReasonId={refusedByState}
+          label={t("record.archive")}
+          confirmText={t("record.archiveConfirm")}
+          archivedMessage={t("record.archiveDone", { name: org.display_name })}
+          archive={async () => {
+            const { data, error } = await api.DELETE("/organizations/{id}", {
+              params: { path: { id: org.id } },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="organizations"
+          recordKey="organization"
+          onArchived={() => navigate({ screen: "companies" })}
+        />
       </OverflowMenu>
     </>
   );

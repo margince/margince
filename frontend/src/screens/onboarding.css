@@ -138,7 +138,7 @@
   display: grid;
   place-items: center;
   flex: none;
-  margin-top: 1px;
+  margin-top: 1px; /* ds:ignore optical: sets the tile on the title's cap line */
 }
 .readfail.warn .rfi {
   background: var(--warnBg);
@@ -193,7 +193,7 @@
   height: 13px;
   color: var(--teal);
   flex: none;
-  margin-top: 2px;
+  margin-top: 2px; /* ds:ignore optical: sets the glyph on the first text line */
 }
 .seclabel {
   font-size: var(--fs-eyebrow);
@@ -1034,11 +1034,12 @@
   border-color: var(--ai);
   box-shadow: 0 0 0 3px var(--aiLight);
 }
-/* The send verb is square and stretches to the composer's own row height; the
-   square, the padding and the icon's size come from .btn-icon in the design
-   system now, so only the stretch is this composer's business. */
+/* The send verb keeps the square .btn-icon draws it, pinned to the FOOT of the
+   composer's row: a grid item stretches by default, and stretching an icon-only
+   button is the one thing that can take its square away. The foot is where a
+   send verb belongs beside a box that grows downward as it is typed into. */
 .mw-composer .btn {
-  align-self: stretch;
+  align-self: end;
 }
 .mw-composer > small {
   grid-column: 1 / -1;
@@ -1411,5 +1412,13 @@
 
   .ob-core-dialog h1 {
     font-size: var(--fs-h1);
+  }
+
+  /* The steps stay on one line — the connector behind them IS the journey, and
+     a stacked column would leave it ruled across the stack. What has to give is
+     the space between them: at this width every label wraps, and 4px apart two
+     wrapped labels read as one paragraph rather than as two stages. */
+  .ob-core-journey {
+    column-gap: var(--space-3);
   }
 }

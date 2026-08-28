@@ -2706,7 +2706,6 @@ export const en = {
   "docs.add.errNoFile": "Choose a file to upload.",
   "docs.add.errNoDeal": "Pick the deal to file this against.",
   "docs.add.errRefused": "You may not add documents to this record.",
-  "docs.add.errInFlight": "This document is still uploading.",
   "docs.add.errTooLarge":
     "That file is larger than {size}, which is the most this installation accepts. Choose a smaller one.",
   "docs.add.failedTitle": "The upload did not go through",
@@ -6418,7 +6417,6 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
-  "person.action.more": "More actions",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",
@@ -6956,7 +6954,6 @@ export const en = {
   "project.archiveConfirm":
     "Archiving removes this project from the live list and frees its key. This cannot be undone from the UI.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
-  "project.railLabel": "Project profile",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "All phases",
   "project.viewDelivering": "In delivery",

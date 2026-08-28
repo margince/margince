@@ -903,6 +903,10 @@ test-migration-versions:
 ## real Postgres/Redis; real-infra suites carry //go:build integration.
 test-lanes:
 	@./scripts/check-test-lanes.sh
+## check-test-lanes.test.sh runs beside it because the gate reports OK both when
+## it read every file and when its comment stripper read none of them — an awk
+## program that failed to load printed exactly the same line as a clean tree.
+	@bash ./scripts/check-test-lanes.test.sh
 
 ## env-reads — OPS-CFG-2: configuration is read once at the composition root,
 ## never by a package below it (ratcheted via scripts/env-read-waivers.txt;

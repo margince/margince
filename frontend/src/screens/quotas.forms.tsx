@@ -299,10 +299,12 @@ function SetTargetModal({
             small
             variant="primary"
             type="submit"
-            disabled={mutation.isPending || !canSubmit}
+            disabled={!mutation.isPending && !canSubmit}
+            pending={mutation.isPending}
+            busyLabel={t("create.saving")}
             data-testid="quota-create-submit"
           >
-            {mutation.isPending ? t("create.saving") : t("quotas.target.save")}
+            {t("quotas.target.save")}
           </Button>
         </div>
       </form>

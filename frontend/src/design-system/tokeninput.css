@@ -76,9 +76,16 @@
   white-space: nowrap;
 }
 
+/* The mark stays 12px — a bigger cross inside a token pill would out-draw the
+   value it removes — and the BOX grows around it to the 24px floor WCAG 2.2 AA
+   2.5.8 sets. A floor rather than a size, so the glyph keeps the middle of it
+   and the pill grows only by what the difference costs. */
 .token-remove {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   border: 0;
   padding: 0;
   background: transparent;

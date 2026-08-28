@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { useId, useState } from "react";
 import type { Route } from "../app/router";
-import { Modal } from "../design-system/atoms";
+import { Button, Modal } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -276,8 +276,19 @@ export function EditAction<Updated extends { id: string }>({
   savedMessage,
   resolveExisting,
   disabledReasonId,
+  labelled,
 }: Readonly<{
   label: string;
+  /**
+   * Draw the verb with its WORDS rather than as a bare pencil.
+   *
+   * The square below is right where the glyph sits among other glyphs and the
+   * header's width is what it costs. It is wrong where the verb sits among
+   * SENTENCES — a list of named actions with one unnamed box in it, and the
+   * box is the only row a reader has to hover to identify. Same `label`, so
+   * the two forms cannot come to say different things about the same verb.
+   */
+  labelled?: boolean;
   // Why this action is unavailable, when it is. STATE-4a settles the
   // absent-vs-disabled question by CAUSE: a control blocked by STATE
   // rather than permission — an archived record — stays visible and
@@ -320,20 +331,34 @@ export function EditAction<Updated extends { id: string }>({
     isVersionSkew(mutation.error.problem);
   return (
     <>
-      {/* Square. A pencil is the one glyph every reader in this product's
-          market already knows, and "Edit" beside it spends a header's width
-          saying what the glyph said — on four record pages at once, which is
-          why this is the one place it is written. The caller's own wording
-          ("Edit deal", "Edit project") stays as the name, spoken and shown on
-          hover, so the tooltip still says WHAT is being edited. */}
-      <IconAction
-        small
-        label={label}
-        icon={<PenLine size={15} aria-hidden="true" />}
-        reasonId={disabledReasonId}
-        onClick={() => setEditing(true)}
-        testId="edit-record"
-      />
+      {/* Square in a header. A pencil is the one glyph every reader in this
+          product's market already knows, and "Edit" beside it spends a
+          header's width saying what the glyph said — on four record pages at
+          once, which is why this is the one place it is written. The caller's
+          own wording ("Edit deal", "Edit project") stays as the name, spoken
+          and shown on hover, so the tooltip still says WHAT is being edited.
+
+          Worded in a menu (`labelled`), where the same square would be the one
+          row of the list that names nothing. */}
+      {labelled ? (
+        <Button
+          small
+          reasonId={disabledReasonId}
+          onClick={() => setEditing(true)}
+          data-testid="edit-record"
+        >
+          {label}
+        </Button>
+      ) : (
+        <IconAction
+          small
+          label={label}
+          icon={<PenLine size={15} aria-hidden="true" />}
+          reasonId={disabledReasonId}
+          onClick={() => setEditing(true)}
+          testId="edit-record"
+        />
+      )}
       <EditRecordModal
         open={editing}
         onClose={() => setEditing(false)}

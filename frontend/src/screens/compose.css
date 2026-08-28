@@ -4,7 +4,7 @@
 .compose-fields {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
   margin-bottom: 12px;
 }
 
@@ -202,7 +202,7 @@
 .recipient-field .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -211,12 +211,21 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 2px 8px; /* ds:ignore the chip height is the remove button's 24px floor */
   border-radius: var(--r-full);
   background: var(--bgHover);
   color: var(--textContent);
 }
+/* Removing a recipient is a mistake nobody wants to make twice, and at the size
+   of its own 14px cross it was a target a third of the 24px WCAG 2.2 AA 2.5.8
+   asks for. The box takes the floor; the mark keeps its size, so the chip still
+   reads as a chip with a small cross rather than as a button with a word in it. */
 .recipient-field .chips button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   border: 0;
   background: none;
   color: var(--textMeta);
@@ -232,7 +241,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 /* The block a refusal lands in: the consent gate and the two send pre-flight
@@ -241,8 +250,8 @@
 .compose-refusal {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-radius: var(--r-sm);
   background: var(--dangerBg);
 }

@@ -157,6 +157,22 @@
   color: var(--textSecondary);
   cursor: pointer;
 }
+/* Sized like every other tick in the product. Its box sits outside a
+   `.checkfield`, so unsized it was whatever the engine draws — 13px in Blink,
+   beside 16px boxes on the same screen. */
+.lt-toggle input[type="checkbox"] {
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+}
+/* Its box is native and sits outside a `.checkfield`, so without this it took
+   the PLATFORM's ring — the one control in a toolbar of eight drawing the blue
+   this product otherwise refuses, beside a tick already painted in the accent.
+   Same shape as the toolbar's other rings below: inset, because the toolbar
+   clips its own overflow. */
+.lt-toggle input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 
 /* The toolbar's buttons carry a pill silhouette so the row reads as one kind
  * of thing rather than several. */
@@ -255,7 +271,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  /* Square by construction, not by arithmetic. The row stretches this segment
+   * to its own inner height; the ratio turns that into the width, so the "⋮"
+   * cannot become a rectangle when the row's height or its border moves. A
+   * written-down width could only agree with a written-down height by luck. */
+  aspect-ratio: 1;
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
@@ -1076,21 +1096,41 @@
  * the name, and the bar above the grid carries the count and the verbs. */
 .lt-select {
   display: inline-flex;
-  margin-right: var(--space-2);
   vertical-align: middle;
+  flex: none;
 }
 
-/* WCAG 2.2 AA §2.5.8: 24×24 CSS px, and this box has no visible label to
-   stand in for the missing area — its name is screen-reader-only, so the
-   `.checkfield` label a form checkbox is pressed by is 13px wide here. The
-   native box is scaled rather than overlaid: the target-size rule measures the
-   focusable control itself, so a pseudo-element covering it would satisfy a
-   reader's finger and not the rule, which is the case that matters least. Only
-   the row and header boxes grow; a checkbox with words beside it is pressed by
-   those words and is left alone. */
+/* The identity cell's row: the box, then the name, centred on each other.
+   Baseline would put the box on the name's baseline and a two-line name would
+   drag it down; these two are one row, and the row's own middle is where a
+   control that selects it belongs. */
+.lt-identity-row {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+}
+/* And the name takes what is left, so a long one truncates instead of pushing
+   the box out of the cell. */
+.lt-identity-row > .lt-cellink {
+  min-inline-size: 0;
+}
+
+/* The house box, at the house size — 24px here read as a control from a
+   different product beside every other tick in the app.
+   
+   WCAG 2.2 AA §2.5.8 is still met, by the SPACING exception rather than by size:
+   the box sits in its own column with the name's target starting a full gutter
+   away, so the 24px circle centred on it reaches no other target. That is what
+   the row above buys beyond looking right — stacked, the box sat 14px above the
+   name link and the two circles overlapped, which is why the size had to carry
+   the rule on its own before. The `--space-3` gap is therefore load-bearing and
+   not decoration: it is the clearance the exception is measured on. */
 .lt-select > input[type="checkbox"] {
-  inline-size: 24px;
-  block-size: 24px;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+}
+.lt-select {
+  margin-inline-end: var(--space-3);
 }
 
 .lt-bulkbar {

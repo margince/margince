@@ -57,6 +57,30 @@ var reservedNets = func() []*net.IPNet {
 	return nets
 }()
 
+// publicIP reports whether ip is a globally routable unicast address — the
+// same question netguard.PublicIP answers for the core, spelled here because a
+// unit may import only pkg/**.
+//
+// The stdlib predicates first and the published list second, in that order and
+// with that content, because the two halves are not interchangeable:
+// IsPrivate covers RFC 1918 and nothing else, and the ranges above are exactly
+// what it misses. Held equal to the core's by
+// TestThePublishedEgressDecisionMatchesTheGuards, which asks both about the
+// same addresses rather than comparing their source.
+func publicIP(ip net.IP) bool {
+	// IsMulticast already covers link-local multicast, so it is not repeated.
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsMulticast() || ip.IsUnspecified() {
+		return false
+	}
+	for _, n := range reservedNets {
+		if n.Contains(ip) {
+			return false
+		}
+	}
+	return true
+}
+
 // ReservedNets returns the non-public ranges a unit must refuse to dial, in
 // addition to what net.IP's own predicates already cover (loopback, private,
 // link-local unicast, multicast, unspecified). Use it in a unit that dials a

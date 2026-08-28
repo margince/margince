@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ListAction, NewDealAction, TagAction } from "./companyactions";
 import {
@@ -151,9 +151,21 @@ export const NewDealOpen: Story = {
   },
 };
 
-// Pending: the deal name is filled and Save clicked, and the create endpoint
-// never resolves — the form freezes on "Creating…" the way a slow request
-// actually looks, rather than a state nobody could otherwise catch on screen.
+// Pending: the name is filled and Save clicked, and the create endpoint never
+// resolves — the form sits mid-write the way a slow request actually looks,
+// rather than a state nobody could otherwise catch on screen.
+//
+// The control keeps its own name throughout: a write in flight is announced
+// through aria-busy and refused through aria-disabled, so the reader keeps both
+// their focus and the word they pressed. Asserting the resting name is what
+// makes this story fail if the button ever renames itself again.
+async function expectCreating(body: ReturnType<typeof within>) {
+  const submit = await body.findByRole("button", { name: "Create" });
+  await waitFor(() => {
+    expect(submit).toHaveAttribute("aria-busy", "true");
+    expect(submit).toHaveAttribute("aria-disabled", "true");
+  });
+}
 export const NewDealPending: Story = {
   render: () => (
     <NewDeal pipeline={openPipeline} submit={() => new Promise(() => {})} />
@@ -169,7 +181,7 @@ export const NewDealPending: Story = {
       "Fleet renewal",
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByRole("button", { name: "Creating…" });
+    await expectCreating(body);
   },
 };
 
@@ -278,7 +290,7 @@ export const TagPending: Story = {
       "VIP",
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByRole("button", { name: "Creating…" });
+    await expectCreating(body);
   },
 };
 
@@ -392,7 +404,7 @@ export const ListPending: Story = {
       "Renewal Q3",
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByRole("button", { name: "Creating…" });
+    await expectCreating(body);
   },
 };
 

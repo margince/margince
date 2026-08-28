@@ -281,8 +281,12 @@ function ReadOffer({
   return (
     <div className="staging-card">
       <p className="t-small">{t("extraction.neverRead")}</p>
-      <Button onClick={onRead} disabled={pending}>
-        {pending ? t("extraction.starting") : t("extraction.readIt")}
+      <Button
+        onClick={onRead}
+        pending={pending}
+        busyLabel={t("extraction.starting")}
+      >
+        {t("extraction.readIt")}
       </Button>
       {failed && <p className="t-caption">{t("extraction.startFailed")}</p>}
     </div>

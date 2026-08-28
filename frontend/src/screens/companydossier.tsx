@@ -122,11 +122,10 @@ export function DossierPanel({
       <Button
         small
         onClick={() => rewrite.mutate()}
-        disabled={rewrite.isPending}
+        pending={rewrite.isPending}
+        busyLabel={t("co.dossier.rewriting")}
       >
-        {rewrite.isPending
-          ? t("co.dossier.rewriting")
-          : t("co.dossier.rewrite")}
+        {t("co.dossier.rewrite")}
       </Button>
     </>
   );

@@ -253,14 +253,27 @@
 /* A button whose whole label is its icon. Square by intent, so the width floor
    that keeps a short WORD readable does not apply — there is no word to keep
    readable, and the icon carries the meaning through the accessible name the
-   caller must still supply. */
+   caller must still supply.
+
+   Both dimensions from the rung, and the row is not allowed to stretch it. A
+   width alone is half a square: a flex row stretched this button to the height
+   of the 40px verbs beside it and left the width at 32, and a ratio does not
+   save it — the cross size a stretched flex item is sized against is its own
+   content, not the height the row ends up giving it, so `aspect-ratio` resolved
+   against 32 in one place and 40 in another depending on whether a wrapper
+   stood between the button and the row. Stated as two figures, it is square
+   wherever it is put. */
 .btn-icon {
   inline-size: var(--control-h);
+  block-size: var(--control-h);
   min-inline-size: 0;
   padding-inline: 0;
+  flex: none;
+  align-self: center;
 }
 .btn-icon.btn-sm {
   inline-size: var(--control-h-sm);
+  block-size: var(--control-h-sm);
 }
 /*
  * The press. Until now nothing in this design system had one: `grep :active`

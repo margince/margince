@@ -15,6 +15,7 @@
 // own join toggle; a child is either a clause row or another group, and the same
 // component handles both depths, so nesting is not a special case to maintain.
 
+import { X } from "lucide-react";
 import { useId } from "react";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { DateInput } from "../design-system/dateinput";
@@ -377,7 +378,7 @@ function ClauseRow({
         })}
         onClick={() => onChange(removeNode(tree, leafID))}
       >
-        ×
+        <X aria-hidden="true" />
       </Button>
     </div>
   );

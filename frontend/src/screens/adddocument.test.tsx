@@ -595,12 +595,21 @@ describe("adding a document from the account", () => {
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await pressUpload(user);
 
-    // The refusal has to be on the CONTROL, not only in its label: a button
-    // that merely reads "Uploading…" still fires, and the second press puts a
-    // second copy of the document on an audited record.
-    const submit = await screen.findByRole("button", { name: /Uploading/ });
-    expect(submit.hasAttribute("disabled")).toBe(true);
+    // The wait has to be on the CONTROL, not only beside it: a button that
+    // only draws a mark still fires, and the second press puts a second copy
+    // of the document on an audited record. It stays named "Upload" and stays
+    // focusable — `aria-disabled`, never `disabled` — so the reader keeps the
+    // control they just pressed while the write is out.
+    const submit = await screen.findByRole("button", { name: "Upload" });
+    await waitFor(() => expect(submit.getAttribute("aria-busy")).toBe("true"));
+    expect(submit.getAttribute("aria-disabled")).toBe("true");
+    expect(submit.hasAttribute("disabled")).toBe(false);
     await user.click(submit);
+    // Measured while the first write is still out, not after it lands: the
+    // refusal is what this test is about, and a count checked only once the
+    // request has returned would pass on a second upload that arrived a tick
+    // late.
+    expect(uploads(calls)).toHaveLength(1);
 
     release?.();
     await waitFor(() => expect(uploads(calls)).toHaveLength(1));

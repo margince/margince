@@ -215,6 +215,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the RECORD holds, and nothing else. |
 | `transactionopeners_test.go` | H2 | One function in the database package turns a pool into a transaction, and every seam the package publishes routes through it. |
 | `txseamacquire_test.go` | H2 | Code that runs on a caller's `pgx.Tx` acquires no connection of its own. |
+| `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
 ## Claim (5)

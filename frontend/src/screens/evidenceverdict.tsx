@@ -182,10 +182,12 @@ export function EvidenceVerdict({
         />
         <Button
           small
-          disabled={correct.isPending || draft.trim() === ""}
+          disabled={!correct.isPending && draft.trim() === ""}
+          pending={correct.isPending}
+          busyLabel={t("evidence.saving")}
           onClick={() => correct.mutate(draft.trim())}
         >
-          {correct.isPending ? t("evidence.saving") : t("evidence.save")}
+          {t("evidence.save")}
         </Button>
         <Button small onClick={() => setCorrecting(false)}>
           {t("evidence.cancel")}
@@ -205,10 +207,11 @@ export function EvidenceVerdict({
     <span className="evidence-verdict">
       <Button
         small
-        disabled={confirm.isPending}
+        pending={confirm.isPending}
+        busyLabel={t("evidence.saving")}
         onClick={() => confirm.mutate()}
       >
-        {confirm.isPending ? t("evidence.saving") : t("evidence.confirm")}
+        {t("evidence.confirm")}
       </Button>
       <Button
         small

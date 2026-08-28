@@ -205,6 +205,11 @@ button.evidence-chip:hover {
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
   padding: 6px 10px;
+  /* The same floor every other field takes. It sits in a flex row beside a
+     Button that has one, and without it the two ends of that row were
+     different heights — which reads as a field that has not finished loading
+     rather than as a field beside its verb. */
+  min-block-size: var(--control-h);
 }
 
 .field-diff {

@@ -185,19 +185,26 @@ async function createLead(
 export function LeadsScreen() {
   const me = useMe();
   return (
-    <QueryGate query={me}>
-      {(session) => (
-        <LeadsWorkbench
-          viewerId={session.user.id}
-          // An admin or manager opens on every lead — they run the queue; a
-          // rep opens on their own.
-          opensOnAll={session.roles.some(
-            (role) =>
-              role === "admin" || role === "manager" || role === "management",
-          )}
-        />
-      )}
-    </QueryGate>
+    // The page's own root, OUTSIDE the gate: inside it, only the loaded screen
+    // carried the gutter and the pending bars drew against the scroller's edge.
+    // The queue's classes ride it rather than an element of their own, because
+    // `.wrap:has(> .lt)` is what gives a list screen its full height and a div
+    // between the two would take that away.
+    <div className="wrap lead-surface lead-queue">
+      <QueryGate query={me}>
+        {(session) => (
+          <LeadsWorkbench
+            viewerId={session.user.id}
+            // An admin or manager opens on every lead — they run the queue; a
+            // rep opens on their own.
+            opensOnAll={session.roles.some(
+              (role) =>
+                role === "admin" || role === "manager" || role === "management",
+            )}
+          />
+        )}
+      </QueryGate>
+    </div>
   );
 }
 
@@ -286,7 +293,10 @@ function LeadsWorkbench({
   ];
 
   return (
-    <div className="wrap lead-surface lead-queue">
+    // A fragment, not a div: the queue's own stack is on the page root above
+    // the gate (`LeadsScreen`), and an element here would sit between `.wrap`
+    // and the `.lt` whose full height depends on being its direct child.
+    <>
       {!noteDismissed && (
         <Callout tone="info">
           {t("lead.segregation")}{" "}
@@ -603,6 +613,6 @@ function LeadsWorkbench({
           </>
         }
       />
-    </div>
+    </>
   );
 }

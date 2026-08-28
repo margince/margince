@@ -294,7 +294,7 @@ function EditOfferHeaderModal({
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: 10 }}
+          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
         >
           {errorMessage}
         </p>
@@ -829,7 +829,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         {errorMessage && (
           <p
             className="t-caption"
-            style={{ color: "var(--danger)", marginTop: 10 }}
+            style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
           >
             {errorMessage}
           </p>

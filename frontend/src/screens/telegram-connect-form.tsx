@@ -194,13 +194,13 @@ export function TelegramConnectForm({
               small
               variant="primary"
               type="submit"
-              disabled={!ready || connect.isPending}
+              disabled={!connect.isPending && !ready}
+              pending={connect.isPending}
+              busyLabel={t("create.saving")}
             >
-              {connect.isPending
-                ? t("create.saving")
-                : connection
-                  ? t("connectors.telegramReplaceCta")
-                  : t("connectors.telegramSubmitCta")}
+              {connection
+                ? t("connectors.telegramReplaceCta")
+                : t("connectors.telegramSubmitCta")}
             </Button>
           </div>
         </form>

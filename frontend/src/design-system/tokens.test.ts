@@ -22,20 +22,23 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // Values verbatim from the mockups; comparison normalizes case, whitespace and
 // a leading zero before a decimal point so formatting is free but values are not.
 //
-// The SURFACE rungs are the values that no longer match the mockup, and
-// deliberately: the grounds are neutral grey and the green lives in the accent,
-// the states and the status families. A tinted ground casts every neutral above
-// it toward the same hue and reads as a business tool from two decades ago,
-// which is a thing a whole application does rather than one surface. The hue
-// therefore stays where it is a decision a reader is meant to see. The mockups
-// are retired on these five; this table is what pins them in their place, and
-// tokens.css carries the ladder and the contrast steps in prose.
+// The SURFACE rungs and the two content borders are the values that no longer
+// match the mockup, and deliberately: each carries --accent's hue at 0.08 of
+// --accent's chroma, at the lightness the neutral rung already had. Hue is what
+// makes one product out of a light theme and a dark theme whose grounds were
+// already ink-green; holding lightness is what keeps the tint out of the
+// ladder's steps, the contrast ratios below, and anything laid on top of these
+// grounds. The mockups are retired on these seven; this table is what pins them
+// in their place, and tokens.css carries the ladder and the contrast steps in
+// prose. The derivation itself is not re-run here — the assertions that matter
+// are the ordering and the contrast pairs further down, which a wrong tint
+// fails whether or not the arithmetic is repeated.
 const canonical: Record<string, string> = {
-  "--bgPage": "#f5f5f6",
-  "--bgSidebar": "#e9e9ec",
-  "--bgElevated": "#ffffff",
-  "--bgCard": "#eaeaee",
-  "--bgHover": "#ededf0",
+  "--bgPage": "#f0f7f3",
+  "--bgSidebar": "#e5ebe8",
+  "--bgElevated": "#fafffd",
+  "--bgCard": "#e6ece9",
+  "--bgHover": "#e9efec",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
@@ -46,8 +49,8 @@ const canonical: Record<string, string> = {
   "--textMuted": "#CBD2CD",
   "--textMeta": "#5E6C65",
   "--textOnAccent": "#fff",
-  "--borderSubtle": "#E5E9E7",
-  "--borderStrong": "#D2D8D4",
+  "--borderSubtle": "#E3EAE6",
+  "--borderStrong": "#D1D8D4",
   "--online": "#22c55e",
   "--teal": "#0E7490",
   "--tealLight": "rgba(14,116,144,.1)",

@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SLOWEST_MEASURED_TEST_MS } from "../../vitest.budget";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { CompanyContextCard } from "./company-context";
@@ -216,16 +217,112 @@ const TEST_MS = SETTLE_MS * 4;
 // ceiling that covers the waiters, not waiters trimmed to fit a ceiling.
 const DIALOG_MS = SETTLE_MS * 3;
 
+// The budget for the two write-posture cases, which drive `renderAs` — one
+// waiter at SETTLE_MS — and then assert about a loaded card.
+//
+// Stated rather than left on the suite default, and that is the whole point of
+// it. These two raised their waiters FILE-WIDE (SETTLE_MS is 10s here, where
+// every other test in the default population sits at 7s or below) and said
+// nothing, so they stayed in the population the suite ceiling is measured over
+// and dragged it up with them: testTimeout was 13437ms rather than 10437ms,
+// and a genuinely stuck test anywhere in the suite took three seconds longer to
+// go red — including the deliberately fast-red cases in this same file.
+//
+// A test that deliberately raises its own waiters owes its own ceiling and then
+// leaves that population. That is what read-conclusion, onboarding-restore,
+// voice-act, integrations-provider and onboarding all do; these two were the
+// exception, and the only ones.
+const POSTURE_TEST_MS = SETTLE_MS + SLOWEST_MEASURED_TEST_MS;
+
 // The fixture's two selectable changes — the `new` and `machine_change` rows.
 // The human_conflict row is decided by radio and the unchanged row offers
 // nothing, so neither carries a checkbox.
 const SELECTABLE = 2;
 
+// diagnose turns a waiter's timeout into an answer instead of another sighting.
+//
+// The refresh-review chain has failed in CI across five PRs, and every
+// occurrence reported the same sentence:
+//
+//	TestingLibraryElementError: Unable to find role="heading" and name "Review what changed"
+//
+// which says the heading is absent and NOTHING about why — whether the POST
+// that starts the read ever landed, whether the GET that fetches it returned,
+// whether the query is still pending, or whether the card rendered an error
+// where the review should be. All of that is already in the fixture: the stub
+// is a vi.fn, so its call log is readable, and the container is rendered.
+//
+// Measurement is why this is the fix rather than a bigger budget: the chain
+// costs about a second and does not move under four times the CPU
+// oversubscription, so a timeout here is a HANG and not a slow settle. Nothing
+// about a busy runner explains ten seconds of work that takes 0.9. A larger
+// SETTLE_MS, a retry or a sleep would each make the next occurrence quieter
+// without making it answerable.
+//
+// It costs nothing on a green run: onTimeout is called only on the failing
+// path, and what it returns is the error vitest then reports.
+function diagnose(
+  stub: ReturnType<typeof backend>,
+  card: HTMLElement,
+  awaited: string,
+) {
+  return (error: Error): Error => {
+    const calls = stub.mock.calls
+      .map(([input]) => {
+        const request = input instanceof Request ? input.url : String(input);
+        const method = input instanceof Request ? input.method : "GET";
+        return `  ${method} ${new URL(request).pathname}`;
+      })
+      .join("\n");
+    // The card's own words: a rendered error state, a spinner, or an empty
+    // shell each read differently here, and which of the three it is decides
+    // where to look next.
+    //
+    // Read off the render's own container rather than document.body, and kept
+    // from BOTH ends rather than trimmed to the first n. The review renders
+    // AFTER the facts and source sections, so a head-only excerpt is exactly
+    // the excerpt that cannot contain the thing being waited for — the heading,
+    // the comparison rows, or the error rendered where they should be. The
+    // middle is what a reader can afford to lose.
+    const rendered = excerpt(
+      (card.textContent ?? "").replace(/\s+/g, " ").trim(),
+    );
+    error.message = [
+      error.message,
+      "",
+      `--- ${awaited} never arrived ---`,
+      "",
+      `the card rendered: ${rendered}`,
+      "",
+      calls
+        ? `the fetch stub was called:\n${calls}`
+        : "the fetch stub was never called",
+    ].join("\n");
+    return error;
+  };
+}
+
+// excerpt keeps a failure readable without losing the end of the card, which is
+// where everything these waiters wait for renders.
+const EXCERPT_HEAD = 300;
+const EXCERPT_TAIL = 700;
+
+function excerpt(text: string): string {
+  if (text.length <= EXCERPT_HEAD + EXCERPT_TAIL) {
+    return text || "(nothing)";
+  }
+  return `${text.slice(0, EXCERPT_HEAD)} … ${text.slice(-EXCERPT_TAIL)}`;
+}
+
 // Renders the card and drives it to the review step, where the comparison
 // cards live.
 async function renderReview() {
-  vi.stubGlobal("fetch", backend());
-  render(
+  // The stub is held rather than passed straight to stubGlobal: its call log is
+  // half of what diagnose reports, and a stub nothing kept a reference to
+  // cannot be asked what it was called with.
+  const stub = backend();
+  vi.stubGlobal("fetch", stub);
+  const { container } = render(
     <Providers>
       <CompanyContextCard />
     </Providers>,
@@ -238,13 +335,19 @@ async function renderReview() {
   const refresh = await screen.findByRole(
     "button",
     { name: "Refresh from website" },
-    { timeout: SETTLE_MS },
+    {
+      timeout: SETTLE_MS,
+      onTimeout: diagnose(stub, container, "the refresh button"),
+    },
   );
   fireEvent.click(refresh);
   await screen.findByRole(
     "heading",
     { name: "Review what changed" },
-    { timeout: SETTLE_MS },
+    {
+      timeout: SETTLE_MS,
+      onTimeout: diagnose(stub, container, "the review heading"),
+    },
   );
   // The heading is not the last thing to arrive: the comparison cards commit
   // from the site read that the heading only announces, so waiting on the
@@ -253,7 +356,10 @@ async function renderReview() {
   // test is settled rather than merely started.
   await waitFor(
     () => expect(screen.getAllByRole("checkbox")).toHaveLength(SELECTABLE),
-    { timeout: SETTLE_MS },
+    {
+      timeout: SETTLE_MS,
+      onTimeout: diagnose(stub, container, "the comparison rows"),
+    },
   );
 }
 
@@ -336,29 +442,37 @@ describe("CompanyContextCard write posture", () => {
     });
   }
 
-  it("withholds both writes from a seat that holds none, and says so", async () => {
-    await renderAs(ME_READER);
+  it(
+    "withholds both writes from a seat that holds none, and says so",
+    async () => {
+      await renderAs(ME_READER);
 
-    // The read is granted, so the data is there to read — as the row's own
-    // answer now rather than as the contents of an input.
-    expect(screen.getByText(COMPANY.offer_summary ?? "")).toBeTruthy();
-    // Stated once, at the surface, rather than annotated onto each absent
-    // control.
-    expect(screen.getByText(READ_ONLY)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
-    expect(screen.queryByRole("button", { name: REFRESH })).toBeNull();
-  });
+      // The read is granted, so the data is there to read — as the row's own
+      // answer now rather than as the contents of an input.
+      expect(screen.getByText(COMPANY.offer_summary ?? "")).toBeTruthy();
+      // Stated once, at the surface, rather than annotated onto each absent
+      // control.
+      expect(screen.getByText(READ_ONLY)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
+      expect(screen.queryByRole("button", { name: REFRESH })).toBeNull();
+    },
+    POSTURE_TEST_MS,
+  );
 
-  it("offers both writes to a seat that may author the profile", async () => {
-    await renderAs(ME_EDITOR);
+  it(
+    "offers both writes to a seat that may author the profile",
+    async () => {
+      await renderAs(ME_EDITOR);
 
-    // Without this arm the test above would pass on a card that renders no
-    // buttons for anybody.
-    expect(screen.getByRole("button", { name: EDIT_OFFER })).toBeTruthy();
-    expect(screen.getByRole("button", { name: REFRESH })).toBeTruthy();
-    // A reader who may write is told nothing about a posture they do not have.
-    expect(screen.queryByText(READ_ONLY)).toBeNull();
-  });
+      // Without this arm the test above would pass on a card that renders no
+      // buttons for anybody.
+      expect(screen.getByRole("button", { name: EDIT_OFFER })).toBeTruthy();
+      expect(screen.getByRole("button", { name: REFRESH })).toBeTruthy();
+      // A reader who may write is told nothing about a posture they do not have.
+      expect(screen.queryByText(READ_ONLY)).toBeNull();
+    },
+    POSTURE_TEST_MS,
+  );
 
   // One PUT writes this profile, so there is one form and one Save — and both
   // are behind a row's verb rather than standing on the card. A row states an

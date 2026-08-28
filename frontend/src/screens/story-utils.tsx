@@ -4,6 +4,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat
@@ -200,7 +201,14 @@ export function StoryProviders({
   });
   return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{children}</LocaleProvider>
+      <LocaleProvider initial={locale}>
+        {/* The record pages' context column belongs to the shell, and a story
+            mounts no shell — so a record drawn here had its rail cards portal
+            into nothing and the catalog showed two thirds of the page. Every
+            other screen renders identically with it: no `PageAside`, no
+            column. */}
+        <RecordShell>{children}</RecordShell>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }

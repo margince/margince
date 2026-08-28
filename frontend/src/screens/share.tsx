@@ -379,7 +379,7 @@ function RosterPicker({
         </p>
         <Button
           small
-          style={{ marginTop: 6 }}
+          style={{ marginTop: "var(--space-2)" }}
           onClick={() => {
             if (usersQuery.isError) usersQuery.refetch();
             if (teamsQuery.isError) teamsQuery.refetch();

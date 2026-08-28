@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
 
 /**
@@ -41,6 +41,10 @@ type PageAsideState = {
   setFilled: (filled: boolean) => void;
   collapsed: boolean;
   toggle: () => void;
+  // Whether the window is too narrow to hold both columns at once. Below that
+  // width the two are ONE region a reader switches, so the switch says "close"
+  // rather than "hide" and the panel is shut on arrival.
+  narrow: boolean;
   // The element a screen's content is portalled into. Null until the shell has
   // mounted, which is why `PageAside` renders nothing on its first pass.
   host: HTMLElement | null;
@@ -63,13 +67,56 @@ function readCollapsed(): boolean {
   }
 }
 
+/*
+ * Below this width the window has room for one column, not two.
+ *
+ * The same figure the shell's own stylesheet folds the column at, and it is
+ * duplicated here for one reason: the fold below the fold is not a width but a
+ * BEHAVIOUR — one region at a time, shut on arrival — and behaviour is the
+ * component's. `frontend/e2e/recordchrome.spec.ts` measures both sides at 900px
+ * and 390px, so a figure changed on one side and not the other fails there
+ * rather than drifting.
+ */
+const NARROW = "(max-width: 1100px)";
+
+function useNarrowShell(): boolean {
+  const [narrow, setNarrow] = useState(() => matches(NARROW));
+  useEffect(() => {
+    // Absent in some embedded contexts, and a missing media query is not a
+    // reason to fail to render a shell — the same guard app/theme.ts takes for
+    // `prefers-color-scheme`.
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+    const media = window.matchMedia(NARROW);
+    const read = () => setNarrow(media.matches);
+    read();
+    media.addEventListener("change", read);
+    return () => media.removeEventListener("change", read);
+  }, []);
+  return narrow;
+}
+
+function matches(query: string): boolean {
+  return (
+    typeof window.matchMedia === "function" && window.matchMedia(query).matches
+  );
+}
+
 export function PageAsideProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const [filled, setFilled] = useState(false);
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const narrow = useNarrowShell();
   const [collapsed, setCollapsed] = useState(readCollapsed);
-  const toggle = useCallback(() => {
+  // The narrow window's own answer, and it is deliberately NOT the remembered
+  // one. Below the fold the panel takes the whole screen in place of the record,
+  // so a reader who arrives with it open never sees what they opened; and a
+  // phone-sized choice is not a statement about how they want to work at a desk,
+  // which is what the stored preference means. Shut on arrival, per visit.
+  const [narrowOpen, setNarrowOpen] = useState(false);
+  const toggleWide = useCallback(() => {
     setCollapsed((current) => {
       const next = !current;
       try {
@@ -82,9 +129,20 @@ export function PageAsideProvider({
       return next;
     });
   }, []);
+  const toggleNarrow = useCallback(() => {
+    setNarrowOpen((current) => !current);
+  }, []);
   return (
     <PageAsideContext.Provider
-      value={{ filled, setFilled, collapsed, toggle, host, setHost }}
+      value={{
+        filled,
+        setFilled,
+        collapsed: narrow ? !narrowOpen : collapsed,
+        toggle: narrow ? toggleNarrow : toggleWide,
+        narrow,
+        host,
+        setHost,
+      }}
     >
       {children}
     </PageAsideContext.Provider>
@@ -102,6 +160,7 @@ const NO_SHELL: PageAsideState = {
   setFilled: () => undefined,
   collapsed: true,
   toggle: () => undefined,
+  narrow: false,
   host: null,
   setHost: () => undefined,
 };
@@ -120,42 +179,40 @@ function usePageAsideState(): PageAsideState {
 export function PageAsideRegion() {
   const t = useT();
   const { filled, collapsed, toggle, setHost } = usePageAsideState();
-  if (collapsed) {
-    return filled ? (
-      <button
-        type="button"
-        className="pageaside-stub"
-        onClick={toggle}
-        title={t("shell.aside.show")}
-        aria-label={t("shell.aside.show")}
-        aria-expanded={false}
-      >
-        <ChevronLeft aria-hidden="true" />
-      </button>
-    ) : null;
-  }
+  // Folding is a width, and a width can only be tweened by an element that
+  // survives the fold. Open and folded are therefore one `<aside>` wearing a
+  // class rather than two elements swapped in and out, which is also what stops
+  // a fold from unmounting the screen's cards and refetching them on the way
+  // back.
+  const fold = collapsed ? t("shell.aside.show") : t("shell.aside.hide");
   return (
-    // Always mounted while expanded, because the host has to exist before a
-    // screen can portal into it — `hidden` rather than absent is what keeps a
-    // screen with nothing to show from leaving an empty landmark behind.
+    // Always mounted, because the host has to exist before a screen can portal
+    // into it — `hidden` rather than absent is what keeps a screen with nothing
+    // to show from leaving an empty landmark behind.
     <aside
-      className="pageaside"
+      className={collapsed ? "pageaside collapsed" : "pageaside"}
       aria-label={t("record.context")}
       hidden={!filled}
-      ref={setHost}
     >
       <div className="pageaside-head">
-        <span className="t-label">{t("record.context")}</span>
+        <span className="t-label pageaside-title">{t("record.context")}</span>
         <button
           type="button"
-          className="pageaside-hide"
+          className="pageaside-fold"
           onClick={toggle}
-          aria-expanded={true}
+          title={fold}
+          aria-label={fold}
+          aria-expanded={!collapsed}
         >
-          <ChevronRight aria-hidden="true" />
-          {t("shell.aside.hide")}
+          {collapsed ? (
+            <ChevronLeft aria-hidden="true" />
+          ) : (
+            <ChevronRight aria-hidden="true" />
+          )}
+          <span className="pageaside-foldlabel">{t("shell.aside.hide")}</span>
         </button>
       </div>
+      <div className="pageaside-body" ref={setHost} />
     </aside>
   );
 }
@@ -182,20 +239,22 @@ export function PageAsideToggle() {
   // glyph and needs a whole sentence to announce itself; this one sits among
   // the record's verbs and reads as one of them.
   const label = collapsed ? t("record.panel.show") : t("record.panel.hide");
+  // The glyph carries it, through the catalog's own square: a panel icon says
+  // which region this governs without the words, and the words were competing
+  // with the record's own NAME for the header's width — on a tablet the name
+  // truncated so that a verb could spell what its icon already showed.
+  // `IconAction` is what keeps the sentence reachable for both readers at once,
+  // one string spoken as the name and shown as the tip.
   return (
-    <Button
-      small
+    <IconAction
+      label={label}
+      icon={<PanelRight aria-hidden="true" />}
+      // The switch says which way it is set: folded away and standing open look
+      // identical otherwise, and a reader cannot tell a control they have used
+      // from one they have not.
+      pressed={!collapsed}
       onClick={toggle}
-      title={label}
-      // The switch says which way it is set, and the ghost variant already
-      // draws that: folded away and standing open look identical otherwise,
-      // and a reader cannot tell a control they have used from one they
-      // have not.
-      aria-pressed={!collapsed}
-    >
-      <PanelRight aria-hidden="true" />
-      {label}
-    </Button>
+    />
   );
 }
 

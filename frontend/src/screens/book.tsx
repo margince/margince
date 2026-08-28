@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import {
   Button,
   Card,
+  Checkbox,
   SectionHeader,
   SegmentedControl,
   TextInput,
@@ -117,7 +118,7 @@ function SessionBookingScreen() {
       <div
         style={{
           display: "flex",
-          gap: 10,
+          gap: "var(--space-2)",
           alignItems: "center",
           marginBottom: 12,
         }}
@@ -145,7 +146,7 @@ function SessionBookingScreen() {
         />
       </div>
       {recognized && (
-        <p className="t-caption" style={{ marginBottom: 10 }}>
+        <p className="t-caption" style={{ marginBottom: "var(--space-3)" }}>
           {t("book.welcomeBack", { name: recognized })}
         </p>
       )}
@@ -266,7 +267,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       <div
         style={{
           display: "flex",
-          gap: 10,
+          gap: "var(--space-2)",
           alignItems: "center",
           flexWrap: "wrap",
           marginBottom: 12,
@@ -300,22 +301,14 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           onChange={(event) => setEmail(event.target.value)}
         />
       </div>
-      <label
-        className="t-caption"
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "flex-start",
-          marginBottom: 12,
-        }}
-      >
-        <input
-          type="checkbox"
+      <div style={{ marginBottom: "var(--space-3)" }}>
+        <Checkbox
+          className="t-caption"
           checked={consented}
           onChange={(event) => setConsented(event.target.checked)}
+          label={<span data-consent-wording>{consentWording}</span>}
         />
-        <span data-consent-wording>{consentWording}</span>
-      </label>
+      </div>
       {book.isSuccess ? (
         <Card as="div" role="status">
           <p className="t-label">{t("book.confirmed")}</p>

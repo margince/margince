@@ -90,20 +90,18 @@ export function ClientSurfaceScreen() {
             <p className="t-caption" style={{ marginTop: 4 }}>
               {t("client.unknownDetail")}
             </p>
-            <a
-              className="btn btn-ghost btn-sm"
-              style={{ marginTop: 10 }}
-              href="#/leads"
-            >
-              {t("client.createLead")}
-            </a>
+            <div className="card-actions">
+              <a className="btn btn-ghost btn-sm" href="#/leads">
+                {t("client.createLead")}
+              </a>
+            </div>
           </Card>
         )}
 
         {lookup.isError && (
           <p
             className="t-caption"
-            style={{ color: "var(--danger)", marginTop: 10 }}
+            style={{ color: "var(--danger)", marginTop: "var(--space-3)" }}
           >
             {problemMessageOf(lookup.error, t)}
           </p>

@@ -474,7 +474,7 @@ function AddRelationshipAction({
         <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
           {t(copy.add)}
         </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="form-stack">
           {!copy.singleKind && (
             <Field label={t("rel.kind")}>
               {(control) => (
@@ -686,7 +686,7 @@ export function RelationshipsTab({
                   key: "actions",
                   header: "",
                   render: (rel: Relationship) => (
-                    <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
                       <EditAction
                         label={t("record.edit")}
                         savedMessage={t("rel.saveDone")}

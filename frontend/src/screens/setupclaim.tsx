@@ -380,9 +380,11 @@ export function SetupClaimScreen({
           <Button
             type="submit"
             variant="primary"
-            disabled={!complete || submitting}
+            disabled={!submitting && !complete}
+            pending={submitting}
+            busyLabel={t("setup.claiming")}
           >
-            {submitting ? t("setup.claiming") : t("setup.claim")}
+            {t("setup.claim")}
           </Button>
         </div>
       </form>

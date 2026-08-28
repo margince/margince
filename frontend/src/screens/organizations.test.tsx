@@ -12,7 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AssistantPanel } from "./assistant";
@@ -56,10 +56,7 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <PageAsideProvider>
-          {ui}
-          <PageAsideRegion />
-        </PageAsideProvider>
+        <RecordShell>{ui}</RecordShell>
       </LocaleProvider>
     </QueryClientProvider>,
   );

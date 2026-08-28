@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
@@ -89,7 +90,7 @@ function render(ui: ReactNode) {
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write SAYS mounts it the same way. */}
         <ToastProvider>
-          {ui}
+          <RecordShell>{ui}</RecordShell>
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -1973,15 +1974,34 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // and the terminal badge — so the wait names the badge it meant.
       expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
     );
-    // The tab bar is navigation, not mutation; everything else must be dead.
-    const navigation = new Set(["Overview", "History"]);
+    // A control that changes what is DRAWN is not a control that changes the
+    // record, and a terminal lead is read-only rather than unreadable: the tab
+    // strip picks which body is open and the toggle puts the context column
+    // away. Named rather than derived because nothing in the DOM tells a view
+    // control from a write — which is also why the list stays this short, and
+    // why a mutation added later is still caught by construction.
+    const viewControls = new Set([
+      "Overview",
+      "History",
+      "Hide panel",
+      "Show panel",
+    ]);
+    // The column's OWN fold is skipped structurally rather than by its label:
+    // it belongs to the shell's chrome, not to this record, and "Hide" is too
+    // ordinary a word to exempt everywhere it might appear.
+    const contextColumn = document.querySelector(".pageaside");
     for (const button of screen.getAllByRole("button")) {
-      if (navigation.has(button.textContent?.trim() ?? "")) {
+      // The ACCESSIBLE name, not the text: the panel switch is icon-only, so
+      // its text is empty and a set keyed on text would have exempted every
+      // unlabelled button on the page along with it.
+      const name =
+        button.textContent?.trim() || (button.getAttribute("aria-label") ?? "");
+      if (viewControls.has(name) || contextColumn?.contains(button)) {
         continue;
       }
       expect(
         (button as HTMLButtonElement).disabled,
-        `"${button.textContent}" is still live on a terminal lead`,
+        `"${name}" is still live on a terminal lead`,
       ).toBe(true);
     }
   });

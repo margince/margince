@@ -13,18 +13,25 @@
   display: flex;
   align-items: center;
 }
-/* Room for the chevron so a long model id ends before the toggle rather than
-   underneath it. */
+/* Room for the chevron's TARGET, not just its mark, so a long model id ends
+   before the toggle rather than underneath it. The two numbers below are one
+   number: the inset is where the toggle's box ends. */
 .combobox-input {
   width: 100%;
-  padding-right: calc(var(--space-5) + var(--space-1));
+  padding-right: calc(var(--space-6) + var(--space-1));
 }
+/* A 16px mark on a 16px box was a target a third of the area WCAG 2.2 AA 2.5.8
+   asks for. The box grows to the 24px floor and the mark does not, and it moves
+   in from the field's edge by exactly what it gained — so the chevron is drawn
+   in the same place it always was and only what is pressable changed. */
 .combobox-toggle {
   position: absolute;
-  right: var(--space-2);
+  right: var(--space-1);
   display: flex;
   align-items: center;
   justify-content: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
   background: none;
   border: none;
   padding: 0;
