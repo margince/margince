@@ -6856,7 +6856,7 @@ export const de = {
   "project.ownerKeep": "Aktuelle Verantwortung behalten",
   "project.ownerMe": "Ich",
   "project.ownerUnassign": "Niemand",
-  "project.assignOwner": "Kolleg:in zuweisen",
+  "project.assignOwner": "Einer Kolleg:in zuweisen",
   "project.assignOwnerTitle": "Einer Kolleg:in zuweisen",
   "project.assignOwnerSearch": "Kolleg:innen suchen",
   "project.assignOwnerNoneSelected": "Erst eine Kolleg:in auswählen",

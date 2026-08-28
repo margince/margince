@@ -6801,7 +6801,7 @@ export const vi = {
   "project.ownerKeep": "Giữ người phụ trách hiện tại",
   "project.ownerMe": "Tôi",
   "project.ownerUnassign": "Bỏ phân công",
-  "project.assignOwner": "Giao cho đồng nghiệp",
+  "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
   "project.assignOwnerNoneSelected": "Hãy chọn một đồng nghiệp trước",

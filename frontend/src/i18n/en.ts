@@ -6945,7 +6945,7 @@ export const en = {
   "project.ownerKeep": "Keep current owner",
   "project.ownerMe": "Me",
   "project.ownerUnassign": "Unassign",
-  "project.assignOwner": "Assign to colleague",
+  "project.assignOwner": "Assign to a colleague",
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
   "project.assignOwnerNoneSelected": "Pick a colleague first",

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -129,7 +130,12 @@ describe("AssignProjectOwnerAction", () => {
     render(<AssignProjectOwnerAction project={project} />);
 
     await user.click(screen.getByTestId("assign-project-owner"));
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    const confirm = screen.getByRole("button", { name: "Confirm" });
+    // Pins the REFUSAL itself, not just its consequence: `picked && mutate(...)`
+    // would also send nothing if `picked` stayed null for some other reason,
+    // so a disabled-button regression could otherwise slip past this test.
+    expect(confirm).toBeDisabled();
+    await user.click(confirm);
 
     expect(calls).toHaveLength(0);
   });
@@ -170,6 +176,9 @@ describe("AssignProjectOwnerAction", () => {
     // has repeated yet must not resurface as if it just happened again.
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByTestId("assign-project-owner"));
+    // The modal itself, not just the absent error text — otherwise a modal
+    // that failed to reopen at all would pass this the same way.
+    await screen.findByRole("heading", { name: "Assign to a colleague" });
     expect(
       screen.queryByText("the project was changed by someone else"),
     ).toBeNull();
