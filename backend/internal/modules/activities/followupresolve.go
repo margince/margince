@@ -30,11 +30,13 @@ import (
 
 // taskSourceSystem is activity.source as the automation engine's create
 // executor stamps it (automation's systemSource — spelled again here
-// because a module cannot import a sibling's constant; the provenance
-// reservation that keeps clients from writing it names the same value,
-// provenance.ReservedSystemSource). Never trusted alone: source arrives
-// on the client create wire, so every selector below pairs it with
-// systemCapturedBy, which no client can write.
+// because a module cannot import a sibling's constant). Never trusted
+// alone, and deliberately NOT reserved at the create wire: the engine's
+// own creates flow through the same mapper as a client's
+// (LogActivityInputFrom), so a value-level refusal there would refuse the
+// engine itself. A caller can spell it — every selector below therefore
+// pairs it with systemCapturedBy, which no client can write, and that
+// pairing is the security boundary.
 const taskSourceSystem = "system"
 
 // systemCapturedBy is captured_by as the workflow engine's runs stamp it:
