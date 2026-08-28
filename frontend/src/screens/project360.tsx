@@ -26,6 +26,7 @@ import { TimelineActions } from "./compose";
 import { EditAction } from "./edit";
 import { EntityRef, OwnerName } from "./entityref";
 import { ProjectCompanies } from "./projectcompanies";
+import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
 import { RollupsStrip } from "./projectreadings";
 import { PhaseBadge, ProjectKeyChip, useCompanyOptions } from "./projects";
@@ -310,6 +311,10 @@ function ProjectActions({
           invalidate="projects"
           recordKey="project"
           onArchived={() => navigate({ screen: "projects" })}
+        />
+        <AssignProjectOwnerAction
+          project={project}
+          disabledReasonId={refusedReasonId}
         />
         {!overlay && (
           <ShareAction

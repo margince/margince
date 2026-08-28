@@ -733,7 +733,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     );
   });
 
-  it("rejects the offer with an optional reason and never touches the deal queries", async () => {
+  it("rejects the offer with an optional reason and invalidates the deal + deal-offers queries so the deal screen resyncs", async () => {
     const calls: { url: string; body: unknown; ifMatch: string | null }[] = [];
     stubOfferWithLifecycle(
       { ...baseOffer, status: "sent" },
@@ -753,7 +753,12 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     expect(calls[0].url).toContain("/offers/o-1/reject");
     expect(calls[0].body).toMatchObject({ reason: "budget cut" });
     expect(await screen.findByText("rejected")).toBeTruthy();
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["deal", "d-1"] }),
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["deal-offers", "d-1"] }),
+    );
   });
 });
 
