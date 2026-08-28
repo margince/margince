@@ -49,7 +49,8 @@ const companyReadMessageSystem = `You are Margince, the professional AI helping 
 Answer the administrator's question using only the supplied dossier evidence and the administrator's own statement.
 Conversation history exists only to resolve follow-up references; it is not dossier evidence.
 Classify the response as status, answer, recommendation, correction, confirmation, clarification, or off_topic. Ordinary questions and status checks never propose changes. Use recommendation only when the administrator explicitly asks what a field should contain or asks you to suggest or recommend a value for a named field. Use correction only when the administrator explicitly supplies or corrects a company detail. Ambiguity defaults to answer or clarification. Off-topic requests get one short scope reminder. Do not apologize unless acknowledging a concrete error or correction.
-Never claim that you saved anything. Use only these fields: display_name, legal_name, registered_address, register_vat, industry, history, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion.
+Never claim that you saved anything. Use only these fields: display_name, legal_name, registered_address, legal_form, register_court, register_number, register_vat, industry, history, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion.
+register_number is the court's commercial-register entry ("HRB 12345 B") and register_vat is the tax identifier ("DE123456789") — never put one in the other's place.
 Return JSON with kind, message, proposed_changes (at most 5 objects with field, value, reason, source_ids), and global source_ids. status, answer, confirmation, clarification, and off_topic MUST have no proposed changes. Every dossier-derived proposed value must carry the dossier source ids that contain that value, and those ids must also appear in global source_ids. Use an empty per-change source_ids list only when the value comes from an administrator statement. Cite only source ids supplied in the dossier. Do not invent a source, legal identity, address, registration, VAT/UID number, product, customer, or market.`
 
 type companyReadEvidence struct {
@@ -292,19 +293,25 @@ var companyFieldAliases = map[string][]string{
 	fieldDisplayName:       {"company name", "brand name", "firmenname", "unternehmensname", "kurzname", "anzeigename"},
 	fieldLegalName:         {"registered name", "legal company name", "rechtlicher name", "juristischer name", "firmierung", "eingetragener name", "gesetzlicher name"},
 	fieldRegisteredAddress: {"registered address", "registered office", "company address", "geschäftsanschrift", "geschäftsadresse", "firmenanschrift", "unternehmensanschrift", "unternehmensadresse", "geschäftssitz", "firmensitz", "anschrift", "adresse"},
-	fieldRegisterVat:       {"vat", "uid", "tax number", "company register", "ust-id", "umsatzsteuer", "handelsregister", "handelsregisternummer", "registernummer", "steuernummer"},
-	fieldIndustry:          {"industry", "sector", "branche", "industrie", "wirtschaftszweig"},
-	fieldHistory:           {"company history", "background", "unternehmensgeschichte", "firmengeschichte", "geschichte", "historie"},
-	fieldICP:               {"ideal customer", "ideal customer profile", "zielkunde", "zielkunden", "zielgruppe", "idealer kunde", "ideales kundenprofil"},
-	fieldOfferSummary:      {"what we offer", companyProductTerm, "service", "angebot", "produkt", "dienstleistung", "leistungsangebot"},
-	fieldValueProposition:  {"value proposition", "customer value", "wertversprechen", "nutzenversprechen", "kundennutzen"},
-	fieldUSP:               {"unique selling proposition", "differentiator", "alleinstellungsmerkmal", "differenzierungsmerkmal"},
-	fieldCustomerPains:     {"customer pain", "customer problem", "kundenproblem", "kundenprobleme", "herausforderungen", "schmerzpunkte"},
-	fieldDesiredOutcomes:   {"desired outcome", "customer outcome", "gewünschte ergebnisse", "gewünschten ergebnisse", "kundenziele", "kundenresultate"},
-	fieldBuyingCenter:      {"buying center", "decision makers", "einkaufsgremium", "kaufentscheider", "entscheidungsgremium"},
-	fieldBuyingIntents:     {"buying intent", "buying signal", "kaufabsicht", "kaufabsichten", "kaufsignal", "kaufsignale", "kaufinteresse"},
-	fieldCommonObjections:  {"common objection", "sales objection", "häufige einwände", "einwände", "kundenbedenken"},
-	fieldSalesMotion:       {"sales motion", "sales process", "go-to-market", "vertriebsmodell", "vertriebsprozess", "verkaufsprozess"},
+	// The court's register and the tax office's number take their own aliases.
+	// Both sets used to sit on register_vat, so a rep saying
+	// "Handelsregisternummer" was offered the VAT field.
+	fieldRegisterVat:      {"vat", "uid", "tax number", "ust-id", "umsatzsteuer", "steuernummer"},
+	fieldRegisterNumber:   {"company register", "commercial register", "register number", "handelsregister", "handelsregisternummer", "registernummer", "hrb", "hra"},
+	fieldRegisterCourt:    {"register court", "registergericht", "amtsgericht", "registry court"},
+	fieldLegalForm:        {"legal form", "rechtsform", "gesellschaftsform"},
+	fieldIndustry:         {fieldIndustry, "sector", "branche", "industrie", "wirtschaftszweig"},
+	fieldHistory:          {"company history", "background", "unternehmensgeschichte", "firmengeschichte", "geschichte", "historie"},
+	fieldICP:              {"ideal customer", "ideal customer profile", "zielkunde", "zielkunden", "zielgruppe", "idealer kunde", "ideales kundenprofil"},
+	fieldOfferSummary:     {"what we offer", companyProductTerm, "service", "angebot", "produkt", "dienstleistung", "leistungsangebot"},
+	fieldValueProposition: {"value proposition", "customer value", "wertversprechen", "nutzenversprechen", "kundennutzen"},
+	fieldUSP:              {"unique selling proposition", "differentiator", "alleinstellungsmerkmal", "differenzierungsmerkmal"},
+	fieldCustomerPains:    {"customer pain", "customer problem", "kundenproblem", "kundenprobleme", "herausforderungen", "schmerzpunkte"},
+	fieldDesiredOutcomes:  {"desired outcome", "customer outcome", "gewünschte ergebnisse", "gewünschten ergebnisse", "kundenziele", "kundenresultate"},
+	fieldBuyingCenter:     {"buying center", "decision makers", "einkaufsgremium", "kaufentscheider", "entscheidungsgremium"},
+	fieldBuyingIntents:    {"buying intent", "buying signal", "kaufabsicht", "kaufabsichten", "kaufsignal", "kaufsignale", "kaufinteresse"},
+	fieldCommonObjections: {"common objection", "sales objection", "häufige einwände", "einwände", "kundenbedenken"},
+	fieldSalesMotion:      {"sales motion", "sales process", "go-to-market", "vertriebsmodell", "vertriebsprozess", "verkaufsprozess"},
 }
 
 func companyFieldMentioned(message, field string) bool {
@@ -417,6 +424,9 @@ func companyReadEvidenceSet(read people.SiteRead) []companyReadEvidence {
 		}
 		if entity.RegisterNumber != "" {
 			parts = append(parts, entity.RegisterNumber)
+		}
+		if entity.VatNumber != "" {
+			parts = append(parts, entity.VatNumber)
 		}
 		value := strings.Join(parts, " · ")
 		add("legal_entity", "legal_identity", value, entity.EvidenceSnippet, entity.SourceURL)

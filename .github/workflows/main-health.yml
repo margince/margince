@@ -317,6 +317,11 @@ jobs:
           # gate now reads, so the baseline returns to the parent of the oldest
           # — the three are covered again and pass on their attestations.
           #
+          # A fourth, 188598a90, landed unsigned later and is attested the same
+          # way rather than by moving this line: an attestation costs one commit
+          # and covers exactly the hole, where an advance would silently drop
+          # every commit between here and there.
+          #
           # Moving it forward is what a hole costs, and it is why remediation is
           # worth reading: every advance is a stretch of main this gate stops
           # asking about, and nothing afterwards reports that it stopped.

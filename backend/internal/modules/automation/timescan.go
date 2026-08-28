@@ -173,7 +173,10 @@ func NewTimeScanner(engine *WorkflowEngine, scan ActivityScan, dateScan DateFiel
 // recorded as completed.
 func (s *TimeScanner) ScanWorkspace(ctx context.Context, wsID ids.UUID) error {
 	now := s.now()
-	wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:time-scan"})
+	// systemActor, the same id HandleEvent acts under: both entries reach the
+	// same runOne and write the same rows, and the selectors that recognise
+	// those rows key on this id.
+	wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 
 	instances, err := s.engine.liveInstances(wsCtx)

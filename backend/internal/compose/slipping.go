@@ -105,6 +105,14 @@ func slippingCandidate(d crmcontracts.Deal, today time.Time) agents.SlippingDeal
 		LastActivityAt: d.LastActivityAt,
 		CreatedAt:      d.CreatedAt,
 	}
+	if d.StageId != nil {
+		stage := ids.UUID(*d.StageId)
+		candidate.StageID = &stage
+	}
+	if d.OwnerId != nil {
+		owner := ids.UUID(*d.OwnerId)
+		candidate.OwnerID = &owner
+	}
 	if d.ExpectedCloseDate != nil {
 		closeDate := d.ExpectedCloseDate.Time
 		candidate.ExpectedCloseDate = &closeDate

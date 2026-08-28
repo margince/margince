@@ -125,8 +125,9 @@ func checkInClockEvent(t *testing.T, ws ids.UUID, automationID ids.AutomationID,
 func TestCheckInCadenceFiresOncePerQuietSpell(t *testing.T) {
 	fx := setupAutomationDB(t)
 	provider := &fakeCreateTaskProvider{}
-	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: this fixture's instance carries no owner_id, so the match-time gate skips before ever touching it
-	h := checkInCadence{ex: Executors{Provider: provider}}
+	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
+	engine := NewWorkflowEngine(db, nil) // nil resolver: this fixture's instance carries no owner_id, so the match-time gate skips before ever touching it
+	h := checkInCadence{ex: Executors{Provider: provider, Claims: NewEffectClaims(db)}}
 	instanceID := fx.seedAutomation(t, checkInCadenceName)
 	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
 	runCtx := principal.WithWorkspaceID(context.Background(), fx.ws)

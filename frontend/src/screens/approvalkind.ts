@@ -51,6 +51,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   deal_follow_up: "approval.kind.deal_follow_up",
   capture_counterparty: "approval.kind.capture_counterparty",
   org_name_promotion: "approval.kind.org_name_promotion",
+  vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
   transcript_proposal: "approval.kind.transcript_proposal",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
@@ -370,6 +371,18 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // A rename read off the company's own site. The old and new names render as
     // an old→new comparison already; the normalization key is internal.
     org_name_promotion: [],
+    // An imported card the dedupe pass refused to create beside its
+    // near-match. Every field the approval would write is captioned: the
+    // decider must see the whole create, not its headline.
+    vcard_create: [
+      { field: "full_name", label: "approval.field.name", as: "text" },
+      { field: "emails", label: "approval.field.email", as: "text" },
+      { field: "organization", label: "approval.field.company", as: "text" },
+      { field: "title", label: "approval.field.title", as: "text" },
+      { field: "phones", label: "approval.field.phone", as: "text" },
+      { field: "url", label: "approval.field.url", as: "text" },
+      { field: "address", label: "approval.field.address", as: "text" },
+    ],
     // A price the provider published. Both are decimal strings, already values a
     // reader recognises.
     fx_rate_proposal: [

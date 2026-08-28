@@ -273,6 +273,8 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		}
 	}
 	out.Evidence = wireEvidence(a.Evidence)
+	out.EffectFailedAt = a.EffectFailedAt
+	out.EffectFailure = a.EffectFailure
 	return out
 }
 

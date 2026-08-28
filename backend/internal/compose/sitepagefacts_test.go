@@ -358,17 +358,22 @@ func TestGatePageEntitiesRefusesDetailsThePageNeverPrinted(t *testing.T) {
 	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindImpressum, seedURL+"/imprint",
 		"Imprint. Acme Robotics GmbH, Kiel, Germany. This notice states no register number at all.")
 	reply := `{"facts":[],"entities":[
-		{"n":"Acme Robotics GmbH","a":"Baker Street 221B, London","r":"HRB 99999","e":"s0"}]}`
+		{"n":"Acme Robotics GmbH","a":"Baker Street 221B, London","r":"HRB 99999","v":"DE999999999","e":"s0"}]}`
 	res, dropped := gatePageEntities2(t, reply, page, menu, idx)
 	if len(res) != 1 {
 		t.Fatalf("the entity itself is printed and must survive: %+v", res)
 	}
-	if res[0].RegisteredAddress != "" || res[0].RegisterNumber != "" {
-		t.Errorf("an invented address or register number reached the block: %+v", res[0])
+	if res[0].RegisteredAddress != "" || res[0].RegisterNumber != "" || res[0].VatNumber != "" {
+		t.Errorf("an invented address or number reached the block: %+v", res[0])
 	}
+	// Each invention is reported under the field it would have filled, so a
+	// lane systematically losing register entries cannot read as one losing
+	// VAT IDs.
 	reasons := dropReasons(dropped)
-	if reasons[fieldRegisteredAddress] != dropValueNotInSnippet || reasons[fieldRegisterVat] != dropValueNotInSnippet {
-		t.Errorf("both inventions must be REPORTED, not dropped in silence: %+v", dropped)
+	if reasons[fieldRegisteredAddress] != dropValueNotInSnippet ||
+		reasons[fieldRegisterNumber] != dropValueNotInSnippet ||
+		reasons[fieldRegisterVat] != dropValueNotInSnippet {
+		t.Errorf("every invention must be REPORTED, not dropped in silence: %+v", dropped)
 	}
 }
 

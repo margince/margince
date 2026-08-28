@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -190,10 +191,13 @@ func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limi
 			continue
 		}
 		due := *row.DueAt
+		linkType, linkID := primaryLink(row)
 		open = append(open, attention.Task{
-			ID:      ids.UUID(row.Id),
-			Subject: subjectOfActivity(row),
-			DueAt:   &due,
+			ID:       ids.UUID(row.Id),
+			Subject:  subjectOfActivity(row),
+			DueAt:    &due,
+			LinkType: linkType,
+			LinkID:   linkID,
 		})
 	}
 	return open, nil
@@ -207,6 +211,48 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 		return *row.Subject
 	}
 	return "(untitled task)"
+}
+
+// linkPriority orders the records a task may be filed under, most specific
+// first. A task raised for a lead is ABOUT that lead even when the same row
+// also names the company it came from, so the lead is what the reader wants to
+// open. A rank absent here is a record kind this surface does not route to.
+var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
+	flipObjectLead: 1,
+	flipObjectDeal: 2,
+	crmcontracts.ActivityLinkEntityTypeProject: 3,
+	flipObjectPerson:       4,
+	flipObjectOrganization: 5,
+}
+
+// primaryLink picks the one record a task row points at.
+//
+// An activity may be filed under several, and the lane shows one row with one
+// destination. Choosing by a stated priority rather than by the order the store
+// happened to return them is what keeps the destination stable: the same task
+// must not lead to the company on one read and the lead on the next.
+//
+// The links this reads are already row-scope filtered by the activities read,
+// so a record the reader may not see never becomes a destination here.
+func primaryLink(row crmcontracts.Activity) (string, ids.UUID) {
+	if row.Links == nil {
+		return "", ids.UUID{}
+	}
+	best := 0
+	var bestType string
+	var bestID ids.UUID
+	for _, link := range *row.Links {
+		rank, routable := linkPriority[link.EntityType]
+		if !routable {
+			continue
+		}
+		if best == 0 || rank < best {
+			best = rank
+			bestType = string(link.EntityType)
+			bestID = ids.UUID(link.EntityId)
+		}
+	}
+	return bestType, bestID
 }
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -274,14 +320,56 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 		if row.Summary != nil {
 			summary = *row.Summary
 		}
-		out = append(out, attention.Receipt{
+		receipt := attention.Receipt{
 			ID:         ids.UUID(row.Id),
 			Kind:       row.Kind,
 			Summary:    summary,
 			OccurredAt: *row.DecidedAt,
-		})
+		}
+		// Both or neither: a type with no id names nothing, and an id with no
+		// type says where to look without saying at what.
+		if row.TargetEntityType != nil && row.TargetEntityId != nil {
+			receipt.TargetType = *row.TargetEntityType
+			receipt.TargetID = ids.UUID(*row.TargetEntityId)
+		}
+		out = append(out, receipt)
 	}
 	return out
+}
+
+// attentionFailedEffects reads the decisions this rep approved whose released
+// work then failed — the mark decide.go leaves on the approved row. The
+// service binds the acting user itself (FailedForDecider), so this lane can
+// only ever carry the reader's own decisions back to them.
+type attentionFailedEffects struct{ svc *approvals.Service }
+
+func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attention.FailedEffect, error) {
+	rows, _, err := f.svc.ListWire(ctx, approvals.ListInput{FailedForDecider: true, Limit: limit})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.FailedEffect, 0, len(rows))
+	for _, row := range rows {
+		if row.EffectFailedAt == nil || row.EffectFailure == nil {
+			// The SQL filter guarantees the pair; the re-check is what makes
+			// the derefs safe in this package, where that SQL is elsewhere.
+			continue
+		}
+		failed := attention.FailedEffect{
+			ID:       ids.UUID(row.Id),
+			Kind:     row.Kind,
+			Sentence: *row.EffectFailure,
+			FailedAt: *row.EffectFailedAt,
+		}
+		// Both or neither: a type with no id names nothing, and an id with no
+		// type says where to look without saying at what.
+		if row.TargetEntityType != nil && row.TargetEntityId != nil {
+			failed.TargetType = *row.TargetEntityType
+			failed.TargetID = ids.UUID(*row.TargetEntityId)
+		}
+		out = append(out, failed)
+	}
+	return out, nil
 }
 
 // attentionBriefing binds the briefing lane to the same engine entry point Home
@@ -292,24 +380,28 @@ type attentionBriefing struct {
 	now    attention.Clock
 }
 
-// Queue serves the acting rep's unanswered briefing entries for today.
+// Queue serves the acting rep's unanswered briefing entries for today, and
+// whether a run exists at all.
 //
-// No run for today reads as an EMPTY lane, not a refusal. LatestRun answers
-// ErrNotFound both when the night has not produced one and when a rep is new,
-// and neither is a permission problem — reporting them as a withheld lane
-// would tell the rep something was hidden from her when nothing was.
+// No run for today reads as an EMPTY lane with ran=false, not a refusal.
+// LatestRun answers ErrNotFound both when the night has not produced one and
+// when a rep is new, and neither is a permission problem — reporting them as
+// a withheld lane would tell the rep something was hidden from her when
+// nothing was. ran is what lets the feed tell that emptiness from a morning
+// the rep finished: a found run counts as ran even with zero unanswered
+// entries.
 //
 // Answered entries are dropped here rather than in the feed, because what the
 // states mean belongs to the brief. The engine already resolves an expired
 // snooze on this read, so an item whose set-aside has run out comes back
 // actionable without anything here knowing that rule either.
-func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, error) {
+func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, error) {
 	run, err := a.engine.LatestRun(ctx, a.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	entries := make([]attention.BriefEntry, 0, len(run.Items))
 	for _, item := range run.Items {
@@ -320,7 +412,7 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, e
 			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
 		})
 	}
-	return entries, nil
+	return entries, true, nil
 }
 
 // newAttentionHandlers assembles the surface for the API role.
@@ -343,51 +435,32 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionTasks{store: activities.NewStore(db)},
 		attentionReceipts{svc: svc},
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
-		attentionCommitments{store: people.NewStore(db)},
+		// Commitments is deliberately UNBOUND: the lane's production writer —
+		// the extraction task that reads promises out of captured
+		// conversations — does not exist yet (issue #849), so no real
+		// installation can put a row behind it, and a lane fed only by demo
+		// seeds would show every real customer an empty promise list dressed
+		// as a feature. A nil binding renders the lane ABSENT (the contract's
+		// honest "this feed does not do commitments"), and rebinding is the
+		// one-line attentionCommitments{store: people.NewStore(db)} when #849
+		// lands. The seam type stays compiled against the interface (the
+		// assertion beside it in attentionlanesseam.go), and the store read
+		// behind it keeps its own integration test — what is NOT tested is
+		// the seam wiring itself, because nothing wires it.
+		nil,
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
+		attentionFailedEffects{svc: svc},
+		// The label resolver: every card that names a record gets that
+		// record's display name under the reader's own grants, one gated get
+		// per distinct subject (attentionnames.go).
+		attentionNames{
+			people:     people.NewStore(db),
+			deals:      deals.NewStore(db, DealsInstallation()),
+			activities: activities.NewStore(db),
+			projects:   projects.NewStore(db),
+		},
 		now,
 	)
-}
-
-// The three faces a merge decision compares.
-//
-// Each answers the same two questions in that record's own terms: which one is
-// this, and which side carries more. `detail` is the field a reader actually
-// uses to tell two near-identical records apart — a company's domain, a
-// person's address — never an id.
-
-func organizationFace(row crmcontracts.Organization) attention.RecordFace {
-	face := attention.RecordFace{
-		Label:        row.DisplayName,
-		CreatedAt:    &row.CreatedAt,
-		RelatedCount: row.ContactCount,
-	}
-	if row.Domains != nil && len(*row.Domains) > 0 {
-		face.Detail = (*row.Domains)[0].Domain
-	}
-	return face
-}
-
-func personFace(row crmcontracts.Person) attention.RecordFace {
-	face := attention.RecordFace{Label: row.FullName, CreatedAt: &row.CreatedAt}
-	if row.Emails != nil && len(*row.Emails) > 0 {
-		face.Detail = string((*row.Emails)[0].Email)
-	}
-	return face
-}
-
-func leadFace(row crmcontracts.Lead) attention.RecordFace {
-	face := attention.RecordFace{CreatedAt: &row.CreatedAt}
-	if row.FullName != nil {
-		face.Label = *row.FullName
-	}
-	switch {
-	case row.Email != nil:
-		face.Detail = string(*row.Email)
-	case row.CompanyName != nil:
-		face.Detail = *row.CompanyName
-	}
-	return face
 }

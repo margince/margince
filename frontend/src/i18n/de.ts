@@ -172,6 +172,8 @@ export const de = {
   "day.lead.plannedOnly": "Nichts zu entscheiden — {count} für heute geplant.",
   "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.meetings": "{count} heute im Kalender.",
+  "day.lead.didNotRun":
+    "{count} freigegebene Aufgaben sind nicht gelaufen. Sieh sie dir zuerst an.",
   "day.lead.atRisk": "{count} werden still. Sonst wartet nichts auf dich.",
   "day.lead.decay":
     "Mit {count} hast du länger nicht gesprochen. Es wartet nichts auf dich.",
@@ -192,6 +194,8 @@ export const de = {
   "day.atRisk": "Wird still",
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
+  "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.didNotRun.empty": "Alles, was du freigegeben hast, ist auch gelaufen.",
   "day.decay": "Beziehungen, die einschlafen",
   "day.decay.empty": "Sie sind mit allen in Kontakt, mit denen Sie es waren.",
   "day.decay.quiet": "Seit {days} Tagen kein Austausch.",
@@ -1373,6 +1377,7 @@ export const de = {
   "approval.kind.site_lead": "Person von der Website aufnehmen",
   "approval.kind.capture_counterparty": "Person aus deiner Mail aufnehmen",
   "approval.kind.org_name_promotion": "Account umbenennen",
+  "approval.kind.vcard_create": "Kontakt aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus einem Transkript übernehmen",
@@ -1411,6 +1416,9 @@ export const de = {
   "approval.field.domain": "Domain",
   "approval.field.company": "Firma",
   "approval.field.title": "Position",
+  "approval.field.phone": "Telefon",
+  "approval.field.url": "Website",
+  "approval.field.address": "Adresse",
   "approval.field.published_email": "E-Mail auf der Seite",
   "approval.field.connection_name": "Auf LinkedIn",
   "approval.field.connection_company": "Arbeitet bei",

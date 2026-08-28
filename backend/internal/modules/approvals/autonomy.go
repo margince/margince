@@ -31,7 +31,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // countDecisionTx records one decision against the deciding rep's track record
@@ -106,4 +108,127 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 		return outcomeApprovedEdited
 	}
 	return outcomeApprovedClean
+}
+
+// AutoApplyKinds are the kinds a rep may put on 'auto'.
+//
+// A closed set, and deliberately not every kind. What may apply without asking
+// is what the product can put back: each of these writes fields on ONE record
+// of a type the restore path serves, so an apply the rep disagrees with is one
+// Undo away. Outbound sends and merges are absent for the opposite reason —
+// nothing reverses a message a customer has read, or a merge that has already
+// discarded the loser's link rows.
+//
+// It is a set here rather than a column on the policy row because it is a fact
+// about the KIND, not about one rep's history with it. A row naming a kind
+// outside this set is inert: SetAutonomyMode refuses to write it, so no reader
+// has to defend against one.
+var AutoApplyKinds = map[string]bool{
+	"close_date_correction": true,
+	"org_name_promotion":    true,
+	"lifecycle_change":      true,
+}
+
+// AutonomyMode is one rung of the ladder.
+type AutonomyMode string
+
+const (
+	// ModeManual asks every time. What every rep has until they choose.
+	ModeManual AutonomyMode = "manual"
+	// ModeAuto applies on sight, undoably.
+	ModeAuto AutonomyMode = "auto"
+)
+
+// AutoApplyMode reports whether the rep this call acts for has put this kind on
+// automatic.
+//
+// NO OBJECT GATE, and it needs none: a policy row is one person's answer about
+// their own queue, and this reads the row of the principal on the context. It
+// takes no user id, so there is no row a caller could ask for but not be —
+// which is a stronger bound than a grant, because a grant could be held over
+// somebody else. auth.Require has no object to check here in any case;
+// `approval` is not in the closed core set.
+//
+// The auto-applier calls it having already bound the OWNER as the acting
+// principal, so the policy it reads is the owner's own — the same row that rep
+// would see in their settings.
+//
+// Absence is 'manual', which is why a missing row is not an error: a rep who
+// has never decided this kind has no policy row, and "never chose" and "chose
+// to be asked" are the same answer. Reading them differently would make the
+// first decision of a kind behave unlike every one after it.
+//
+// The kind is checked against AutoApplyKinds here as well as on the write. A
+// set that shrinks — a kind that stops being reversible — must stop applying
+// for the reps who already said yes, and a reader trusting an old row would go
+// on applying it.
+func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode, error) {
+	if !AutoApplyKinds[kind] {
+		return ModeManual, nil
+	}
+	rep, ok := principal.Actor(ctx)
+	if !ok || rep.UserID.IsZero() {
+		return ModeManual, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	var mode string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT mode FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
+			rep.UserID, kind).Scan(&mode)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ModeManual, nil
+	}
+	if err != nil {
+		return ModeManual, fmt.Errorf("crmapprovals: reading the autonomy mode: %w", err)
+	}
+	return AutonomyMode(mode), nil
+}
+
+// SetAutoApply turns automatic application on or off for one rep and one kind.
+//
+// NO OBJECT GATE, for the same reason the read has none: it writes the row of
+// the principal on the context and takes no user id, so a rep cannot put a
+// colleague on automatic — there is no cross-user write for a grant to
+// authorize. `approval` is not a core RBAC object, so there is no grant to
+// check even if one were wanted.
+//
+// The row is upserted because a rep may choose before they have ever decided
+// this kind — turning a suggestion off is a reasonable first move, and it must
+// not depend on having earned a counter row first.
+//
+// A kind outside AutoApplyKinds has no setting to write, and says so with
+// ErrNotFound rather than storing the row. Storing it would record a preference
+// the product will not honour, and the next reader would have to decide whether
+// to trust it; refusing says so while the caller can still do something about
+// it. Not a new sentinel: the registry is extended alongside the error contract
+// it implements, never for one call site.
+func (s *Service) SetAutoApply(ctx context.Context, kind string, on bool) error {
+	if !AutoApplyKinds[kind] {
+		return fmt.Errorf("%q does not apply automatically, so it has no setting: %w",
+			kind, apperrors.ErrNotFound)
+	}
+	rep, ok := principal.Actor(ctx)
+	if !ok || rep.UserID.IsZero() {
+		return fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	mode := ModeManual
+	if on {
+		mode = ModeAuto
+	}
+	// veto_window stays NULL: the table's CHECK allows one only on 'veto', and
+	// neither rung this writes waits.
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`INSERT INTO approval_autonomy_policy (user_id, kind, mode)
+			 VALUES ($1, $2, $3)
+			 ON CONFLICT (user_id, kind) DO UPDATE SET mode = EXCLUDED.mode`,
+			rep.UserID, kind, string(mode))
+		if err != nil {
+			return fmt.Errorf("crmapprovals: setting the autonomy mode: %w", err)
+		}
+		return nil
+	})
 }

@@ -59,11 +59,16 @@ func gatePageEntities(parsed pageFactsReply, page crawlPage, idx snippetIndex, d
 			// legal identity that was never theirs.
 			entity.RegisteredAddress = groundedDetail(blockNorm, e.A)
 			entity.RegisterNumber = groundedDetail(blockNorm, e.R)
+			entity.VatNumber = groundedDetail(blockNorm, e.V)
 			// A detail the model stated but the page does not print is the
 			// no-guess gate working; report it rather than dropping it in
-			// silence, so a systematically-lost field is visible.
+			// silence, so a systematically-lost field is visible. Each number
+			// is reported under the field it would have filled, so a lane
+			// losing register entries is not read as losing VAT IDs.
 			for field, claimed := range map[string]string{
-				fieldRegisteredAddress: e.A, fieldRegisterVat: e.R,
+				fieldRegisteredAddress: e.A,
+				fieldRegisterNumber:    e.R,
+				fieldRegisterVat:       e.V,
 			} {
 				if strings.TrimSpace(claimed) != "" && groundedDetail(blockNorm, claimed) == "" {
 					drop(laneLegal, field, claimed, dropValueNotInSnippet)

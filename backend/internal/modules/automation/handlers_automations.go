@@ -313,18 +313,25 @@ func runTargetRef(rec AutomationRunRecord) string {
 }
 
 // runActionKinds lists the distinct action kinds of a run trace, in
-// trace order.
+// trace order. A deduplicated create renders as its own entry: the trace
+// records it, but a sibling instance's firing performed the write, and
+// listing it as a plain applied kind would report a write this run never
+// made.
 func runActionKinds(trace json.RawMessage) []string {
 	var actions []workflow.Action
 	if err := json.Unmarshal(trace, &actions); err != nil {
 		return nil
 	}
 	var kinds []string
-	seen := map[workflow.ActionKind]bool{}
+	seen := map[string]bool{}
 	for _, a := range actions {
-		if !seen[a.Kind] {
-			seen[a.Kind] = true
-			kinds = append(kinds, string(a.Kind))
+		kind := string(a.Kind)
+		if a.Deduplicated {
+			kind += " (deduplicated)"
+		}
+		if !seen[kind] {
+			seen[kind] = true
+			kinds = append(kinds, kind)
 		}
 	}
 	return kinds

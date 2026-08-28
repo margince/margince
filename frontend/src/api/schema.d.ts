@@ -19937,8 +19937,10 @@ export interface components {
             name: string;
             /** @description Its registered address as printed; absent when the page states none for this entity. */
             registered_address?: string;
-            /** @description Its registration, VAT, UID or tax number as printed; absent when the page states none for this entity. */
+            /** @description Its commercial-register entry as printed (HRB/HRA or the local equivalent); absent when the page states none for this entity. A dossier read before the two numbers were told apart may hold a VAT ID here. */
             register_number?: string;
+            /** @description Its VAT, UID or tax number as printed; absent when the page states none for this entity. */
+            vat_number?: string;
             evidence_snippet?: string;
             /** Format: uri */
             source_url: string;
@@ -20437,6 +20439,18 @@ export interface components {
             decided_by?: string | null;
             /** Format: date-time */
             decided_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the work an APPROVED decision released failed to run. Absent on every
+             *     row whose effect ran — an approved row carrying this is a decision a person
+             *     made whose promised work never happened.
+             */
+            effect_failed_at?: string | null;
+            /**
+             * @description The sentence a reader is shown about that failure — written for them, never
+             *     copied from the executor's error. Present exactly when `effect_failed_at` is.
+             */
+            effect_failure?: string | null;
             /** Format: date-time */
             created_at: string;
         };
@@ -22613,6 +22627,18 @@ export interface components {
              *     "nothing was worth flagging" behind one number.
              */
             this_morning: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Why `this_morning` holds what it holds: the night produced no run for this
+             *     reader; a run exists and nothing in it still needs an answer (every item
+             *     answered — or the run ranked nothing worth the morning, which is the same
+             *     message to a reader); or items are waiting (and the lane carries them).
+             *     Named because the lane's emptiness is ambiguous on
+             *     its own — "the night found nothing" and "you finished the morning" render
+             *     identically as zero rows, and only one of them has earned a tick. Absent
+             *     when the lane itself was withheld (`lanes_omitted` names it).
+             * @enum {string}
+             */
+            this_morning_state?: "no_run_today" | "all_answered" | "items_waiting";
             /** @description Decisions only a person can make, highest-stakes first. */
             needs_you: components["schemas"]["AttentionItem"][];
             /** @description Work already agreed: overdue first, then due today. */
@@ -22672,8 +22698,23 @@ export interface components {
             relationship_decay?: components["schemas"]["AttentionItem"][];
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Decisions THIS reader approved whose released work then failed, reading
+             *     the queue newest-staged first. The row is not pending (it was decided) and not a receipt
+             *     (a person decided it), so no other lane can carry it; without this one the
+             *     person who pressed Accept is the last to learn nothing happened.
+             *
+             *     Each card carries the server's own sentence about what did not run, and
+             *     `open` when the decision named a record. Re-driving the failed work is a
+             *     separate decision the product has not made yet; this lane only ends the
+             *     silence.
+             *
+             *     Absent — not empty — on an installation whose feed does not read approvals'
+             *     failure marks.
+             */
+            did_not_run?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22696,6 +22737,8 @@ export interface components {
             commitments?: number;
             /** @description How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in. */
             relationship_decay?: number;
+            /** @description How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report. */
+            did_not_run?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22710,7 +22753,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -22729,6 +22772,7 @@ export interface components {
             confidence?: number;
             subject?: components["schemas"]["AttentionSubject"];
             pair?: components["schemas"]["AttentionPair"];
+            deal?: components["schemas"]["AttentionDealFacts"];
             /**
              * Format: date-time
              * @description When this is due (tasks), or when it lapses (approvals).
@@ -22774,6 +22818,25 @@ export interface components {
              *     database rather than their own records.
              */
             evidence: components["schemas"]["AttentionPairEvidence"][];
+        };
+        /**
+         * @description The deal behind a `deal_at_risk` item: the facts its card states, so a client
+         *     draws value and ownership without a second read per row. Sent only for
+         *     `source: deal_at_risk`. The stage travels as its id rather than a label — the
+         *     client already holds the pipelines vocabulary and writes the label in the
+         *     reader's own language; a label composed server-side would not be.
+         */
+        AttentionDealFacts: {
+            /**
+             * Format: uuid
+             * @description The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+             */
+            stage_id?: string | null;
+            /** Format: int64 */
+            amount_minor?: number | null;
+            currency?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {

@@ -1232,6 +1232,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 const (
 	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
+	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
 	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
@@ -1247,6 +1248,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 		return true
 	case AttentionLanesOmittedCommitments:
 		return true
+	case AttentionLanesOmittedDidNotRun:
+		return true
 	case AttentionLanesOmittedDoneForYou:
 		return true
 	case AttentionLanesOmittedMeetings:
@@ -1258,6 +1261,27 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedRelationshipDecay:
 		return true
 	case AttentionLanesOmittedThisMorning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttentionThisMorningState.
+const (
+	AllAnswered  AttentionThisMorningState = "all_answered"
+	ItemsWaiting AttentionThisMorningState = "items_waiting"
+	NoRunToday   AttentionThisMorningState = "no_run_today"
+)
+
+// Valid indicates whether the value is a known member of the AttentionThisMorningState enum.
+func (e AttentionThisMorningState) Valid() bool {
+	switch e {
+	case AllAnswered:
+		return true
+	case ItemsWaiting:
+		return true
+	case NoRunToday:
 		return true
 	default:
 		return false
@@ -1307,6 +1331,7 @@ const (
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
 	AttentionItemSourceTask              AttentionItemSource = "task"
@@ -1324,6 +1349,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceFailedApproval:
 		return true
 	case AttentionItemSourceMeeting:
 		return true
@@ -13281,6 +13308,15 @@ type Approval struct {
 	// DiffHash Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.
 	DiffHash *string `json:"diff_hash,omitempty"`
 
+	// EffectFailedAt When the work an APPROVED decision released failed to run. Absent on every
+	// row whose effect ran — an approved row carrying this is a decision a person
+	// made whose promised work never happened.
+	EffectFailedAt *time.Time `json:"effect_failed_at,omitempty"`
+
+	// EffectFailure The sentence a reader is shown about that failure — written for them, never
+	// copied from the executor's error. Present exactly when `effect_failed_at` is.
+	EffectFailure *string `json:"effect_failure,omitempty"`
+
 	// Evidence Per-claim evidence (snippet + source id) backing the proposal.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
 
@@ -13586,6 +13622,20 @@ type Attention struct {
 	// lane shows a bounded slice of it.
 	Counts AttentionCounts `json:"counts"`
 
+	// DidNotRun Decisions THIS reader approved whose released work then failed, reading
+	// the queue newest-staged first. The row is not pending (it was decided) and not a receipt
+	// (a person decided it), so no other lane can carry it; without this one the
+	// person who pressed Accept is the last to learn nothing happened.
+	//
+	// Each card carries the server's own sentence about what did not run, and
+	// `open` when the decision named a record. Re-driving the failed work is a
+	// separate decision the product has not made yet; this lane only ends the
+	// silence.
+	//
+	// Absent — not empty — on an installation whose feed does not read approvals'
+	// failure marks.
+	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
+
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
@@ -13638,10 +13688,30 @@ type Attention struct {
 	// it is optional. Merging them would put "nothing is waiting on you" and
 	// "nothing was worth flagging" behind one number.
 	ThisMorning []AttentionItem `json:"this_morning"`
+
+	// ThisMorningState Why `this_morning` holds what it holds: the night produced no run for this
+	// reader; a run exists and nothing in it still needs an answer (every item
+	// answered — or the run ranked nothing worth the morning, which is the same
+	// message to a reader); or items are waiting (and the lane carries them).
+	// Named because the lane's emptiness is ambiguous on
+	// its own — "the night found nothing" and "you finished the morning" render
+	// identically as zero rows, and only one of them has earned a tick. Absent
+	// when the lane itself was withheld (`lanes_omitted` names it).
+	ThisMorningState *AttentionThisMorningState `json:"this_morning_state,omitempty"`
 }
 
 // AttentionLanesOmitted defines model for Attention.LanesOmitted.
 type AttentionLanesOmitted string
+
+// AttentionThisMorningState Why `this_morning` holds what it holds: the night produced no run for this
+// reader; a run exists and nothing in it still needs an answer (every item
+// answered — or the run ranked nothing worth the morning, which is the same
+// message to a reader); or items are waiting (and the lane carries them).
+// Named because the lane's emptiness is ambiguous on
+// its own — "the night found nothing" and "you finished the morning" render
+// identically as zero rows, and only one of them has earned a tick. Absent
+// when the lane itself was withheld (`lanes_omitted` names it).
+type AttentionThisMorningState string
 
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
@@ -13652,6 +13722,9 @@ type AttentionCounts struct {
 
 	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
+
+	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
+	DidNotRun *int `json:"did_not_run,omitempty"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
@@ -13666,6 +13739,20 @@ type AttentionCounts struct {
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`
+}
+
+// AttentionDealFacts The deal behind a `deal_at_risk` item: the facts its card states, so a client
+// draws value and ownership without a second read per row. Sent only for
+// `source: deal_at_risk`. The stage travels as its id rather than a label — the
+// client already holds the pipelines vocabulary and writes the label in the
+// reader's own language; a label composed server-side would not be.
+type AttentionDealFacts struct {
+	AmountMinor *int64              `json:"amount_minor,omitempty"`
+	Currency    *string             `json:"currency,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -13686,6 +13773,13 @@ type AttentionItem struct {
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
+	// draws value and ownership without a second read per row. Sent only for
+	// `source: deal_at_risk`. The stage travels as its id rather than a label — the
+	// client already holds the pipelines vocabulary and writes the label in the
+	// reader's own language; a label composed server-side would not be.
+	Deal *AttentionDealFacts `json:"deal,omitempty"`
 
 	// Detail One supporting line: what changed, or what the evidence said.
 	Detail *string `json:"detail,omitempty"`
@@ -15167,12 +15261,15 @@ type CompanySiteReadLegalEntity struct {
 	// Name The entity's registered name exactly as the legal notice prints it.
 	Name string `json:"name"`
 
-	// RegisterNumber Its registration, VAT, UID or tax number as printed; absent when the page states none for this entity.
+	// RegisterNumber Its commercial-register entry as printed (HRB/HRA or the local equivalent); absent when the page states none for this entity. A dossier read before the two numbers were told apart may hold a VAT ID here.
 	RegisterNumber *string `json:"register_number,omitempty"`
 
 	// RegisteredAddress Its registered address as printed; absent when the page states none for this entity.
 	RegisteredAddress *string `json:"registered_address,omitempty"`
 	SourceUrl         string  `json:"source_url"`
+
+	// VatNumber Its VAT, UID or tax number as printed; absent when the page states none for this entity.
+	VatNumber *string `json:"vat_number,omitempty"`
 }
 
 // CompanySiteReadMessageReply defines model for CompanySiteReadMessageReply.

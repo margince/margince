@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  ShieldAlert,
   Sparkles,
   Sunrise,
   TrendingDown,
@@ -17,6 +18,7 @@ import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { itemDetail, itemTitle } from "./attentionitemcopy";
+import { subjectHref } from "./attentionsubject";
 import { BriefQueueItem } from "./briefqueue";
 import {
   useBriefItemMark,
@@ -111,6 +113,12 @@ function quietLead(
 ): string {
   // A drifting deal is money leaving on its own — nobody is waiting on the
   // reader for it, which is exactly why it needs saying.
+  // Above the drifting deals, because it is worse news: a rep already DECIDED
+  // these, was told they worked, and they did not.
+  const failed = day.counts.did_not_run ?? 0;
+  if (failed > 0) {
+    return t("day.lead.didNotRun", { count: formatNumber(failed, locale) });
+  }
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
@@ -147,6 +155,7 @@ function quietLead(
     day.counts.commitments === undefined ||
     day.counts.at_risk === undefined ||
     day.counts.relationship_decay === undefined ||
+    day.counts.did_not_run === undefined ||
     day.counts.meetings === undefined
   ) {
     return t("day.lead.clearOfWhatWasRead");
@@ -158,6 +167,13 @@ function quietLead(
 // ran. Neither carries a decision: a task is completed or pushed, and a receipt
 // is read. The lane that asks a person something does not use this row at all,
 // because a decision does not fit on one.
+//
+// A row reaches the record it is about in one of two ways, and which one is
+// decided by whether the row carries verbs. A row with no verbs is a single
+// press target filling the row, which is what `interactive` is for. A row with
+// Done and Tomorrow on it is not: those draw their own hover, and a fill behind
+// them would claim a hit area the row does not have — so there the NAME is the
+// link and the verbs keep their own targets.
 function AttentionRow({
   item,
   onComplete,
@@ -173,38 +189,69 @@ function AttentionRow({
   const { locale } = useLocale();
   const zone = viewerZone();
   const detail = itemDetail(item, t, locale, zone);
-  return (
-    <PanelRow className="today-row">
-      <div className="today-row-text">
-        <p className="t-body today-row-title">{itemTitle(item, t)}</p>
-        {detail && <p className="t-caption today-row-detail">{detail}</p>}
-      </div>
-      <div className="today-row-verbs">
-        {item.overdue && <Badge tone="danger">{t("day.overdue")}</Badge>}
-        {item.actions.includes("complete") && (
-          <>
-            {/* Not now, rather than not at all: a task pushed a day is still
-                agreed work, and a queue whose only verbs are "done" and
-                nothing teaches a reader to leave it open forever. */}
-            {item.actions.includes("snooze") && item.due_at && (
-              <Button
-                small
-                onClick={() => onSnooze(item.id, item.due_at ?? "")}
-                disabled={completing}
-              >
-                {t("day.snooze")}
-              </Button>
-            )}
+  const href = subjectHref(item);
+  const actionable = item.actions.includes("complete");
+  const title = itemTitle(item, t);
+  // The name is its own link only on a row that ALREADY carries verbs. On a
+  // verb-less row the whole row is the link, and a second anchor inside it
+  // would be a target within a target.
+  const linkedTitle = href && actionable;
+  const text = (
+    <div className="today-row-text">
+      <p className="t-body today-row-title">
+        {linkedTitle ? (
+          <a className="today-row-link" href={href}>
+            {title}
+          </a>
+        ) : (
+          title
+        )}
+      </p>
+      {detail && <p className="t-caption today-row-detail">{detail}</p>}
+    </div>
+  );
+  const verbs = (
+    <div className="today-row-verbs">
+      {item.overdue && <Badge tone="danger">{t("day.overdue")}</Badge>}
+      {actionable && (
+        <>
+          {/* Not now, rather than not at all: a task pushed a day is still
+              agreed work, and a queue whose only verbs are "done" and
+              nothing teaches a reader to leave it open forever. */}
+          {item.actions.includes("snooze") && item.due_at && (
             <Button
               small
-              onClick={() => onComplete(item.id)}
+              onClick={() => onSnooze(item.id, item.due_at ?? "")}
               disabled={completing}
             >
-              {t("day.complete")}
+              {t("day.snooze")}
             </Button>
-          </>
-        )}
-      </div>
+          )}
+          <Button
+            small
+            onClick={() => onComplete(item.id)}
+            disabled={completing}
+          >
+            {t("day.complete")}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+  if (href && !actionable) {
+    return (
+      <PanelRow interactive>
+        <a className="today-row today-row-whole" href={href}>
+          {text}
+          {verbs}
+        </a>
+      </PanelRow>
+    );
+  }
+  return (
+    <PanelRow className="today-row">
+      {text}
+      {verbs}
     </PanelRow>
   );
 }
@@ -225,6 +272,7 @@ function OptionalLane({
   omitted,
   lane,
   total,
+  tone,
   onComplete,
   onSnooze,
   completing,
@@ -234,6 +282,7 @@ function OptionalLane({
   omitted: readonly AttentionLane[];
   lane: AttentionLane;
   total: number;
+  tone?: "accent" | "warn";
   onComplete: (id: string) => void;
   onSnooze: (id: string, dueAt: string) => void;
   completing: boolean;
@@ -248,6 +297,7 @@ function OptionalLane({
       items={items ?? []}
       withheld={withheld}
       total={total}
+      tone={tone}
       onComplete={onComplete}
       onSnooze={onSnooze}
       completing={completing}
@@ -275,7 +325,10 @@ function Lane({
   // stays finishable, and a badge counting the page would tell a reader with
   // forty decisions that they have nine.
   total: number;
-  tone?: "accent";
+  // `warn` is the lead whose FINDING is the bad news — a deal nobody has
+  // touched in months. It is not a second accent: the decisions lane is the
+  // one panel asking for a MOVE, and this one reports something going wrong.
+  tone?: "accent" | "warn";
   onComplete: (id: string) => void;
   onSnooze: (id: string, dueAt: string) => void;
   completing: boolean;
@@ -526,7 +579,14 @@ function TodayLanes({
   const commitments = day.commitments;
   // Same absent-versus-empty rule: no lane at all when nothing reads deals.
   const atRisk = day.at_risk;
+  // Decisions this reader approved whose released work then failed. Warn-toned
+  // whenever it holds anything: every row is a promise the product broke.
+  const failed = day.did_not_run;
+  const failedTone = (failed ?? []).length > 0 ? "warn" : undefined;
   const lapsed = day.relationship_decay;
+  // Tinted only when the lane HAS a finding: a warn-toned panel drawn over "no
+  // deal is drifting" would dress good news as bad.
+  const driftingTone = (atRisk ?? []).length > 0 ? "warn" : undefined;
   const meetings = day.meetings;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
@@ -622,6 +682,23 @@ function TodayLanes({
         omitted={omitted}
         lane="at_risk"
         total={day.counts.at_risk ?? 0}
+        tone={driftingTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={failed}
+        shape={{
+          title: t("day.didNotRun"),
+          empty: t("day.didNotRun.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: ShieldAlert,
+        }}
+        omitted={omitted}
+        lane="did_not_run"
+        total={day.counts.did_not_run ?? 0}
+        tone={failedTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

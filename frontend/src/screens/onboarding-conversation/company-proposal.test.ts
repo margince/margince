@@ -33,13 +33,13 @@ describe("draftWithLegalEntity", () => {
     expect(next.values.registered_address).toBe(
       "Level 12, Bitexco Tower, 2 Hai Trieu, District 1, Ho Chi Minh City",
     );
-    expect(next.values.register_vat).toBe("0318 447 291");
+    expect(next.values.register_number).toBe("0318 447 291");
     // Grounded, not edited: the review must be able to tell this came from
     // the site's own legal notice, the same as any other scraped field.
     for (const field of [
       "legal_name",
       "registered_address",
-      "register_vat",
+      "register_number",
     ] as const) {
       expect(next.grounded[field]).toMatchObject({
         source_kind: "url",
@@ -58,7 +58,7 @@ describe("draftWithLegalEntity", () => {
     for (const field of [
       "legal_name",
       "registered_address",
-      "register_vat",
+      "register_number",
     ] as const) {
       expect(next.grounded[field]?.confidence).toBeUndefined();
     }
@@ -127,7 +127,7 @@ describe("draftWithLegalEntity", () => {
     expect(next.grounded.registered_address).toBeUndefined();
     expect(next.edited.has("registered_address")).toBe(true);
     // The fields the human never touched still fill normally.
-    expect(next.values.register_vat).toBe("0318 447 291");
+    expect(next.values.register_number).toBe("0318 447 291");
   });
 });
 
@@ -228,7 +228,7 @@ describe("draftWithSoleLegalEntity", () => {
   it("fills the blanks the profile lane left, from the only company on the site", () => {
     const next = draftWithSoleLegalEntity(EMPTY_DRAFT, [gradionEntity]);
     expect(next.values.legal_name).toBe("Gradion Co., Ltd.");
-    expect(next.values.register_vat).toBe("0318 447 291");
+    expect(next.values.register_number).toBe("0318 447 291");
     expect(next.grounded.legal_name).toMatchObject({
       source_url: gradionEntity.source_url,
       evidence_snippet: gradionEntity.evidence_snippet,
@@ -279,10 +279,10 @@ describe("draftWithSoleLegalEntity", () => {
 
   it("leaves an emptied address and registration number alone too", () => {
     let cleared = changeDraftField(EMPTY_DRAFT, "registered_address", "");
-    cleared = changeDraftField(cleared, "register_vat", "");
+    cleared = changeDraftField(cleared, "register_number", "");
     const next = draftWithSoleLegalEntity(cleared, [gradionEntity]);
     expect(next.values.registered_address).toBe("");
-    expect(next.values.register_vat).toBe("");
+    expect(next.values.register_number).toBe("");
     // The one field nobody touched still fills from the read.
     expect(next.values.legal_name).toBe("Gradion Co., Ltd.");
   });
@@ -293,7 +293,7 @@ describe("draftWithSoleLegalEntity", () => {
     expect(next.values.registered_address).toBe(
       gradionEntity.registered_address,
     );
-    expect(next.values.register_vat).toBe("0318 447 291");
+    expect(next.values.register_number).toBe("0318 447 291");
   });
 });
 

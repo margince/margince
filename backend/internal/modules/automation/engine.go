@@ -145,7 +145,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 	// Workflows are deterministic system automations; their writes are
 	// attributed to the system actor and grouped per trigger event.
 	runCtx := principal.WithWorkspaceID(ctx, ws.UUID)
-	runCtx = principal.WithActor(runCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
+	runCtx = principal.WithActor(runCtx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
 	runCtx = principal.WithCorrelationID(runCtx, ids.NewV7())
 	runCtx = principal.WithCausationEvent(runCtx, env.EventID)
 
@@ -245,6 +245,26 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 // cannot drift into three independent spellings of the same fact.
 const systemSource = "system"
 
+// systemActor is the principal id every workflow write is attributed to, and
+// it is ONE id for both entries into runOne.
+//
+// captured_by is written from the acting principal's id and never from a
+// request body, which is what makes it the unforgeable half of "the system
+// wrote this row". Two selectors depend on that half being one value: the
+// last-touch scan excludes the engine's own reminders from what counts as
+// genuine engagement, and the follow-up resolver finds the open tasks the
+// engine minted so it can close them.
+//
+// The time-scan used to act as "system:time-scan". Nothing read that spelling
+// — it named which entry had fired, which the run row already records — and
+// both selectors looked for the other one, so every reminder the clock minted
+// counted as a touch on the record it was reminding about. One pass then made
+// the record look freshly worked, and it was never reminded about again; the
+// task it left open was never closed either.
+//
+// Held by TestTheEngineActsUnderTheIdItsOwnSelectorsLookFor.
+const systemActor = "system"
+
 // ApplyActions is the shared executor handlers delegate Apply to: each
 // typed action runs through the SAME set of seams every surface uses
 // (ex, seams.go). The closed switch IS the anti-builder guard — an
@@ -255,7 +275,7 @@ const systemSource = "system"
 func ApplyActions(ctx context.Context, ex Executors, effect workflow.Effect) ([]workflow.Action, error) {
 	var applied []workflow.Action
 	for _, action := range effect.Actions {
-		recorded, staged, err := applyOne(ctx, ex, action)
+		recorded, staged, err := applyOne(ctx, ex, effect, action)
 		if err != nil {
 			return applied, err
 		}
@@ -287,10 +307,10 @@ func ApplyActions(ctx context.Context, ex Executors, effect workflow.Effect) ([]
 // returns it unchanged). The closed switch IS the anti-builder guard: a
 // kind the seams do not know is a programming error, not a plugin point. A
 // non-nil middle return is a 🟡 staging that short-circuits the batch.
-func applyOne(ctx context.Context, ex Executors, action workflow.Action) (workflow.Action, *workflow.StagedApprovalError, error) {
+func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action workflow.Action) (workflow.Action, *workflow.StagedApprovalError, error) {
 	switch action.Kind {
 	case workflow.ActionCreateTask, workflow.ActionCreateRecord:
-		return action, nil, applyCreate(ctx, ex.Provider, action)
+		return applyCreate(ctx, ex, eff, action)
 	case workflow.ActionUpdateRecord:
 		return action, nil, applyUpdate(ctx, ex.Provider, action)
 	case workflow.ActionAssignOwner:
@@ -348,19 +368,6 @@ func applyOne(ctx context.Context, ex Executors, action workflow.Action) (workfl
 	default:
 		return action, nil, fmt.Errorf("crmagents: unknown action kind %q", action.Kind)
 	}
-}
-
-func applyCreate(ctx context.Context, provider datasource.SystemOfRecordProvider, action workflow.Action) error {
-	entity := action.Target.Type
-	if action.Kind == workflow.ActionCreateTask {
-		entity = datasource.EntityActivity
-	}
-	_, err := provider.Create(ctx, datasource.CreateInput{
-		EntityType: entity,
-		Fields:     action.Args,
-		Source:     systemSource,
-	})
-	return err
 }
 
 func applyUpdate(ctx context.Context, provider datasource.SystemOfRecordProvider, action workflow.Action) error {

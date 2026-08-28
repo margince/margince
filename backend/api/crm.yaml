@@ -27296,7 +27296,8 @@ components:
       properties:
         name: { type: string, description: "The entity's registered name exactly as the legal notice prints it." }
         registered_address: { type: string, description: "Its registered address as printed; absent when the page states none for this entity." }
-        register_number: { type: string, description: "Its registration, VAT, UID or tax number as printed; absent when the page states none for this entity." }
+        register_number: { type: string, description: "Its commercial-register entry as printed (HRB/HRA or the local equivalent); absent when the page states none for this entity. A dossier read before the two numbers were told apart may hold a VAT ID here." }
+        vat_number: { type: string, description: "Its VAT, UID or tax number as printed; absent when the page states none for this entity." }
         evidence_snippet: { type: string }
         source_url: { type: string, format: uri }
 
@@ -27884,6 +27885,18 @@ components:
         approval_token: { type: [string, 'null'], description: 'Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream 🟡 operation it is bound to.' }
         decided_by: { type: [string, 'null'], format: uuid }
         decided_at: { type: [string, 'null'], format: date-time }
+        effect_failed_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the work an APPROVED decision released failed to run. Absent on every
+            row whose effect ran — an approved row carrying this is a decision a person
+            made whose promised work never happened.
+        effect_failure:
+          type: [string, 'null']
+          description: |
+            The sentence a reader is shown about that failure — written for them, never
+            copied from the executor's error. Present exactly when `effect_failed_at` is.
         created_at: { type: string, format: date-time }
 
     ApproveRequest:
@@ -30051,6 +30064,18 @@ components:
             proceeds; a briefing item is a suggestion about where to start, and answering
             it is optional. Merging them would put "nothing is waiting on you" and
             "nothing was worth flagging" behind one number.
+        this_morning_state:
+          type: string
+          enum: [no_run_today, all_answered, items_waiting]
+          description: |
+            Why `this_morning` holds what it holds: the night produced no run for this
+            reader; a run exists and nothing in it still needs an answer (every item
+            answered — or the run ranked nothing worth the morning, which is the same
+            message to a reader); or items are waiting (and the lane carries them).
+            Named because the lane's emptiness is ambiguous on
+            its own — "the night found nothing" and "you finished the morning" render
+            identically as zero rows, and only one of them has earned a tick. Absent
+            when the lane itself was withheld (`lanes_omitted` names it).
         needs_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -30120,9 +30145,25 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
+        did_not_run:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Decisions THIS reader approved whose released work then failed, reading
+            the queue newest-staged first. The row is not pending (it was decided) and not a receipt
+            (a person decided it), so no other lane can carry it; without this one the
+            person who pressed Accept is the last to learn nothing happened.
+
+            Each card carries the server's own sentence about what did not run, and
+            `open` when the decision named a record. Re-driving the failed work is a
+            separate decision the product has not made yet; this lane only ends the
+            silence.
+
+            Absent — not empty — on an installation whose feed does not read approvals'
+            failure marks.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30164,6 +30205,12 @@ components:
             How many lapsed relationships this lane is CARRYING — the bounded page, as the
             other lanes report. A rep past the bound sees the longest silences, which is the
             order the lane is in.
+        did_not_run:
+          type: integer
+          minimum: 0
+          description: >-
+            How many failed decisions this lane is CARRYING — the bounded page, as the
+            other lanes report.
 
 
     AttentionItem:
@@ -30178,7 +30225,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -30200,6 +30247,8 @@ components:
           $ref: '#/components/schemas/AttentionSubject'
         pair:
           $ref: '#/components/schemas/AttentionPair'
+        deal:
+          $ref: '#/components/schemas/AttentionDealFacts'
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
@@ -30240,6 +30289,20 @@ components:
             print: a reader asked to compare `full_name` is being shown the
             database rather than their own records.
           items: { $ref: '#/components/schemas/AttentionPairEvidence' }
+    AttentionDealFacts:
+      type: object
+      description: |
+        The deal behind a `deal_at_risk` item: the facts its card states, so a client
+        draws value and ownership without a second read per row. Sent only for
+        `source: deal_at_risk`. The stage travels as its id rather than a label — the
+        client already holds the pipelines vocabulary and writes the label in the
+        reader's own language; a label composed server-side would not be.
+      properties:
+        stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent." }
+        amount_minor: { type: [integer, 'null'], format: int64 }
+        currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        owner_id: { type: [string, 'null'], format: uuid }
+
     AttentionPairEvidence:
       type: object
       description: 'One field the detector compared across the two records.'

@@ -52,6 +52,18 @@ type Connector struct {
 	owner string // used ONLY by Normalize (the test-guarded pure mapping); never set by Sync
 	// now anchors the initial-sync window; a field so tests pin the clock.
 	now func() time.Time
+	// bounces records the delivery reports this mailbox receives against the
+	// outbound mail they name. Nil keeps the old behaviour: the report is
+	// dropped with the rest of the delivery-system mail.
+	bounces connector.BounceSink
+}
+
+// WithBounceSink returns a copy that records delivery reports instead of
+// only dropping them.
+func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
+	copied := *c
+	copied.bounces = sink
+	return &copied
 }
 
 // New returns a Graph connector over the given OAuth + API surfaces.
@@ -226,7 +238,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		}
 		// The incremental delta reads the inbox folder only, so nothing it
 		// yields is mail the owner sent.
-		if _, err := captureOne(ctx, raw, sink, owner, false); err != nil {
+		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, false); err != nil {
 			return nil, err
 		}
 	}
@@ -259,13 +271,13 @@ func (c *Connector) selectMessages(ctx context.Context, access, start string) ([
 // a no-op; only a real Sink write fault returns a non-nil error (which stops
 // the pull). It is a package function (no receiver) so a pull holds no shared
 // state.
-func captureOne(ctx context.Context, raw []byte, sink connector.Sink, owner string, sentByOwner bool) (captured bool, err error) {
+func captureOne(ctx context.Context, raw []byte, sink connector.Sink, bounces connector.BounceSink, owner string, sentByOwner bool) (captured bool, err error) {
 	msg, err := mailmap.Parse(raw, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the Gmail connector)
 	}
 	if _, drop := msg.SkipReason(); drop {
-		return false, nil
+		return false, mailmap.RecordIfBounce(ctx, raw, bounces)
 	}
 	msg = msg.AttestSentByOwner(sentByOwner)
 	if _, err := sink.Upsert(ctx, msg.ToRecord(connectorName, raw)); err != nil {
