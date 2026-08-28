@@ -497,15 +497,23 @@ func TestOrganizationComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord
 		t.Errorf("open_deal_count = %d, want 2 — a deal that cannot be priced is still a deal", count)
 	}
 
-	// A total covering one of two deals is not a total. The field reports
-	// awaiting_fx rather than the ordinary deal's amount on its own, which
-	// would be a confident figure that is quietly short.
+	// A total covering one of two deals is not a total. The field floors, and
+	// it floors to PARTIAL_PIPELINE rather than awaiting_fx: one deal was
+	// priced, so this is a short sum and not an absent one, and the two reasons
+	// are what tells a reader which. Asserted rather than left to Computable,
+	// because "some deals could not be priced" and "none could" are different
+	// sentences on the page.
 	open0 := computedFieldByKey(*org.ComputedFields, "open_pipeline")
 	if open0.Computable {
 		t.Errorf("open_pipeline reads computable with one of two deals priced: %+v — a short total is "+
 			"worse than no total", open0)
 	}
+	if open0.Reason == nil || *open0.Reason != "partial_pipeline" {
+		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\" — one deal reached the sum and "+
+			"one could not be represented, which is a short figure rather than no figure", open0.Reason)
+	}
 	if open0.ValueMinor != nil {
-		t.Errorf("open_pipeline.value_minor = %v, want absent", open0.ValueMinor)
+		t.Errorf("open_pipeline.value_minor = %v, want absent — a short sum is not published as a total",
+			open0.ValueMinor)
 	}
 }
