@@ -32,6 +32,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -292,6 +293,10 @@ func signingPayloadFormat(t *testing.T) string {
 				return true
 			}
 			if lit, ok := call.Args[0].(*ast.BasicLit); ok {
+				// The SOURCE spelling, deliberately. The screen's side of this
+				// comparison is read out of .tsx text, where the separator really is a
+				// backslash and an `n`, so decoding this side would compare a newline
+				// against two characters and report the two formats as disagreeing.
 				format = strings.Trim(lit.Value, "\"")
 			}
 			return false
@@ -368,7 +373,7 @@ func headerConstantValues(t *testing.T) map[string]string {
 			if !ok {
 				continue
 			}
-			values[ident.Name] = strings.Trim(lit.Value, `"`)
+			values[ident.Name] = gatekit.TextOf(lit)
 		}
 		return true
 	})

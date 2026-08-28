@@ -53,7 +53,9 @@ const sqlLiteralReaderFloor = 20
 
 // rawReaderWaivers ratifies the files where the SOURCE text is what is meant.
 // Each is checked, and AssertAllMatched reports one that has gone stale.
-var rawReaderWaivers = gatekit.Waive(map[string]string{})
+var rawReaderWaivers = gatekit.Waive(map[string]string{
+	"gates/inboundsigningrecipe_test.go": "compares a Go format against one read out of .tsx TEXT, where the separator really is a backslash and an n — decoded, this side would be a newline and the two would read as disagreeing",
+})
 
 // judgesSQLLiterals is the census's subject: a file that both walks Go string
 // literals and has SQL vocabulary of its own. A reader that never looks at a
