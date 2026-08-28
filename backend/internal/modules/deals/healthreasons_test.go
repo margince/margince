@@ -4,7 +4,6 @@
 package deals
 
 import (
-	"strings"
 	"testing"
 	"time"
 )
@@ -36,11 +35,14 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 		{"later the same day", time.Date(2026, 8, 20, 23, 0, 0, 0, time.UTC), "today"},
 	} {
 		t.Run(probe.what, func(t *testing.T) {
-			got := recencyReason(&last, false, probe.now)
-			if !strings.Contains(got, probe.want) {
-				t.Errorf("at %s the card says %q, want it to say %q — a sentence a reader can check "+
+			// The WHOLE sentence, not a substring of it: "12 days ago" contains
+			// "2 days ago", so a contains-check passes on an answer that is off
+			// by ten days — which is the class of error this test is about.
+			want := "Last activity " + probe.want + "."
+			if got := recencyReason(&last, false, probe.now); got != want {
+				t.Errorf("at %s the card says %q, want %q — a sentence a reader can check "+
 					"against a timestamp must not move between cache writes",
-					probe.now.Format(time.RFC3339), got, probe.want)
+					probe.now.Format(time.RFC3339), got, want)
 			}
 		})
 	}
@@ -51,9 +53,9 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 // honestly say about an activity that has not happened yet.
 func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 	last := time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)
-	got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC))
-	if !strings.Contains(got, "today") {
-		t.Errorf("an activity dated ahead of now reads %q, want today", got)
+	const want = "Last activity today."
+	if got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)); got != want {
+		t.Errorf("an activity dated ahead of now reads %q, want %q", got, want)
 	}
 }
 
@@ -61,8 +63,8 @@ func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 // counted must not lose it.
 func TestAStalledDealSaysSoInTheSameSentence(t *testing.T) {
 	last := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
-	got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC))
-	if !strings.Contains(got, "21 days ago") || !strings.Contains(got, "stalled") {
-		t.Errorf("a stalled deal's recency reads %q, want the day count and the stalled clause", got)
+	const want = "Last activity 21 days ago — the deal counts as stalled."
+	if got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)); got != want {
+		t.Errorf("a stalled deal's recency reads %q, want %q", got, want)
 	}
 }
