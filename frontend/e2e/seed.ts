@@ -730,6 +730,83 @@ function unsupportedBySor(detail: string) {
   return { title: "Unprocessable Entity", detail, code: "unsupported_by_sor" };
 }
 
+// Settings → Capture activity, both scopes. A fixture rather than a catch-all
+// `page([])` answer for the reason the block above states: the catch-all is the
+// WRONG SHAPE, not a thin one. `funnel` is required by CaptureActivityResponse
+// and the window reads `first.funnel` straight into its counters, so the
+// catch-all handed it undefined and it threw mid-render — taking the whole
+// shell down, which is how a page renders the app error boundary and still
+// reports zero axe violations. Every field below is required by its schema.
+//
+// One entry per outcome, so the funnel's five counters each have a row behind
+// them and the filter has something to narrow. `payload_capture_enabled` is
+// true, because the counterparty and subject columns only exist when it is and
+// a false fixture would sweep a narrower table than the product draws.
+const captureActivity = {
+  funnel: {
+    captured: 3,
+    internal: 1,
+    suppressed: 1,
+    deferred: 1,
+    fault: 1,
+  },
+  data: [
+    {
+      id: "11111111-1111-4111-8111-111111111111",
+      connector: "gmail",
+      outcome: "captured",
+      counterparty: "anna.weber@brandt.example",
+      subject: "Angebot zur Flottenerneuerung",
+      occurred_at: "2026-08-28T07:12:00Z",
+      activity_id: "22222222-2222-4222-8222-222222222222",
+    },
+    {
+      id: "11111111-1111-4111-8111-111111111112",
+      connector: "gmail",
+      outcome: "internal",
+      reason: "internal_only",
+      counterparty: "lars@brandt.example",
+      subject: "Re: Wochenplanung",
+      occurred_at: "2026-08-28T06:40:00Z",
+    },
+    {
+      id: "11111111-1111-4111-8111-111111111113",
+      connector: "gmail",
+      outcome: "suppressed",
+      reason: "noise_prior",
+      counterparty: "newsletter@example.com",
+      subject: "Ihr woechentlicher Marktbericht",
+      occurred_at: "2026-08-28T05:55:00Z",
+    },
+    {
+      id: "11111111-1111-4111-8111-111111111114",
+      connector: "telegram",
+      outcome: "deferred",
+      reason: "no_granting_human",
+      counterparty: "+49 170 0000000",
+      subject: null,
+      occurred_at: "2026-08-28T05:10:00Z",
+      resolution: {
+        status: "pending",
+        kind: null,
+        resolved_at: null,
+      },
+    },
+    {
+      id: "11111111-1111-4111-8111-111111111115",
+      connector: "gmail",
+      outcome: "fault",
+      reason: "derivation_failed",
+      counterparty: null,
+      subject: null,
+      occurred_at: "2026-08-28T04:20:00Z",
+    },
+  ],
+  page: { next_cursor: null },
+  payload_capture_enabled: true,
+  window_hours: 24,
+};
+
 function page(data: unknown[]) {
   return { data, page: { next_cursor: null } };
 }
@@ -1930,6 +2007,12 @@ export async function mockApi(
           },
         ],
       });
+    }
+    if (
+      path === "/capture/activity" ||
+      path === "/capture/activity/workspace"
+    ) {
+      return json(captureActivity);
     }
     if (path === "/ai/usage") {
       return json(aiUsage);
