@@ -74,6 +74,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # paths-filter asks the API for the pull request's file list. Reading that
+      # needs no grant while the repository is public, which is the only reason
+      # this job has run without it; the grant is what the step actually
+      # requires, and without it the classifier fails closed — which on a pull
+      # request skips every gated job and still renders a green `ci`.
+      pull-requests: read
     outputs:
       # Diff-scoping is honest for author feedback and dishonest as a merge
       # verdict: on a push, a commit matching no scope skipped every gate and
