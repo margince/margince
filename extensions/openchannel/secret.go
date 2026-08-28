@@ -103,7 +103,13 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		// mint had run when none had — and the screen discards the secret on
 		// that refusal, throwing away a credential that is live.
 		if err := tx.QueryRow(ctx,
-			`UPDATE `+endpointTable+` SET secret_version = secret_version + 1, updated_at = now()
+			// BOTH counters, in the one statement that reserves. secret_version
+			// is what a mint watches, because only minting moves it; version is
+			// the row's public optimistic-concurrency counter, and a rotation
+			// that left it standing would tell every reader holding the row
+			// that nothing had changed when the credential just did.
+			`UPDATE `+endpointTable+` SET secret_version = secret_version + 1,
+			        version = version + 1, updated_at = now()
 			 WHERE user_id = $1::uuid AND slug = $2
 			 RETURNING secret_version`, member, inboundSlug).Scan(&claimed); err != nil {
 			return err
