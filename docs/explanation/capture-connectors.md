@@ -17,8 +17,8 @@ write shape every captured row commits through and the bus the pipeline rides, s
 **A connector normalizes; the Sink writes.** A connector is a small, pure-ish thing — it knows how to
 authenticate to one provider, pull records incrementally from a cursor, and map one raw record to domain
 structs. It knows *nothing* about how the CRM stores data, who may see it, or how an event ships.
-Everything security-relevant — RBAC, RLS, provenance, audit, the outbox event, idempotency — lives
-behind the **one** Sink, so it happens in exactly one place, once per record:
+Everything security-relevant — RBAC, the workspace transaction, provenance, audit, the outbox event,
+idempotency — lives behind the **one** Sink, so it happens in exactly one place, once per record:
 
 ```text
 provider record ──▶ connector.Normalize ──▶ Sink.Upsert  (ONE transaction)
@@ -306,8 +306,9 @@ The pipeline is live; these were scoped out, not missed:
 
 ## Rules of thumb
 
-- **The connector normalizes; the Sink writes.** A connector never touches the CRM, RLS, audit, or the
-  outbox — audit + provenance + event + idempotency all live in the one Sink, once per record.
+- **The connector normalizes; the Sink writes.** A connector never touches the CRM, the workspace
+  transaction, audit, or the outbox — audit + provenance + event + idempotency all live in the one
+  Sink, once per record.
 - **connector ≤ human.** A demoted human instantly narrows every grant the sync runs under.
 - **Capture is idempotent on `(source_system, source_id)`.** Replays, re-anchored cursors, overlapping
   backfill pages — all no-ops.
@@ -339,7 +340,7 @@ The pipeline is live; these were scoped out, not missed:
 | Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |
 | Gmail push webhook (token + OIDC) | `internal/compose/gmailpush.go`, `capture/push.go` |
 | Background jobs (dispatcher, sync, backfill, watch renewal, digest) | `internal/compose/jobs.go`, `capturejobs.go`; `backend/cmd/worker/main.go` |
-| The tables + RLS | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ people's `organization_domain_disposition`) |
+| The tables | `raw_capture, capture_connection, capture_sync_state, capture_backfill, workspace_email_domain, capture_digest, capture_freemail_domain, capture_pending_counterparty, capture_auto_enrich_state` (+ people's `organization_domain_disposition`) |
 | The REST contract | `backend/api/crm.yaml` (`/connectors*`, `/capture/settings`, `/capture/consumer-mail-domains`, `/digest`) |
 | The connect UI (Settings + onboarding) | `frontend/src/screens/connectors.tsx`, `onboarding-connect-panels.tsx`, `onboarding-conversation/connect-act.tsx`, `backfill.tsx` |
 

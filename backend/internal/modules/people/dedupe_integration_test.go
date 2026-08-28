@@ -58,10 +58,9 @@ func setupDedupe(t *testing.T) *dedupeEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
-	// Every test in this package seeds its own workspace into ONE database,
-	// and what used to keep their rows apart was deny-on-unset RLS. With
-	// tenant isolation retired (ADR-0091 §8 phase A) the separation has to be
-	// real: reset before seeding, as compose/integration's harness does.
+	// Every test in this package seeds its own workspace into ONE database, so
+	// the separation between them has to be real: reset before seeding, as
+	// compose/integration's harness does.
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}

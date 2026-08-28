@@ -20,7 +20,7 @@ shared  →  platform  →  modules  →  compose  →  cmd
   interfaces: authz, datasource, mcp, connector, workflow, model,
   retrieval, extraction, fieldcatalog, jurisdiction).
 - **`internal/platform/`** — technical plumbing that owns no domain:
-  `database` (pool + the RLS workspace-transaction contract) and
+  `database` (pool + the `WithWorkspaceTx` workspace-transaction contract) and
   `database/storekit` (the one spelling of the write shape), `auth` (the
   one admission point), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr`, `httpserver`.
@@ -87,8 +87,10 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   itself before adding a seam rather than trusting that list: a seam missing from
   a page is how a second one gets written for a question already answered.
 - `internal/platform/` — technical plumbing, owns no domain:
-  `database` (pg pool + the `WithWorkspaceTx` GUC contract that binds every
-  tenant statement's workspace predicate) +
+  `database` (pg pool + the `WithWorkspaceTx` workspace-transaction contract:
+  a transaction boundary with a fail-closed check that a workspace is on the
+  context — it binds no database GUC, and no table carries a `workspace_id`
+  column or a row-level policy) +
   `database/storekit` (the ONE spelling of the audit+outbox write shape,
   keyset cursors, version patches), `auth` (the ONE admission point:
   `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
@@ -156,10 +158,10 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   is its own Go module importing ONLY the marker-allowlisted
   `backend/pkg/**` surface; presence under `extensions/` is the
   enablement. The vanilla tree's own units are `de` (the German
-  jurisdiction pack — GoBD calendar-year retention floors), `notes`,
-  `relay-probe` (the provider-facing reference — capture, a merge-key
-  declaration and a transport) and `yogi` (one served 🟢/read agent tool —
-  the worked example of the governed-tool kind).
+  jurisdiction pack — GoBD calendar-year retention floors) and
+  `openchannel` (the reference connector — an anonymous signed inbound
+  edge, a drain job, capture with a merge-key declaration, a transport,
+  seven served governed tools and a screen).
   Read `extensions/` for the live list rather than trusting this sentence — a
   list in prose goes stale the first time somebody adds a unit, and it reads
   no differently when it has. `make composition` (run by every build lane)
@@ -199,12 +201,11 @@ envelope, the relay, dedupe — is detailed in
 
 ## Tenancy as structure
 
-Every tenant table carries `ENABLE`+`FORCE` row-level security with
-deny-on-unset policies, reachable only through the one
-workspace-transaction helper; every tenant-local foreign key is
-composite `(workspace_id, col)`, so a cross-workspace reference is
-rejected by the database itself. Both invariants are fitness functions
-derived from the live schema.
+An installation holds ONE organization (ADR-0061), so no table carries a
+row-level policy. Every module statement still goes through the one
+workspace-transaction helper — the auditable boundary a fitness function
+derived from the live tree holds — and row scope is decided by
+`platform/auth`, not by the database.
 
 ## One governed agent surface
 

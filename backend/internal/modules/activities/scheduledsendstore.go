@@ -64,8 +64,9 @@ func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]Schedu
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// Scheduled mail is the SENDER's own: an unsent message's body and its
 		// blind-copy list are not workspace-readable the way a sent activity
-		// is. The workspace bound comes from the transaction's GUC, like every
-		// other tenant read here.
+		// is. The scheduled_by predicate below is what narrows the read to the
+		// actor; the surrounding transaction only requires a workspace on the
+		// context, it does not filter rows on its own.
 		rows, err := tx.Query(ctx, `
 			SELECT`+scheduledSendColumns+`
 			  FROM scheduled_send

@@ -22,8 +22,8 @@ import (
 // before New() is even called.
 //
 // This walk targets CALLS specifically, not "runs no code" in general: a
-// var initializer that merely holds a composite or basic literal (like
-// yogi's var quotes = []string{...}) is unaffected because it contains no
+// var initializer that merely holds a composite or basic literal (a unit's
+// static table of strings, say) is unaffected because it contains no
 // call, and the New() literal-only reader already welcomes exactly that
 // shape. containsCall does not claim to enumerate every way an initializer
 // could do work at import — a channel receive (var v = <-ch) is a

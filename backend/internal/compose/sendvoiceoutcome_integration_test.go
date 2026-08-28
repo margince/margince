@@ -89,8 +89,8 @@ type voiceSignalRow struct {
 
 // voiceSendEnv is the fixture every case here starts from: a consented
 // recipient, the anchor the send threads onto, and the acting human. The
-// owner connection seeds and reads the signal table, which is RLS-forced and
-// has no handler on this surface — the suite reads it as the retention
+// owner connection seeds and reads the signal table directly, since it has
+// no handler on this surface — the suite reads it as the retention
 // evaluator would.
 type voiceSendEnv struct {
 	*integration.Env

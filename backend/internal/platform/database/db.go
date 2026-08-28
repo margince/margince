@@ -21,9 +21,10 @@ import (
 // reads the workspace from the caller's ctx, which means every request path,
 // every job and every fixture has to put it there first, and a path that
 // forgets fails at the SQL rather than at the seam. ADR-0091 §9 step 3 is the
-// collapse: one helper, the singleton resolved once, and the GUC still set
-// from it, so RLS stays armed and the tenant-isolation suite remains the proof
-// that the edit was faithful.
+// collapse: one helper, the singleton resolved once. RLS is retired — no table
+// carries workspace_id and no policy reads one — so what Tx checks below is the
+// same programming-error refusal WithWorkspaceTx checks: that a caller reached
+// the installation's one workspace at all, not that SQL is scoped by it.
 //
 // The workspace arrives as a resolver rather than a value because bootstrap
 // has not necessarily happened when the server is assembled — the worker polls
@@ -113,11 +114,10 @@ func (d *DB) Pool() *pgxpool.Pool {
 	return d.pool
 }
 
-// Tx runs fn inside a transaction with app.workspace_id bound, which is what
-// every tenant statement's own workspace predicate reads. Same contract as
-// WithWorkspaceTx — including that the binding scopes nothing by itself since
-// core 0217 — minus the requirement that the caller have put the workspace in
-// ctx.
+// Tx runs fn inside ONE transaction. Same contract as WithWorkspaceTx, minus
+// the requirement that the caller have put the workspace in ctx: this handle
+// resolves the installation's workspace itself, and still refuses before any
+// SQL runs when it cannot.
 func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	if d == nil {
 		// A store built without a handle, answered with the sentinel that
@@ -133,8 +133,11 @@ func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 			"construct this store through compose, which binds the installation's pool",
 			ErrNoWorkspace)
 	}
-	ws, err := d.workspace(ctx)
-	if err != nil {
+	// Resolved for its refusal, not for its value: nothing in the transaction
+	// keys on the workspace, but a handle that cannot name the installation's
+	// one workspace has not been reached through a bootstrapped install, and
+	// that is a fault the caller must see before any SQL runs.
+	if _, err := d.workspace(ctx); err != nil {
 		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 	}
 	if d.budget != 0 {
@@ -146,7 +149,7 @@ func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 			return bounded(tx)
 		}
 	}
-	return withBoundTx(ctx, d.pool, ws, fn)
+	return runTx(ctx, d.pool, fn)
 }
 
 // ForWorkspace is this handle re-bound to another workspace, for the fleet

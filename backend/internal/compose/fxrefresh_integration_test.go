@@ -16,8 +16,6 @@ package compose
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"testing"
 	"time"
 
@@ -28,8 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
 // stubFetcher returns fixed page text for any URL (webread's SSRF guard would
 // refuse a loopback httptest server). The text is inert — the fake brain below

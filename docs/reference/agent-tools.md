@@ -28,14 +28,23 @@ live surface differ from the table below:
 - **Extensions register onto the same registry.** `registerComposedTools` runs
   last in `internal/compose/registry.go`, after the core registrars, so an
   extension unit can add verbs (and a name that collides with a core verb fails
-  loudly at boot). A served extension tool declares 🟢 and an inbound cap — the
-  boot refuses a handler-bearing confirm-first or `send`/`enrich` declaration,
-  because neither could be staged for the human this surface has no way to ask.
+  loudly at boot). A served extension tool declares an inbound cap, and a
+  confirm-first one must also declare `x-mcp-tool.subject` — the argument
+  carrying a row id and the unit-owned table it lives in — because an approval
+  needs a row to park against and to show the approver. Boot refuses a
+  confirm-first declaration without one, and refuses `send`/`enrich` outright,
+  since neither could be staged for the human this surface has no way to ask.
   That governs what a unit may CLAIM; what its handler does is bounded by the
   composed set being a trust boundary, not by the gate. The
   vanilla tree ships two first-party units: `extensions/de` registers no tools,
-  and `extensions/yogi` adds `yogi_quote` (🟢/read), so on a vanilla install the
-  catalog below plus that one verb is the whole surface.
+  and `extensions/openchannel` adds seven: 🟢 for `openchannel_list_inbound`,
+  `openchannel_list_outbound` and `openchannel_read_endpoint` at `read`, and for
+  `openchannel_open` and `openchannel_set_enabled` at `write`; 🟡
+  confirmation-required for `openchannel_mint_secret` and
+  `openchannel_register_url`, also at `write` — the one hands back a durable
+  signing credential and the other re-points the member's whole outbound
+  channel, so neither runs unattended. So on a vanilla install the catalog
+  below plus those seven verbs is the whole surface.
 
 **Where it is served:** `cmd/api` mounts the tool surface at `/mcp` over
 Streamable HTTP, on the same origin as `/oauth/*` and the discovery documents.
@@ -48,9 +57,9 @@ the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
 
 The **35 core tools**, listed in the order `Registry.Specs()` sorts them — which
 is the order `tools/list` returns. An enabled extension unit adds its own verbs
-to the same listing, so a vanilla install answers 36: these plus `yogi_quote`
-(🟢, `read`), which is not tabled here because the catalog tracks the core
-surface.
+to the same listing, so a vanilla install answers 42: these plus
+`openchannel`'s seven verbs, which are not tabled here because the catalog
+tracks the core surface.
 
 This table and `api/crm.yaml` cannot disagree: every operation carrying
 `x-mcp-tool` has a registered tool of that verb, and every registered tool is
@@ -176,7 +185,7 @@ passport's scopes and the granting human's live RBAC and seat — never the unio
 and never the passport alone.
 
 Counts are of the core catalog above; an enabled unit's verbs add to them
-(vanilla: `yogi_quote` makes `read` 18).
+(vanilla: `openchannel`'s seven make `read` 20 and `write` 16).
 
 | Scope | Tools it unlocks | What it means |
 |---|---|---|

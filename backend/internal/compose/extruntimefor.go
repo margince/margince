@@ -85,3 +85,13 @@ func unattendedRuntimeFor(ctx context.Context, unit, version, via string, deps e
 	rt.unattended = true
 	return rt
 }
+
+// inboundRuntimeFor mints the Runtime for one request arriving on a unit's
+// session-less inbound edge. It is the only constructor here that is NOT
+// unattended — the principal it runs as, and why, is set and explained at its
+// one call site: inboundHandler.invoke, in extinbound.go. This is a named
+// entry point rather than an inlined call because a security walk
+// (TestTheInboundEdgeReachesNoRequireHumanGate) starts from it by name.
+func inboundRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
+	return runtimeFor(ctx, unit, version, via, deps)
+}

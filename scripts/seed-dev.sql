@@ -75,10 +75,6 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Tenant tables carry FORCE RLS; bind the GUC so writes are visible even on a
-  -- non-superuser owner connection (mirrors seed-reset.sql).
-  PERFORM set_config('app.workspace_id', ws::text, true);
-
   -- FX rates: base currency is EUR; seed the three other UI currencies
   -- (USD/GBP/CHF) dated today so a close on or after today finds a rate.
   -- Representative demo values — not a live quote.
@@ -107,10 +103,6 @@ BEGIN
     RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
     RETURN;
   END IF;
-
-  -- Tenant tables carry FORCE RLS; bind the GUC so writes are visible even on a
-  -- non-superuser owner connection (mirrors seed-reset.sql).
-  PERFORM set_config('app.workspace_id', ws::text, true);
 
   -- The demo admin is bootstrapped through the public API (scripts/seed-dev.sh),
   -- never here — reuse its password_hash verbatim so the 2nd seat shares the
@@ -260,8 +252,6 @@ BEGIN
   IF ws IS NULL THEN
     RETURN;
   END IF;
-  PERFORM set_config('app.workspace_id', ws::text, true);
-
   SELECT id INTO conn
     FROM finance_connection
    WHERE provider = 'offline_demo' AND archived_at IS NULL;

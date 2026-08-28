@@ -97,9 +97,8 @@ set — it is compiled into the query that produces it:
   exist.
 - **Row scope rides the same branch.** `auth.ScopeClauseFor` (or
   `auth.ActivityContentClause` for the activity branch's link walk) is appended to
-  that branch's `WHERE`, in the same `database.WithWorkspaceTx` transaction that
-  binds the RLS GUC. Both arms use the identical helper — fusion adds no
-  visibility of its own.
+  that branch's `WHERE`, inside the same `database.WithWorkspaceTx` transaction.
+  Both arms use the identical helper — fusion adds no visibility of its own.
 - **The context walk gates the same way.** `anchorProfile` is the existence *and*
   visibility gate for the whole assembly (`auth.EnsureVisible`, then a real row
   read whose `pgx.ErrNoRows` becomes `apperrors.ErrNotFound`), and every hop-2
@@ -308,7 +307,7 @@ mechanism with its own maintenance rules — see
 | Concern | Where |
 |---|---|
 | Lexical index | generated `search_tsv` columns on `person`, `organization`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`); linguistics `0052`, apostrophe folding `0077` |
-| Vector store | `embedding` (migration `0022`; identity stamp + unbounded `vector` + corpus wipe in `0114`) — tenant table, RLS ENABLE+FORCE |
+| Vector store | `embedding` (migration `0022`; identity stamp + unbounded `vector` + corpus wipe in `0114`) — **non-tenant**, no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`0114`, run/identity/pending-set fan-out shape in `0174`) — **non-tenant**, no `workspace_id`, no RLS |
 | Relationship projection | `graph_interaction_edge` (`0158`) — see [relationship-graph.md](relationship-graph.md) |
 | RBAC object | `embedding_reindex` (`read`/`update`, admin + ops only; backfilled by `0115`) |

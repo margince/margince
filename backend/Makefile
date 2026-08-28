@@ -646,7 +646,7 @@ db-up: ## Start the dev stack (infra/docker-compose.dev.yml) and create the app 
 db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
 	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
 
-seed-reset: ## Wipe the demo workspace (scripts/seed-reset.sql); make seed-dev rebuilds it
+seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (scripts/seed-reset.sql); make seed-dev refills it, no restart needed
 	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql
 
 seed-dev-db: ## Apply the dev DB seed for API-less demo data (scripts/seed-dev.sql); run after seed-dev

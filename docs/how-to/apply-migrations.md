@@ -40,8 +40,8 @@ the credential stays out of the process list.
   shipped core migrations are additive-only and are never edited.
 
 With no `--dsn`, the DSN comes from `MARGINCE_OWNER_DSN`, else `MARGINCE_DSN`.
-The owner variable takes precedence because every verb here runs DDL — RLS
-policies, roles and triggers need owner privileges to create — while
+The owner variable takes precedence because every verb here runs DDL — tables,
+roles and triggers need owner privileges to create — while
 `MARGINCE_DSN` is the app role elsewhere in the product (`NOSUPERUSER
 NOBYPASSRLS`, no DDL rights). `MARGINCE_DSN` remains the last resort for an
 installation running everything under one sufficiently-privileged credential.
@@ -72,9 +72,9 @@ Follow this checklist — several obligations are enforced by fitness tests, so 
    on `origin/main`, so a branch that sat while another migration merged re-runs
    `make migrate-create` and moves its SQL across. `make check` reports that
    (`scripts/check-migration-versions.sh`).
-2. **Tenant tables** carry `workspace_id uuid NOT NULL REFERENCES workspace(id)` with `ENABLE`+`FORCE`
-   row-level security + an isolation policy, and composite same-workspace foreign keys — the RLS
-   coverage integration test derives these from the live schema and fails any table that misses them.
+2. **No table carries row-level security.** An installation holds one organization (ADR-0061), so a
+   tenant predicate separates nothing; a schema fitness test derived from the live schema fails a
+   table that declares a policy.
 3. **Keep enums in sync** — a new `CHECK (col IN (...))` that a Go enum mirrors means extending that Go
    const set, or `enumsync_test.go` fails.
 4. **Reach erasure + SAR** if the table holds PII (`piicoverage_test.go`), and record the table in the

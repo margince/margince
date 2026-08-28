@@ -135,8 +135,10 @@ firings a human needs to see. Each non-applied outcome carries a human-readable 
 
 The **claim** is the idempotency guard: `runOne` inserts the `workflow_run` row `ON CONFLICT DO
 NOTHING` **before** `Apply`, so an at-least-once redelivery of the same occurrence finds the row taken
-and does nothing. Every write in the pipeline runs inside `database.WithWorkspaceTx` (RLS-bound), and
-`workflow_run` is a FORCE-RLS tenant table — a run can never be read or written cross-workspace.
+and does nothing. Every write in the pipeline runs inside `database.WithWorkspaceTx`, which fails
+closed before any SQL if no workspace is bound to the context; `workflow_run` itself carries no
+workspace column — an installation holds exactly one workspace (ADR-0061), so there is no cross-workspace
+case to guard against.
 
 ## 4. Two entry points, one path
 
@@ -209,13 +211,12 @@ database:
 | **Correlation** | a fresh `ids.NewV7()` per event | a fresh `ids.NewV7()` per scan pass |
 | **Causation** | `WithCausationEvent(env.EventID)` — the triggering event is the parent edge | none — a clock pass has no source event |
 
-**The tenant boundary is RLS, not a filter.** The workspace on the context is bound as the
-`app.workspace_id` GUC by `database.WithWorkspaceTx` (see [write-backbone.md](write-backbone.md)), and
-every read and write a firing makes runs inside that transaction — so a run can only ever see and
-touch its own workspace's rows, `workflow_run` included (a FORCE-RLS table). The clock scan is the one
-place that reads across tenants (`enumerateWorkspaces`, a marked `rls-exempt` pool query over the
-non-tenant `workspace` table); it immediately re-enters a per-workspace context before any per-record
-work, so nothing downstream ever runs tenant-agnostic.
+**The workspace rides the context, and every statement runs inside one transaction.** A firing's
+reads and writes all open through `database.WithWorkspaceTx` (see
+[write-backbone.md](write-backbone.md)), which refuses before any SQL when no workspace is bound. The
+clock scan is the one place that reads across the installation (`enumerateWorkspaces`, a marked
+`rls-exempt` pool query over the `workspace` table); it immediately re-enters a per-workspace context
+before any per-record work, so nothing downstream ever runs tenant-agnostic.
 
 **A firing acts _as the system_, authorized _as its owner_** — two different identities, and keeping
 them straight is the crux:

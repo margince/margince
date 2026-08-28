@@ -45,9 +45,6 @@ func (e *dedupeEnv) beginHeldPhoneCreate(ctx context.Context, t *testing.T, name
 			t.Errorf("releasing the in-flight create's transaction: %v", err)
 		}
 	})
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatalf("binding the workspace GUC: %v", err)
-	}
 	var pid int
 	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 		t.Fatalf("reading the in-flight create's backend pid: %v", err)
@@ -176,9 +173,6 @@ func (e *dedupeEnv) beginHeldNameCreate(ctx context.Context, t *testing.T, name 
 			t.Errorf("releasing the in-flight create's transaction: %v", err)
 		}
 	})
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatalf("binding the workspace GUC: %v", err)
-	}
 	var pid int
 	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 		t.Fatalf("reading the in-flight create's backend pid: %v", err)

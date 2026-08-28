@@ -17,7 +17,7 @@ HTTP request / agent run / bus consumer
         │  (middleware binds actor + workspace + correlation_id onto ctx)
         ▼
   module Handler ──► Store.tx(ctx, fn)  ==  database.WithWorkspaceTx(ctx, pool, fn)
-                          │  SET LOCAL app.workspace_id  (RLS bound)
+                          │  (refused before any SQL if no workspace is bound)
                           ▼
         ┌───────────────── ONE transaction ─────────────────┐
         │  INSERT INTO <domain table> …           ← the change │
@@ -104,7 +104,7 @@ action vocabulary by `0018`/`0053`):
 | Column | Meaning |
 |---|---|
 | `id` | UUIDv7 PK (time-ordered) |
-| `workspace_id` | tenant FK, `ON DELETE RESTRICT` — it **is** an RLS tenant table |
+| `workspace_id` | tenant FK, `ON DELETE RESTRICT` — no row-level security behind it; `Audit` stamps it from the workspace bound on the context, not a Postgres GUC |
 | `actor_type` | `CHECK IN ('human','agent','connector','system')` |
 | `actor_id` | user uuid / agent id / connector name / `system` |
 | `passport_id` | the Agent Seat Passport that authorized an agent action (nullable) |
@@ -159,7 +159,7 @@ type Envelope struct {
     EventID     ids.UUID        // UUIDv7 — the consumer-side idempotency key (dedupe on this)
     Type        string          // "<entity>.<verb>", e.g. "deal.created"
     Version     int             // payload schema version, stamped from VersionOf(Type)
-    WorkspaceID ids.UUID        // the bus analogue of RLS
+    WorkspaceID ids.UUID        // the read-back handle a consumer fetches under its own scope
     OccurredAt  time.Time
     Actor       Actor           // {Type, ID, PassportID, OnBehalfOf} — mirrors audit_log
     Entity      EntityRef       // {Type, ID} — a REF, never the record body
@@ -300,7 +300,7 @@ You don't have to remember these — a fitness test fails your PR if you break o
 | `audit_log` / `event_outbox` are written only through `storekit` | `tableownership_test.go` |
 | A by-id UPDATE of a versioned row carries a concurrency guard | `updateguard_test.go` |
 | The `audit_log` `action`/`actor_type` CHECK sets equal their Go enums | `enumsync_test.go` |
-| `audit_log` is a tenant table with RLS ENABLE+FORCE+policy | `rls_coverage_integration_test.go` |
+| A comment credits row-level security with a guarantee no schema in this tree carries | `rlsclaims_test.go` |
 | Errors are classified by SQLSTATE, never `Error()` text | `errmatch_test.go` |
 
 ---

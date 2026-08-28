@@ -347,7 +347,7 @@ function ResetRoute() {
 //      and why check-ext-imports.sh gates what such a screen may import.
 //   2. Otherwise the contract-derived descriptor set — the operations the
 //      unit's fragments published, which is all the app can honestly say about
-//      a unit nobody wrote a screen for (de, yogi, crm-hello).
+//      a unit nobody wrote a screen for (de, crm-hello).
 //
 // The registry is consulted only AFTER the descriptor resolves, so a screen
 // cannot render for a unit this installation did not compose: an entry for a

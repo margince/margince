@@ -4,14 +4,12 @@ How a bounded add-on lands in this product **without editing a single upstream-o
 recorded exception, below**. This is
 the *extension tier*: one named, versioned unit under `extensions/<name>/`, its own Go module,
 reaching the core through one narrow published surface and composed in at build time. The vanilla tree
-already ships four:
+already ships two:
 
 | Unit | What it is |
 |---|---|
 | `extensions/de` | The German jurisdiction pack — statutory retention floors, and nothing else |
-| `extensions/yogi` | The reference unit that serves one governed agent tool |
-| `extensions/notes` | The reference extension for a unit that owns data: its own table under RLS, six governed operations, its own RBAC object, a stored signing key it signs with and never emits, and a scheduled heartbeat |
-| `extensions/relay-probe` | The reference unit that reaches the outside world: it captures messages from its provider and carries replies back out on its own transport |
+| `extensions/openchannel` | The reference unit, and it exercises every capability the tier has: its own tables, seven governed agent tools, an anonymous signed inbound edge, a drain job, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 This page is for a contributor who wants the whole idea first, then the detail. Start here; to
 actually *build* a unit, jump to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -261,8 +259,8 @@ record, and a send happens only because a human staged one. An
 **agent tool** (`extension.Tool`) is the *governed* kind proper: it derives a risk-tier
 request into `manifest.generated.json` for operator resolution (§7), and a tool declaring a `Handle`
 **is served** — `buildExtensionTools` adapts it to the core `mcp.Tool` seam and boot registers it into
-the same `agents.Registry`, admission gate, and tool listing the core tools ride (`extensions/yogi` is
-the reference unit that exercises that path end to end). Two limits hold there: a handler-less
+the same `agents.Registry`, admission gate, and tool listing the core tools ride (`extensions/openchannel`
+is the reference unit that exercises that path end to end). Two limits hold there: a handler-less
 declaration stays a manifest request and serves nothing, and a *served* 🟡 confirm-first tool is
 refused at boot rather than registered, because this data-only adapter cannot implement the registry's
 staging seam — its approvals could never be staged, so the capability would be dead on every call. A
@@ -300,11 +298,13 @@ validated to the full identifier budget, so a name chosen today stays valid for 
 
 - **Its own tables** — `ext.ext_<name>_*`, from a `migrations/` directory of `NNNN_name.up.sql`/`.down.sql`
   pairs the unit embeds and `cmd/migrate` applies as its own namespace, tracked in
-  `schema_migrations_ext_<name>`. Every unit table must carry FORCE row level security and a
-  workspace-bound policy; `make check-ext-migrations` applies the unit's migrations as a *minted
-  restricted role* against a throwaway database and re-reads the catalog to prove it. At runtime there is
-  no such role — `cmd/migrate` runs one owner connection with no `SET ROLE`, so isolation rests on the
-  RLS, not on ownership (#628).
+  `schema_migrations_ext_<name>`. A unit table must carry no workspace column, no row-level security
+  and no policy — the tenant they would key on is gone; `make check-ext-migrations` applies the
+  unit's migrations as a *minted restricted role* against a throwaway database and re-reads the catalog
+  to prove it. At runtime there is no such role — `cmd/migrate` runs one owner connection with no
+  `SET ROLE`, and every unit shares the one app role in production, so isolation between units' own
+  tables rests on the AST-level SQL-scope gate (`extensionsqlscope_test.go`), not on a database
+  privilege boundary (#628).
 - **Its own HTTP surface** — `/v1/ext/<name>/…`, declared as operations in an `api/` contract fragment
   that is merged into the composed `crm.yaml`. `build/composition/api/crm.yaml` is a real merge now, not
   a byte-copy of the core contract.
@@ -321,7 +321,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   unauditable, and a ledger row with no event is a change nothing downstream is told about, which the
   core grants itself no exemption from either. It is OFFERED rather than enforced: the three SQL
   verbs still write whatever a unit tells them to, and a write made through `Exec` alone records
-  nothing, which is a choice a unit makes (`extensions/notes/heartbeat.go` makes it, and says why). The type on the bus is `ext_<namespace>.<verb>` — the
+  nothing, which is a choice a unit makes. The type on the bus is `ext_<namespace>.<verb>` — the
   core prefixes the namespace from the invocation, so a unit can publish neither under another unit's
   name nor inside a core family — and every extension event rides one stream,
   `gw:events:crm:extension`, which no core consumer group carries.
@@ -357,7 +357,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   Authority is the mirror image of `tx.Core()`'s: an ingest is refused from an ATTENDED invocation, and
   it runs on the LIVE authority of the member named in `on` — who must currently hold one of this unit's
   user-scoped secrets, because depositing a credential with a unit is the act that says "act for me
-  here". `extensions/relay-probe` is the unit that exercises the path end to end.
+  here". `extensions/openchannel` is the unit that exercises the path end to end.
 
 - **Its own messaging transport** — a `Channel` declares a provider the unit can carry messages on, so
   a rep's reply to a captured conversation leaves through the unit, on the member's own credential,
@@ -418,8 +418,8 @@ object needs the contract overlay — which is why the API surface landed before
 are **reviewed, first-party or otherwise trusted code**, compiled into the same process. Every wall
 described in this document is defence in depth against *mistakes* — it makes the accidental
 cross-tenant query or the forgotten scope a loud failure — and none of it is a sandbox against a unit
-that is trying. In-process Go can read the keyvault root key from the environment; `Runtime.Tx` can
-rebind the `app.workspace_id` GUC the RLS policies key on; and every handler runs as the shared
+that is trying. In-process Go can read the keyvault root key from the environment; nothing in the database narrows a
+unit's SQL to a workspace; and every handler runs as the shared
 `margince_app` role, which holds DML on core tables, on every *other* unit's tables, and on
 `extension_secret`. Issue #628 (a per-unit database role) is the one change that would move any of this
 from convention to enforcement, and even then the in-process reach remains. `backend/pkg/extension/runtime.go`
@@ -437,7 +437,7 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | Vanilla composition reproduces the committed stub byte-for-byte | `make check-composition` |
 | The published surface doesn't break compatibility (advisory before the first release tag, enforcing after) | `scripts/check-pkg-freeze.sh` |
 | The core stays jurisdiction-neutral | `scripts/check-no-jurisdiction.sh` |
-| Every unit table carries FORCE RLS and a workspace-bound policy, and touches nothing in `public` | `make check-ext-migrations` (applies each unit's migrations as a minted restricted role) |
+| No unit table carries a workspace column, row-level security or a policy, and none touches anything in `public` | `make check-ext-migrations` (applies each unit's migrations as a minted restricted role) |
 | Every unit table grants the runtime role exactly `SELECT, INSERT, UPDATE, DELETE` — a table granting *nothing* satisfied the old one-sided allowlist and then answered `permission denied` at the first call | `make check-ext-migrations` |
 | A unit's SQL names only that unit's own `ext.ext_<name>_…` tables — the mistake-defence half of the shared-role reach described above, reading through the string constants a table name is spelled with | `backend/gates/extensionsqlscope_test.go` |
 | A unit's write to a CORE record goes through the product's own write path — the caller's live RBAC, the row-scope check on the subject, the audit row, the outbox event — and carries the unit's attribution under a core-stamped evidence member no caller may supply | `extension.Tx.Core()` (`internal/compose/extcore.go`), `storekit.withExtensionAttribution` |
@@ -496,11 +496,11 @@ the whole path).
 | The committed vanilla stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
 | The first-party German pack | `extensions/de/de.go` |
-| The reference served-tool unit | `extensions/yogi/yogi.go` |
-| The reference extension (every capability) | `extensions/notes/notes.go` |
-| The reference connector: ingress, merge key, transport | `extensions/relay-probe/relayprobe.go`, `record.go`, `send.go` |
-| Its screen, in the unit's own workspace package | `extensions/notes/frontend/screen.tsx` |
-| That screen's tests, and the lane that runs them | `extensions/notes/frontend/screen.test.tsx`, `frontend/vitest.ext.config.ts` |
+| The reference unit (every capability), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
+| Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
+| Its anonymous inbound edge | `extensions/openchannel/inbound.go` |
+| Its screen, in the unit's own workspace package | `extensions/openchannel/frontend/screen.tsx` |
+| That screen's tests, and the lane that runs them | `extensions/openchannel/frontend/screen.test.tsx`, `frontend/vitest.ext.config.ts` |
 | The reference fixture | `fixtures/extensions/crm-hello/crmhello.go` |
 | The negative migration fixtures | `fixtures/extensions/bad-unprefixed-table/`, `bad-overbudget-table/` |
 | The secrets namespace-wall fixture | `fixtures/extensions/crm-nosy/crmnosy.go` |

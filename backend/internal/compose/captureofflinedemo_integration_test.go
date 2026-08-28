@@ -7,14 +7,13 @@ package compose
 
 // The offline demo directory against the REAL database, because the one thing
 // worth proving here is a property of the connection rather than of the SQL
-// text: tenant tables carry FORCE RLS, and a read that does not say which
-// workspace it is in returns NOTHING.
+// text: every read opens through the seam, which REFUSES a caller that has not
+// said which workspace it is in rather than answering an empty mailbox.
 //
 // The first version of this directory used the bare pool. Every sync completed
 // cleanly, the generator was handed a mailbox with zero accounts, and no error
-// was logged anywhere — a silent empty read is exactly the shape RLS produces
-// for a caller who has not identified their tenant. A unit test with a fake
-// pool would have agreed with the mistake.
+// was logged anywhere. A unit test with a fake pool would have agreed with the
+// mistake.
 
 import (
 	"context"
@@ -25,12 +24,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// TestTheDirectoryReadsThroughRLS is the regression this file exists for.
-func TestTheDirectoryReadsThroughRLS(t *testing.T) {
+// TestTheDirectoryReadsThroughTheSeam is the regression this file exists for.
+func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 	e := integration.Setup(t)
 	// The workspace must be BOUND, exactly as the capture job binds it before
-	// calling the connector. Without it the read is refused rather than empty,
-	// which is the improvement the RLS fix brought: the failure is now loud.
+	// calling the connector. Without it the read is refused rather than empty:
+	// the failure is loud.
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	seat := ids.UUID(e.Rep1)
 
@@ -44,7 +43,7 @@ func TestTheDirectoryReadsThroughRLS(t *testing.T) {
 		t.Error("the mailbox has no address, so no message can be written from it")
 	}
 	if len(box.Accounts) == 0 {
-		t.Fatal("the directory returned no accounts — the workspace-bound read is not entering the tenant")
+		t.Fatal("the directory returned no accounts — the seeded seat owns one")
 	}
 	var found bool
 	for _, a := range box.Accounts {

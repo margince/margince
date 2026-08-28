@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+#
+# openchannel's drain, declared in the contract the core job kinds live in
+# (jobs.yaml). gen-composition merges it into build/composition/api/jobs.yaml
+# and reads the pair back out of the MERGED document, so what the worker
+# registers and what this file says cannot disagree.
+#
+# TWO kinds, not one: a cadenced DISPATCHER that enumerates the live fleet and a
+# workspace CHILD that drains one tenant's queue. A kind that both ticks and
+# carries a tenant has no honest answer for whose data the tick touched, so the
+# generator forbids it — and it forbids each half declaring what the other owns:
+# no attempt cap on the dispatcher, no cadence, tier or scope on the child.
+#
+# queue: default, because `queues` is NOT a container a fragment may extend. A
+# River queue bounds the installation's worker pool, so an extension job rides a
+# pool the installation already declared rather than allocating one.
+overlay: 1.0.0
+info:
+  title: openchannel
+  version: "1.0.0"
+actions:
+  - target: $.kinds['ext_openchannel_drain']
+    update:
+      job: drain
+      role: dispatcher
+      queue: default
+      # One minute, and it is the latency a member experiences between a remote
+      # system posting a message and that message appearing on the timeline.
+      # Unlike a poll this spends no remote party's rate budget — the drain reads
+      # this installation's own table — so the usual reason to tick more slowly
+      # does not apply, and what bounds it downward is that every tick that finds
+      # an empty queue is still a row River writes and a worker it occupies.
+      cadence: 60s
+      # The dispatcher enumerates the fleet and inserts one child per tenant; it
+      # runs no unit code at all. Thirty seconds is a database round trip and an
+      # insert with room for a loaded pool.
+      timeout: 30s
+      # 🟢 write: the tick writes this unit's own queue rows and hands what they
+      # carry to core capture through the governed ingress port — which runs on
+      # the OWNER's live authority, not on the job's. It cannot be confirm-first
+      # (a job has no caller to confirm it) and it cannot be outbound (autonomous
+      # outbound authority on a clock); the job seam refuses both outright.
+      #
+      # The connector's outbound half is deliberately not this job's: a message
+      # leaves through the product's own staged delivery, on a caller's decision,
+      # and nothing here posts anywhere.
+      tier: auto_execute
+      scope: write
+
+  - target: $.kinds['ext_openchannel_drain_ws']
+    update:
+      job: drain
+      role: worker
+      queue: default
+      # Two minutes for a batch of at most drainBatch rows, each one a capture
+      # transaction the core opens locally. It is twice the cadence on purpose:
+      # `running` is inside the fan-out's uniqueness window, so a tick that
+      # overruns collapses the next insert into itself rather than racing it, and
+      # a wall clock shorter than a full batch would park the same slow rows at
+      # the head of the queue on every tick.
+      timeout: 120s
+      # Small on purpose, like every other fan-out child's: the real retry
+      # cadence is the dispatcher's next tick, a minute away.
+      #
+      # A capture sink that is down for the whole installation no longer spends
+      # an attempt at all — the tick postpones itself instead of failing
+      # (drainfailure.go), and River decrements the attempt count on a
+      # postponement — so this cap is about the failures that DO need somebody.
+      max_attempts: 3
+      # No tier and no scope: the pair resolves as ONE governed job, so its
+      # governance is declared once, on the dispatcher above.

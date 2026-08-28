@@ -288,7 +288,7 @@ func ledgerAuthority(t *testing.T) context.Context {
 	})
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return provenance.WithExtension(ctx, provenance.Extension{
-		Unit: "relay-probe", Version: "1.0.0", Via: "job/poll",
+		Unit: "openchannel", Version: "1.0.0", Via: "job/drain",
 	})
 }
 

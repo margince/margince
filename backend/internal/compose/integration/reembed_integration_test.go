@@ -96,14 +96,13 @@ func TestReembedReembedsAllLiveEntitiesAndIsResumable(t *testing.T) {
 	}
 }
 
-// failEmbeddingWritesFor makes every embedding write inside ONE tenant raise,
-// leaving every other tenant's untouched — the fault that used to end the whole
-// fleet pass and now ends one workspace's.
+// failEmbeddingWrites makes every embedding write raise, which is the fault a
+// re-embed pass has to report rather than swallow.
 //
 // It is dropped in cleanup: the integration lane resets rows between tests but
 // keeps the schema, so a surviving trigger would break every later suite that
-// embeds anything in this workspace.
-func failEmbeddingWritesFor(t *testing.T, owner *pgx.Conn, ws ids.UUID) {
+// embeds anything.
+func failEmbeddingWrites(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
 	if _, err := owner.Exec(ctx, `
@@ -122,21 +121,12 @@ func failEmbeddingWritesFor(t *testing.T, owner *pgx.Conn, ws ids.UUID) {
 			t.Errorf("dropping the fault-injection function: %v", err)
 		}
 	})
-	// The condition names the tenant the WRITE IS RUNNING AS, not the tenant on
-	// the row. Phase B keyed embedding on (entity_type, entity_id, chunk_ix)
-	// alone, so a row belongs to the installation and carries whichever tenant
-	// happened to write it first — a NEW.workspace_id test would then fire or
-	// not depending on which pass won the race, which is not what "this
-	// tenant's writes cannot land" means. The GUC is set by the pass's own
-	// WithWorkspaceTx, so this fires for every write that tenant attempts.
-	//
-	// CREATE TRIGGER takes no bind parameters, so the tenant is interpolated;
-	// it is a UUID rendered by ids.UUID.String(), never caller text.
+	// Unconditional: an installation holds one corpus, so every write the pass
+	// attempts is one this test wants to see refused.
 	if _, err := owner.Exec(ctx, `
 		CREATE TRIGGER embedding_write_fault_trigger
 		BEFORE INSERT OR UPDATE ON embedding
-		FOR EACH ROW WHEN (current_setting('app.workspace_id', true) = '`+ws.String()+`')
-		EXECUTE FUNCTION embedding_write_fault()`); err != nil {
+		FOR EACH ROW EXECUTE FUNCTION embedding_write_fault()`); err != nil {
 		t.Fatalf("arming the fault-injection trigger: %v", err)
 	}
 	t.Cleanup(func() {
@@ -171,7 +161,7 @@ func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
 	}
 
 	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Unwritable Person', 'manual', 'human:x')`)
-	failEmbeddingWritesFor(t, e.Owner, e.WS)
+	failEmbeddingWrites(t, e.Owner)
 
 	if err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity}, embedder); err == nil {
 		t.Fatal("a pass whose embedding writes could not land reported success — nothing records that the corpus was never rebuilt")

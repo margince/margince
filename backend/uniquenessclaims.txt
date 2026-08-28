@@ -34,13 +34,6 @@
 
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
-../extensions/notes/note.go#const noteColumns
-../extensions/notes/notes.go#const noteTable
-../extensions/relay-probe/fake_test.go#type fakeRuntime.ingested
-../extensions/relay-probe/ledger.go#const connectionEntity
-../extensions/relay-probe/relayprobe.go#const connectionTable
-../extensions/relay-probe/relayprobe.go#const ingressSystem
-../extensions/relay-probe/walk.go#type walkResult.items
 cmd/api/configitems.go#const oauthAccessTokenTTLEnv
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
@@ -162,7 +155,6 @@ internal/compose/integration/recordhistory_http_integration_test.go#const record
 internal/compose/integration/requiredbodyids_http_integration_test.go#func requiredIDCases
 internal/compose/integration/scheduledsend_integration_test.go#method preflightEnv.seedConsentedRecipient
 internal/compose/integration/seatmatrix_integration_test.go#func seededRoles
-internal/compose/integration/webhooks/webhooks_integration_test.go#method webhookEnv.inWorkspaceTx
 internal/compose/integration/workflow_replay_integration_test.go#const block at const routeLeadHandler
 internal/compose/integration/writeauthorityreview_integration_test.go#func TestAReadShareOfADealCannotRewriteItsContracts
 internal/compose/integrationswiring.go#func NewProviderRunService
@@ -541,7 +533,6 @@ internal/platform/auth/rbac.go#func UpsertAction
 internal/platform/auth/rbac.go#func refuseBuyer
 internal/platform/auth/rowscope.go#var ownerPrivateTables
 internal/platform/cliflags/cliflags.go#method Env.Items
-internal/platform/database/database.go#func withBoundTx
 internal/platform/database/statementbudget.go#func BoundStatement
 internal/platform/database/storekit/customcolumns.go#func quoteColumnIdentifier
 internal/platform/database/storekit/predicate.go#func ReferenceTargets

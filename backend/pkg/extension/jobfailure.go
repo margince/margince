@@ -7,9 +7,9 @@ package extension
 // wrapper a job returns to speak it.
 //
 // THE PROBLEM THIS SOLVES is that a job failure reaches an operator through
-// river_job.errors, a column with no workspace and so no RLS, which every
-// workspace's admin reads. The job layer therefore refuses to persist a cause's
-// own text and substitutes a sentence from a closed vocabulary — otherwise a
+// river_job.errors, a fleet-wide column every admin reads. The job layer
+// therefore refuses to persist a cause's own text and substitutes a sentence
+// from a closed vocabulary — otherwise a
 // provider that named the phone number it refused would have published it,
 // fleet-wide, for as long as River retains the row.
 //

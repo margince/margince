@@ -44,9 +44,6 @@ func (e *dedupeEnv) holdOrgNameLock(ctx context.Context, t *testing.T) (pgx.Tx, 
 			t.Errorf("releasing the lock holder's transaction: %v", err)
 		}
 	})
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatalf("binding the workspace GUC: %v", err)
-	}
 	var pid int
 	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 		t.Fatalf("reading the lock holder's backend pid: %v", err)

@@ -82,7 +82,7 @@ func RegisterRbacObjects(objects []identity.RbacObject) error {
 // declares, in the verbs' own (already deterministic) order.
 //
 // crm-demo, the reference extension, declares ext_crm_demo_note on its three
-// record operations; de, yogi and crm-hello own no records and declare none, so
+// record operations; de and crm-hello own no records and declare none, so
 // a composed set without crm-demo returns the empty set and this seam does
 // nothing — which is the state every other installation is in.
 //

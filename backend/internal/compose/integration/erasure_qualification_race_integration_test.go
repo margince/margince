@@ -60,10 +60,6 @@ func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := holder.Exec(holderCtx,
-		`SELECT set_config('app.workspace_id', $1::text, true)`, e.WS); err != nil {
-		t.Fatal(err)
-	}
 	// The REAL stamp, not a hand-written UPDATE. The class and its evidence are
 	// one statement on purpose — a CHECK refuses a restricted row whose
 	// evidence does not say what qualified it — and a test that wrote only the

@@ -234,8 +234,7 @@ func TestFilteredExportRejectsOutOfVocabularyPredicate(t *testing.T) {
 	}
 }
 
-// lastSystemLog reads the most recent system_log row for an action inside
-// the workspace-bound GUC (FORCE RLS applies even to the table owner), so the
+// lastSystemLog reads the most recent system_log row for an action, so the
 // suite can assert the export was recorded.
 func lastSystemLog(t *testing.T, e *SearchEnv, action string) (gotAction string, detail map[string]any) {
 	t.Helper()
@@ -246,9 +245,6 @@ func lastSystemLog(t *testing.T, e *SearchEnv, action string) (gotAction string,
 	}
 	//craft:ignore swallowed-errors read-only probe; the rollback is the designed close of a SELECT-only tx
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.WS.String()); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	var detailRaw []byte
 	err = tx.QueryRow(ctx,
 		`SELECT action, detail FROM system_log WHERE action = $1 ORDER BY occurred_at DESC LIMIT 1`,

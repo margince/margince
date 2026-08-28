@@ -20,7 +20,9 @@ package gates
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -44,13 +46,10 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 		}
 	})
 
-	for _, module := range []string{
+	for _, module := range append([]string{
 		"tools/go.mod",
 		"../composition/go.mod",
-		"../extensions/de/go.mod",
-		"../extensions/notes/go.mod",
-		"../extensions/yogi/go.mod",
-	} {
+	}, extensionModules(t)...) {
 		t.Run(module, func(t *testing.T) {
 			if got := goVersionOf(t, module); got != want {
 				t.Errorf("%s pins go %s, backend/go.mod pins %s", module, got, want)
@@ -76,6 +75,25 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 				"the template is copied into new modules verbatim", want)
 		}
 	})
+}
+
+// extensionModules scans the tier for its unit modules rather than listing
+// them here. A list is a second copy of the tier: the unit added this morning
+// is not on it, and a pin nobody checks reads exactly like one that agrees. It
+// fails on an empty tier for the reason every census in this tree does —
+// reading nothing and reporting a clean sweep is the failure a version pin
+// cannot afford.
+func extensionModules(t *testing.T) []string {
+	t.Helper()
+	found, err := filepath.Glob("../extensions/*/go.mod")
+	if err != nil {
+		t.Fatalf("scanning the extension tier: %v", err)
+	}
+	if len(found) == 0 {
+		t.Fatal("the extension tier holds no go.mod — a scan that finds no module passes exactly like one that checked every module, so either the tier moved or this glob is stale")
+	}
+	sort.Strings(found)
+	return found
 }
 
 func goVersionOf(t *testing.T, path string) string {

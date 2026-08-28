@@ -369,9 +369,8 @@ Two neighbouring lifecycle rules follow the same shape:
   The alternative duplicated the arithmetic and, being written as a delete, left a surviving pair's
   counts stale whenever the activity was not its last evidence.
 
-Both tables are `ENABLE` + `FORCE ROW LEVEL SECURITY` with the ordinary `app.workspace_id` tenant
-policy, reached only through `database.WithWorkspaceTx` — see
-[authorization.md](authorization.md) and [privacy-and-consent.md](privacy-and-consent.md).
+Both tables are reached only through `database.WithWorkspaceTx`, like every other module statement —
+see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-and-consent.md).
 
 ## Honest limitations
 
@@ -417,7 +416,7 @@ policy, reached only through `database.WithWorkspaceTx` — see
 | Erasure of participants, ghosts and edges (one transaction) | `internal/modules/privacy/erasure_graph.go`, `retention_graph.go` |
 | Deactivation deleting a departing member's network | `internal/modules/identity/users.go` |
 | Cross-store ratifications for every table above | `backend/gates/tableownership_test.go` |
-| The tables + RLS | `activity_participant` (`migrations/core/0157_*`), `graph_interaction_edge` (`0158_*`), `linkedin_connection` (`0159_*`), `linkedin_account` (`0160_*`) |
+| The tables | `activity_participant` (`migrations/core/0157_*`), `graph_interaction_edge` (`0158_*`), `linkedin_connection` (`0159_*`), `linkedin_account` (`0160_*`) |
 | The REST contract | `backend/api/crm.yaml` (`getPersonNetwork`, `getDealCoverage`) |
 | The job contract (cadence, fan-out, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |
 | The two cards | `frontend/src/screens/network.tsx` (rendered from `people.tsx` and `deals.tsx`) |

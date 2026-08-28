@@ -181,9 +181,6 @@ func seedRecordBenchVolume(t *testing.T, e *apptest.AppEnv) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, workspace); err != nil {
-		t.Fatalf("binding the workspace GUC: %v", err)
-	}
 	for _, seed := range recordBenchSeeds(workspace) {
 		if _, err := tx.Exec(ctx, seed.sql, seed.args...); err != nil {
 			t.Fatalf("seeding %s: %v", seed.what, err)

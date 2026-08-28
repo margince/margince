@@ -82,6 +82,49 @@ type unitManifest struct {
 	// manifest for a Tool's reason: it is a capability an operator should see
 	// declared, not discover from a message leaving the installation.
 	Channels []declaredChannel `json:"channels,omitempty"`
+
+	// Inbound are the session-less HTTP edges the unit asks the core to mount
+	// (see extension.InboundEndpoint). It is the one entry in this document an
+	// operator must read before enabling the unit at all: every other capability
+	// here is reached by somebody the installation already authenticated, and
+	// these are reached by a party holding nothing but a URL and a secret.
+	//
+	// The bounds are published with it, because "which unit added an anonymous
+	// route" and "how much can one stranger make this installation read" are the
+	// same question. omitempty for the reason the fields above have it.
+	Inbound []inboundEndpoint `json:"inbound,omitempty"`
+}
+
+// inboundEndpoint is one declared anonymous edge (see
+// extension.InboundEndpoint), sorted by slug so the encoding does not depend on
+// declaration order.
+//
+// Durations are published in WHOLE SECONDS rather than as Go duration strings:
+// this document is read by an operator comparing a skew against a sender's own
+// retry window, and "300" answers that where "5m0s" asks them to convert.
+type inboundEndpoint struct {
+	Slug   string `json:"slug"`
+	Secret string `json:"secret"`
+	// MaxBody is the byte cap the endpoint asked for. It is the number that
+	// decides how much one unauthenticated request costs before its signature
+	// has even been checked.
+	MaxBody     int64       `json:"max_body"`
+	SkewSeconds int64       `json:"skew_seconds"`
+	Rate        inboundRate `json:"rate"`
+}
+
+// inboundRate is the two metering buckets an endpoint asked for. Both are
+// published: an endpoint bucket alone says nothing about what a flood spread
+// across many endpoints costs.
+type inboundRate struct {
+	PerIP       rateRequest `json:"per_ip"`
+	PerEndpoint rateRequest `json:"per_endpoint"`
+}
+
+// rateRequest is one fixed-window allowance.
+type rateRequest struct {
+	Limit         int   `json:"limit"`
+	WindowSeconds int64 `json:"window_seconds"`
 }
 
 // secretsRequest is one declared secret key and scope (see

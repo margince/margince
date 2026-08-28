@@ -87,7 +87,7 @@ worker that does the work. Declare both.
 
    ```go
    func (w *closeDateWorkspaceWorker) Work(ctx context.Context, job *river.Job[CloseDateWorkspaceArgs]) error {
-       wsCtx, err := workspaceJobCtx(ctx, job.Args)   // refuses a zero workspace, binds the RLS GUC
+       wsCtx, err := workspaceJobCtx(ctx, job.Args)   // refuses a zero workspace, binds it to the context
        if err != nil {
            return jobs.FaultContext(ctx, err)
        }
@@ -150,8 +150,8 @@ worker that does the work. Declare both.
 
 7. **Verify** — `make check`. The census, the eleven job gates and the boot-time totality check all
    run here. Add `make test-integration` if the pass touches tenant tables: the real-Postgres lane is
-   what proves the RLS binding, and the timeout wiring suite reads the declared wall clock back off a
-   live River client.
+   what proves the workspace binding, and the timeout wiring suite reads the declared wall clock back
+   off a live River client.
 
 8. **Commit the contract and the generated output together** — `api/jobs.yaml`, `specs_gen.go` and
    `jobkinds_gen.go` in the same commit. A missed `make gen` fails the drift gate, and a

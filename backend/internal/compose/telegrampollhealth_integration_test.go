@@ -157,8 +157,8 @@ func TestAConflictAWebhookClearRepairsLeavesTheConnectionLive(t *testing.T) {
 	}
 }
 
-// telegramConnectionStatus reads the connection's status through a
-// workspace-bound transaction (channel_connection carries FORCE RLS).
+// telegramConnectionStatus reads the connection's status through the same
+// transaction seam the poller writes it through.
 func telegramConnectionStatus(t *testing.T, e *integration.Env, conn capture.ChannelConnection) string {
 	t.Helper()
 	var status string

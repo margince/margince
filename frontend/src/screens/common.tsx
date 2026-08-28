@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -171,15 +176,30 @@ export function timelineZoneNotice(
 // would be offered a connection request they never started — and the resume
 // banner would send them to a consent screen holding their OWN passports.
 //
-// Order matters here: queryClient.clear() destroys every Query object in the
-// cache, INCLUDING ["me"]'s. If ["me"] were reset only after a full clear(),
-// resetQueries would find nothing matching that key to reset (it was already
-// removed) — the mounted AuthGate observer would keep rendering its last
-// (stale, authenticated) snapshot, since clear() alone never triggers a
-// refetch. So instead: drop every OTHER cache entry first (leaving ["me"]
-// intact), then resetQueries the shared ["me"] entry specifically — that
-// query still exists, has an active (mounted) observer, and resetQueries
-// forces it to refetch immediately, landing the AuthGate on 401 → login.
+// resetToSignedOut drops every cached answer belonging to the session that just
+// ended, and lands the auth boundary on the login screen.
+//
+// ORDER MATTERS, and it is the whole reason this is one function rather than
+// four spellings. queryClient.clear() destroys every Query object in the cache,
+// INCLUDING ["me"]'s. If ["me"] were reset only after a full clear(),
+// resetQueries would find nothing matching that key to reset — the mounted
+// AuthGate observer would keep rendering its last authenticated snapshot, since
+// clear() alone never triggers a refetch. So: drop every OTHER entry first,
+// leaving ["me"] intact, then reset ["me"] specifically. That query still
+// exists, still has a mounted observer, and resetQueries forces it to refetch
+// immediately, landing the boundary on 401 → login.
+//
+// Every caller is a place that learns the session is over: the deliberate
+// sign-out, and the 401 a long-lived read discovers for itself. What must not
+// happen is a cached answer outliving the member it was fetched for — the next
+// person to sign in inside the cache lifetime would be served it.
+export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== "me",
+  });
+  return queryClient.resetQueries({ queryKey: ["me"] });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -192,10 +212,7 @@ export function useLogout() {
       // expired session — the login screen greets it accordingly.
       authExitNotice = "signed-out";
       clearPendingAuthorize();
-      queryClient.removeQueries({
-        predicate: (query) => query.queryKey[0] !== "me",
-      });
-      await queryClient.resetQueries({ queryKey: ["me"] });
+      await resetToSignedOut(queryClient);
     },
   });
 }

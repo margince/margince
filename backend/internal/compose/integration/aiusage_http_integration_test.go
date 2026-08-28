@@ -33,10 +33,6 @@ func seedAiUsage(t *testing.T, e *apptest.AppEnv) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	wsID := apptest.InstallationWorkspaceID(ctx, t, tx)
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO ai_usage (day, task, tier, calls, cached_hits, tokens_in, tokens_out) VALUES
 		('2026-07-10', 'capture_classify', 'local_small', 4, 1, 1200, 300),

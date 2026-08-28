@@ -1,5 +1,13 @@
 # Video walkthrough — the extension tier, `notes` end to end
 
+> **Historical record, 2026-08-28.** The `notes` unit this evidence shows was
+> REMOVED, together with `yogi` and `relay-probe`, when `openchannel` replaced the
+> three as the tier's one reference unit. Nothing below describes code that is in
+> the tree. It is kept because it is the acceptance evidence for the capabilities
+> the tier still has — screens, secrets, jobs, migrations, a governed surface —
+> and deleting a review's evidence to tidy up destroys the record of what was
+> actually checked. Read it as "how the tier was proved", never as "what ships".
+
 `notes.mp4` (1.0 MB, 1360×860, 1:23) — same take as `notes.webm` (5.6 MB), re-encoded.
 Attach the **mp4** to the PR; the webm is the Playwright original.
 

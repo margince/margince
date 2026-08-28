@@ -144,7 +144,7 @@ func TestCallBearingVarInitializerIsRejected(t *testing.T) {
 }
 
 // TestLiteralOnlyPackageVarIsAccepted: a package-level var holding only
-// literals (yogi's `var quotes = []string{...}` is the in-tree example)
+// literals (a package-level table of strings, say)
 // runs no code at import and must keep deriving — the gate targets calls,
 // not package-level state.
 func TestLiteralOnlyPackageVarIsAccepted(t *testing.T) {

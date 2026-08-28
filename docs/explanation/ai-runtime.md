@@ -230,9 +230,8 @@ final answer:
   retention evaluator.
 
 The write path is the standard one — `ai_call` + `ai_call_payload` in one
-`WithWorkspaceTx`, `workspace_id` stamped from the GUC, FORCE RLS on both — so a
-trace is as tenant-isolated as any domain row. See
-[write-backbone.md](write-backbone.md).
+`WithWorkspaceTx` — so a trace is written and audited exactly like any domain
+row. See [write-backbone.md](write-backbone.md).
 
 ## Cost — the meter collects tokens, a rate table prices them
 

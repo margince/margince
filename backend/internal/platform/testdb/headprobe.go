@@ -152,11 +152,11 @@ func reusableClone(ctx context.Context, owner *pgx.Conn) (bool, string, error) {
 	// A failed emptiness probe REFUSES rather than propagating, because this
 	// function's contract is that everything it can establish about the schema
 	// resolves to reuse-or-rebuild — rebuilding is always correct, and an error
-	// here would instead abort every package in the process. The reachable cause
-	// is the RLS refusal above: an owner without BYPASSRLS (which is what
-	// scripts/deploy/db-bootstrap.sql creates outside the compose stack) cannot
-	// read an ext_ table with row_security off. "Cannot prove empty" and "is not
-	// empty" owe the caller the same answer.
+	// here would instead abort every package in the process. An error means the
+	// database could not be asked at all: a relation this connection's role holds
+	// no SELECT on reads that way, which is what an owner outside the compose
+	// stack (scripts/deploy/db-bootstrap.sql) can meet. "Cannot prove empty" and
+	// "is not empty" owe the caller the same answer.
 	reason, err := schemaEmpty(ctx, owner)
 	if err != nil {
 		return false, fmt.Sprintf("the clone could not be proved empty, so it is rebuilt rather than trusted: %v", err), nil
@@ -263,6 +263,70 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]recordedRow) st
 // that the line stays readable in a lane log.
 const nonEmptyReportLimit = 5
 
+// probedTable is one relation the emptiness probe reads, carrying the catalog
+// fact that decides whether reading it answers about the TABLE or about the
+// role doing the reading.
+type probedTable struct {
+	ident       string
+	rowSecurity bool
+}
+
+// probedTables lists the relations a reset acts on, each with its row-security
+// setting, in ONE catalog read.
+//
+// One read and not two, because the list the probe SCANS and the list it vets
+// for readability have to be the same list by construction. A second query
+// carrying its own predicate can match fewer relations, find no row rule among
+// the ones it did match, and report a clean schema — under-recognition, which
+// is the one direction this check must not fail in. The caller's refusal for an
+// empty list closes the other direction.
+func probedTables(ctx context.Context, owner *pgx.Conn) ([]probedTable, error) {
+	rows, err := owner.Query(ctx,
+		`SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname), c.relrowsecurity `+
+			resetTables+` ORDER BY n.nspname, c.relname`)
+	if err != nil {
+		return nil, fmt.Errorf("listing data tables to prove the clone is empty: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []probedTable
+	for rows.Next() {
+		var table probedTable
+		if err := rows.Scan(&table.ident, &table.rowSecurity); err != nil {
+			return nil, fmt.Errorf("listing data tables to prove the clone is empty: %w", err)
+		}
+		tables = append(tables, table)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("listing data tables to prove the clone is empty: %w", err)
+	}
+	return tables, nil
+}
+
+// rowRuleRefusal names the relations whose rows a row-level rule can hide from
+// this probe, and is a refusal rather than a note.
+//
+// EXISTS over a table with row-level security enabled answers about the ROLE
+// running the query: a role that bypasses RLS is shown every row, one that does
+// not is shown only what the policies admit, and under FORCE not even the owner
+// is exempt. The same clone then reads empty to one lane and populated to the
+// next, while EnsureSchema baselines every table size on whichever answer it
+// got. A relation the probe cannot ask about the table itself is one it declines
+// to vouch for.
+func rowRuleRefusal(tables []probedTable) string {
+	var filtered []string
+	for _, table := range tables {
+		if table.rowSecurity {
+			filtered = append(filtered, table.ident)
+		}
+	}
+	if len(filtered) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d table(s) carry row-level security (%s) — an emptiness check over them answers about the role reading rather than about the table, so this clone is rebuilt rather than trusted",
+		len(filtered), summarise(filtered))
+}
+
 // schemaEmpty proves that every table a reset acts on currently holds no rows.
 //
 // EnsureSchema records emptySizes right after this, and reclaimBloat measures
@@ -274,17 +338,22 @@ const nonEmptyReportLimit = 5
 // removes is what laundered that.
 //
 // It asks the same resetTables fragment the reset itself acts on, so a table
-// the reset would empty can never be one this probe does not look at.
+// the reset would empty can never be one this probe does not look at. And the
+// verdict is only worth what the read behind it is worth, which is why the row
+// rules come first: an EXISTS the catalog says can be filtered proves nothing
+// about the table it ran against.
 func schemaEmpty(ctx context.Context, owner *pgx.Conn) (string, error) {
-	tables, err := queryIdents(ctx, owner,
-		`SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname) `+resetTables+` ORDER BY n.nspname, c.relname`)
+	tables, err := probedTables(ctx, owner)
 	if err != nil {
-		return "", fmt.Errorf("listing data tables to prove the clone is empty: %w", err)
+		return "", err
 	}
 	// A migrated database always has tables, so an empty list means the schema
 	// is not there — which is a rebuild, not an empty database.
 	if len(tables) == 0 {
 		return "no data tables in public or ext — this database carries a migration ledger but no schema", nil
+	}
+	if reason := rowRuleRefusal(tables); reason != "" {
+		return reason, nil
 	}
 	// One statement, and it selects each table's INDEX rather than its name:
 	// the names are already quote_ident() output from pg_class and would need
@@ -292,39 +361,9 @@ func schemaEmpty(ctx context.Context, owner *pgx.Conn) (string, error) {
 	// quoting at all and cannot be anything but what this loop wrote.
 	branches := make([]string, 0, len(tables))
 	for i, table := range tables {
-		branches = append(branches, `SELECT `+strconv.Itoa(i)+` WHERE EXISTS (SELECT 1 FROM `+table+`)`)
+		branches = append(branches, `SELECT `+strconv.Itoa(i)+` WHERE EXISTS (SELECT 1 FROM `+table.ident+`)`)
 	}
-	// In a transaction with row_security off, and the guard is NOT the set_config
-	// — that call always succeeds, because row_security is a USERSET GUC. (The
-	// SUSET one is session_replication_role, which is why resetWithin's first
-	// statement fails loudly for a role that cannot set it. Do not carry that
-	// reasoning across; these are different GUCs with different contexts.)
-	//
-	// What the setting buys is the ERROR. An ext_ table carries FORCE ROW LEVEL
-	// SECURITY with a deny-on-unset policy and this connection sets no
-	// app.workspace_id, so a role without BYPASSRLS reading it normally is shown
-	// zero rows — and this probe would answer "empty" over a populated schema,
-	// the one wrong answer it must never give, since EnsureSchema baselines every
-	// table size on the strength of it. With row_security off that same role gets
-	// SQLSTATE 42501 instead of a filtered result, which schemaEmpty turns into a
-	// refusal below. Silence becomes a refusal; the transaction is what makes
-	// that swap, so do not remove it as redundant.
-	tx, err := owner.Begin(ctx)
-	if err != nil {
-		return "", fmt.Errorf("probing the clone for rows: %w", err)
-	}
-	// Read-only throughout, so the transaction is ended by rollback on every
-	// path: there is nothing here to commit. On the caller's context, like
-	// Reset's own rollback — a cancelled probe has no rollback worth waiting on.
-	defer func() {
-		//craft:ignore swallowed-errors a read-only probe transaction has nothing to lose on rollback, and the probe's own verdict is the error that matters
-		_ = tx.Rollback(ctx)
-	}()
-	if _, err := tx.Exec(ctx, `SELECT set_config('row_security', 'off', true)`); err != nil {
-		return "", fmt.Errorf("arming the emptiness probe: %w", err)
-	}
-
-	rows, err := tx.Query(ctx, strings.Join(branches, " UNION ALL "))
+	rows, err := owner.Query(ctx, strings.Join(branches, " UNION ALL "))
 	if err != nil {
 		return "", fmt.Errorf("probing the clone for rows: %w", err)
 	}
@@ -336,7 +375,7 @@ func schemaEmpty(ctx context.Context, owner *pgx.Conn) (string, error) {
 		if err := rows.Scan(&i); err != nil {
 			return "", fmt.Errorf("probing the clone for rows: %w", err)
 		}
-		populated = append(populated, tables[i])
+		populated = append(populated, tables[i].ident)
 	}
 	if err := rows.Err(); err != nil {
 		return "", fmt.Errorf("probing the clone for rows: %w", err)

@@ -82,11 +82,9 @@ func setupCaptureDB(t *testing.T) (*pgx.Conn, *pgxpool.Pool) {
 	// would go on writing into the database the NEXT test just reset.
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
 	// Every test in this package seeds its own workspace through ONE shared
-	// connection, and what used to keep their rows apart was deny-on-unset RLS.
-	// With tenant isolation retired (ADR-0091 §8 phase A) the separation has to
-	// be real: reset before seeding, as compose/integration's harness does.
-	// Once per TEST, not per call — a test that seeds a second workspace on
-	// purpose must not lose its first.
+	// connection, so the separation between them has to be real: reset before
+	// seeding, as compose/integration's harness does. Once per TEST, not per call
+	// — a test that seeds a second workspace on purpose must not lose its first.
 	captureResetMu.Lock()
 	defer captureResetMu.Unlock()
 	if !captureResetFor[t.Name()] {

@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package database is the shared Postgres platform layer: the configured
-// connection pool and the tenant-scoped transaction helper every store
-// uses. It is the ONE place the RLS GUC contract (data-model §1.3) is
-// implemented — no store issues its own SET LOCAL.
+// connection pool and the transaction seam every store uses. It is the ONE
+// place a transaction is opened for domain work, which is what makes "a
+// module's row, its audit row and its outbox row commit together" a property
+// one file holds rather than a habit every store repeats.
 package database
 
 import (
@@ -17,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -110,28 +110,42 @@ func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 // context — a programming error, surfaced before any SQL runs.
 var ErrNoWorkspace = errors.New("pg: no workspace bound to context")
 
-// WithWorkspaceTx runs fn inside a transaction whose app.workspace_id GUC
-// is SET LOCAL to the context's workspace, which is what every tenant
-// statement's OWN workspace predicate reads. Core 0217 (ADR-0091) retired
-// the policies that used to read it instead, so the GUC binds nothing on
-// its own now: a statement that omits the predicate is unscoped and no
-// longer fails closed. SET LOCAL is transaction-scoped — it resets at
-// COMMIT/ROLLBACK, so a pooled connection can never leak one tenant's GUC
-// to the next checkout (the §1.3 pool-reuse rule). Every domain read and
-// write goes through here; there is no raw-pool path for tenant data.
+// WithWorkspaceTx runs fn inside ONE transaction, and refuses before any SQL
+// runs if the context carries no workspace.
+//
+// It is the seam every domain read and write goes through: one transaction
+// boundary per unit of work, so a module's row, its audit row and its outbox
+// row commit together, and one place to audit what addresses the database.
+// There is no raw-pool path for domain data — scripts/check-rls-store-path.sh
+// holds that.
+//
+// The workspace itself scopes nothing in SQL. An installation holds exactly one
+// (ADR-0061), no table carries workspace_id and no policy reads one, so what
+// this checks is that a domain call was reached through a request that resolved
+// its tenant at all — a programming-error check, not an isolation boundary.
 func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return ErrNoWorkspace
 	}
 
-	return withBoundTx(ctx, pool, ids.From[ids.WorkspaceKind](wsID), fn)
+	return runTx(ctx, pool, fn)
 }
 
-// withBoundTx is the one spelling of "a transaction with the workspace GUC
-// bound", shared by WithWorkspaceTx (workspace from ctx) and DB.Tx (workspace
-// from the installation resolver) so the two cannot drift while both exist.
-func withBoundTx(ctx context.Context, pool *pgxpool.Pool, ws ids.WorkspaceID, fn func(pgx.Tx) error) error {
+// WithInfraTx runs fn in a transaction for the narrow infra paths that run
+// outside any one tenant's request — workspace bootstrap, session lookup by
+// token hash, the outbox relay. It differs from WithWorkspaceTx in exactly one
+// way: it does not require a workspace on the context, which is why a path that
+// HAS one must not reach for it.
+func WithInfraTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
+	return runTx(ctx, pool, fn)
+}
+
+// runTx is the one spelling of this package's transaction discipline — begin,
+// roll back on every path that is not a commit, commit once — so the seams
+// above cannot drift from each other while both exist.
+//
+// Held by: TestTheDatabasePackageOpensATransactionInOneFunction (backend/gates/transactionopeners_test.go)
+func runTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("pg: begin: %w", err)
@@ -140,31 +154,6 @@ func withBoundTx(ctx context.Context, pool *pgxpool.Pool, ws ids.WorkspaceID, fn
 	// successful Commit it answers ErrTxClosed by design, and on the error
 	// path the fn/commit error is the one the caller must see.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	// Parameterized set_config, never string-built SET LOCAL.
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, ws.String()); err != nil {
-		return fmt.Errorf("pg: binding workspace GUC: %w", err)
-	}
-	if err := fn(tx); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
-}
-
-// WithInfraTx runs fn in a transaction WITHOUT a tenant GUC — for the
-// narrow infra paths that legitimately cross tenants (workspace bootstrap,
-// session lookup by token hash, the outbox relay). Under the deny-on-unset
-// policies such a transaction reads zero tenant rows unless the owning
-// role bypasses RLS, which keeps misuse loud in tests.
-func WithInfraTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("pg: begin: %w", err)
-	}
-	// Error-path safety net only: once Commit succeeded this rollback is
-	// pgx's ErrTxClosed no-op, and a genuine failure already left through fn.
-	//craft:ignore swallowed-errors deferred rollback of a committed infra tx cannot fail meaningfully; real failures surface via fn or Commit
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	if err := fn(tx); err != nil {

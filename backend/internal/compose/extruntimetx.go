@@ -78,22 +78,21 @@ func (r *callRuntime) endIngest() {
 	r.ingesting--
 }
 
-// Tx opens ONE transaction, already pinned to the workspace the invocation
-// belongs to, and hands the callback the published seam over it.
+// Tx opens ONE transaction on the workspace the invocation belongs to, and
+// hands the callback the published seam over it.
 //
-// The pinning is database.WithWorkspaceTx — the same transaction-local
-// app.workspace_id GUC every core store binds — rather than a second
-// mechanism this surface invents. The workspace comes from scoped, so the
-// GUC names the INVOCATION's tenant and not whatever tenant the handler's
-// own ctx happens to carry.
+// It goes through database.WithWorkspaceTx rather than a second mechanism this
+// surface invents, so the tier and the core open a transaction the same way and
+// there is one place to audit either. The workspace comes from scoped — the
+// INVOCATION's tenant, not whatever tenant the handler's own ctx happens to
+// carry.
 //
-// What the pin does NOT do is bound fn. Core 0217 (ADR-0091) retired every
-// tenant-isolation policy, so the GUC is a value a statement may read, not a
-// fence the database applies: SQL issued here reaches whatever it names, and
-// a unit's statement carries its own workspace predicate or carries none.
-// The boundary that holds is the published seam itself — the grant surface
-// extmigrategate polices and the `ext` schema a unit owns — plus A107's
-// single-organization installation.
+// What the transaction does NOT do is bound fn. Nothing in this database keys
+// on a tenant: an installation holds one workspace (ADR-0061), no table carries
+// workspace_id and no policy reads one, so SQL issued here reaches whatever the
+// application role can name. The boundary that holds is the published seam
+// itself — the grant surface extmigrategate polices and the `ext` schema a unit
+// owns.
 func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) error {
 	ctx, err := r.scoped(ctx)
 	if err != nil {

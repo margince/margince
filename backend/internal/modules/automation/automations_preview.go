@@ -357,7 +357,8 @@ func (def previewDef) scopeClause(ctx context.Context, alias string, arg func(an
 // caller's row scope, and the trailing-window firing count.
 func (def previewDef) measure(ctx context.Context, tx pgx.Tx, since time.Time, res *AutomationPreviewResult) error {
 	// Workspace-wide matches: the honest denominator behind
-	// excluded_by_permission (RLS still bounds the tenant).
+	// excluded_by_permission — there is nothing further to scope it to,
+	// since an installation holds exactly one workspace (ADR-0061).
 	var totalArgs []any
 	matchSQL, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&totalArgs))
 	if err != nil {

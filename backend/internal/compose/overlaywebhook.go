@@ -329,14 +329,15 @@ func (h *hubspotWebhookHandler) enqueueRefetch(r *http.Request, workspace ids.UU
 
 // freshTimestamp reports whether the millis-epoch request timestamp is within
 // webhookMaxSkew of now. A missing or unparseable timestamp is not fresh.
+//
+// The parsing is HubSpot's — it sends epoch milliseconds, where the extension
+// edge sends seconds — and the comparison delegates to withinSkew, which the
+// extension inbound edge's admission also calls: the absolute-distance rule
+// and the inclusive bound live there.
 func freshTimestamp(ts string) bool {
 	ms, err := strconv.ParseInt(ts, 10, 64)
 	if err != nil {
 		return false
 	}
-	delta := time.Since(time.UnixMilli(ms))
-	if delta < 0 {
-		delta = -delta
-	}
-	return delta <= webhookMaxSkew
+	return withinSkew(time.Now(), time.UnixMilli(ms), webhookMaxSkew)
 }

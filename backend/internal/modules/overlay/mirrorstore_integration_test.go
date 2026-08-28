@@ -387,10 +387,9 @@ func TestIngestClearsAReprojectionFailureRecord(t *testing.T) {
 	}
 }
 
-// seedTombstone inserts the fixture the tombstone-guard test asserts
-// against, through the same tenant-scoped transaction helper the store
-// itself uses — the fixture must be workspace-visible to the guard's own
-// NOT EXISTS check, which reads app.workspace_id off the GUC.
+// seedTombstone inserts the fixture the tombstone-guard test asserts against,
+// through the same transaction helper the store itself uses — a fixture that
+// wrote around it would not be standing in for a production write.
 func seedTombstone(ctx context.Context, pool *pgxpool.Pool, objectClass, externalID string) error {
 	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `

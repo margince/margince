@@ -1,7 +1,8 @@
 # Roles, teams, and record sharing
 
 The companion to [authorization.md](authorization.md). That page explains **where** the access check
-lives (at the store, with Postgres RLS beneath) and how the three transports resolve one gate. This
+lives (at the store, with the transaction seam and the app role's own grants beneath) and how the
+three transports resolve one gate. This
 page explains the **data model that gate reads**: what a role grants, how row scope narrows it, how
 teams widen it, and how a single-record share layers on top.
 
@@ -265,5 +266,5 @@ board) — the symptom that means "no role," distinct from "role present but sco
   `tableclass.go`; the activity discover/content gates in `inheritedscope.go`
 - Schema: `role`, `role_assignment`, `team`, `team_membership`, `record_grant`
   (`backend/migrations/core/`)
-- The enforcement architecture (one gate, three transports, RLS backstop):
+- The enforcement architecture (one gate, three transports, structural backstop):
   [authorization.md](authorization.md)

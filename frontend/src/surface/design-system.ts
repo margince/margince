@@ -22,10 +22,25 @@
 // buttons and gets the group semantics wrong: the fieldset, the accessible name
 // carried onto each option, and the pressed state are the parts nobody rebuilds
 // correctly by eye.
+// DataTable, because a unit that has ROWS to show has otherwise to write a
+// bare `<table>`, and no extension ships a stylesheet — so what it gets is the
+// browser's default table, unaligned, unbounded, and scrolling the whole page
+// sideways the moment it is wider than its column. This is the same argument
+// FactList was published under, one dimension up: FactList draws one record's
+// facts and there was no primitive at all for a LIST of them.
+//
+// DataTable rather than ListTable, and the difference is the promise. ListTable
+// is a record list with server-backed query dials, saved views, a column picker
+// and a keyset footer — a caller owes it sort state the server answers to.
+// DataTable is columns, rows and a name, already inside the one `TableScroll`
+// that keeps an over-wide table scrolling in its own box rather than taking the
+// page with it. A unit's listing is the second shape, and publishing the first
+// would promise a contract the core changes for its own record screens.
 export {
   Badge,
   Button,
   Card,
+  DataTable,
   EmptyState,
   Field,
   SectionHeader,

@@ -25,10 +25,18 @@
 // helper a unit cannot call. problemMessageOf's MessageKey is already
 // published through useT, so this widens no type surface.
 export { api } from "../api/client";
+// resetToSignedOut is published for the same reason the rest of this block is:
+// a unit's screen that polls will one day meet the 401 of a session that ended
+// under it, and the answer — drop every cached answer belonging to the member
+// who is gone, then reset the shared probe so the auth boundary notices — has
+// an ORDER that is wrong in a way nothing catches. A unit spelling it itself
+// gets a cache that outlives its member, and the next person to sign in inside
+// the cache lifetime is served the previous one's data.
 export {
   isVersionSkew,
   ProblemError,
   problemMessageOf,
   QueryStates,
+  resetToSignedOut,
   throwProblem,
 } from "../screens/common";

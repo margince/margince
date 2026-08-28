@@ -36,6 +36,7 @@ package extension
 // are copies that stop being equal to the published list the moment it moves.
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -53,6 +54,16 @@ import (
 // shorter than that.
 const outboundDialTimeout = 10 * time.Second
 
+// ErrEgressRefused marks a dial this installation declined to make. Exported
+// because a unit that wires RefuseNonPublic (or reaches it through
+// OutboundClient) needs to tell the two outcomes of a failed send apart: a
+// dial this hook refused transmitted NOTHING — no connection was ever
+// opened — while an ordinary network failure means a request went out and
+// its outcome is unknown. Only the first is a certain non-delivery, and only
+// this installation can act on it; the second may have reached the far end
+// and must not be treated the same way a caller would treat "it refused".
+var ErrEgressRefused = errors.New("extension: this installation refused the dial")
+
 // RefuseNonPublic is a net.Dialer.Control hook that refuses any non-public
 // address. Published for the unit that needs its own client settings — a
 // custom TLS config, a different proxy — and can therefore not use
@@ -64,17 +75,17 @@ const outboundDialTimeout = 10 * time.Second
 func RefuseNonPublic(_, address string, _ syscall.RawConn) error {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return fmt.Errorf("extension: unparseable dial address %q: %w", address, err)
+		return fmt.Errorf("extension: unparseable dial address %q: %w: %w", address, err, ErrEgressRefused)
 	}
 	ip := net.ParseIP(host)
 	if ip == nil {
 		// The dialer hands a literal here, always. A name at this point means
 		// the caller wired this hook somewhere it does not belong, and
 		// admitting it would be admitting an unchecked address.
-		return fmt.Errorf("extension: dial address %q is not a literal IP", host)
+		return fmt.Errorf("extension: dial address %q is not a literal IP: %w", host, ErrEgressRefused)
 	}
 	if !publicIP(ip) {
-		return fmt.Errorf("extension: refusing to dial non-public address %s", host)
+		return fmt.Errorf("extension: refusing to dial non-public address %s: %w", host, ErrEgressRefused)
 	}
 	return nil
 }

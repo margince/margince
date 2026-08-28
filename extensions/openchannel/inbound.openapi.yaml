@@ -1,0 +1,262 @@
+# This document is NOT composed into the governed /v1 contract, and it must
+# never be. The path it describes is mounted by the core's
+# MountInboundEndpoints directly (backend/internal/compose/extinbound.go),
+# beside /v1 rather than under it, because this edge carries no session and
+# /v1 carries the session middleware. Declaring this path inside crm.yaml
+# would publish a documented route with no generated handler behind it.
+#
+# It is also NOT dropped into extensions/openchannel/api/ — that directory is
+# a closed set of overlay fragments, each named after the core contract it
+# extends (backend/tools/gen-composition/contracts.go, composedContractBases).
+# A file there that names no core contract makes composition refuse outright,
+# for every unit, not just this one. This document extends nothing; it stands
+# alone, so it lives at the unit's own root instead, where it ships with the
+# unit without entering the composed surface.
+#
+# It exists because the core admitted these bytes on a signature and
+# interpreted nothing in them — extensions/openchannel/record.go says the unit
+# decides the envelope because nobody else can, and having decided it, this is
+# where that decision is published to whoever configures a sender. The body
+# schema below MUST equal the `arrival` struct's JSON tags in record.go, in
+# both directions: backend/gates/openchannelinboundschema_test.go holds that,
+# because a schema that drifted from the struct would tell an integrator to
+# fill in a field the connector ignores, or leave out one it reads.
+openapi: 3.1.0
+info:
+  title: Openchannel inbound webhook
+  version: "1.0.0"
+  description: >-
+    The anonymous, signed edge a third-party sender POSTs a message to. One
+    endpoint is minted per member (the `ref` segment); the `slug` segment is
+    this unit's own declared edge name and is the same for every member.
+    Nothing about the caller is trusted beyond the signature: there is no
+    session, no cookie and no bearer token, and the request carries no
+    identity of its own.
+servers:
+  - url: /webhooks/ext/openchannel
+    description: >-
+      Mounted on the same origin as the API, beside /v1 rather than under it.
+paths:
+  /{slug}/{ref}:
+    post:
+      operationId: openchannelInboundReceive
+      summary: Land one message from a connected sender.
+      description: >-
+        Verified, durably queued and answered before the message is acted on
+        — recording is not the same as acting, and this edge deliberately
+        does only the former. A body that verifies but is not the document
+        below, or that verifies and names no `message_id`, is refused as a
+        PARKED request visible on the member's own screen, never silently
+        dropped: the member can see what arrived and why it did not land.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: >-
+            This unit's declared edge name. Fixed for every member; today the
+            only value openchannel declares is `receive`.
+          schema:
+            type: string
+            example: receive
+        - name: ref
+          in: path
+          required: true
+          description: >-
+            Opaque, per-member handle the unit minted when the member opened
+            this endpoint. It is an ADDRESS, not a second secret — it travels
+            in the URL and therefore in every access log and proxy between a
+            sender and this installation. Only the signature below admits a
+            request.
+          schema:
+            type: string
+        - name: X-Margince-Timestamp
+          in: header
+          required: true
+          description: >-
+            Unix seconds, decimal digits, of when the sender signed the
+            request. Checked for freshness against a bounded skew; too old or
+            too far in the future is refused the same as a bad signature.
+          schema:
+            type: string
+            pattern: "^[0-9]+$"
+        - name: X-Margince-Nonce
+          in: header
+          required: true
+          description: >-
+            A caller-chosen unique value, hex-encoded, that makes a
+            correctly-signed request replayable exactly once: a second
+            arrival with the same nonce on this endpoint lands nothing.
+          schema:
+            type: string
+            pattern: "^[0-9a-fA-F]+$"
+        - name: X-Margince-Signature
+          in: header
+          required: true
+          description: >-
+            `sha256=<hex>`, the HMAC-SHA256 under the endpoint's own secret
+            over the signing payload described below. Recompute it exactly as
+            specified — a sender that assumes some other concatenation gets
+            one opaque 401 with nothing in it to say why.
+          schema:
+            type: string
+            pattern: "^sha256=[0-9a-fA-F]+$"
+      requestBody:
+        required: true
+        description: >-
+          The exact bytes signed by X-Margince-Signature. The signing payload
+          is NOT the three headers concatenated: it is (in order, joined by a
+          single newline each) the fixed scope string `margince-inbound-v1`,
+          the `slug` path segment, the `ref` path segment, the timestamp as
+          decimal unix seconds, the nonce as presented (hex), and then this
+          body's raw bytes appended after the fifth newline — see
+          extension.SigningPayload in backend/pkg/extension/inbound.go, which
+          is the one place this recipe is spelled; nothing here restates it
+          with different words.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboundArrival"
+            examples:
+              minimal:
+                summary: The smallest document the connector accepts.
+                value:
+                  message_id: "demo-1"
+              repliable:
+                summary: >-
+                  A sender able to name its own account for the other party —
+                  this is what makes the captured message repliable.
+                value:
+                  message_id: "msg-482910"
+                  thread_id: "conv-77"
+                  occurred_at: "2026-08-28T14:03:00Z"
+                  subject: "Re: renewal terms"
+                  body: "Sounds good, let's proceed."
+                  from:
+                    account: "acct-93af"
+                    email: "buyer@example.net"
+                    name: "Jordan Rivers"
+                  to:
+                    account: "member-1c02"
+                    email: "rep@installation.example"
+                    name: "Alex Chen"
+      responses:
+        "202":
+          description: >-
+            Verified and durably recorded. Recorded is not the same as acted
+            on — the connector does not act on the message from this edge.
+        "401":
+          description: >-
+            Refused. Deliberately ONE opaque response, with an empty body,
+            for every reason a request fails to verify: an unknown or
+            disabled endpoint, a replayed nonce, a bad signature, a stale or
+            future timestamp. A response that distinguished these would let
+            whoever asks enumerate this installation's endpoints, so nothing
+            here does.
+        "404":
+          description: >-
+            No endpoint is mounted at this path — an unknown unit or slug, or
+            (once resolved) no `ref` the unit recognises.
+        "413":
+          description: >-
+            The body exceeds this endpoint's declared cap. Bounded well under
+            the platform ceiling; this edge takes no attachments, only a
+            message and its envelope.
+        "429":
+          description: >-
+            Over one of the two metered rate buckets (per source address, or
+            across every request this endpoint receives from anyone). Not a
+            fault — retrying immediately will not help; wait for the window
+            to roll.
+components:
+  schemas:
+    InboundArrival:
+      type: object
+      description: >-
+        The document a sender signs and POSTs. It is deliberately small: a
+        field this connector cannot land is a field a sender would fill in
+        and never see used. There is no `phone` field — no merge key this
+        installation resolves a captured record against today reads a phone
+        number (only an email merge key exists, and an account identity),
+        so a phone number here would be accepted and then read by nothing.
+      required:
+        - message_id
+      properties:
+        message_id:
+          type: string
+          description: >-
+            The ONLY required field. Combined with the endpoint's own `ref`
+            it forms the natural key that makes a redelivery land nothing
+            instead of a second timeline entry. It MUST be the value the
+            sending system reports identically on a re-read of the same
+            message — an id derived from a timestamp or a list position
+            produces a duplicate every single time it is redelivered.
+        thread_id:
+          type: string
+          description: >-
+            The conversation this message belongs to at the sending system.
+            Empty (or omitted) means the message is its own thread, keyed on
+            `message_id`.
+        occurred_at:
+          type: string
+          format: date-time
+          description: >-
+            RFC 3339. When the message happened at the sending system. Empty
+            (or omitted) falls back to the timestamp the sender signed with.
+        subject:
+          type: string
+          description: Trimmed before it is stored.
+        body:
+          type: string
+          description: Trimmed before it is stored.
+        from:
+          $ref: "#/components/schemas/InboundParty"
+          description: The party at the other end of the conversation.
+        to:
+          $ref: "#/components/schemas/InboundParty"
+          description: The member, as the sending system addresses them.
+      example:
+        message_id: "msg-482910"
+        thread_id: "conv-77"
+        occurred_at: "2026-08-28T14:03:00Z"
+        subject: "Re: renewal terms"
+        body: "Sounds good, let's proceed."
+        from:
+          account: "acct-93af"
+          email: "buyer@example.net"
+          name: "Jordan Rivers"
+        to:
+          account: "member-1c02"
+          email: "rep@installation.example"
+          name: "Alex Chen"
+    InboundParty:
+      type: object
+      description: >-
+        One end of a message as the sending system names it. An empty
+        object — no account, no email, no name — is deliberately ACCEPTED: a
+        party identified by an opaque account and nothing else is the case
+        this connector exists for, and an empty address set on BOTH parties
+        together is read by the core as "this connector could not enumerate
+        the parties", which keeps the record rather than refusing it.
+
+
+        Name BOTH `from` and `to` wherever the sending system can supply
+        them, even alongside an account. The core decides whether a message
+        is purely internal — colleagues talking, which is not evidence of a
+        customer relationship — by reading every party's address; naming
+        only one end silently disables that gate rather than passing it, and
+        an address given on top of an account still rides along as
+        corroboration for matching the same human captured elsewhere.
+      properties:
+        account:
+          type: string
+          description: >-
+            The sending system's own id for this human. AN ACCOUNT OUTRANKS
+            AN EMAIL: naming one on `from` is what makes the captured message
+            REPLIABLE — the core binds the account to a person and resolves a
+            reply's recipient from that binding. With only an email, it is
+            not repliable.
+        email:
+          type: string
+          format: email
+        name:
+          type: string

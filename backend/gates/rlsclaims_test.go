@@ -7,17 +7,16 @@ package gates
 
 // Fitness function over a guarantee this codebase no longer has.
 //
-// Core migration 0217 (ADR-0091 §8 phase A) dropped all 139 tenant-isolation
-// policies and both RLS flags from every schema. What replaced them is a
-// predicate each statement writes for itself against the app.workspace_id GUC
-// — so a source comment saying RLS scopes, bounds, confines or gates a read
-// names a control the database does not apply, and the next reader trusts it
-// instead of checking. Nineteen statements whose scope had been the DATABASE's
-// were found during phase A, two of them data loss and one a cross-tenant
-// disclosure; every one was found by a failing test, because nothing gates the
-// class. This is the cheap half of that gate: it cannot tell whether a query
-// is scoped, but it can stop the tree from claiming a retired mechanism
-// scopes it.
+// No table in any schema carries row-level security, and no policy exists to
+// read. What a statement reaches is bounded by the predicate it writes for
+// itself and by the row-scope clauses in platform/auth — so a source comment
+// saying RLS scopes, bounds, confines or gates a read names a control the
+// database does not apply, and the next reader trusts it instead of checking.
+// Nineteen statements whose scope had been the DATABASE's were found the hard
+// way, two of them data loss and one a cross-tenant disclosure; every one was
+// found by a failing test, because nothing gates the class. This is the cheap
+// half of that gate: it cannot tell whether a query is scoped, but it can stop
+// the tree from claiming a retired mechanism scopes it.
 //
 // It bans the CLAIM, not the word. Three spellings stay legal because they
 // name something real: the `// rls-exempt:` waiver marker that
@@ -42,11 +41,18 @@ import (
 // The suffix group carries `d` as well as `ed` because the stems are whole
 // words: "scoped" is scope+d, not scope+ed. Leaving it out is what the pinning
 // test below caught — the gate had swept the tree clean of `RLS-scoped` while
-// being unable to see it.
-var rlsClaim = regexp.MustCompile(`(?i)\bRLS[ -](?:scope|bound|confine|restrict|isolate|enforce|govern|gate|bind|keep|constrain|protect)(?:s|d|es|ed)?\b` +
-	`|\bRLS already\b` +
-	`|\b(?:scoped|bounded|confined|restricted|isolated|gated|governed|protected|filtered)[ -]by[ -]RLS\b` +
-	`|\bFORCE RLS (?:doesn't|does not|do not|don't)\b`)
+// being unable to see it. "bound" is listed separately from the verb group
+// because it is bind's irregular past participle, not bind+ed; the `already`
+// alternative allows up to two words between RLS and "already" because a
+// review sweep found `RLS GUC already` sitting between the two; and "forced"
+// gets its own alternative because it names the same live-control claim as
+// the verb group without appearing as one of its stems ("RLS is forced",
+// "RLS-forced").
+var rlsClaim = regexp.MustCompile(`(?i)\bRLS[ -](?:scope|bound|confine|restrict|isolate|enforce|govern|gate|bind|keep|constrain|protect|guard)(?:s|d|es|ed)?\b` +
+	`|\bRLS(?:[ -]\w+){0,2}[ -]already\b` +
+	`|\b(?:scoped|bounded|bound|confined|restricted|isolated|gated|governed|protected|filtered|guarded)[ -]by[ -]RLS\b` +
+	`|\bFORCE RLS (?:doesn't|does not|do not|don't)\b` +
+	`|\bRLS[ -](?:is[ -](?:on and[ -])?)?forced\b`)
 
 // TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew pins the pattern
 // against the real phrasings the 2026-08 sweep removed, and against the
@@ -62,6 +68,10 @@ func TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew(t *testing.T) {
 		"// for the RLS-governed catalog insert and audit write.",
 		"// workspace-scoped read (RLS confines it to the tenant)",
 		"// superuser, so FORCE RLS doesn't bite behaviorally",
+		"// workspace-bound by RLS through the GUC the binding above set.",
+		"// app_user is RLS-guarded like every tenant table",
+		"// the signal table, which is RLS-forced and has no handler",
+		"// transaction the RLS GUC already bounds what can be locked",
 	}
 	for _, line := range mustMatch {
 		if !rlsClaim.MatchString(line) {
@@ -128,7 +138,7 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 		t.Fatal("the sweep read no Go file — a gate that scans nothing passes exactly like a clean one")
 	}
 	if len(claims) > 0 {
-		t.Errorf("%d line(s) credit RLS with a guarantee core 0217 retired. "+
+		t.Errorf("%d line(s) credit RLS with a guarantee no schema in this tree carries. "+
 			"State what actually scopes the statement — its own workspace predicate, the row-scope "+
 			"clauses in platform/auth, or A107/ADR-0061's single organization — and if the answer is "+
 			"\"nothing does\", that is a defect to fix rather than a comment to reword:\n\t%s",

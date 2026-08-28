@@ -186,6 +186,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 	// from an empty set and pass a collision it could not see. The reconcile
 	// holds that one, where both sets exist.
 	claimedProviders := make(map[string]extension.Name)
+	// Which mounted anonymous path each unit has asked for — a fact about the
+	// composed SET, accumulated across the loop for claimedProviders' reason.
+	inboundMounts := make(map[string]extension.Name)
 	for _, e := range exts {
 		if err := e.Name.Validate(); err != nil {
 			return fmt.Errorf("compose: %w", err)
@@ -222,6 +225,12 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return err
 		}
 		if err := preflightChannels(e, claimedProviders); err != nil {
+			return err
+		}
+		if err := preflightInbound(e); err != nil {
+			return err
+		}
+		if err := reserveInboundMounts(e, inboundMounts); err != nil {
 			return err
 		}
 	}

@@ -24,13 +24,10 @@ import (
 // preservedResetTables are the tables a reset must NOT delete. Everything else
 // in the public schema is domain/config data: swept, then re-seeded.
 //
-// This list is the whole definition, and it did not used to be. The sweep
-// derived its targets from the presence of a workspace_id column, which was a
-// proxy for "holds this tenant's data" — a proxy ADR-0091 §8 phase D is
-// removing table by table. Under it, a module that dropped the column silently
-// stopped being reset: consent_purpose was the first, and the reset then failed
-// re-seeding purposes it had not deleted. So the derivation is inverted. What a
-// reset must keep is a decision someone has to make; what it deletes follows.
+// This list is the whole definition: what a reset must KEEP is a decision
+// someone has to make, and what it deletes follows. A derivation narrowed by
+// any column instead would silently stop sweeping a table that dropped it, and
+// the reset would then fail re-seeding rows it had not deleted.
 //
 // Four kinds are kept:
 //
@@ -93,12 +90,9 @@ var preservedResetTables = map[string]bool{
 // KEPT, where forgetting an entry fails loudly (the admin loses their session,
 // the installation loses its config) instead of quietly leaving a tenant's rows
 // behind after a reset that reported success.
-func resetTargetTables(ctx context.Context, tx pgx.Tx) ([]resetTarget, error) {
+func resetTargetTables(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT c.relname,
-		       EXISTS (SELECT 1 FROM pg_attribute a
-		                WHERE a.attrelid = c.oid AND a.attname = 'workspace_id'
-		                  AND a.attnum > 0 AND NOT a.attisdropped) AS tenant_scoped
+		SELECT c.relname
 		FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = 'public'
@@ -110,54 +104,34 @@ func resetTargetTables(ctx context.Context, tx pgx.Tx) ([]resetTarget, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []resetTarget
+	var out []string
 	for rows.Next() {
-		var t resetTarget
-		if err := rows.Scan(&t.name, &t.tenantScoped); err != nil {
+		var name string
+		if err := rows.Scan(&name); err != nil {
 			return nil, err
 		}
-		if !preservedResetTables[t.name] {
-			out = append(out, t)
+		if !preservedResetTables[name] {
+			out = append(out, name)
 		}
 	}
 	return out, rows.Err()
 }
 
-// resetTarget is one table to sweep and whether it still carries the tenant
-// column. A table that has one keeps its predicate: phase D is mid-flight, and
-// the two spellings agree on every row an installation with one live workspace
-// holds (ADR-0061 §3), so the narrower one costs nothing and keeps a reset from
-// widening ahead of the schema. The predicate goes when the last column does.
-type resetTarget struct {
-	name         string
-	tenantScoped bool
-}
-
-// deleteStatement is the sweep's DELETE for one target.
-func (t resetTarget) deleteStatement() string {
-	stmt := `DELETE FROM ` + pgx.Identifier{t.name}.Sanitize()
-	if t.tenantScoped {
-		stmt += ` WHERE workspace_id = current_setting('app.workspace_id')::uuid`
-	}
-	return stmt
-}
-
-// sweepWorkspaceData deletes every row of the target tables for the bound
-// workspace. Running as the non-superuser app role, it cannot disable FK
+// sweepWorkspaceData deletes every row of the target tables. Running as the non-superuser app role, it cannot disable FK
 // triggers, so it discovers a safe order at runtime: each pass tries every
 // still-populated table behind a savepoint and defers the ones a child FK still
 // blocks to the next pass, until all are clear. A pass with no progress means an
 // unbreakable FK cycle — surfaced explicitly, never silently skipped.
-func sweepWorkspaceData(ctx context.Context, tx pgx.Tx, tables []resetTarget) error {
-	remaining := append([]resetTarget(nil), tables...)
+func sweepWorkspaceData(ctx context.Context, tx pgx.Tx, tables []string) error {
+	remaining := append([]string(nil), tables...)
 	for len(remaining) > 0 {
-		var stuck []resetTarget
+		var stuck []string
 		progressed := false
 		for _, t := range remaining {
 			if _, err := tx.Exec(ctx, "SAVEPOINT reset_sp"); err != nil {
 				return err
 			}
-			_, delErr := tx.Exec(ctx, t.deleteStatement())
+			_, delErr := tx.Exec(ctx, `DELETE FROM `+pgx.Identifier{t}.Sanitize())
 			if delErr == nil {
 				if _, err := tx.Exec(ctx, "RELEASE SAVEPOINT reset_sp"); err != nil {
 					return err
@@ -307,15 +281,9 @@ func likeEscaped(s string) string {
 type handleColumn struct{ table, column string }
 
 // credentialHandleColumns lists them, derived from the catalog for the same
-// reason resetTargetTables is: a new one enrols itself.
-//
-// It asks only about the column, not about a workspace_id. It used to also
-// require one, which was the same set only while every connection table had
-// one — and phase D (ADR-0091 §8) is removing it table by table, so each
-// connection table that dropped it silently stopped being collected and left
-// its sealed credential resident after a reset. That is the same failure
-// resetTargetTables already had for the same reason, and it is why neither
-// derivation may ask about a column that is on its way out.
+// reason resetTargetTables is: a new one enrols itself. It asks only about the
+// handle column — a derivation narrowed by any other column collects a subset
+// and leaves sealed credentials resident after a reset that reported success.
 //
 // vault_secret itself is excluded: its `ref` IS the handle rather than a
 // reference to one, and joining the table to itself would collect every secret

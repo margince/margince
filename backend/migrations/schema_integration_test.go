@@ -161,9 +161,11 @@ func seedWorkspace(t *testing.T, conn *pgx.Conn, label string) string {
 	return id
 }
 
-// withGUC runs fn in a transaction bound to a workspace, mirroring the
-// production database.WithWorkspaceTx contract.
-func withGUC(t *testing.T, conn *pgx.Conn, wsID string, fn func(pgx.Tx) error) error {
+// inTx runs fn inside ONE transaction, which is the shape the production
+// database.WithWorkspaceTx seam gives a caller: every statement a module issues
+// addresses the transaction rather than the bare pool. It binds no session
+// setting, because there is none left to bind.
+func inTx(t *testing.T, conn *pgx.Conn, fn func(pgx.Tx) error) error {
 	t.Helper()
 	ctx := context.Background()
 	tx, err := conn.Begin(ctx)
@@ -172,11 +174,6 @@ func withGUC(t *testing.T, conn *pgx.Conn, wsID string, fn func(pgx.Tx) error) e
 	}
 	//craft:ignore swallowed-errors error-path safety net: after the Commit below this rollback is a designed no-op, and fn's error already reached the caller
 	defer func() { _ = tx.Rollback(ctx) }()
-	if wsID != "" {
-		if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
-			t.Fatalf("set_config: %v", err)
-		}
-	}
 	if err := fn(tx); err != nil {
 		return err
 	}
@@ -187,14 +184,16 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
-	ws := seedWorkspace(t, owner, "tenant-v")
+	// The installation's workspace. No row below names it any more, but a
+	// schema holding none at all is not a state any installation is in.
+	seedWorkspace(t, owner, "tenant-v")
 
 	app := connect(t, appDSN)
 	ctx := context.Background()
 
 	var id string
 	var version int64
-	if err := withGUC(t, app, ws, func(tx pgx.Tx) error {
+	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`INSERT INTO person (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
 		).Scan(&id, &version)
@@ -206,7 +205,7 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	}
 
 	// The trigger bumps version on every UPDATE (data-model §1.3a).
-	if err := withGUC(t, app, ws, func(tx pgx.Tx) error {
+	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`UPDATE person SET title = 'CTO' WHERE id = $1 RETURNING version`, id).Scan(&version)
 	}); err != nil {
@@ -217,7 +216,7 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	}
 
 	// The If-Match write shape: a stale version matches zero rows.
-	if err := withGUC(t, app, ws, func(tx pgx.Tx) error {
+	if err := inTx(t, app, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
 			`UPDATE person SET title = 'CEO' WHERE id = $1 AND version = $2`, id, int64(1))
 		if err != nil {
@@ -236,13 +235,15 @@ func TestAuditLogIsAppendOnly(t *testing.T) {
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
-	ws := seedWorkspace(t, owner, "tenant-audit")
+	// The installation's workspace, present for the reason the sibling test
+	// above states.
+	seedWorkspace(t, owner, "tenant-audit")
 
 	app := connect(t, appDSN)
 	ctx := context.Background()
 
 	var id string
-	if err := withGUC(t, app, ws, func(tx pgx.Tx) error {
+	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			// entity_id is NOT NULL since 0075 (audit_log is record-mutations-only).
 			`INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
@@ -255,7 +256,7 @@ func TestAuditLogIsAppendOnly(t *testing.T) {
 		`UPDATE audit_log SET actor_id = 'tampered' WHERE id = $1`,
 		`DELETE FROM audit_log WHERE id = $1`,
 	} {
-		err := withGUC(t, app, ws, func(tx pgx.Tx) error {
+		err := inTx(t, app, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, stmt, id)
 			return err
 		})

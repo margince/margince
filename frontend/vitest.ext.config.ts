@@ -9,7 +9,7 @@ import base from "./vite.config.ts";
 //   - Widening the default lane's include is wrong because these suites only
 //     PASS composed. A unit screen reads its copy through "@composition/copy",
 //     which the vanilla alias resolves to the committed empty registry — so
-//     `t("extNotes.notes.empty")` returns the key rather than "No notes yet."
+//     a unit's `t("extOpenchannel.…")` returns the key rather than its copy
 //     and every copy assertion below fails. The same is true of the routes it
 //     calls: they exist in the merged contract and nowhere else. The unit lane
 //     is the COMPOSED lane, exactly as `make fe-typecheck-composed` is, and a

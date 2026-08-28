@@ -1,0 +1,184 @@
+{
+  "schema": 1,
+  "name": "openchannel",
+  "version": "1.0.0",
+  "risk_tiers": [
+    {
+      "id": "job/drain",
+      "unit": "openchannel",
+      "kind": "extension_job",
+      "contract": "jobs.yaml",
+      "operation": "extension.job.tick",
+      "operation_id": "ext_openchannel_drain",
+      "route": "",
+      "method": "",
+      "scopes": [
+        "write"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:4693c9e28c3fd5d7640e57e0488ca756c3354cbb0b4568d2dd8da5b0203a2913",
+      "digest": "sha256:e28077bf6e8bd60e372b7a31a8636dd021d9b960b5ebd18d89e8d0d0510bf7d4"
+    },
+    {
+      "id": "tool/openchannel_list_inbound",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelListInbound",
+      "route": "/ext/openchannel/inbound",
+      "method": "GET",
+      "scopes": [
+        "read"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:ac280cee1e2abbb35179938867181fb62e0aa8aa0358b9c50b37c1d641cf7fda",
+      "digest": "sha256:f368c1515f9f6e2cbf75f4a8be2428fcea6ba7b5ded86ddf246c9746694db954"
+    },
+    {
+      "id": "tool/openchannel_list_outbound",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelListOutbound",
+      "route": "/ext/openchannel/outbound",
+      "method": "GET",
+      "scopes": [
+        "read"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:919140974d9294eea4daafe75df196dac2da57703cc5e91f034b53d463947dce",
+      "digest": "sha256:91c3fd2dcec812a06b7f633579e887e4fb78e4debffb62bd5c623721f069c3e9"
+    },
+    {
+      "id": "tool/openchannel_mint_secret",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelMintSecret",
+      "route": "/ext/openchannel/endpoint/secret",
+      "method": "POST",
+      "scopes": [
+        "write"
+      ],
+      "tier": "confirmation_required",
+      "fragment_hash": "sha256:58b62dbfb3759014fdad0bd0b9309cfe7e2433e72979eb844292bacf59920b8d",
+      "digest": "sha256:0eb96bad96ef433f4254cd969378e0181079a4664ead3675742a761cfa2c94e4"
+    },
+    {
+      "id": "tool/openchannel_open",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelOpenEndpoint",
+      "route": "/ext/openchannel/endpoint",
+      "method": "PUT",
+      "scopes": [
+        "write"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:b2194507991eb0090a72cdc3250fb1ba8458884d671e392a6b7b84aa0e741ef6",
+      "digest": "sha256:fbf2ee83eeb1466679fb88336168bbd0ac553a1ccbf4c6c1802e43a6ebca522a"
+    },
+    {
+      "id": "tool/openchannel_read_endpoint",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelReadEndpoint",
+      "route": "/ext/openchannel/endpoint",
+      "method": "GET",
+      "scopes": [
+        "read"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:ad7b1deccc93f5f41167b61a2d59cd4f2b1f38ff030df0bfaf16b8e2e6eff5b9",
+      "digest": "sha256:b137f164baacc937995ee2fda571ce39ba268698a3ccacfe562ed65930bfdd5f"
+    },
+    {
+      "id": "tool/openchannel_register_url",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelRegisterUrl",
+      "route": "/ext/openchannel/endpoint/url",
+      "method": "PUT",
+      "scopes": [
+        "write"
+      ],
+      "tier": "confirmation_required",
+      "fragment_hash": "sha256:002db2bebf9e0baed628c251379b924626e06a06e580ebf017ac841f53d88d89",
+      "digest": "sha256:a6a9ca41ec11fe06894b441bf12baadd09075ba0971f639da8a0d7cf8ef7e091"
+    },
+    {
+      "id": "tool/openchannel_set_enabled",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelSetEnabled",
+      "route": "/ext/openchannel/endpoint/enabled",
+      "method": "PUT",
+      "scopes": [
+        "write"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:72960d48c74cb08ee24aba74e7c30bc8b23c6ea5d7d0a9750813b00ac6b6d9f2",
+      "digest": "sha256:da21428043dc4167081d0cabd7bd2e16c15e8990f745ae931cd67f9591644d1b"
+    }
+  ],
+  "secrets": [
+    {
+      "key": "inbound",
+      "scope": "user"
+    }
+  ],
+  "subscriptions": [
+    {
+      "name": "withdraw_captured",
+      "events": [
+        "activity.archived"
+      ]
+    }
+  ],
+  "ingress": [
+    {
+      "system": "openchannel",
+      "lands": [
+        "activity"
+      ],
+      "merges": [
+        "email"
+      ]
+    }
+  ],
+  "channels": [
+    {
+      "provider": "openchannel",
+      "supplies_transport": true
+    }
+  ],
+  "inbound": [
+    {
+      "slug": "receive",
+      "secret": "inbound",
+      "max_body": 65536,
+      "skew_seconds": 300,
+      "rate": {
+        "per_ip": {
+          "limit": 60,
+          "window_seconds": 60
+        },
+        "per_endpoint": {
+          "limit": 120,
+          "window_seconds": 60
+        }
+      }
+    }
+  ]
+}

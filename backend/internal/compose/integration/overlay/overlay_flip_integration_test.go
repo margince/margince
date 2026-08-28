@@ -92,8 +92,9 @@ type flipEstate struct {
 	adminCtx context.Context
 }
 
-// inWorkspaceTx runs fn on the app pool under the estate's workspace GUC
-// — every RLS-forced table read/write in these tests goes through it.
+// inWorkspaceTx runs fn on the app pool under the estate's workspace
+// binding — every table read/write in these tests goes through it, and
+// each query's own predicate is what scopes it to the estate's rows.
 func (f flipEstate) inWorkspaceTx(t *testing.T, fn func(pgx.Tx) error) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(f.adminCtx, f.pool, fn); err != nil {

@@ -6,9 +6,10 @@
 package extsecrets_test
 
 // The store's whole job is a wall between namespaces, and every wall it
-// builds is made of SQL predicates and RLS — so the suite is an integration
-// suite by necessity: a fake pool would test the wall's drawing, not the
-// wall. The fixture is package-local (its own owner connection and app pool
+// builds is made of SQL predicates — so the suite is an integration suite by
+// necessity: a fake pool would test the wall's drawing, not the wall.
+//
+// The fixture is package-local (its own owner connection and app pool
 // off MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN, the same pair every
 // integration package reads) rather than a shared helper: promoting one
 // would be a change to how every suite in the tree is set up, which is not
@@ -114,15 +115,10 @@ func (e *env) ctxFor(ws ids.UUID) context.Context {
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
-// currentRef reads the ref a mapping row names, through the owner connection
-// with the tenant GUC bound — extension_secret FORCEs row level security, so
-// even the schema owner sees nothing without it.
-func (e *env) currentRef(t *testing.T, ws ids.UUID, unit, key string) keyvault.Ref {
+// currentRef reads the ref a mapping row names, through the owner connection.
+func (e *env) currentRef(t *testing.T, unit, key string) keyvault.Ref {
 	t.Helper()
 	ctx := context.Background()
-	if _, err := e.owner.Exec(ctx, `SELECT set_config('app.workspace_id', $1, false)`, ws.String()); err != nil {
-		t.Fatal(err)
-	}
 	var ref string
 	err := e.owner.QueryRow(ctx, `
 		SELECT vault_ref FROM extension_secret
@@ -134,14 +130,11 @@ func (e *env) currentRef(t *testing.T, ws ids.UUID, unit, key string) keyvault.R
 	return keyvault.Ref(ref)
 }
 
-// systemLogActions returns the ledger entries for ws, oldest first, each as
+// systemLogActions returns the ledger entries, oldest first, each as
 // "<action>" or "<action>/<outcome>" where an outcome was recorded.
-func (e *env) systemLogActions(t *testing.T, ws ids.UUID) []string {
+func (e *env) systemLogActions(t *testing.T) []string {
 	t.Helper()
 	ctx := context.Background()
-	if _, err := e.owner.Exec(ctx, `SELECT set_config('app.workspace_id', $1, false)`, ws.String()); err != nil {
-		t.Fatal(err)
-	}
 	rows, err := e.owner.Query(ctx, `
 		SELECT action, coalesce('/' || (detail->>'outcome'), '')
 		  FROM system_log ORDER BY occurred_at, id`)
@@ -207,11 +200,11 @@ func TestSecretsRotationDestroysThePreviousMaterial(t *testing.T) {
 	if err := s.Put(ctx, "signing", []byte("one")); err != nil {
 		t.Fatal(err)
 	}
-	first := e.currentRef(t, e.ws, "notes", "signing")
+	first := e.currentRef(t, "notes", "signing")
 	if err := s.Put(ctx, "signing", []byte("two")); err != nil {
 		t.Fatal(err)
 	}
-	second := e.currentRef(t, e.ws, "notes", "signing")
+	second := e.currentRef(t, "notes", "signing")
 	if second == first {
 		t.Fatal("rotation reused the ref: keyvault.Put mints a new one on every call")
 	}
@@ -234,6 +227,18 @@ func TestSecretsRotationDestroysThePreviousMaterial(t *testing.T) {
 // stale id from an admin's open tab, naming no row at all. Without this the
 // refusal path has no test, and the failure mode it prevents is a raw foreign
 // key violation reaching a client as a constraint name.
+//
+// PutUser and DeleteUser still name ErrUnknownUser: minting or destroying a
+// secret for a userID nobody holds is a caller bug (a stale id, a typo), and
+// the caller is the one authenticated party in the room — it should see
+// exactly what went wrong. GetUser is different: its published contract is
+// "the secret, or ErrSecretNotFound" and nothing finer, because the one
+// caller that resolves an arbitrary, attacker-influenced ref to a userID at
+// runtime is the anonymous inbound edge (extensions/openchannel), which must
+// answer identically whether that endpoint's owner was never minted a
+// secret or has since been removed — anything else turns "does this ref's
+// owner still exist" into an oracle. The ledger keeps the finer reason
+// (outcome "unknown_user" vs. "missing"); only the RETURNED error is unified.
 func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
@@ -243,8 +248,8 @@ func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
 	if err := s.PutUser(ctx, unknown, "token", []byte("nope")); !errors.Is(err, extsecrets.ErrUnknownUser) {
 		t.Fatalf("PutUser accepted a user id naming no row: err=%v", err)
 	}
-	if _, err := s.GetUser(ctx, unknown, "token"); !errors.Is(err, extsecrets.ErrUnknownUser) {
-		t.Fatalf("GetUser accepted a user id naming no row: err=%v", err)
+	if _, err := s.GetUser(ctx, unknown, "token"); !errors.Is(err, extension.ErrSecretNotFound) {
+		t.Fatalf("GetUser on an unknown user id = %v, want the same refusal as a never-minted secret", err)
 	}
 	if err := s.DeleteUser(ctx, unknown, "token"); !errors.Is(err, extsecrets.ErrUnknownUser) {
 		t.Fatalf("DeleteUser accepted a user id naming no row: err=%v", err)
@@ -306,7 +311,7 @@ func TestSecretsDeleteDestroysTheMaterial(t *testing.T) {
 	if err := s.Put(ctx, "signing", []byte("one")); err != nil {
 		t.Fatal(err)
 	}
-	ref := e.currentRef(t, e.ws, "notes", "signing")
+	ref := e.currentRef(t, "notes", "signing")
 	if err := s.Delete(ctx, "signing"); err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +388,7 @@ func TestSecretsLeaveAnAuditTrail(t *testing.T) {
 		"extension.secret_read/resolved",
 		"extension.secret_deleted",
 	}
-	got := e.systemLogActions(t, e.ws)
+	got := e.systemLogActions(t)
 	if len(got) != len(want) {
 		t.Fatalf("system_log actions = %v, want %v", got, want)
 	}
@@ -394,10 +399,6 @@ func TestSecretsLeaveAnAuditTrail(t *testing.T) {
 	}
 
 	// The ledger records WHAT changed hands, never the secret itself.
-	if _, err := e.owner.Exec(context.Background(),
-		`SELECT set_config('app.workspace_id', $1, false)`, e.ws.String()); err != nil {
-		t.Fatal(err)
-	}
 	var leaked bool
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT EXISTS (SELECT 1 FROM system_log WHERE detail::text LIKE '%sekrit%')`).Scan(&leaked); err != nil {

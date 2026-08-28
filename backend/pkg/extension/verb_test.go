@@ -74,7 +74,7 @@ func TestVerbValidateAcceptsAWellFormedDeclaration(t *testing.T) {
 			t.Fatalf("a %s operation naming an object must validate: %v", string(scope), err)
 		}
 	}
-	// And a READ operation still needs none: yogi, de and crm-hello own no
+	// And a READ operation still needs none: de and crm-hello own no
 	// records, and requiring an object of them would refuse the common case.
 	readOnly := wellFormed()
 	readOnly.RequestedScope = ScopeRead

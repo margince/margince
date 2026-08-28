@@ -164,9 +164,7 @@ var errLockHeld = errors.New("request row lock held")
 // transaction, WITHOUT blocking: FOR UPDATE NOWAIT turns a contended lock into
 // an immediate 55P03 rather than a wait, so the assertion is deterministic (no
 // sleep, no racing timeout). It runs through database.WithWorkspaceTx like every
-// other tenant query — binding app.workspace_id the one sanctioned way, never a
-// hand-rolled GUC over a raw pool connection (the row is FORCE-RLS; the app role
-// sees zero rows unbound).
+// other module statement, never over a raw pool connection.
 func dsrRowLockHeld(t *testing.T, e *Env, id ids.UUID) bool {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

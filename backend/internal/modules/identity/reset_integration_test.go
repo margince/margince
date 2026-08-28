@@ -169,9 +169,6 @@ func TestOperatorResetPasswordRevokesPassportsToo(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if _, err := tx.Exec(context.Background(), `SELECT set_config('app.workspace_id', $1, true)`, e.admin.WorkspaceID.String()); err != nil {
-		t.Fatal(err)
-	}
 	if err := OperatorResetPassword(context.Background(), tx, e.admin.WorkspaceID, e.member.Email, "operator recovery password"); err != nil {
 		t.Fatalf("OperatorResetPassword: %v", err)
 	}
@@ -224,9 +221,6 @@ func TestOperatorResetPasswordRevokesALiveOAuthGrantToo(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if _, err := tx.Exec(context.Background(), `SELECT set_config('app.workspace_id', $1, true)`, e.admin.WorkspaceID.String()); err != nil {
-		t.Fatal(err)
-	}
 	if err := OperatorResetPassword(context.Background(), tx, e.admin.WorkspaceID, e.member.Email, "operator recovery over a live connection"); err != nil {
 		t.Fatalf("OperatorResetPassword must not error for a user with a live OAuth connection: %v", err)
 	}
@@ -300,9 +294,6 @@ func TestPasswordResetSupersedesAndExpires(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = expireTx.Rollback(context.Background()) }()
-	if _, err := expireTx.Exec(context.Background(), `SELECT set_config('app.workspace_id', $1, true)`, e.admin.WorkspaceID.String()); err != nil {
-		t.Fatal(err)
-	}
 	tag, err := expireTx.Exec(context.Background(),
 		`UPDATE auth_token SET expires_at = now() - interval '1 minute'
 		 WHERE user_id = $1 AND used_at IS NULL`, e.member.UserID)
@@ -337,9 +328,6 @@ func TestOperatorResetPasswordRecoversTheAccount(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if _, err := tx.Exec(context.Background(), `SELECT set_config('app.workspace_id', $1, true)`, e.admin.WorkspaceID.String()); err != nil {
-		t.Fatal(err)
-	}
 	const operatorPassword = "operator chosen password"
 	if err := OperatorResetPassword(context.Background(), tx, e.admin.WorkspaceID, e.member.Email, operatorPassword); err != nil {
 		t.Fatalf("OperatorResetPassword: %v", err)
@@ -369,8 +357,5 @@ func OperatorResetPasswordSmoke(ctx context.Context, e *revocationEnv, email str
 	}
 	//craft:ignore swallowed-errors error-path cleanup — the result under test is OperatorResetPassword's error
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if _, err := tx.Exec(context.Background(), `SELECT set_config('app.workspace_id', $1, true)`, e.admin.WorkspaceID.String()); err != nil {
-		return err
-	}
 	return OperatorResetPassword(context.Background(), tx, ids.From[ids.WorkspaceKind](e.admin.WorkspaceID.UUID), email, "irrelevant password!")
 }

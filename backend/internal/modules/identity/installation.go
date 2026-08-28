@@ -228,9 +228,6 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		`INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&wsID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID.String()); err != nil {
-		return ids.WorkspaceID{}, err
-	}
 	// The installation's identity is written HERE, not read back off the row
 	// by a caller: normalize() and the currency default above are the only
 	// place these values are resolved, and a second derivation elsewhere would

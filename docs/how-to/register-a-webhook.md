@@ -20,7 +20,7 @@ verifier library works unmodified.
 > **Single-organization installation.** One installation serves one organization; the
 > server resolves its singleton organization itself, so no request selects a tenant — there is no
 > `X-Workspace-Slug` header. The `curl`s below carry only the session cookie. ("Workspace" still names
-> the internal RLS tenant these tables are scoped by.)
+> the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
 
 ## Prerequisites
 

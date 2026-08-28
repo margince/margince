@@ -169,10 +169,8 @@ func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
 }
 
 // SetWorkspaceSeat flips the installation's PEOPLE to a seat type through the
-// owner connection, inside a workspace-bound transaction — not because core
-// needs the binding (0217 retired row-level security there) but because a
-// fixture that writes unbound is standing in for a production write that never
-// is. Used to drive the read-seat ceiling from a test.
+// owner connection, inside one transaction. Used to drive the read-seat ceiling
+// from a test.
 //
 // The agent seat is left alone because the schema refuses to demote it
 // (app_user_agent_is_full): an agent identity is never a read seat, and the
@@ -188,10 +186,6 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	wsID := InstallationWorkspaceID(ctx, t, tx)
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE app_user SET seat_type = $1 WHERE NOT is_agent`, seat); err != nil {
 		t.Fatalf("seat update: %v", err)

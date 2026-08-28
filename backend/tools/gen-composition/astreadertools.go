@@ -113,51 +113,13 @@ func (r *unitReader) readTool(elt ast.Expr, ext string) (declaredTool, error) {
 // by shape alone, and refuses every other one on the same conservative
 // footing as isStaticallyNil below.
 func (r *unitReader) readHandle(expr ast.Expr, ext string) (served bool, err error) {
-	if isStaticallyNil(expr, ext) {
+	if r.isStaticallyNilHandler(expr, ext, "ToolHandler") {
 		return false, nil
 	}
 	if _, ok := expr.(*ast.Ident); ok {
 		return true, nil
 	}
 	return false, r.errAt(expr, "Tool.Handle must be a plain identifier naming the handler function, or one of the documented inert nil spellings (nil, extension.ToolHandler(nil), (nil))")
-}
-
-// isStaticallyNil reports whether an expression is nil at the declaration —
-// which is how a Tools entry says "declare it, serve nothing", and what the
-// runtime adapter skips on.
-//
-// Two spellings, because both reach the adapter as the same nil function value:
-// the bare `nil`, and a conversion of it through the PUBLISHED extension.
-// ToolHandler type (`extension.ToolHandler(nil)`), which a unit author writes
-// when the surrounding literal needs the type to be obvious.
-//
-// The CallExpr arm checks the callee, not just the argument count, and that
-// check is load-bearing, not decorative: a syntactic conversion and an
-// ordinary one-argument call are indistinguishable by shape alone (`T(x)` and
-// `f(x)` parse identically), so accepting any one-argument call whose sole
-// argument is nil — without checking what is being called — would read
-// `mustDial(nil)` as inert too. That is not the safe failure mode: it does
-// not merely admit one more spelling of "serve nothing", it exempts a call
-// that already ran, at declaration time, from BOTH gates the tool has —
-// readHandle's identifier-only rule for anything else, and readTool's
-// served-tool-needs-a-Description refusal, which never even asks the
-// question for something this function has already called inert. Requiring
-// the callee to be exactly the published extension.ToolHandler conversion
-// keeps this arm what its name promises: a real, code-free type conversion
-// of the constant nil, not a call to arbitrary unit-authored code. Anything
-// else — a function name, a literal, any other call — is refused outright by
-// the Ident check in readHandle above; this reader never falls back to
-// treating an unrecognized shape as inert.
-func isStaticallyNil(expr ast.Expr, ext string) bool {
-	switch e := expr.(type) {
-	case *ast.Ident:
-		return e.Name == "nil"
-	case *ast.CallExpr:
-		return len(e.Args) == 1 && isSelector(e.Fun, ext, "ToolHandler") && isStaticallyNil(e.Args[0], ext)
-	case *ast.ParenExpr:
-		return isStaticallyNil(e.X, ext)
-	}
-	return false
 }
 
 // declaredTool is one Tools entry as the source states it: the verb, whether

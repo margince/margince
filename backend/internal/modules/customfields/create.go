@@ -45,8 +45,7 @@ func lockTimedOut(err error) bool {
 // a core table. The transaction here opens as the schema pool's owner
 // role, runs the DDL first, THEN downgrades itself to exactly the
 // authority every other tenant write runs under (SET LOCAL ROLE
-// margince_app + the app.workspace_id GUC) for the catalog insert and
-// audit write.
+// margince_app) for the catalog insert and audit write.
 func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return crmcontracts.CustomField{}, err
@@ -66,8 +65,7 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	if s.schemaPool == nil {
 		return crmcontracts.CustomField{}, ErrSchemaChangesUnavailable
 	}
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return crmcontracts.CustomField{}, errors.New("customfields: no workspace bound to context")
 	}
 	creator, err := createdBy(ctx)
@@ -85,7 +83,7 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	//craft:ignore swallowed-errors deferred rollback of a committed tx is a designed no-op; real failures already left through the operation error
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	out, err := s.createInTx(ctx, tx, spec, wsID, creator, slug, column, ddl)
+	out, err := s.createInTx(ctx, tx, spec, creator, slug, column, ddl)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -97,8 +95,8 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 
 // createInTx is Create's transaction body: lock → collision pre-check →
 // ALTER (owner) → downgrade → catalog INSERT + audit.
-func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, wsID ids.UUID, creator ids.UUID, slug, column, ddl string) (crmcontracts.CustomField, error) {
-	if err := beginSchemaChange(ctx, tx, wsID, spec.Object); err != nil {
+func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug, column, ddl string) (crmcontracts.CustomField, error) {
+	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
 	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
@@ -171,23 +169,8 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, wsI
 	return out, nil
 }
 
-// beginSchemaChange arms the transaction for a governed DDL step: it
-// binds the workspace GUC (the WithWorkspaceTx spelling — parameterized
-// set_config, never string-built SET LOCAL), then bounds the lock waits
-// and serializes with the per-table advisory lock (serializeSchemaChange).
-//
-// The GUC no longer scopes the catalog — that column is gone (ADR-0091 §8
-// phase D) — but the audit row this transaction writes still stamps its
-// workspace from it, so the binding stays until audit_log drops the column.
-func beginSchemaChange(ctx context.Context, tx pgx.Tx, wsID ids.UUID, object string) error {
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID.String()); err != nil {
-		return fmt.Errorf("customfields: binding workspace GUC: %w", err)
-	}
-	return serializeSchemaChange(ctx, tx, object)
-}
-
 // serializeSchemaChange is the shared arming step of both DDL paths
-// (Create's beginSchemaChange, SetOptions' setOptionsInTx):
+// (createInTx and setOptionsInTx):
 //
 // SET LOCAL lock_timeout bounds every lock wait in this transaction —
 // the ALTER TABLE ahead needs ACCESS EXCLUSIVE, and unbounded, a single
@@ -251,9 +234,9 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 
 // downgradeToAppRole drops the transaction to the DML-only app role for
 // everything after the DDL, so the catalog and audit writes run under
-// exactly the authority every other tenant write has — RLS forced, no
-// owner privilege in reach. SET LOCAL is transaction-scoped: the pooled
-// connection reverts to the owner role at COMMIT/ROLLBACK. The role name
+// exactly the authority every other tenant write has — the app role's
+// own grants, no owner privilege in reach. SET LOCAL is transaction-scoped:
+// the pooled connection reverts to the owner role at COMMIT/ROLLBACK. The role name
 // is the scripts/db-init.sql runtime role, the same one the app pool's
 // DSN connects as.
 //
