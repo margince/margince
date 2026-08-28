@@ -125,7 +125,7 @@ func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
 	// the same six.
 	second := settledThread{
 		Key: key, Newest: base.Add(7 * time.Hour), Count: 11,
-		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest,
+		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 	if len(second.Messages) == 0 {
@@ -165,7 +165,7 @@ func TestNewMailIsReadBeforeTheOlderRange(t *testing.T) {
 
 	second := settledThread{
 		Key: key, Newest: reply, Count: 9,
-		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest,
+		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 	newest := second.Messages[len(second.Messages)-1].At
@@ -239,11 +239,61 @@ func TestNothingOlderLeftFallsBackToTheNewestWindow(t *testing.T) {
 
 	second := settledThread{
 		Key: key, Newest: at, Count: 2,
-		ReadTo: timePtr(at), ReadFrom: &firstOldest,
+		ReadTo: timePtr(at), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 	if len(second.Messages) != 2 {
 		t.Errorf("the read took %d messages, want both — with nothing older left the window is the newest "+
 			"end, and a read that takes nothing never reaches the model at all", len(second.Messages))
+	}
+}
+
+// TestAWindowOfMessagesAtOneInstantIsNotSplit holds the half a timestamp
+// cannot: an instant is not a message boundary.
+//
+// Mail imported in bulk shares an occurred_at routinely. A cursor that is a
+// timestamp alone either drops the rest of that group unread — which is the
+// defect this change exists to fix, at a smaller scale — or, made inclusive,
+// re-reads it every pass and never gets past it.
+func TestAWindowOfMessagesAtOneInstantIsNotSplit(t *testing.T) {
+	e := integration.Setup(t)
+	key := "sameclock-" + ids.NewV7().String()
+
+	// More messages at ONE instant than a window holds.
+	at := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
+	const group = extractThreadMessages + 3
+	for range group {
+		seedThreadMailAt(t, e, key, at)
+	}
+
+	first := settledThread{Key: key, Newest: at, Count: group}
+	read(t, e, &first)
+	if len(first.Messages) != extractThreadMessages {
+		t.Fatalf("the first read took %d messages, want the window of %d",
+			len(first.Messages), extractThreadMessages)
+	}
+
+	// Nothing is newer, and the rest of the group is below the cursor — which
+	// is only expressible as a pair, since every one of them shares its instant.
+	second := settledThread{
+		Key: key, Newest: at, Count: group,
+		ReadTo: timePtr(at), ReadFrom: first.ReadFromNow, ReadFromID: first.ReadFromIDNow,
+	}
+	read(t, e, &second)
+
+	read1 := map[string]bool{}
+	for _, message := range first.Messages {
+		read1[message.ID.String()] = true
+	}
+	fresh := 0
+	for _, message := range second.Messages {
+		if !read1[message.ID.String()] {
+			fresh++
+		}
+	}
+	if fresh != group-extractThreadMessages {
+		t.Errorf("the second read brought %d messages the first had not seen, want %d — a group sharing "+
+			"one instant is walked through by (occurred_at, id), never split by the instant alone",
+			fresh, group-extractThreadMessages)
 	}
 }

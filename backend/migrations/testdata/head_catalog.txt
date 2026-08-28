@@ -3958,8 +3958,10 @@ public.signal_thread_scan.refused_message_count integer gen=- def=-
 public.signal_thread_scan.resolved_org_id uuid gen=- def=-
 public.signal_thread_scan.scanned_at timestamp with time zone NOT NULL gen=- def=now()
 public.signal_thread_scan.scanned_from timestamp with time zone gen=- def=-
+public.signal_thread_scan.scanned_from_id uuid gen=- def=-
 public.signal_thread_scan.signal_thread_scan_pkey PRIMARY KEY (thread_key)
 public.signal_thread_scan.signal_thread_scan_resolved_org_fkey FOREIGN KEY (resolved_org_id) REFERENCES organization(id) ON DELETE SET NULL (resolved_org_id)
+public.signal_thread_scan.signal_thread_scan_scanned_from_shape CHECK (((scanned_from IS NULL) = (scanned_from_id IS NULL)))
 public.signal_thread_scan.thread_key text NOT NULL gen=- def=-
 public.signal_thread_scan_pkey CREATE UNIQUE INDEX signal_thread_scan_pkey ON public.signal_thread_scan USING btree (thread_key)
 public.signing_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

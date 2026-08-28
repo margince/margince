@@ -104,10 +104,16 @@ type settledThread struct {
 	// tracked only how far forward it had got could not see the second at all.
 	ReadTo   *time.Time
 	ReadFrom *time.Time
-	// ReadFromNow is the oldest message THIS pass read, which becomes ReadFrom
-	// for the next one. Set by threadMessages, because the window it chose is
-	// the only thing that knows.
-	ReadFromNow *time.Time
+	// ReadFromID pairs with ReadFrom, because an INSTANT IS NOT A MESSAGE
+	// BOUNDARY: mail imported in bulk shares an occurred_at routinely, and a
+	// cursor that is a timestamp alone either skips the rest of a group or
+	// re-reads it forever. (occurred_at, id) is the order the window walks in.
+	ReadFromID *ids.UUID
+	// ReadFromNow and ReadFromIDNow are the oldest message THIS pass read,
+	// which becomes the cursor for the next one. Set by threadMessages, because
+	// the window it chose is the only thing that knows.
+	ReadFromNow   *time.Time
+	ReadFromIDNow *ids.UUID
 	// PrivateTo is the one reader this conversation answers to, or the zero
 	// value when every message on it is workspace-readable.
 	//
@@ -131,6 +137,18 @@ var dueThreadsQuery = `
 		WITH conversation AS (
 			SELECT a.thread_key,
 			       max(a.occurred_at) AS newest,
+			       -- The thread's own lower end, as the pair the cursor is.
+			       -- min(id) FILTER on the minimum instant, because the oldest
+			       -- MESSAGE is not the smallest id at any other instant.
+			       min(a.occurred_at) AS oldest,
+			       -- min() has no uuid overload, so the id is compared as text.
+			       -- A uuidv7 orders the same either way — its text form is the
+			       -- big-endian bytes in hex — and the read below casts it back.
+			       min(a.id::text) FILTER (WHERE a.occurred_at = (
+			         SELECT min(b.occurred_at) FROM activity b
+			          WHERE b.thread_key = a.thread_key AND b.kind = 'email'
+			            AND b.archived_at IS NULL AND b.captured_by LIKE 'connector:%'
+			       ))::uuid AS oldest_id,
 			       count(DISTINCT a.id) AS message_count,
 			       min(ro.organization_id::text) AS one_org,
 			       count(DISTINCT ro.organization_id) AS org_count,
@@ -196,7 +214,7 @@ var dueThreadsQuery = `
 		       -- "how far did reading get" has the same answer as a thread with
 		       -- no row at all. It is also not a time.Time, so scanning it
 		       -- would fail the whole pass.
-		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from
+		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
 		 WHERE c.org_count = 1
@@ -228,7 +246,16 @@ var dueThreadsQuery = `
 		   AND (s.thread_key IS NULL
 		        OR s.last_activity_at < c.newest
 		        OR s.message_count <> c.message_count
-		        OR s.resolved_org_id IS DISTINCT FROM c.one_org::uuid)
+		        OR s.resolved_org_id IS DISTINCT FROM c.one_org::uuid
+		        -- Or there is history left BELOW the cursor. A window is six
+		        -- messages and a thread can be longer, so a pass that read one
+		        -- window and recorded the whole count would otherwise never be
+		        -- offered the rest: the newest has not moved, the count has
+		        -- not moved, and the older half is simply never read. This is
+		        -- what makes "walks back a window per pass" true rather than
+		        -- described.
+		        OR (s.scanned_from IS NOT NULL
+		            AND (c.oldest, c.oldest_id) < (s.scanned_from, s.scanned_from_id)))
 		 ORDER BY c.newest DESC
 		 LIMIT $2`
 
@@ -279,7 +306,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		var privateTo *ids.UUID
 		if err := rows.Scan(&thread.Key, &thread.OrganizationID,
 			&thread.Newest, &thread.Count, &privateTo,
-			&thread.ReadTo, &thread.ReadFrom); err != nil {
+			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID); err != nil {
 			return nil, err
 		}
 		if privateTo != nil {
@@ -351,8 +378,8 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO signal_thread_scan
 		  (thread_key, last_activity_at, message_count, scanned_at,
-		   resolved_org_id, scanned_from)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		   resolved_org_id, scanned_from, scanned_from_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (thread_key) DO UPDATE
 		   SET last_activity_at = greatest(signal_thread_scan.last_activity_at, excluded.last_activity_at),
 		       -- The oldest message ever read, so it only ever moves EARLIER.
@@ -360,7 +387,23 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 		       -- it has none of — least(x, NULL) is x — which is what carries a
 		       -- cursor through a pass that read the newest window and reached
 		       -- nothing older.
-		       scanned_from = least(signal_thread_scan.scanned_from, excluded.scanned_from),
+		       -- The pair moves together, and only EARLIER. A window that read
+		       -- nothing older than the cursor leaves it where it was, which is
+		       -- what carries it through a pass that read the newest end.
+		       scanned_from_id = CASE
+		         WHEN excluded.scanned_from IS NULL THEN signal_thread_scan.scanned_from_id
+		         WHEN signal_thread_scan.scanned_from IS NULL THEN excluded.scanned_from_id
+		         WHEN (excluded.scanned_from, excluded.scanned_from_id)
+		            < (signal_thread_scan.scanned_from, signal_thread_scan.scanned_from_id)
+		           THEN excluded.scanned_from_id
+		         ELSE signal_thread_scan.scanned_from_id END,
+		       scanned_from = CASE
+		         WHEN excluded.scanned_from IS NULL THEN signal_thread_scan.scanned_from
+		         WHEN signal_thread_scan.scanned_from IS NULL THEN excluded.scanned_from
+		         WHEN (excluded.scanned_from, excluded.scanned_from_id)
+		            < (signal_thread_scan.scanned_from, signal_thread_scan.scanned_from_id)
+		           THEN excluded.scanned_from
+		         ELSE signal_thread_scan.scanned_from END,
 		       message_count = excluded.message_count,
 		       scanned_at = excluded.scanned_at,
 		       -- WHICH account this reading was for. Overwritten, never
@@ -375,7 +418,7 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 		       refused_activity_at = NULL,
 		       refused_message_count = NULL`,
 		thread.Key, thread.Newest, thread.Count, now, thread.OrganizationID,
-		thread.ReadFromNow); err != nil {
+		thread.ReadFromNow, thread.ReadFromIDNow); err != nil {
 		return fmt.Errorf("record where the read got to: %w", err)
 	}
 	return nil

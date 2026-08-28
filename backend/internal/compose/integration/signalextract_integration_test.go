@@ -799,3 +799,47 @@ func TestAParkedThreadIsOfferedAgainOnceTheParkExpires(t *testing.T) {
 		t.Errorf("open signals after the recovered read = %v, want [contract_ended]", kinds)
 	}
 }
+
+// TestALongThreadIsWalkedToItsStartOnePassAtATime is the half a direct call to
+// threadMessages cannot reach: the QUEUE has to keep offering the thread until
+// its history is covered.
+//
+// The window is six messages and a conversation can be longer. A pass that read
+// one window and recorded the whole message count left the thread looking
+// settled — the newest has not moved and the count has not moved — so the older
+// half was never read, and "walks back a window per pass" was a description
+// rather than a behaviour.
+func TestALongThreadIsWalkedToItsStartOnePassAtATime(t *testing.T) {
+	e := Setup(t)
+	org := e.SeedOrg(t, "Acme", &e.Rep1)
+
+	// Three windows' worth, oldest last so the seeding order is not what the
+	// walk follows.
+	const messages = 3 * 6
+	newest := extractClock.Add(-48 * time.Hour)
+	for i := range messages {
+		seedThread(t, e, org, "thread-long", "Renewal",
+			"A message on the thread.", "inbound", newest.Add(-time.Duration(i)*time.Hour))
+	}
+
+	brain := &scriptedBrain{reply: `{"events": []}`}
+	// Each pass reads one window, and the thread stays due while history
+	// remains below the cursor. Three passes reach the start; a fourth finds
+	// nothing left to walk back to.
+	for pass := 1; pass <= 3; pass++ {
+		extractPass(t, e, brain)
+		if brain.calls != pass {
+			t.Fatalf("after pass %d the model had been called %d times, want %d — a thread with unread "+
+				"history must stay due until it is covered", pass, brain.calls, pass)
+		}
+	}
+
+	// The whole conversation has now been read, so the thread settles: nothing
+	// newer, nothing older, and no reason to spend the model on it again.
+	extractPass(t, e, brain)
+	if brain.calls != 3 {
+		t.Errorf("a fourth pass called the model %d times over a fully read thread, want it left alone — "+
+			"a thread that stays due forever holds a slot in every pass while the backlog behind it starves",
+			brain.calls)
+	}
+}

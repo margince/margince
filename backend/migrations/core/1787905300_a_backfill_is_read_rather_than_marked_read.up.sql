@@ -20,5 +20,15 @@
 -- so no thread changes behaviour until it is next scanned.
 SET LOCAL lock_timeout = '3s';
 
+-- The id travels with the instant, because an instant is not a message
+-- boundary. Mail imported in bulk shares an occurred_at routinely, and a cursor
+-- that is a timestamp alone either skips the rest of a group or re-reads it
+-- forever. (occurred_at, id) is the order the read already walks in, so the
+-- pair is the cursor and the comparison is a tuple.
 ALTER TABLE signal_thread_scan
-    ADD COLUMN scanned_from timestamptz;
+    ADD COLUMN scanned_from timestamptz,
+    ADD COLUMN scanned_from_id uuid;
+
+ALTER TABLE signal_thread_scan
+    ADD CONSTRAINT signal_thread_scan_scanned_from_shape
+    CHECK ((scanned_from IS NULL) = (scanned_from_id IS NULL));

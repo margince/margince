@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // threadMessages reads one window of a conversation, oldest first, so the
@@ -47,10 +49,11 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	// The upper bound of the window. Nothing to read older means the newest
 	// end; a backfill below where reading started means walk back from there.
 	var olderThan *time.Time
+	var olderThanID *ids.UUID
 	if thread.ReadTo != nil && !thread.Newest.After(*thread.ReadTo) && thread.ReadFrom != nil {
-		olderThan = thread.ReadFrom
+		olderThan, olderThanID = thread.ReadFrom, thread.ReadFromID
 	}
-	messages, err := threadWindow(ctx, tx, thread.Key, olderThan)
+	messages, err := threadWindow(ctx, tx, thread.Key, olderThan, olderThanID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +63,7 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	// window every time. Both fall back to the newest window, which is where
 	// the new content is.
 	if len(messages) == 0 && olderThan != nil {
-		messages, err = threadWindow(ctx, tx, thread.Key, nil)
+		messages, err = threadWindow(ctx, tx, thread.Key, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +73,9 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 
 // threadWindow reads one window, oldest first. olderThan bounds it above; nil
 // is the newest end.
-func threadWindow(ctx context.Context, tx pgx.Tx, key string, olderThan *time.Time) ([]threadMessage, error) {
+func threadWindow(
+	ctx context.Context, tx pgx.Tx, key string, olderThan *time.Time, olderThanID *ids.UUID,
+) ([]threadMessage, error) {
 	// The remainder is measured in the same statement that cuts the body:
 	// asked for afterwards it would be a second read of a row that may have
 	// changed, and the number would then describe a different message from the
@@ -84,10 +89,16 @@ func threadWindow(ctx context.Context, tx pgx.Tx, key string, olderThan *time.Ti
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
 		           -- Null means no bound: the newest window, which is the
 		           -- ordinary case and the one a thread starts from.
-		           AND ($4::timestamptz IS NULL OR occurred_at < $4)
+		           --
+		           -- A TUPLE, not a timestamp. Mail imported in bulk shares an
+		           -- occurred_at routinely, so comparing the instant alone would
+		           -- drop the rest of that group unread — or, made inclusive,
+		           -- re-read it every pass and never get past it.
+		           AND ($4::timestamptz IS NULL
+		                OR (occurred_at, id) < ($4, $5::uuid))
 		         ORDER BY occurred_at DESC, id DESC
 		         LIMIT $3) tail
-		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages, olderThan)
+		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages, olderThan, olderThanID)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation: %w", err)
 	}
@@ -116,9 +127,10 @@ func threadWindow(ctx context.Context, tx pgx.Tx, key string, olderThan *time.Ti
 func finishThreadWindow(ctx context.Context, thread *settledThread, out []threadMessage) []threadMessage {
 	if len(out) > 0 {
 		// The window's own lower end, so the mark can lower the cursor to it.
-		// Rows come back oldest first, so it is the first.
-		oldest := out[0].At
-		thread.ReadFromNow = &oldest
+		// Rows come back oldest first, so it is the first — and both halves of
+		// the pair travel, because either alone is not a boundary.
+		oldest, oldestID := out[0].At, out[0].ID
+		thread.ReadFromNow, thread.ReadFromIDNow = &oldest, &oldestID
 	}
 	unread, cut := 0, 0
 	for _, message := range out {
