@@ -2,8 +2,8 @@
 
 How Margince decides **who may do what**, and — importantly — **where** that decision is made. If you
 are looking for the auth check in an HTTP handler and not finding it, this page is the explanation:
-the check is at the store/service entry point, and Postgres row-level security is the backstop beneath
-it. That is a design decision, not drift.
+the check is at the store/service entry point, and the one transaction seam plus the app role's own
+grants are the structural backstop beneath it. That is a design decision, not drift.
 
 ## Why authorization lives below the handlers
 

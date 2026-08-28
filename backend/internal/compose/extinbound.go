@@ -320,7 +320,13 @@ func inboundHeaders(r *http.Request) (stamp time.Time, nonce, signature string, 
 	}
 	nonce = r.Header.Get(extension.InboundHeaderNonce)
 	signature = r.Header.Get(extension.InboundHeaderSignature)
-	if nonce == "" || signature == "" {
+	// The nonce is held to its grammar HERE rather than in a unit, and for the
+	// core's sake twice over. A unit is told to store it under a uniqueness
+	// index, so an unbounded one is an unbounded write every unit
+	// would have to remember to refuse; and SigningPayload is unambiguous only
+	// while the nonce cannot contain the separator, so a nonce off its alphabet
+	// is a replay key that can be moved without changing what was signed.
+	if signature == "" || !extension.ValidInboundNonce(nonce) {
 		return time.Time{}, "", "", false
 	}
 	return time.Unix(secs, 0), nonce, signature, true

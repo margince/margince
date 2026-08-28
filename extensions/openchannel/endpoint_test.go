@@ -18,6 +18,13 @@ import (
 // is what a client sending nothing at all would produce.
 const noArgs = `{}`
 
+// ownArgs is what a confirm-first operation's request carries when the caller
+// names their own endpoint — the ordinary case every success-path fixture in
+// this suite exercises. endpointID is the row every fixture's singleRows
+// answer as the caller's own, so this is the one value that survives the
+// mismatch check.
+const ownArgs = `{"endpoint_id":"` + endpointID + `"}`
+
 func TestOpeningStampsTheOwnerFromTheInvocation(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()
@@ -250,7 +257,7 @@ func TestRegisteringAnAddressStoresTheCheckedForm(t *testing.T) {
 	}
 
 	if _, err := registerURL(context.Background(), rt,
-		json.RawMessage(`{"url":"  `+address+`  "}`)); err != nil {
+		json.RawMessage(`{"endpoint_id":"`+endpointID+`","url":"  `+address+`  "}`)); err != nil {
 		t.Fatalf("registering: %v", err)
 	}
 	_, args := rt.tx.statementMentioning(t, "url = $2")
@@ -259,6 +266,31 @@ func TestRegisteringAnAddressStoresTheCheckedForm(t *testing.T) {
 	}
 	if rt.tx.published[0].Verb != eventURLRegistered {
 		t.Fatalf("registering published %q", rt.tx.published[0].Verb)
+	}
+}
+
+// The IDOR guard on the other confirm-first operation: naming a colleague's
+// endpoint id must re-point nothing and answer not-found, never a permission
+// error — the same rule as mintSecret, and load-bearing here because this
+// operation is the one that silently changes where every LATER send posts a
+// member's message bodies.
+func TestRegisteringAnAddressForAnotherMembersEndpointIsRefusedAsNotFound(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.singleRows = [][]any{endpointRow(endpointID, ownerUserID, "", true)}
+
+	_, err := registerURL(context.Background(), rt,
+		json.RawMessage(`{"endpoint_id":"`+colleagueEndpointID+`","url":"https://example.com/hook"}`))
+	if !errors.Is(err, extension.ErrNotFound) {
+		t.Fatalf("naming another endpoint must answer not-found, got %v", err)
+	}
+	if errors.Is(err, extension.ErrForbidden) {
+		t.Fatal("a permission error confirms the id belongs to somebody — existence must stay hidden")
+	}
+	for _, sql := range rt.tx.statements {
+		if strings.Contains(sql, "UPDATE") {
+			t.Fatalf("the mismatch was not caught before a write:\n%s", sql)
+		}
 	}
 }
 

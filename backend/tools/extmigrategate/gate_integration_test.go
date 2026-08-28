@@ -207,8 +207,9 @@ func TestGateRejectsTableWithWorkspaceID(t *testing.T) {
 
 // A policy that admits every row is the failure this whole tier exists to
 // prevent, and it is invisible to every textual rule: the SQL is well-formed,
-// the table is namespaced, RLS is on and forced. Only comparing the rendered
-// predicate against the one canonical spelling catches it.
+// the table is namespaced, and the fixture below switches row-level security
+// on with FORCE. Only comparing the rendered predicate against the one
+// canonical spelling catches it.
 // Any policy at all, whatever it says. The gate used to pin the predicate's
 // rendered form and enumerate the ways to get it wrong; with no tenant to key
 // on there is nothing a policy here can mean, so the rule is the simpler one.

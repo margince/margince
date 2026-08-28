@@ -64,6 +64,9 @@ func outcomeOf(err error) string {
 	switch {
 	case err == nil:
 		return outcomeSent
+	case errors.Is(err, errBlocked):
+		// Definite: the guard runs before a connection exists, so nothing left.
+		return outcomeRefused
 	case errors.Is(err, errUnanswered):
 		return outcomeUnknown
 	default:
@@ -78,6 +81,8 @@ func attemptClass(err error) extension.FailureClass {
 	switch {
 	case err == nil:
 		return extension.FailureClass{}
+	case errors.Is(err, errBlocked):
+		return classDeliveryBlocked
 	case errors.Is(err, errUnanswered):
 		return classDeliveryUnanswered
 	default:

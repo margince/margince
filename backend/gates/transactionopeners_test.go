@@ -91,7 +91,13 @@ func beginCallersOutside(file *ast.File, filename string) []string {
 				return true
 			}
 			sel, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || sel.Sel.Name != "Begin" {
+			// Every spelling pgx offers, not the one this package happens to
+			// use today: BeginTx and BeginFunc open exactly the same
+			// transaction, so a gate that matched only Begin would report PASS
+			// on the two ways around it — and under-recognition is the one way
+			// a census must not fail, because it reads a smaller subject and
+			// leaves no failing assertion to notice.
+			if !ok || !strings.HasPrefix(sel.Sel.Name, "Begin") {
 				return true
 			}
 			offenders = append(offenders, filename+": "+fn.Name.Name)

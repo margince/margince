@@ -234,9 +234,9 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 
 // downgradeToAppRole drops the transaction to the DML-only app role for
 // everything after the DDL, so the catalog and audit writes run under
-// exactly the authority every other tenant write has — RLS forced, no
-// owner privilege in reach. SET LOCAL is transaction-scoped: the pooled
-// connection reverts to the owner role at COMMIT/ROLLBACK. The role name
+// exactly the authority every other tenant write has — the app role's
+// own grants, no owner privilege in reach. SET LOCAL is transaction-scoped:
+// the pooled connection reverts to the owner role at COMMIT/ROLLBACK. The role name
 // is the scripts/db-init.sql runtime role, the same one the app pool's
 // DSN connects as.
 //

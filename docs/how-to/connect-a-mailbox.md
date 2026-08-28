@@ -13,7 +13,8 @@ one Sink, the three ingestion modes, credential custody — read
 
 > **Single-organization installation.** One installation serves one organization; the
 > server resolves it itself, so no request selects a tenant — the `curl`s below carry only the session
-> cookie. ("Workspace" still names the internal RLS tenant these tables are scoped by.)
+> cookie. ("Workspace" still names the internal tenant identity `WithWorkspaceTx` binds the
+> transaction to.)
 
 ## Where the UI lives
 

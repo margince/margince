@@ -218,9 +218,10 @@ func assertNoTriggers(ctx context.Context, conn *pgx.Conn) error {
 
 // assertNoRules refuses rewrite rules on the unit's relations.
 //
-// A rule is not an isolation break the way a missing policy is: the rewritten
-// action runs with the invoking role's privileges and RLS still binds the
-// target it rewrites to. It is refused because it is arbitrary behaviour on a
+// A rule is not an isolation break the way a permissive policy would be: the
+// rewritten action still runs with the invoking role's own grants, whatever
+// target it rewrites to — a rule cannot hand that role a privilege it does
+// not already have. It is refused because it is arbitrary behaviour on a
 // tenant table's write path — `ON INSERT DO INSTEAD NOTHING` silently discards
 // every write — which is the same reason assertNoTriggers gives, and because
 // this design is a positive allowlist: the question is not "is this harmful"

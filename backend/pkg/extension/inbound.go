@@ -22,10 +22,10 @@ import (
 // the timestamp for freshness and carries the nonce as the replay key, and it
 // cannot do either against a name only the unit knows.
 //
-// The signature covers all three parts — the timestamp, the nonce and the body
-// — so neither of the first two can be edited without invalidating it. The unit
-// verifies it, because the secret lives in the unit's own namespace and the
-// core cannot reach it.
+// The signature covers all three parts, and the endpoint addressed as well —
+// see SigningPayload — so none of them can be edited without invalidating it.
+// The unit verifies it, because the secret lives in the unit's own namespace
+// and the core cannot reach it.
 const (
 	// InboundHeaderTimestamp carries unix SECONDS, as decimal digits.
 	InboundHeaderTimestamp = "X-Margince-Timestamp"
@@ -36,8 +36,11 @@ const (
 	// same one lands nothing.
 	InboundHeaderNonce = "X-Margince-Nonce"
 
-	// InboundHeaderSignature carries `sha256=<hex>`, the HMAC-SHA256 over
-	// `<timestamp>.<nonce>.<body>` under the endpoint's secret.
+	// InboundHeaderSignature carries `sha256=<hex>`, the HMAC-SHA256 under
+	// the endpoint's secret over exactly what SigningPayload builds. Read that
+	// function before writing a sender: the material is not the three headers
+	// concatenated, and a sender that assumes it is gets one opaque 401 with
+	// nothing in it to say why.
 	InboundHeaderSignature = "X-Margince-Signature"
 )
 
@@ -138,28 +141,70 @@ type InboundRequest struct {
 
 	// Nonce is the value the caller signed. It is the unit's replay key: store
 	// it unique per endpoint, and a second arrival with the same one lands
-	// nothing.
+	// nothing. Bounded (MaxInboundNonce) before it reaches a unit: a
+	// caller-chosen value a unit is asked to KEEP is a caller-chosen write.
 	Nonce string
 
 	// Signature is the presented `sha256=<hex>` MAC, verbatim. The unit
-	// recomputes the expected value over `<timestamp>.<nonce>.<body>` and
-	// compares with hmac.Equal — never with ==, and never after decoding only
-	// one side.
+	// recomputes the expected value over SignedPayload and compares with
+	// hmac.Equal — never with ==, and never after decoding only one side.
 	Signature string
 
 	// Body is the request body, at most MaxBody bytes.
 	Body []byte
 }
 
-// SignedPayload is the exact material an InboundRequest's signature covers.
-// Compute the expected MAC over this and over nothing else: a verifier that
-// re-spells the concatenation is a verifier that will one day spell it
-// differently from the sender, and the failure looks like a wrong secret.
+// SigningScope names WHICH exchange a MAC was minted for. It is the first line
+// of every signed payload, and it is what stops one exchange's signature from
+// being valid material in another.
+//
+// The case it exists for is concrete and was otherwise live: a unit that both
+// sends signed messages and receives them, under one secret, over one payload
+// spelling, produces outbound requests that are byte-for-byte valid INBOUND
+// requests. Any party trusted only to receive could relay what it was sent
+// straight back to the installation's own edge and be authenticated by it,
+// without ever holding the secret. Two scopes make those two messages
+// different messages.
+type SigningScope string
+
+const (
+	// ScopeInbound is a request arriving at a declared inbound endpoint.
+	ScopeInbound SigningScope = "margince-inbound-v1"
+	// ScopeOutbound is a request a unit sends to a destination someone
+	// registered with it.
+	ScopeOutbound SigningScope = "margince-outbound-v1"
+)
+
+// SigningPayload is the exact material a signature covers, for either
+// direction. Compute the expected MAC over this and over nothing else: a
+// verifier that re-spells the concatenation is a verifier that will one day
+// spell it differently from the sender, and the failure looks like a wrong
+// secret rather than a rule that moved.
+//
+// The encoding is UNAMBIGUOUS, which a plain join is not. Every field before
+// the body is drawn from an alphabet with no newline in it — a scope is a
+// constant here, a slug and a ref are held to their published grammars, the
+// timestamp is decimal and the nonce is hex — so the first five newlines are
+// the five separators and nothing else can be read as one. The earlier
+// `<ts>.<nonce>.<body>` spelling had no such property: moving the boundary
+// rightwards produced a DIFFERENT nonce over IDENTICAL signing material, so
+// one captured request could be replayed once per separator in its own body,
+// each replay landing a fresh row past a uniqueness index that never saw a
+// collision. Nothing about that attack needed the secret.
+func SigningPayload(scope SigningScope, slug, ref string, at time.Time, nonce string, body []byte) []byte {
+	head := fmt.Sprintf("%s\n%s\n%s\n%d\n%s\n", scope, slug, ref, at.Unix(), nonce)
+	payload := make([]byte, 0, len(head)+len(body))
+	payload = append(payload, head...)
+	return append(payload, body...)
+}
+
+// SignedPayload is the material an arriving request's signature covers.
+//
+// Slug and Ref are IN it: without them a request captured on one endpoint is
+// valid on every other endpoint the installation declares, which is a
+// distinction the URL makes and the signature would otherwise not.
 func (r InboundRequest) SignedPayload() []byte {
-	prefix := fmt.Sprintf("%d.%s.", r.Timestamp.Unix(), r.Nonce)
-	payload := make([]byte, 0, len(prefix)+len(r.Body))
-	payload = append(payload, prefix...)
-	return append(payload, r.Body...)
+	return SigningPayload(ScopeInbound, r.Slug, r.Ref, r.Timestamp, r.Nonce, r.Body)
 }
 
 // InboundOutcome is why a handler stopped. It mirrors the response discipline
@@ -205,8 +250,24 @@ type InboundRate struct {
 	// caller can write.
 	PerIP Rate
 
-	// PerEndpoint meters every request that resolves to this endpoint,
-	// whatever its source.
+	// PerEndpoint meters every request that resolves to this DECLARED
+	// endpoint, whatever its source.
+	//
+	// SIZE IT FOR THE WHOLE INSTALLATION, not for one sender. A slug comes
+	// from the declaration and is the same for every caller, so where a unit gives
+	// each member their own URL by minting a trailing Ref, all of those URLs
+	// resolve to this one declaration and spend this one budget. The Ref
+	// cannot be the meter's key — a caller-chosen key is a caller-choosing
+	// its own budget, and ratelimit leaves an over-long key unmetered and
+	// admitted — so members share fate here by construction.
+	//
+	// The consequence to size against: this bucket is spent BEFORE a
+	// signature is checked, deliberately, so that an unverified request
+	// cannot cost a secret read. An anonymous party sending junk therefore
+	// spends the same budget a member's real sender needs, and a limit set
+	// for one sender's traffic is a limit an anonymous party can exhaust on
+	// everyone's behalf. Set it against the installation's total expected
+	// arrival rate with headroom, and rely on PerIP to brake a single source.
 	PerEndpoint Rate
 }
 
@@ -243,6 +304,28 @@ var inboundRefGrammar = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 // URL it has already given to somebody.
 func ValidInboundRef(ref string) bool {
 	return len(ref) <= MaxInboundRef && inboundRefGrammar.MatchString(ref)
+}
+
+// MaxInboundNonce bounds the replay key a caller may present. The nonce is
+// caller-chosen and this edge asks a unit to STORE it, under a uniqueness
+// index that by construction never collapses two of them — so an unbounded one
+// is an unbounded write, and the ref beside it is bounded for the same reason.
+// 128 characters is four times the 32 a 128-bit hex value needs, which is past
+// any sender's idea of unique and nowhere near a payload.
+const MaxInboundNonce = 128
+
+// inboundNonceGrammar is the alphabet the nonce header has always documented.
+// It is ENFORCED rather than merely documented because SigningPayload's
+// unambiguity rests on it: a nonce free to contain the separator could absorb
+// the head of the body and present itself as a different replay key over the
+// same signed bytes.
+var inboundNonceGrammar = regexp.MustCompile(`^[0-9a-fA-F]+$`)
+
+// ValidInboundNonce reports whether a presented replay key is one the core will
+// pass to a unit. Published beside ValidInboundRef so a sender can hold itself
+// to the rule rather than meeting it as an opaque refusal.
+func ValidInboundNonce(nonce string) bool {
+	return len(nonce) <= MaxInboundNonce && inboundNonceGrammar.MatchString(nonce)
 }
 
 // MaxInboundBody is the largest body any declared endpoint may ask for. It

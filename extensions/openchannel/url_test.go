@@ -14,15 +14,17 @@ import (
 func TestARegistrableAddressIsHttpsAndNamesAHost(t *testing.T) {
 	t.Parallel()
 	for name, raw := range map[string]string{
-		"empty":                  "  ",
-		"plain http":             "http://example.com/hook",
-		"no scheme at all":       "example.com/hook",
-		"an address, not a host": "https://10.0.0.5/hook",
-		"a loopback address":     "https://127.0.0.1/hook",
-		"credentials in the URL": "https://user:pass@example.com/hook",
-		"a fragment":             "https://example.com/hook#part",
-		"over the length cap":    "https://example.com/" + strings.Repeat("a", maxURLLength),
-		"not a URL at all":       "https://exa mple.com/\x7f",
+		"empty":                                "  ",
+		"plain http":                           "http://example.com/hook",
+		"no scheme at all":                     "example.com/hook",
+		"an address, not a host":               "https://10.0.0.5/hook",
+		"a loopback address":                   "https://127.0.0.1/hook",
+		"a bracketed IPv6 literal":             "https://[::1]/hook",
+		"a bracketed IPv6 literal with a port": "https://[::1]:8443/hook",
+		"credentials in the URL":               "https://user:pass@example.com/hook",
+		"a fragment":                           "https://example.com/hook#part",
+		"over the length cap":                  "https://example.com/" + strings.Repeat("a", maxURLLength),
+		"not a URL at all":                     "https://exa mple.com/\x7f",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

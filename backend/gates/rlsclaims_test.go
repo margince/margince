@@ -41,11 +41,18 @@ import (
 // The suffix group carries `d` as well as `ed` because the stems are whole
 // words: "scoped" is scope+d, not scope+ed. Leaving it out is what the pinning
 // test below caught — the gate had swept the tree clean of `RLS-scoped` while
-// being unable to see it.
-var rlsClaim = regexp.MustCompile(`(?i)\bRLS[ -](?:scope|bound|confine|restrict|isolate|enforce|govern|gate|bind|keep|constrain|protect)(?:s|d|es|ed)?\b` +
-	`|\bRLS already\b` +
-	`|\b(?:scoped|bounded|confined|restricted|isolated|gated|governed|protected|filtered)[ -]by[ -]RLS\b` +
-	`|\bFORCE RLS (?:doesn't|does not|do not|don't)\b`)
+// being unable to see it. "bound" is listed separately from the verb group
+// because it is bind's irregular past participle, not bind+ed; the `already`
+// alternative allows up to two words between RLS and "already" because a
+// review sweep found `RLS GUC already` sitting between the two; and "forced"
+// gets its own alternative because it names the same live-control claim as
+// the verb group without appearing as one of its stems ("RLS is forced",
+// "RLS-forced").
+var rlsClaim = regexp.MustCompile(`(?i)\bRLS[ -](?:scope|bound|confine|restrict|isolate|enforce|govern|gate|bind|keep|constrain|protect|guard)(?:s|d|es|ed)?\b` +
+	`|\bRLS(?:[ -]\w+){0,2}[ -]already\b` +
+	`|\b(?:scoped|bounded|bound|confined|restricted|isolated|gated|governed|protected|filtered|guarded)[ -]by[ -]RLS\b` +
+	`|\bFORCE RLS (?:doesn't|does not|do not|don't)\b` +
+	`|\bRLS[ -](?:is[ -](?:on and[ -])?)?forced\b`)
 
 // TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew pins the pattern
 // against the real phrasings the 2026-08 sweep removed, and against the
@@ -61,6 +68,10 @@ func TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew(t *testing.T) {
 		"// for the RLS-governed catalog insert and audit write.",
 		"// workspace-scoped read (RLS confines it to the tenant)",
 		"// superuser, so FORCE RLS doesn't bite behaviorally",
+		"// workspace-bound by RLS through the GUC the binding above set.",
+		"// app_user is RLS-guarded like every tenant table",
+		"// the signal table, which is RLS-forced and has no handler",
+		"// transaction the RLS GUC already bounds what can be locked",
 	}
 	for _, line := range mustMatch {
 		if !rlsClaim.MatchString(line) {

@@ -100,7 +100,7 @@ budget rather than keeping its own list of which pages are generated.
 - [backend-onboarding.md](explanation/backend-onboarding.md) — **the contributor hub**: system overview, the map, what's generated vs hand-written, the store shape, the gates.
 - [architecture.md](explanation/architecture.md) — the module DAG, the spine shapes, tenancy-as-structure.
 - [contract-first.md](explanation/contract-first.md) — how code is generated from `crm.yaml`.
-- [authorization.md](explanation/authorization.md) — why the auth check lives at the store entry point; the RLS backstop; what a passport is.
+- [authorization.md](explanation/authorization.md) — why the auth check lives at the store entry point; the structural backstop; what a passport is.
 - [rbac-roles-and-teams.md](explanation/rbac-roles-and-teams.md) — the role matrix, row scope (own/team/all), teams, role assignment, and per-record sharing — the data model the auth gate reads.
 
 **The platform spine — how a change is written**

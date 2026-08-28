@@ -54,10 +54,23 @@ const signaturePrefix = "sha256="
 //
 // ITS VALUE IS IRRELEVANT AND IT IS NOT A SECRET: the comparison it feeds is
 // discarded and the request is refused either way. What matters is that the
-// work HAPPENS. Without it, a probe for a slug nobody opened would return
-// before any MAC was computed and come back measurably sooner than a wrong
-// signature does, which makes an installation's endpoints enumerable by clock.
+// comparison HAPPENS. Without it, a probe for a ref nobody minted would return
+// before any MAC was computed and come back sooner than a wrong signature does.
 // Deleting this as pointless is the failure mode it exists to prevent.
+//
+// WHAT IT DOES NOT EQUALIZE, stated plainly rather than left for a reader to
+// assume: an absent ref takes this stand-in without a secret read, while a live
+// one costs a database round trip and a decrypt — far more than the SHA-256
+// this equalizes. So "that ref resolves to a live endpoint" remains
+// distinguishable by clock, and the mitigation here is partial.
+//
+// It is left partial deliberately. A ref carries 128 bits from the system
+// random source, so an oracle answering "does this one exist" is worth nothing
+// without a candidate to ask about, and there is no way to produce one. Closing
+// the rest would mean issuing a decoy secret read against a stand-in identity
+// on every miss — a database round trip per unauthenticated probe, which hands
+// an anonymous party a cheaper way to make this installation work than the one
+// it would be closing.
 const absentEndpointKey = "openchannel: no secret, and the answer is the same either way"
 
 // inboundTarget is the endpoint an arriving request resolved to: the row to

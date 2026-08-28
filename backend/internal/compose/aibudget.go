@@ -28,9 +28,10 @@ const (
 )
 
 // seatBudget derives the pool live: seat changes move the budget at
-// the next model call, no restart. The count runs under the target
-// workspace's own GUC binding — app_user is RLS-guarded like every
-// tenant table, and the budget question is always about ONE tenant.
+// the next model call, no restart. The count runs against app_user,
+// which carries no workspace column at all (ADR-0091 §8 phase D) — a
+// single-organization installation has one workspace to charge, so
+// counting every full seat on the installation IS the tenant's count.
 type seatBudget struct {
 	pool *pgxpool.Pool
 }

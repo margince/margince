@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SCOPE_INBOUND } from "./recipe";
 import OpenchannelScreen from "./screen";
 
 // The connector's screen, over a stubbed transport.
@@ -233,9 +234,9 @@ describe("the openchannel screen", () => {
   // than none: the person who pastes it is refused by the same opaque 401 a
   // forged request gets, and learns that the connector is broken rather than
   // that the example is. Each clause below is the verifier's own rule —
-  // HMAC-SHA256 over `<unix seconds>.<nonce>.<body>`, hex, under the `sha256=`
-  // prefix the comparison is made with, sent under the three published header
-  // names.
+  // HMAC-SHA256 over the scope, slug, ref, unix seconds, nonce and body joined
+  // by newlines, hex, under the `sha256=` prefix the comparison is made with,
+  // sent under the three published header names.
   it("offers a curl that carries what the verifier checks", async () => {
     const { fetchStub } = stubTransport(FULL_GRANT, {
       ...QUIET,
@@ -254,7 +255,14 @@ describe("the openchannel screen", () => {
     // The signed material, in the order and with the separators the verifier
     // concatenates them in — and via printf, because echo appends a newline
     // and the MAC covers the bytes it was given.
-    expect(recipe).toContain(`printf '%s.%s.%s' "$TS" "$NONCE" "$BODY"`);
+    expect(recipe).toContain(
+      `printf '%s\\n%s\\n%s\\n%s\\n%s\\n%s' '${SCOPE_INBOUND}' "$SLUG" "$REF" "$TS" "$NONCE" "$BODY"`,
+    );
+    // The scope and the endpoint it addresses are signed, not merely sent: a
+    // request captured on one endpoint must not be valid on another, and a
+    // message this connector SENDS must not be a valid arrival at its own edge.
+    expect(recipe).toContain(`SLUG='receive'`);
+    expect(recipe).toContain(`REF='k7m2q9x4'`);
     expect(recipe).toContain(`openssl dgst -sha256 -hmac "$SECRET"`);
     // The body is posted verbatim: --data-raw does not reinterpret it, and
     // one edited byte is the difference between a landed message and an
@@ -291,7 +299,7 @@ describe("the openchannel screen", () => {
       (call) => call.path === "/ext/openchannel/endpoint/secret",
     );
     expect(mint?.method).toBe("POST");
-    expect(mint?.body).toEqual({});
+    expect(mint?.body).toEqual({ endpoint_id: ENDPOINT.id });
   });
 
   // The read that follows a mint carries no secret, and the screen must not
@@ -335,7 +343,10 @@ describe("the openchannel screen", () => {
         (call) => call.path === "/ext/openchannel/endpoint/url",
       );
       expect(put?.method).toBe("PUT");
-      expect(put?.body).toEqual({ url: "https://example.com/hooks/crm" });
+      expect(put?.body).toEqual({
+        endpoint_id: ENDPOINT.id,
+        url: "https://example.com/hooks/crm",
+      });
     });
   });
 

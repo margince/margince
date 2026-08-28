@@ -26,6 +26,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -55,6 +56,14 @@ const (
 	// product's ladder would send the rep's message a second time with nothing
 	// able to detect it.
 	errUnanswered sendError = "openchannel: the registered address never reported the outcome"
+
+	// errBlocked is the egress guard refusing to dial the address a member
+	// registered. NOTHING LEFT — the guard runs on the resolved address before
+	// a connection is made — so it is a definite answer, and telling it apart
+	// from errUnanswered is the difference between an operator reading "their
+	// system did not answer" and "this installation would not call it". Only
+	// the second is actionable, and only by us.
+	errBlocked sendError = "openchannel: this installation refused to post to the registered address"
 )
 
 // sendError is one of this unit's own outbound refusal classes.
@@ -141,7 +150,7 @@ func refusePrivate(_, address string, _ syscall.RawConn) error {
 		return fmt.Errorf("openchannel: %q did not resolve to an address", host)
 	}
 	if !publicIP(ip) {
-		return fmt.Errorf("openchannel: refusing to post to %s — it is not a public address, and an address a member registered must not become a probe of this deployment's own network", ip)
+		return fmt.Errorf("%w: %s is not a public address, and an address a member registered must not become a probe of this deployment's own network", errBlocked, ip)
 	}
 	return nil
 }
@@ -177,12 +186,18 @@ func (s *sender) post(ctx context.Context, secret []byte, nonce string, at time.
 	req.Header.Set(extension.InboundHeaderSignature, signatureOver(secret, nonce, at, body))
 	resp, err := s.http.Do(req)
 	if err != nil {
-		// The request went out and this side never learned what was decided —
-		// including the guard's own refusal, which transmitted nothing at all.
-		// The two are told apart by the guard running BEFORE anything leaves, so
-		// its message names the address it would not dial; what they share is
-		// that no answer exists, and the send path treats an unanswered POST as
-		// unknown rather than as a failure.
+		// The guard's refusal FIRST, and it is not a variety of "no answer".
+		// Control runs on the resolved address before a connection exists, so
+		// nothing was transmitted and the outcome is certain — where a genuine
+		// unanswered POST may be at the recipient and may not. Reporting the
+		// two alike would park a delivery that certainly never left, under a
+		// sentence blaming a system this installation declined to call.
+		if errors.Is(err, errBlocked) {
+			return fmt.Errorf("%w: %s", errBlocked, err.Error())
+		}
+		// The request went out and this side never learned what was decided.
+		// No answer exists, so the send path treats it as unknown rather than
+		// as a failure.
 		return fmt.Errorf("%w: %s", errUnanswered, err.Error())
 	}
 	// The answer's BODY is never read. What the far end says about itself is a
@@ -197,14 +212,17 @@ func (s *sender) post(ctx context.Context, secret []byte, nonce string, at time.
 	return nil
 }
 
-// signatureOver is the header value a receiver verifies, and it is built from the
-// PUBLISHED material rather than from a concatenation spelled here.
+// signatureOver is the header value a receiver verifies, and it is built from
+// the PUBLISHED material rather than from a concatenation spelled here.
 //
-// The same function the inbound edge's verifier uses, over the same value: what
-// this connector sends is what this connector would accept.
+// Under ScopeOutbound, which is the whole point: this connector signs with the
+// same member secret it verifies arrivals with, so a payload spelled the same
+// in both directions would make every message it SENDS a valid message to
+// itself. The party we send to is trusted to receive, not to speak as the
+// sender — and relaying our own bytes back at our own edge is the cheapest
+// forgery there is. Different scope, different message.
 func signatureOver(secret []byte, nonce string, at time.Time, body []byte) string {
-	signed := extension.InboundRequest{Timestamp: at, Nonce: nonce, Body: body}
 	mac := hmac.New(sha256.New, secret)
-	mac.Write(signed.SignedPayload())
+	mac.Write(extension.SigningPayload(extension.ScopeOutbound, "", "", at, nonce, body))
 	return signaturePrefix + hex.EncodeToString(mac.Sum(nil))
 }

@@ -20,7 +20,7 @@ shared  →  platform  →  modules  →  compose  →  cmd
   interfaces: authz, datasource, mcp, connector, workflow, model,
   retrieval, extraction, fieldcatalog, jurisdiction).
 - **`internal/platform/`** — technical plumbing that owns no domain:
-  `database` (pool + the RLS workspace-transaction contract) and
+  `database` (pool + the `WithWorkspaceTx` workspace-transaction contract) and
   `database/storekit` (the one spelling of the write shape), `auth` (the
   one admission point), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr`, `httpserver`.

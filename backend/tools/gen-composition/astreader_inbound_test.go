@@ -183,3 +183,172 @@ func TestInboundReadsEitherOrderOfADuration(t *testing.T) {
 		t.Errorf("time.Minute * 5 did not derive as 300 seconds:\n%s", derived)
 	}
 }
+
+// The refusals above are about VALUES; these are about SHAPE. A generator that
+// reads a declaration statically has no compiler behind it, so every shape it
+// cannot read has to be refused by name rather than skipped — a skipped field
+// is an endpoint published without the bound it asked for, and nothing
+// downstream can tell that from an endpoint that asked for none.
+func TestInboundDerivationRefusesAShapeItCannotRead(t *testing.T) {
+	tests := []struct {
+		name    string
+		entries string
+		want    string
+	}{
+		{
+			"an entry that is not a literal",
+			"\t\t\tspareEndpoint,\n",
+			"must be an extension.InboundEndpoint literal",
+		},
+		{
+			"an endpoint field given positionally",
+			"\t\t\t{\"capture\", \"inbound\"},\n",
+			"InboundEndpoint fields must be keyed",
+		},
+		{
+			"an endpoint field keyed by something other than a name",
+			strings.Replace(wholeEndpoint, `Slug:    "capture",`, `"Slug": "capture",`, 1),
+			"must be keyed by name",
+		},
+		{
+			"a slug built from an identifier rather than a literal",
+			strings.Replace(wholeEndpoint, `Slug:    "capture",`, `Slug:    slugConst,`, 1),
+			"InboundEndpoint.Slug",
+		},
+		{
+			"a rate that is not a literal",
+			replaceRate(`spareRate`),
+			"must be an extension.InboundRate literal",
+		},
+		{
+			"a rate bucket given positionally",
+			replaceRate(`extension.InboundRate{extension.Rate{Limit: 60, Window: time.Minute}}`),
+			"InboundRate fields must be keyed",
+		},
+		{
+			"a rate field this generator cannot derive",
+			strings.Replace(wholeEndpoint, `PerIP:       extension.Rate{Limit: 60, Window: time.Minute},`,
+				"PerIP:       extension.Rate{Limit: 60, Window: time.Minute},\n\t\t\t\t\tPerMember:   extension.Rate{Limit: 1, Window: time.Minute},", 1),
+			"InboundRate field PerMember is not derivable",
+		},
+		{
+			"a bucket that is not a literal",
+			strings.Replace(wholeEndpoint, `PerIP:       extension.Rate{Limit: 60, Window: time.Minute},`, `PerIP:       spareBucket,`, 1),
+			"InboundRate.PerIP must be an extension.Rate literal",
+		},
+		{
+			"a bucket field given positionally",
+			strings.Replace(wholeEndpoint, `extension.Rate{Limit: 60, Window: time.Minute}`, `extension.Rate{60, time.Minute}`, 1),
+			"InboundRate.PerIP fields must be keyed",
+		},
+		{
+			"a bucket field this generator cannot derive",
+			strings.Replace(wholeEndpoint, `extension.Rate{Limit: 60, Window: time.Minute}`, `extension.Rate{Limit: 60, Window: time.Minute, Burst: 5}`, 1),
+			"InboundRate.PerIP field Burst is not derivable",
+		},
+		{
+			// A shift Go itself accepts can still wrap int64 negative, and a
+			// negative cap reads to Validate as "no cap declared" — the exact
+			// value an anonymous edge must never be published with.
+			"a body cap whose shift leaves int64",
+			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: 64 << 70`, 1),
+			"shifts out of range",
+		},
+		{
+			"a body cap using an operator outside the grammar",
+			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: 65536 - 1`, 1),
+			"reads only <<, * and +",
+		},
+		{
+			"a body cap written as a string",
+			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: "64k"`, 1),
+			"must be an integer literal",
+		},
+		{
+			"a body cap that is not arithmetic at all",
+			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: -someCall()`, 1),
+			"arithmetic expression over literals",
+		},
+		{
+			"a skew added rather than multiplied",
+			strings.Replace(wholeEndpoint, `Skew:   5 * time.Minute`, `Skew:   time.Minute + time.Minute`, 1),
+			"must be written as N * time.Unit",
+		},
+		{
+			"a skew multiplying two numbers",
+			strings.Replace(wholeEndpoint, `Skew:   5 * time.Minute`, `Skew:   5 * 60`, 1),
+			"must multiply a literal by a time unit",
+		},
+		{
+			"a skew naming a constant of another package",
+			strings.Replace(wholeEndpoint, `Skew:   5 * time.Minute`, `Skew:   window.Minute`, 1),
+			"only the time package's units",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := deriveSynthetic(t, "x", inboundUnitSource(tc.entries))
+			if err == nil {
+				t.Fatalf("the generator derived %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("refusal said %q, which does not carry %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// replaceRate swaps the whole Rate value for one this generator should refuse.
+func replaceRate(with string) string {
+	const rate = `Rate: extension.InboundRate{
+					PerIP:       extension.Rate{Limit: 60, Window: time.Minute},
+					PerEndpoint: extension.Rate{Limit: 120, Window: time.Minute},
+				},`
+	return strings.Replace(wholeEndpoint, rate, "Rate: "+with+",", 1)
+}
+
+// A bare unit and a parenthesised expression are the same declarations as `N *
+// time.Unit` and `64 << 10`; refusing either would be a style rule wearing a
+// grammar's clothes, and the author's cheapest workaround — dropping the bound
+// — is the one outcome an anonymous edge cannot afford.
+func TestInboundReadsABareUnitAndParentheses(t *testing.T) {
+	tests := []struct {
+		name string
+		skew string
+		want string
+	}{
+		{"a bare time unit", `time.Minute`, `"skew_seconds": 60`},
+		{"a parenthesised product", `(5 * time.Minute)`, `"skew_seconds": 300`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			entries := strings.Replace(wholeEndpoint, `Skew:   5 * time.Minute`, `Skew:   `+tc.skew, 1)
+			entries = strings.Replace(entries, `MaxBody: 64 << 10`, `MaxBody: (64 << 10)`, 1)
+			derived, err := deriveSynthetic(t, "x", inboundUnitSource(entries))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{tc.want, `"max_body": 65536`} {
+				if !strings.Contains(string(derived), want) {
+					t.Errorf("%s did not derive %s:\n%s", tc.skew, want, derived)
+				}
+			}
+		})
+	}
+}
+
+// An Inbound field the generator cannot see into is refused rather than read as
+// "no anonymous edge" — the manifest is the operator's only census of the
+// installation's unauthenticated surface, and a silently empty census is the
+// one failure that looks exactly like a clean one.
+func TestInboundRefusesAnIndirectSlice(t *testing.T) {
+	source := strings.Replace(inboundUnitSource(""),
+		"Inbound: []extension.InboundEndpoint{\n\n\t\t},", "Inbound: declaredEndpoints,", 1)
+	_, err := deriveSynthetic(t, "x", source)
+	if err == nil {
+		t.Fatal("the generator read an Inbound field it cannot see into")
+	}
+	if !strings.Contains(err.Error(), "must be a slice literal") {
+		t.Fatalf("refusal said %q, which does not name the shape", err)
+	}
+}

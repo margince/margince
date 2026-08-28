@@ -463,8 +463,10 @@ func (s *Service) deleteUnreferencedRef(ctx context.Context, ws ids.UUID, ref ke
 // whether overlay mode is live, the same posture as a quota's attainment
 // read. No EnsureVisible probe runs: like quota, incumbent_connection is
 // a workspace-shared singleton governed by the object grant alone, never
-// row-scoped (there is exactly one row per tenant; RLS alone already
-// walls off other tenants).
+// row-scoped: incumbent_connection carries no workspace column and the
+// query below no workspace predicate, because an installation holds
+// exactly one workspace (ADR-0061) and this table always holds exactly
+// one row.
 // apperrors.ErrNotFound means no connection row was ever inserted for
 // this workspace — a revoked connection still reads back (its status
 // column carries that fact, and Disconnect never deletes the lifecycle

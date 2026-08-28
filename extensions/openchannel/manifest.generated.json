@@ -63,9 +63,9 @@
       "scopes": [
         "write"
       ],
-      "tier": "auto_execute",
-      "fragment_hash": "sha256:a4e0ad19e185d5880fdcff29cd7a1cff41763447c04ca9828b82247949a5c5fe",
-      "digest": "sha256:42a1154573817db023e6d60b1c33dcdda65276030e8c1c92531ed048db69449a"
+      "tier": "confirmation_required",
+      "fragment_hash": "sha256:58b62dbfb3759014fdad0bd0b9309cfe7e2433e72979eb844292bacf59920b8d",
+      "digest": "sha256:0eb96bad96ef433f4254cd969378e0181079a4664ead3675742a761cfa2c94e4"
     },
     {
       "id": "tool/openchannel_open",
@@ -111,9 +111,9 @@
       "scopes": [
         "write"
       ],
-      "tier": "auto_execute",
-      "fragment_hash": "sha256:4f78401e090926331cfd53c7902c13268f29557a3cd0a87ae9e9913e0c09f2b4",
-      "digest": "sha256:aa45f671cb26a01642d46b15cc645dc8508f61018235d8ca56dab0470dcb5f9a"
+      "tier": "confirmation_required",
+      "fragment_hash": "sha256:002db2bebf9e0baed628c251379b924626e06a06e580ebf017ac841f53d88d89",
+      "digest": "sha256:a6a9ca41ec11fe06894b441bf12baadd09075ba0971f639da8a0d7cf8ef7e091"
     },
     {
       "id": "tool/openchannel_set_enabled",

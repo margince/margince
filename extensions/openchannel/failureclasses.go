@@ -119,19 +119,22 @@ var (
 		Sentence: "a message left for a member's registered address and no answer to it ever came back",
 		Remedy:   "It is stopped rather than retried, because a repeat would deliver twice with nothing able to detect it. Whoever runs the receiving system can confirm from their side whether it arrived.",
 	}
-	// classDeliveryUndeliverable is a send that transmitted NOTHING: no endpoint,
-	// no registered address, a paused one, no signing secret, or an address the
-	// egress guard refuses.
-	classDeliveryUndeliverable = extension.FailureClass{
-		Class:    "delivery_undeliverable",
-		Sentence: "a message could not be posted at all, because the member has no usable openchannel address for it to go to",
-		Remedy:   "That member opens their openchannel endpoint, registers an https address, mints a signing secret and leaves the endpoint enabled. Nothing left this installation.",
+	// classDeliveryBlocked is THIS INSTALLATION declining to dial the address a
+	// member registered, because it resolved to something not publicly routable.
+	// Separate from the two above because the remedy is ours and not the
+	// receiver's, and because nothing was transmitted: recording it as
+	// unanswered would park a delivery that certainly never left, and point the
+	// operator at a system that was never called.
+	classDeliveryBlocked = extension.FailureClass{
+		Class:    "delivery_blocked",
+		Sentence: "a member's registered address resolved to somewhere this installation will not post to",
+		Remedy:   "Nothing was sent. The address resolves to a private, reserved or loopback address; the member has to register one that resolves publicly.",
 	}
 )
 
 // failureClasses is the set this unit declares, in the order an operator meets
 // them: what a human must fix first, then what fixes itself, then the two
-// catch-alls, then the outbound direction's own three.
+// catch-alls, then the outbound direction's own two.
 //
 // It is ONE list and every other reference is to it, so a class that exists in
 // the code and not in the declaration cannot happen — an undeclared class reaches
@@ -145,7 +148,7 @@ var failureClasses = []extension.FailureClass{
 	classCaptureUnavailable,
 	classEveryRequestFailed,
 	classDrainFailed,
-	classDeliveryUndeliverable,
 	classDeliveryRefused,
 	classDeliveryUnanswered,
+	classDeliveryBlocked,
 }

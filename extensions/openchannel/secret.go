@@ -36,7 +36,10 @@ const signingSecretBytes = 32
 // is no operation that adds a second valid secret, so a member rotating theirs
 // knows exactly what breaks and when.
 func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
-	if _, err := extension.DecodeArgs[struct{}](in); err != nil {
+	args, err := extension.DecodeArgs[struct {
+		EndpointID string `json:"endpoint_id"`
+	}](in)
+	if err != nil {
 		return nil, err
 	}
 	member, err := callingMember(rt, "minting a signing secret")
@@ -57,6 +60,15 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 			// Refused BEFORE anything is sealed: material stored under a
 			// member who owns no endpoint is a credential this surface has no
 			// operation to revoke.
+			return errNoEndpoint()
+		}
+		if mine.ID != args.EndpointID {
+			// A staged approval names its subject by id, which means the id is
+			// a request argument — but this operation still acts on the
+			// caller's own endpoint only. Naming another one answers exactly
+			// as an endpoint that does not exist: existence stays hidden, and
+			// there is no way to distinguish "wrong id" from "somebody else's
+			// endpoint" from the outside.
 			return errNoEndpoint()
 		}
 		return nil

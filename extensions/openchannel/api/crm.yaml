@@ -8,13 +8,16 @@
 # document — not the Go — is where every operation's risk tier, Passport scope,
 # RBAC object, prose and I/O schemas are declared.
 #
-# SEVEN OPERATIONS, all about the CALLER's own endpoint. None of them takes a
-# user id, and that absence is the load-bearing part of this document: the owner
-# recorded on an endpoint is whose sealed secret verifies every request that
-# arrives on it and whose authority the payload is eventually acted under, so an
-# operation that let one member open, re-point or read ANOTHER member's endpoint
-# would hand a stranger's name to whatever a remote party sends. The member is
-# taken from the invocation, exactly as captured_by is.
+# SEVEN OPERATIONS, all about the CALLER's own endpoint. The owner recorded on
+# an endpoint is whose sealed secret verifies every request that arrives on it
+# and whose authority the payload is eventually acted under, so an operation
+# that let one member open, re-point or read ANOTHER member's endpoint would
+# hand a stranger's name to whatever a remote party sends. The member is taken
+# from the invocation, exactly as captured_by is — never from an argument. The
+# two confirm-first operations DO take an endpoint_id, but only because a
+# staged approval needs a row to show the approver; the handler still refuses
+# any id that is not the caller's own, as not found, so naming a stranger's
+# endpoint never works even there.
 #
 # EVERY MEMBER GETS THEIR OWN ADDRESS. The mounted edge is declared once and is
 # therefore the same for everybody, so an opened endpoint carries a minted `ref`
@@ -227,12 +230,25 @@ actions:
           verb: openchannel_mint_secret
           version: 1.0.0
           title: Mint a signing secret
-          # 🟢 write: it seals a credential in the unit's own namespace and
-          # bumps the unit's own row. Nothing leaves the workspace, and what it
-          # breaks — senders holding the previous secret — is what the caller
-          # asked for.
-          tier: auto_execute
+          # 🟡 write: this is the ONLY operation in the unit that hands back a
+          # durable credential, and the thing it returns is what admits a
+          # request to the anonymous edge — holding it is indistinguishable
+          # from being the sender. It does not expire with the passport that
+          # asked for it and it is not revoked by ending a seat, so an
+          # unattended call is a caller taking out-of-band, open-ended write
+          # access to this member's timeline and walking away with it. That a
+          # credential is sealed on OUR side says nothing about where the copy
+          # in the response goes.
+          tier: confirmation_required
           scope: write
+          # A confirm-first call has to name a row to stage against — an
+          # approver reads the inbox and has to see WHICH endpoint is about to
+          # get a new credential before deciding. That is the only reason
+          # endpoint_id exists on this request: naming an endpoint that is not
+          # the caller's own is refused as not found (see the 404 below), same
+          # as every other operation here that only ever touches the caller's
+          # own row.
+          subject: { arg: endpoint_id, table: ext_openchannel_endpoint }
           description: >-
             Mint the signing secret for the calling person's own inbound
             endpoint and return it once. The same operation opens and rotates,
@@ -248,12 +264,20 @@ actions:
               schema:
                 type: object
                 additionalProperties: false
-                # NO MEMBERS AT ALL, and the empty object is the declaration
-                # rather than an oversight: the endpoint this acts on is the
-                # caller's own, so there is nothing to name. additionalProperties
-                # false is what turns a client that tries to name somebody else
-                # into a refusal instead of a silently ignored field.
-                properties: {}
+                required: [endpoint_id]
+                # endpoint_id NAMES NO OTHER MEMBER'S ROW — it exists only so a
+                # confirm-first approval has something to stage against and show
+                # an approver. The endpoint this mints for is still always the
+                # caller's own: a value that is not the caller's own endpoint id
+                # is refused as not found, exactly as if no endpoint existed.
+                properties:
+                  endpoint_id:
+                    type: string
+                    format: uuid
+                    description: >-
+                      The calling person's own endpoint id, as returned by
+                      opening or reading it. Any other id is refused as not
+                      found.
         responses:
           '200':
             description: The new secret, and the endpoint it belongs to.
@@ -372,10 +396,21 @@ actions:
           verb: openchannel_register_url
           version: 1.0.0
           title: Register an outward address
-          # 🟢 write: one column of the unit's own row. The address is checked
-          # here and dialed elsewhere; recording it transmits nothing.
-          tier: auto_execute
+          # 🟡 write: recording the address transmits nothing, and that is the
+          # wrong thing to weigh. Every LATER send reads this column and posts
+          # the rep's message body and the recipient it resolved to whatever
+          # host is in it, so changing it silently re-points the member's whole
+          # outbound channel — the same class of change as an email forwarding
+          # rule, and invisible afterwards to everyone but the new recipient.
+          # netguard does not help here: it refuses private and reserved
+          # addresses, and an exfiltration collector is an ordinary public host.
+          tier: confirmation_required
           scope: write
+          # See the subject comment on openchannel_mint_secret — the same rule
+          # applies here: endpoint_id exists so an approver can see which
+          # endpoint is being re-pointed, and it is refused as not found unless
+          # it names the caller's own.
+          subject: { arg: endpoint_id, table: ext_openchannel_endpoint }
           description: >-
             Record the https address this connector should post to when it has
             something to send for the calling person. It must be https and name
@@ -389,8 +424,15 @@ actions:
               schema:
                 type: object
                 additionalProperties: false
-                required: [url]
+                required: [endpoint_id, url]
                 properties:
+                  endpoint_id:
+                    type: string
+                    format: uuid
+                    description: >-
+                      The calling person's own endpoint id, as returned by
+                      opening or reading it. Any other id is refused as not
+                      found.
                   url:
                     type: string
                     format: uri

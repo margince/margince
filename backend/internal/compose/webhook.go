@@ -27,9 +27,6 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 // Disposition is why a webhook handler stopped, not merely whether it
@@ -75,67 +72,6 @@ type WebhookSpec struct {
 	// OnAccept is the status written for Accepted — the one thing the
 	// design allows to differ between providers on the success path.
 	OnAccept int
-	// Rate meters the edge before any work is spent on the request. nil
-	// leaves it unmetered.
-	Rate *WebhookRate
-	// Fresh bounds how stale the request's own timestamp may be. nil leaves
-	// the edge with no freshness bound, which is only safe where the payload
-	// itself cannot be replayed usefully.
-	Fresh *WebhookFreshness
-}
-
-// WebhookRate meters a webhook edge in two buckets, because one is not enough:
-// the endpoint bucket bounds what a single sender costs this installation, and
-// the client-IP bucket is what still brakes a flood spread across endpoints.
-//
-// Both are optional individually, so an edge can adopt one before the other —
-// but an edge that meters NEITHER should leave WebhookRate nil rather than
-// supply an empty one, so "unmetered" is a visible decision.
-type WebhookRate struct {
-	// PerIP meters on httpserver.ClientIP, which reads RemoteAddr and never a
-	// caller-supplied X-Forwarded-For. That matters here: an edge keyed on a
-	// header the sender writes is an edge the sender decides its own budget on.
-	PerIP *ratelimit.Limiter
-
-	// PerEndpoint meters on EndpointKey.
-	PerEndpoint *ratelimit.Limiter
-
-	// EndpointKey is the RESOLVED identity of what was addressed — never the
-	// raw path. ratelimit leaves an over-long key unmetered and admitted by
-	// design, so a key built from a path segment a caller chose is a self-serve
-	// way off the meter. Resolve the segment against what is actually declared
-	// first, and key on that.
-	//
-	// An empty answer means "nothing declared matches", which is metered under
-	// one shared bucket rather than skipped: a flood of misses is still a flood.
-	EndpointKey func(*http.Request) string
-}
-
-// WebhookFreshness bounds how far a request's own timestamp may sit from the
-// receiver's clock.
-//
-// It is the half of replay protection this layer can hold. The other half —
-// remembering which requests have already been seen — needs somewhere durable
-// to remember them, which is the handler's business and not the chassis's. A
-// skew bound is what makes that memory finite.
-type WebhookFreshness struct {
-	// At reads the request's timestamp. Parsing stays with the caller because
-	// the encodings genuinely differ — HubSpot sends epoch milliseconds, the
-	// extension edge sends epoch seconds — and a chassis that guessed between
-	// them would read one provider's clock a thousand times wrong.
-	//
-	// A missing or unparseable timestamp answers false, and false is refused:
-	// an edge with a freshness bound must not admit a request that declined to
-	// say when it was made.
-	At func(*http.Request) (time.Time, bool)
-
-	// Skew is the permitted distance in either direction. Future-dated is
-	// bounded too, or a sender with a fast clock mints requests that stay valid
-	// past the window.
-	Skew time.Duration
-
-	// Now is the receiver's clock, injected so a test can hold one.
-	Now func() time.Time
 }
 
 // Webhook builds the shared chassis: method guard, constant-time secret
@@ -148,17 +84,6 @@ func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Before the secret compare, and deliberately: everything below this
-		// costs the installation something — a SHA-256 over the secret, a
-		// second-factor round trip, a body read up to MaxBody — and metering
-		// after paying is metering that does not brake a flood.
-		if !admitRate(spec.Rate, r) {
-			log.WarnContext(r.Context(), "webhook: over the metered rate",
-				"provider", spec.Provider)
-			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
 
@@ -194,15 +119,6 @@ func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
 			return
 		}
 
-		// After the body cap and before the handler, which is where a provider
-		// that already checked freshness itself had it: a stale timestamp is
-		// refused before an HMAC is spent on it, and 401 rather than 400 so a
-		// transient clock blip is retried by the sender rather than dropped.
-		if !fresh(spec.Fresh, r) {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
 		disposition, handleErr := spec.Handle(r.Context(), r, body)
 		switch disposition {
 		case Accepted:
@@ -228,38 +144,6 @@ func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
 	})
 }
 
-// admitRate meters the request in both buckets, and spends BOTH budgets rather
-// than short-circuiting on the first refusal.
-//
-// Short-circuiting would leave the second bucket under-counting exactly the
-// traffic it exists to see: a flood from one address would be refused by the IP
-// bucket and never recorded against the endpoint, so the endpoint's own budget
-// would report a quiet edge throughout.
-func admitRate(rate *WebhookRate, r *http.Request) bool {
-	if rate == nil {
-		return true
-	}
-	admitted := rate.PerIP == nil || rate.PerIP.Allow(httpserver.ClientIP(r))
-	if rate.PerEndpoint != nil && rate.EndpointKey != nil && !rate.PerEndpoint.Allow(rate.EndpointKey(r)) {
-		admitted = false
-	}
-	return admitted
-}
-
-// fresh reports whether the request's timestamp is within the declared skew.
-// An edge that declares no freshness is unbounded and says so by leaving the
-// stage nil.
-func fresh(f *WebhookFreshness, r *http.Request) bool {
-	if f == nil {
-		return true
-	}
-	at, ok := f.At(r)
-	if !ok {
-		return false
-	}
-	return withinSkew(f.Now(), at, f.Skew)
-}
-
 // withinSkew is the freshness comparison itself, shared by the chassis stage
 // above and by the HubSpot receiver, which does not ride the chassis and parses
 // epoch MILLISECONDS rather than seconds.
@@ -270,10 +154,13 @@ func fresh(f *WebhookFreshness, r *http.Request) bool {
 // that stay valid past the window; and the bound is inclusive, so a skew of
 // exactly Skew is fresh rather than falling in a gap between the two callers'
 // spellings.
+// Compared as INSTANTS rather than by subtracting them. time.Sub saturates at
+// ±(1<<63-1) nanoseconds — about 292 years — and the saturated negative value
+// negates to itself, still negative, so an absolute-value spelling admits every
+// timestamp far enough in the future to overflow. That is precisely the
+// fast-clock sender this bound exists to refuse, so the arithmetic has to be
+// the kind that cannot wrap. now±skew is always in range: skew is bounded by
+// MaxInboundSkew and now is the wall clock.
 func withinSkew(now, at time.Time, skew time.Duration) bool {
-	delta := now.Sub(at)
-	if delta < 0 {
-		delta = -delta
-	}
-	return delta <= skew
+	return !at.Before(now.Add(-skew)) && !at.After(now.Add(skew))
 }

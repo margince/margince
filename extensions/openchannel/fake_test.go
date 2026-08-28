@@ -34,6 +34,11 @@ const (
 	ownerUserID     = "9f1d0c4a-3b2e-4f57-9a10-2c8e6b5d4f31"
 	colleagueUserID = "1b7f6e25-8c43-4a90-b6d1-5e2a7c3f9081"
 	endpointID      = "3c5a1f80-6d24-4b19-8e77-0a4b2d6c9e13"
+	// colleagueEndpointID is a well-formed endpoint id that is not the owner's
+	// — a colleague's, or simply a stranger's guess. It exists only to prove a
+	// confirm-first request naming it is refused as not found rather than
+	// acted on or answered with a permission error.
+	colleagueEndpointID = "8b4e2a10-5f3c-4d67-9a21-6c8f1e0d4b7a"
 	// ownerRef is the address on the owner's endpoint. A fixed value shaped
 	// like a minted one, so a fixture reads as the thing it stands for.
 	ownerRef = "Qm4xT2lZc0hkRGZLbGFwWQ"

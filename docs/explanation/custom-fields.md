@@ -49,18 +49,18 @@ fake relationship) is far worse than the one it causes (an admin rewords a label
 ## The privilege boundary
 
 The engine rides **two pools with deliberately different authority**. The app pool
-(`margince_app`, RLS-bound, DML-only) serves every catalog-only operation. The owner-privileged
+(`margince_app`, DML-only) serves every catalog-only operation. The owner-privileged
 **schema pool** is touched by exactly two paths — create, and a picklist's options edit — because
 only those run DDL.
 
 Inside one transaction on that pool:
 
-1. Bind the workspace GUC, bound every lock wait (`SET LOCAL lock_timeout = '2s'`), and take a
+1. Bound every lock wait (`SET LOCAL lock_timeout = '2s'`), and take a
    transaction-scoped **advisory lock keyed on the target table**.
 2. Pre-check the column namespace, then run **the one privileged statement** — the `ALTER TABLE`.
 3. **`SET LOCAL ROLE margince_app`** — the transaction downgrades itself to exactly the authority
-   every other tenant write runs under, and the catalog `INSERT` + audit row land under forced RLS
-   with no owner privilege in reach.
+   every other tenant write runs under, and the catalog `INSERT` + audit row land under the app
+   role's own grants, with no owner privilege in reach.
 
 Postgres's transactional DDL makes the column, the catalog row, and the audit entry land or roll back
 **together** — a half-added field is not a state this system can reach.

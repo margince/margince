@@ -67,9 +67,19 @@ func registrableURL(raw string) (string, error) {
 
 // hostOnly drops the port from a host:port, and answers the whole string when
 // there is none — which is what net.SplitHostPort reports as an error.
+//
+// A BRACKETED IPv6 LITERAL WITH NO PORT is that same "no port" case, and
+// net.SplitHostPort's error leaves the brackets on: "[::1]" is not a value
+// net.ParseIP accepts, so the address-literal check below it would otherwise
+// wave a bracketed literal through as a hostname. The brackets are stripped by
+// hand for exactly that shape — a string that both opens and closes with one —
+// so a bracketed literal reads the same whether or not it names a port.
 func hostOnly(host string) string {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		return h
+	}
+	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		return host[1 : len(host)-1]
 	}
 	return host
 }

@@ -48,7 +48,7 @@ event, and every AI action is tiered (auto-execute vs. stage for human approval)
 
 1. **`cmd/api`** receives the request; middleware binds actor + workspace + `correlation_id` onto the context (and, for an agent, resolves the autonomy tier).
 2. The **generated router** dispatches to the operation's method on `compose.Server` — a real module handler shadowing a generated 501 stub.
-3. The **handler** decodes and calls its module's **Store/Service**, where the RBAC gate and the workspace transaction (RLS) live. Handlers never decide authorization.
+3. The **handler** decodes and calls its module's **Store/Service**, where the RBAC gate and the workspace transaction live. Handlers never decide authorization.
 4. The **Store** runs SQL over the tables it owns inside `WithWorkspaceTx`; a mutation writes the domain row + an `audit_log` row + an `event_outbox` row in that one transaction.
 5. After commit, the **outbox relay** ships the event to Redis, where consumer groups (context-graph, workflows, overnight reasoning) react. The handler maps any error through a sentinel and returns.
 
@@ -162,9 +162,9 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (Deal, error
 }
 ```
 
-`WithWorkspaceTx` binds the tenant to Postgres row-level security, so isolation holds even if a query
-forgets its `WHERE`; the three rows commit in the one transaction. Go deeper where you need it: the
-**tenant isolation** (RLS, `WithWorkspaceTx`, the auth gate) is in
+`WithWorkspaceTx` fails closed before any SQL runs if no workspace is bound to the context, and the
+three rows commit in the one transaction. Go deeper where you need it: **authorization** (`WithWorkspaceTx`,
+the app role's own grants, the auth gate) is in
 [authorization.md](authorization.md); the **write backbone** (the `audit_log` DDL, the outbox envelope,
 the relay, dedupe) is in [write-backbone.md](write-backbone.md).
 
@@ -210,10 +210,10 @@ exist tells you what will fail your PR and why:
 | `integrationmigrateonce_test.go` | a compose/integration suite re-runs its own migrate instead of the shared migrate-once harness |
 | `workflowhandler_test.go` | a workflow `Match`/`Plan` mutates (only `Apply` may write) |
 | `migrations/migrations_test.go` | the embedded core/custom migration namespaces don't form a loadable sequence |
-| `internal/compose/integration/rls_coverage_integration_test.go` | a `workspace_id` table lacks RLS ENABLE+FORCE+policy |
+| `rlsclaims_test.go` | a comment credits row-level security with a guarantee no schema in this tree carries |
 
-They run in `make check` (unit ones uncached — they walk the module tree) and `make test-integration`
-(the RLS one). The full merge loop (gates, DCO sign-off, craft pre-push hook) is in
+They run in `make check` — unit ones uncached, walking the module tree; integration ones against
+`make test-integration`'s real Postgres. The full merge loop (gates, DCO sign-off, craft pre-push hook) is in
 [CONTRIBUTING.md](../../CONTRIBUTING.md); every target is in
 [make-targets.md](../reference/make-targets.md).
 

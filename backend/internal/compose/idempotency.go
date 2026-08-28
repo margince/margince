@@ -64,7 +64,8 @@ const (
 //
 // idempotency is a contract-router middleware; it rides inside the
 // session middleware, so workspace and principal are bound (the claim
-// table is RLS-guarded and scoped per principal).
+// queries below key on principal_id themselves — the table carries no
+// workspace column and needs none).
 func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

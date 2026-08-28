@@ -160,7 +160,7 @@ func setEnabled(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 	if !args.Enabled {
 		verb = eventDisabled
 	}
-	stored, err := updateOwnEndpoint(ctx, rt, verb, "enabled = $2", args.Enabled)
+	stored, err := updateOwnEndpoint(ctx, rt, "", verb, "enabled = $2", args.Enabled)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,8 @@ func setEnabled(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 // what they typed, rather than at the moment something tries to dial it.
 func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
 	args, err := extension.DecodeArgs[struct {
-		URL string `json:"url"`
+		EndpointID string `json:"endpoint_id"`
+		URL        string `json:"url"`
 	}](in)
 	if err != nil {
 		return nil, err
@@ -182,7 +183,7 @@ func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) 
 	if err != nil {
 		return nil, err
 	}
-	stored, err := updateOwnEndpoint(ctx, rt, eventURLRegistered, "url = $2", dialable)
+	stored, err := updateOwnEndpoint(ctx, rt, args.EndpointID, eventURLRegistered, "url = $2", dialable)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +203,14 @@ func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) 
 // The value is constrained to the two column types the governed operations set,
 // so a caller cannot bind something the schema has no place for and find out
 // from the driver.
-func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtime, verb, assignment string, value T) (endpoint, error) {
+//
+// expectedID is empty for an operation whose request names no endpoint at all
+// (setEnabled). A confirm-first operation's request DOES carry one — a staged
+// approval needs a row to show the approver — and the id is checked against
+// the caller's own before anything is written: a mismatch answers exactly as
+// no endpoint at all, because an operation that told a caller "that one exists
+// but is not yours" would be confirming a stranger's endpoint id back to them.
+func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtime, expectedID, verb, assignment string, value T) (endpoint, error) {
 	member, err := callingMember(rt, "changing an endpoint")
 	if err != nil {
 		return endpoint{}, err
@@ -214,6 +222,9 @@ func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtim
 			return err
 		}
 		if before == nil {
+			return errNoEndpoint()
+		}
+		if expectedID != "" && before.ID != expectedID {
 			return errNoEndpoint()
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,

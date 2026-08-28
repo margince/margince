@@ -159,9 +159,13 @@ function OpenedEndpoint({
 function EndpointControls({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
   return (
     <>
-      <SigningSecret />
+      <SigningSecret endpointId={endpoint.id} />
       <PauseResume enabled={endpoint.enabled} />
-      <OutboundUrlForm key={endpoint.url} url={endpoint.url} />
+      <OutboundUrlForm
+        key={endpoint.url}
+        endpointId={endpoint.id}
+        url={endpoint.url}
+      />
     </>
   );
 }
@@ -175,7 +179,7 @@ function EndpointControls({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
  * moment it is shown — a reader who has to hover to learn that has already
  * navigated away.
  */
-function SigningSecret() {
+function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
   const t = useT();
   const refresh = useRefreshEverything();
   const [secret, setSecret] = useState<string | null>(null);
@@ -183,7 +187,7 @@ function SigningSecret() {
     mutationFn: async () => {
       const { data, error, response } = await api.POST(
         "/ext/openchannel/endpoint/secret",
-        { body: {} },
+        { body: { endpoint_id: endpointId } },
       );
       if (error || !response.ok) {
         throwProblem(error);
@@ -277,7 +281,10 @@ function PauseResume({ enabled }: Readonly<{ enabled: boolean }>) {
  * re-seeds the field rather than leaving a stale one that the next press would
  * submit back over the new one.
  */
-function OutboundUrlForm({ url }: Readonly<{ url: string }>) {
+function OutboundUrlForm({
+  endpointId,
+  url,
+}: Readonly<{ endpointId: string; url: string }>) {
   const t = useT();
   const refresh = useRefreshEverything();
   const [draft, setDraft] = useState(url);
@@ -285,7 +292,7 @@ function OutboundUrlForm({ url }: Readonly<{ url: string }>) {
     mutationFn: async (next: string) => {
       const { error, response } = await api.PUT(
         "/ext/openchannel/endpoint/url",
-        { body: { url: next } },
+        { body: { endpoint_id: endpointId, url: next } },
       );
       if (error || !response.ok) {
         throwProblem(error);

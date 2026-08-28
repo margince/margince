@@ -41,7 +41,14 @@ const (
 // preservedArrayEntry matches one quoted name inside seed-reset.sql's preserved
 // ARRAY[...] literal. SQL has no parser here, so the shape is pinned by the
 // count assertion below rather than by trusting the regex alone.
-var preservedArrayEntry = regexp.MustCompile(`'([a-z_]+)'`)
+//
+// Digits are IN the alphabet, and that is not cosmetic. Without them a name
+// like `org360_view` matched as far as its first digit and was read as `org` —
+// a name neither list holds — so the gate reported the SQL side preserving
+// something the Go side does not AND missing something it does, from one
+// correctly mirrored entry. A reader chasing that would have edited a file that
+// was already right.
+var preservedArrayEntry = regexp.MustCompile(`'([a-z0-9_]+)'`)
 
 func TestTheTwoResetsPreserveTheSameTables(t *testing.T) {
 	fromGo := goPreservedTables(t)

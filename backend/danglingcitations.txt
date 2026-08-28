@@ -229,7 +229,6 @@ docs/explanation/desktop-distribution.md core 0032
 docs/explanation/desktop-distribution.md core 0052
 docs/explanation/ingress-gate-and-auto-capture.md core 0269
 docs/explanation/outbound-messaging.md migration 0155
-docs/explanation/outbound-webhooks.md core 0113
 docs/explanation/rbac-roles-and-teams.md core 0002
 docs/explanation/relationship-graph.md core 0157
 docs/explanation/relationship-graph.md migration 0157

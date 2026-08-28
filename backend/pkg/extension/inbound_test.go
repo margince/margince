@@ -81,14 +81,17 @@ func TestInboundEndpointValidateRefusals(t *testing.T) {
 }
 
 // The signed material is the one thing a sender and a verifier must spell
-// identically, so it is pinned byte for byte rather than described.
-func TestInboundRequestSignedPayloadIsTimestampNonceBody(t *testing.T) {
+// identically, so it is pinned byte for byte rather than described. A reader
+// writing a sender against this product copies it from here.
+func TestInboundRequestSignedPayloadIsPinned(t *testing.T) {
 	req := extension.InboundRequest{
+		Slug:      "capture",
+		Ref:       "mB1e7Zq",
 		Timestamp: time.Unix(1700000000, 0),
 		Nonce:     "0f1e2d3c",
 		Body:      []byte(`{"hello":"world"}`),
 	}
-	const want = `1700000000.0f1e2d3c.{"hello":"world"}`
+	const want = "margince-inbound-v1\ncapture\nmB1e7Zq\n1700000000\n0f1e2d3c\n" + `{"hello":"world"}`
 	if got := string(req.SignedPayload()); got != want {
 		t.Fatalf("SignedPayload() = %q, want %q", got, want)
 	}
@@ -103,7 +106,7 @@ func TestInboundRequestSignedPayloadUsesWholeSeconds(t *testing.T) {
 		Nonce:     "ab",
 		Body:      nil,
 	}
-	if got := string(req.SignedPayload()); got != "1700000000.ab." {
+	if got := string(req.SignedPayload()); got != "margince-inbound-v1\n\n\n1700000000\nab\n" {
 		t.Fatalf("SignedPayload() = %q, want the whole-second form", got)
 	}
 }
@@ -115,5 +118,99 @@ func TestInboundRequestSignedPayloadKeepsBothSeparators(t *testing.T) {
 	b := extension.InboundRequest{Timestamp: time.Unix(1, 0), Nonce: "", Body: []byte("x")}
 	if string(a.SignedPayload()) == string(b.SignedPayload()) {
 		t.Fatalf("a nonce and a body signed alike: %q", a.SignedPayload())
+	}
+}
+
+// The replay key and the body must not be separable by a caller. Under the
+// earlier `<ts>.<nonce>.<body>` spelling they were: every separator inside the
+// body marked a boundary the same bytes could be re-split at, yielding a
+// DIFFERENT nonce over IDENTICAL signing material. One captured request then
+// replayed once per separator in its own body — each replay landing a fresh row
+// past a uniqueness index that never saw a collision, and none of it needing
+// the secret.
+//
+// The alternative splits are DERIVED from the message rather than listed, so
+// the case cannot be satisfied by a spelling that happens to escape the three
+// examples somebody thought of.
+func TestSigningPayloadCannotBeReSplitBetweenNonceAndBody(t *testing.T) {
+	at := time.Unix(1_787_910_000, 0)
+	const nonce = "a1b2"
+	body := []byte(`{"m":"hi. there. and. again"}`)
+	captured := extension.SigningPayload(extension.ScopeInbound, "capture", "r1", at, nonce, body)
+
+	// Every way of moving the nonce/body boundary rightwards past a separator
+	// the body itself contains.
+	tried := 0
+	for i, c := range string(body) {
+		if c != '.' && c != '\n' {
+			continue
+		}
+		tried++
+		movedNonce := nonce + string(c) + string(body[:i])
+		moved := extension.SigningPayload(extension.ScopeInbound, "capture", "r1", at, movedNonce, body[i+1:])
+		if string(moved) == string(captured) {
+			t.Errorf("nonce %q over the remaining body signs the same bytes as the captured request — "+
+				"one signature admits a second, differently-keyed row", movedNonce)
+		}
+	}
+	if tried == 0 {
+		t.Fatal("the body carries no separator, so this test asserted nothing about re-splitting")
+	}
+}
+
+// And the grammar is what keeps that property true rather than accidental: a
+// nonce free to contain the separator could absorb the head of the body.
+func TestValidInboundNonce(t *testing.T) {
+	tests := []struct {
+		nonce string
+		want  bool
+	}{
+		{"a1b2", true},
+		{"DEADBEEF", true},
+		{strings.Repeat("a", extension.MaxInboundNonce), true},
+		{"", false},
+		{strings.Repeat("a", extension.MaxInboundNonce+1), false},
+		{"a1b2.more", false},
+		{"a1b2\nmore", false},
+		{"nothex", false},
+		{"a1 b2", false},
+		{"a1b2-", false},
+	}
+	for _, tc := range tests {
+		if got := extension.ValidInboundNonce(tc.nonce); got != tc.want {
+			t.Errorf("ValidInboundNonce(%q) = %v, want %v", tc.nonce, got, tc.want)
+		}
+	}
+}
+
+// A signature is minted for ONE exchange. The same secret over the same message
+// in the other direction must produce different material, or a party trusted to
+// receive can relay what it was sent back at the sender's own edge.
+func TestSigningPayloadSeparatesTheTwoDirections(t *testing.T) {
+	at := time.Unix(1_787_910_000, 0)
+	body := []byte(`{"m":"hi"}`)
+	in := extension.SigningPayload(extension.ScopeInbound, "capture", "r1", at, "a1b2", body)
+	out := extension.SigningPayload(extension.ScopeOutbound, "capture", "r1", at, "a1b2", body)
+	if string(in) == string(out) {
+		t.Fatal("an outbound message signs the same material as an inbound one — " +
+			"every message this installation sends is a valid message to itself")
+	}
+}
+
+// A request captured on one endpoint must not be valid on another. The URL
+// makes that distinction and the signature has to make it too.
+func TestSigningPayloadBindsTheEndpointAddressed(t *testing.T) {
+	at := time.Unix(1_787_910_000, 0)
+	body := []byte(`{"m":"hi"}`)
+	base := extension.SigningPayload(extension.ScopeInbound, "capture", "r1", at, "a1b2", body)
+	for _, other := range []struct{ slug, ref string }{
+		{"capture", "r2"},
+		{"receive", "r1"},
+		{"capture", ""},
+	} {
+		if string(extension.SigningPayload(extension.ScopeInbound, other.slug, other.ref, at, "a1b2", body)) == string(base) {
+			t.Errorf("slug %q ref %q signs what slug %q ref %q signs — a request captured on one "+
+				"endpoint is valid on the other", other.slug, other.ref, "capture", "r1")
+		}
 	}
 }

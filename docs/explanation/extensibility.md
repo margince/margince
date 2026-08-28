@@ -298,11 +298,13 @@ validated to the full identifier budget, so a name chosen today stays valid for 
 
 - **Its own tables** — `ext.ext_<name>_*`, from a `migrations/` directory of `NNNN_name.up.sql`/`.down.sql`
   pairs the unit embeds and `cmd/migrate` applies as its own namespace, tracked in
-  `schema_migrations_ext_<name>`. Every unit table must carry FORCE row level security and a
-  workspace-bound policy; `make check-ext-migrations` applies the unit's migrations as a *minted
-  restricted role* against a throwaway database and re-reads the catalog to prove it. At runtime there is
-  no such role — `cmd/migrate` runs one owner connection with no `SET ROLE`, so isolation rests on the
-  RLS, not on ownership (#628).
+  `schema_migrations_ext_<name>`. A unit table must carry no workspace column, no row-level security
+  and no policy — the tenant they would key on is gone; `make check-ext-migrations` applies the
+  unit's migrations as a *minted restricted role* against a throwaway database and re-reads the catalog
+  to prove it. At runtime there is no such role — `cmd/migrate` runs one owner connection with no
+  `SET ROLE`, and every unit shares the one app role in production, so isolation between units' own
+  tables rests on the AST-level SQL-scope gate (`extensionsqlscope_test.go`), not on a database
+  privilege boundary (#628).
 - **Its own HTTP surface** — `/v1/ext/<name>/…`, declared as operations in an `api/` contract fragment
   that is merged into the composed `crm.yaml`. `build/composition/api/crm.yaml` is a real merge now, not
   a byte-copy of the core contract.

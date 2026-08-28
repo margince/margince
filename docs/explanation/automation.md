@@ -135,8 +135,10 @@ firings a human needs to see. Each non-applied outcome carries a human-readable 
 
 The **claim** is the idempotency guard: `runOne` inserts the `workflow_run` row `ON CONFLICT DO
 NOTHING` **before** `Apply`, so an at-least-once redelivery of the same occurrence finds the row taken
-and does nothing. Every write in the pipeline runs inside `database.WithWorkspaceTx` (RLS-bound), and
-`workflow_run` is a FORCE-RLS tenant table — a run can never be read or written cross-workspace.
+and does nothing. Every write in the pipeline runs inside `database.WithWorkspaceTx`, which fails
+closed before any SQL if no workspace is bound to the context; `workflow_run` itself carries no
+workspace column — an installation holds exactly one workspace (ADR-0061), so there is no cross-workspace
+case to guard against.
 
 ## 4. Two entry points, one path
 

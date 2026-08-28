@@ -31,7 +31,7 @@ func TestMintingSealsTheSecretUnderTheCallerAndShowsItOnce(t *testing.T) {
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
 
-	out, err := mintSecret(context.Background(), rt, json.RawMessage(noArgs))
+	out, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
 	if err != nil {
 		t.Fatalf("minting: %v", err)
 	}
@@ -71,11 +71,11 @@ func TestMintingTwiceReplacesTheSecretRatherThanAddingOne(t *testing.T) {
 	}
 	rt.tx.singleRows = rows
 
-	first, err := mintSecret(context.Background(), rt, json.RawMessage(noArgs))
+	first, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
 	if err != nil {
 		t.Fatalf("first mint: %v", err)
 	}
-	second, err := mintSecret(context.Background(), rt, json.RawMessage(noArgs))
+	second, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
 	if err != nil {
 		t.Fatalf("second mint: %v", err)
 	}
@@ -105,6 +105,37 @@ func TestMintingForAnEndpointNobodyOpenedSealsNothing(t *testing.T) {
 	}
 }
 
+// The IDOR guard: naming a colleague's endpoint id must be refused exactly as
+// if no endpoint existed, never as a permission error and never honored. A
+// permission error would confirm the id belongs to somebody — existence has to
+// stay hidden, per the row-scope-miss rule this unit follows everywhere else.
+func TestMintingForAnotherMembersEndpointIsRefusedAsNotFound(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	// The caller DOES own an endpoint — endpointID — so this is not the
+	// "nobody opened one" case above. They simply named a different id.
+	rt.tx.singleRows = [][]any{endpointRow(endpointID, ownerUserID, "", true)}
+
+	_, err := mintSecret(context.Background(), rt,
+		json.RawMessage(`{"endpoint_id":"`+colleagueEndpointID+`"}`))
+	if !errors.Is(err, extension.ErrNotFound) {
+		t.Fatalf("naming another endpoint must answer not-found, got %v", err)
+	}
+	if errors.Is(err, extension.ErrForbidden) {
+		t.Fatal("a permission error confirms the id belongs to somebody — existence must stay hidden")
+	}
+	if len(rt.secrets.stored) != 0 {
+		t.Fatal("material was sealed for an endpoint the caller only named, not owns")
+	}
+	// The row is READ (to know whether it is the caller's) but never WRITTEN —
+	// the refusal comes before the seal and before the row is touched.
+	for _, sql := range rt.tx.statements {
+		if strings.Contains(sql, "UPDATE") {
+			t.Fatalf("the mismatch was not caught before a write:\n%s", sql)
+		}
+	}
+}
+
 func TestMintingRecordsTheRotationAgainstTheEndpoint(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()
@@ -114,7 +145,7 @@ func TestMintingRecordsTheRotationAgainstTheEndpoint(t *testing.T) {
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
 
-	if _, err := mintSecret(context.Background(), rt, json.RawMessage(noArgs)); err != nil {
+	if _, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs)); err != nil {
 		t.Fatalf("minting: %v", err)
 	}
 	if len(rt.tx.audited) != 1 {

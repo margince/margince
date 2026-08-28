@@ -100,7 +100,7 @@ drift). With the containers from step 1 running,
 make test-integration
 ```
 
-runs the real-Postgres lane: RLS gates, the governed-agent-writes loop,
+runs the real-Postgres lane: cross-tenant isolation gates, the governed-agent-writes loop,
 and the HTTP end-to-end sales flow. It fails loudly when the database is
 missing — it never skips.
 

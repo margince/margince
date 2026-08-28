@@ -10,8 +10,20 @@ import { type Endpoint, inboundUrl } from "./contract";
 // gets — deliberately, because a refusal that said which part was wrong would
 // enumerate this installation's endpoints. So every part of the command below
 // is derived from the same rule the verifier applies: HMAC-SHA256 over
-// `<unix seconds>.<nonce>.<body>`, hex, under the `sha256=` prefix the
-// comparison is made with.
+// the scope, slug, ref, unix seconds, nonce and body joined by newlines, hex,
+// under the `sha256=` prefix the comparison is made with.
+
+/**
+ * The signing scope, which must equal extension.ScopeInbound in
+ * backend/pkg/extension/inbound.go VERBATIM — it is one invariant spelled on
+ * both sides of a wire, so it is held by backend/gates/inboundsigningrecipe_test.go,
+ * which fails in both directions. A member pastes what this file generates; if
+ * it and the verifier disagree, the command produces an opaque refusal and
+ * there is nothing in the answer to say why.
+ */
+export const SCOPE_INBOUND = "margince-inbound-v1";
+
+const SCOPE_LITERAL = `'${SCOPE_INBOUND}'`;
 
 /**
  * The signing material, spelled once for the reader and once for the shell.
@@ -20,7 +32,7 @@ import { type Endpoint, inboundUrl } from "./contract";
  * shell and the verifier hashes the bytes it was given: one trailing byte is
  * the difference between a request that lands and an opaque refusal.
  */
-const SIGNED_MATERIAL = "<timestamp>.<nonce>.<body>";
+const SIGNED_MATERIAL = `${SCOPE_INBOUND} / <slug> / <ref> / <timestamp> / <nonce> / <body>, newline-separated`;
 
 /**
  * A value made safe to sit inside single quotes in a POSIX shell.
@@ -43,16 +55,28 @@ function shellQuoted(value: string): string {
  */
 export function curlRecipe(
   url: string,
+  slug: string,
+  ref: string,
   secretPlaceholder: string,
   body: string,
 ): string {
   return [
     `SECRET=${shellQuoted(secretPlaceholder)}`,
     `URL=${shellQuoted(url)}`,
+    `SLUG=${shellQuoted(slug)}`,
+    `REF=${shellQuoted(ref)}`,
     `BODY=${shellQuoted(body)}`,
     `TS=$(date +%s)`,
     `NONCE=$(openssl rand -hex 16)`,
-    `SIG=$(printf '%s.%s.%s' "$TS" "$NONCE" "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -r | cut -d' ' -f1)`,
+    // The scope, the slug and the ref are signed alongside the timestamp,
+    // nonce and body: without them a request captured on one endpoint is valid
+    // on every other, and a message this installation SENDS is a valid message
+    // back to it. Newline-separated because no field before the body may
+    // contain one, which is what makes the split unambiguous — a separator the
+    // nonce could carry would let the same bytes be re-signed under a
+    // different replay key.
+    `SIG=$(printf '%s\\n%s\\n%s\\n%s\\n%s\\n%s' ${SCOPE_LITERAL} "$SLUG" "$REF" "$TS" "$NONCE" "$BODY" \\`,
+    `  | openssl dgst -sha256 -hmac "$SECRET" -r | cut -d' ' -f1)`,
     `curl -i -X POST "$URL" \\`,
     `  -H 'Content-Type: application/json' \\`,
     `  -H "X-Margince-Timestamp: $TS" \\`,
@@ -102,7 +126,13 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
         {t("extOpenchannel.recipe.signedOver", { material: SIGNED_MATERIAL })}
       </p>
       <pre className="code-block t-mono" data-testid="openchannel-curl">
-        {curlRecipe(url, t("extOpenchannel.recipe.secretPlaceholder"), body)}
+        {curlRecipe(
+          url,
+          endpoint.slug,
+          endpoint.ref,
+          t("extOpenchannel.recipe.secretPlaceholder"),
+          body,
+        )}
       </pre>
     </>
   );

@@ -71,5 +71,5 @@ If the capability needs infra a given process role may not have:
 ## Verify
 
 `make check` (build + arch-lint + fitness tests + drift) and `make test-integration` (the real-Postgres
-lane, including RLS coverage for any new tenant table). Commit the contract, the regenerated `*_gen.go`,
-the migrations, and the module together.
+lane, including cross-tenant isolation for any new tenant table). Commit the contract, the regenerated
+`*_gen.go`, the migrations, and the module together.

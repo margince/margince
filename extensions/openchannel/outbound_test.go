@@ -6,8 +6,10 @@ package openchannel
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -114,7 +116,7 @@ func TestEveryClassTheOutboundPathRecordsIsDeclared(t *testing.T) {
 		attemptClass(errRefused), attemptClass(errUnanswered),
 		classPayloadUnusable, classRefusedByTheCore, classMemberNotPermitted,
 		classCaptureNotDeclared, classCaptureUnavailable, classEveryRequestFailed,
-		classDrainFailed, classDeliveryUndeliverable,
+		classDrainFailed,
 	} {
 		if !declared[class.Class] {
 			t.Fatalf("class %q is written by this unit and not declared by it", class.Class)
@@ -124,5 +126,42 @@ func TestEveryClassTheOutboundPathRecordsIsDeclared(t *testing.T) {
 	// rather than as an empty token.
 	if attemptClass(nil).Class != "" {
 		t.Fatalf("a message that was accepted was given class %q", attemptClass(nil).Class)
+	}
+}
+
+// The egress guard's refusal must reach the ledger as its OWN class, and it is
+// exercised through the real guard rather than a stand-in error: a class
+// nothing produces is a class an operator never sees, and the previous
+// outbound-undeliverable class was exactly that — declared, tested for its
+// declaration, and unreachable.
+//
+// The distinction is not cosmetic. `unanswered` means the message may be at the
+// recipient, so the product's ladder STOPS rather than resend. A blocked dial
+// transmitted nothing at all, so parking it would strand a delivery that
+// certainly never left, under a sentence blaming a system this installation
+// declined to call.
+func TestTheEgressGuardsRefusalIsItsOwnClass(t *testing.T) {
+	t.Parallel()
+	// The real constructor, so the real Control hook is attached, and a NAME
+	// rather than an address literal — the grammar refuses those earlier, and
+	// this test is about the guard that runs on what the name RESOLVES to,
+	// which is the only check a member cannot see coming.
+	post, err := newSender("https://localhost/hook")
+	if err != nil {
+		t.Skipf("the address grammar refused before the dial guard could run: %v", err)
+	}
+	sendErr := post.post(context.Background(), []byte("secret"), "nonce", time.Now(), []byte(`{}`))
+	if sendErr == nil {
+		t.Fatal("a loopback destination was posted to")
+	}
+	if !errors.Is(sendErr, errBlocked) {
+		t.Fatalf("the guard's refusal came back as %v, which is not the blocked class — "+
+			"an operator reads it as the receiver failing to answer", sendErr)
+	}
+	if got := attemptClass(sendErr); got != classDeliveryBlocked {
+		t.Fatalf("the ledger would record %q for a dial this installation refused", got.Class)
+	}
+	if got := outcomeOf(sendErr); got != outcomeRefused {
+		t.Fatalf("a blocked dial was recorded as %q — nothing left, so the outcome is definite", got)
 	}
 }

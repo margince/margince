@@ -126,8 +126,9 @@ func (w *followUpWorkspaceWorker) Work(ctx context.Context, job *river.Job[Follo
 		return jobs.FaultContext(ctx, err)
 	}
 	// The overnight agent is the acting principal — its writes and stagings
-	// carry agent:overnight provenance (features/07 §8a), and every read is
-	// workspace-bound by RLS through the GUC the binding above set.
+	// carry agent:overnight provenance (features/07 §8a), and every read the
+	// reconciler makes is scoped by its own query predicate against the
+	// workspace the binding above put on the context.
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "agent:overnight"})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	return jobs.FaultContext(ctx, w.reconciler.ReconcileWorkspace(wsCtx))

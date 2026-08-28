@@ -487,7 +487,7 @@ viewer with read-only access sees the list and deliveries but not the mutating a
 | Secret minting + HMAC signing + the wire headers | `internal/modules/webhooks/signing.go` |
 | The SSRF-guarded delivery client | `internal/modules/webhooks/client.go` |
 | HTTP transport (shadows the generated stubs) + error mapping | `internal/modules/webhooks/handlers.go`, `mapping.go` |
-| The tables + RLS + indexes | `backend/migrations/core/0113_webhook.up.sql` |
+| The tables + indexes | `backend/migrations/core/0001_baseline.up.sql` (`webhook_subscription`, `webhook_delivery`) |
 | Compose wiring (key-gate options, the two deliverers) | `internal/compose/webhooks.go` |
 | Process-role wiring (consumer + sweep) | `backend/cmd/worker/main.go`, `backend/cmd/api/main.go` |
 | The `cg:webhooks` consumer group | `internal/shared/kernel/events/catalog.go` |

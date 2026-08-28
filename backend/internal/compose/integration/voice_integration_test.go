@@ -374,7 +374,8 @@ func TestVoiceProfileIsInvisibleAcrossTenants(t *testing.T) {
 	}
 
 	// Tenant B: a second workspace + user seeded past the boot invariant
-	// (which binds the process, not the schema — RLS still isolates rows).
+	// (which binds the process, not the schema — the store's own
+	// row-scope predicate is what isolates rows, not RLS).
 	ctx := context.Background()
 	wsB, userB := ids.NewV7(), ids.NewV7()
 	if _, err := e.Owner.Exec(ctx,

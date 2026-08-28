@@ -83,31 +83,60 @@ func fixedClock() func() time.Time {
 	return func() time.Time { return signedAt }
 }
 
-// THE WHOLE POINT OF THIS CONNECTOR: what leaves is verifiable by the same code
-// that admits what arrives. The assertion runs the unit's OWN inbound verifier
-// over an InboundRequest rebuilt from the three headers and the posted bytes — so
-// a send that re-spelled the material would fail here exactly as it would fail at
-// a receiver.
-func TestASentMessageVerifiesAgainstTheInboundEdgesOwnCheck(t *testing.T) {
+// What leaves is verifiable by a receiver holding the member's secret: the
+// assertion recomputes the outbound recipe over the posted bytes and the three
+// headers, so a send that re-spelled its material would fail here exactly as it
+// would fail at a receiver.
+func TestASentMessageVerifiesAgainstTheOutboundRecipe(t *testing.T) {
 	t.Parallel()
 	got := &receiver{}
 	rt := sendableEndpoint(registeredURL)
 	if _, err := sendVia(context.Background(), rt, staged(), listening(t, got), fixedClock()); err != nil {
 		t.Fatalf("sending: %v", err)
 	}
-	stamp, err := strconv.ParseInt(got.got.Header.Get(extension.InboundHeaderTimestamp), 10, 64)
-	if err != nil {
-		t.Fatalf("the timestamp header is %q: %v", got.got.Header.Get(extension.InboundHeaderTimestamp), err)
+	stamp, nonce, signature := sentSignature(t, got)
+	if want := signatureOver([]byte(senderSecret), nonce, time.Unix(stamp, 0), got.body); want != signature {
+		t.Fatalf("what left does not verify against the outbound recipe:\n%v", got.got.Header)
 	}
-	arrived := extension.InboundRequest{
+}
+
+// AND IT MUST NOT VERIFY AT OUR OWN DOOR. This connector signs what it sends
+// with the same member secret it admits arrivals with, so a payload spelled the
+// same in both directions would make every message it sends a valid message TO
+// ITSELF: the party we send to is trusted to receive, not to speak as the
+// sender, and relaying our own bytes back at our own edge is the cheapest
+// forgery available to it — no secret required. The scope in the signed
+// material is what makes those two different messages, and this is the
+// assertion that fails if it is ever taken back out.
+func TestASentMessageIsNotAValidArrivalAtOurOwnEdge(t *testing.T) {
+	t.Parallel()
+	got := &receiver{}
+	rt := sendableEndpoint(registeredURL)
+	if _, err := sendVia(context.Background(), rt, staged(), listening(t, got), fixedClock()); err != nil {
+		t.Fatalf("sending: %v", err)
+	}
+	stamp, nonce, signature := sentSignature(t, got)
+	relayed := extension.InboundRequest{
 		Timestamp: time.Unix(stamp, 0),
-		Nonce:     got.got.Header.Get(extension.InboundHeaderNonce),
+		Nonce:     nonce,
 		Body:      got.body,
-		Signature: got.got.Header.Get(extension.InboundHeaderSignature),
+		Signature: signature,
 	}
-	if !verified([]byte(senderSecret), arrived) {
-		t.Fatalf("what left does not verify against the code that admits what arrives:\n%v", got.got.Header)
+	if verified([]byte(senderSecret), relayed) {
+		t.Fatal("a message this connector SENT was admitted by the edge that guards what arrives — " +
+			"any party we transmit to can relay it back and be authenticated as the sender")
 	}
+}
+
+// sentSignature reads the three signed headers off what was posted.
+func sentSignature(t *testing.T, got *receiver) (stamp int64, nonce, signature string) {
+	t.Helper()
+	raw := got.got.Header.Get(extension.InboundHeaderTimestamp)
+	stamp, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		t.Fatalf("the timestamp header is %q: %v", raw, err)
+	}
+	return stamp, got.got.Header.Get(extension.InboundHeaderNonce), got.got.Header.Get(extension.InboundHeaderSignature)
 }
 
 // The nonce is the receiver's REPLAY key, and the delivery id is what makes a

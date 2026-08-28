@@ -6,6 +6,9 @@ package compose
 import (
 	"context"
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -391,18 +394,163 @@ func TestABareConnectorIsDeniedByRequire(t *testing.T) {
 	}
 }
 
-// auth.RequireHuman ADMITS connectors, so an inbound edge would clear any gate
-// gated on that alone. This pins that the mounted edge reaches none: the handler
-// is the unit's, and nothing between the mux and it calls RequireHuman.
+// inboundEdgeDoors are the ways into the anonymous edge: the mount that builds
+// the handler, the handler itself, and the runtime an anonymous invocation is
+// given. A walk that started anywhere else would be describing a different
+// surface.
+var inboundEdgeDoors = []string{"MountInboundEndpoints", "inboundHandler.ServeHTTP", "inboundRuntimeFor"}
+
+// auth.RequireHuman ADMITS connectors, so a gate spelled with it alone would
+// pass an anonymous signed request as though a person had made it. This walks
+// the compose package from the edge's doors through every same-package call it
+// can reach and pins that none of them calls it.
+//
+// It reads the WHOLE package rather than the edge's own file, because the edge
+// is already spread across more than one: a file-scoped grep goes on reporting
+// PASS the moment a reachable helper moves next door, and a security census
+// that can fail short has already failed. Its blind spot is named rather than
+// implied — a call made through a func value, or into another package, is not
+// followed, so a helper reached only that way is not covered here.
 func TestTheInboundEdgeReachesNoRequireHumanGate(t *testing.T) {
-	source, err := os.ReadFile("extinbound.go")
+	bodies := composeFuncDecls(t)
+	for _, door := range inboundEdgeDoors {
+		if bodies[door] == nil {
+			t.Fatalf("the edge no longer declares %s — this walk would start nowhere, so re-point "+
+				"the door here rather than leaving the gate reading an empty set", door)
+		}
+	}
+	reached := map[string]bool{}
+	for _, door := range inboundEdgeDoors {
+		walkInboundCalls(t, door, bodies, reached)
+	}
+	// The edge's own file declares nine functions; reaching fewer than that
+	// many in total means the walk stopped resolving calls and is reporting
+	// agreement with a corpus it failed to read.
+	if len(reached) < 9 {
+		t.Fatalf("the walk reached only %d functions from the edge's doors, which is fewer than the "+
+			"edge itself declares — it is passing on a corpus it failed to read", len(reached))
+	}
+}
+
+// composeFuncDecls indexes every function the compose package declares, keyed
+// the way a resolved call site names it: `Name`, or `Receiver.Name`.
+func composeFuncDecls(t *testing.T) map[string]*ast.FuncDecl {
+	t.Helper()
+	entries, err := os.ReadDir(".")
 	if err != nil {
-		t.Fatalf("reading the edge's own source: %v", err)
+		t.Fatalf("reading the compose package: %v", err)
 	}
-	if strings.Contains(string(source), "RequireHuman") {
-		t.Fatal("the inbound edge reaches a RequireHuman gate — connectors pass that check, " +
-			"so it would admit an anonymous signed request as though a person had made it")
+	fset := token.NewFileSet()
+	bodies := map[string]*ast.FuncDecl{}
+	read := 0
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", name, err)
+		}
+		read++
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			bodies[declKey(fn)] = fn
+		}
 	}
+	if read == 0 {
+		t.Fatal("read no compose source — the walk would report PASS having looked at nothing")
+	}
+	return bodies
+}
+
+// walkInboundCalls marks one function reached and follows every same-package
+// call in its body, failing the moment one of them is auth.RequireHuman.
+func walkInboundCalls(t *testing.T, key string, bodies map[string]*ast.FuncDecl, reached map[string]bool) {
+	t.Helper()
+	if reached[key] {
+		return
+	}
+	reached[key] = true
+	fn := bodies[key]
+	if fn == nil {
+		return
+	}
+	types := receiverTypes(fn)
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		// Any MENTION, not only a call: handing RequireHuman on as a func value
+		// puts it just as surely on this path, and a walk that watched only call
+		// sites would report PASS on the one spelling written to evade it.
+		if sel, ok := n.(*ast.SelectorExpr); ok {
+			if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" && sel.Sel.Name == "RequireHuman" {
+				t.Errorf("%s names auth.RequireHuman and is reachable from the anonymous inbound edge — "+
+					"connectors pass that check, so it would admit a signed request as though a person had made it", key)
+			}
+		}
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch callee := call.Fun.(type) {
+		case *ast.Ident:
+			walkInboundCalls(t, callee.Name, bodies, reached)
+		case *ast.SelectorExpr:
+			ident, ok := callee.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if owner := types[ident.Name]; owner != "" {
+				walkInboundCalls(t, owner+"."+callee.Sel.Name, bodies, reached)
+			}
+		}
+		return true
+	})
+}
+
+// receiverTypes answers, for one function, which of its identifiers name a
+// value of a type declared in this package — its receiver and its parameters.
+// A method call on anything else is not followed, which is the blind spot the
+// test's own comment names.
+func receiverTypes(fn *ast.FuncDecl) map[string]string {
+	types := map[string]string{}
+	fields := []*ast.Field{}
+	if fn.Recv != nil {
+		fields = append(fields, fn.Recv.List...)
+	}
+	if fn.Type.Params != nil {
+		fields = append(fields, fn.Type.Params.List...)
+	}
+	for _, field := range fields {
+		name := bareTypeName(field.Type)
+		if name == "" {
+			continue
+		}
+		for _, ident := range field.Names {
+			types[ident.Name] = name
+		}
+	}
+	return types
+}
+
+// declKey names a declaration the way a resolved call site spells it.
+func declKey(fn *ast.FuncDecl) string {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return fn.Name.Name
+	}
+	return bareTypeName(fn.Recv.List[0].Type) + "." + fn.Name.Name
+}
+
+func bareTypeName(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		return bareTypeName(t.X)
+	case *ast.Ident:
+		return t.Name
+	}
+	return ""
 }
 
 // A declared slug is the same for every caller, so a connector needing one URL
@@ -475,5 +623,54 @@ func TestInboundMetersOnTheDeclaredEndpointNotTheRef(t *testing.T) {
 	}
 	if codes[http.StatusTooManyRequests] == 0 {
 		t.Fatalf("62 requests under 62 distinct refs were all admitted (%v) — the ref is buying its own budget", codes)
+	}
+}
+
+// The nonce is caller-chosen and a unit is told to KEEP it, under an index
+// that by construction never collapses two of them. An unbounded one is
+// therefore an unbounded write, which is why the ref beside it is bounded too —
+// and why this is refused at the core rather than left to each unit to remember.
+func TestInboundRefusesAnUnboundedNonce(t *testing.T) {
+	tests := []struct {
+		name  string
+		nonce string
+		want  int
+	}{
+		{"at the bound", strings.Repeat("a", extension.MaxInboundNonce), http.StatusAccepted},
+		{"one past the bound", strings.Repeat("a", extension.MaxInboundNonce+1), http.StatusUnauthorized},
+		{"far past the bound", strings.Repeat("a", 64<<10), http.StatusUnauthorized},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &inboundProbe{outcome: extension.InboundAccepted}
+			mux, _ := mountProbe(t, p)
+			r := signedRequest("/webhooks/ext/u/capture", time.Now(), "{}")
+			r.Header.Set(extension.InboundHeaderNonce, tc.nonce)
+			if got := serve(mux, r).Code; got != tc.want {
+				t.Fatalf("a %d-character nonce answered %d, want %d", len(tc.nonce), got, tc.want)
+			}
+		})
+	}
+}
+
+// An over-long nonce is refused with the SAME opaque answer as a wrong
+// signature. Telling a caller its nonce was too long would be a second refusal
+// reason distinguishable from the first, and the whole discipline of this edge
+// is that there is exactly one.
+func TestAnOverLongNonceIsRefusedLikeEverythingElse(t *testing.T) {
+	p := &inboundProbe{outcome: extension.InboundAccepted}
+	mux, _ := mountProbe(t, p)
+
+	long := signedRequest("/webhooks/ext/u/capture", time.Now(), "{}")
+	long.Header.Set(extension.InboundHeaderNonce, strings.Repeat("a", extension.MaxInboundNonce+1))
+	over := serve(mux, long)
+
+	absent := signedRequest("/webhooks/ext/u/capture", time.Now(), "{}")
+	absent.Header.Del(extension.InboundHeaderNonce)
+	none := serve(mux, absent)
+
+	if over.Code != none.Code || over.Body.String() != none.Body.String() {
+		t.Fatalf("an over-long nonce answered %d/%q and a missing one %d/%q — the two refusals are distinguishable",
+			over.Code, over.Body.String(), none.Code, none.Body.String())
 	}
 }

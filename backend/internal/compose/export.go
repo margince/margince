@@ -65,8 +65,8 @@ const (
 	scopeAttachment
 	scopeAudit
 	// scopeWorkspace is workspace-shared configuration with no per-row
-	// owner (pipeline, stage): the workspace RLS boundary is the whole
-	// scope, so members see the same config their deals point at.
+	// owner (pipeline, stage): the RBAC object gate is the whole scope,
+	// so members see the same config their deals point at.
 	scopeWorkspace
 	// scopePersonChild scopes a person child row (person_social) by its
 	// parent person's visibility  14 the same rule the person read applies.
@@ -84,8 +84,8 @@ const (
 
 // exportMember is one bundle entry: a table, its row-scope rule, and the
 // RBAC object whose read grant gates it (empty = reference data that
-// travels with the records it supports, gated only by the workspace RLS
-// boundary).
+// travels with the records it supports and skips the auth.Require call
+// below entirely — no exportMember today leaves objectGate empty).
 type exportMember struct {
 	table      string
 	scope      scopeMode

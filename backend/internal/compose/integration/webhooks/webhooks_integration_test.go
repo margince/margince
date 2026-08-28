@@ -681,9 +681,9 @@ func (we *webhookEnv) execInWorkspace(t *testing.T, sql string, args ...any) int
 	return int(affected)
 }
 
-// inWorkspaceTx runs one statement on an owner tx and commits — the one
-// spelling of that shape, so a reading fixture and a writing one cannot open
-// their transaction differently.
+// inWorkspaceTx runs one statement on an owner tx and commits. Fixtures here
+// share it so that a reading one and a writing one cannot open their
+// transaction differently and disagree about what was committed.
 func (we *webhookEnv) inWorkspaceTx(t *testing.T, run func(pgx.Tx) error) {
 	t.Helper()
 	ctx := context.Background()
