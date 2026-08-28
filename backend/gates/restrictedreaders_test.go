@@ -156,12 +156,17 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File) []str
 			// each of which owes the exclusion for the query it assembles.
 			// Reporting the fragment itself would name a declaration nobody can
 			// fix in place — the WHERE belongs to whoever composes it.
-			unguarded := unguardedNamers(graph, declaredFragmentNames(decl))
-			if unguarded == nil {
-				continue
-			}
-			for _, namer := range unguarded {
-				offenders = append(offenders, namer+": "+gatekit.FirstLineOf(reads[0].SQL))
+			//
+			// Per BINDING, not per declaration. One `const (…)` block binds
+			// several names, and only one of them may hold the activity SQL, so
+			// a block judged whole would answer for a function that names its
+			// unrelated sibling — reporting a reader that reads nothing, and
+			// counting a sibling's namer as evidence that the fragment is
+			// composed somewhere.
+			for _, fragment := range activityFragmentsIn(decl) {
+				for _, namer := range unguardedNamers(graph, fragment.names) {
+					offenders = append(offenders, namer+": "+gatekit.FirstLineOf(fragment.sql))
+				}
 			}
 			continue
 		}
@@ -251,26 +256,69 @@ func reachesAnExclusion(graph map[string]*graphFunc, key string, followCalls boo
 	return false
 }
 
-// declaredFragmentNames are the identifiers a package-level const or var block
-// binds — how a fragment is found at the functions that name it.
-func declaredFragmentNames(decl ast.Decl) []string {
+// fragmentBinding is ONE package-level binding whose value reads the activity
+// table: the names it binds, and the statement that made it a subject.
+type fragmentBinding struct {
+	names []string
+	sql   string
+}
+
+// activityFragmentsIn splits a package-level declaration into the individual
+// bindings that read the activity table.
+//
+// A `const (…)` block is one declaration binding many names, and the activity
+// SQL usually belongs to exactly one of them. Collecting every name in the
+// block would let a function that names an unrelated sibling answer for the
+// fragment — as evidence that it is composed somewhere, and, when that
+// function reaches no exclusion, as a reported reader of SQL it never touches.
+func activityFragmentsIn(decl ast.Decl) []fragmentBinding {
 	gen, isGen := decl.(*ast.GenDecl)
 	if !isGen {
 		return nil
 	}
-	var names []string
+	var bindings []fragmentBinding
 	for _, spec := range gen.Specs {
 		value, isValue := spec.(*ast.ValueSpec)
 		if !isValue {
 			continue
 		}
+		sql, reads := activitySQLIn(value)
+		if !reads {
+			continue
+		}
+		var names []string
 		for _, name := range value.Names {
 			if name.Name != "_" {
 				names = append(names, name.Name)
 			}
 		}
+		bindings = append(bindings, fragmentBinding{names: names, sql: sql})
 	}
-	return names
+	return bindings
+}
+
+// activitySQLIn is the first statement in this binding's value that reads the
+// activity table, and whether there is one.
+func activitySQLIn(spec *ast.ValueSpec) (string, bool) {
+	found := ""
+	for _, value := range spec.Values {
+		ast.Inspect(value, func(node ast.Node) bool {
+			if found != "" {
+				return false
+			}
+			expr, isExpr := node.(ast.Expr)
+			if !isExpr {
+				return true
+			}
+			text, isText := gatekit.LiteralText(expr)
+			if isText && activityReadLiteral.MatchString(text) {
+				found = text
+				return false
+			}
+			return true
+		})
+	}
+	return found, found != ""
 }
 
 // unguardedNamers are the functions that assemble a query from this fragment
