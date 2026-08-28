@@ -165,5 +165,13 @@ describe("AssignProjectOwnerAction", () => {
     // The dialog stays open on failure — the reader can retry or cancel,
     // rather than the write vanishing with nothing on screen.
     expect(screen.getByRole("button", { name: "Confirm" })).toBeTruthy();
+
+    // Closing and reopening starts clean: a failure from an attempt nobody
+    // has repeated yet must not resurface as if it just happened again.
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByTestId("assign-project-owner"));
+    expect(
+      screen.queryByText("the project was changed by someone else"),
+    ).toBeNull();
   });
 });

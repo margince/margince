@@ -23,10 +23,17 @@ import type { Project } from "./projects.form";
 // contract already supports, reached through the standing RecordPicker
 // search→pick pattern rather than a new one.
 
+// `q` is a server-side filter (not a client-walked page like a deal search),
+// so one page covers every ordinary search — but the endpoint still caps a
+// page at 50 by default. Asking for the contract's own maximum instead means
+// a common name in a large workspace does not quietly lose matches past the
+// default.
 export async function searchColleagues(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/users", { params: { query: { q } } });
+  const { data, error } = await api.GET("/users", {
+    params: { query: { q, limit: 200 } },
+  });
   if (error) {
     throwProblem(error);
   }
@@ -90,6 +97,12 @@ export function AssignProjectOwnerAction({
         onClose={() => {
           setOpen(false);
           setPicked(null);
+          // A prior failure's error is this action's own transient state, not
+          // a fact about the project — closing the dialog on it, however, is
+          // not the same as it being addressed. Reset so reopening starts
+          // clean rather than showing a refusal from an attempt nobody has
+          // repeated yet.
+          mutation.reset();
         }}
         title={t("project.assignOwnerTitle")}
         confirmLabel={t("deals.confirm")}
