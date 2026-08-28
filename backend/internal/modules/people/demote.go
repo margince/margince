@@ -72,22 +72,67 @@ func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (c
 	}
 	var out crmcontracts.DemoteLeadResponse
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// The row lock serializes a demote against a concurrent re-promote
-		// or second demote; the loser re-reads the state and answers 409.
-		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
+		// PERSON BEFORE LEAD, which is the order MergePerson takes: it locks
+		// the two people (LockPair) and then repoints lead.promoted_person_id,
+		// and an UPDATE locks the row it writes. Two writers taking the same
+		// pair in opposite orders is the whole of a deadlock — each holds what
+		// the other waits for, Postgres aborts one, and the caller gets a 5xx
+		// where the losing side of a serialized race should get a clean
+		// refusal.
+		//
+		// Which person to lock is written on the lead, so the lead is read
+		// FIRST and unlocked. That read is a hint, not a decision: the lead is
+		// re-read under both locks below and the answer is taken from there.
+		//
+		// BOTH row-scope probes therefore run before either lock, and the lead's
+		// runs before anything is read off it at all. Under lead-then-person the
+		// scope check sat behind the lead lock and ahead of every read, so
+		// nothing about the row could be learned by a caller it would refuse.
+		// Reading the lead first to name the person moves that read in front of
+		// the check, and unprobed it would answer a caller who may not see this
+		// lead whether it was ever promoted — "not promoted" rather than "not
+		// yours" — and then take a lock on a person they cannot see. This is
+		// unwindPerson's own rule, which its doc states for the deal probe, owed
+		// one frame earlier because the lock moved one frame earlier.
+		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}
-		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+		personID, err := promotedPersonOf(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+			return err
+		}
+		if err := auth.EnsureWritable(ctx, tx, "person", personID.UUID); err != nil {
+			return err
+		}
+		if _, err := storekit.LockRow(ctx, tx, "person", personID.UUID, storekit.LiveOnly); err != nil {
+			return fmt.Errorf("lock promoted person: %w", err)
+		}
+		// The lead lock serializes a demote against a concurrent re-promote or
+		// second demote; the loser re-reads the state and answers 409.
+		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
 			return err
 		}
 		lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)
 		if err != nil {
 			return fmt.Errorf("read lead before demote: %w", err)
 		}
+		// Re-checked UNDER the locks, against the person actually locked. The
+		// unlocked read above can be overtaken — by a merge repointing this
+		// lead at the survivor, or by a demote that got there first — and
+		// proceeding on it would unwind a person this lead no longer names.
 		if lead.Status != crmcontracts.LeadStatusPromoted || lead.PromotedPersonId == nil {
 			return &NotPromotedError{}
 		}
-		personID := ids.From[ids.PersonKind](ids.UUID(*lead.PromotedPersonId))
+		if ids.UUID(*lead.PromotedPersonId) != personID.UUID {
+			// Somebody moved this lead's person between the two reads. Refused
+			// rather than retried here: the caller re-issues against a lead
+			// whose state they can see, which is the same answer a second
+			// demote gets.
+			return &NotPromotedError{}
+		}
 
 		outcome, err := promotedOutcome(ctx, tx, id)
 		if err != nil {
@@ -177,7 +222,12 @@ func ensureNoLiveDeal(ctx context.Context, tx pgx.Tx, personID ids.PersonID) err
 // Both unwinds write the person (the lineage pointer at least), so the
 // person's grant and row scope are checked and the row locked BEFORE anything
 // is read about it: the deal probe must not tell a caller who cannot see the
-// person whether it sits on a live deal. Archiving the created person needs
+// person whether it sits on a live deal. Its one caller now owes the same
+// three one frame earlier — it locks the person before the lead — so these
+// re-ask a question already answered. They are kept rather than deleted
+// because they are what makes THIS function safe to read and to call: a guard
+// that lives only in a caller is a guard the next caller does not get.
+// Archiving the created person needs
 // no separate archive grant: the promotion that minted it ran under
 // lead.update + person.create, and its reversal is that same authority
 // exercised backwards — a rep who may promote must be able to undo the
@@ -197,6 +247,11 @@ func unwindPerson(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personID id
 	if err := auth.EnsureWritable(ctx, tx, "person", personID.UUID); err != nil {
 		return "", err
 	}
+	// The caller already holds this lock: it takes it BEFORE the lead, which is
+	// the order MergePerson takes and the reason it cannot be acquired here for
+	// the first time. Re-taking it is nearly free and is kept so this function's
+	// own by-id UPDATE below is guarded by something in this function, rather
+	// than by a caller a reader has to go and find.
 	if _, err := storekit.LockRow(ctx, tx, "person", personID.UUID, storekit.LiveOnly); err != nil {
 		return "", fmt.Errorf("lock promoted person: %w", err)
 	}
@@ -242,4 +297,26 @@ func isSharedByOthers(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, personI
 		return false, fmt.Errorf("check dependants of the promoted person: %w", err)
 	}
 	return shared, nil
+}
+
+// promotedPersonOf reads which person a lead was promoted into, WITHOUT taking
+// a lock.
+//
+// The demote has to lock that person before it locks the lead — the order the
+// merge path takes — and the person's id is written on the lead, so something
+// has to read it first. This read is a hint: the caller locks what it names,
+// then re-reads the lead under both locks and refuses if the two disagree.
+func promotedPersonOf(ctx context.Context, tx pgx.Tx, id ids.LeadID) (ids.PersonID, error) {
+	var promoted *ids.UUID
+	if err := tx.QueryRow(ctx,
+		`SELECT promoted_person_id FROM lead WHERE id = $1`, id.UUID).Scan(&promoted); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ids.PersonID{}, apperrors.ErrNotFound
+		}
+		return ids.PersonID{}, fmt.Errorf("read the lead's promoted person: %w", err)
+	}
+	if promoted == nil {
+		return ids.PersonID{}, &NotPromotedError{}
+	}
+	return ids.From[ids.PersonKind](*promoted), nil
 }

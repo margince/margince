@@ -60,7 +60,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (65)
+## Census (66)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -94,6 +94,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | The census as a fitness function, in both directions. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
+| `leadpersonlockorder_test.go` | H2 | ONE lock order over the lead and the person it was promoted into. |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |
