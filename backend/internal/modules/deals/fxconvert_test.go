@@ -86,3 +86,23 @@ func TestConvertToBaseRefusesDishonestResults(t *testing.T) {
 		}
 	})
 }
+
+// TestConvertToBaseRefusesRatherThanWrapping is the property both callers rest
+// their own policy on.
+//
+// They differ in what they DO with the refusal — one fails the whole read, the
+// other leaves that deal unpriced and counted — and neither is safe if the
+// engine can return a wrapped number instead of refusing. So the refusal is
+// proven here, once, rather than assumed at two call sites.
+func TestConvertToBaseRefusesRatherThanWrapping(t *testing.T) {
+	// The largest rate the column holds, against an amount near the top of its
+	// own range: a product no int64 can carry.
+	if _, err := ConvertToBase(math.MaxInt64, numericRate(9_999_999_999, 0)); err == nil {
+		t.Error("a product past int64 returned a value — a wrapped figure is a plausible-looking wrong " +
+			"number, which is worse than no number")
+	}
+	// And the boundary the other way: a product that exactly fits is answered.
+	if got, err := ConvertToBase(math.MaxInt64, numericRate(1, 0)); err != nil || got != math.MaxInt64 {
+		t.Errorf("the largest representable product = %d, %v; want it answered, not refused", got, err)
+	}
+}

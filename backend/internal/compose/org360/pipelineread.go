@@ -194,11 +194,12 @@ func openPipeline(
 		       (SELECT count(*) FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.from_stage_id IS DISTINCT FROM h.to_stage_id),
 		       d.amount_minor,
-		       -- Cast the DATE column to a timestamp: pgx decodes a bare date
-		       -- (OID 1082) into its own Date type, not into time.Time, and the
-		       -- scan below fails at runtime rather than at compile time. Only
-		       -- a read against real rows finds that, which is why it is spelled
-		       -- here rather than left to the driver.
+		       -- Cast to a timestamp because the scan takes a *time.Time and
+		       -- this column is nullable: the cast keeps the null a null while
+		       -- naming the type the row hands back. pgx does decode a bare
+		       -- DATE into time.Time — the engine's own rate_date read proves
+		       -- it against real rows (deals/fxrates_integration_test.go) — so
+		       -- this is about the shape of the value, not about the driver.
 		       d.expected_close_date::timestamptz,
 		       d.currency
 		FROM deal d
@@ -265,9 +266,18 @@ func priceOpenDeals(
 		}
 		converted, err := deals.ConvertToBase(*row.amountMinor, rate.Rate)
 		if err != nil {
-			// The deal is unpriceable rather than the read unreadable: an
-			// amount whose converted value does not fit is one deal the figure
-			// cannot cover, and priced_count is what says so.
+			// UNPRICED, not refused, and this is a decision rather than a
+			// swallow. An amount whose converted value does not fit a bigint is
+			// one deal the figure cannot cover, and priced_count is what says
+			// so — the same answer organization_open_pipeline_rollup gives the
+			// same deal, because one implausible amount must not take a company
+			// record offline.
+			//
+			// The hierarchy rollup refuses the whole read on this error, and
+			// the two differ for the reason they differ on a missing rate: it
+			// reports ONE number for a set of accounts, where a partial total
+			// presented as a total is a lie, and this page reports a figure
+			// beside the count of deals it covers.
 			continue
 		}
 		row.valueBase = &converted

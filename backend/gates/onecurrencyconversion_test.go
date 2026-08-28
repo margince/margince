@@ -46,6 +46,12 @@ const fxRateOwner = "internal/modules/deals"
 // readsFXRate matches a statement that goes to the rate table itself.
 var readsFXRate = regexp.MustCompile(`(?i)\bfrom\s+fx_rate\b|\bjoin\s+fx_rate\b`)
 
+// readsAnInterpolatedTable matches a FROM or JOIN whose table name this gate
+// cannot see, because the flattening substitutes a space for every operand that
+// is not a literal. The trailing anchor is what keeps it off an ordinary
+// `FROM deal d`: only a gap where a name belongs matches.
+var readsAnInterpolatedTable = regexp.MustCompile(`(?i)\b(from|join)\s{2,}\b|(?i)\b(from|join)\s+$`)
+
 // convertsInSQL matches the arithmetic: an amount multiplied by a rate. It is
 // the half that makes a second read a second ENGINE rather than a lookup — a
 // query that reads a rate and hands it to Go is converting through
@@ -70,6 +76,10 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 		"appearing anywhere the engine IS reachable",
 	"internal/compose/rateproposals_integration_test.go": "a test seeding and asserting on rate rows. It reads " +
 		"the table to arrange and to check, never to convert an amount for a reader",
+	"gates/onecurrencyconversion_test.go": "this gate itself: the probes below are planted defects, and " +
+		"judging them would report its own evidence as a finding. The file holds nothing but the gate, so " +
+		"skipping it whole costs no coverage — unlike a census whose probes sit beside real code, where the " +
+		"exemption belongs on the declaration",
 	"internal/compose/briefs/briefrank.go": "a FOURTH conversion, and the only ratified one that could reach " +
 		"the engine — it is in compose. It converts inside a larger ranking query and answers a wider " +
 		"question than the engine does: a CLOSED deal reads its frozen amount_minor_base, which is a stored " +
@@ -94,32 +104,23 @@ func TestMoneyConvertsToTheBaseCurrencyInOnePlace(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
-		literals := sqlLiteralsIn(file)
-		for _, sql := range literals {
-			if !readsFXRate.MatchString(sql) {
+		statements := fxSQLStatementsIn(file)
+		namesFXRate := false
+		for _, sql := range statements {
+			if strings.Contains(strings.ToLower(sql), "fx_rate") {
+				namesFXRate = true
+			}
+		}
+		for _, sql := range statements {
+			found, why := conversionIn(where, sql, namesFXRate)
+			if !found {
 				continue
 			}
 			judged++
 			if fxConversionExempt.Waived(t, where) {
 				continue
 			}
-			if strings.HasPrefix(where, fxRateOwner+"/") {
-				offences = append(offences, where+" reads fx_rate outside the engine, inside the module that "+
-					"owns it — the lookup is deals.FXRates")
-				continue
-			}
-			offences = append(offences, where+" reads fx_rate directly; the lookup is deals.FXRates, which "+
-				"memoizes one per currency and answers the same rate the other surface converts at")
-		}
-		for _, sql := range literals {
-			if !convertsInSQL.MatchString(sql) || !readsFXRate.MatchString(sql) {
-				continue
-			}
-			if fxConversionExempt.Waived(t, where) {
-				continue
-			}
-			offences = append(offences, where+" multiplies an amount by a rate in SQL; the arithmetic is "+
-				"deals.ConvertToBase, which rounds half away from zero over exact decimal digits")
+			offences = append(offences, where+" "+why)
 		}
 	}
 	// A census that judged nothing certifies nothing: the rate table is read by
@@ -136,18 +137,198 @@ func TestMoneyConvertsToTheBaseCurrencyInOnePlace(t *testing.T) {
 	}
 }
 
-// sqlLiteralsIn returns every string literal in a file, which is where a
-// statement lives. Concatenations are read piece by piece: a fragment naming
-// fx_rate is a read of it whichever half of the concatenation it sits in.
-func sqlLiteralsIn(file *ast.File) []string {
+// conversionIn reports whether one statement converts money outside the engine,
+// and what it did. Extracted from the walk so the shapes it must catch can be
+// PLANTED and asserted: a census over a clean tree passes identically over a
+// detector that has stopped detecting.
+func conversionIn(where, sql string, fileNamesFXRate bool) (bool, string) {
+	if !readsFXRate.MatchString(sql) {
+		// A FROM whose table this gate cannot read — the name is interpolated
+		// from a variable, so the flattening left a gap where it belongs.
+		//
+		// Reported only when the FILE also names fx_rate in a literal
+		// somewhere, and that pairing is what makes it worth reporting rather
+		// than noise: a dynamic FROM alone is ordinary (this tree builds them
+		// over lists of tables), and a file naming the rate table is ordinary,
+		// but a file doing both may be reading fx_rate through a name this
+		// gate cannot follow. The answer is a waiver saying which table it is,
+		// which is a sentence somebody has to write down.
+		if fileNamesFXRate && readsAnInterpolatedTable.MatchString(sql) {
+			return true, "builds a FROM whose table name this gate cannot resolve, in a file that also " +
+				"names fx_rate — say which table it is in a waiver, so a read through an interpolated " +
+				"name cannot hide here"
+		}
+		return false, ""
+	}
+	if convertsInSQL.MatchString(sql) {
+		return true, "converts an amount at a rate in SQL; the arithmetic is deals.ConvertToBase, which " +
+			"rounds half away from zero over exact decimal digits, and the lookup is deals.FXRates"
+	}
+	if strings.HasPrefix(where, fxRateOwner+"/") {
+		return true, "reads fx_rate outside the engine, inside the module that owns it — the lookup is " +
+			"deals.FXRates"
+	}
+	return true, "reads fx_rate directly; the lookup is deals.FXRates, which memoizes one per currency and " +
+		"answers the same rate the other surface converts at"
+}
+
+// fxSQLStatementsIn returns the statements a file holds, with CONCATENATIONS
+// FLATTENED.
+//
+// Flattened, because a statement is routinely assembled — `"SELECT … FROM " +
+// table` is the shape in this tree — and a scan over bare literals sees each
+// half alone: neither fragment carries both the FROM and the table name, so a
+// second engine built that way is invisible. Under-recognition is the one
+// direction a prohibition may not fail in, and this is the shape it fails in.
+//
+// Each concatenation contributes its joined text AND its pieces stay available
+// through the walk, so a literal that is a whole statement is still read as
+// one.
+func fxSQLStatementsIn(file *ast.File) []string {
 	var out []string
+	joined := map[ast.Node]bool{}
 	ast.Inspect(file, func(node ast.Node) bool {
-		if lit, ok := node.(*ast.BasicLit); ok {
-			if text, isText := gatekit.LiteralText(lit); isText {
+		switch typed := node.(type) {
+		case *ast.BinaryExpr:
+			if typed.Op != token.ADD {
+				return true
+			}
+			text, ok := flattenConcatenation(typed, joined)
+			if ok {
+				out = append(out, text)
+			}
+			return true
+		case *ast.BasicLit:
+			if joined[typed] {
+				return true
+			}
+			if text, isText := gatekit.LiteralText(typed); isText {
 				out = append(out, text)
 			}
 		}
 		return true
 	})
 	return out
+}
+
+// flattenConcatenation joins the string operands of one `+` chain, marking each
+// literal it consumed so the walk does not report it a second time on its own.
+//
+// A non-literal operand — a variable, a call — contributes a space rather than
+// nothing: it stands where text the gate cannot see would be, and joining
+// around it would fuse two words that are not adjacent in the statement.
+func flattenConcatenation(expr *ast.BinaryExpr, joined map[ast.Node]bool) (string, bool) {
+	var parts []string
+	var walk func(ast.Expr)
+	walk = func(node ast.Expr) {
+		switch typed := node.(type) {
+		case *ast.BinaryExpr:
+			if typed.Op == token.ADD {
+				walk(typed.X)
+				walk(typed.Y)
+				return
+			}
+			parts = append(parts, " ")
+		case *ast.BasicLit:
+			if text, isText := gatekit.LiteralText(typed); isText {
+				joined[typed] = true
+				parts = append(parts, text)
+				return
+			}
+			parts = append(parts, " ")
+		default:
+			parts = append(parts, " ")
+		}
+	}
+	walk(expr)
+	return strings.Join(parts, ""), len(parts) > 0
+}
+
+// TestTheDetectorSeesEachShapeAConversionIsWrittenIn is the positive control.
+//
+// The census above passes identically over a clean tree and over a detector
+// that has stopped detecting: it reports nothing either way. These read the
+// detector directly, on shapes taken from how this tree actually writes
+// queries, so the census means something.
+//
+// The concatenated case is why this exists. A statement assembled as
+// `"SELECT … FROM " + table` splits the FROM and the table name across two
+// literals, and a scan over bare literals sees neither — a second engine
+// written that way was invisible, which is the one direction a prohibition may
+// not fail in.
+func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
+	t.Parallel()
+	const elsewhere = "internal/compose/somewhere/read.go"
+	for _, probe := range []struct {
+		what  string
+		src   string
+		fires bool
+	}{
+		{"a plain read", "package p\nvar q = `SELECT rate FROM fx_rate WHERE from_currency = $1`\n", true},
+		{"a join", "package p\nvar q = `SELECT d.id FROM deal d JOIN fx_rate r ON r.from_currency = d.currency`\n", true},
+		{
+			"a conversion in SQL",
+			"package p\nvar q = `SELECT round(d.amount_minor * r.rate)::bigint FROM fx_rate r`\n",
+			true,
+		},
+		{
+			// The shape the first version of this gate could not see: the table
+			// name comes from a variable, so the flattening leaves a gap where
+			// it belongs. Caught because the FILE also names fx_rate — a
+			// dynamic FROM alone is ordinary here, and so is naming the table;
+			// doing both is what earns the question.
+			"a read whose table name is interpolated, in a file that names the rate table",
+			"package p\nvar q = `SELECT rate FROM ` + rateTable + ` WHERE from_currency = $1`\nvar rateTable = `fx_rate`\n",
+			true,
+		},
+		{
+			// And the near miss that keeps it from being noise: a dynamic FROM
+			// in a file with no interest in rates at all.
+			"a dynamic FROM in a file that never names the rate table",
+			"package p\nvar q = `SELECT count(*) FROM ` + table + ` WHERE archived_at IS NULL`\nvar table = `deal`\n",
+			false,
+		},
+		{
+			"a concatenation whose halves are both literal",
+			"package p\nvar q = `SELECT rate ` + `FROM fx_rate WHERE from_currency = $1`\n",
+			true,
+		},
+		// Near misses. A gate widened until it matches ordinary prose is a gate
+		// somebody turns off.
+		{"a read of another table", "package p\nvar q = `SELECT amount_minor FROM deal WHERE id = $1`\n", false},
+		{
+			"the words in a comment",
+			"package p\n\n// This reads FROM fx_rate and multiplies amount_minor * rate.\nvar q = 1\n",
+			false,
+		},
+		{
+			"a write to the rate table, which is not a conversion",
+			"package p\nvar q = `INSERT INTO fx_rate (from_currency, rate) VALUES ($1, $2)`\n",
+			false,
+		},
+	} {
+		t.Run(probe.what, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", probe.src, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("parsing the probe: %v", err)
+			}
+			statements := fxSQLStatementsIn(file)
+			namesRate := false
+			for _, sql := range statements {
+				if strings.Contains(strings.ToLower(sql), "fx_rate") {
+					namesRate = true
+				}
+			}
+			fired := false
+			for _, sql := range statements {
+				if found, _ := conversionIn(elsewhere, sql, namesRate); found {
+					fired = true
+				}
+			}
+			if fired != probe.fires {
+				t.Errorf("%s: the detector answered %t, want %t — %q", probe.what, fired, probe.fires, probe.src)
+			}
+		})
+	}
 }
