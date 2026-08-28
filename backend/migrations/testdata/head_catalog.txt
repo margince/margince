@@ -3957,6 +3957,7 @@ public.signal_thread_scan.refused_activity_at timestamp with time zone gen=- def
 public.signal_thread_scan.refused_message_count integer gen=- def=-
 public.signal_thread_scan.resolved_org_id uuid gen=- def=-
 public.signal_thread_scan.scanned_at timestamp with time zone NOT NULL gen=- def=now()
+public.signal_thread_scan.scanned_from timestamp with time zone gen=- def=-
 public.signal_thread_scan.signal_thread_scan_pkey PRIMARY KEY (thread_key)
 public.signal_thread_scan.signal_thread_scan_resolved_org_fkey FOREIGN KEY (resolved_org_id) REFERENCES organization(id) ON DELETE SET NULL (resolved_org_id)
 public.signal_thread_scan.thread_key text NOT NULL gen=- def=-

@@ -97,6 +97,18 @@ type settledThread struct {
 	// The timestamp alone cannot see a message inserted at the same instant, or
 	// a backfill filling in older ones; the count changes for both.
 	Count int
+	// ReadTo and ReadFrom are the two ends a PREVIOUS read reached: the newest
+	// message it covered and the oldest. Both nil on a thread never scanned.
+	//
+	// Two ends and not one, because a conversation grows at both. Newer than
+	// ReadTo is new mail; older than ReadFrom is a backfill; and a scan that
+	// tracked only how far forward it had got could not see the second at all.
+	ReadTo   *time.Time
+	ReadFrom *time.Time
+	// ReadFromNow is the oldest message THIS pass read, which becomes ReadFrom
+	// for the next one. Set by threadMessages, because the window it chose is
+	// the only thing that knows.
+	ReadFromNow *time.Time
 	// PrivateTo is the one reader this conversation answers to, or the zero
 	// value when every message on it is workspace-readable.
 	//
@@ -176,7 +188,10 @@ var dueThreadsQuery = `
 			 GROUP BY a.thread_key
 		)
 		SELECT c.thread_key, c.one_org::uuid, c.newest, c.message_count,
-		       CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END
+		       CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END,
+		       -- The two ends a previous read reached, so this one can tell new
+		       -- mail from a backfill. Both null on a thread never scanned.
+		       s.last_activity_at, s.scanned_from
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
 		 WHERE c.org_count = 1
@@ -258,7 +273,8 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		var thread settledThread
 		var privateTo *ids.UUID
 		if err := rows.Scan(&thread.Key, &thread.OrganizationID,
-			&thread.Newest, &thread.Count, &privateTo); err != nil {
+			&thread.Newest, &thread.Count, &privateTo,
+			&thread.ReadTo, &thread.ReadFrom); err != nil {
 			return nil, err
 		}
 		if privateTo != nil {
@@ -270,7 +286,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		return nil, err
 	}
 	for i := range due {
-		messages, err := threadMessages(ctx, tx, due[i].Key)
+		messages, err := threadMessages(ctx, tx, &due[i])
 		if err != nil {
 			return nil, err
 		}
@@ -279,9 +295,36 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 	return due, nil
 }
 
-// threadMessages reads the tail of one conversation, oldest first, so the
+// threadMessages reads one window of a conversation, oldest first, so the
 // prompt reads in the order the exchange happened.
-func threadMessages(ctx context.Context, tx pgx.Tx, key string) ([]threadMessage, error) {
+//
+// WHICH window is the whole of this function's judgement, and it used to have
+// none: it always read the newest six. A backfill made the thread due again —
+// the count changed — the same newest six were re-read, and the new count was
+// recorded. The inserted older messages never reached the model and the thread
+// then looked read, which is the bad direction: the state says handled, nothing
+// errored, and nothing says content was skipped.
+//
+// Two ends, asked in this order:
+//
+//   - NEW MAIL FIRST. Messages newer than the last read are why the
+//     conversation is interesting now, and a thread that walked backwards
+//     through its history while a reply sat unread would be reading the least
+//     useful end of it.
+//   - THEN THE UNREAD OLDER RANGE. With nothing new, a message older than where
+//     reading started is a backfill, and the window is the newest of THOSE — so
+//     a long thread walks backwards one window per pass until its history is
+//     covered, rather than never reaching it.
+//
+// Neither end left: the newest window, which is what a thread with no scan row
+// gets and what every thread got before.
+func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]threadMessage, error) {
+	// The upper bound of the window. Nothing to read older means the newest
+	// end; a backfill below where reading started means walk back from there.
+	var olderThan *time.Time
+	if thread.ReadTo != nil && !thread.Newest.After(*thread.ReadTo) && thread.ReadFrom != nil {
+		olderThan = thread.ReadFrom
+	}
 	// The remainder is measured in the same statement that cuts the body:
 	// asked for afterwards it would be a second read of a row that may have
 	// changed, and the number would then describe a different message from the
@@ -293,9 +336,12 @@ func threadMessages(ctx context.Context, tx pgx.Tx, key string) ([]threadMessage
 		  FROM (SELECT id, direction, subject, body, occurred_at
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
+		           -- Null means no bound: the newest window, which is the
+		           -- ordinary case and the one a thread starts from.
+		           AND ($4::timestamptz IS NULL OR occurred_at < $4)
 		         ORDER BY occurred_at DESC, id DESC
 		         LIMIT $3) tail
-		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages)
+		 ORDER BY occurred_at, id`, extractBodyLimit, thread.Key, extractThreadMessages, olderThan)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation: %w", err)
 	}
@@ -317,13 +363,19 @@ func threadMessages(ctx context.Context, tx pgx.Tx, key string) ([]threadMessage
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	if len(out) > 0 {
+		// The window's own lower end, reported so the mark can lower the
+		// cursor to it. Rows come back oldest first, so it is the first.
+		oldest := out[0].At
+		thread.ReadFromNow = &oldest
+	}
 	if cut > 0 {
 		// Said once per conversation rather than once per message: what a
 		// reader needs is how much of THIS exchange the reading was drawn
 		// from, and a line per body would bury that under the long threads it
 		// is most true of.
 		slog.WarnContext(ctx, "part of this conversation was not read; the events extracted from it are drawn from the head of each mail and anything stated below the cut is absent rather than judged",
-			"thread_key", key, "messages_cut", cut, "messages_read", len(out),
+			"thread_key", thread.Key, "messages_cut", cut, "messages_read", len(out),
 			"body_limit", extractBodyLimit, "unread_runes", unread)
 	}
 	return out, nil
@@ -380,10 +432,16 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO signal_thread_scan
 		  (thread_key, last_activity_at, message_count, scanned_at,
-		   resolved_org_id)
-		VALUES ($1, $2, $3, $4, $5)
+		   resolved_org_id, scanned_from)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (thread_key) DO UPDATE
 		   SET last_activity_at = greatest(signal_thread_scan.last_activity_at, excluded.last_activity_at),
+		       -- The oldest message ever read, so it only ever moves EARLIER.
+		       -- least() over a null is null in Postgres only for the operands
+		       -- it has none of — least(x, NULL) is x — which is what carries a
+		       -- cursor through a pass that read the newest window and reached
+		       -- nothing older.
+		       scanned_from = least(signal_thread_scan.scanned_from, excluded.scanned_from),
 		       message_count = excluded.message_count,
 		       scanned_at = excluded.scanned_at,
 		       -- WHICH account this reading was for. Overwritten, never
@@ -397,7 +455,8 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 		       refusals = 0,
 		       refused_activity_at = NULL,
 		       refused_message_count = NULL`,
-		thread.Key, thread.Newest, thread.Count, now, thread.OrganizationID); err != nil {
+		thread.Key, thread.Newest, thread.Count, now, thread.OrganizationID,
+		thread.ReadFromNow); err != nil {
 		return fmt.Errorf("record where the read got to: %w", err)
 	}
 	return nil
