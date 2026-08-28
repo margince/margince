@@ -1991,15 +1991,17 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // ordinary a word to exempt everywhere it might appear.
     const contextColumn = document.querySelector(".pageaside");
     for (const button of screen.getAllByRole("button")) {
-      if (
-        viewControls.has(button.textContent?.trim() ?? "") ||
-        contextColumn?.contains(button)
-      ) {
+      // The ACCESSIBLE name, not the text: the panel switch is icon-only, so
+      // its text is empty and a set keyed on text would have exempted every
+      // unlabelled button on the page along with it.
+      const name =
+        button.textContent?.trim() || (button.getAttribute("aria-label") ?? "");
+      if (viewControls.has(name) || contextColumn?.contains(button)) {
         continue;
       }
       expect(
         (button as HTMLButtonElement).disabled,
-        `"${button.textContent}" is still live on a terminal lead`,
+        `"${name}" is still live on a terminal lead`,
       ).toBe(true);
     }
   });

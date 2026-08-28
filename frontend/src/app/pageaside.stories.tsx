@@ -100,8 +100,14 @@ export const Open: Story = { render: page(contextCards) };
  * Folded away. Open and folded are ONE `<aside>` wearing a class, which is both
  * what lets the track tween and what keeps a screen's cards mounted across the
  * fold — so the play asserts that the element SURVIVES the fold rather than that
- * a second one appeared. Both assertions are about the switch and the element,
- * not about what is drawn, so they hold at either of the two widths above.
+ * a second one appeared.
+ *
+ * Which way the switch is set on arrival is the WINDOW's answer and not this
+ * story's: below 1100px the column and the record are one region a reader
+ * switches, so the panel is shut on arrival and the switch reads "show". The
+ * play therefore drives whichever state the canvas is in and asserts what is
+ * true of the switch either way — it flips, it says so, and the element it
+ * governs is the same one afterwards.
  */
 export const Folded: Story = {
   render: page(contextCards),
@@ -112,15 +118,29 @@ export const Folded: Story = {
     // pass, so an identity check on a column that was never there would agree
     // with itself and prove nothing.
     const column = canvasElement.querySelector("aside");
-    await expect(column).not.toBeNull();
-    await user.click(
-      await canvas.findByRole("button", { name: en["record.panel.hide"] }),
-    );
-    const toggle = await canvas.findByRole("button", {
-      name: en["record.panel.show"],
+    if (column === null) {
+      throw new Error("the column is not in the canvas at all");
+    }
+    const foldedBefore = column.classList.contains("collapsed");
+    // Whichever switch this width puts on screen. Above the fold both are
+    // there — the record's header carries one and the column's head the other —
+    // and below it only one can be: opening the column there gives it the
+    // record's whole cell, so the header goes with the record and the way back
+    // is the column's own head. A play that named one of them would be
+    // asserting the width rather than the fold.
+    const header = canvas.queryByRole("button", {
+      name: foldedBefore ? en["record.panel.show"] : en["record.panel.hide"],
     });
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await expect(canvasElement.querySelector("aside")).toBe(column);
+    await user.click(
+      header ?? canvas.getByRole("button", { name: /^(Hide|Show)$/ }),
+    );
+
+    // The one element, wearing the other state. Both halves matter: a second
+    // <aside> appearing would take the screen's cards down with it and refetch
+    // them on the way back, and a class that did not move means nothing folded.
+    const after = canvasElement.querySelector("aside");
+    await expect(after).toBe(column);
+    await expect(after?.classList.contains("collapsed")).toBe(!foldedBefore);
   },
 };
 

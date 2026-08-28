@@ -47,7 +47,11 @@
 .co-reading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  /* The page's own rhythm, not a tighter one of this group's. Two panels 8px
+     apart here and 16px apart everywhere else on the same page is the reader
+     being told these two are a closer pair than they are — the group's heading
+     already says they belong together. */
+  gap: var(--space-4);
 }
 
 /* The header of the group, unboxed and outside the first card. It names the
@@ -71,7 +75,11 @@
 .co-reading-pair {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr));
-  gap: var(--space-2);
+  /* The page's own rhythm in both directions. Once these two fold into one
+     column the gap between them is a gap between stacked cards like any other,
+     and 8px there was the same card 8px from its neighbour on a page that puts
+     16px everywhere else. */
+  gap: var(--space-4);
   align-items: start;
 }
 /* What this account is worth to us. The panel is one reading in five parts —

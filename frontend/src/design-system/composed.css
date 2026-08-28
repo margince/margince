@@ -259,9 +259,29 @@
 }
 .record-actions {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  margin: 12px 0 16px;
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+/* A record's verbs share ONE rung, whatever size each call site asked for: the
+   ellipsis and the panel switch sit among the account's other verbs, and a 32px
+   control in a row of 40px ones reads as a lesser class of thing rather than as
+   one more of the same. Stated on the row, because the rung belongs to the row
+   and not to each button — the alternative was a size prop threaded through
+   fourteen call sites, half of which are table rows where the small rung is the
+   right one.
+
+   Explicitly, and not by letting the row stretch them: stretch makes every
+   button's height a function of the tallest one beside it, which is how the
+   icon-only square came to be 32 wide and 40 tall in the first place. */
+.record-actions :is(.btn, .overflow-menu > .btn) {
+  min-block-size: var(--control-h);
+}
+.record-actions :is(.btn-icon, .overflow-menu > .btn-icon) {
+  inline-size: var(--control-h);
+  block-size: var(--control-h);
 }
 
 /* `actionsInline`: the verbs sit on the SAME baseline as the identity block

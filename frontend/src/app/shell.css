@@ -260,11 +260,24 @@
   margin: 0 auto;
 }
 /* Screens drop content blocks straight into .wrap, which has no row gap, so two
-   stacked top-level cards would otherwise touch. This is the default rhythm so
+   stacked top-level blocks would otherwise touch. This is the default rhythm so
    they never do; a screen wanting a different gap sets an inline margin (which
    wins over this rule). Only direct-child siblings match — nested .card-inset
-   blocks keep their own spacing. */
-.wrap > .card + .card {
+   blocks keep their own spacing.
+
+   BOTH house boxes, and either order. The rule read `.card + .card` while the
+   house card is a `Panel` as often as it is a `.card`, so a page built out of
+   panels had no rhythm at all — the Worklist stacked eleven of them edge to
+   edge — and a page that mixed the two got the gap between its cards and
+   nothing between a card and a panel. One selector for the pair, because the
+   rhythm is a fact about the page's stack and not about which primitive a
+   screen happened to reach for.
+
+   `.surfacestate-part` stands in that stack: a labelled part is where a screen's
+   own blocks go when the surface has a name, so the stack passes through it. Any
+   wrapper that comes to stand there belongs in this list — it is the page's
+   rhythm, and a wrapper is not a reason to lose it. */
+:is(.wrap, .surfacestate-part) > :is(.card, .panel) + :is(.card, .panel) {
   margin-top: var(--space-4);
 }
 
@@ -1622,7 +1635,9 @@
 .pageaside-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  /* The page's own rhythm between stacked cards, here as everywhere: this column
+     holds the same primitive the work column does. */
+  gap: var(--space-4);
   /* Sized to the OPEN column rather than to the track it is in, for the reason
      above: a percentage would reflow the cards inside it sixty times a second
      while the column closes. */
@@ -1722,34 +1737,77 @@
   container-type: inline-size;
   container-name: work;
 }
-/* Under the fold the context column becomes a block at the end of the page
-   rather than a track: at this width the work column is already the whole
-   screen, and a 320px column beside it leaves neither readable. */
+/* Under the fold the window has room for ONE region, so the record and its
+   context take turns in the same cell rather than sharing it. Two columns leave
+   neither readable; two ROWS leave neither, either — split down the middle, a
+   phone gave the record 422px and its context the other 422px, and the reader
+   had opened the record.
+
+   The switch is the one already in the record's header, and the panel's own head
+   carries the way back. */
 @media (max-width: 1100px) {
   .app:has(> .pageaside:not([hidden])) {
     grid-template-columns: var(--railW) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
-  /* It lands under the work column rather than beside it, and it keeps its
-     content: hidden outright, the readings filed here would be gone on a
-     laptop with no way to ask for them — and the control that folds the column
-     would still be in the record's header, doing nothing a reader could see. */
+  /* The work column's own cell, and the whole of it: what is drawn there is
+     whichever of the two the reader asked for. */
   .pageaside {
-    grid-column: 2 / -1;
+    grid-area: 1 / 2 / 2 / -1;
     block-size: auto;
     max-block-size: none;
-    overflow-y: visible;
+    overflow-y: auto;
     border-inline-start: 0;
-    border-block-start: 1px solid var(--borderSubtle);
+    border-block-start: 0;
   }
-  /* The strip is the folded column's own edge, and there is no column beside
-     the work to fold at this width — folded here means the block is simply not
-     drawn, and the record header's toggle is what brings it back. */
+  /* One at a time. `PageAsideProvider` keeps the narrow window's own open state,
+     shut on arrival, so a reader always lands on the record they opened — the
+     remembered preference is about working at a desk with both columns, and it
+     is not an instruction to open a phone on the context instead. */
+  .app:has(> .pageaside:not([hidden]):not(.collapsed)) > .main {
+    display: none;
+  }
+  /* And folded means not drawn: there is no column beside the work to leave a
+     stub at, so the record simply has the screen. */
   .pageaside.collapsed {
     display: none;
   }
-  /* Sticky belongs to a column that scrolls on its own. Here the page scrolls,
-     and a head pinned to the viewport would sit over the rows below it. */
-  .pageaside-head {
-    position: static;
+  /* The panel has the work column's width now, so its cards take it. The fixed
+     width above exists to keep the fold from reflowing them sixty times a
+     second, and there is no fold to tween here — the column does not narrow, it
+     gives way to the record. Left as it was, a 288px stack of cards sat in a
+     648px region with the rest of it empty. */
+  .pageaside-body {
+    width: auto;
+  }
+  /* And it stands on the page's gutter, so its cards line up with the record's
+     own column rather than half a gutter inside it. */
+  .pageaside {
+    padding-inline: var(--pageGutter);
+  }
+}
+
+/* On a phone there is no rail TRACK to leave room for: the sidebar is a fixed
+   bottom bar, so it is out of the grid entirely and the work column is the whole
+   width.
+
+   Stated here rather than in the phone block far earlier in this file, and that
+   placement is the whole point: `.app:has(> .pageaside…)` and the phone block's
+   own `.app` carry different specificities, so the wider rule above was winning
+   at phone width too. It put a 252px rail track back into a 390px grid and
+   placed the context column in the second track BESIDE a 138px work column —
+   two unreadable columns where the page should be one. */
+@media (max-width: 700px) {
+  .app:has(> .pageaside:not([hidden])) {
+    grid-template-columns: 1fr;
+  }
+  /* The only cell there is: with one track, a column line of 2 is the grid's
+     end rather than a second column. */
+  .pageaside {
+    grid-area: 1 / 1 / 2 / -1;
+    /* Clear of the navigation bar, which is fixed over the foot of the screen:
+       the panel now reaches that far, so its last row is what the bar would
+       otherwise cover. */
+    padding-block-end: var(--phoneNavClearance);
   }
 }

@@ -1103,29 +1103,37 @@ export function ListTable<Row>({
                         // cell is the card's heading and needs none.
                         data-label={column.fixed ? undefined : column.header}
                       >
-                        <RowSelect
-                          identity={Boolean(column.fixed)}
-                          row={row}
-                          rowKey={rowKey}
-                          selection={selection}
-                        />
-                        {column.fixed && rowHref ? (
-                          // The identity cell is a real link, so the row can be
-                          // opened the ways a link can: a new tab, a new window,
-                          // a bookmark, or the keyboard. Only the default click
-                          // is stopped from reaching the row's own handler —
-                          // preventing the anchor instead would navigate the
-                          // current page while the new tab opens too.
-                          <a
-                            className="lt-cellink"
-                            href={rowHref(row)}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {column.cell(row)}
-                          </a>
-                        ) : (
-                          column.cell(row)
-                        )}
+                        {/* The identity cell's own row: the box and the name
+                            side by side, centred on each other. Without it the
+                            two are an inline-grid label followed by a link, so a
+                            name long enough to wrap put the checkbox on a line
+                            of its own ABOVE the name it selects — which reads as
+                            a control belonging to the row above. */}
+                        <span className="lt-identity-row">
+                          <RowSelect
+                            identity={Boolean(column.fixed)}
+                            row={row}
+                            rowKey={rowKey}
+                            selection={selection}
+                          />
+                          {column.fixed && rowHref ? (
+                            // The identity cell is a real link, so the row can be
+                            // opened the ways a link can: a new tab, a new window,
+                            // a bookmark, or the keyboard. Only the default click
+                            // is stopped from reaching the row's own handler —
+                            // preventing the anchor instead would navigate the
+                            // current page while the new tab opens too.
+                            <a
+                              className="lt-cellink"
+                              href={rowHref(row)}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {column.cell(row)}
+                            </a>
+                          ) : (
+                            column.cell(row)
+                          )}
+                        </span>
                       </td>
                     ))}
                     <td className="lt-slack" aria-hidden="true" />

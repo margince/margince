@@ -8,6 +8,7 @@ import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
@@ -152,11 +153,20 @@ function WriteEmailAction({
           button among two outlined ones says writing is what a reader came to
           do, and on an account it is one of several things they might — the
           move worth doing is the one the Brief names, and that one carries the
-          fill. The icon is what makes this one findable instead. */}
-      <Button reasonId={disabledReasonId} onClick={() => onOpen(true)}>
-        <Mail aria-hidden="true" />
-        {t("co.writeEmail")}
-      </Button>
+          fill. The icon is what makes this one findable instead.
+
+          The icon alone, in fact: mail is one of the glyphs the catalog names
+          as needing no gloss, and the words cost the record's own NAME the room
+          it needs on a tablet — the header truncated the account a reader came
+          to read in order to spell a verb its icon had already said.
+          `IconAction` is what keeps the name reachable for both readers, one
+          string spoken through `aria-label` and shown through the tooltip. */}
+      <IconAction
+        label={t("co.writeEmail")}
+        icon={<Mail aria-hidden="true" />}
+        reasonId={disabledReasonId}
+        onClick={() => onOpen(true)}
+      />
       {open && (
         // Keyed by the record, so navigating to another company while the
         // composer is open REMOUNTS it rather than re-pointing it. Without the
