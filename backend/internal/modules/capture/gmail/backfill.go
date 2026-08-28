@@ -103,7 +103,7 @@ func (c *Connector) backfillOne(ctx context.Context, access, id string, sink con
 		// provider is waited out, anything else ends the run.
 		return false, err
 	}
-	return captureOne(ctx, msg, sink, owner)
+	return captureOne(ctx, msg, sink, c.bounces, owner)
 }
 
 // paramMaxResults is Gmail's page-size query parameter.

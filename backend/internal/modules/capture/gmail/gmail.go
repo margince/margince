@@ -47,6 +47,18 @@ type Connector struct {
 	oauth googleconn.Authorizer
 	api   API
 	owner string // used ONLY by Normalize (the test-guarded pure mapping); never set by Sync
+	// bounces records the delivery reports this mailbox receives against the
+	// outbound mail they name. Nil keeps the old behaviour: the report is
+	// dropped with the rest of the delivery-system mail.
+	bounces connector.BounceSink
+}
+
+// WithBounceSink returns a copy that records delivery reports instead of
+// only dropping them.
+func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
+	copied := *c
+	copied.bounces = sink
+	return &copied
 }
 
 // New returns a Gmail connector over the given OAuth + API surfaces.
@@ -194,7 +206,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 			// cursor so the next cycle retries from the same watermark.
 			return nil, err
 		}
-		if _, err := captureOne(ctx, msg, sink, owner); err != nil {
+		if _, err := captureOne(ctx, msg, sink, c.bounces, owner); err != nil {
 			return nil, err
 		}
 	}
@@ -241,13 +253,13 @@ func (c *Connector) backfill(ctx context.Context, access string) ([]string, stri
 // the IMAP connector uses. A parse failure or a deliberate skip is a no-op;
 // only a real Sink write fault returns a non-nil error (which stops the pull).
 // It is a package function (no receiver) so a pull holds no shared state.
-func captureOne(ctx context.Context, fetched Message, sink connector.Sink, owner string) (captured bool, err error) {
+func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounces connector.BounceSink, owner string) (captured bool, err error) {
 	msg, err := mailmap.Parse(fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)
 	}
 	if _, drop := msg.SkipReason(); drop {
-		return false, nil
+		return false, mailmap.RecordIfBounce(ctx, fetched.RFC822, bounces)
 	}
 	msg = msg.AttestSentByOwner(fetched.FiledAsSent)
 	if _, err := sink.Upsert(ctx, msg.ToRecord(connectorName, fetched.RFC822)); err != nil {

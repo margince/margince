@@ -51,6 +51,24 @@ func (e PublicEventApprovalDecidedVerdict) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventCommsDeliveryBouncedKind.
+const (
+	Hard PublicEventCommsDeliveryBouncedKind = "hard"
+	Soft PublicEventCommsDeliveryBouncedKind = "soft"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventCommsDeliveryBouncedKind enum.
+func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
+	switch e {
+	case Hard:
+		return true
+	case Soft:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventRetentionRestrictedAction.
 const (
 	Pin      PublicEventRetentionRestrictedAction = "pin"
@@ -115,6 +133,7 @@ const (
 	ColdstartRejected                     SubscribableEventType = "coldstart.rejected"
 	CommissionAccrued                     SubscribableEventType = "commission.accrued"
 	CommissionDecided                     SubscribableEventType = "commission.decided"
+	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
 	ContractArchived                      SubscribableEventType = "contract.archived"
 	ContractCreated                       SubscribableEventType = "contract.created"
@@ -228,6 +247,8 @@ func (e SubscribableEventType) Valid() bool {
 	case CommissionAccrued:
 		return true
 	case CommissionDecided:
+		return true
+	case CommsDeliveryBounced:
 		return true
 	case ConsentChanged:
 		return true
@@ -580,6 +601,21 @@ type PublicEventCommissionDecided struct {
 	Reason   *string `json:"reason,omitempty"`
 	ToStatus string  `json:"to_status"`
 }
+
+// PublicEventCommsDeliveryBounced Payload for comms.delivery_bounced — the receiving mail system returned a sent message (comms/store.go's RecordBounce). The entity is the sent message's timeline activity. kind separates the two facts a consumer can act on: `hard` — the address does not accept mail and retrying is sending to nobody; `soft` — a temporary refusal (full mailbox, greylisting) that says nothing durable about the address.
+type PublicEventCommsDeliveryBounced struct {
+	// Kind Whether the refusal is durable (`hard`) or temporary (`soft`).
+	Kind PublicEventCommsDeliveryBouncedKind `json:"kind"`
+
+	// MessageId The bounced message's own RFC 5322 Message-ID — the identity the delivery report named, and the key the outbound record was matched on.
+	MessageId string `json:"message_id"`
+
+	// Reason The delivery report's stated reason, bounded and safe to show an operator; empty when the report carried none.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// PublicEventCommsDeliveryBouncedKind Whether the refusal is durable (`hard`) or temporary (`soft`).
+type PublicEventCommsDeliveryBouncedKind string
 
 // PublicEventConsentChanged Payload for consent.changed — a subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a person XOR a lead (data-model §7, before promotion) — a RUNTIME choice Record resolves via consentSubject, not a fixed type this schema can name, so this is the first dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
 type PublicEventConsentChanged struct {
@@ -1732,6 +1768,10 @@ func (PublicEventCommissionDecided) EventType() string { return "commission.deci
 
 func (PublicEventCommissionDecided) EntityType() string { return "commission" }
 
+func (PublicEventCommsDeliveryBounced) EventType() string { return "comms.delivery_bounced" }
+
+func (PublicEventCommsDeliveryBounced) EntityType() string { return "activity" }
+
 func (PublicEventConsentChanged) EventType() string { return "consent.changed" }
 
 func (PublicEventConsentChanged) EntityType() string { return "dynamic" }
@@ -2103,6 +2143,7 @@ var PublicEventVersions = map[string]int{
 	"coldstart.rejected":                        1,
 	"commission.accrued":                        1,
 	"commission.decided":                        1,
+	"comms.delivery_bounced":                    1,
 	"consent.changed":                           1,
 	"contract.archived":                         1,
 	"contract.created":                          1,

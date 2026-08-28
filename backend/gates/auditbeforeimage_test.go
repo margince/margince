@@ -91,6 +91,8 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/comms/bounce.go:RecordBounce": "the receiving mail system refusing a message is an OCCURRENCE on the sent activity, not a field replacement: the bounce columns were NULL on every row this can match (the CAS refuses a second mark), so the prior state is the absence the mark ends, and there is nothing for a before-image to name",
+
 	"internal/modules/people/channelidentity.go:auditChannelIdentityChange": "binding an account to a person who had none replaces nothing: the question is which account reaches this human, and before the bind none did. A rebind takes the other branch and names the binding it moved",
 
 	"internal/modules/consent/qualifyingevent.go:RecordQualifyingEvent": "a human writing down an exchange that happened away from every system — a card handed over at a trade fair. It is an OCCURRENCE and not a replacement: nothing about the person changed state, a row saying what happened was added, and there is no prior version of a meeting for the image to name. The verb is `update` on `person` because that is the row the caller was authorized against and the row whose sendability this changes; the alternative, a create on the qualifying-event row, would put a rule in the trail that authorized nothing here",

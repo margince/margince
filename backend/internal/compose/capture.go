@@ -158,8 +158,14 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	}
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
-	// carries it.
-	r.Register(imap.NewStanding())
+	// carries it. With a pool it also records the delivery reports the
+	// mailbox receives; enumerate-only constructions keep the old
+	// drop-everything behaviour, because there is no database to record into.
+	standingIMAP := imap.NewStanding()
+	if pool != nil {
+		standingIMAP = standingIMAP.WithBounceSink(newBounceSink(pool))
+	}
+	r.Register(standingIMAP)
 	// Telegram is registered on the same terms and for the same reason: a bot
 	// binding's token is per-connection and vault-sealed, so there is no
 	// deployment-wide app to configure. It is the registration that lets the send
@@ -334,7 +340,8 @@ func newCaptureRegistryWithGoogle(
 ) *capture.Registry {
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if googleAppReachable(resolve, c) {
-		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPI(nil, "")))
+		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPI(nil, "")).
+			WithBounceSink(newBounceSink(pool)))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 	}
 	return reg
@@ -370,7 +377,8 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	// silently, which reads as an empty inbox rather than as a broken one.
 	reg := newCaptureRegistryWithGoogle(pool, vault, newGoogleAppResolver(pool, vault, log), c, cfg)
 	if g.canSync() {
-		reg.Register(graph.New(newGraphOAuth(g), graph.NewAPI(nil, "")))
+		reg.Register(graph.New(newGraphOAuth(g), graph.NewAPI(nil, "")).
+			WithBounceSink(newBounceSink(pool)))
 	}
 	return reg
 }
