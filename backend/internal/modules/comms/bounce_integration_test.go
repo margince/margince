@@ -21,12 +21,23 @@ import (
 
 // asCapturingConnector is who really reports a bounce: the mail connector
 // that read the delivery report out of the owner's mailbox.
-func (e *storeEnv) asCapturingConnector() context.Context {
+func (e *storeEnv) asCapturingConnector(owner ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail",
+		UserID: owner, OnBehalfOf: owner,
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
+}
+
+// bounceFor is the report a real DSN for this suite's staged mail yields.
+func bounceFor(messageID string, kind connector.BounceKind, reason string) connector.BounceReport {
+	return connector.BounceReport{
+		MessageID: messageID,
+		Recipient: "buyer@example.com",
+		Kind:      kind,
+		Reason:    reason,
+	}
 }
 
 // sentDelivery stages and sends one delivery the real writers' way, so the
@@ -60,7 +71,7 @@ func TestRecordBounceMarksTheSentRowWithAuditAndEvent(t *testing.T) {
 	e := setupStore(t)
 	id := e.sentDelivery(t, "bounced@myco.test")
 
-	marked, err := e.store.RecordBounce(e.asCapturingConnector(), "bounced@myco.test", connector.BounceHard, "550 5.1.1 user unknown")
+	marked, err := e.store.RecordBounce(e.asCapturingConnector(e.user.UUID), bounceFor("bounced@myco.test", connector.BounceHard, "550 5.1.1 user unknown"))
 	if err != nil {
 		t.Fatalf("RecordBounce: %v", err)
 	}
@@ -94,12 +105,12 @@ func TestRecordBounceMarksTheSentRowWithAuditAndEvent(t *testing.T) {
 func TestRecordBounceKeepsTheFirstMarkOnReplay(t *testing.T) {
 	e := setupStore(t)
 	e.sentDelivery(t, "twice@myco.test")
-	ctx := e.asCapturingConnector()
+	ctx := e.asCapturingConnector(e.user.UUID)
 
-	if marked, err := e.store.RecordBounce(ctx, "twice@myco.test", connector.BounceHard, "550 first report"); err != nil || !marked {
+	if marked, err := e.store.RecordBounce(ctx, bounceFor("twice@myco.test", connector.BounceHard, "550 first report")); err != nil || !marked {
 		t.Fatalf("first report: marked=%v err=%v", marked, err)
 	}
-	marked, err := e.store.RecordBounce(ctx, "twice@myco.test", connector.BounceSoft, "452 second report")
+	marked, err := e.store.RecordBounce(ctx, bounceFor("twice@myco.test", connector.BounceSoft, "452 second report"))
 	if err != nil {
 		t.Fatalf("second report: %v", err)
 	}
@@ -116,21 +127,32 @@ func TestRecordBounceKeepsTheFirstMarkOnReplay(t *testing.T) {
 	}
 }
 
-// A report naming mail this installation never sent (the owner's own mail
-// client shares the mailbox), and one naming a delivery that never reached
-// 'sent', are both normal inputs answered with no mark and no error.
-func TestRecordBounceIgnoresMailItNeverSent(t *testing.T) {
+// A report naming mail this installation never sent is a normal input
+// answered with no mark and no error. A PENDING delivery is markable — the
+// report proves the wire carried it and the receipt write can lose the race
+// against it — but a report failing the owner or recipient match records
+// nothing, which is what makes a forged report inert.
+func TestRecordBounceRefusesWhatItCannotVerify(t *testing.T) {
 	e := setupStore(t)
-	pending := e.stage(t, e.baseInput(e.activity, "never-sent@myco.test"))
-	ctx := e.asCapturingConnector()
+	pending := e.stage(t, e.baseInput(e.activity, "raced@myco.test"))
+	ctx := e.asCapturingConnector(e.user.UUID)
 
-	if marked, err := e.store.RecordBounce(ctx, "not-ours@elsewhere.test", connector.BounceHard, ""); err != nil || marked {
+	if marked, err := e.store.RecordBounce(ctx, bounceFor("not-ours@elsewhere.test", connector.BounceHard, "x")); err != nil || marked {
 		t.Errorf("unknown message: marked=%v err=%v, want false and nil", marked, err)
 	}
-	if marked, err := e.store.RecordBounce(ctx, "never-sent@myco.test", connector.BounceHard, ""); err != nil || marked {
-		t.Errorf("pending delivery: marked=%v err=%v, want false and nil — nothing was sent to bounce", marked, err)
+	stranger := e.asCapturingConnector(ids.NewV7())
+	if marked, err := e.store.RecordBounce(stranger, bounceFor("raced@myco.test", connector.BounceHard, "x")); err != nil || marked {
+		t.Errorf("another mailbox's capture: marked=%v err=%v, want false and nil", marked, err)
+	}
+	wrongAddress := bounceFor("raced@myco.test", connector.BounceHard, "x")
+	wrongAddress.Recipient = "nobody@customer.example"
+	if marked, err := e.store.RecordBounce(ctx, wrongAddress); err != nil || marked {
+		t.Errorf("an address the mail never went to: marked=%v err=%v, want false and nil", marked, err)
 	}
 	if _, _, ok := e.bounceMark(t, pending); ok {
-		t.Error("a pending delivery carries a bounce mark")
+		t.Fatal("a refused report left a mark")
+	}
+	if marked, err := e.store.RecordBounce(ctx, bounceFor("raced@myco.test", connector.BounceHard, "x")); err != nil || !marked {
+		t.Errorf("the report that lost the receipt race: marked=%v err=%v, want the pending row marked", marked, err)
 	}
 }

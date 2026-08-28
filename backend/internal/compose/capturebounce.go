@@ -26,12 +26,12 @@ func (b commsBounceSink) RecordBounce(ctx context.Context, report connector.Boun
 	// The marked/not-marked answer stays here: a report naming mail this
 	// installation never sent is a normal capture input, not a connector
 	// fault, so the connector only ever hears about real write failures.
-	_, err := b.store.RecordBounce(ctx, report.MessageID, report.Kind, report.Reason)
+	_, err := b.store.RecordBounce(ctx, report)
 	return err
 }
 
 // newBounceSink binds delivery reports to the comms store, exactly as the
 // send path constructs it.
-func newBounceSink(pool *pgxpool.Pool) connector.BounceSink {
+func newBounceSink(pool *pgxpool.Pool) commsBounceSink {
 	return commsBounceSink{store: comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)))}
 }

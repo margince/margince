@@ -42,7 +42,16 @@ func ParseBounce(raw []byte) (connector.BounceReport, bool) {
 		return connector.BounceReport{}, false
 	}
 	contentType, params, err := reader.Header.ContentType()
-	if err != nil || contentType != "multipart/report" || params["report-type"] != "delivery-status" {
+	if err != nil || contentType != "multipart/report" || !strings.EqualFold(params["report-type"], "delivery-status") {
+		return connector.BounceReport{}, false
+	}
+	// Only the message-transport system reports a delivery outcome. The From
+	// is attacker-writable, so this is a bar and not a proof — what makes a
+	// forged report inert is the recipient and mailbox-owner match the store
+	// applies — but an ordinary correspondent's mail must never reach the
+	// bounce path at all.
+	fromList, _ := reader.Header.AddressList("From")
+	if !isDeliverySystemSender(firstAddress(fromList)) {
 		return connector.BounceReport{}, false
 	}
 
@@ -75,7 +84,15 @@ func ParseBounce(raw []byte) (connector.BounceReport, bool) {
 	if status.hard {
 		kind = connector.BounceHard
 	}
-	return connector.BounceReport{MessageID: originalID, Kind: kind, Reason: status.reason}, true
+	// Every field crossed the wire in a message an attacker shaped, and a
+	// byte sequence that is not UTF-8 would fail the database write — which
+	// the pull retries forever, one poison report wedging the whole mailbox.
+	return connector.BounceReport{
+		MessageID: strings.ToValidUTF8(originalID, "\uFFFD"),
+		Recipient: strings.ToValidUTF8(status.recipient, "\uFFFD"),
+		Kind:      kind,
+		Reason:    strings.ToValidUTF8(status.reason, "\uFFFD"),
+	}, true
 }
 
 // partContentType answers a part's content type whichever header shape the
@@ -102,9 +119,10 @@ func partContentType(part *mail.Part) string {
 // dsnStatus is what the delivery-status part said about the FIRST recipient
 // whose delivery actually failed.
 type dsnStatus struct {
-	found  bool
-	hard   bool
-	reason string
+	found     bool
+	hard      bool
+	reason    string
+	recipient string
 }
 
 // readDeliveryStatus reads the RFC 3464 field groups: one per-message group,
@@ -126,22 +144,57 @@ func readDeliveryStatus(body io.Reader) dsnStatus {
 			}
 			continue
 		}
+		// A failed action must carry a well-formed status class: 5 is a
+		// permanent refusal, 4 a temporary one. A report that says failed
+		// with no readable class is malformed, and a malformed report must
+		// not become a durable fact by defaulting to either kind.
+		statusClass, _, _ := strings.Cut(strings.TrimSpace(group.Get("Status")), ".")
+		if statusClass != "4" && statusClass != "5" {
+			return dsnStatus{}
+		}
+		recipient := reportedAddress(group.Get("Final-Recipient"))
+		if recipient == "" {
+			recipient = reportedAddress(group.Get("Original-Recipient"))
+		}
+		if recipient == "" {
+			// A failure that names nobody is a report the store could never
+			// verify against the sent row; unnameable is unrecordable.
+			return dsnStatus{}
+		}
 		return dsnStatus{
-			found:  true,
-			hard:   strings.HasPrefix(strings.TrimSpace(group.Get("Status")), "5"),
-			reason: diagnosticReason(group.Get("Diagnostic-Code")),
+			found:     true,
+			hard:      statusClass == "5",
+			reason:    diagnosticReason(group.Get("Diagnostic-Code")),
+			recipient: recipient,
 		}
 	}
 }
 
 // diagnosticReason keeps the human half of a Diagnostic-Code, whose defined
 // shape is "<type>; <text>" — the type (almost always "smtp") tells an
-// operator nothing the text does not.
+// operator nothing the text does not. Control characters are dropped: the
+// text is attacker-writable and ends up in an operator's terminal and a
+// webhook payload, where a stray escape sequence or newline is a lie about
+// where the reason ends.
 func diagnosticReason(code string) string {
 	if _, text, found := strings.Cut(code, ";"); found {
-		return strings.TrimSpace(text)
+		code = text
 	}
-	return strings.TrimSpace(code)
+	return strings.TrimSpace(strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, code))
+}
+
+// reportedAddress reads an RFC 3464 address field, whose defined shape is
+// "<address-type>; <address>" — rfc822 in every case a mail bounce can name.
+func reportedAddress(field string) string {
+	if _, addr, found := strings.Cut(field, ";"); found {
+		field = addr
+	}
+	return strings.TrimSpace(field)
 }
 
 // originalMessageID reads the returned message's own Message-ID from a
@@ -157,11 +210,11 @@ func originalMessageID(body io.Reader) string {
 }
 
 // RecordIfBounce hands raw to the sink when it is a delivery report naming a
-// message, and does nothing otherwise. It is the one spelling of the drop
-// branch every mail connector shares: a nil sink is a connector wired without
-// bounce recording, and keeps the old behaviour — the report is dropped.
-// A sink error propagates, because losing a bounce silently is the exact
-// invisibility this path exists to end; the pull retries the message later.
+// message, and does nothing otherwise. A nil sink is a connector wired
+// without bounce recording, and keeps the old behaviour — the report is
+// dropped. A sink error propagates, because losing a bounce silently is the
+// exact invisibility this path exists to end; the pull retries the message
+// later.
 func RecordIfBounce(ctx context.Context, raw []byte, sink connector.BounceSink) error {
 	if sink == nil {
 		return nil

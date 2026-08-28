@@ -11,6 +11,7 @@ import "context"
 // that says nothing durable about the address.
 type BounceKind string
 
+// BounceHard and BounceSoft are the only two kinds a report can carry.
 const (
 	BounceHard BounceKind = "hard"
 	BounceSoft BounceKind = "soft"
@@ -23,6 +24,12 @@ type BounceReport struct {
 	// MessageID is the RFC 5322 Message-ID of the ORIGINAL message the
 	// report is about — never the report's own id.
 	MessageID string
+	// Recipient is the address the report says delivery failed FOR
+	// (Final-Recipient). The recorder verifies it against the sent row's own
+	// recipients: a report that names an address the message never went to
+	// is a report about some other message — or a forgery — and records
+	// nothing.
+	Recipient string
 	Kind      BounceKind
 	// Reason is the report's Diagnostic-Code line, or empty when the report
 	// carried none. External text: bounded and treated as data by every

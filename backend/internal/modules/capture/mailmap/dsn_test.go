@@ -63,6 +63,9 @@ func TestParseBounceReadsAHardBounce(t *testing.T) {
 	if report.Reason != "550 5.1.1 user unknown" {
 		t.Errorf("Reason = %q, want the diagnostic text without its smtp; prefix", report.Reason)
 	}
+	if report.Recipient != "gone@customer.example" {
+		t.Errorf("Recipient = %q, want the Final-Recipient address", report.Recipient)
+	}
 }
 
 func TestParseBounceReadsATemporaryFailureAsSoft(t *testing.T) {
@@ -79,6 +82,7 @@ func TestParseBounceReadsATemporaryFailureAsSoft(t *testing.T) {
 		"",
 		"Reporting-MTA: dns; mail.example.com",
 		"",
+		"Final-Recipient: rfc822; away@customer.example",
 		"Action: failed",
 		"Status: 4.2.2",
 		"Diagnostic-Code: smtp; 452 4.2.2 mailbox full",
