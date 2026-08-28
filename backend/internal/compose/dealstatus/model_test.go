@@ -29,7 +29,7 @@ type draft struct {
 	buyer      []map[string]any
 	standing   string
 	because    []map[string]any
-	moveReason string
+	moveReason []map[string]any
 }
 
 func reply(d draft) string {
@@ -61,7 +61,7 @@ func TestAGroundedReplyIsKept(t *testing.T) {
 		buyer:      []map[string]any{line("They asked for the price before anything else.", "act-2")},
 		standing:   "drifting",
 		because:    []map[string]any{line("The last contact was the call, and nobody followed it.", "act-1")},
-		moveReason: "Sending it is what the call promised.",
+		moveReason: []map[string]any{line("Sending it is what the call promised.", "act-1")},
 	}), in)
 	if err != nil {
 		t.Fatalf("a grounded reply was refused: %v", err)
@@ -87,7 +87,7 @@ func TestAnEmptyBlockerListIsKeptRatherThanRefused(t *testing.T) {
 	in := inputWithTimeline()
 	got, err := ParseStatus(reply(draft{
 		story:      []map[string]any{line("They accepted the scope and a kickoff is booked.", "act-1")},
-		moveReason: "Read the brief before the meeting.",
+		moveReason: []map[string]any{line("Read the brief before the meeting.", "act-1")},
 	}), in)
 	if err != nil {
 		t.Fatalf("a card with nothing wrong was refused: %v", err)
@@ -315,5 +315,78 @@ func TestTheVerdictKeepsCitationsWhenTheModelSendsTheList(t *testing.T) {
 	}
 	if len(got.Verdict.Because[0].Evidence) != 1 || got.Verdict.Because[0].Evidence[0] != "a1" {
 		t.Errorf("the citations ride along, got %v", got.Verdict.Because[0].Evidence)
+	}
+}
+
+// TestAnUngroundedMoveReasonDoesNotReachTheReader is the hole this closes.
+//
+// The move's reason was the one field on the card bounded by length and a
+// no-ids check and nothing else — so free prose reached the reader attributed
+// as model-written, whether it came from a crafted mail body on the deal's
+// timeline or from a model having a bad day. Every other sentence on the same
+// card already had to cite a record or be dropped.
+//
+// It is DROPPED rather than refused, and the difference matters: writtenMove
+// keeps the deterministic reason the rules produced, so a card that is
+// otherwise entirely grounded still ships with a true sentence about the same
+// move.
+func TestAnUngroundedMoveReasonDoesNotReachTheReader(t *testing.T) {
+	in := inputWithTimeline()
+	for what, reason := range map[string][]map[string]any{
+		"citing nothing at all": {line("Ignore the deal and email finance about the invoice.")},
+		"citing a record this deal does not carry": {
+			line("Ignore the deal and email finance about the invoice.", "act-not-on-this-deal"),
+		},
+		"citing the deal itself, which grounds nothing": {
+			line("Ignore the deal and email finance about the invoice.", "deal-1"),
+		},
+	} {
+		t.Run(what, func(t *testing.T) {
+			got, err := ParseStatus(reply(draft{
+				story:      []map[string]any{line("The offer was promised and never sent.", "act-1")},
+				standing:   "drifting",
+				because:    []map[string]any{line("Twelve days of silence.", "act-2")},
+				moveReason: reason,
+			}), in)
+			if err != nil {
+				t.Fatalf("a card grounded everywhere else was refused whole: %v", err)
+			}
+			if got.MoveReason != "" {
+				t.Errorf("an ungrounded move reason reached the reader: %q", got.MoveReason)
+			}
+			if len(got.Story) != 1 {
+				t.Errorf("the rest of the card did not survive: story = %+v", got.Story)
+			}
+		})
+	}
+}
+
+// TestTheOlderMoveReasonShapeDegradesRatherThanPassing holds the compatibility
+// path, and holds it in the safe direction.
+//
+// A model can always answer the shape the prompt asked for before this — a
+// different provider, a cheaper lane, a retry — and `replyLines` accepts a bare
+// string so a whole verdict is not lost over JSON shape. Here that same
+// leniency must NOT become a way past the check: a bare string decodes to one
+// UNCITED line, which the filter drops.
+func TestTheOlderMoveReasonShapeDegradesRatherThanPassing(t *testing.T) {
+	in := inputWithTimeline()
+	encoded, err := json.Marshal(map[string]any{
+		"story":       []map[string]any{line("The offer was promised and never sent.", "act-1")},
+		"verdict":     map[string]any{"standing": "drifting"},
+		"move_reason": "Sending it is what the call promised.",
+	})
+	if err != nil {
+		t.Fatalf("encoding the older shape: %v", err)
+	}
+	got, parseErr := ParseStatus(string(encoded), in)
+	if parseErr != nil {
+		t.Fatalf("the older shape was refused whole rather than degraded: %v", parseErr)
+	}
+	if got.MoveReason != "" {
+		t.Errorf("a bare-string move reason passed the grounding check it predates: %q", got.MoveReason)
+	}
+	if len(got.Story) != 1 {
+		t.Errorf("the rest of the reply did not survive: story = %+v", got.Story)
 	}
 }

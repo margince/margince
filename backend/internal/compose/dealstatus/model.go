@@ -55,16 +55,16 @@ type Completer interface {
 const statusSystem = `You brief a colleague on one sales deal, from a JSON summary of the deal, its timeline, its open tasks and its buyer conversation in a CRM.
 
 Return ONLY a JSON object with these keys:
-{"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":"..."}
-Each of "story", "blocker", "buyer" and "verdict.because" is a list of {"text":"...","evidence":["<id>", ...]}.
+{"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":[...]}
+Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a list of {"text":"...","evidence":["<id>", ...]}.
 
 "story" — what happened and where it leaves things, in the order it happened. Two to four sentences. Start with the thing a reader who has forgotten this deal most needs to know. Name people, dates and what was actually said.
 "blocker" — what is HOLDING THE DEAL UP, named as something somebody can act on: an unsent mail, a question nobody answered, a person who never replied, a decision nobody has asked for. One or two sentences. Return an empty list when nothing is holding it up. "Time has passed" is not a blocker; "she asked for times on 2 June and nobody sent them" is.
 "buyer" — what the buyer wants, read from what they have actually said: what they are optimising for, what they asked for, what they have NOT objected to. One or two sentences. Return an empty list when they have said too little to read honestly. Never guess at a motive the summary does not support.
 "verdict" — your honest call. "standing" is exactly one of: live (moving, with a next step both sides expect), drifting (nothing wrong, nothing happening, it dies of neglect if nobody acts), blocked (something specific is in the way, and you named it in "blocker"), cold (a long silence after real engagement — treat as lost unless something changes). "because" is a LIST of one or two {"text","evidence"} objects saying what the call rests on — the same shape as "story", never a bare string. Be willing to say a deal is cold. A briefing that never delivers bad news is not read twice.
-"move_reason" — one sentence on why the recommended move is the right one now. The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it.
+"move_reason" — a LIST of exactly one {"text","evidence"} object saying why the recommended move is the right one now, the same shape as "story". The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it. It rests on records like every other sentence, so it cites them.
 
-Every sentence in "story", "blocker", "buyer" and "verdict.because" lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text", in "move_reason" or in "opening".
+Every sentence lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text" or in "opening".
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
 Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
 "health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
@@ -278,199 +278,10 @@ func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
 	if len(sections.Story) == 0 {
 		return WrittenStatus{}, errors.New("deal status reply tells no story")
 	}
-	if err := keepFreeText(&sections, parsed, known); err != nil {
+	if err := keepMoveReason(&sections, parsed, known, citable); err != nil {
 		return WrittenStatus{}, err
 	}
 	return sections, nil
-}
-
-// replyShape is the reply as the prompt asks for it.
-type replyShape struct {
-	Story   []replyLine `json:"story"`
-	Blocker []replyLine `json:"blocker"`
-	Buyer   []replyLine `json:"buyer"`
-	Verdict struct {
-		Standing string     `json:"standing"`
-		Because  replyLines `json:"because"`
-	} `json:"verdict"`
-	MoveReason string `json:"move_reason"`
-}
-
-// keepSections runs the grounding filter over every cited section. Each may
-// come back empty except the story, and an empty one means the records did not
-// support saying anything — which is a section the card omits rather than pads.
-func keepSections(parsed replyShape, known, citable map[string]bool) (WrittenStatus, error) {
-	var out WrittenStatus
-	for _, section := range []struct {
-		name  string
-		lines []replyLine
-		limit int
-		into  *[]WrittenLine
-	}{
-		{"story", parsed.Story, maxStoryRows, &out.Story},
-		{"blocker", parsed.Blocker, maxBlockerRows, &out.Blocker},
-		{"buyer", parsed.Buyer, maxBuyerRows, &out.Buyer},
-		{"verdict", parsed.Verdict.Because, maxBecauseRows, &out.Verdict.Because},
-	} {
-		kept, err := keepGrounded(section.lines, known, citable, section.limit)
-		if err != nil {
-			return WrittenStatus{}, fmt.Errorf("%s: %w", section.name, err)
-		}
-		*section.into = kept
-	}
-	// A call this build does not recognise is dropped rather than shown: the
-	// reader has learned what four words mean, and a fifth teaches them
-	// nothing. The reasoning behind it stays, because it is still grounded.
-	if verdictStandings[parsed.Verdict.Standing] {
-		out.Verdict.Standing = parsed.Verdict.Standing
-	}
-	return out, nil
-}
-
-// keepFreeText holds the one field that carries no citations of its own: the
-// move's reason.
-//
-// It is uncited deliberately. The reason explains a move the RULES chose from
-// records, so what it rests on is the move's own evidence rather than a
-// citation of its own. It is still bounded and still refused when it spells an
-// id.
-func keepFreeText(out *WrittenStatus, parsed replyShape, known map[string]bool) error {
-	reason := strings.TrimSpace(parsed.MoveReason)
-	if len([]rune(reason)) > maxMoveReason {
-		return errors.New("deal status reply's move reason exceeds the card's bounds")
-	}
-	if err := refuseIDsInReaderText(reason, known); err != nil {
-		return fmt.Errorf("move reason: %w", err)
-	}
-	out.MoveReason = reason
-	return nil
-}
-
-// replyLine is one sentence as the reply spells it.
-type replyLine struct {
-	Text     string   `json:"text"`
-	Evidence []string `json:"evidence"`
-}
-
-// replyLines is a list of cited sentences that also accepts a BARE STRING.
-//
-// It has to, and the reason is worth stating because the card spent its whole
-// life without a verdict on account of it. The prompt describes this field
-// twice — once in the shape line as a list, once in prose as "one or two
-// sentences" — and the model followed the prose, returning a string. The
-// decoder refused it, the verdict was dropped, and the card fell back to the
-// deterministic writer EVERY TIME, logging a warning nobody was reading. A
-// reader saw a card with no call and no way to tell that one had been written.
-//
-// The prompt is fixed too, but a prompt is a request and this is the parse. A
-// model can always answer the older shape — a different provider, a cheaper
-// lane, a retry — and losing the whole verdict over a JSON shape is the wrong
-// trade when the sentence itself is right there. A bare string becomes one
-// uncited line: the grounding filter then treats it as any other uncited
-// sentence, so nothing skips the check that matters.
-type replyLines []replyLine
-
-func (r *replyLines) UnmarshalJSON(raw []byte) error {
-	var lines []replyLine
-	if err := json.Unmarshal(raw, &lines); err == nil {
-		*r = lines
-		return nil
-	}
-	var bare string
-	if err := json.Unmarshal(raw, &bare); err != nil {
-		return fmt.Errorf("verdict.because is neither a list of sentences nor a string: %w", err)
-	}
-	if strings.TrimSpace(bare) == "" {
-		*r = nil
-		return nil
-	}
-	*r = replyLines{{Text: bare}}
-	return nil
-}
-
-// keepGrounded drops a sentence whose citations do not resolve, and refuses
-// the whole reply when a sentence breaks a bound. The difference matters: an
-// ungrounded sentence is one bad claim among good ones, while an oversized or
-// id-leaking one says the reply is not the shape the prompt asked for.
-func keepGrounded(
-	lines []replyLine, known, citable map[string]bool, limit int,
-) ([]WrittenLine, error) {
-	out := make([]WrittenLine, 0, len(lines))
-	for _, line := range lines {
-		text := strings.TrimSpace(line.Text)
-		if text == "" {
-			continue
-		}
-		if len([]rune(text)) > maxSentenceLen {
-			return nil, errors.New("a sentence exceeds the card's bounds")
-		}
-		if err := refuseIDsInReaderText(text, known); err != nil {
-			return nil, err
-		}
-		cited := make([]string, 0, len(line.Evidence))
-		for _, id := range line.Evidence {
-			// The deal's own id grounds nothing — every sentence is about this
-			// deal — and it is absent from the citable set for that reason.
-			if citable[id] {
-				cited = append(cited, id)
-			}
-		}
-		// A sentence citing nothing is dropped whole rather than shown
-		// uncited, which is the one thing the grounding rule exists to
-		// prevent.
-		if len(cited) == 0 {
-			continue
-		}
-		out = append(out, WrittenLine{Text: text, Evidence: cited})
-		if len(out) == limit {
-			break
-		}
-	}
-	return out, nil
-}
-
-// refuseIDsInReaderText refuses a reply that spells a record id where a person
-// reads. An id in reader text is either a leak or filler.
-func refuseIDsInReaderText(text string, known map[string]bool) error {
-	for id := range known {
-		if strings.Contains(text, id) {
-			return errors.New("reply spells a record id in reader text")
-		}
-	}
-	return nil
-}
-
-// knownIDs is every id this input carried — the set reader text must be free
-// of. Being known is not the same as being CITABLE: see citableIDs.
-func knownIDs(in StatusInput) map[string]bool {
-	known := citableIDs(in)
-	known[in.Deal.ID] = true
-	if in.Room != nil {
-		for _, th := range in.Room.Threads {
-			known[th.ID] = true
-		}
-	}
-	return known
-}
-
-// citableIDs is the narrower set a citation may come from: the records the
-// card can render as evidence the reader opens.
-//
-// A Deal Room thread is deliberately absent. The card cites through the
-// activity evidence type, and a thread is not an activity — admitting one
-// would pass the filter and then be dropped when the card is assembled, which
-// costs the sentence its grounding after it had already earned it. The buyer's
-// words still reach the model; they are just cited through the deal's timeline
-// rather than by thread id.
-func citableIDs(in StatusInput) map[string]bool {
-	citable := map[string]bool{}
-	for _, a := range in.Timeline {
-		citable[a.ID] = true
-	}
-	for _, t := range in.OpenTasks {
-		citable[t.ID] = true
-	}
-	return citable
 }
 
 // excerpt bounds one body's contribution, cutting on a rune so a multi-byte
