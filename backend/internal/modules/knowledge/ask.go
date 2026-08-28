@@ -6,23 +6,27 @@ package knowledge
 // The deterministic half of asking a corpus: everything decided WITHOUT a
 // model.
 //
-// Three of the four outcomes are settled here, and the fourth is only made
-// possible here. That split is the design: a refusal must never depend on a
-// model call, or the product cannot say why it refused.
-//
-// The three refusals say different things and are never interchangeable:
+// Two of the outcomes are settled here in full, and they are the two that are
+// NOT about the question:
 //
 //   not_ready              — about the CORPUS. It is still ingesting, holds
 //                            nothing, or is being re-embedded.
 //   retrieval_unavailable  — about the INSTALLATION. No embed lane is bound, so
 //                            nothing was searched at all.
-//   not_covered            — about the QUESTION. The corpus was searched, in
-//                            full, and holds nothing close enough to ground an
-//                            answer.
 //
 // Collapsing them is the failure this endpoint exists to avoid. Answering
 // "your documents do not cover this" for a corpus that is merely half-ingested
 // is an affirmative false claim about documents that DO cover it.
+//
+// not_covered is about the QUESTION, and this file cannot settle it. It reports
+// not_covered only where nothing was ranked at all — an empty question, or a
+// question the lane could answer only with a zero vector. Whether a corpus that
+// WAS searched covers a question is decided downstream by the writer that reads
+// the passages, because ranking cannot decide it: cosine is not calibrated, and
+// under mistral-embed-2312 a covered question against a one-document corpus
+// measured 0.670 while an unrelated one measured 0.672. The floor below removes
+// what is obviously far; it does not tell those two apart, and no value of it
+// could.
 
 import (
 	"context"

@@ -5149,6 +5149,8 @@ export const de = {
     "Diese Sammlung ist noch nicht fertig eingelesen — {embedded} von {total} Abschnitten sind durchsuchbar. An Ihrer Frage liegt es nicht; versuchen Sie es gleich noch einmal.",
   "corpusAsk.retrievalUnavailable":
     "Es wurde nichts durchsucht: in dieser Installation ist kein Suchindex eingerichtet, die Dokumente konnten also nicht angesehen werden. Das ist eine Frage der Einrichtung und liegt nicht an Ihrer Frage.",
+  "corpusAsk.unreviewed":
+    "Diese Textstellen hat niemand gelesen. Sie sind das, was die Suche Ihrer Frage am nächsten gefunden hat — ob sie die Frage beantworten, hat nichts geprüft.",
   "corpusAsk.notCovered.title": "Von dieser Sammlung nicht abgedeckt",
   "corpusAsk.notCovered.body":
     "{name} wurde vollständig durchsucht und enthält nichts, was nah genug daran wäre. Die Sammlung deckt ab:",

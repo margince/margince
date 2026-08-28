@@ -1,0 +1,40 @@
+name: corpus_ask_returns_nothing_when_the_only_passage_does_not_answer
+task: corpus_ask
+site: corpus_ask
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  # ONE passage, which is what a workspace's very first document set holds: one
+  # file, freshly filed. The sibling scenario hands the model three passages to
+  # choose between, and choosing none of three is an easier refusal than
+  # refusing the only thing it was given — a model handed a single passage and
+  # told to answer from the passages will reach for it.
+  question: "What is the boiling point of nitrogen in Kelvin?"
+  passages:
+    - label: escalation_notes
+      document: escalation-notes.md
+      text: >-
+        An escalated ticket is reviewed within one working day. The reviewer
+        records what was promised to the customer, and any billing correction
+        is exported on the following night's run so finance sees it in the same
+        period.
+expect:
+  outcome: accepted
+  # Deliberately empty: a correct answer cites NOTHING.
+  answer: []
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the model refuses to answer. The single passage is about
+    escalated tickets and billing exports and says nothing about nitrogen,
+    boiling points or temperature, so the ONLY correct reply is an empty list
+    of claims. Any claim that survives the quote check is a failure, however
+    hedged — a sentence about review timelines or billing exports quoted at a
+    reader who asked a physics question reads as an answer, because the
+    citation UI and the outcome are the same ones a real answer carries. The
+    prompt tells the model not to say the passages are insufficient, so a reply
+    that explains its own abstention in a claim is also wrong. This is the
+    shape a first document set has, which makes it the shape a person is most
+    likely to meet the refusal in.

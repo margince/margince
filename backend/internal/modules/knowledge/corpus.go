@@ -47,11 +47,17 @@ const (
 //
 // It is a starting point rather than a tuned value, and nothing in this build
 // records which binding a floor WAS tuned against — the surface that would use
-// such a record does not exist, so neither does the column. 0.35 is
-// deliberately permissive — the
-// quote check downstream is what keeps an ungrounded sentence out of an
-// answer, and a floor set high enough to do that job on its own would refuse
-// questions the corpus does answer.
+// such a record does not exist, so neither does the column. That gap is why the
+// floor is not asked to do more than it can: 0.35 sits below every score both
+// currently bound embedding models produce for any prose pair, so under those
+// bindings it removes nothing.
+//
+// Raising it does not fix that. Cosine is not calibrated across embedding
+// models, and under mistral-embed-2312 the covered and uncovered ranges overlap
+// on the same corpus, so no value of this number separates them. What refuses
+// an uncovered question is the writer that READS the passages, and an ask that
+// reached no writer says so with the unreviewed outcome rather than claiming an
+// answer.
 const DefaultMinSimilarity = 0.35
 
 // Store owns the knowledge tables. Handlers→Store, the CRUD spine: the store

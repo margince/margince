@@ -30556,16 +30556,21 @@ components:
           type: string
           maxLength: 500
           description: >-
-            What this corpus covers, in the workspace's own words. Quoted back in
-            the refusal when a question falls below the grounding floor, so it is
-            read by a person at their least patient moment — write it as a
-            sentence, not a label.
+            What this corpus covers, in the workspace's own words. Quoted back
+            whenever the corpus refuses, so it is read by a person at their least
+            patient moment — write it as a sentence, not a label.
         min_similarity:
           type: number
           format: double
           minimum: 0
           maximum: 1
-          description: The grounding floor. Below it a question is refused before any model call.
+          description: >-
+            The grounding floor: the cosine a passage must reach before it may be
+            cited at all. It removes what is obviously far and is NOT what tells a
+            covered question from an uncovered one — cosine is not calibrated across
+            embedding models, and under some bindings no value separates the two. A
+            reader is told what read the passages by generated_by and by the
+            unreviewed outcome.
         default_ask:
           type: boolean
           description: The corpus the command palette's ask lands on. At most one per workspace.
@@ -30680,23 +30685,29 @@ components:
       properties:
         outcome:
           type: string
-          enum: [answered, not_covered, not_ready, retrieval_unavailable]
+          enum: [answered, not_covered, not_ready, retrieval_unavailable, unreviewed]
           # Pins the generated Go constant names. Unpinned, these four land as a
           # bare Answered/NotCovered/NotReady/RetrievalUnavailable in the package
           # every contract type shares — identifiers far too generic to carry
           # there, and ones the generator only prefixes when something else
           # happens to collide with them.
           x-enum-varnames:
-            [KnowledgeAnswerOutcomeAnswered, KnowledgeAnswerOutcomeNotCovered, KnowledgeAnswerOutcomeNotReady, KnowledgeAnswerOutcomeRetrievalUnavailable]
+            [KnowledgeAnswerOutcomeAnswered, KnowledgeAnswerOutcomeNotCovered, KnowledgeAnswerOutcomeNotReady, KnowledgeAnswerOutcomeRetrievalUnavailable, KnowledgeAnswerOutcomeUnreviewed]
           description: >-
-            The four are not interchangeable. not_covered is a statement about the
+            The five are not interchangeable. not_covered is a statement about the
             QUESTION; not_ready is a statement about the corpus; retrieval_unavailable
-            says no embed lane is bound, so nothing was searched at all. Collapsing
-            them is the failure this endpoint exists to avoid.
+            says no embed lane is bound, so nothing was searched at all; unreviewed says
+            the corpus WAS searched and the nearest passages are attached, but no writer
+            read them, so nothing has judged whether they answer the question — the
+            claims are what the search found, not an answer. Collapsing them is the
+            failure this endpoint exists to avoid.
         claims:
           type: array
           items: { $ref: '#/components/schemas/KnowledgeClaim' }
-          description: The answer IS this list, in order. Empty unless outcome is answered.
+          description: >-
+            The answer IS this list, in order, when outcome is answered. Under
+            unreviewed it is the nearest passages instead, which nothing has judged.
+            Empty under every other outcome.
         corpus: { $ref: '#/components/schemas/KnowledgeAnswerCorpus' }
         coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
