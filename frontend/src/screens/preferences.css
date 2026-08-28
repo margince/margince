@@ -7,7 +7,9 @@
   min-height: 100%;
   display: flex;
   justify-content: center;
-  padding: 56px 20px 96px;
+  /* Twice the top at the bottom: the save bar sticks 16px off the floor, so
+     the page has to clear it below the last row. */
+  padding: var(--space-12) var(--space-5) calc(var(--space-12) * 2);
   background: var(--bgCard);
 }
 
@@ -17,7 +19,7 @@
 }
 
 .pref-header p {
-  margin-top: 10px;
+  margin-top: var(--space-2);
 }
 
 .pref-list {
@@ -37,7 +39,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  padding: 16px 18px;
+  padding: var(--space-4);
 }
 
 /* The toggle is `flex: none`, so this half is the only one that can give: a
@@ -74,7 +76,7 @@
   color: var(--textSecondary);
   background: var(--bgCard);
   border-radius: var(--r-full);
-  padding: 2px 8px;
+  padding: 2px 8px; /* ds:ignore the Badge atom's own box, not rhythm */
 }
 
 .pref-state {
@@ -130,7 +132,7 @@
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-pop);
-  padding: 16px 18px;
+  padding: var(--space-4);
 }
 
 .pref-not-saved {
@@ -154,7 +156,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .pref-unsub-error {
@@ -166,5 +168,5 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-3);
 }

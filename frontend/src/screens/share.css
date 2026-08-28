@@ -12,23 +12,23 @@
 }
 
 .share-backlink {
-  margin-top: 6px;
+  margin-top: var(--space-2);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .share-ceiling {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: var(--space-2);
   background: var(--bgCard);
   border-radius: var(--r-sm);
-  padding: 10px 12px;
+  padding: var(--space-3);
   font-size: 12px;
   color: var(--textSecondary);
   line-height: 1.5;
-  margin-top: 14px;
+  margin-top: var(--space-4);
 }
 
 .share-ceiling svg {
@@ -36,7 +36,7 @@
   height: 14px;
   color: var(--textSecondary);
   flex: none;
-  margin-top: 2px;
+  margin-top: 2px; /* ds:ignore centres the 14px glyph on the first 18px line */
 }
 
 .share-ceiling b {
@@ -69,9 +69,9 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-2);
   text-align: left;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
 }
 
 /* The right-hand end of a picker row: the level this subject already holds,
@@ -97,7 +97,7 @@
 .share-acl-name {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -114,7 +114,7 @@
   color: var(--warn);
   background: var(--warnBg);
   border-radius: var(--r-full);
-  padding: 2px 8px;
+  padding: 2px 8px; /* ds:ignore the Badge atom's own box, which it stands beside */
 }
 
 .share-acl-list {
@@ -127,7 +127,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 13px 4px;
+  padding: var(--space-3) var(--space-1);
   border-bottom: 1px solid var(--borderSubtle);
 }
 

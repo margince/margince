@@ -77,13 +77,13 @@
   font-size: 11.5px;
   color: var(--textMeta);
   line-height: 1.45;
-  margin: 6px 0;
+  margin: var(--space-1) 0;
 }
 
 .cf-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 13px;
+  gap: var(--space-3);
 }
 
 @media (max-width: 640px) {
@@ -95,12 +95,12 @@
 .cf-options {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .cf-option-row {
   display: flex;
-  gap: 7px;
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -120,13 +120,13 @@
   color: var(--textSecondary);
   background: var(--bgElevated);
   border-radius: 6px;
-  padding: 2px 7px;
+  padding: var(--space-1) var(--space-2);
 }
 
 .cf-actions {
   display: flex;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: var(--space-4);
 }
 
 /* Field cell: a type-glyph tile, then the human label with the immutable API
@@ -134,7 +134,7 @@
 .cf-fieldcell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .cf-fieldicon {
@@ -156,7 +156,7 @@
 .cf-fieldmeta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -179,13 +179,13 @@
 .cf-typechip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   font-size: 11.5px;
   font-weight: 500;
   color: var(--textSecondary);
   background: var(--bgCard);
   border-radius: var(--r-full);
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .cf-typechip svg {
