@@ -27,13 +27,19 @@ type Story = StoryObj<typeof meta>;
 
 // The real thing this was built for: model ids off an installation's price
 // sheet, which are long, namespaced, and nothing anyone types from memory.
+// The hint carries what a reader is actually choosing between: price per
+// million tokens, in → out. A row with no hint is a model whose price the sheet
+// could not state — offered, but not priced.
 const MODELS: readonly ComboBoxSuggestion[] = [
-  { value: "gemini-3.5-flash", hint: "premium" },
-  { value: "gemini-3.1-flash-lite", hint: "cheap" },
-  { value: "gemini-3.1-pro-preview", hint: "frontier" },
-  { value: "mistralai/mistral-small-3.2-24b-instruct" },
-  { value: "mistralai/mistral-large-2512" },
-  { value: "deepseek/deepseek-v4-flash" },
+  { value: "gemini-3.5-flash", hint: "US$1.50 → US$9.00" },
+  { value: "gemini-3.1-flash-lite", hint: "US$0.25 → US$1.50" },
+  { value: "gemini-3.1-pro-preview", hint: "US$2.00 → US$12.00" },
+  {
+    value: "mistralai/mistral-small-3.2-24b-instruct",
+    hint: "US$0.10 → US$0.30",
+  },
+  { value: "mistralai/mistral-large-2512", hint: "US$0.50 → US$1.50" },
+  { value: "deepseek/deepseek-v4-flash", hint: "US$0.14 → US$0.28" },
   { value: "openai/gpt-oss-120b" },
 ];
 

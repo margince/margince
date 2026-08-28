@@ -45,14 +45,34 @@ type CapturedRouting = {
 };
 
 // The price sheet, which is also the catalogue this card offers from: a model
-// outside it serves calls and reports UNPRICED. Only the three fields the
-// picker reads — the four prices are the endpoint's business, not this card's.
+// outside it serves calls and reports UNPRICED. The full wire row, prices
+// included — the picker renders them, so a fixture without them is not the
+// shape this screen receives.
+function sheetRow(
+  provider: string,
+  model_id: string,
+  lane: "chat" | "embeddings",
+  input_per_mtok: string,
+  output_per_mtok: string,
+) {
+  return {
+    provider,
+    model_id,
+    lane,
+    input_per_mtok,
+    output_per_mtok,
+    cache_read_per_mtok: "0",
+    cache_write_per_mtok: "0",
+    effective_date: "2026-08-01",
+  };
+}
+
 const SHEET = [
-  { provider: "gemini", model_id: "gemini-3.5-flash", lane: "chat" },
-  { provider: "gemini", model_id: "gemini-3.1-flash-lite", lane: "chat" },
-  { provider: "gemini", model_id: "gemini-3.1-pro-preview", lane: "chat" },
-  { provider: "gemini", model_id: "gemini-embedding-001", lane: "embeddings" },
-  { provider: "anthropic", model_id: "claude-opus-4-8", lane: "chat" },
+  sheetRow("gemini", "gemini-3.5-flash", "chat", "1.50", "9.00"),
+  sheetRow("gemini", "gemini-3.1-flash-lite", "chat", "0.25", "1.50"),
+  sheetRow("gemini", "gemini-3.1-pro-preview", "chat", "2.00", "12.00"),
+  sheetRow("gemini", "gemini-embedding-001", "embeddings", "0.15", "0"),
+  sheetRow("anthropic", "claude-opus-4-8", "chat", "5.00", "25.00"),
 ];
 
 const BOUND = {
@@ -341,17 +361,19 @@ describe("AiRoutingCard", () => {
 
     const tier = screen.getByTestId("ai-routing-tier-premium");
     await user.click(within(tier).getByRole("combobox", { name: "Model" }));
+    // The row says both: which model, and what it costs per million tokens in
+    // → out, which is what a reader is choosing between.
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
     expect(offered).toEqual([
-      "gemini-3.1-flash-lite",
-      "gemini-3.1-pro-preview",
-      "gemini-3.5-flash",
+      "gemini-3.1-flash-liteUS$0.25 → US$1.50",
+      "gemini-3.1-pro-previewUS$2.00 → US$12.00",
+      "gemini-3.5-flashUS$1.50 → US$9.00",
     ]);
     // Neither the embedder nor another vendor's model.
-    expect(offered).not.toContain("gemini-embedding-001");
-    expect(offered).not.toContain("claude-opus-4-8");
+    expect(offered.join(" ")).not.toContain("gemini-embedding-001");
+    expect(offered.join(" ")).not.toContain("claude-opus-4-8");
   });
 
   it("binds the model a reader picks off the list", async () => {
@@ -365,7 +387,7 @@ describe("AiRoutingCard", () => {
     await pickSuggestion(
       user,
       within(tier).getByRole("combobox", { name: "Model" }),
-      "gemini-3.1-pro-preview",
+      /^gemini-3\.1-pro-preview/,
     );
     await user.click(screen.getByRole("button", { name: /save routing/i }));
 

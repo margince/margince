@@ -5955,7 +5955,7 @@ export const de = {
     "Einmal gesendet und im Schlüsseltresor versiegelt. Ist stattdessen {envVar} in der Umgebung gesetzt, liest der Server ihn von dort.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
+    "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.google.title": "Google-App verbinden",
   "firstRun.google.sub":
@@ -6006,7 +6006,7 @@ export const de = {
     "Die Host-Wurzel des Anbieters, ohne Versionssegment. Der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
-    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
+    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt — je Million Token, Eingabe → Ausgabe. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",

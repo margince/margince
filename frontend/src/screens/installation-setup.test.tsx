@@ -23,29 +23,54 @@ afterEach(() => {
 type Step = { step: string; configured: boolean; blocking: boolean };
 
 // The seeded price sheet a fresh installation is provisioned with, which is
-// also the catalogue both model fields offer from. Only the three columns the
-// picker reads.
+// also the catalogue both model fields offer from. The full wire row, prices
+// included — the picker renders them.
+function sheetRow(
+  provider: string,
+  model_id: string,
+  lane: "chat" | "embeddings",
+  input_per_mtok: string,
+  output_per_mtok: string,
+) {
+  return {
+    provider,
+    model_id,
+    lane,
+    input_per_mtok,
+    output_per_mtok,
+    cache_read_per_mtok: "0",
+    cache_write_per_mtok: "0",
+    effective_date: "2026-08-01",
+  };
+}
+
 const SEEDED_SHEET = [
-  { provider: "gemini", model_id: "gemini-3.1-flash-lite", lane: "chat" },
-  { provider: "gemini", model_id: "gemini-3.5-flash", lane: "chat" },
-  { provider: "gemini", model_id: "gemini-embedding-001", lane: "embeddings" },
-  {
-    provider: "openai_compatible",
-    model_id: "mistralai/mistral-large-2512",
-    lane: "chat",
-  },
+  sheetRow("gemini", "gemini-3.1-flash-lite", "chat", "0.25", "1.50"),
+  sheetRow("gemini", "gemini-3.5-flash", "chat", "1.50", "9.00"),
+  sheetRow("gemini", "gemini-embedding-001", "embeddings", "0.15", "0"),
+  sheetRow(
+    "openai_compatible",
+    "mistralai/mistral-large-2512",
+    "chat",
+    "0.50",
+    "1.50",
+  ),
   // The OpenRouter preset's own two, which the sheet always carries — a preset
   // naming a model SeedModelRates does not price fails a backend gate.
-  {
-    provider: "openai_compatible",
-    model_id: "mistralai/mistral-small-3.2-24b-instruct",
-    lane: "chat",
-  },
-  {
-    provider: "openai_compatible",
-    model_id: "openai/text-embedding-3-small",
-    lane: "embeddings",
-  },
+  sheetRow(
+    "openai_compatible",
+    "mistralai/mistral-small-3.2-24b-instruct",
+    "chat",
+    "0.10",
+    "0.30",
+  ),
+  sheetRow(
+    "openai_compatible",
+    "openai/text-embedding-3-small",
+    "embeddings",
+    "0.02",
+    "0",
+  ),
 ];
 
 /** The server's answer, in the order the server gives it. */
@@ -235,7 +260,10 @@ describe("the first-run setup gate", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["gemini-3.1-flash-lite", "gemini-3.5-flash"]);
+    ).toEqual([
+      "gemini-3.1-flash-liteUS$0.25 → US$1.50",
+      "gemini-3.5-flashUS$1.50 → US$9.00",
+    ]);
     await user.keyboard("{Escape}");
 
     await user.click(screen.getByRole("combobox", { name: "Embedding model" }));
@@ -243,7 +271,7 @@ describe("the first-run setup gate", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["gemini-embedding-001"]);
+    ).toEqual(["gemini-embedding-001US$0.15"]);
   });
 
   it("binds the model a reader picks off the list", async () => {
@@ -254,7 +282,7 @@ describe("the first-run setup gate", () => {
     await pickSuggestion(
       user,
       screen.getByRole("combobox", { name: "Model" }),
-      "gemini-3.5-flash",
+      /^gemini-3\.5-flash/,
     );
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -306,8 +334,8 @@ describe("the first-run setup gate", () => {
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual([
-      "mistralai/mistral-large-2512",
-      "mistralai/mistral-small-3.2-24b-instruct",
+      "mistralai/mistral-large-2512US$0.50 → US$1.50",
+      "mistralai/mistral-small-3.2-24b-instructUS$0.10 → US$0.30",
     ]);
   });
 });

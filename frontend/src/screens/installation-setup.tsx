@@ -7,7 +7,7 @@ import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { suggestionsFor, useAiModelCatalogue } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { problemMessageOf, throwProblem } from "./common";
@@ -120,6 +120,7 @@ function useBindModels() {
 /** The AI step: one vendor, one key, the two models it will serve. */
 function AiStep() {
   const t = useT();
+  const { locale } = useLocale();
   const [choice, setChoice] = useState<SetupProviderId>("gemini");
   const preset = SETUP_PROVIDERS[choice];
   const [apiKey, setApiKey] = useState("");
@@ -250,6 +251,7 @@ function AiStep() {
                 catalogue.data,
                 preset.provider,
                 "chat",
+                locale,
               )}
               disabled={busy}
               onChange={setChatModel}
@@ -265,6 +267,7 @@ function AiStep() {
                 catalogue.data,
                 preset.provider,
                 "embeddings",
+                locale,
               )}
               disabled={busy}
               onChange={setEmbedModel}

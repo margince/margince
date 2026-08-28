@@ -9,7 +9,7 @@ import { ComboBox } from "../design-system/combobox";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import {
   type ModelCatalogue,
   type ModelLane,
@@ -267,6 +267,7 @@ function AdapterFields<
   onChange: (next: B) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
       <Field label={label}>
@@ -294,7 +295,12 @@ function AdapterFields<
           <ComboBox
             {...control}
             value={binding.model}
-            suggestions={suggestionsFor(catalogue, binding.provider, lane)}
+            suggestions={suggestionsFor(
+              catalogue,
+              binding.provider,
+              lane,
+              locale,
+            )}
             disabled={disabled}
             onChange={(model) => onChange({ ...binding, model })}
           />

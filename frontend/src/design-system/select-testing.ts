@@ -54,8 +54,13 @@ export async function pickOption(
  * listbox, and thirty files doing that by hand encode the markup thirty times.
  *
  * ```ts
- * await pickSuggestion(user, screen.getByRole("combobox", { name: "Model" }), "gemini-3.5-flash");
+ * await pickSuggestion(user, screen.getByRole("combobox", { name: "Model" }), /^gemini-3\.5-flash/);
  * ```
+ *
+ * A suggestion's accessible name is the WHOLE row — its value and whatever hint
+ * sits beside it, which is what a screen reader hears — so a bare string has to
+ * match all of it. Pass a RegExp anchored on the value when the hint is not the
+ * part you mean.
  *
  * The press is `pointerDown`-suppressed inside the component so focus stays in
  * the text box; a plain `user.click` on the option is therefore the whole

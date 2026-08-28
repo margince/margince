@@ -6,6 +6,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { ComboBoxSuggestion } from "../design-system/combobox";
 import { stable } from "../format/collate";
+import { formatUsdPerMTok } from "../format/format";
+import type { Locale } from "../i18n";
 
 /**
  * Which models this installation can bind, for the two screens that bind one.
@@ -55,6 +57,41 @@ export function useAiModelCatalogue() {
 }
 
 /**
+ * What one model costs, short enough to sit beside its id in a dropdown row.
+ *
+ * A chat model is priced on BOTH sides and the output rate is the larger one —
+ * five times the input across most of this sheet — so showing input alone would
+ * rank the list by the number that matters least. The arrow is the whole
+ * explanation: what goes in, what comes out. An embedding lane has no output at
+ * all, so a second figure there would be a zero that means "not applicable"
+ * rendered as if it were a price.
+ */
+// A price the sheet cannot state. Blank counts, and it is the case worth
+// spelling out: `Number("")` is 0, not NaN, so an absent price would otherwise
+// render as US$0.00 — and free is the one thing this product is careful never
+// to say by accident.
+function unreadablePrice(price: string): boolean {
+  return price.trim() === "" || !Number.isFinite(Number(price));
+}
+
+function priceHint(rate: ModelRate, locale: Locale): string | undefined {
+  // The hint is decoration, so an unreadable sheet offers the model without a
+  // price — never a NaN in the list, and never a throw inside a render, which
+  // takes the whole settings page down with it.
+  if (
+    unreadablePrice(rate.input_per_mtok) ||
+    unreadablePrice(rate.output_per_mtok)
+  ) {
+    return undefined;
+  }
+  const shown = formatUsdPerMTok(rate.input_per_mtok, locale);
+  if (rate.lane === "embeddings") {
+    return shown;
+  }
+  return `${shown} → ${formatUsdPerMTok(rate.output_per_mtok, locale)}`;
+}
+
+/**
  * The models to offer for one field: this provider's, in this lane, by id.
  *
  * Sorted rather than left in the server's order because the server's order is
@@ -70,9 +107,10 @@ export function suggestionsFor(
   catalogue: ModelCatalogue,
   provider: string,
   lane: ModelLane,
+  locale: Locale,
 ): readonly ComboBoxSuggestion[] {
   return (catalogue ?? [])
     .filter((r) => r.provider === provider && r.lane === lane)
-    .map((r) => ({ value: r.model_id }))
+    .map((r) => ({ value: r.model_id, hint: priceHint(r, locale) }))
     .sort((a, b) => stable(a.value, b.value));
 }
