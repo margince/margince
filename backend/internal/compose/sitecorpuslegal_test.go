@@ -123,7 +123,11 @@ func TestLegalEntityDetailCountsWhatWasPrinted(t *testing.T) {
 	}{
 		{"name only", corpusLegalEntity{Name: "Acme GmbH"}, 0},
 		{"with address", corpusLegalEntity{Name: "Acme GmbH", RegisteredAddress: "Kiel"}, 1},
-		{"the whole block", corpusLegalEntity{Name: "Acme GmbH", RegisteredAddress: "Kiel", RegisterNumber: "HRB 1"}, 2},
+		{"with a register entry", corpusLegalEntity{Name: "Acme GmbH", RegisteredAddress: "Kiel", RegisterNumber: "HRB 1"}, 2},
+		{"the whole block", corpusLegalEntity{
+			Name: "Acme GmbH", RegisteredAddress: "Kiel", RegisterNumber: "HRB 1", VatNumber: "DE1",
+		}, 3},
+		{"a VAT ID counts like the register entry beside it", corpusLegalEntity{Name: "Acme GmbH", VatNumber: "DE1"}, 1},
 		{"blank is not printed", corpusLegalEntity{Name: "Acme GmbH", RegisteredAddress: "  "}, 0},
 	} {
 		if got := legalEntityDetail(tc.entity); got != tc.want {
@@ -227,6 +231,79 @@ func TestCensusFillsTheAddressTheProfileLaneMissed(t *testing.T) {
 		if f.EvidenceSnippet == "" || f.SourceURL != impressum {
 			t.Errorf("%s arrived without evidence or a source page", f.Field)
 		}
+	}
+}
+
+// A VAT ID is an identity when no register number is printed.
+//
+// A tax office issues one per company, so two sightings sharing one are the
+// same company however their locales name it, and two carrying different ones
+// are two companies however alike their names read. Without this a notice
+// printing only VAT IDs had no identity at all: one entity split under its
+// locale names and could trip the multi-entity abstention, and two companies
+// under one name merged into whichever the crawl saw first.
+func TestAVatNumberIsAnIdentityWhereNoRegisterNumberIs(t *testing.T) {
+	const imprint = "https://example.com/impressum"
+	same := dedupeLegalEntities([]corpusLegalEntity{
+		{Name: "Acme GmbH", VatNumber: "DE111111111", SourceURL: imprint},
+		{Name: "Acme Deutschland", VatNumber: "DE111111111", SourceURL: imprint},
+	})
+	if len(same) != 1 {
+		t.Errorf("one VAT ID under two locale names folded to %d entities, want 1: %+v", len(same), same)
+	}
+
+	distinct := dedupeLegalEntities([]corpusLegalEntity{
+		{Name: "Acme GmbH", VatNumber: "DE111111111", SourceURL: imprint},
+		{Name: "Acme GmbH", VatNumber: "DE222222222", SourceURL: imprint},
+	})
+	if len(distinct) != 2 {
+		t.Errorf("two VAT IDs under one name folded to %d entities, want 2: %+v", len(distinct), distinct)
+	}
+}
+
+// Two sightings of one entity on one page keep BOTH numbers.
+//
+// An imprint block naming the address and the VAT ID and another naming the
+// address and the register entry tie on how much each states, so a rule that
+// kept the richer sighting whole kept whichever came first and dropped the
+// other's number. They are three facts about one company and the page order
+// decides nothing.
+func TestOneEntitySeenTwiceKeepsBothItsNumbers(t *testing.T) {
+	const imprint = "https://example.com/impressum"
+	got := dedupeLegalEntities([]corpusLegalEntity{
+		{Name: "Acme GmbH", RegisteredAddress: "Werkstr. 1", VatNumber: "DE111111111", SourceURL: imprint},
+		{Name: "Acme GmbH", RegisteredAddress: "Werkstr. 1", RegisterNumber: "HRB 42", SourceURL: imprint},
+	})
+	if len(got) != 1 {
+		t.Fatalf("one entity seen twice folded to %d, want 1: %+v", len(got), got)
+	}
+	if got[0].RegisterNumber != "HRB 42" || got[0].VatNumber != "DE111111111" {
+		t.Errorf("the fold dropped a number: %+v", got[0])
+	}
+}
+
+// A detail is never borrowed across pages, because the evidence would lie.
+//
+// An entity carries ONE snippet and one source URL, and every field filled
+// from it is published citing them. A number taken from another page would
+// arrive quoting a passage that never printed it — the claim the no-guess
+// gate exists to refuse.
+func TestADetailIsNeverBorrowedFromAnotherPage(t *testing.T) {
+	got := dedupeLegalEntities([]corpusLegalEntity{
+		{
+			Name: "Acme GmbH", RegisteredAddress: "Werkstr. 1", RegisterNumber: "HRB 42",
+			EvidenceSnippet: "Acme GmbH, Werkstr. 1, HRB 42", SourceURL: "https://example.com/impressum",
+		},
+		{
+			Name: "Acme GmbH", VatNumber: "DE111111111",
+			EvidenceSnippet: "Acme GmbH, USt-IdNr. DE111111111", SourceURL: "https://example.com/en/imprint",
+		},
+	})
+	if len(got) != 1 {
+		t.Fatalf("one entity across two locales folded to %d, want 1: %+v", len(got), got)
+	}
+	if got[0].VatNumber != "" {
+		t.Errorf("a VAT ID from another page rode in on this page's evidence: %+v", got[0])
 	}
 }
 

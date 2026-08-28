@@ -203,6 +203,7 @@ function collapseWhitespace(value: string): string {
 export const LEGAL_BLOCK: ReadonlySet<string> = new Set([
   "legal_name",
   "registered_address",
+  "register_number",
   "register_vat",
 ]);
 
