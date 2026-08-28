@@ -126,6 +126,8 @@ type recordingImports struct {
 	stubImports
 	stored    *bool
 	suggested map[string]string
+	columns   []string
+	targets   []string
 }
 
 func (r recordingImports) ProfileSource(
@@ -134,10 +136,15 @@ func (r recordingImports) ProfileSource(
 	if r.stored != nil {
 		*r.stored = true
 	}
-	return crmcontracts.ImportSourceProfile{
+	profile := crmcontracts.ImportSourceProfile{
 		Object:           crmcontracts.ImportObject(object),
 		SuggestedMapping: r.suggested,
-	}, nil
+		Targets:          r.targets,
+	}
+	for _, header := range r.columns {
+		profile.Columns = append(profile.Columns, crmcontracts.ImportColumn{Header: header})
+	}
+	return profile, nil
 }
 
 // The approval a person sees says what the import will DO.
@@ -191,4 +198,57 @@ type reportlessImports struct{ stubImports }
 
 func (reportlessImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
 	return crmcontracts.ImportRunReport{}, errors.New("the report is gone")
+}
+
+// TestAProposalThatPlacesOnlySomeColumnsIsRefused is the shape a partial
+// proposal fails in.
+//
+// The proposal matches names and nothing more, so a file spelling its columns
+// the way a human would — "Company", "City", "Band" — reaches only `id`. A
+// screen draws the rest as blanks somebody fills; a tool caller sees a mapping
+// that looks like an answer, validates clean, and commits an update with no
+// changed fields. That is an import reporting success and writing nothing.
+func TestAProposalThatPlacesOnlySomeColumnsIsRefused(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company", "City", "Country", "Band"},
+		targets:   []string{"display_name", "address.city", "address.country", "size_band", "id"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company,City,Country,Band\nx,Acme,Essen,DE,201-500\n"}`))
+	if err == nil {
+		t.Fatal("a proposal that placed one column of five was accepted")
+	}
+	message := err.Error()
+	for _, want := range []string{`"Company"`, `"City"`, `"Country"`, `"Band"`, "display_name", "size_band"} {
+		if !strings.Contains(message, want) {
+			t.Errorf("the refusal %q does not name %s — a caller cannot fix what it is not told", message, want)
+		}
+	}
+}
+
+// A proposal that places every column is the one case where accepting the
+// proposal whole is honest, and it still goes through.
+func TestAProposalThatPlacesEveryColumnIsAccepted(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"display_name": "display_name", "size_band": "size_band"},
+		columns:   []string{"display_name", "size_band"},
+		targets:   []string{"display_name", "size_band"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"display_name,size_band\nAcme,201-500\n"}`))
+	if err != nil {
+		t.Fatalf("a complete proposal was refused: %v", err)
+	}
+}
+
+// A caller who named even one column has made a choice about the rest, so the
+// refusal does not fire — the result's `unmapped` list is what reports it.
+func TestACallersOwnMappingIsNotSecondGuessed(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		columns: []string{"Company", "City"},
+		targets: []string{"display_name", "address.city"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"Company,City\nAcme,Essen\n","mapping":{"Company":"display_name"}}`))
+	if err != nil {
+		t.Fatalf("a caller's own partial mapping was refused: %v", err)
+	}
 }

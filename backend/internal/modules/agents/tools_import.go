@@ -30,6 +30,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -118,7 +120,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `","` + importObjectPerson + `"]},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands."},
+			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
 			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For people an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
@@ -165,6 +167,11 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	for column, field := range args.Mapping {
 		mapping[column] = field
 	}
+	if len(args.Mapping) == 0 {
+		if err := proposalCoversTheFile(profile, mapping); err != nil {
+			return nil, err
+		}
+	}
 
 	req := crmcontracts.CreateImportRunRequest{
 		Connector: crmcontracts.CreateImportRunRequestConnector(importConnectorCSV),
@@ -186,6 +193,62 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		Columns:  columnNames(profile),
 		Unmapped: unmappedColumns(profile, mapping),
 	})
+}
+
+// proposalCoversTheFile refuses a proposal that places some of the file's
+// columns and not others, when the caller sent no mapping of their own.
+//
+// The proposal matches NAMES, and nothing more (migration.SuggestMapping); the
+// timidity is right for the screen, which draws an unplaced column as a blank
+// the person fills. A tool caller has no blanks. Handed a proposal that maps
+// `id` and drops `Company`, `City`, `Country` and `Band`, they get something
+// plausible that validates clean and commits an update with no changed fields
+// — an import that reports success and writes nothing. A partial answer that
+// looks whole is worse than no answer, so this is the refusal that says which
+// columns it could not place and what the object can receive.
+//
+// Only when the caller sent NOTHING. A caller who named even one column has
+// made a choice about the rest, and the result's `unmapped` list reports it.
+func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map[string]string) error {
+	unplaced := unmappedColumns(profile, mapping)
+	if len(unplaced) == 0 {
+		return nil
+	}
+	// The vocabulary rides in Guidance, which is NOT bounded. Put in the cause
+	// it is echoed through echoSafe and a long header list cuts the field names
+	// off the end — taking away the one thing the refusal exists to teach,
+	// exactly when the caller most needs it.
+	return &BadArgsError{
+		Cause: fmt.Errorf(
+			"this file's columns %s match no %s field by name, so the proposal would import "+
+				"only %s and leave the rest behind — an import that reports success and "+
+				"changes nothing",
+			strings.Join(quoted(unplaced), ", "), profile.Object,
+			strings.Join(quoted(mappedColumns(mapping)), ", ")),
+		Guidance: fmt.Sprintf("send a mapping that says what each column is. A %s takes: %s",
+			profile.Object, strings.Join(profile.Targets, ", ")),
+	}
+}
+
+// mappedColumns names the columns a mapping does place, sorted so one file
+// always refuses in the same words.
+func mappedColumns(mapping map[string]string) []string {
+	out := make([]string, 0, len(mapping))
+	for column := range mapping {
+		out = append(out, column)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// quoted puts each name in quotes so a header with a space in it reads as one
+// name in the sentence.
+func quoted(names []string) []string {
+	out := make([]string, 0, len(names))
+	for _, name := range names {
+		out = append(out, strconv.Quote(name))
+	}
+	return out
 }
 
 // importConnectorCSV is the connector a pasted file is: the same one the
