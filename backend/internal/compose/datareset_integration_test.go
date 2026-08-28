@@ -112,8 +112,8 @@ func TestPreserveSetIntegrity(t *testing.T) {
 			return err
 		}
 		for _, tgt := range targets {
-			if preservedResetTables[tgt.name] {
-				t.Errorf("preserved table %q appears in the sweep target set", tgt.name)
+			if preservedResetTables[tgt] {
+				t.Errorf("preserved table %q appears in the sweep target set", tgt)
 			}
 		}
 		return nil
@@ -359,7 +359,7 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 		}
 		targetSet := make(map[string]bool, len(targets))
 		for _, target := range targets {
-			targetSet[target.name] = true
+			targetSet[target] = true
 		}
 		// tgtype bit 0x08 marks a trigger that fires on DELETE; tgisinternal
 		// excludes FK-enforcement triggers so only real guards remain.

@@ -40,8 +40,7 @@ func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string)
 	if s.schemaPool == nil {
 		return crmcontracts.CustomField{}, ErrSchemaChangesUnavailable
 	}
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return crmcontracts.CustomField{}, errors.New("customfields: no workspace bound to context")
 	}
 
@@ -55,7 +54,7 @@ func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string)
 	//craft:ignore swallowed-errors deferred rollback of a committed tx is a designed no-op; real failures already left through the operation error
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	out, err := s.setOptionsInTx(ctx, tx, wsID, id, options)
+	out, err := s.setOptionsInTx(ctx, tx, id, options)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -65,17 +64,11 @@ func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string)
 	return out, nil
 }
 
-// lockPicklistField binds the workspace GUC, takes FOR UPDATE on the
-// catalog row, and refuses a non-picklist or retired target. The GUC no
-// longer scopes the catalog — that column is gone (ADR-0091 §8 phase D) —
-// but the audit row this transaction goes on to write still stamps its
-// workspace from it, so the binding stays until audit_log drops the column
-// too. The type check answers first — type is the operation's precondition;
-// the status gate then freezes a retired field's options (mutable).
-func lockPicklistField(ctx context.Context, tx pgx.Tx, wsID ids.UUID, id ids.UUID) (lockedField, error) {
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID.String()); err != nil {
-		return lockedField{}, fmt.Errorf("customfields: binding workspace GUC: %w", err)
-	}
+// lockPicklistField takes FOR UPDATE on the catalog row and refuses a
+// non-picklist or retired target. The type check answers first — type is
+// the operation's precondition; the status gate then freezes a retired
+// field's options (mutable).
+func lockPicklistField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
 		`SELECT object, column_name, type, status, label, options, version
@@ -96,11 +89,11 @@ func lockPicklistField(ctx context.Context, tx pgx.Tx, wsID ids.UUID, id ids.UUI
 	return f, nil
 }
 
-// setOptionsInTx is SetOptions' transaction body: GUC + row lock →
+// setOptionsInTx is SetOptions' transaction body: row lock →
 // picklist check → advisory lock → CHECK regeneration (owner) →
 // downgrade → catalog UPDATE + audit.
-func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, wsID ids.UUID, id ids.UUID, options []string) (crmcontracts.CustomField, error) {
-	f, err := lockPicklistField(ctx, tx, wsID, id)
+func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, options []string) (crmcontracts.CustomField, error) {
+	f, err := lockPicklistField(ctx, tx, id)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}

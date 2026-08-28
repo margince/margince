@@ -395,14 +395,10 @@ func resetPassword(ctx context.Context, conn *pgx.Conn, email string, stdin io.R
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is checked, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Bind the installation's singleton organization (FORCE RLS applies
-	// to the owner role too). More than one active workspace is the same
-	// operator-led-migration refusal every process role gives.
+	// More than one active workspace is the same operator-led-migration
+	// refusal every process role gives.
 	wsID, err := singletonWorkspace(ctx, tx)
 	if err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID.String()); err != nil {
 		return err
 	}
 	if err := identity.OperatorResetPassword(ctx, tx, wsID, email, newPassword); err != nil {
