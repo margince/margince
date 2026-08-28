@@ -2,6 +2,8 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { verticalPlacement } from "./anchored";
 import {
@@ -83,10 +85,11 @@ it("draws its panel outside the container that would clip it", async () => {
   expect(items?.getAttribute("style")).toContain("top:");
 });
 
-// The panel is a sibling of the trigger in the DOM now, so "click outside" has
-// to mean outside BOTH — otherwise pressing an item reads as clicking away and
-// closes the menu under the reader's finger.
-it("stays open when an item inside the portalled panel is clicked", async () => {
+// An item that DID something is finished, and a menu still standing over the
+// page after it reads as a control that never took the press. Focus goes back
+// to the trigger rather than being dropped on <body> with the panel that held
+// it: the reader's place is the button they opened.
+it("closes and returns focus to the trigger when an item is chosen", async () => {
   const user = userEvent.setup();
   render(
     <OverflowMenu label="More actions">
@@ -97,6 +100,90 @@ it("stays open when an item inside the portalled panel is clicked", async () => 
   await user.click(trigger);
 
   await user.click(screen.getByRole("button", { name: "Archive" }));
+
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(document.activeElement).toBe(trigger);
+});
+
+// The panel is a sibling of the trigger in the DOM, so "click outside" has to
+// mean outside BOTH — otherwise pressing anything in the panel reads as
+// clicking away. The caller's own prose lives in here too (the one sentence
+// saying why an archived record refuses these verbs), and a click landing on a
+// paragraph has chosen nothing.
+it("stays open when the click inside the panel chose nothing", async () => {
+  const user = userEvent.setup();
+  render(
+    <OverflowMenu label="More actions">
+      <p>Archived accounts take no writes.</p>
+      <button type="button">Archive</button>
+    </OverflowMenu>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+  await user.click(trigger);
+
+  await user.click(screen.getByText("Archived accounts take no writes."));
+
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+});
+
+// A toggle is not a verb. The reader opened this menu to set two switches, and
+// the control that drew a region open is also the only one that closes it — so
+// an item that SAYS it is a setting (aria-pressed, aria-expanded) leaves the
+// panel standing while the verbs beside it do not.
+it("stays open when the item chosen sets something rather than doing it", async () => {
+  const user = userEvent.setup();
+  function InspectorToggle() {
+    const [open, setOpen] = useState(false);
+    return (
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((was) => !was)}
+      >
+        Runs
+      </button>
+    );
+  }
+  render(
+    <OverflowMenu label="More actions">
+      <InspectorToggle />
+    </OverflowMenu>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+  await user.click(trigger);
+
+  await user.click(screen.getByRole("button", { name: "Runs" }));
+
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+});
+
+// The one item that must NOT close the menu under itself: one whose whole job
+// is to put a dialog up. A dialog restores focus, on close, to the control that
+// opened it — so hiding that control first strands the reader on <body>. The
+// menu reads the same `.overlay` its Escape handler reads, one commit after the
+// press, which is the first moment the answer exists.
+it("stays open when the item it just ran opened a dialog", async () => {
+  const user = userEvent.setup();
+  function DialogAction() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)}>
+          Merge with…
+        </button>
+        {open && createPortal(<div className="overlay" />, document.body)}
+      </>
+    );
+  }
+  render(
+    <OverflowMenu label="More actions">
+      <DialogAction />
+    </OverflowMenu>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+  await user.click(trigger);
+
+  await user.click(screen.getByRole("button", { name: "Merge with…" }));
 
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
 });

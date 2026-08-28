@@ -521,6 +521,8 @@ function CompanyEditAction({
   return (
     <EditAction<Organization>
       disabledReasonId={disabledReasonId}
+      // This one lives in the overflow menu, among rows that say what they do.
+      labelled
       label={t("record.edit")}
       savedMessage={(saved) =>
         t("record.saveDone", { name: saved.display_name })
@@ -681,8 +683,8 @@ export function CompanyActionBadges({
           disabledReasonId={refusedByState}
         />
         {/* Merge has no incumbent-first projection — the seam refuses it
-            outright (overlay/provider_writes.go Merge) — unlike
-            edit/archive above, which it serves, so it stays hidden here.
+            outright (overlay/provider_writes.go Merge) — unlike edit and
+            archive, which it serves, so it stays hidden here.
             Unsupported is the OTHER cause STATE-4a sorts, and absence is
             its answer: there is no fact about this account to report. */}
         {!overlay && (
@@ -716,24 +718,15 @@ export function CompanyActionBadges({
             })}
           />
         )}
-        <ArchiveAction
-          disabledReasonId={refusedByState}
-          label={t("record.archive")}
-          confirmText={t("record.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: org.display_name })}
-          archive={async () => {
-            const { data, error } = await api.DELETE("/organizations/{id}", {
-              params: { path: { id: org.id } },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
-          }}
-          invalidate="organizations"
-          recordKey="organization"
-          onArchived={() => navigate({ screen: "companies" })}
-        />
+        {/* The way in to the partner programme for an account that has none.
+            The tab only shows once there IS one, so without this the first
+            partner row would be unreachable — this is the same form, asked
+            for rather than offered. */}
+        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+            {t("org.partnerSetUp")}
+          </Button>
+        )}
         {/* A record grant probes the native row via auth.EnsureLinkTarget,
             which a mirrored record has no row for — sharing stays hidden
             in overlay regardless of record type (see deals.tsx's
@@ -744,15 +737,6 @@ export function CompanyActionBadges({
             recordId={org.id}
             disabledReasonId={refusedByState}
           />
-        )}
-        {/* The way in to the partner programme for an account that has none.
-            The tab only shows once there IS one, so without this the first
-            partner row would be unreachable — this is the same form, asked
-            for rather than offered. */}
-        {!overlay && !(org.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-            {t("org.partnerSetUp")}
-          </Button>
         )}
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
@@ -774,6 +758,28 @@ export function CompanyActionBadges({
         {onOpenDecisions && (
           <DecisionsChip view={view} onOpen={onOpenDecisions} />
         )}
+        {/* Last, and set apart by the panel's own seam (atoms.css). This is
+            the one verb here a reader cannot walk back from the header, so it
+            does not sit in the run of routine ones where a slipped pointer
+            reaches it. */}
+        <ArchiveAction
+          disabledReasonId={refusedByState}
+          label={t("record.archive")}
+          confirmText={t("record.archiveConfirm")}
+          archivedMessage={t("record.archiveDone", { name: org.display_name })}
+          archive={async () => {
+            const { data, error } = await api.DELETE("/organizations/{id}", {
+              params: { path: { id: org.id } },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="organizations"
+          recordKey="organization"
+          onArchived={() => navigate({ screen: "companies" })}
+        />
       </OverflowMenu>
     </>
   );

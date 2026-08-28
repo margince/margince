@@ -1766,16 +1766,33 @@ export function DataTable<Row>({
  * which is how two disclosures on one screen end up disagreeing about their
  * own caret. `className` is the same bargain for the row's chrome.
  */
+// Whether an item SETS something rather than doing something — a toggle, or a
+// control that draws a region open — which is the one shape of item a menu must
+// not close under.
+//
+// A verb is finished when it has run, and a menu still standing over the page
+// after it reads as a control that never took the press. A switch is not: the
+// reader came here to set two of them, and the control that opened a region is
+// also the only control that closes it again. The button says which it is —
+// `aria-pressed` and `aria-expanded` are exactly that claim — so nothing has to
+// be declared at the call site, and an item that grows a toggle later carries
+// the right behaviour the moment it says so.
+function isSetting(item: Element): boolean {
+  return (
+    item.hasAttribute("aria-pressed") || item.hasAttribute("aria-expanded")
+  );
+}
+
 // OverflowMenu folds the verbs a record offers but a reader rarely wants —
 // merge, archive, share — behind one control, so the header carries identity
 // and the frequent actions rather than a row of buttons of equal weight where
 // the destructive ones sit next to the routine ones.
 //
 // The children are the caller's own action components (each opening its own
-// confirm flow), so the menu owns only the disclosure: it closes on Escape and
-// on a click outside. It deliberately stays open when an item is clicked —
-// that item's dialog restores focus to whatever opened it, so hiding it would
-// send focus, on close, to a node that is gone.
+// confirm flow), so the menu owns only the disclosure: it closes on Escape, on
+// a click outside, and on an item being chosen — with the two exceptions
+// `isSetting` and the `.overlay` test below name, an item that SETS rather than
+// does, and one that put a dialog up which now owns the screen and the focus.
 //
 // The children are not rendered until the menu is first opened. They are
 // components with their own reads — the company's edit form alone fetches the
@@ -1798,11 +1815,35 @@ export function OverflowMenu({
 }>) {
   const [open, setOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
+  // How many times an item has been chosen. A counter rather than a flag
+  // because it is a fact that RECURS: the second press of the second item has
+  // to reach the effect below as its own event, and a boolean already true
+  // would be no change at all.
+  const [chosen, setChosen] = useState(0);
   const wrap = useRef<HTMLDivElement | null>(null);
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
   const at = useAnchoredToTrigger(open, trigger, panel);
+
+  // Choosing an item closes the menu, one commit after the press.
+  //
+  // The delay is the whole design. Some items DO something and are finished —
+  // and a menu still standing over the page after that reads as a control that
+  // did not take the press. Others only open a dialog, which restores focus on
+  // close to the control that opened it, so hiding that control first would
+  // strand the reader on <body>. Which of the two happened is not knowable
+  // while the item's own handler is running: the dialog is not in the document
+  // until React has committed the state that handler set. So the press records
+  // that it happened, and this effect — after that commit — reads the same
+  // `.overlay` the Escape handler reads and answers accordingly.
+  useEffect(() => {
+    if (chosen === 0 || document.querySelector(".overlay")) {
+      return;
+    }
+    setOpen(false);
+    trigger.current?.focus();
+  }, [chosen]);
 
   useEffect(() => {
     if (!open) {
@@ -1854,9 +1895,13 @@ export function OverflowMenu({
     <div className="overflow-menu" ref={wrap}>
       {/* A disclosure, not an ARIA menu. `role="menu"` promises arrow-key
           navigation and a roving tabstop; the items here are the caller's own
-          buttons, each opening its own dialog, and Tab through them is the
-          behaviour a reader actually gets. Announcing a menu we do not
-          implement is worse than announcing the expandable region we do. */}
+          buttons — each running its own verb, opening its own dialog or setting
+          its own switch — and Tab through them is the behaviour a reader
+          actually gets. The rows below are DRAWN as a menu, which changes
+          nothing about that: the look is what tells a reader these are choices
+          in a list, and the announcement still has to describe what the
+          keyboard will really do. Announcing a menu we do not implement is
+          worse than announcing the expandable region we do. */}
       <button
         type="button"
         ref={trigger}
@@ -1875,16 +1920,11 @@ export function OverflowMenu({
       {/* Hidden, never unmounted. The items own their own dialogs, so
           unmounting them on close would throw away the dialog the click just
           opened. `hidden` also takes them out of the tab order, so a closed
-          menu is closed for a keyboard reader too.
-
-          Clicking an item does NOT close the panel. The item opens a dialog
-          that covers the page, and a dialog restores focus to whatever opened
-          it — so hiding that item first would send focus, on close, to a node
-          that is no longer there. Leaving the panel open keeps the return
-          target visible; the outside-click below then closes it on the
-          reader's next move. */}
+          menu is closed for a keyboard reader too. */}
       {createPortal(
-        <div
+        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it observes that one of the caller's controls inside it was pressed
+        // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path IS this handler; Enter and Space on a button dispatch a click that bubbles here
+        <div // NOSONAR: listener observes activation of the caller's own buttons; the panel itself is not pressable
           id={panelId}
           ref={panel}
           className="overflow-menu-items"
@@ -1893,6 +1933,20 @@ export function OverflowMenu({
             top: `${at.top}px`,
             left: `${at.left}px`,
             maxHeight: `${at.maxHeight}px`,
+          }}
+          onClick={(event) => {
+            if (!(event.target instanceof Element)) {
+              return;
+            }
+            // A control was pressed, not merely the panel. The caller also puts
+            // PROSE in here — the one sentence saying why an archived record
+            // refuses these verbs — and a click landing on a paragraph has
+            // chosen nothing. A refused item never arrives at all: `reason` and
+            // `reasonId` disable the button natively.
+            const item = event.target.closest("button, a");
+            if (item && !isSetting(item)) {
+              setChosen((count) => count + 1);
+            }
           }}
         >
           {everOpened && children}

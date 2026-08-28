@@ -1,6 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Lock, Mail, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import {
   AttainmentRing,
   Avatar,
@@ -976,22 +983,25 @@ export const Dialog: Story = {
 // open, so a story that merely renders it is a lone button in the canvas.
 // Pressing the trigger on mount is the only way to catalog the panel without
 // giving the component a prop it does not have.
-function OverflowMenuDemo() {
+function OverflowMenuDemo({
+  openOnMount,
+  children,
+}: Readonly<{ openOnMount: boolean; children: ReactNode }>) {
   const wrap = useRef<HTMLDivElement>(null);
   const pressed = useRef(false);
   useEffect(() => {
     // The trigger TOGGLES, so this must happen exactly once — a mount effect
     // invoked twice would open the menu and close it again.
-    if (pressed.current) {
+    if (!openOnMount || pressed.current) {
       return;
     }
     pressed.current = true;
     wrap.current
       ?.querySelector<HTMLButtonElement>(".overflow-menu-trigger")
       ?.click();
-  }, []);
+  }, [openOnMount]);
   return (
-    // The panel is absolutely positioned and right-aligned to its trigger, the
+    // The panel is anchored to its trigger and hangs off the trigger's END, the
     // way a record header carries it — so the story puts the trigger at the
     // right edge (the panel opens inward, not off the page) and reserves the
     // height it drops into.
@@ -1001,20 +1011,61 @@ function OverflowMenuDemo() {
         display: "flex",
         justifyContent: "flex-end",
         alignItems: "flex-start",
-        minHeight: "14rem",
+        minHeight: "18rem",
       }}
     >
-      <OverflowMenu label="More actions">
-        <Button>Merge with…</Button>
-        <Button>Export</Button>
-        <Button variant="danger">Archive</Button>
-      </OverflowMenu>
+      <OverflowMenu label="More actions">{children}</OverflowMenu>
     </div>
   );
 }
 
+// The resting state, which is the one a reader sees for most of a record's
+// life: a single ghost square in the header, saying only that there is more.
+export const OverflowClosed: Story = {
+  render: () => (
+    <OverflowMenuDemo openOnMount={false}>
+      <Button>Merge with…</Button>
+      <Button variant="danger">Archive</Button>
+    </OverflowMenuDemo>
+  ),
+};
+
+// The open panel, carrying every item shape one menu can hold at once, because
+// each of these was a separate defect and every one of them was invisible while
+// the panel was reviewed with three tidy verbs in it:
+//
+//   - a row whose label LEADS WITH A GLYPH, beside rows that do not — the words
+//     have to start on one x or the menu reads as two ragged columns;
+//   - a label longer than the panel's ceiling, which wraps rather than being
+//     clipped: an item a reader cannot finish reading is one they cannot choose;
+//   - a row that is SET rather than pressed — the one item a menu must not
+//     close under, since the control that drew a region open is the only one
+//     that closes it — drawn in the accent rather than the filled bar;
+//   - a refused row, which stays listed because the refusal is information;
+//   - the destructive verb, which keeps its red and loses its fill, and sits
+//     below the seam that separates it from the routine ones.
 export const Overflow: Story = {
-  render: () => <OverflowMenuDemo />,
+  render: () => (
+    <OverflowMenuDemo openOnMount>
+      <Button>
+        <Mail aria-hidden="true" />
+        Email everyone on this account
+      </Button>
+      <Button>Merge with…</Button>
+      <Button aria-expanded="true">
+        <RefreshCw aria-hidden="true" />
+        Runs
+      </Button>
+      <Button>
+        Set up the partner programme for this account and its subsidiaries
+      </Button>
+      <Button reason="An archived account takes no writes.">Export</Button>
+      <Button variant="danger">
+        <Trash2 aria-hidden="true" />
+        Archive
+      </Button>
+    </OverflowMenuDemo>
+  ),
 };
 
 // placement="right" is the drawer form of the SAME Modal — full height on the
