@@ -118,6 +118,9 @@ BEGIN
   -- LIVE compose stack it cannot promise a clean reset of in-flight events —
   -- only stop the worker/relay before running this if that residue matters,
   -- or expect a consumer to see a handful of not-found records after a reset.
+  -- NOSONAR(sql:S1153) -- the missing WHERE is the whole intent: this clears
+  -- every staged event, and a predicate here would leave behind exactly the
+  -- rows the reset exists to remove.
   DELETE FROM event_outbox;
 
   RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its people and its configuration are untouched — run make seed-dev to fill it', targets;
