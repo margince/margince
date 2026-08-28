@@ -24269,8 +24269,8 @@ type SendEmailRequest struct {
 	// What it exists for is the link the anchor cannot have. A deal whose project was
 	// attached after the conversation started has an anchor with no project link, so every
 	// reply in that thread would stay unfiled — the composer says "this will be filed under
-	// X" and the sent message carries no link to X. A subject tag brings the customer's
-	// REply back to the right project, but only once they answer, and the outbound half is
+	// X" and the sent message carries no link to X. A subject tag brings the customer's own
+	// reply back to the right project, but only once they answer, and the outbound half is
 	// missing from the project's timeline until then.
 	//
 	// Each target is row-scope probed exactly as an account-started send's `links` are, so

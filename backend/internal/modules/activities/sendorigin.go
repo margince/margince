@@ -127,7 +127,18 @@ func (o SendOrigin) resolve(ctx context.Context, s *Store) ([]ActivityLinkInput,
 	if err := s.probeLinkTargets(ctx, o.also); err != nil {
 		return nil, err
 	}
-	return mergedLinks(inherited, o.also), nil
+	merged := mergedLinks(inherited, o.also)
+	// The bound applies to what will be WRITTEN, not to what the caller named.
+	// probeLinkTargets bounds the additions alone, and an anchor already at the
+	// limit plus one more passes that and then fails inside the staging
+	// transaction — after the consent gate has answered, after the message is
+	// prepared, and on a scheduled send days after the caller could have
+	// shortened anything. The write's own check stays; this one is what makes
+	// the refusal arrive while the sender is still at the keyboard.
+	if len(merged) > maxActivityLinks {
+		return nil, &TooManyLinksError{Count: len(merged)}
+	}
+	return merged, nil
 }
 
 // mergedLinks adds the caller's records to the anchor's, once each.

@@ -305,6 +305,10 @@ func (s *Store) scheduleSend(
 	if err != nil {
 		return ScheduledSend{}, err
 	}
+	alsoLinks, err := marshalAlsoLinks(origin)
+	if err != nil {
+		return ScheduledSend{}, err
+	}
 
 	row := ScheduledSend{
 		ID:          ids.NewV7(),
@@ -327,12 +331,12 @@ func (s *Store) scheduleSend(
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO scheduled_send
 			  (id, status, scheduled_at, scheduled_tz,
-			   origin_kind, anchor_activity_id, origin_links,
+			   origin_kind, anchor_activity_id, origin_links, also_links,
 			   payload, payload_version, scheduled_by, principal_kind,
 			   agent_actor_id, agent_passport_id, agent_on_behalf_of)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 			row.ID, row.Status, row.ScheduledAt, row.ScheduledTZ,
-			row.OriginKind, nullableAnchor(origin), originLinks,
+			row.OriginKind, nullableAnchor(origin), originLinks, alsoLinks,
 			payload, payloadVersionCurrent, row.ScheduledBy, principalKind(actor),
 			prov.ActorID, prov.PassportID, prov.OnBehalfOf,
 		); err != nil {
@@ -401,6 +405,30 @@ func nullableAnchor(o SendOrigin) *ids.UUID {
 		return &anchor
 	}
 	return nil
+}
+
+// marshalAlsoLinks freezes the records a REPLY was told to file itself under
+// beyond its anchor's, so a scheduled reply files the way an immediate one
+// does.
+//
+// It is a stored intention rather than something re-derived at fire, and it has
+// to be: the caller named these records at composition time, and there is
+// nothing at fire that could work out which ones they meant. The anchor's own
+// links are still resolved then, against the estate as it stands — a link added
+// to the conversation while the message waited belongs on it.
+//
+// Null when there are none, and null on an account origin, whose whole set is
+// origin_links. A reply that named nothing is every reply sent before the
+// column existed.
+func marshalAlsoLinks(o SendOrigin) ([]byte, error) {
+	if !o.isReply() || len(o.also) == 0 {
+		return nil, nil
+	}
+	raw, err := json.Marshal(o.also)
+	if err != nil {
+		return nil, fmt.Errorf("scheduled send: freezing the added record links: %w", err)
+	}
+	return raw, nil
 }
 
 func marshalOriginLinks(o SendOrigin) ([]byte, error) {
