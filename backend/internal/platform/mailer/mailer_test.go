@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 // fakeRelay is a minimal in-process SMTP server on the loopback — the one
@@ -177,5 +179,48 @@ func TestIsLoopbackRecognizesLocalRelaysOnly(t *testing.T) {
 		if got := isLoopback(host); got != want {
 			t.Errorf("isLoopback(%q) = %v, want %v", host, got, want)
 		}
+	}
+}
+
+// TestTheGreetingNamesTheSenderRatherThanLocalhost is what a relay operator
+// reads to attribute the mail they are carrying.
+//
+// Nothing called Hello, so net/smtp announced `localhost` — and every
+// installation announced it identically. That is worse than anonymous: it is a
+// claim, and a false one, since the mail did not come from the relay's own
+// machine.
+func TestTheGreetingNamesTheSenderRatherThanLocalhost(t *testing.T) {
+	cases := []struct {
+		name string
+		from string
+		want string
+	}{
+		{
+			name: "the sender's own domain, which the relay sees in MAIL FROM anyway",
+			from: "notifications@acme.example",
+			want: "acme.example",
+		},
+		{
+			// Nothing to announce from, so the product token stands in — still
+			// not a claim about which machine this is.
+			name: "a sender with no domain falls back to the product",
+			from: "postmaster",
+			want: outbound.MailProduct,
+		},
+		{
+			name: "an unconfigured sender still announces something",
+			from: "",
+			want: outbound.MailProduct,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := (SMTP{FromAddress: tc.from}).helloName(); got != tc.want {
+				t.Errorf("helloName() = %q, want %q", got, tc.want)
+			}
+			if got := (SMTP{FromAddress: tc.from}).helloName(); got == "localhost" {
+				t.Errorf("the greeting still claims to be the relay's own machine")
+			}
+		})
 	}
 }

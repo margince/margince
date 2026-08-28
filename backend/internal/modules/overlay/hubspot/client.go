@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -154,6 +155,10 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		return fmt.Errorf("hubspot: building request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
+	// Their administrator reads this traffic in an audit log beside their own
+	// people's, and "some Go program" is not an answer to "what is writing to
+	// our records".
+	req.Header.Set("User-Agent", outbound.MirrorHeader)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

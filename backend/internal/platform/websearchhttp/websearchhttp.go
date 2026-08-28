@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
@@ -122,6 +123,10 @@ func (b *Brave) Search(ctx context.Context, q websearch.Query) ([]websearch.Resu
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Subscription-Token", b.key)
+	// The key names the customer's ACCOUNT; the agent names the software
+	// calling under it. An operator diagnosing a spike can act on the second
+	// without cancelling the first.
+	req.Header.Set("User-Agent", outbound.SearchHeader)
 
 	resp, err := b.client.Do(req)
 	if err != nil {

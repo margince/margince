@@ -29,6 +29,7 @@ import (
 	"github.com/emersion/go-imap/v2/imapclient"
 
 	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -116,12 +117,32 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 	//craft:ignore swallowed-errors SetDeadline only errors on a closed conn; we just dialed it, and a failure surfaces as the next read timing out
 	_ = tlsConn.SetDeadline(time.Now().Add(pullDeadline))
 	client := imapclient.New(tlsConn, &imapclient.Options{})
+	announceClient(client)
 	if err := client.Login(creds.Email, creds.Password).Wait(); err != nil {
 		//craft:ignore swallowed-errors best-effort close of a session whose login already failed — the rejection is the error to report
 		_ = client.Close()
 		return nil, nil, ErrLoginRejected
 	}
 	return client, tlsConn, nil
+}
+
+// announceClient sends the RFC 2971 ID, which is how a mailbox provider names
+// this client in their own logs and throttles it by name rather than by guess.
+// Nothing sent it, so every session was anonymous to the provider carrying it.
+//
+// Only when the server advertises the extension, and a refusal is not fatal:
+// an introduction is a courtesy the session does not depend on, and declining
+// to read a person's mail because their provider would not take one would be
+// the wrong trade entirely.
+func announceClient(client *imapclient.Client) {
+	if !client.Caps().Has(imapv2.CapID) {
+		return
+	}
+	//craft:ignore swallowed-errors an introduction the provider refused changes nothing about the session; the mail is still there to read
+	_, _ = client.ID(&imapv2.IDData{
+		Name:    outbound.MailboxProduct,
+		Version: outbound.MailboxVersion,
+	}).Wait()
 }
 
 // authenticateStanding probes the credentials end to end (dial, login,

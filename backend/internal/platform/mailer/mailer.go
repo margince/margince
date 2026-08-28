@@ -18,6 +18,8 @@ import (
 	"net/smtp"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 // Mailer sends one plain-text transactional message. Implementations
@@ -76,6 +78,19 @@ func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
 	return client.Quit()
 }
 
+// helloName is what this installation announces to the relay.
+//
+// The sender's own domain, which is the honest answer and the one the relay is
+// about to see in MAIL FROM anyway — so it needs no configuration of its own
+// and differs per installation, which is the whole point. The product token
+// stands in only when the configured sender carries no domain to announce.
+func (s SMTP) helloName() string {
+	if _, domain, found := strings.Cut(s.FromAddress, "@"); found && domain != "" {
+		return domain
+	}
+	return outbound.MailProduct
+}
+
 // connect dials the relay, bounds the WHOLE exchange with one deadline
 // (a stalling relay must not pin a goroutine and socket per reset
 // request), secures the channel, and authenticates.
@@ -93,6 +108,18 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 	if err != nil {
 		closeQuietly(conn)
 		return nil, fmt.Errorf("mailer: relay %s greeting failed: %w", addr, err)
+	}
+	// Announced BEFORE STARTTLS and before AUTH, which is the only place SMTP
+	// takes it: the library re-issues the same name after the upgrade.
+	//
+	// Without this call net/smtp says `localhost`, and every installation says
+	// it identically. That is worse than anonymous — it is a claim, and a false
+	// one, since the mail did not come from the relay's own machine. A relay
+	// operator reads the EHLO name to attribute what they are carrying, and
+	// they cannot attribute a name that is the same for everyone.
+	if err := client.Hello(s.helloName()); err != nil {
+		closeQuietly(client)
+		return nil, fmt.Errorf("mailer: relay %s refused the greeting: %w", addr, err)
 	}
 	if ok, _ := client.Extension("STARTTLS"); ok {
 		if err := client.StartTLS(&tls.Config{ServerName: s.Host, MinVersion: tls.VersionTLS12}); err != nil {

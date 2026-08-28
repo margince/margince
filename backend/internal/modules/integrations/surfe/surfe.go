@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -227,6 +228,10 @@ func (a *Adapter) call(ctx context.Context, cred provider.Credential, method, pa
 	req.Header.Set("Authorization", "Bearer "+string(cred))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	// The key names the customer's account; the agent names the software
+	// calling under it, so an operator throttling one is not throttling the
+	// other.
+	req.Header.Set("User-Agent", outbound.EnrichHeader)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
