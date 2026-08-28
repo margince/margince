@@ -1,0 +1,56 @@
+name: first_message_from_an_intent_alone
+task: draft_reply
+site: first
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The thinnest brief this product sends a model. draft_email over MCP names the
+# records the conversation is FILED under, not records it is written FROM, so
+# what reaches the site is the caller's own sentence and the envelope — no
+# company, no recipient, no history, and nothing to fall back on.
+#
+# It is the case that separates writing from filling in. A model given almost
+# nothing is at its most inventive, and the one thing it must not invent here is
+# the very thing an opening line reaches for: a prior meeting, an earlier email,
+# a name it was never told.
+fixture:
+  output_language: en
+  conversation_state: fresh
+  silence_days: "0"
+  now: 2026-08-11T09:00:00Z
+  sender_name: Anna Krüger
+  sender_email: anna.krueger@example.com
+  intent: Introduce ourselves after meeting at the K5 conference and ask for a short call.
+expect:
+  outcome: accepted
+  answer: written
+  rubric: >
+    This is the first email of a new conversation, written from the stated
+    intent and nothing else. Three things decide the case.
+
+    Nothing invented. The ONLY facts supplied are the sender's name and email,
+    the date, and the caller's sentence: they met at K5 and want a short call. A
+    draft that names a company, a product, a price, a job title, a person's
+    name, a mutual contact, a specific problem, or anything said at K5 beyond
+    "we met" is inventing, and scores at the floor. The recipient's name is not
+    supplied, so a greeting that addresses somebody by name has invented one —
+    "Hello," or an equivalent opening with no name is the correct answer, not a
+    weaker one.
+
+    No claimed history beyond the meeting. The intent names one prior contact —
+    meeting at K5 — and that single fact may be referred to. Everything else is
+    a claim about a conversation that has not happened: "following up on our
+    call", "as discussed", "checking back in", or a reply prefix ("Re:", "AW:")
+    on the subject each claim a thread nobody sent, and score at the floor.
+
+    It does the job asked. The intent asks for two things — introduce, and ask
+    for a short call — and a draft that does neither has not written the message
+    it was briefed to write.
+
+    Full marks for a short English note that says who is writing, refers to the
+    K5 meeting and nothing more about it, asks for the call, carries no sign-off
+    or sender name, and reads as somebody's first message rather than the
+    continuation of one.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -372,9 +372,9 @@ func replyDraftServedRegister(trace aitasks.Trace) (string, error) {
 	}
 	system := trace.Requests[len(trace.Requests)-1].System
 	switch {
-	case strings.HasPrefix(system, replyDraftVoiceSystem):
+	case strings.HasPrefix(system, string(replyDraftVoiceSystem)):
 		return replyDraftRegisterVoiced, nil
-	case strings.HasPrefix(system, replyDraftSystem):
+	case strings.HasPrefix(system, string(replyDraftSystem)):
 		return replyDraftRegisterPlain, nil
 	default:
 		return "", errors.New("compose: the last request is in neither system variant this site sends")

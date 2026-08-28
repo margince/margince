@@ -63,6 +63,7 @@ func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 		"replydraftmodel.go": {
 			replyDraftSystemFor(replyDraftSystem, fence),
 			replyDraftSystemFor(replyDraftVoiceSystem, fence),
+			replyDraftSystemFor(firstDraftSystem, fence),
 		},
 		"persondraft/write.go":  {persondraft.SystemPromptFor(fence)},
 		"accountdraft/write.go": {accountdraft.SystemPromptFor(fence)},

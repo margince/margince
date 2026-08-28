@@ -263,7 +263,7 @@ func TestReplyDraftCaseRecordsEveryRequestTheDrafterIssued(t *testing.T) {
 			len(trace.Requests))
 	}
 	voiced, retry, fallback := trace.Requests[0], trace.Requests[1], trace.Requests[2]
-	if !strings.HasPrefix(voiced.System, replyDraftVoiceSystem) {
+	if !strings.HasPrefix(voiced.System, string(replyDraftVoiceSystem)) {
 		t.Errorf("the first request is not in the voice variant: %q", voiced.System)
 	}
 	for _, fragment := range []string{"Voice profile:", "Blunt, never hedges.", "We ship Monday."} {
@@ -274,7 +274,7 @@ func TestReplyDraftCaseRecordsEveryRequestTheDrafterIssued(t *testing.T) {
 	if !strings.Contains(retry.Messages[0].Content, "violated these hard rules") {
 		t.Error("the retry does not tell the model what the last attempt broke")
 	}
-	if !strings.HasPrefix(fallback.System, replyDraftSystem) {
+	if !strings.HasPrefix(fallback.System, string(replyDraftSystem)) {
 		t.Errorf("the fallback is not in the plain variant: %q", fallback.System)
 	}
 	if strings.Contains(fallback.Messages[0].Content, "Voice profile:") {
