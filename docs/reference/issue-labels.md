@@ -64,9 +64,12 @@ leaving them off puts unactionable work in somebody's queue:
 
 **Provenance**, additive and independent of the three axes: `bug`,
 `enhancement`, `security`, `capability-gap` (a missing capability, not a defect),
-and `fast-track-debt` (shipped fast under time pressure with the gap recorded
-deliberately). These record *why the issue exists*, which is the one thing
-nobody can reconstruct later — prefer keeping them over tidying them away.
+`fast-track-debt` (shipped fast under time pressure with the gap recorded
+deliberately), and `margince-qc` (found by the `margince-qc` UAT acceptance-test
+repo while building or running a scenario, rather than by a person working in
+this repo directly). These record *why the issue exists*, which is the one
+thing nobody can reconstruct later — prefer keeping them over tidying them
+away.
 
 **`security` is not a way to report a vulnerability.** This repo is public, and
 [SECURITY.md](../../SECURITY.md) is explicit that an exploitable weakness goes to a
