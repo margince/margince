@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind prohibition H1
+//gate:kind prohibition H2
 
 package gates_test
+
+// One function in the database package turns a pool into a transaction, and
+// every seam the package publishes routes through it. That is what makes "a
+// domain row commits with its audit row and its outbox row" a property held in
+// a single place instead of a habit each store repeats.
+//
+// A second opener is the hardest kind of drift to see: it begins a transaction,
+// it commits, and it reads correctly in review.
 
 import (
 	"go/ast"
