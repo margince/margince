@@ -487,11 +487,213 @@ export function ContactsScreen() {
 const PERSON_TABS = ["overview", "relationships", "history"] as const;
 type PersonTab = (typeof PERSON_TABS)[number];
 
+// The verbs a person record offers, and the two the overlay withholds.
+//
+// Extracted from the 360 render so that render carries the record's SHAPE and
+// this carries what may be done to it: the mode branch and the archive branch
+// are both about the verbs, and reading either one no longer means holding the
+// whole page.
+function PersonActionBadges({
+  person,
+  archivedReasonId,
+}: Readonly<{
+  person: Person;
+  // Minted once for the page by the caller, because the archive is a fact
+  // about the record rather than about any one verb that refuses.
+  archivedReasonId: string;
+}>) {
+  const t = useT();
+  const cf = useObjectCustomFields("person");
+  const overlay = useSorMode() === "overlay";
+  const viewerId = useViewerId();
+  const id = person.id;
+  return (
+    <>
+      <ProvenanceTag provenance={provenanceOf(person.captured_by, viewerId)} />
+      {/* Where this contact came from, when it came from a lead
+          (ADR-0119/A170). The pointer runs person → lead and the
+          lead's page is a terminal record of the promotion, so the
+          chip is a link rather than a label: a rep asking "was this
+          a merge or a new contact?" reads the answer there. */}
+      {person.converted_from_lead_id && (
+        <Badge tone="accent">
+          {t("person.fromLead")}{" "}
+          <EntityRef kind="lead" id={person.converted_from_lead_id} />
+        </Badge>
+      )}
+      {person.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
+      {/* An archived record is read-only: the backend rejects
+          edit/merge/archive on a non-live row (there is no
+          unarchive path). The verbs stay VISIBLE and refused,
+          pointing at the page's one sentence about the archive
+          (STATE-4a): a missing control says nothing about the
+          record, while a refused one names the reason. */}
+      <EditAction<Person>
+        disabledReasonId={person.archived_at ? archivedReasonId : undefined}
+        label={t("record.edit")}
+        savedMessage={(saved) =>
+          t("record.saveDone", { name: saved.full_name })
+        }
+        notice={overlay ? t("overlay.partialWriteBack") : undefined}
+        fields={[...personEditFields, ...cf.formFields]}
+        record={{
+          id: person.id,
+          version: person.version,
+          full_name: person.full_name,
+          first_name: person.first_name ?? "",
+          last_name: person.last_name ?? "",
+          title: person.title ?? "",
+          "social.linkedin": stringField(person.social?.linkedin),
+          ...cf.recordSlice(person),
+        }}
+        update={async (values) => {
+          const { data, error } = await api.PATCH("/people/{id}", {
+            params: {
+              path: { id },
+              ...ifMatch(requireVersion(person.version)),
+            },
+            body: {
+              ...mapPersonUpdate(values),
+              // A diff against what the form prefilled from: a
+              // snapshot sends `null` for every empty custom field,
+              // and the API reads that as clearing a column nobody
+              // touched.
+              ...cf.toPatch(values, cf.recordSlice(person)),
+            },
+          });
+          if (error) {
+            throwProblem(error);
+          }
+          return data;
+        }}
+        invalidate="people"
+        recordKey="person"
+      />
+      {/* Merge has no incumbent-first projection — the seam
+          refuses it outright (overlay/provider_writes.go
+          Merge) — unlike edit/archive below, which it
+          serves, so it stays hidden here. */}
+      {!overlay && (
+        <MergeAction
+          disabledReasonId={person.archived_at ? archivedReasonId : undefined}
+          label={t("merge.person")}
+          sourceId={person.id}
+          sourceName={person.full_name}
+          searchTargets={searchPeopleTargets}
+          merge={async (targetId) => {
+            const { data, error } = await api.POST("/people/{id}/merge", {
+              params: {
+                path: { id: person.id },
+                ...ifMatch(requireVersion(person.version)),
+              },
+              body: { target_id: targetId },
+            });
+            if (error) {
+              throwProblem(error, t);
+            }
+            return data;
+          }}
+          invalidate="people"
+          recordKey="person"
+          survivorRoute={(targetId) => ({
+            screen: "contacts",
+            id: targetId,
+          })}
+        />
+      )}
+      <ArchiveAction
+        disabledReasonId={person.archived_at ? archivedReasonId : undefined}
+        label={t("record.archive")}
+        confirmText={t("record.archiveConfirm")}
+        archivedMessage={t("record.archiveDone", {
+          name: person.full_name,
+        })}
+        archive={async () => {
+          const { data, error } = await api.DELETE("/people/{id}", {
+            params: { path: { id } },
+          });
+          if (error) {
+            throwProblem(error);
+          }
+          return data;
+        }}
+        invalidate="people"
+        recordKey="person"
+        onArchived={() => navigate({ screen: "contacts" })}
+      />
+      {/* A record grant probes the native row via
+          auth.EnsureLinkTarget, which a mirrored record has
+          no row for — sharing stays hidden in overlay
+          regardless of record type (see deals.tsx's
+          DealBadges). */}
+      {!overlay && (
+        <ShareAction
+          recordType="person"
+          recordId={person.id}
+          disabledReasonId={person.archived_at ? archivedReasonId : undefined}
+        />
+      )}
+    </>
+  );
+}
+
+// What the chosen tab shows. One component per screen rather than one per tab:
+// the panels share the record and differ only in which of it they draw, and a
+// component apiece would put five files between a reader and that fact.
+function PersonTabPanels({
+  tab,
+  person,
+  view,
+}: Readonly<{
+  tab: PersonTab;
+  person: Person;
+  view?: Person360;
+}>) {
+  const queryClient = useQueryClient();
+  const id = person.id;
+  return (
+    <>
+      {tab === "overview" && thinRecord(view) && view && (
+        <ThinState view={view} />
+      )}
+      {/* Consent renders on a thin record too: it is not an absence
+          but a guard — what you may send is a live fact whether or
+          not anyone has written to them yet. */}
+      {tab === "overview" && <ConsentSection personId={person.id} />}
+      {tab === "overview" && view && (
+        <EnrichedFields personId={id} view={view} />
+      )}
+      {tab === "overview" && !thinRecord(view) && (
+        <>
+          <CustomFieldsCard object="person" record={person} />
+          <RecordContextPanel entityType="person" id={person.id} />
+          <LogActivity entityType="person" entityId={person.id} />
+        </>
+      )}
+      {tab === "relationships" && (
+        <div style={{ display: "grid", gap: "var(--space-4)" }}>
+          <PersonNetworkTab personId={id} />
+          <RelationshipsTab scope={{ person_id: person.id }} />
+        </div>
+      )}
+      {tab === "history" && (
+        <RecordHistoryTab
+          kind="person"
+          id={person.id}
+          restore={{
+            version: person.version,
+            onRestored: () =>
+              invalidateRecord(queryClient, "person", person.id),
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
-  const cf = useObjectCustomFields("person");
   // ONE sentence about this contact being archived, minted here and pointed at
   // by every verb the archive refuses. Said once for the page rather than
   // beside each of four buttons.
@@ -536,154 +738,16 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
   return (
     <div className="wrap">
       <QueryGate query={personQuery}>
-        {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this 360 render was already at the ceiling; overlay support adds one necessary mode branch (write affordances are hidden over a read-only mirror). A PersonScreen split is tracked in issue 2480. */}
         {(person) => (
           <RecordView
             name={person.full_name}
             subtitle={person.title ?? undefined}
             zone={recordZone}
             badges={
-              <>
-                <ProvenanceTag
-                  provenance={provenanceOf(person.captured_by, viewerId)}
-                />
-                {/* Where this contact came from, when it came from a lead
-                    (ADR-0119/A170). The pointer runs person → lead and the
-                    lead's page is a terminal record of the promotion, so the
-                    chip is a link rather than a label: a rep asking "was this
-                    a merge or a new contact?" reads the answer there. */}
-                {person.converted_from_lead_id && (
-                  <Badge tone="accent">
-                    {t("person.fromLead")}{" "}
-                    <EntityRef kind="lead" id={person.converted_from_lead_id} />
-                  </Badge>
-                )}
-                {person.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
-                )}
-                {/* An archived record is read-only: the backend rejects
-                    edit/merge/archive on a non-live row (there is no
-                    unarchive path). The verbs stay VISIBLE and refused,
-                    pointing at the page's one sentence about the archive
-                    (STATE-4a): a missing control says nothing about the
-                    record, while a refused one names the reason. */}
-                <EditAction<Person>
-                  disabledReasonId={
-                    person.archived_at ? archivedReasonId : undefined
-                  }
-                  label={t("record.edit")}
-                  savedMessage={(saved) =>
-                    t("record.saveDone", { name: saved.full_name })
-                  }
-                  notice={overlay ? t("overlay.partialWriteBack") : undefined}
-                  fields={[...personEditFields, ...cf.formFields]}
-                  record={{
-                    id: person.id,
-                    version: person.version,
-                    full_name: person.full_name,
-                    first_name: person.first_name ?? "",
-                    last_name: person.last_name ?? "",
-                    title: person.title ?? "",
-                    "social.linkedin": stringField(person.social?.linkedin),
-                    ...cf.recordSlice(person),
-                  }}
-                  update={async (values) => {
-                    const { data, error } = await api.PATCH("/people/{id}", {
-                      params: {
-                        path: { id },
-                        ...ifMatch(requireVersion(person.version)),
-                      },
-                      body: {
-                        ...mapPersonUpdate(values),
-                        // A diff against what the form prefilled from: a
-                        // snapshot sends `null` for every empty custom field,
-                        // and the API reads that as clearing a column nobody
-                        // touched.
-                        ...cf.toPatch(values, cf.recordSlice(person)),
-                      },
-                    });
-                    if (error) {
-                      throwProblem(error);
-                    }
-                    return data;
-                  }}
-                  invalidate="people"
-                  recordKey="person"
-                />
-                {/* Merge has no incumbent-first projection — the seam
-                    refuses it outright (overlay/provider_writes.go
-                    Merge) — unlike edit/archive below, which it
-                    serves, so it stays hidden here. */}
-                {!overlay && (
-                  <MergeAction
-                    disabledReasonId={
-                      person.archived_at ? archivedReasonId : undefined
-                    }
-                    label={t("merge.person")}
-                    sourceId={person.id}
-                    sourceName={person.full_name}
-                    searchTargets={searchPeopleTargets}
-                    merge={async (targetId) => {
-                      const { data, error } = await api.POST(
-                        "/people/{id}/merge",
-                        {
-                          params: {
-                            path: { id: person.id },
-                            ...ifMatch(requireVersion(person.version)),
-                          },
-                          body: { target_id: targetId },
-                        },
-                      );
-                      if (error) {
-                        throwProblem(error, t);
-                      }
-                      return data;
-                    }}
-                    invalidate="people"
-                    recordKey="person"
-                    survivorRoute={(targetId) => ({
-                      screen: "contacts",
-                      id: targetId,
-                    })}
-                  />
-                )}
-                <ArchiveAction
-                  disabledReasonId={
-                    person.archived_at ? archivedReasonId : undefined
-                  }
-                  label={t("record.archive")}
-                  confirmText={t("record.archiveConfirm")}
-                  archivedMessage={t("record.archiveDone", {
-                    name: person.full_name,
-                  })}
-                  archive={async () => {
-                    const { data, error } = await api.DELETE("/people/{id}", {
-                      params: { path: { id } },
-                    });
-                    if (error) {
-                      throwProblem(error);
-                    }
-                    return data;
-                  }}
-                  invalidate="people"
-                  recordKey="person"
-                  onArchived={() => navigate({ screen: "contacts" })}
-                />
-                {/* A record grant probes the native row via
-                    auth.EnsureLinkTarget, which a mirrored record has
-                    no row for — sharing stays hidden in overlay
-                    regardless of record type (see deals.tsx's
-                    DealBadges). */}
-                {!overlay && (
-                  <ShareAction
-                    recordType="person"
-                    recordId={person.id}
-                    disabledReasonId={
-                      person.archived_at ? archivedReasonId : undefined
-                    }
-                  />
-                )}
-              </>
+              <PersonActionBadges
+                person={person}
+                archivedReasonId={archivedReasonId}
+              />
             }
             // The archive is a fact about the whole record, so it is stated
             // once across the header rather than repeated beside each verb it
@@ -734,40 +798,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                 }}
               />
             </div>
-            {tab === "overview" && thinRecord(view) && view && (
-              <ThinState view={view} />
-            )}
-            {/* Consent renders on a thin record too: it is not an absence
-                but a guard — what you may send is a live fact whether or
-                not anyone has written to them yet. */}
-            {tab === "overview" && <ConsentSection personId={person.id} />}
-            {tab === "overview" && view && (
-              <EnrichedFields personId={id} view={view} />
-            )}
-            {tab === "overview" && !thinRecord(view) && (
-              <>
-                <CustomFieldsCard object="person" record={person} />
-                <RecordContextPanel entityType="person" id={person.id} />
-                <LogActivity entityType="person" entityId={person.id} />
-              </>
-            )}
-            {tab === "relationships" && (
-              <div style={{ display: "grid", gap: "var(--space-4)" }}>
-                <PersonNetworkTab personId={id} />
-                <RelationshipsTab scope={{ person_id: person.id }} />
-              </div>
-            )}
-            {tab === "history" && (
-              <RecordHistoryTab
-                kind="person"
-                id={person.id}
-                restore={{
-                  version: person.version,
-                  onRestored: () =>
-                    invalidateRecord(queryClient, "person", person.id),
-                }}
-              />
-            )}
+            <PersonTabPanels tab={tab} person={person} view={view} />
           </RecordView>
         )}
       </QueryGate>
