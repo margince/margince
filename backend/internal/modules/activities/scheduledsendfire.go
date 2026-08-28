@@ -363,11 +363,9 @@ func holdReasonFor(err error) (string, bool) {
 // race safe rather than harmful, but a sweep that fights the normal path on
 // every pass is a sweep nobody can read the logs of.
 //
-// The workspace is an EXPLICIT predicate, not the transaction's GUC. Binding
-// the transaction sets `app.workspace_id` and nothing more — RLS was retired
-// wholesale in core 0217, so no policy turns that binding into a filter, and a
-// query without the column in its WHERE reads every tenant on the installation.
-// This one has to be narrowed by hand:
+// The workspace is an EXPLICIT predicate. Nothing in the transaction narrows a
+// statement by tenant, so a query without the column in its WHERE reads every
+// workspace on the installation. This one is narrowed by hand:
 //
 //   - an ARCHIVED workspace keeps its rows (0217 left them in place rather than
 //     deleting them), so an unfiltered sweep re-arms mail for an organization

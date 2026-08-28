@@ -493,10 +493,8 @@ func (c *telegramEnv) rewindPollCursor(t *testing.T, offset int64) {
 	}
 }
 
-// count runs one scalar count under the bootstrapped workspace's GUC. Every
-// table this suite reads carries FORCE RLS, so a query with no GUC set would
-// answer zero regardless of what the table holds — the deny-on-unset policy
-// applies to a test's own assertions exactly as it does to production code.
+// count runs one scalar count through the same transaction seam the suite's
+// writers use, so a reading fixture and a writing one see one database state.
 func (c *telegramEnv) count(t *testing.T, query string, args ...any) int {
 	t.Helper()
 	var n int

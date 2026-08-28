@@ -8,10 +8,12 @@
 -- never land in this committed file — `:'…'` + `%L` quote and escape them. They
 -- MUST match the passwords embedded in the app's MARGINCE_OWNER_DSN / MARGINCE_DSN.
 --
--- Why two non-superuser roles: margince enforces tenant isolation with
--- FORCE ROW LEVEL SECURITY, which a superuser (and only a superuser) bypasses.
+-- Why two non-superuser roles: the runtime holds DML grants only, and a
+-- superuser ignores every grant — so the wall between what serves traffic and
+-- what applies DDL exists only while neither role is exempt. The api refuses to
+-- serve on an exempt runtime role (compose.AssertRuntimeRole).
 --   * margince_owner — owns the database + tables, runs migrations (DDL). Not a
---     superuser, no BYPASSRLS: RLS binds it too.
+--     superuser, no BYPASSRLS.
 --   * margince_app   — the runtime role the api/worker connect as. Its table
 --     grants are applied by migration 0015_app_role_grants, which is a no-op
 --     unless the role already exists — hence it is created here, first.
@@ -25,7 +27,7 @@
 -- interpolation DOES happen) and run with \gexec. `format(… %L …)` safely quotes
 -- the password; the WHERE NOT EXISTS makes each idempotent (an existing role
 -- yields no row, so \gexec runs nothing). Neither role is a superuser or granted
--- BYPASSRLS — FORCE RLS must bind them.
+-- BYPASSRLS — their grants must bind them.
 
 -- The runtime app role (mirrors scripts/db-init.sql for local dev).
 SELECT format('CREATE ROLE margince_app LOGIN PASSWORD %L', :'app_pw')
@@ -40,7 +42,7 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_owner')
 -- Normalize the security-critical attributes UNCONDITIONALLY. The NOT EXISTS
 -- guards above skip a role that already exists, so a pre-existing margince_app /
 -- margince_owner could otherwise retain SUPERUSER or BYPASSRLS and silently
--- defeat FORCE RLS. These ALTERs are idempotent and cost nothing on a fresh role
+-- ignore its own grants. These ALTERs are idempotent and cost nothing on a fresh role
 -- (CREATE ROLE already defaults to NOSUPERUSER NOBYPASSRLS).
 ALTER ROLE margince_app   NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
 ALTER ROLE margince_owner NOSUPERUSER NOBYPASSRLS;

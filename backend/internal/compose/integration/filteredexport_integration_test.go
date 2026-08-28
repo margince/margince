@@ -234,8 +234,7 @@ func TestFilteredExportRejectsOutOfVocabularyPredicate(t *testing.T) {
 	}
 }
 
-// lastSystemLog reads the most recent system_log row for an action inside
-// the workspace-bound GUC (FORCE RLS applies even to the table owner), so the
+// lastSystemLog reads the most recent system_log row for an action, so the
 // suite can assert the export was recorded.
 func lastSystemLog(t *testing.T, e *SearchEnv, action string) (gotAction string, detail map[string]any) {
 	t.Helper()

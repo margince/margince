@@ -32,11 +32,10 @@ import (
 
 // offlineDemoDirectory answers the connector's questions from the database.
 //
-// Every read runs inside a WORKSPACE-BOUND transaction. The tenant tables
-// carry FORCE RLS, so the bare pool sees nothing: the first version of this
-// used it, the sync completed cleanly, and the generator was handed a mailbox
-// with zero accounts every time. A silent empty read is exactly the shape RLS
-// is supposed to produce for a caller who has not said which tenant they are.
+// Every read runs inside a WORKSPACE-BOUND transaction, so a caller with no
+// tenant on its context is refused rather than answered. The first version used
+// the bare pool: the sync completed cleanly and the generator was handed a
+// mailbox with zero accounts every time, with nothing logged anywhere.
 type offlineDemoDirectory struct{ pool *pgxpool.Pool }
 
 // Mailbox describes one seat and the accounts it owns.

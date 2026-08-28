@@ -6,9 +6,9 @@
 # fallbacks, so no flags are needed here.
 #
 # The two DB roles + the database are created ONCE, out of band, by
-# scripts/deploy/db-bootstrap.sql — margince enforces tenant isolation with
-# FORCE ROW LEVEL SECURITY, which only a superuser bypasses, so the app must
-# never connect as one and this container holds no superuser credential.
+# scripts/deploy/db-bootstrap.sql — the app role holds DML grants only and a
+# superuser ignores every grant, so the app must never connect as one and this
+# container holds no superuser credential.
 set -eu
 
 # Optional convenience: source an env file if one is mounted at /.env. The

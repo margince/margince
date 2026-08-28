@@ -97,10 +97,9 @@ func setupStore(t *testing.T) *storeEnv {
 		activity2:  ids.New[ids.ActivityKind](),
 		clockValue: time.Date(2026, 7, 28, 9, 0, 0, 0, time.UTC),
 	}
-	// Every test in this package seeds its own workspace into ONE database, and
-	// what used to keep their rows apart was deny-on-unset RLS. With tenant
-	// isolation retired (ADR-0091 §8 phase A) the separation has to be real:
-	// reset before seeding, the way compose/integration's harness already does.
+	// Every test in this package seeds its own workspace into ONE database, so
+	// the separation between them has to be real: reset before seeding, as
+	// compose/integration's harness does.
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}

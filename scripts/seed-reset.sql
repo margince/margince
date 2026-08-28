@@ -35,10 +35,6 @@ BEGIN
       RAISE EXCEPTION 'seed-reset: more than one live workspace — refusing to delete, since there is no such thing as THE demo installation here';
   END;
 
-  -- Tenant tables carry FORCE RLS, which binds even a non-superuser table
-  -- owner; bind the GUC so the deletes see the rows on such a connection.
-  PERFORM set_config('app.workspace_id', ws::text, true);
-
   FOR t IN
     SELECT c.table_name
     FROM information_schema.columns c

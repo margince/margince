@@ -83,12 +83,10 @@ func setupIdentityDB(t *testing.T) (*pgx.Conn, *pgxpool.Pool) {
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
-	// Every test in this package bootstraps its own installation into ONE
-	// shared connection, and what used to keep their rows apart was
-	// deny-on-unset RLS. With tenant isolation retired (ADR-0091 §8 phase A)
-	// the separation has to be real: reset before seeding, as
-	// compose/integration's harness does. Once per TEST, not per call — a test
-	// that seeds a second workspace on purpose must not lose its first.
+	// Every test in this package bootstraps its own installation into ONE shared
+	// connection, so the separation between them has to be real: reset before
+	// seeding, as compose/integration's harness does. Once per TEST, not per call
+	// — a test that seeds a second workspace on purpose must not lose its first.
 	identityResetMu.Lock()
 	defer identityResetMu.Unlock()
 	if !identityResetFor[t.Name()] {

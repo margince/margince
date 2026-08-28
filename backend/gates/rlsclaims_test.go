@@ -7,17 +7,16 @@ package gates
 
 // Fitness function over a guarantee this codebase no longer has.
 //
-// Core migration 0217 (ADR-0091 §8 phase A) dropped all 139 tenant-isolation
-// policies and both RLS flags from every schema. What replaced them is a
-// predicate each statement writes for itself against the app.workspace_id GUC
-// — so a source comment saying RLS scopes, bounds, confines or gates a read
-// names a control the database does not apply, and the next reader trusts it
-// instead of checking. Nineteen statements whose scope had been the DATABASE's
-// were found during phase A, two of them data loss and one a cross-tenant
-// disclosure; every one was found by a failing test, because nothing gates the
-// class. This is the cheap half of that gate: it cannot tell whether a query
-// is scoped, but it can stop the tree from claiming a retired mechanism
-// scopes it.
+// No table in any schema carries row-level security, and no policy exists to
+// read. What a statement reaches is bounded by the predicate it writes for
+// itself and by the row-scope clauses in platform/auth — so a source comment
+// saying RLS scopes, bounds, confines or gates a read names a control the
+// database does not apply, and the next reader trusts it instead of checking.
+// Nineteen statements whose scope had been the DATABASE's were found the hard
+// way, two of them data loss and one a cross-tenant disclosure; every one was
+// found by a failing test, because nothing gates the class. This is the cheap
+// half of that gate: it cannot tell whether a query is scoped, but it can stop
+// the tree from claiming a retired mechanism scopes it.
 //
 // It bans the CLAIM, not the word. Three spellings stay legal because they
 // name something real: the `// rls-exempt:` waiver marker that
@@ -128,7 +127,7 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 		t.Fatal("the sweep read no Go file — a gate that scans nothing passes exactly like a clean one")
 	}
 	if len(claims) > 0 {
-		t.Errorf("%d line(s) credit RLS with a guarantee core 0217 retired. "+
+		t.Errorf("%d line(s) credit RLS with a guarantee no schema in this tree carries. "+
 			"State what actually scopes the statement — its own workspace predicate, the row-scope "+
 			"clauses in platform/auth, or A107/ADR-0061's single organization — and if the answer is "+
 			"\"nothing does\", that is a defect to fix rather than a comment to reword:\n\t%s",

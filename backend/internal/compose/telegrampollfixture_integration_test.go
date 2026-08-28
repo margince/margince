@@ -237,9 +237,8 @@ func telegramGroupUpdate(updateID, senderID int64) json.RawMessage {
 		updateID, senderID, senderID))
 }
 
-// telegramStoredPollOffset reads the connection's cursor through a
-// workspace-bound transaction — channel_connection carries FORCE RLS, so a query
-// with no GUC set would answer zero rows regardless of what the table holds.
+// telegramStoredPollOffset reads the connection's cursor through the same
+// transaction seam the poller writes it through.
 func telegramStoredPollOffset(t *testing.T, e *integration.Env, conn capture.ChannelConnection) int64 {
 	t.Helper()
 	var offset int64

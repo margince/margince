@@ -6,12 +6,11 @@
 package migrations_test
 
 // A deployed installation's migration role owns the schema and is NOT a
-// superuser. That single difference decides whether a migration's data half runs
-// at all: tenant tables carry FORCE ROW LEVEL SECURITY, FORCE binds the owner,
-// and FORCE does not reach a superuser or a BYPASSRLS role. The default dev and
-// CI owner IS a superuser (the Postgres container's POSTGRES_USER), so an unbound
-// tenant write lands there and reaches no row under an ordinary owner: the one
-// difference that separates a migration which works from one that only appears to.
+// superuser. A superuser ignores every privilege check, so a migration that
+// needs one it was never granted applies cleanly for the dev and CI owner (the
+// Postgres container's POSTGRES_USER) and fails on the installation that has to
+// run it — the one difference that separates a migration which works from one
+// that only appears to.
 //
 // This file supplies the role that tells the two apart, and states the mechanism
 // once so the tests that rely on it are not each re-arguing it.
@@ -32,10 +31,10 @@ import (
 //
 // A role is CLUSTER-scoped, not database-scoped, so a login role left behind by a
 // test run is a standing credential on every database in that cluster, including
-// the dev one; and this role owns the migrated tables, so it can drop their RLS
-// policies outright. It is therefore created with a per-run random password and
-// dropped again in Cleanup, and the name carries the pid so two concurrent
-// packages cannot adopt each other's.
+// the dev one; and this role owns the migrated tables, so it can drop them
+// outright. It is therefore created with a per-run random password and dropped
+// again in Cleanup, and the name carries the pid so two concurrent packages
+// cannot adopt each other's.
 var migratorRole = fmt.Sprintf("margince_migrator_test_%d", os.Getpid())
 
 // extensionsTheOperatorInstalls are created by the cluster operator out of band
@@ -89,7 +88,7 @@ func asMigrator(t *testing.T, admin *pgx.Conn) *pgx.Conn {
 		} {
 			if _, err := admin.Exec(context.Background(), statement); err != nil {
 				t.Errorf("removing the %s role (%s): %v — a login role left on this cluster owns the "+
-					"migrated tables and can drop their tenant-isolation policies", migratorRole, statement, err)
+					"migrated tables and can drop them outright", migratorRole, statement, err)
 			}
 		}
 	})

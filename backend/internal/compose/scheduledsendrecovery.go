@@ -70,11 +70,9 @@ func newScheduledSendRecoveryWorker(idsvc *identity.Service, store *activities.S
 
 func (w *scheduledSendRecoveryWorker) Work(ctx context.Context, _ *river.Job[ScheduledSendRecoveryArgs]) error {
 	// The installation's own workspace, on the context rather than left to the
-	// store's handle to resolve. The handle resolves it either way, so a context
-	// that disagreed would put the transaction's app.workspace_id and the
-	// workspace this code believes it is acting in out of step — and a later
-	// writer inside this transaction would lock under one and stamp under the
-	// other. installationJobCtx is the spelling every other tenant-less pass uses.
+	// store's handle to resolve, so this pass and the rows it writes agree on
+	// which workspace it is acting in. installationJobCtx is the spelling every
+	// other tenant-less pass uses.
 	ctx, err := installationJobCtx(ctx, w.identity)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_scheduled_send_recovery: resolving the installation: %w", err))

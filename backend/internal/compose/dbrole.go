@@ -39,9 +39,9 @@ const runtimeRoleQuery = `
 // AssertRuntimeRole refuses to serve when the runtime pool carries an
 // exemption the tier's guarantees assume it lacks. Extension code reaches the
 // database through this pool, so a deployment that points it at the migration
-// owner would void the DDL/runtime lane separation silently — FORCE row-level
-// security does not bind a superuser or a BYPASSRLS role, and an owner of an
-// ext relation can drop that relation's tenant-isolation policies outright.
+// owner would void the DDL/runtime lane separation silently — a superuser or a
+// BYPASSRLS role is not bound by the grants that separation rests on, and an
+// owner of an ext relation can alter or drop that relation outright.
 //
 // It cannot run before extension code: both binaries register the composed
 // extension set while assembling their configuration, which is earlier than

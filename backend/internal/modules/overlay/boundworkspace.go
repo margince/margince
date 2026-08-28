@@ -21,10 +21,6 @@ import (
 // lane's acting-workspace handle, and the cross-tenant suites). The row the
 // transaction is bound to is the only correct answer, so it is the one asked
 // for.
-//
-// Before ADR-0091 §5 these statements read app.workspace_id, which came from
-// the same binding and so could not disagree with it. This preserves that
-// property without the GUC.
 func (s *Service) boundWorkspace(ctx context.Context) (ids.UUID, error) {
 	ws, err := s.db.Workspace(ctx)
 	if err != nil {

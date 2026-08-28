@@ -78,10 +78,10 @@ func TestAnInsertedValueBoundFromTheAppClockIsReported(t *testing.T) {
 // have drifted apart must be judged on the value Postgres would actually store
 // — here the bound $2, two positions along from the column's own place.
 func TestAnInsertIsJudgedOnThePositionPostgresWouldUse(t *testing.T) {
-	const source = "package store\n\nconst q = `\n\tINSERT INTO sync_state (workspace_id, id, next_sync_at)\n\tVALUES (NULLIF(current_setting('app.workspace_id',true),'')::uuid, $1, $2)`\n"
+	const source = "package store\n\nconst q = `\n\tINSERT INTO sync_state (schema_name, id, next_sync_at)\n\tVALUES (coalesce(nullif(current_setting('search_path',true),''),'public'), $1, $2)`\n"
 	got := reportOn(t, source, "next_sync_at")
 	if !strings.Contains(got, "as `$2`") {
-		t.Errorf("the GUC expression's own commas misaligned the position: %q", got)
+		t.Errorf("the leading expression's own commas misaligned the position: %q", got)
 	}
 }
 

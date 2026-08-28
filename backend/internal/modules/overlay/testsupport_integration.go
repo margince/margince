@@ -41,22 +41,22 @@ func testBudgetMeter(t *testing.T, incumbents ...string) *overlaybudget.Meter {
 	return budgettest.Meter(t, budgettest.SmallConfig(incumbents...))
 }
 
-// testWorkspaceCtx mints a fresh workspace + one human app_user over the
-// real integration Postgres, and returns a context bound to both (the
-// shape database.WithWorkspaceTx and every RBAC-aware store call needs)
-// plus the app-role pool the test's store under test is constructed with,
-// and the workspace id itself (the multi-actor visibility tests seed
-// further app_users into the SAME workspace via testWorkspaceCtxAsUser,
-// which needs it). It fails loudly rather than skipping: a missing DSN
-// means the dependency (`make db-up`) was never provisioned, and a
-// silently skipped test looks exactly like a passing one.
+// testWorkspaceCtx mints a fresh workspace + one human app_user over the real
+// integration Postgres, and returns a context bound to both (the shape
+// database.WithWorkspaceTx and every RBAC-aware store call needs) plus the
+// app-role pool the test's store under test is constructed with, and the
+// workspace id itself (the multi-actor visibility tests seed further app_users
+// into the SAME workspace via testWorkspaceCtxAsUser, which needs it). It
+// fails loudly rather than skipping: a missing DSN means the dependency (`make
+// db-up`) was never provisioned, and a silently skipped test looks exactly
+// like a passing one.
+//
 // resetOncePerTest truncates the database the FIRST time a test asks for a
 // workspace, and never again within that test.
 //
-// Every test in this package seeds its own workspace into ONE database, and
-// what used to keep their rows apart was deny-on-unset RLS. With tenant
-// isolation retired (ADR-0091 §8 phase A) the separation has to be real, so the
-// harness resets — the way compose/integration's already does.
+// Every test in this package seeds its own workspace into ONE database, so the
+// separation between them has to be real: reset before seeding, as
+// compose/integration's harness does.
 //
 // Once per TEST rather than once per call, because several tests here connect
 // two workspaces on purpose (the fail-closed portal binding is the clearest:

@@ -102,8 +102,7 @@ func TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace(t *testing.T) {
 
 // TestRuntimeTxRefusesACallWithNoWorkspace: a Runtime is minted per
 // invocation, and an invocation with no tenant bound has no workspace to pin
-// to. Opening an unpinned transaction would hand a unit's SQL whatever the
-// deny-on-unset policies happen to allow, so the seam refuses instead.
+// to. The seam refuses rather than opening a transaction on behalf of nobody.
 func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 	e := setupExtRuntime(t)
 	// Minted from an INVOCATION with no tenant: that, and not the context the

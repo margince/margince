@@ -223,8 +223,8 @@ const (
 	agentRunKey
 )
 
-// WithWorkspaceID binds the tenant key the RLS transaction helper will
-// SET LOCAL as app.workspace_id.
+// WithWorkspaceID binds the tenant key a store's statements narrow by and a
+// transaction helper refuses to open without.
 func WithWorkspaceID(ctx context.Context, id ids.UUID) context.Context {
 	return context.WithValue(ctx, workspaceKey, id)
 }

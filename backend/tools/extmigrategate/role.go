@@ -37,11 +37,11 @@ type extRole struct {
 //
 // The privilege set IS the gate's teeth, so each piece is deliberate:
 //
-//   - NOSUPERUSER, NOBYPASSRLS. Both exemptions make FORCE ROW LEVEL SECURITY
-//     a no-op for the role holding them, so every RLS conclusion drawn over
-//     such a connection is vacuous. Asserted again after connecting, because a
-//     cluster where the role already existed with different attributes would
-//     otherwise turn this whole gate into a test of nothing.
+//   - NOSUPERUSER, NOBYPASSRLS. A superuser ignores every grant, so each
+//     refusal below would be vacuous over such a connection. Asserted again
+//     after connecting, because a cluster where the role already existed with
+//     different attributes would otherwise turn this whole gate into a test of
+//     nothing.
 //
 //   - CREATE, USAGE on ext and NOTHING on public. This is what converts "the
 //     unit must not touch core" from something to detect into something
@@ -223,7 +223,7 @@ func (r *extRole) assertRestricted(ctx context.Context) error {
 	}
 	switch {
 	case super || bypass:
-		return fmt.Errorf("role %s holds rolsuper=%t rolbypassrls=%t — FORCE ROW LEVEL SECURITY does not bind such a role, so every tenancy assertion below would prove nothing", r.name, super, bypass)
+		return fmt.Errorf("role %s holds rolsuper=%t rolbypassrls=%t — an exempt role is not bound by the grants every refusal below rests on, so the gate would prove nothing", r.name, super, bypass)
 	case createPublic:
 		return fmt.Errorf("role %s holds CREATE on schema public — the namespace wall is that it does not, and with it a migration can create a core-schema table that this gate would then have to detect rather than have refused", r.name)
 	case !usagePublic:

@@ -137,12 +137,9 @@ func assertUnitTable(ctx context.Context, conn *pgx.Conn, rel relation, namespac
 
 // assertNoTenantColumn refuses a workspace column on a unit table.
 //
-// The tier carried one until an installation became single-organization. The
-// policy that compared it then admitted every row it could see, so what looked
-// like isolation was a predicate with nothing left to separate — and it was
-// never a wall against a unit in any case, because a unit can rebind
-// app.workspace_id through the seam's own verbs (pkg/extension/runtime.go
-// records that as verified against the shipped schema).
+// An installation holds one organization, so a workspace column separates
+// nothing — and it was never a wall against a unit in any case, since a unit
+// issues its own SQL through the seam.
 //
 // Refused rather than merely not required: a column re-added here would read as
 // a live tenant boundary to the next author, and the thing that would restore

@@ -153,10 +153,9 @@ func Reset(ctx context.Context, owner *pgx.Conn) error {
 
 // resetWithin performs every step of the reset on one transaction.
 func resetWithin(ctx context.Context, tx execQuerier) error {
-	// Two transaction-local settings, both load-bearing, both reverted by the
-	// commit or rollback that ends this transaction:
-	//
-	// session_replication_role = replica suppresses every non-ALWAYS trigger.
+	// One transaction-local setting, reverted by the commit or rollback that
+	// ends this transaction: session_replication_role = replica suppresses
+	// every non-ALWAYS trigger.
 	// That covers the FK triggers, which is what lets one unordered DELETE batch
 	// stand in for TRUNCATE ... CASCADE, AND the
 	// append-only guards on audit_log and system_log, whose BEFORE DELETE
@@ -165,18 +164,10 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	// audit row, so without replica mode the very first reset aborts. Do not
 	// replace this with topologically ordered DELETEs.
 	//
-	// row_security = off closes the second exposure. TRUNCATE is not subject to
-	// RLS; DELETE is, and every workspace_id table carries FORCE ROW LEVEL
-	// SECURITY with deny-on-unset policies (gated by
-	// migrations/schema_fitness_integration_test.go) while this transaction sets
-	// no app.workspace_id GUC — so a role without BYPASSRLS would delete zero
-	// rows and report a clean database. Setting session_replication_role is
-	// itself SUSET, so it is the first statement such a role fails on and the
-	// primary guard; this makes the RLS half fail loudly too rather than
-	// filtering silently.
-	if _, err := tx.Exec(ctx, `
-		SELECT set_config('session_replication_role', 'replica', true),
-		       set_config('row_security', 'off', true)`); err != nil {
+	// Setting it is SUSET, so a role without the privilege fails here rather
+	// than partway through the sweep with a half-cleared database.
+	if _, err := tx.Exec(ctx,
+		`SELECT set_config('session_replication_role', 'replica', true)`); err != nil {
 		return fmt.Errorf("arming reset session: %w", err)
 	}
 

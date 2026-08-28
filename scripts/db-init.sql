@@ -1,6 +1,6 @@
 -- One-time cluster setup (run by `make db-init` as the database owner):
 -- the runtime role the server connects as. Non-superuser, no BYPASSRLS,
--- not the table owner — RLS binds it with no exception path.
+-- not the table owner — its grants bind it with no exception path.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app') THEN
