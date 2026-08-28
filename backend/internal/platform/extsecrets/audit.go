@@ -58,6 +58,15 @@ const (
 	// hold. It is recorded as well as alarmed on, so the ledger shows which
 	// key was unreadable and when.
 	outcomeTorn = "torn"
+	// outcomeUnknownUser is a userID that names no row in app_user — most
+	// often one that did, before the member's account was removed. The
+	// RETURNED error is still ErrSecretNotFound: the published port promises
+	// only that sentinel, and a caller across it (in particular an anonymous
+	// edge that must answer identically whether a ref was never minted or its
+	// owner is gone) has no way to ask for anything finer. This outcome is
+	// what lets the ledger keep the distinction for an operator, without the
+	// port leaking it to the caller.
+	outcomeUnknownUser = "unknown_user"
 )
 
 // audit appends a state-changing operation to system_log inside the caller's

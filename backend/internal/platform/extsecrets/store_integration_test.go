@@ -227,6 +227,18 @@ func TestSecretsRotationDestroysThePreviousMaterial(t *testing.T) {
 // stale id from an admin's open tab, naming no row at all. Without this the
 // refusal path has no test, and the failure mode it prevents is a raw foreign
 // key violation reaching a client as a constraint name.
+//
+// PutUser and DeleteUser still name ErrUnknownUser: minting or destroying a
+// secret for a userID nobody holds is a caller bug (a stale id, a typo), and
+// the caller is the one authenticated party in the room — it should see
+// exactly what went wrong. GetUser is different: its published contract is
+// "the secret, or ErrSecretNotFound" and nothing finer, because the one
+// caller that resolves an arbitrary, attacker-influenced ref to a userID at
+// runtime is the anonymous inbound edge (extensions/openchannel), which must
+// answer identically whether that endpoint's owner was never minted a
+// secret or has since been removed — anything else turns "does this ref's
+// owner still exist" into an oracle. The ledger keeps the finer reason
+// (outcome "unknown_user" vs. "missing"); only the RETURNED error is unified.
 func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
@@ -236,8 +248,8 @@ func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
 	if err := s.PutUser(ctx, unknown, "token", []byte("nope")); !errors.Is(err, extsecrets.ErrUnknownUser) {
 		t.Fatalf("PutUser accepted a user id naming no row: err=%v", err)
 	}
-	if _, err := s.GetUser(ctx, unknown, "token"); !errors.Is(err, extsecrets.ErrUnknownUser) {
-		t.Fatalf("GetUser accepted a user id naming no row: err=%v", err)
+	if _, err := s.GetUser(ctx, unknown, "token"); !errors.Is(err, extension.ErrSecretNotFound) {
+		t.Fatalf("GetUser on an unknown user id = %v, want the same refusal as a never-minted secret", err)
 	}
 	if err := s.DeleteUser(ctx, unknown, "token"); !errors.Is(err, extsecrets.ErrUnknownUser) {
 		t.Fatalf("DeleteUser accepted a user id naming no row: err=%v", err)

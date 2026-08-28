@@ -74,7 +74,7 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext string) (inboundEndpo
 	// operator reads describes what is offered, and a function identifier tells
 	// them nothing. Its presence is still required, which boot checks against
 	// the live declaration — see registerInbound.
-	var sawHandler bool
+	var sawHandler, handleNil bool
 	for _, e := range lit.Elts {
 		kv, ok := e.(*ast.KeyValueExpr)
 		if !ok {
@@ -97,13 +97,28 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext string) (inboundEndpo
 		case "Rate":
 			endpoint.Rate, err = r.readInboundRate(kv.Value, ext)
 		case "Handle":
-			sawHandler = true
+			// A nil spelling is caught HERE rather than left to be merely
+			// "present": unlike a Tool's or a Job's, an InboundEndpoint has
+			// no inert form — every declared edge mounts and serves, and
+			// extension.InboundEndpoint.Validate() unconditionally refuses
+			// e.Handle == nil at boot. Accepting `Handle: nil` here would let
+			// generation succeed on a declaration boot can never start,
+			// moving the failure from a `make composition` a unit author
+			// runs locally to a shipped binary's boot log.
+			if isStaticallyNilInboundHandle(kv.Value, ext) {
+				handleNil = true
+			} else {
+				sawHandler = true
+			}
 		default:
 			err = r.errAt(kv, "InboundEndpoint field %s is not derivable by this generator", k.Name)
 		}
 		if err != nil {
 			return inboundEndpoint{}, err
 		}
+	}
+	if handleNil {
+		return inboundEndpoint{}, r.errAt(lit, "inbound endpoint %q declares Handle: nil — an inbound endpoint has no inert form; every declared edge mounts and must serve a real handler", endpoint.Slug)
 	}
 	if !sawHandler {
 		return inboundEndpoint{}, r.errAt(lit, "inbound endpoint %q declares no Handle", endpoint.Slug)
@@ -112,6 +127,26 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext string) (inboundEndpo
 		return inboundEndpoint{}, r.errPos(lit, "%v", err)
 	}
 	return endpoint, nil
+}
+
+// isStaticallyNilInboundHandle reports whether an InboundEndpoint.Handle
+// expression is nil at the declaration.
+//
+// Two spellings, for the reason isStaticallyNil (Tool.Handle) gives: the bare
+// `nil`, and a conversion through the published extension.InboundHandler type.
+// The CallExpr arm checks the callee, not just the argument count, for the
+// same reason stated there — a syntactic conversion and an ordinary
+// one-argument call parse identically.
+func isStaticallyNilInboundHandle(expr ast.Expr, ext string) bool {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return e.Name == "nil"
+	case *ast.CallExpr:
+		return len(e.Args) == 1 && isSelector(e.Fun, ext, "InboundHandler") && isStaticallyNilInboundHandle(e.Args[0], ext)
+	case *ast.ParenExpr:
+		return isStaticallyNilInboundHandle(e.X, ext)
+	}
+	return false
 }
 
 // readInboundRate reads the two metering buckets.
@@ -220,9 +255,25 @@ func (r *unitReader) intLit(expr ast.Expr, field string) (int64, error) {
 			}
 			return left << uint(right), nil
 		case token.MUL:
-			return left * right, nil
+			// Checked the same way SHL is, and for the same reason: this
+			// generator's own int64 multiplication wraps silently at run
+			// time, where the compiler's constant arithmetic is arbitrary
+			// precision and would refuse a genuinely overflowing literal —
+			// so an unchecked `*` here can derive a wrapped, wrong manifest
+			// number instead of failing the way the source itself does.
+			product := left * right
+			if left != 0 && product/left != right {
+				return 0, r.errAt(expr, "%s overflows the 64-bit range it must fit in", field)
+			}
+			return product, nil
 		case token.ADD:
-			return left + right, nil
+			// Checked the standard way: same-signed operands whose sum comes
+			// back a different sign wrapped, for the reason MUL above gives.
+			sum := left + right
+			if (left > 0 && right > 0 && sum < 0) || (left < 0 && right < 0 && sum > 0) {
+				return 0, r.errAt(expr, "%s overflows the 64-bit range it must fit in", field)
+			}
+			return sum, nil
 		}
 		return 0, r.errAt(expr, "%s uses %s, and this generator reads only <<, * and + over literals", field, v.Op)
 	}

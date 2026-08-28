@@ -148,6 +148,11 @@ type fakeSecrets struct {
 	// gets counts user-scoped reads, which is how the constant-shape refusal
 	// paths are asserted: they must do the same work as a wrong signature.
 	gets int
+	// clobberAfterPut simulates a second, overlapping PutUser committing right
+	// after this call's own: once set, the NEXT PutUser stores its value and
+	// then immediately overwrites it with clobberAfterPut, exactly as a
+	// racing mint would if it committed a heartbeat later.
+	clobberAfterPut []byte
 }
 
 func (s *fakeSecrets) Get(context.Context, string) ([]byte, error) {
@@ -177,6 +182,9 @@ func (s *fakeSecrets) PutUser(_ context.Context, user extension.UserID, key stri
 		return s.putErr
 	}
 	s.stored[s.userKey(user, key)] = secret
+	if s.clobberAfterPut != nil {
+		s.stored[s.userKey(user, key)] = s.clobberAfterPut
+	}
 	return nil
 }
 

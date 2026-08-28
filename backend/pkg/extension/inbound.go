@@ -243,11 +243,22 @@ const (
 
 // InboundRate is the two buckets an inbound endpoint is metered on. Both are
 // required: the endpoint bucket bounds what one sender can cost this
-// installation, and the client-IP bucket is what still brakes a flood spread
-// across many endpoints.
+// installation, and the client-IP bucket is what still brakes one source
+// hammering every address minted under THIS declaration.
 type InboundRate struct {
 	// PerIP meters by the client address the core trusts, not by a header a
 	// caller can write.
+	//
+	// THE BUCKET IS PER DECLARATION, not installation-wide: the core keys it
+	// unit/slug, so an address spamming every Ref minted under this one
+	// declared endpoint shares a single budget (the Ref is never part of the
+	// key, for the same reason PerEndpoint's is not — see below), but the
+	// same address hammering a SECOND declared endpoint, in this unit or
+	// another, spends that endpoint's own separate budget. A genuinely
+	// installation-wide bound is not offered: each endpoint declares its own
+	// Limit and Window here, so there is no single rate a shared bucket
+	// could enforce across declarations that disagree about what "too many"
+	// means.
 	PerIP Rate
 
 	// PerEndpoint meters every request that resolves to this DECLARED

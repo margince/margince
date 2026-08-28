@@ -34,9 +34,13 @@ import (
 // something this unit holds, and the receiver already knows whose endpoint it
 // configured.
 type departure struct {
-	// MessageID is the product's own delivery id, which is also the signature
-	// nonce — so a receiver implementing this scheme deduplicates a re-posted
-	// attempt on the same value it replay-checks.
+	// MessageID is the product's own delivery id. The signature nonce is
+	// derived from it (deliveryNonce, client.go) rather than equal to it: this
+	// id is a UUID and the nonce header is documented and enforced as hex, so
+	// signing the id verbatim would be a nonce this connector's own edge
+	// refuses. The derivation is deterministic, so a receiver implementing this
+	// scheme still deduplicates a re-posted attempt — on the derived value it
+	// replay-checks, not on this field.
 	MessageID string `json:"message_id"`
 	// Attempt counts from 1, so a receiver's log can tell a first try from a
 	// repeat even where it does not deduplicate.
@@ -126,12 +130,21 @@ func transmit(ctx context.Context, rt extension.Runtime, t transmission, secret,
 	if err := recordAttempt(ctx, rt, t, outcomeUnknown, classDeliveryUnanswered); err != nil {
 		return extension.Receipt{}, err
 	}
-	sendErr := t.post.post(ctx, secret, t.msg.IdempotencyKey, t.at, body)
+	sendErr := t.post.post(ctx, secret, deliveryNonce(t.msg.IdempotencyKey), t.at, body)
 	if err := recordAttempt(ctx, rt, t, outcomeOf(sendErr), attemptClass(sendErr)); err != nil {
-		if sendErr == nil {
+		switch {
+		case sendErr == nil:
 			return extension.Receipt{}, fmt.Errorf("%w: it was accepted and this installation could not record that: %s", extension.ErrSendOutcomeUnknown, err.Error())
+		case errors.Is(sendErr, errUnanswered):
+			// The POST may already be at the recipient, and this write failing
+			// too must not downgrade that into an ordinary ledger error: the
+			// core retries every refusal it is not told is unanswerable, and
+			// losing this signal here delivers the rep's message a second
+			// time exactly as if transmissionRefusal had never run.
+			return extension.Receipt{}, fmt.Errorf("%w: %s, and this installation could not record that either: %s", extension.ErrSendOutcomeUnknown, sendErr.Error(), err.Error())
+		default:
+			return extension.Receipt{}, err
 		}
-		return extension.Receipt{}, err
 	}
 	if sendErr != nil {
 		return extension.Receipt{}, transmissionRefusal(sendErr)

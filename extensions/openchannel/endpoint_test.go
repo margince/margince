@@ -143,19 +143,26 @@ func TestOpeningRefusesAnOwnerNamedInTheBody(t *testing.T) {
 	}
 }
 
+// TestOpeningTwiceAnswersTheSameEndpointAndInsertsNothing covers the ordinary
+// re-open AND a concurrent open racing this one, because open() cannot tell
+// the two apart and must not need to: the insert is ON CONFLICT DO NOTHING, so
+// it is issued every time — even against a row that already exists, which is
+// what makes a genuinely simultaneous second `open` land on the SAME
+// conflict-then-read path rather than surfacing the unique constraint as a
+// bare error. What must hold either way is that nothing NEW is created: the
+// answer names the row that already existed, and nothing is recorded for a
+// write this call did not make.
 func TestOpeningTwiceAnswersTheSameEndpointAndInsertsNothing(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()
+	// The insert conflicts (no row) and the fallback read finds the endpoint
+	// that already existed.
+	rt.tx.noRows[1] = true
 	rt.tx.singleRows = [][]any{endpointRow(endpointID, ownerUserID, "", true)}
 
 	out, err := open(context.Background(), rt, json.RawMessage(noArgs))
 	if err != nil {
 		t.Fatalf("re-opening: %v", err)
-	}
-	for _, sql := range rt.tx.statements {
-		if strings.Contains(sql, "VALUES ($1::uuid, $2, $3)") {
-			t.Fatalf("re-opening inserted a second endpoint:\n%s", sql)
-		}
 	}
 	stored := jsonOf[endpoint](t, out)
 	if stored.ID != endpointID {
@@ -247,6 +254,28 @@ func TestPausingRecordsBothImagesAgainstTheOwnersRow(t *testing.T) {
 	}
 }
 
+// TestTheBeforeImageIsReadLocked guards against two overlapping governed
+// writes (setEnabled racing registerURL, say) both reading the SAME
+// before-image and both updating: without the lock, the second writer's
+// ledger row would name a "before" state its own UPDATE never actually
+// replaced, because the first writer's change already landed and vanished
+// from the trail between the two audit rows.
+func TestTheBeforeImageIsReadLocked(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.singleRows = [][]any{
+		endpointRow(endpointID, ownerUserID, "", true),
+		endpointRow(endpointID, ownerUserID, "", false),
+	}
+	if _, err := setEnabled(context.Background(), rt, json.RawMessage(`{"enabled":false}`)); err != nil {
+		t.Fatalf("pausing: %v", err)
+	}
+	sql, _ := rt.tx.statementMentioning(t, "user_id = $1::uuid AND slug = $2")
+	if !strings.Contains(sql, "FOR UPDATE") {
+		t.Fatalf("the before-image read does not lock the row, so a second overlapping write can record a before-image that was never actually replaced:\n%s", sql)
+	}
+}
+
 func TestRegisteringAnAddressStoresTheCheckedForm(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()
@@ -287,8 +316,11 @@ func TestRegisteringAnAddressForAnotherMembersEndpointIsRefusedAsNotFound(t *tes
 	if errors.Is(err, extension.ErrForbidden) {
 		t.Fatal("a permission error confirms the id belongs to somebody — existence must stay hidden")
 	}
+	// HasPrefix, not Contains: the ownership read now locks with FOR UPDATE
+	// (see lockedEndpointOf), and that substring must not be mistaken for the
+	// write statement this test asserts never runs.
 	for _, sql := range rt.tx.statements {
-		if strings.Contains(sql, "UPDATE") {
+		if strings.HasPrefix(sql, "UPDATE") {
 			t.Fatalf("the mismatch was not caught before a write:\n%s", sql)
 		}
 	}

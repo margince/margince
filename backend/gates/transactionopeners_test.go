@@ -105,6 +105,35 @@ func other(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 }
 
+// TestBeginCallersOutsideCatchesAVarDeclaredAlias is the sibling gap in the
+// same alias tracking: `begin := pool.Begin` is an *ast.AssignStmt, but
+// `var begin = pool.Begin` is an *ast.GenDecl holding an *ast.ValueSpec — a
+// different node entirely. A walk that only matched AssignStmt would read a
+// tree containing this spelling as one with no second opener and report PASS.
+func TestBeginCallersOutsideCatchesAVarDeclaredAlias(t *testing.T) {
+	const source = `package database
+
+func other(ctx context.Context, pool *pgxpool.Pool) error {
+	var begin = pool.Begin
+	tx, err := begin(ctx)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	if err != nil {
+		t.Fatalf("parsing fixture source: %v", err)
+	}
+	offenders := beginCallersOutside(file, "fixture.go")
+	if len(offenders) != 1 || offenders[0] != "fixture.go: other" {
+		t.Fatalf("beginCallersOutside(fixture) = %v, want exactly [\"fixture.go: other\"] — "+
+			"a transaction opener reached through a var-declared alias must be reported "+
+			"the same as one reached through pool.Begin(ctx) directly", offenders)
+	}
+}
+
 // beginCallersOutside names every function in file that calls a .Begin( other
 // than transactionOpener itself.
 func beginCallersOutside(file *ast.File, filename string) []string {
@@ -157,20 +186,49 @@ func beginCallersOutside(file *ast.File, filename string) []string {
 func beginAliases(body *ast.BlockStmt) map[string]bool {
 	aliases := map[string]bool{}
 	ast.Inspect(body, func(n ast.Node) bool {
-		assign, ok := n.(*ast.AssignStmt)
-		if !ok {
-			return true
-		}
-		for i, rhs := range assign.Rhs {
-			sel, ok := rhs.(*ast.SelectorExpr)
-			if !ok || !strings.HasPrefix(sel.Sel.Name, "Begin") || i >= len(assign.Lhs) {
-				continue
+		switch stmt := n.(type) {
+		case *ast.AssignStmt:
+			// begin := pool.Begin (or begin = pool.Begin, reassigning one
+			// declared earlier): both are AssignStmt regardless of token.
+			for i, rhs := range stmt.Rhs {
+				if i >= len(stmt.Lhs) {
+					continue
+				}
+				if ident, ok := stmt.Lhs[i].(*ast.Ident); ok && isBeginSelector(rhs) {
+					aliases[ident.Name] = true
+				}
 			}
-			if ident, ok := assign.Lhs[i].(*ast.Ident); ok {
-				aliases[ident.Name] = true
+		case *ast.ValueSpec:
+			// var begin = pool.Begin. This is a DIFFERENT node than the
+			// AssignStmt above — a `var` declaration is a GenDecl holding
+			// ValueSpecs, never an AssignStmt — so a walk that matched only
+			// AssignStmt would miss this spelling of the identical alias and
+			// report PASS on a second opener reached through it.
+			for i, rhs := range stmt.Values {
+				if i >= len(stmt.Names) {
+					continue
+				}
+				if isBeginSelector(rhs) {
+					aliases[stmt.Names[i].Name] = true
+				}
 			}
 		}
 		return true
 	})
 	return aliases
+}
+
+// isBeginSelector reports whether expr is a Begin* method value, looking
+// through any parenthesization — `(pool.Begin)` is the same alias source as
+// `pool.Begin` and must be recognized the same way.
+func isBeginSelector(expr ast.Expr) bool {
+	for {
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			break
+		}
+		expr = paren.X
+	}
+	sel, ok := expr.(*ast.SelectorExpr)
+	return ok && strings.HasPrefix(sel.Sel.Name, "Begin")
 }

@@ -59,7 +59,7 @@
   "extOpenchannel.recipe.urlLabel": "Your address",
   "extOpenchannel.recipe.urlNotSecret": "This address is not a credential. It appears in access logs and in every proxy between a sender and this installation, exactly as any other path does — share it with whoever configures the sender. Only the signing secret admits a request.",
   "extOpenchannel.secret.mint": "Mint a signing secret",
-  "extOpenchannel.secret.mintFailed": "No new secret was shown, so the previous one may still be the one that verifies. Try again before reconfiguring any sender.",
+  "extOpenchannel.secret.mintFailed": "No new secret was shown. This may mean minting failed and the previous secret still verifies, or it may mean minting succeeded and every sender configured with the previous secret has already stopped working. Mint again either way — it is safe, and it is the only way to see a secret you can use.",
   "extOpenchannel.secret.shownOnce": "This is the only time this secret is shown. Nothing reads it back — copy it into the sender now, or mint another one, which stops this one verifying.",
   "extOpenchannel.state.failed": "Stopped",
   "extOpenchannel.state.ingested": "On the timeline",

@@ -59,7 +59,7 @@
   "extOpenchannel.recipe.urlLabel": "Địa chỉ của bạn",
   "extOpenchannel.recipe.urlNotSecret": "Địa chỉ này không phải là thông tin bí mật. Nó xuất hiện trong nhật ký truy cập và trong mọi proxy giữa bên gửi và bản cài đặt này, giống như bất kỳ đường dẫn nào khác — hãy đưa nó cho người cấu hình bên gửi. Chỉ khóa ký mới cho phép một yêu cầu đi vào.",
   "extOpenchannel.secret.mint": "Tạo khóa ký",
-  "extOpenchannel.secret.mintFailed": "Không có khóa mới nào được hiển thị, nên khóa cũ có thể vẫn là khóa hợp lệ. Hãy thử lại trước khi cấu hình lại bất kỳ bên gửi nào.",
+  "extOpenchannel.secret.mintFailed": "Không có khóa mới nào được hiển thị. Điều này có thể có nghĩa là việc tạo khóa đã thất bại và khóa cũ vẫn còn hiệu lực, hoặc việc tạo khóa đã thành công và mọi bên gửi được cấu hình với khóa cũ đã ngừng hoạt động. Hãy tạo lại trong mọi trường hợp — việc này an toàn và là cách duy nhất để xem khóa có thể sử dụng được.",
   "extOpenchannel.secret.shownOnce": "Đây là lần duy nhất khóa này được hiển thị. Không có gì đọc lại được nó — hãy sao chép vào bên gửi ngay, hoặc tạo khóa khác, khi đó khóa này hết hiệu lực.",
   "extOpenchannel.state.failed": "Đã dừng",
   "extOpenchannel.state.ingested": "Đã lên dòng thời gian",

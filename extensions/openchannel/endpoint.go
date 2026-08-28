@@ -105,6 +105,16 @@ func renderTime(at *time.Time) string {
 // Re-opening is the same endpoint, not a second one, and it keeps the same ref
 // — a new one would break every sender already pointed at the old URL, which is
 // exactly what re-opening must not do.
+//
+// TWO OVERLAPPING FIRST-OPENS ARE SAFE, and that is a claim this file's own
+// contract makes ("asking twice returns the same endpoint") — one that a plain
+// existence check followed by a plain insert cannot keep: two calls that both
+// read no row before either commits would both attempt the insert, and the
+// second would hit ext_openchannel_endpoint_one_per_member as a bare
+// constraint violation rather than the same endpoint the first call already
+// created. ON CONFLICT DO NOTHING makes the insert itself the arbiter — the
+// loser's RETURNING yields no row, which is how it learns to go read what the
+// winner committed instead of failing.
 func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
 	if _, err := extension.DecodeArgs[struct{}](in); err != nil {
 		return nil, err
@@ -119,23 +129,32 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 	}
 	var stored endpoint
 	err = rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		mine, err := endpointOf(ctx, tx, member)
-		if err != nil {
-			return err
-		}
-		if mine != nil {
-			// The ref minted above is discarded rather than stored: a member
-			// asking again is asking for their endpoint, not for a new address.
+		created, err := scanEndpoint(tx.QueryRow(ctx,
+			`INSERT INTO `+endpointTable+` (user_id, slug, ref) VALUES ($1::uuid, $2, $3)
+			 ON CONFLICT (user_id, slug) DO NOTHING
+			 RETURNING `+endpointColumns, member, inboundSlug, ref).Scan)
+		switch {
+		case err == nil:
+			stored = created
+			return recordEndpoint(ctx, tx, extension.AuditCreate, eventOpened, nil, &stored)
+		case errors.Is(err, extension.ErrNoRows):
+			// The conflict means the row already exists — an earlier open
+			// from this member, or one that just raced this call — and asking
+			// again is asking for THAT endpoint. The ref minted above is
+			// discarded either way: this call did not create anything, so it
+			// records nothing.
+			mine, err := endpointOf(ctx, tx, member)
+			if err != nil {
+				return err
+			}
+			if mine == nil {
+				return fmt.Errorf("openchannel: opening conflicted with a concurrent open, but the endpoint it created cannot be found")
+			}
 			stored = *mine
 			return nil
-		}
-		stored, err = scanEndpoint(tx.QueryRow(ctx,
-			`INSERT INTO `+endpointTable+` (user_id, slug, ref) VALUES ($1::uuid, $2, $3)
-			 RETURNING `+endpointColumns, member, inboundSlug, ref).Scan)
-		if err != nil {
+		default:
 			return err
 		}
-		return recordEndpoint(ctx, tx, extension.AuditCreate, eventOpened, nil, &stored)
 	})
 	if err != nil {
 		return nil, err
@@ -217,7 +236,7 @@ func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtim
 	}
 	var stored endpoint
 	err = rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		before, err := endpointOf(ctx, tx, member)
+		before, err := lockedEndpointOf(ctx, tx, member)
 		if err != nil {
 			return err
 		}
@@ -264,10 +283,37 @@ func callingMember(rt extension.Runtime, doing string) (string, error) {
 // nothing. Both halves of the key are named: a member holds one endpoint PER
 // EDGE, and a read on the member alone would answer an arbitrary one of them the
 // day this unit declares a second.
+//
+// A PLAIN READ — no lock. This is the shape every read-only caller wants
+// (readEndpoint, listOutbound, listInbound, and the ownership checks that
+// precede a seal), and taking a row lock for all of them would serialize
+// callers that never write anything. A caller about to UPDATE the row wants
+// lockedEndpointOf instead — see there for why.
 func endpointOf(ctx context.Context, tx extension.Tx, member string) (*endpoint, error) {
 	return oneEndpoint(tx.QueryRow(ctx,
 		`SELECT `+endpointColumns+` FROM `+endpointTable+`
 		 WHERE user_id = $1::uuid AND slug = $2`, member, inboundSlug).Scan)
+}
+
+// lockedEndpointOf reads one member's endpoint exactly as endpointOf does, FOR
+// UPDATE.
+//
+// EVERY CALLER THAT RECORDS A BEFORE-IMAGE AND THEN UPDATES THE ROW MUST READ
+// THROUGH THIS, not endpointOf. Two overlapping calls that both read first and
+// both update after — updateOwnEndpoint pausing an endpoint while
+// registerURL re-points it, or two overlapping secret mints — can otherwise
+// both read the SAME before-image, both write, and the second writer's ledger
+// row then names a "before" that was never the state its own UPDATE actually
+// replaced: the first writer's change vanished from the trail between two
+// audit rows that both claim to have started from the row as it stood before
+// either ran. FOR UPDATE serializes them: the second caller's read blocks
+// until the first's transaction commits, so it reads what that transaction
+// actually left rather than what was there before either began.
+func lockedEndpointOf(ctx context.Context, tx extension.Tx, member string) (*endpoint, error) {
+	return oneEndpoint(tx.QueryRow(ctx,
+		`SELECT `+endpointColumns+` FROM `+endpointTable+`
+		 WHERE user_id = $1::uuid AND slug = $2
+		 FOR UPDATE`, member, inboundSlug).Scan)
 }
 
 // oneEndpoint turns a single-row read into a row or an absence.

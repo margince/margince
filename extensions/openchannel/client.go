@@ -73,6 +73,22 @@ type sendError string
 
 func (e sendError) Error() string { return string(e) }
 
+// deliveryNonce derives the signature nonce from the product's own delivery id.
+//
+// IT CANNOT BE THE DELIVERY ID ITSELF. That id is a UUID and carries hyphens,
+// while InboundHeaderNonce documents the value as hex-encoded and the core's
+// own edge enforces it (extension.ValidInboundNonce): a connector receiving its
+// own scheme back would refuse the very nonce it sent. Deriving it rather than
+// generating it fresh per attempt is the other half of the requirement — a
+// retried attempt must present the SAME nonce, because that is what lets a
+// receiver recognise a re-post as the message it already saw rather than land
+// it as a second one. A fixed-size hex digest is also comfortably inside
+// MaxInboundNonce regardless of what the product's id format ever becomes.
+func deliveryNonce(idempotencyKey string) string {
+	sum := sha256.Sum256([]byte(idempotencyKey))
+	return hex.EncodeToString(sum[:])
+}
+
 // sendTimeout bounds ONE outbound POST, and the unit brings it because the core
 // imposes none: the only ceiling above it is the delivery job's five-minute wall
 // clock, which is a budget for the whole delivery rather than for one request.

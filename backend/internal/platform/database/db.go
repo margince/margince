@@ -21,9 +21,10 @@ import (
 // reads the workspace from the caller's ctx, which means every request path,
 // every job and every fixture has to put it there first, and a path that
 // forgets fails at the SQL rather than at the seam. ADR-0091 §9 step 3 is the
-// collapse: one helper, the singleton resolved once, and the GUC still set
-// from it, so RLS stays armed and the tenant-isolation suite remains the proof
-// that the edit was faithful.
+// collapse: one helper, the singleton resolved once. RLS is retired — no table
+// carries workspace_id and no policy reads one — so what Tx checks below is the
+// same programming-error refusal WithWorkspaceTx checks: that a caller reached
+// the installation's one workspace at all, not that SQL is scoped by it.
 //
 // The workspace arrives as a resolver rather than a value because bootstrap
 // has not necessarily happened when the server is assembled — the worker polls

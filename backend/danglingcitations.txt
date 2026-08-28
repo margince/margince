@@ -105,7 +105,6 @@ backend/internal/modules/activities/lasttouch.go migration 1787032690
 backend/internal/modules/activities/lifecycle.go migration 1787320003
 backend/internal/modules/activities/participantbackfill.go migration 0157
 backend/internal/modules/activities/relinkbatch.go migration 0008
-backend/internal/modules/activities/scheduledsendfire.go core 0242
 backend/internal/modules/activities/scheduledsendprovenance.go core 0260
 backend/internal/modules/activities/threadwire_integration_test.go migration 0093
 backend/internal/modules/agents/tools_comms_test.go core 0251
@@ -214,6 +213,7 @@ backend/tools/seed-demo/comms.go migration 0282
 desktop/build/build-postgres.sh core 0032
 desktop/build/build-postgres.sh core 0052
 docs/deployment.md migration 0015
+docs/evidence/extension-tier/DESIGN.md migration 0014
 docs/evidence/extension-tier/DESIGN.md migration 0213
 docs/explanation/ai-runtime.md migration 0088
 docs/explanation/ai-runtime.md migration 0100

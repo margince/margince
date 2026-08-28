@@ -56,9 +56,17 @@ const retainDecidedDays = 30
 // somebody made.
 func sweepDecided(ctx context.Context, rt extension.Runtime) error {
 	err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
+		// The window runs from updated_at — WHEN IT WAS DECIDED — never from
+		// received_at. A request can sit `pending` for as long as an endpoint
+		// stays open with nobody draining it, and the whole point of parking
+		// one is to preserve it as evidence once a decision is finally made.
+		// Keying the window on the arrival time instead would let a request
+		// that sat pending past the window get parked and be swept away on
+		// the very next tick — the parking decision recorded and destroyed in
+		// the same breath, which is the one outcome parking exists to avoid.
 		if _, err := tx.Exec(ctx,
 			`DELETE FROM `+inboundTable+`
-			  WHERE state <> $1 AND received_at < now() - make_interval(days => $2::int)`,
+			  WHERE state <> $1 AND updated_at < now() - make_interval(days => $2::int)`,
 			stateWaiting, retainDecidedDays); err != nil {
 			return err
 		}

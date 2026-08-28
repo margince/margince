@@ -92,8 +92,17 @@ func drainFailure(cause error) (extension.FailureClass, bool) {
 		// terminal for the row: the rows are fine and the installation is not.
 		return classCaptureNotDeclared, false
 	default:
-		// Everything a unit can get WRONG is one of the sentinels above, so what
-		// is left is the pipeline itself failing to answer.
+		// NOT a claim that this IS the pipeline failing to answer — an unwired
+		// role's capture sink, a record the core could no longer find or land on
+		// a conflicting version, and a plain connectivity failure all reach here
+		// the same way: none of them is one of the sentinels above, and none of
+		// them carries anything more specific than that once it crosses this
+		// unit's own boundary. The choice to answer classCaptureUnavailable
+		// anyway is deliberate and asymmetric, not a certainty: an outage that is
+		// failed instead manufactures dead work every cadence for as long as it
+		// lasts, while a genuine deployment fault answered this way instead costs
+		// only a saved pass. TestAnUnreachableCapturePipelinePostponesTheTick
+		// holds that trade; it does not make the guess correct.
 		return classCaptureUnavailable, false
 	}
 }

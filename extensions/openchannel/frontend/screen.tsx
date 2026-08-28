@@ -1,7 +1,7 @@
 import { api, QueryStates, throwProblem } from "@margince/frontend/api";
 import { useCan, useT } from "@margince/frontend/app";
 import { Card, SectionHeader } from "@margince/frontend/design-system";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ENDPOINT_KEY,
   ENDPOINT_OBJECT,
@@ -39,6 +39,7 @@ import { InboundList, OutboundList } from "./traffic";
  * this", not a failing read on a timer.
  */
 function useEndpoint(enabled: boolean) {
+  const queryClient = useQueryClient();
   return useQuery({
     enabled,
     refetchInterval: POLL_MS,
@@ -47,6 +48,33 @@ function useEndpoint(enabled: boolean) {
       const { data, error, response } = await api.GET(
         "/ext/openchannel/endpoint",
       );
+      if (response.status === 401) {
+        // This query polls every POLL_MS, far tighter than the shared `me`
+        // probe's five-minute staleTime — so a session expiring mid-session
+        // is routinely caught HERE first. Left alone, the cache would still
+        // hold this member's endpoint (their ref, their traffic counts) under
+        // this same static key, and the query client survives sign-in the way
+        // it survives any other navigation: the next member to authenticate
+        // in this tab would be served it before their own read ever lands.
+        //
+        // Same clearing settings.tsx's passport mint does on its own 401, and
+        // for the same reason: drop every OTHER cached answer, then reset the
+        // shared `me` entry so the auth boundary notices and swaps in the
+        // login screen.
+        //
+        // Deferred past this fetch's own settlement rather than run inline:
+        // `removeQueries` would otherwise remove THIS query — the one whose
+        // `queryFn` is still running — while it is still in flight, which
+        // cancels it and the error below never reaches anyone watching this
+        // read. Once this fetch has settled there is no in-flight fetch left
+        // to cancel, and the stale entry is safe to drop like every other one.
+        setTimeout(() => {
+          queryClient.removeQueries({
+            predicate: (query) => query.queryKey[0] !== "me",
+          });
+          queryClient.resetQueries({ queryKey: ["me"] });
+        }, 0);
+      }
       if (error || !response.ok) {
         throwProblem(error);
       }

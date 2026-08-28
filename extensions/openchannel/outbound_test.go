@@ -134,6 +134,35 @@ func TestTheOutboundCounterFollowsTheRowNotTheCall(t *testing.T) {
 	}
 }
 
+// TestTheAttemptReadBeforeUpsertIsLocked guards the mechanism that makes two
+// overlapping recordAttempt calls for the SAME attempt safe: a plain SELECT
+// only reads whatever was last committed, so two calls racing on a row that
+// does not exist yet would both read "no previous outcome" and both bump the
+// counter once each later moved the row to `sent`. FOR UPDATE is what forces
+// the second call to wait for the first's transaction and then see what it
+// actually left, rather than what was there before either started.
+func TestTheAttemptReadBeforeUpsertIsLocked(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.noRows[1] = true
+	subject := transmission{target: endpoint{ID: endpointID, UserID: ownerUserID}, msg: staged()}
+	if err := recordAttempt(context.Background(), rt, subject, outcomeSent, extension.FailureClass{}); err != nil {
+		t.Fatalf("recording: %v", err)
+	}
+	var read string
+	for _, sql := range rt.tx.statements {
+		if strings.HasPrefix(sql, "SELECT outcome") {
+			read = sql
+		}
+	}
+	if read == "" {
+		t.Fatal("no read of the previous outcome was issued")
+	}
+	if !strings.Contains(read, "FOR UPDATE") {
+		t.Fatalf("the previous-outcome read does not lock the row, so a second overlapping call can still read a stale outcome and double-count the bump:\n%s", read)
+	}
+}
+
 // countOutboundBumps counts how many times the endpoint's outbound counter was
 // asked to move, across every statement a test observed.
 func countOutboundBumps(statements []string) int {

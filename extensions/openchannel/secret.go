@@ -84,7 +84,7 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		return nil, err
 	}
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		before, err := endpointOf(ctx, tx, member)
+		before, err := lockedEndpointOf(ctx, tx, member)
 		if err != nil {
 			return err
 		}
@@ -105,6 +105,23 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		// — value verifies from this moment on. A bare err here would read as
 		// "nothing changed", which is the one answer that is false.
 		return nil, fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
+	}
+	// A second mint can overlap this one: PutUser is replace-and-destroy, and
+	// two overlapping calls both seal, both record, and only the LAST seal to
+	// commit is what verifies from now on. Without this read-back, the loser
+	// would still answer 200 with a secret it just sealed, and the caller
+	// would paste in a value that already stopped working before they ever
+	// saw it. Re-reading what is actually current — rather than trusting the
+	// value this call itself sealed — is what makes the invariant hold at the
+	// write's own finish line instead of relying on a lock this package has no
+	// way to hold across two separate stores (see PutUser's replace-then-
+	// commit shape).
+	current, err := rt.Secrets().GetUser(ctx, extension.UserID(member), inboundSecretKey)
+	if err != nil {
+		return nil, fmt.Errorf("openchannel: the secret was sealed and its rotation recorded, but confirming it is still current failed: %w", err)
+	}
+	if string(current) != secret {
+		return nil, fmt.Errorf("%w: another mint for this endpoint completed while this one was still in flight, so the secret this call sealed is no longer the one that verifies — mint again to see the secret that is actually current", extension.ErrConflict)
 	}
 	return json.Marshal(struct {
 		SigningSecret string   `json:"signing_secret"`

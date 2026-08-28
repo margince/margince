@@ -203,16 +203,31 @@ func markLanded(ctx context.Context, rt extension.Runtime, req queued, result ex
 // because a message this installation accepted and will now never act on is
 // exactly the kind of fact somebody asks about afterwards.
 func markStalled(ctx context.Context, rt extension.Runtime, req queued, class extension.FailureClass, terminal bool) error {
+	// AN OUTAGE IS NOT THE REQUEST'S FAULT, so it does not spend the request's
+	// budget. The attempt cap exists to stop ONE request being retried forever
+	// on a fault of its own — a body the core keeps refusing, an owner whose
+	// authority is gone. classCaptureUnavailable is the opposite: nothing about
+	// this row was tried, the whole pipeline was unreachable, and every waiting
+	// row got the same answer. Counting it would park every request an
+	// installation held the moment an outage outlived five cadences, which is
+	// exactly what classCaptureUnavailable's remedy promises does not happen —
+	// "no received request is lost" has to be true of the row, not only of the
+	// tick that reported it.
+	shared := class.Class == classCaptureUnavailable.Class && !terminal
 	state := stateWaiting
-	if terminal || req.attempts+1 >= maxDrainAttempts {
+	if terminal || (!shared && req.attempts+1 >= maxDrainAttempts) {
 		state = stateParked
+	}
+	spend := 1
+	if shared {
+		spend = 0
 	}
 	return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		if _, err := tx.Exec(ctx,
 			`UPDATE `+inboundTable+`
-			    SET state = $2, attempts = attempts + 1, last_error_class = $3, updated_at = now()
+			    SET state = $2, attempts = attempts + $5, last_error_class = $3, updated_at = now()
 			  WHERE id = $1::uuid AND state = $4`,
-			req.id, state, class.Class, stateWaiting); err != nil {
+			req.id, state, class.Class, stateWaiting, spend); err != nil {
 			return err
 		}
 		if state != stateParked {

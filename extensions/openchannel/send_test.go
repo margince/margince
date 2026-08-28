@@ -174,9 +174,13 @@ func sentSignature(t *testing.T, got *receiver) (stamp int64, nonce, signature s
 	return stamp, got.got.Header.Get(extension.InboundHeaderNonce), got.got.Header.Get(extension.InboundHeaderSignature)
 }
 
-// The nonce is the receiver's REPLAY key, and the delivery id is what makes a
+// The nonce is the receiver's REPLAY key, and it must be DERIVED from the
+// delivery id rather than equal to it: the id is a UUID with hyphens, and the
+// nonce header is documented and enforced as hex (extension.ValidInboundNonce),
+// so signing the id verbatim is a nonce this connector's own edge would refuse.
+// The derivation must also be deterministic, because that is what makes a
 // re-posted attempt recognisable as the same message rather than a second one.
-func TestTheSignatureNonceIsTheDeliveryTheProductStaged(t *testing.T) {
+func TestTheSignatureNonceIsDerivedFromTheDeliveryTheProductStaged(t *testing.T) {
 	t.Parallel()
 	got := &receiver{}
 	rt := sendableEndpoint(registeredURL)
@@ -184,8 +188,24 @@ func TestTheSignatureNonceIsTheDeliveryTheProductStaged(t *testing.T) {
 	if _, err := sendVia(context.Background(), rt, msg, listening(t, got), fixedClock()); err != nil {
 		t.Fatalf("sending: %v", err)
 	}
-	if nonce := got.got.Header.Get(extension.InboundHeaderNonce); nonce != msg.IdempotencyKey {
-		t.Fatalf("it signed nonce %q; a value that changes per attempt reaches a receiver as a second message", nonce)
+	nonce := got.got.Header.Get(extension.InboundHeaderNonce)
+	if !extension.ValidInboundNonce(nonce) {
+		t.Fatalf("it signed nonce %q, which this connector's own inbound edge would refuse", nonce)
+	}
+	if want := deliveryNonce(msg.IdempotencyKey); nonce != want {
+		t.Fatalf("it signed nonce %q, want %q derived from the delivery id", nonce, want)
+	}
+	// Re-sent with the same delivery id, unaltered, and it must present the
+	// SAME nonce a second time — a retry that mints a fresh one would reach the
+	// receiver as a new message. A fresh Runtime stands in for the retry
+	// because the fake's singleRows is a one-shot queue, not because anything
+	// about the endpoint changed between attempts.
+	got2 := &receiver{}
+	if _, err := sendVia(context.Background(), sendableEndpoint(registeredURL), msg, listening(t, got2), fixedClock()); err != nil {
+		t.Fatalf("sending again: %v", err)
+	}
+	if again := got2.got.Header.Get(extension.InboundHeaderNonce); again != nonce {
+		t.Fatalf("a retry of the same delivery signed nonce %q, want the original %q", again, nonce)
 	}
 }
 
@@ -213,6 +233,33 @@ func TestAPostWithNoAnswerIsUnknownRatherThanFailed(t *testing.T) {
 	_, args := rt.tx.statementMentioning(t, "ON CONFLICT (endpoint_id, delivery_key, attempt)")
 	if args[5] != outcomeUnknown {
 		t.Fatalf("the attempt was recorded as %v", args[5])
+	}
+}
+
+// An unanswered POST whose FINAL ledger write also fails must still surface as
+// unanswerable. The write failing on top of the POST is not "back to an
+// ordinary ledger error" — the caller still needs the one signal that stops a
+// retry from delivering the rep's message a second time.
+func TestAnUnanswerablePostSurvivesAFailedLedgerWrite(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(http.ErrAbortHandler)
+	}))
+	srv.Config.ErrorLog = log.New(io.Discard, "", 0)
+	t.Cleanup(srv.Close)
+	rt := sendableEndpoint(registeredURL)
+	// Resolving the endpoint and its secret, then the first "unknown"
+	// recordAttempt, cost three statements between them; failing from the
+	// fourth is the SECOND recordAttempt — the one this test is about. Failing
+	// earlier would exercise the pre-flight instead, which has no POST behind
+	// it and therefore nothing to be uncertain about.
+	rt.tx.failFrom = 4
+	rt.tx.err = errors.New("the ledger write failed")
+	dial := func(string) (*sender, error) { return &sender{url: srv.URL, http: srv.Client()}, nil }
+	_, err := sendVia(context.Background(), rt, staged(), dial, fixedClock())
+	if !errors.Is(err, extension.ErrSendOutcomeUnknown) {
+		t.Fatalf("a POST with no answer, whose ledger write then also failed, was reported as %v; "+
+			"the core reads anything else as proof nothing was transmitted and retries into a duplicate", err)
 	}
 }
 

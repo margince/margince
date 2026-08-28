@@ -363,19 +363,12 @@ func holdReasonFor(err error) (string, bool) {
 // race safe rather than harmful, but a sweep that fights the normal path on
 // every pass is a sweep nobody can read the logs of.
 //
-// The workspace is an EXPLICIT predicate. Nothing in the transaction narrows a
-// statement by tenant, so a query without the column in its WHERE reads every
-// workspace on the installation. This one is narrowed by hand:
-//
-//   - an ARCHIVED workspace keeps its rows (0217 left them in place rather than
-//     deleting them), so an unfiltered sweep re-arms mail for an organization
-//     somebody switched off, and the fire path behind it does not catch that —
-//     it re-checks the sender's seat against app_user rows still active in that
-//     archived tenant.
-//   - it is also what keeps the read cheap: with the column present this is
-//     exactly the shape core 0242's idx_scheduled_send_due was built for, so it
-//     walks that partial index in scheduled_at order and stops at the limit.
-//     Without it, a sequential scan over every scheduled row on the installation.
+// There is no workspace predicate, and none is needed: an installation holds
+// exactly one workspace (ADR-0061), so "every row still scheduled and overdue"
+// already means the whole installation's queue. The WHERE clause matches
+// idx_scheduled_send_due (scheduled_at, partial on status = 'scheduled')
+// exactly, so this walks that index in scheduled_at order and stops at the
+// limit rather than scanning the table.
 func (s *Store) OverdueScheduledSends(ctx context.Context, olderThan time.Duration, limit int) ([]ids.UUID, error) {
 	var out []ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {

@@ -122,6 +122,21 @@ func TestInboundDerivationRefusals(t *testing.T) {
 			"declares no Handle",
 		},
 		{
+			// Unlike a Tool's or a Job's, an inbound endpoint has no inert
+			// form — every declared edge mounts and must serve. A bare
+			// `Handle: nil` must be refused HERE, at generation, rather than
+			// merely counted as "present" and left for boot's own Validate
+			// to refuse in a binary that already shipped.
+			"a nil handler",
+			strings.Replace(wholeEndpoint, "Handle: receive,", "Handle: nil,", 1),
+			"has no inert form",
+		},
+		{
+			"a nil handler spelled through the published conversion",
+			strings.Replace(wholeEndpoint, "Handle: receive,", "Handle: extension.InboundHandler(nil),", 1),
+			"has no inert form",
+		},
+		{
 			"a body cap over the published ceiling",
 			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: 8 << 20`, 1),
 			"over the",
@@ -258,6 +273,20 @@ func TestInboundDerivationRefusesAShapeItCannotRead(t *testing.T) {
 			"a body cap using an operator outside the grammar",
 			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: 65536 - 1`, 1),
 			"reads only <<, * and +",
+		},
+		{
+			// The same wraparound the shift guard exists for, reached
+			// through * instead: both operands fit int64 on their own, but
+			// their product does not, and an unchecked int64 multiply wraps
+			// silently rather than failing the way the real constant would.
+			"a body cap whose multiplication overflows int64",
+			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: 4611686018427387904 * 4`, 1),
+			"overflows the 64-bit range",
+		},
+		{
+			"a body cap whose addition overflows int64",
+			strings.Replace(wholeEndpoint, `MaxBody: 64 << 10`, `MaxBody: 9223372036854775807 + 1`, 1),
+			"overflows the 64-bit range",
 		},
 		{
 			"a body cap written as a string",

@@ -169,7 +169,21 @@ func (s *store) read(ctx context.Context, user *ids.UserID, key string) ([]byte,
 		outcome string
 	)
 	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		if err := requireUser(ctx, tx, user); err != nil {
+		switch err := requireUser(ctx, tx, user); {
+		case err == nil:
+			// fall through to the lookup below
+		case errors.Is(err, ErrUnknownUser):
+			// The published port promises Get/GetUser return the secret or
+			// ErrSecretNotFound — nothing else. A userID that once named a
+			// member and no longer does resolves to no secret exactly as one
+			// that never held a key does: there is nothing stored for it
+			// either way, and a caller across the port has no sentinel to
+			// tell the two apart (ErrUnknownUser is not published). The
+			// ledger keeps the finer distinction (see outcomeUnknownUser);
+			// only the returned error is unified with the ordinary miss.
+			outcome = outcomeUnknownUser
+			return s.auditRead(ctx, tx, user, key, outcome)
+		default:
 			return err
 		}
 		found, err := s.refFor(ctx, tx, user, key, forShare)

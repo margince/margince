@@ -100,4 +100,13 @@ CREATE TABLE ext.ext_openchannel_endpoint (
 -- The app role runs the unit's handlers. TRUNCATE is deliberately absent: no
 -- operation here empties the table, and a privilege nothing reaches for is one
 -- more thing a compromised unit could.
-GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_openchannel_endpoint TO margince_app;
+--
+-- Conditional for the same reason core's app-role grants are: a throwaway
+-- database applying this migration under its owning role alone has no
+-- margince_app role at all.
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_openchannel_endpoint TO margince_app;
+  END IF;
+END $$;

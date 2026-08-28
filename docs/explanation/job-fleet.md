@@ -248,11 +248,13 @@ the role declaration a label *beside* the binding rather than the thing that gov
 `WorkspaceID()` is what keeps the declaration load-bearing: a worker cannot claim one workspace and
 work in another.
 
-The **zero id is refused rather than bound**. A zero bound onto the context does not fail here; it
-fails at the first statement that narrows by it, somewhere far less legible, and only after the job
-has already begun. A zero is
-also what an args type decodes to when a queued row predates a change to its wire key, so the refusal
-is the difference between a loud failure and a pass that quietly touches nothing.
+The **zero id is refused rather than bound**. Nothing downstream narrows a query by workspace any
+more — no table carries the column and no policy reads one (ADR-0061/ADR-0091 §5) — so a zero id
+bound onto the context would not fail loudly at all: it would just be the value an audit entity id, a
+blob key or an advisory-lock name silently carries instead of the real one, discovered only much later
+and far from the job that produced it. A zero is also what an args type decodes to when a queued row
+predates a change to its wire key, so the refusal here is the difference between a loud failure and a
+pass that quietly touches nothing.
 
 **No role carries a deferred exception today.** `embed_reindex` is a full pair — a dispatcher whose
 fan-out seeds the run's pending set and enqueues its children in one transaction, and an

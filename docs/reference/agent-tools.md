@@ -34,10 +34,13 @@ live surface differ from the table below:
   That governs what a unit may CLAIM; what its handler does is bounded by the
   composed set being a trust boundary, not by the gate. The
   vanilla tree ships two first-party units: `extensions/de` registers no tools,
-  and `extensions/openchannel` adds seven (🟢; `openchannel_list_inbound`,
-  `openchannel_list_outbound` and `openchannel_read_endpoint` at `read`,
-  `openchannel_open`, `openchannel_mint_secret`, `openchannel_set_enabled` and
-  `openchannel_register_url` at `write`), so on a vanilla install the catalog
+  and `extensions/openchannel` adds seven: 🟢 for `openchannel_list_inbound`,
+  `openchannel_list_outbound` and `openchannel_read_endpoint` at `read`, and for
+  `openchannel_open` and `openchannel_set_enabled` at `write`; 🟡
+  confirmation-required for `openchannel_mint_secret` and
+  `openchannel_register_url`, also at `write` — the one hands back a durable
+  signing credential and the other re-points the member's whole outbound
+  channel, so neither runs unattended. So on a vanilla install the catalog
   below plus those seven verbs is the whole surface.
 
 **Where it is served:** `cmd/api` mounts the tool surface at `/mcp` over

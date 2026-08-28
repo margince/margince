@@ -59,7 +59,7 @@
   "extOpenchannel.recipe.urlLabel": "Ihre Adresse",
   "extOpenchannel.recipe.urlNotSecret": "Diese Adresse ist kein Zugangsdatum. Sie steht in Zugriffsprotokollen und in jedem Proxy zwischen einem Sender und dieser Installation, genau wie jeder andere Pfad — geben Sie sie an, wer den Sender einrichtet. Nur das Signaturgeheimnis lässt eine Anfrage zu.",
   "extOpenchannel.secret.mint": "Signaturgeheimnis erzeugen",
-  "extOpenchannel.secret.mintFailed": "Es wurde kein neues Geheimnis angezeigt, das bisherige prüft also möglicherweise weiterhin. Versuchen Sie es erneut, bevor Sie einen Sender umstellen.",
+  "extOpenchannel.secret.mintFailed": "Es wurde kein neues Geheimnis angezeigt. Das kann bedeuten, dass die Erstellung fehlgeschlagen ist und das bisherige Geheimnis weiterhin gilt, oder dass sie erfolgreich war und jeder mit dem bisherigen Geheimnis konfigurierte Sender bereits nicht mehr funktioniert. Erstellen Sie in jedem Fall erneut — das ist unbedenklich und der einzige Weg, ein nutzbares Geheimnis zu sehen.",
   "extOpenchannel.secret.shownOnce": "Dies ist das einzige Mal, dass dieses Geheimnis angezeigt wird. Nichts liest es zurück — übertragen Sie es jetzt in den Sender, oder erzeugen Sie ein neues, wodurch dieses ungültig wird.",
   "extOpenchannel.state.failed": "Gestoppt",
   "extOpenchannel.state.ingested": "Auf dem Zeitstrahl",

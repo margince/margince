@@ -36,6 +36,12 @@ func TestTheDrainSweepsBothOfItsGrowingTables(t *testing.T) {
 // A PENDING request is never swept at any age. It is a message somebody was told
 // had been accepted, and the drain's own parking is what turns one nothing will
 // land into a decided row — so an aged-out queue cannot silently swallow work.
+//
+// THE WINDOW RUNS FROM updated_at, NOT received_at. A request can sit pending
+// for as long as an endpoint stays open with nobody draining it; if the window
+// were bound to arrival, a request parked well past 30 days old would be swept
+// on the very next tick — the parking decision recorded and destroyed in the
+// same breath, which is exactly the outcome parking exists to avoid.
 func TestTheSweepNeverRemovesARequestNobodyHasDecidedAbout(t *testing.T) {
 	t.Parallel()
 	rt := draining()
@@ -49,8 +55,8 @@ func TestTheSweepNeverRemovesARequestNobodyHasDecidedAbout(t *testing.T) {
 	if args[1] != retainDecidedDays {
 		t.Fatalf("the sweep keeps decided requests for %v days, and the window is %d", args[1], retainDecidedDays)
 	}
-	if !strings.Contains(sql, "received_at < now()") {
-		t.Fatalf("the sweep is not bounded by arrival:\n%s", sql)
+	if !strings.Contains(sql, "updated_at < now()") {
+		t.Fatalf("the sweep is not bounded by the decision, so a request parked long after it arrived is destroyed on the next tick rather than kept for the window:\n%s", sql)
 	}
 }
 

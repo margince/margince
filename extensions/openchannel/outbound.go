@@ -110,12 +110,23 @@ func attemptClass(err error) extension.FailureClass {
 // Bumping on every call whose outcome is `sent` would count that one row
 // twice, so the previous outcome is read first and the bump fires only when
 // THIS call is what moves the row into `sent` for the first time.
+//
+// THE READ IS `FOR UPDATE`, not a plain SELECT, and that is what makes the
+// decision safe under two calls racing on the SAME attempt: by the time the
+// row this attempt names already exists — which it does by the time a `sent`
+// outcome is ever recorded, because the in-flight write always lands first
+// (see the doc above) — the lock serializes them. The second call's SELECT
+// blocks until the first's transaction commits, so it reads the outcome the
+// first call actually left rather than the one that was current before
+// either started, and finds `sent` where an unlocked read would still have
+// found the row's prior state.
 func recordAttempt(ctx context.Context, rt extension.Runtime, t transmission, outcome string, class extension.FailureClass) error {
 	return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		var previous string
 		err := tx.QueryRow(ctx,
 			`SELECT outcome FROM `+outboundTable+`
-			 WHERE endpoint_id = $1::uuid AND delivery_key = $2 AND attempt = $3`,
+			 WHERE endpoint_id = $1::uuid AND delivery_key = $2 AND attempt = $3
+			 FOR UPDATE`,
 			t.target.ID, t.msg.IdempotencyKey, t.msg.Attempt).Scan(&previous)
 		if err != nil && !errors.Is(err, extension.ErrNoRows) {
 			return err

@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ENDPOINT_KEY } from "./contract";
 import { SCOPE_INBOUND } from "./recipe";
 import OpenchannelScreen from "./screen";
 
@@ -128,17 +129,17 @@ const QUIET = {
   "GET /ext/openchannel/outbound": () => ({ attempts: [] }),
 };
 
-function renderScreen() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function renderScreen(client?: QueryClient) {
+  const usedClient =
+    client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={usedClient}>
       <LocaleProvider>
         <OpenchannelScreen />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return usedClient;
 }
 
 // The real descriptor, restored after every test so a locale this suite pins
@@ -588,5 +589,71 @@ describe("the openchannel screen", () => {
     expect(alert.textContent).toBe(
       "The endpoint may not have been opened. Check the state above before trying again.",
     );
+  });
+
+  // The query client survives a sign-in the way it survives any other
+  // navigation, so a session that expires mid-poll and a DIFFERENT member
+  // signing back in in the same tab would otherwise share this cache entry —
+  // the new member's screen would paint the previous member's ref and traffic
+  // counts before their own read ever lands. A 401 on this poll has to drop
+  // the stale entry itself rather than merely surface an error card.
+  it("drops the cached endpoint on a 401 rather than leaving it for the next signed-in member", async () => {
+    // Answered by hand rather than through stubTransport: that helper always
+    // wraps a scripted handler's return value in a 200, and the one thing this
+    // test needs is a non-200 status on the endpoint read itself.
+    // The session is genuinely expired, so `/v1/me` fails too the moment
+    // this screen's forced reset re-probes it — the real signal that ends the
+    // loop and, in the live app, swaps in the login screen. A stub where `me`
+    // keeps succeeding would have the endpoint re-enable and re-401 forever,
+    // which is not what an actually-expired session does.
+    let meCalls = 0;
+    const fetchStub = async (input: Request | string | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const json = (value: unknown, status = 200) =>
+        new Response(JSON.stringify(value), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (url.endsWith("/v1/me")) {
+        meCalls += 1;
+        if (meCalls > 1) {
+          return json({ code: "unauthorized" }, 401);
+        }
+        return json({
+          user: {},
+          roles: [],
+          teams: [],
+          authorization: FULL_GRANT,
+        });
+      }
+      const parsed = new URL(url, "http://stub.invalid");
+      const path = parsed.pathname.slice("/v1".length);
+      if (path === "/ext/openchannel/endpoint") {
+        return json({ code: "unauthorized" }, 401);
+      }
+      if (path === "/ext/openchannel/inbound") return json({ entries: [] });
+      if (path === "/ext/openchannel/outbound") return json({ attempts: [] });
+      return json({ code: "unavailable" }, 503);
+    };
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    // Seed the cache the way a live session would have left it: an earlier
+    // member's endpoint, sitting under the one static key this screen reads.
+    client.setQueryData(ENDPOINT_KEY, {
+      endpoint: { ...ENDPOINT, ref: "previous-members-ref" },
+    });
+
+    renderScreen(client);
+
+    // The settled end state is "not granted" (the session is genuinely gone,
+    // and `me`'s second answer says so) rather than an error card — what this
+    // test holds is that the stale entry is gone by then, not what the screen
+    // renders on the way there.
+    await waitFor(() => {
+      expect(client.getQueryData(ENDPOINT_KEY)).toBeUndefined();
+    });
   });
 });

@@ -74,4 +74,9 @@ CREATE INDEX ext_openchannel_inbound_pending_idx
 
 -- The app role runs the unit's handlers. TRUNCATE is deliberately absent, for
 -- the reason 0001 states.
-GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_openchannel_inbound TO margince_app;
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_openchannel_inbound TO margince_app;
+  END IF;
+END $$;

@@ -265,10 +265,18 @@ type Extension struct {
 	// Inbound are the session-less HTTP edges this unit asks the core to mount:
 	// a signed POST from a party that holds no session and no seat.
 	//
-	// Like a Tool's tier this is a REQUEST an operator resolves — declaring one
-	// mounts nothing an operator has not enabled, and the bounds a unit asks for
-	// are clamped by the installation's own ceiling, with the manifest recording
-	// what was asked and what was granted.
+	// PRESENCE IS THE RESOLUTION. Declaring one mounts nothing an operator has
+	// not enabled by including the unit at all — the same trust the composed
+	// tool set rides (see buildExtensionTools's TRUST MODEL note): an
+	// installation adds a unit deliberately, and the vanilla tree ships only
+	// first-party ones. What is NOT true, stated plainly because a unit
+	// author's DECLARATION here is the wrong place for the CORE to claim it: the
+	// bounds a unit asks for — MaxBody, Rate, Skew — are not clamped against an
+	// installation ceiling; the core mounts exactly what is declared, and the
+	// manifest publishes exactly that, asked and granted being the same number
+	// today. A per-capability operator resolution that could narrow a unit's
+	// own request is a later governance step, not a property this field
+	// grants.
 	//
 	// It is declared HERE rather than in a contract fragment because a fragment
 	// adds capabilities and never the shape of the document: the merge layer

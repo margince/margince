@@ -28,11 +28,15 @@ import (
 // and mints its own correlation id, and moving that here would change what the
 // audit rows say about work whose behaviour is meant to be untouched.
 //
-// A zero id is REFUSED rather than bound. An unbound GUC does not fail here;
-// it fails at the first tenant query, somewhere far less legible, and only
-// after the job has already begun. It is also what an args type decodes to
-// when a queued job predates a change to its wire key, so the refusal is the
-// difference between a loud failure and a pass that quietly touches nothing.
+// A zero id is REFUSED rather than bound. Nothing downstream narrows a query
+// by workspace — no table carries the column and no policy reads one
+// (ADR-0061/ADR-0091 §5) — so an unrefused zero would not fail here or at any
+// later statement; it would simply be the value an audit entity id, a blob key
+// or an advisory-lock name carries instead of the real one, discovered only
+// much later and far from the job that produced it. It is also what an args
+// type decodes to when a queued job predates a change to its wire key, so the
+// refusal is the difference between a loud failure and a pass that quietly
+// touches nothing.
 func workspaceJobCtx(ctx context.Context, args jobs.WorkspaceScoped) (context.Context, error) {
 	ws := args.WorkspaceID()
 	if ws == (ids.UUID{}) {
@@ -44,12 +48,14 @@ func workspaceJobCtx(ctx context.Context, args jobs.WorkspaceScoped) (context.Co
 // installationJobCtx binds the installation's workspace for a collapsed pass —
 // one that carries no workspace of its own (ADR-0103 §1).
 //
-// The binding is NOT vestigial while any store still stamps its workspace_id
-// column from the context: storekit.MustWorkspace reads it, sixteen deals sites
-// and a handful in people, capture, ai and activities call it, and an agent tool
-// reaches several of them. Unbound, those inserts would stamp a zero uuid and
-// fail their foreign key — loudly, but for a reason nobody would recognise. It
-// retires with MustWorkspace itself (ADR-0091 §5), not before.
+// The binding is NOT vestigial while any store still reads the workspace off
+// the context: storekit.MustWorkspace reads it, sixteen deals sites and a
+// handful in people, capture, ai and activities call it, and an agent tool
+// reaches several of them — as an audit entity id, a blob storage key or an
+// advisory-lock name, never as a column any of those stores writes. Unbound,
+// those calls would silently carry a zero uuid into whichever of those it
+// feeds, with nothing to fail loudly on. It retires with MustWorkspace itself
+// (ADR-0091 §5), not before.
 func installationJobCtx(ctx context.Context, svc *identity.Service) (context.Context, error) {
 	ws, err := svc.InstallationWorkspace(ctx)
 	if err != nil {

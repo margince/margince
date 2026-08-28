@@ -311,3 +311,45 @@ func TestAnEmptyQueueIsNotAFailure(t *testing.T) {
 		t.Fatal("a tick that found nothing wrote a ledger row, which is one per cadence forever to say a schedule ran")
 	}
 }
+
+// A fleet-wide outage must not spend a request's own budget. The attempt cap is
+// there to stop ONE request being retried forever on a fault of its own; an
+// unreachable capture pipeline is a fault of nothing in the row, and every
+// waiting row gets the same answer at the same moment. Counting it would park
+// an installation's whole queue the moment an outage outlived five cadences —
+// and classCaptureUnavailable's remedy tells an operator, in those words, that
+// no received request is lost and the drain catches up by itself.
+func TestAnOutageDoesNotSpendTheRequestsOwnAttemptBudget(t *testing.T) {
+	t.Parallel()
+	req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
+	rt := &fakeRuntime{tx: &fakeTx{}}
+	if err := markStalled(context.Background(), rt, req, classCaptureUnavailable, false); err != nil {
+		t.Fatalf("marking stalled: %v", err)
+	}
+	_, args := rt.tx.statementMentioning(t, "SET state =")
+	if args[1] != stateWaiting {
+		t.Fatalf("a request on its last attempt was moved to %v by an outage — the queue parks itself "+
+			"the moment an outage outlives the cadence budget, which is what the class promises cannot happen", args[1])
+	}
+	if args[4] != 0 {
+		t.Fatalf("an outage spent %v of the request's own attempt budget", args[4])
+	}
+}
+
+// And a fault the REQUEST owns still spends it, or the cap stops bounding
+// anything and one poison body is retried forever.
+func TestAFaultTheRequestOwnsStillSpendsItsBudget(t *testing.T) {
+	t.Parallel()
+	req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
+	rt := &fakeRuntime{tx: &fakeTx{}}
+	if err := markStalled(context.Background(), rt, req, classDrainFailed, false); err != nil {
+		t.Fatalf("marking stalled: %v", err)
+	}
+	_, args := rt.tx.statementMentioning(t, "SET state =")
+	if args[1] != stateParked {
+		t.Fatalf("a request on its last attempt was left %v by a fault of its own", args[1])
+	}
+	if args[4] != 1 {
+		t.Fatalf("a fault the request owns spent %v of its budget, want 1", args[4])
+	}
+}
