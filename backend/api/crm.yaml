@@ -16564,10 +16564,18 @@ components:
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
-      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date]
+      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane]
       properties:
         provider: { type: string }
         model_id: { type: string }
+        lane:
+          type: string
+          enum: [chat, embeddings]
+          description: |
+            What the model is FOR. A property of the model rather than of this dated row: the
+            routing form offers a `chat` model where a chat tier binds and an `embeddings` one
+            where the embeddings lane binds, and a zero output price cannot tell them apart —
+            every local chat row carries one too.
         input_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         output_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
@@ -16584,6 +16592,14 @@ components:
       properties:
         provider: { type: string }
         model_id: { type: string }
+        lane:
+          type: string
+          enum: [chat, embeddings]
+          description: |
+            What the model is for. OMIT to keep what the sheet already files this model as —
+            a re-price must never re-file an embedder as a chat model, and a refresh knows
+            only the price. A model the sheet has never seen is filed as `chat`. Supply it to
+            correct a mis-filed model.
         input_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$', description: 'USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64).' }
         output_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$', description: USD per 1M output tokens. }
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$', description: USD per 1M cache-read tokens. }
@@ -30145,6 +30161,22 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
+        dsr:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Data-subject requests nobody has resolved, soonest legal deadline
+            first — the cases whose clocks run whether or not anyone opens the
+            compliance screen. Each card carries the request's kind and its
+            deadline; working the case stays on the case queue's own screen,
+            so the card offers no verbs.
+
+            Withheld — named in `lanes_omitted` — for every reader the case
+            queue itself refuses: the lane is served exactly as far as the
+            DSR admin gate reaches, and no further.
+
+            Absent — not empty — on an installation whose feed does not read
+            the case queue.
         did_not_run:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -30163,7 +30195,7 @@ components:
             failure marks.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30211,6 +30243,13 @@ components:
           description: >-
             How many failed decisions this lane is CARRYING — the bounded page, as the
             other lanes report.
+        dsr:
+          type: integer
+          minimum: 0
+          description: >-
+            How many unresolved data-subject requests this lane is CARRYING — the
+            bounded page, as the other lanes report. A reader past the bound sees
+            the soonest deadlines, which is the order the lane is in.
 
 
     AttentionItem:
@@ -30225,7 +30264,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

@@ -179,6 +179,8 @@ export const vi = {
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
   "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.meetings": "{count} cuộc họp trên lịch hôm nay.",
+  "day.lead.dsr":
+    "{count} yêu cầu quyền riêng tư đang chạy hạn. Những việc đó trước.",
   "day.lead.didNotRun":
     "{count} việc bạn đã duyệt không chạy. Hãy xem những việc đó trước.",
   "day.lead.atRisk": "{count} đang lặng đi. Không còn gì khác chờ bạn.",
@@ -201,6 +203,12 @@ export const vi = {
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
   "day.didNotRun": "Đã duyệt nhưng chưa chạy",
+  "day.dsr": "Yêu cầu quyền riêng tư",
+  "day.dsr.empty": "Không có yêu cầu nào đang mở từ chủ thể dữ liệu.",
+  "day.dsr.kind.access": "Có người muốn biết chúng ta giữ dữ liệu gì",
+  "day.dsr.kind.erasure": "Có người muốn được xóa",
+  "day.dsr.kind.rectify": "Có người muốn sửa dữ liệu của họ",
+  "day.dsr.kind.generic": "Một yêu cầu quyền riêng tư đang mở",
   "day.didNotRun.empty": "Mọi việc bạn đã duyệt đều đã chạy.",
   "day.decay": "Những mối quan hệ đang nguội dần",
   "day.decay.empty":
@@ -5906,7 +5914,7 @@ export const vi = {
     "Gửi một lần và niêm phong trong két khóa. Nếu môi trường đã đặt {envVar}, máy chủ đọc từ đó.",
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
-    "Chỉ là điểm khởi đầu. Bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
+    "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.google.title": "Kết nối ứng dụng Google",
   "firstRun.google.sub":
@@ -5956,6 +5964,8 @@ export const vi = {
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
   "aiRouting.model.label": "Mô hình",
+  "aiRouting.model.help":
+    "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
   "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saved": "Đã lưu định tuyến. Mọi tiến trình đang phục vụ theo nó.",

@@ -10806,6 +10806,14 @@ export interface components {
         AiModelRate: {
             provider: string;
             model_id: string;
+            /**
+             * @description What the model is FOR. A property of the model rather than of this dated row: the
+             *     routing form offers a `chat` model where a chat tier binds and an `embeddings` one
+             *     where the embeddings lane binds, and a zero output price cannot tell them apart —
+             *     every local chat row carries one too.
+             * @enum {string}
+             */
+            lane: "chat" | "embeddings";
             input_per_mtok: string;
             output_per_mtok: string;
             cache_read_per_mtok: string;
@@ -10819,6 +10827,14 @@ export interface components {
         SetAiModelRateRequest: {
             provider: string;
             model_id: string;
+            /**
+             * @description What the model is for. OMIT to keep what the sheet already files this model as —
+             *     a re-price must never re-file an embedder as a chat model, and a refresh knows
+             *     only the price. A model the sheet has never seen is filed as `chat`. Supply it to
+             *     correct a mis-filed model.
+             * @enum {string}
+             */
+            lane?: "chat" | "embeddings";
             /** @description USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64). */
             input_per_mtok: string;
             /** @description USD per 1M output tokens. */
@@ -22699,6 +22715,21 @@ export interface components {
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /**
+             * @description Data-subject requests nobody has resolved, soonest legal deadline
+             *     first — the cases whose clocks run whether or not anyone opens the
+             *     compliance screen. Each card carries the request's kind and its
+             *     deadline; working the case stays on the case queue's own screen,
+             *     so the card offers no verbs.
+             *
+             *     Withheld — named in `lanes_omitted` — for every reader the case
+             *     queue itself refuses: the lane is served exactly as far as the
+             *     DSR admin gate reaches, and no further.
+             *
+             *     Absent — not empty — on an installation whose feed does not read
+             *     the case queue.
+             */
+            dsr?: components["schemas"]["AttentionItem"][];
+            /**
              * @description Decisions THIS reader approved whose released work then failed, reading
              *     the queue newest-staged first. The row is not pending (it was decided) and not a receipt
              *     (a person decided it), so no other lane can carry it; without this one the
@@ -22714,7 +22745,7 @@ export interface components {
              */
             did_not_run?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22739,6 +22770,8 @@ export interface components {
             relationship_decay?: number;
             /** @description How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report. */
             did_not_run?: number;
+            /** @description How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in. */
+            dsr?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22753,7 +22786,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

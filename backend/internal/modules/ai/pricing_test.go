@@ -191,3 +191,51 @@ func seedRoutingIn(t *testing.T, path string) (RoutingConfig, bool) {
 	}
 	return cfg, true
 }
+
+// TestSeedModelRatesEveryRowDeclaresItsLane proves the seed sheet says which
+// LANE each model serves, which is what makes it a catalogue and not only a
+// price list: the routing form offers a chat model where a chat tier binds and
+// an embedder where the embeddings lane binds, and it has nothing but this to
+// tell them apart. Deriving the lane from a zero output price would be a guess
+// that a chat model priced at 0 (every local row) gets wrong.
+func TestSeedModelRatesEveryRowDeclaresItsLane(t *testing.T) {
+	for _, r := range SeedModelRates(seedRatesTestDay) {
+		if r.Lane != LaneChat && r.Lane != LaneEmbeddings {
+			t.Errorf("%s/%s: lane %q is neither %q nor %q", r.Provider, r.ModelID, r.Lane, LaneChat, LaneEmbeddings)
+		}
+	}
+}
+
+// TestSeedModelRatesFilesTheEmbeddersAsEmbedders names the embedding models
+// outright. The sibling test above proves every row carries A lane; this one
+// proves the lane is the RIGHT one, which no property of the row can show —
+// an embedder mis-filed as chat is offered on four tier pickers where it
+// cannot serve a single call, and is missing from the one lane that needs it.
+func TestSeedModelRatesFilesTheEmbeddersAsEmbedders(t *testing.T) {
+	embedders := map[string]bool{
+		providerGemini + "/gemini-embedding-001":                    false,
+		providerOllama + "/bge-m3":                                  false,
+		providerOpenAICompatible + "/mistralai/mistral-embed-2312":  false,
+		providerOpenAICompatible + "/baai/bge-m3":                   false,
+		providerOpenAICompatible + "/openai/text-embedding-3-small": false,
+	}
+	for _, r := range SeedModelRates(seedRatesTestDay) {
+		key := r.Provider + "/" + r.ModelID
+		if _, known := embedders[key]; known {
+			embedders[key] = true
+			if r.Lane != LaneEmbeddings {
+				t.Errorf("%s is an embedding model, filed as lane %q", key, r.Lane)
+			}
+			continue
+		}
+		if r.Lane == LaneEmbeddings {
+			t.Errorf("%s is filed as an embedder and is not one of the known embedding models — "+
+				"add it to this list if it is, or correct its lane", key)
+		}
+	}
+	for key, seen := range embedders {
+		if !seen {
+			t.Errorf("no seed row for embedding model %s — the embeddings picker lost an option", key)
+		}
+	}
+}

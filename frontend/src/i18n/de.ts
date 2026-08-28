@@ -172,6 +172,8 @@ export const de = {
   "day.lead.plannedOnly": "Nichts zu entscheiden — {count} für heute geplant.",
   "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.meetings": "{count} heute im Kalender.",
+  "day.lead.dsr":
+    "{count} Datenschutzanfragen laufen gegen die Frist. Die zuerst.",
   "day.lead.didNotRun":
     "{count} freigegebene Aufgaben sind nicht gelaufen. Sieh sie dir zuerst an.",
   "day.lead.atRisk": "{count} werden still. Sonst wartet nichts auf dich.",
@@ -195,6 +197,12 @@ export const de = {
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
   "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.dsr": "Datenschutzanfragen",
+  "day.dsr.empty": "Keine offenen Anfragen von Betroffenen.",
+  "day.dsr.kind.access": "Jemand möchte wissen, welche Daten wir haben",
+  "day.dsr.kind.erasure": "Jemand möchte gelöscht werden",
+  "day.dsr.kind.rectify": "Jemand möchte seine Daten korrigieren",
+  "day.dsr.kind.generic": "Eine offene Datenschutzanfrage",
   "day.didNotRun.empty": "Alles, was du freigegeben hast, ist auch gelaufen.",
   "day.decay": "Beziehungen, die einschlafen",
   "day.decay.empty": "Sie sind mit allen in Kontakt, mit denen Sie es waren.",
@@ -5959,7 +5967,7 @@ export const de = {
     "Einmal gesendet und im Schlüsseltresor versiegelt. Ist stattdessen {envVar} in der Umgebung gesetzt, liest der Server ihn von dort.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
+    "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.google.title": "Google-App verbinden",
   "firstRun.google.sub":
@@ -6009,6 +6017,8 @@ export const de = {
   "aiRouting.baseUrl.help":
     "Die Host-Wurzel des Anbieters, ohne Versionssegment. Der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
   "aiRouting.model.label": "Modell",
+  "aiRouting.model.help":
+    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt — je Million Token, Eingabe → Ausgabe. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",

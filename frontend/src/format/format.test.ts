@@ -11,6 +11,7 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
   formatTimeOfDay,
+  formatUsdPerMTok,
   identifierNumber,
   isRenderableZone,
   MONEY_ABSENT,
@@ -240,5 +241,35 @@ describe("a number that names or places is not a magnitude", () => {
     // And agrees with it below that width, which is why three of these sites
     // looked correct for as long as the demo data stayed small.
     expect(identifierNumber(999)).toBe(formatNumber(999, "de"));
+  });
+});
+
+describe("formatUsdPerMTok", () => {
+  // The sheet's own unit: USD per million tokens, as a decimal string. Always
+  // USD — the contract says so, and the µUSD integers behind it carry no
+  // currency of their own.
+  it("reads the sheet's decimal string as USD", () => {
+    // `US$`, not `$`: unconfigured English here is en-GB (A100), where the
+    // dollar sign alone would not say WHOSE dollar.
+    expect(formatUsdPerMTok("3", "en")).toBe("US$3.00");
+    expect(formatUsdPerMTok("15", "en")).toBe("US$15.00");
+  });
+
+  it("renders the figure in the reader's conventions", () => {
+    expect(formatUsdPerMTok("1234.5", "de")).toBe("1.234,50\u00a0$");
+  });
+
+  // The trap this exists to avoid: a real price shown as $0.00 reads as free,
+  // and free is a claim this product is careful never to make by accident.
+  it("never rounds a real price down to nothing", () => {
+    expect(formatUsdPerMTok("0.01", "en")).toBe("US$0.01");
+    expect(formatUsdPerMTok("0.005", "en")).toBe("US$0.005");
+    expect(formatUsdPerMTok("0.0001", "en")).toBe("US$0.0001");
+  });
+
+  // A local model really does cost nothing, and saying so is the point of its
+  // explicit zero row — an honest 0, never "no data".
+  it("says zero for a price that is genuinely zero", () => {
+    expect(formatUsdPerMTok("0", "en")).toBe("US$0.00");
   });
 });

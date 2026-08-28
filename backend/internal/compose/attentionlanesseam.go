@@ -3,7 +3,7 @@
 
 package compose
 
-// The four OPTIONAL attention lanes' seams over the engines that already own
+// The OPTIONAL attention lanes' seams over the engines that already own
 // what they read. Three are bound today; commitments is deliberately not
 // (newAttentionService passes nil until its production writer, issue #849,
 // exists), and its seam stays compiled here for that rebinding.

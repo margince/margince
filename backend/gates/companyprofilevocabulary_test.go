@@ -24,6 +24,10 @@ package gates
 // The CHECK is the authority because it is what the database enforces: a value
 // it refuses cannot be stored whatever any Go file believes.
 //
+// The browser's five mirrors of the same vocabulary — two label maps, the
+// section grouping, the interview's question list and the draft serializer —
+// are held by frontendprofilevocabulary_test.go, which reads TypeScript.
+//
 // WHAT IT CANNOT SEE, two things:
 //
 // Whether a field is offered to a HUMAN. The company form's typed properties
@@ -252,4 +256,162 @@ func declMentions(decl *ast.GenDecl, name string) bool {
 		}
 	}
 	return false
+}
+
+// Each contract enum carries the WHOLE vocabulary, checked one enum at a time.
+//
+// The contract inlines this vocabulary as a separate enum per schema that
+// names a profile field, and the gate above resolves an identifier against all
+// of them flattened together. That is right for what it does — it is asking
+// what a Go name stands for — and wrong as a check on the enums themselves: a
+// value present in one and missing from another resolves anyway, so a schema
+// that fell short would be covered by its siblings and nothing would fail.
+//
+// What that costs is a field the API refuses on one endpoint and accepts on
+// the next. The generated client for the short enum cannot even name it.
+func TestEveryContractEnumCarriesTheWholeProfileVocabulary(t *testing.T) {
+	t.Parallel()
+	admitted := tableCheckSets(t)[theProfileVocabulary]
+	if len(admitted) < 10 {
+		t.Fatalf("only %d value(s) derived for %s — the migration scan has stopped reading it",
+			len(admitted), theProfileVocabulary)
+	}
+	wholeVocabulary := map[string]bool{}
+	for _, value := range admitted {
+		wholeVocabulary[value] = true
+	}
+
+	byType := profileFieldEnums(t, "internal/contracts/api_gen.go")
+	if len(byType) == 0 {
+		t.Fatal("no enum constants parsed out of the generated contract — this gate reads nothing")
+	}
+
+	for enum, part := range profileFieldEnumRoster {
+		values, generated := byType[enum]
+		if !generated {
+			t.Errorf("the contract no longer generates %s, which this gate is rostered to check.\n"+
+				"  Either the schema was renamed — update the roster — or it is gone and the roster entry is dead.", enum)
+			continue
+		}
+		if part != "" {
+			// A stated part still states it in this vocabulary's own words. A
+			// value from outside it means the enum has become something else,
+			// and its exemption no longer describes it.
+			for value := range values {
+				if !wholeVocabulary[value] {
+					t.Errorf("the contract enum %s is rostered as %s, yet carries %q, which %s does not admit",
+						enum, part, value, theProfileVocabulary)
+				}
+			}
+			continue
+		}
+		var missing []string
+		for _, value := range admitted {
+			if !values[value] {
+				missing = append(missing, value)
+			}
+		}
+		if len(missing) > 0 {
+			sort.Strings(missing)
+			t.Errorf("the contract enum %s omits %s, which %s admits.\n"+
+				"  Consequence: the API refuses the field on the operations using this schema while accepting it elsewhere.\n"+
+				"  Add it to that schema in api/crm.yaml and regenerate.",
+				enum, strings.Join(missing, ", "), theProfileVocabulary)
+		}
+	}
+
+	// A schema that inlines the vocabulary and is not on the roster is the
+	// failure this gate cannot afford: it would simply not be checked. An enum
+	// is taken to be one when it is drawn ENTIRELY from the vocabulary, which
+	// no unrelated enum sharing a word or two ever is.
+	for enum, values := range byType {
+		if _, rostered := profileFieldEnumRoster[enum]; rostered || len(values) == 0 {
+			continue
+		}
+		ownWords := true
+		for value := range values {
+			if !wholeVocabulary[value] {
+				ownWords = false
+				break
+			}
+		}
+		if ownWords {
+			t.Errorf("the contract enum %s is built from %s and is not on this gate's roster, so nothing checks it.\n"+
+				"  Add it to profileFieldEnumRoster — with \"\" if it carries the whole vocabulary, or the reason it carries a part.",
+				enum, theProfileVocabulary)
+		}
+	}
+}
+
+// profileFieldEnumRoster names every generated enum built from this
+// vocabulary, and says whether it carries all of it or a stated part.
+//
+// Named, not inferred, and the two rejected alternatives are why. "Most of the
+// values" excludes the two required-field enums, which carry three of nineteen
+// and are perfectly correct — a real subject leaving the census with nothing
+// failing is this gate's own defect. "Every value is a vocabulary member"
+// looks tighter and is worse: an enum whose value is CORRUPTED stops matching
+// and drops out, so the filter absorbs exactly the drift it was meant to
+// report.
+//
+// So the roster is a list, and the census below fails on an enum missing from
+// it. That costs one line when a schema is added and refuses to go green until
+// somebody writes it — which is the trade a list has to earn.
+//
+// gatekit:fixture the contract enums built from this vocabulary, and for each
+// one whether it carries all of it or the part named here
+var profileFieldEnumRoster = map[string]string{
+	"ColdStartFieldField":                 "",
+	"CompanyProfileFieldField":            "",
+	"CompanySiteReadSuggestedChangeField": "",
+	"ProfileFieldKey":                     "",
+
+	"OnboardingCompanyMessageReplyNextRequiredField":       "the required fields alone, which is what the interview asks for next",
+	"OnboardingCompanyMessageReplyRemainingRequiredFields": "the required fields alone, which is what the interview still needs",
+}
+
+// profileFieldEnums reads every generated enum type and its values, so the
+// census can judge the rostered ones and NOTICE an unrostered one.
+//
+// It filters nothing. Selecting by content is what let the two earlier
+// versions of this gate lose a subject: a corrupted value stops looking like
+// the vocabulary, and a filter reading values then removes the enum instead of
+// failing it.
+func profileFieldEnums(t *testing.T, file string) map[string]map[string]bool {
+	t.Helper()
+	parsed, err := parser.ParseFile(token.NewFileSet(), filepath.Clean(file), nil, 0)
+	if err != nil {
+		t.Fatalf("parse %s: %v", file, err)
+	}
+
+	byType := map[string]map[string]bool{}
+	for _, node := range parsed.Decls {
+		general, isGeneral := node.(*ast.GenDecl)
+		if !isGeneral || general.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range general.Specs {
+			value, isValue := spec.(*ast.ValueSpec)
+			if !isValue || value.Type == nil || len(value.Values) != 1 {
+				continue
+			}
+			typeName, named := value.Type.(*ast.Ident)
+			if !named {
+				continue
+			}
+			literal, isLiteral := value.Values[0].(*ast.BasicLit)
+			if !isLiteral || literal.Kind != token.STRING {
+				continue
+			}
+			unquoted, unquoteErr := strconv.Unquote(literal.Value)
+			if unquoteErr != nil {
+				continue
+			}
+			if byType[typeName.Name] == nil {
+				byType[typeName.Name] = map[string]bool{}
+			}
+			byType[typeName.Name][unquoted] = true
+		}
+	}
+	return byType
 }

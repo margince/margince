@@ -670,6 +670,24 @@ func (e AiActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for AiModelRateLane.
+const (
+	AiModelRateLaneChat       AiModelRateLane = "chat"
+	AiModelRateLaneEmbeddings AiModelRateLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the AiModelRateLane enum.
+func (e AiModelRateLane) Valid() bool {
+	switch e {
+	case AiModelRateLaneChat:
+		return true
+	case AiModelRateLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProfileInferenceMode.
 const (
 	AiProfileInferenceModeCloud       AiProfileInferenceMode = "cloud"
@@ -1234,6 +1252,7 @@ const (
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
 	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedDsr               AttentionLanesOmitted = "dsr"
 	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
 	AttentionLanesOmittedPlanned           AttentionLanesOmitted = "planned"
@@ -1251,6 +1270,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedDidNotRun:
 		return true
 	case AttentionLanesOmittedDoneForYou:
+		return true
+	case AttentionLanesOmittedDsr:
 		return true
 	case AttentionLanesOmittedMeetings:
 		return true
@@ -1331,6 +1352,7 @@ const (
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceDsr               AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
@@ -1349,6 +1371,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceDsr:
 		return true
 	case AttentionItemSourceFailedApproval:
 		return true
@@ -9097,6 +9121,24 @@ func (e SetActivityAudienceRequestMembersSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for SetAiModelRateRequestLane.
+const (
+	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
+	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the SetAiModelRateRequestLane enum.
+func (e SetAiModelRateRequestLane) Valid() bool {
+	switch e {
+	case SetAiModelRateRequestLaneChat:
+		return true
+	case SetAiModelRateRequestLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetBlockedDomainRequestAdmission.
 const (
 	Admitted   SetBlockedDomainRequestAdmission = "admitted"
@@ -13064,10 +13106,22 @@ type AiModelRate struct {
 	CacheWritePerMtok string             `json:"cache_write_per_mtok"`
 	EffectiveDate     openapi_types.Date `json:"effective_date"`
 	InputPerMtok      string             `json:"input_per_mtok"`
-	ModelId           string             `json:"model_id"`
-	OutputPerMtok     string             `json:"output_per_mtok"`
-	Provider          string             `json:"provider"`
+
+	// Lane What the model is FOR. A property of the model rather than of this dated row: the
+	// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
+	// where the embeddings lane binds, and a zero output price cannot tell them apart —
+	// every local chat row carries one too.
+	Lane          AiModelRateLane `json:"lane"`
+	ModelId       string          `json:"model_id"`
+	OutputPerMtok string          `json:"output_per_mtok"`
+	Provider      string          `json:"provider"`
 }
+
+// AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
+// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
+// where the embeddings lane binds, and a zero output price cannot tell them apart —
+// every local chat row carries one too.
+type AiModelRateLane string
 
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
@@ -13639,6 +13693,20 @@ type Attention struct {
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
+	// Dsr Data-subject requests nobody has resolved, soonest legal deadline
+	// first — the cases whose clocks run whether or not anyone opens the
+	// compliance screen. Each card carries the request's kind and its
+	// deadline; working the case stays on the case queue's own screen,
+	// so the card offers no verbs.
+	//
+	// Withheld — named in `lanes_omitted` — for every reader the case
+	// queue itself refuses: the lane is served exactly as far as the
+	// DSR admin gate reaches, and no further.
+	//
+	// Absent — not empty — on an installation whose feed does not read
+	// the case queue.
+	Dsr *[]AttentionItem `json:"dsr,omitempty"`
+
 	// LanesOmitted Lanes withheld because the caller may not read what they contain. Never returned empty instead.
 	LanesOmitted *[]AttentionLanesOmitted `json:"lanes_omitted,omitempty"`
 
@@ -13725,6 +13793,9 @@ type AttentionCounts struct {
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
+
+	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
+	Dsr *int `json:"dsr,omitempty"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
@@ -24326,12 +24397,24 @@ type SetAiModelRateRequest struct {
 
 	// InputPerMtok USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64).
 	InputPerMtok string `json:"input_per_mtok"`
-	ModelId      string `json:"model_id"`
+
+	// Lane What the model is for. OMIT to keep what the sheet already files this model as —
+	// a re-price must never re-file an embedder as a chat model, and a refresh knows
+	// only the price. A model the sheet has never seen is filed as `chat`. Supply it to
+	// correct a mis-filed model.
+	Lane    *SetAiModelRateRequestLane `json:"lane,omitempty"`
+	ModelId string                     `json:"model_id"`
 
 	// OutputPerMtok USD per 1M output tokens.
 	OutputPerMtok string `json:"output_per_mtok"`
 	Provider      string `json:"provider"`
 }
+
+// SetAiModelRateRequestLane What the model is for. OMIT to keep what the sheet already files this model as —
+// a re-price must never re-file an embedder as a chat model, and a refresh knows
+// only the price. A model the sheet has never seen is filed as `chat`. Supply it to
+// correct a mis-filed model.
+type SetAiModelRateRequestLane string
 
 // SetBlockedDomainRequest defines model for SetBlockedDomainRequest.
 type SetBlockedDomainRequest struct {

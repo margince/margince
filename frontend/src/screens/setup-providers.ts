@@ -15,10 +15,13 @@
  * remain available in Settings → AI, where an operator who already has two
  * vendor accounts can bind the lanes separately.
  *
- * WHY DEFAULTS RATHER THAN A CLOSED PICKER. The server accepts any model id its
- * vendor offers and publishes no catalogue, so a fixed dropdown would be this
- * file inventing a list and calling it the truth — wrong the week a vendor ships
- * a model. These are a starting point, and the field can be typed over.
+ * WHY DEFAULTS AND NOT A LIST. The two models named here are where each field
+ * OPENS, not what it offers. What it offers comes from the server — the price
+ * sheet, which is the one list that has to be right, since a model outside it
+ * reports UNPRICED on every call. A list in this file would be the frontend
+ * inventing a catalogue and calling it the truth, wrong the week a vendor ships
+ * a model; and the field takes anything typed either way, because the server
+ * accepts any id its vendor serves.
  *
  * OpenRouter is a PRESET rather than a fifth adapter: on the wire it is
  * `openai_compatible`, which fails closed without a `base_url`, and asking an

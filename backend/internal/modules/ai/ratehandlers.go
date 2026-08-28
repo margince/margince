@@ -25,6 +25,7 @@ func toContractModelRate(r ModelRateRow) crmcontracts.AiModelRate {
 		CacheReadPerMtok:  r.CacheReadUsd,
 		CacheWritePerMtok: r.CacheWriteUsd,
 		EffectiveDate:     openapi_types.Date{Time: r.EffectiveDate},
+		Lane:              crmcontracts.AiModelRateLane(r.Lane),
 	}
 }
 
@@ -110,6 +111,14 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 	if req.EffectiveDate != nil {
 		effective = req.EffectiveDate.Time
 	}
+	// An omitted lane stays empty all the way to the store, which resolves it
+	// against the sheet: a re-price that named no lane must keep the one the
+	// model already has, and a zero value chosen here would be that decision
+	// made in the wrong place.
+	var lane Lane
+	if req.Lane != nil {
+		lane = Lane(*req.Lane)
+	}
 	row, err := h.rates.SetModelRate(r.Context(), SetModelRateInput{
 		Provider:      req.Provider,
 		ModelID:       req.ModelId,
@@ -117,6 +126,7 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 		OutputUsd:     req.OutputPerMtok,
 		CacheReadUsd:  req.CacheReadPerMtok,
 		CacheWriteUsd: req.CacheWritePerMtok,
+		Lane:          lane,
 		EffectiveDate: effective,
 	})
 	if err != nil {

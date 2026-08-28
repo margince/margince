@@ -1,0 +1,253 @@
+/** @vitest-environment jsdom */
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import "@testing-library/jest-dom/vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { afterEach, describe, expect, it } from "vitest";
+import { ComboBox } from "./combobox";
+
+const MODELS = [
+  { value: "gemini-3.5-flash" },
+  { value: "gemini-3.1-flash-lite" },
+  { value: "gemini-3.1-pro-preview" },
+];
+
+function Harness({
+  suggestions = MODELS,
+  initial = "",
+}: Readonly<{
+  suggestions?: readonly { value: string; hint?: string }[];
+  initial?: string;
+}>) {
+  const [value, setValue] = useState(initial);
+  return (
+    <>
+      <ComboBox
+        aria-label="Model"
+        value={value}
+        onChange={setValue}
+        suggestions={suggestions}
+      />
+      <p data-testid="committed">{value}</p>
+    </>
+  );
+}
+
+describe("ComboBox", () => {
+  afterEach(cleanup);
+
+  it("keeps a value the suggestions do not offer", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Model" }),
+      "my-own-model",
+    );
+
+    expect(screen.getByTestId("committed")).toHaveTextContent("my-own-model");
+  });
+
+  it("commits the suggestion a reader picks", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "gemini-3.1-flash-lite",
+      }),
+    );
+
+    expect(screen.getByTestId("committed")).toHaveTextContent(
+      "gemini-3.1-flash-lite",
+    );
+    expect(box).toHaveValue("gemini-3.1-flash-lite");
+  });
+
+  it("narrows the list to what has been typed, and still keeps the typing", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(screen.getByRole("combobox", { name: "Model" }), "flash");
+
+    const options = within(screen.getByRole("listbox")).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
+    ]);
+    expect(screen.getByTestId("committed")).toHaveTextContent("flash");
+  });
+
+  // The half that separates this from a Select: what a reader typed is theirs,
+  // and closing the list is not a reason to lose it.
+  it("keeps what was typed when Escape closes the list", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.type(box, "gemini-4-experimental");
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(box).toHaveValue("gemini-4-experimental");
+    expect(screen.getByTestId("committed")).toHaveTextContent(
+      "gemini-4-experimental",
+    );
+  });
+
+  // An installation whose price sheet knows nothing about the chosen provider.
+  // The field still works; it just has nothing to offer.
+  it("is a plain text box when there is nothing to suggest", async () => {
+    const user = userEvent.setup();
+    render(<Harness suggestions={[]} />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.type(box, "anything");
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    // `{ hidden: true }` or this proves nothing: the chevron is aria-hidden, so
+    // a plain query excludes it whether or not the component rendered one.
+    expect(
+      screen.queryByRole("button", { hidden: true }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("committed")).toHaveTextContent("anything");
+  });
+
+  it("walks the list from the keyboard and commits on Enter", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+
+    const active = box.getAttribute("aria-activedescendant");
+    expect(active).toBeTruthy();
+    expect(document.getElementById(active ?? "")).toHaveTextContent(
+      "gemini-3.1-flash-lite",
+    );
+
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("committed")).toHaveTextContent(
+      "gemini-3.1-flash-lite",
+    );
+  });
+
+  // ArrowUp reaches for the end of the list, the way Select's does. Clamping
+  // both directions to zero put ArrowUp and ArrowDown on the same row, which
+  // leaves a keyboard reader no way to reach the last option but to walk the
+  // whole list.
+  it("walks up from the end when nothing is active yet", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.keyboard("{ArrowUp}");
+
+    const active = box.getAttribute("aria-activedescendant");
+    expect(document.getElementById(active ?? "")).toHaveTextContent(
+      MODELS[MODELS.length - 1].value,
+    );
+  });
+
+  // A field arrives holding what is already bound, and a reader who opens it is
+  // asking what ELSE there is. Narrowing to the row they already have would make
+  // them clear the field to find out.
+  it("offers the whole list when the value is already one of the suggestions", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="gemini-3.5-flash" />);
+
+    await user.click(screen.getByRole("combobox", { name: "Model" }));
+
+    const options = within(screen.getByRole("listbox")).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(
+      MODELS.map((m) => m.value),
+    );
+    expect(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "gemini-3.5-flash",
+      }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  // A bound model the sheet no longer prices: it is the value, and the priced
+  // ones are still offered beside it.
+  it("shows a value that is not among the suggestions", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="a-model-nobody-priced" />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    expect(box).toHaveValue("a-model-nobody-priced");
+
+    await user.clear(box);
+    expect(
+      within(screen.getByRole("listbox")).getAllByRole("option"),
+    ).toHaveLength(MODELS.length);
+  });
+
+  // A list left hanging over the page under a control nobody is focused on,
+  // still claiming aria-expanded. The pointer path closes it on an outside
+  // press; the keyboard path has to close it on the way out.
+  it("closes the list when focus leaves the field", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Harness />
+        <button type="button">Somewhere else</button>
+      </>,
+    );
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    await user.tab();
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // The chevron is a pointer affordance ON the field, not a way out of it: a
+  // press that stole focus would close the list on the way to opening it.
+  it("keeps focus in the field when the chevron opens the list", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { hidden: true }));
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(box).toHaveFocus();
+  });
+
+  it("refuses every interaction when disabled", async () => {
+    const user = userEvent.setup();
+    render(
+      <ComboBox
+        aria-label="Model"
+        value="gemini-3.5-flash"
+        onChange={() => {
+          throw new Error("a disabled combo box must not report a change");
+        }}
+        suggestions={MODELS}
+        disabled
+      />,
+    );
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    expect(box).toBeDisabled();
+    await user.click(box);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+});

@@ -63,3 +63,38 @@ func TestPrepareModelRateAdmitsEitherWriteGrant(t *testing.T) {
 		})
 	}
 }
+
+// A lane the sheet does not know is a 422 naming the field, never a 500 from
+// the column's CHECK: the caller supplied it, so the caller can fix it.
+//
+// An OMITTED lane is admitted here and resolved in the transaction, where the
+// model's existing lane can be read — the refresh job re-prices models it knows
+// nothing else about, and must not re-file an embedder as a chat model.
+func TestPrepareModelRateRefusesAnUnknownLane(t *testing.T) {
+	base := SetModelRateInput{
+		Provider: "anthropic", ModelID: "m",
+		InputUsd: "1", OutputUsd: "1", CacheReadUsd: "0", CacheWriteUsd: "0",
+	}
+	admin := principal.ObjectGrant{Create: true, Update: true}
+
+	for _, lane := range []Lane{"", LaneChat, LaneEmbeddings} {
+		t.Run("admits "+string(lane), func(t *testing.T) {
+			in := base
+			in.Lane = lane
+			if _, err := NewRateStore(nil).prepareModelRate(modelRateCtx(admin), in); err != nil {
+				t.Fatalf("prepareModelRate(lane=%q) = %v, want admitted", lane, err)
+			}
+		})
+	}
+
+	in := base
+	in.Lane = "vision"
+	_, err := NewRateStore(nil).prepareModelRate(modelRateCtx(admin), in)
+	var invalid *RateValidationError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("prepareModelRate(lane=vision) = %v, want a validation error", err)
+	}
+	if invalid.Field != "lane" {
+		t.Errorf("validation names field %q, want %q", invalid.Field, "lane")
+	}
+}

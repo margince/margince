@@ -24,7 +24,25 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "dedupe_candidate") {
     return t(`day.duplicate.${duplicateNoun(item.kind)}` as const);
   }
+  // A data-subject request's sentence is the client's to write, like the
+  // duplicate's: the server sends the request's kind, and the three locales
+  // each say what that kind obliges.
+  if (item.source === "dsr") {
+    return t(`day.dsr.kind.${dsrNoun(item.kind)}` as const);
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
+}
+
+// Which obligation a data-subject request carries. Only a kind with its own
+// sentence names itself; anything else takes the generic line rather than
+// mislabelling a legal duty.
+function dsrNoun(
+  kind: string | undefined,
+): "access" | "erasure" | "rectify" | "generic" {
+  if (kind === "access" || kind === "erasure" || kind === "rectify") {
+    return kind;
+  }
+  return "generic";
 }
 
 // Which noun a duplicate pair is about.

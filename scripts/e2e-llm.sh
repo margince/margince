@@ -69,13 +69,29 @@ fi
 command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
 
-# The credential. A subscription token is an OAuth bearer and goes in
-# ANTHROPIC_AUTH_TOKEN; an API key goes in ANTHROPIC_API_KEY. Either works —
-# what must not happen is a run that silently falls back to whatever the
-# operator's own shell is logged into, because then the lane is measuring a
-# different account's model.
-if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-  echo "neither ANTHROPIC_API_KEY nor ANTHROPIC_AUTH_TOKEN is set" >&2
+# The credential. Three variables can carry one, and the CLI ranks them:
+# ANTHROPIC_AUTH_TOKEN (a gateway bearer) over ANTHROPIC_API_KEY (a Console key)
+# over CLAUDE_CODE_OAUTH_TOKEN (a subscription token from `claude setup-token`).
+# A subscription token is the one credential with no second home: presented as
+# either of the others it arrives without the OAuth beta header the API requires
+# and is refused, and a refused credential reads downstream as a model that
+# chose to call nothing.
+#
+# The CLI never says which variable it passed over, so a lane with two set
+# measures an account nobody chose. Resolve it here, in the CLI's own order, and
+# print the name — a transcript that ends in a 401 has to say which credential
+# was on trial. What must not happen either way is a run that silently falls
+# back to whatever the operator's own shell is logged into, because then the
+# lane is measuring a different account's model.
+if [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+  CREDENTIAL=ANTHROPIC_AUTH_TOKEN
+elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  CREDENTIAL=ANTHROPIC_API_KEY
+elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  CREDENTIAL=CLAUDE_CODE_OAUTH_TOKEN
+else
+  echo "no credential is set: CLAUDE_CODE_OAUTH_TOKEN (a subscription token from" >&2
+  echo "\`claude setup-token\`), ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN" >&2
   exit 1
 fi
 
@@ -109,6 +125,7 @@ echo "==> booting the $SLUG stack (never :8080)"
 APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
 echo "==> app at $APP_BASE"
 echo "==> model $E2E_LLM_MODEL"
+echo "==> credential $CREDENTIAL"
 
 seed_everything() {
   (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >/dev/null)

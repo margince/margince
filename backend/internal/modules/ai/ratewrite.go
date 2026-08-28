@@ -30,6 +30,7 @@ type ModelRateRow struct {
 	CacheReadUsd  string
 	CacheWriteUsd string
 	EffectiveDate time.Time
+	Lane          Lane
 }
 
 // SetModelRateInput sets one effective-dated model price. The four prices
@@ -43,6 +44,11 @@ type SetModelRateInput struct {
 	CacheReadUsd  string
 	CacheWriteUsd string
 	EffectiveDate time.Time
+	// Lane is what the model is FOR, and is OPTIONAL: empty inherits what the
+	// sheet already files this model as, and falls back to chat for a model it
+	// has never seen. A re-price must not re-file an embedder, and the refresh
+	// job re-prices models it knows nothing else about.
+	Lane Lane
 }
 
 func (s *RateStore) todayUTC() time.Time {
@@ -117,6 +123,9 @@ func (s *RateStore) SetModelRateInTx(ctx context.Context, tx pgx.Tx, in SetModel
 type preparedModelRate struct {
 	provider, modelID                    string
 	input, output, cacheRead, cacheWrite int64
+	// lane is empty when the caller did not name one; writeModelRate resolves
+	// it against the sheet, which needs the transaction this half does not have.
+	lane Lane
 }
 
 // prepareModelRate runs the connection-free, clock-free gates — RBAC admission,
@@ -148,10 +157,42 @@ func (s *RateStore) prepareModelRate(ctx context.Context, in SetModelRateInput) 
 	if err != nil {
 		return preparedModelRate{}, err
 	}
+	if in.Lane != "" && in.Lane != LaneChat && in.Lane != LaneEmbeddings {
+		return preparedModelRate{}, rateInvalid("lane", "rate_lane_unknown",
+			"lane must be either chat or embeddings")
+	}
 	return preparedModelRate{
 		provider: provider, modelID: modelID,
 		input: input, output: output, cacheRead: cacheRead, cacheWrite: cacheWrite,
+		lane: in.Lane,
 	}, nil
+}
+
+// filedLane resolves what this write files the model as: the caller's lane when
+// they named one, otherwise whatever the sheet already says this model is —
+// ANY row for it, since the lane belongs to the model rather than to one
+// effective-dated price. A model the sheet has never seen is a chat model,
+// which is what all but a handful are.
+//
+// Read under the model's write-identity lock, so a concurrent write cannot file
+// the same model differently between this read and the upsert below.
+func filedLane(ctx context.Context, tx pgx.Tx, p preparedModelRate) (Lane, error) {
+	if p.lane != "" {
+		return p.lane, nil
+	}
+	var lane Lane
+	err := tx.QueryRow(ctx, `
+		SELECT lane FROM ai_model_rate
+		WHERE provider = $1 AND model_id = $2
+		ORDER BY effective_date DESC LIMIT 1`,
+		p.provider, p.modelID).Scan(&lane)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return LaneChat, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read filed lane: %w", err)
+	}
+	return lane, nil
 }
 
 // replacedModelRate reads the price this write would overwrite, if any: the
@@ -161,13 +202,16 @@ func (s *RateStore) prepareModelRate(ctx context.Context, in SetModelRateInput) 
 // Called under the model's write-identity lock, so no concurrent writer can
 // insert the row between this read and the upsert that follows.
 func replacedModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effDate time.Time) (before map[string]any, replacing bool, err error) {
-	var in, out, cacheRead, cacheWrite int64
+	var (
+		in, out, cacheRead, cacheWrite int64
+		lane                           Lane
+	)
 	err = tx.QueryRow(ctx, `
 		SELECT input_per_mtok_microusd, output_per_mtok_microusd,
-		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd
+		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, lane
 		FROM ai_model_rate
 		WHERE provider = $1 AND model_id = $2 AND effective_date = $3`,
-		p.provider, p.modelID, effDate).Scan(&in, &out, &cacheRead, &cacheWrite)
+		p.provider, p.modelID, effDate).Scan(&in, &out, &cacheRead, &cacheWrite, &lane)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -177,6 +221,7 @@ func replacedModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effD
 	prior := preparedModelRate{
 		provider: p.provider, modelID: p.modelID,
 		input: in, output: out, cacheRead: cacheRead, cacheWrite: cacheWrite,
+		lane: lane,
 	}
 	return modelRateImage(prior, effDate), true, nil
 }
@@ -189,7 +234,7 @@ func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 		"provider": r.provider, "model_id": r.modelID,
 		"input_microusd": r.input, "output_microusd": r.output,
 		"cache_read_microusd": r.cacheRead, "cache_write_microusd": r.cacheWrite,
-		"date": effDate,
+		"date": effDate, "lane": string(r.lane),
 	}
 }
 
@@ -213,6 +258,13 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if effDate.Before(today) {
 		return ModelRateRow{}, rateInvalid("effective_date", "rate_past", "effective_date cannot be in the past")
 	}
+	// Under the lock taken above, so the lane this write files the model as is
+	// the one the upsert below stores.
+	lane, err := filedLane(ctx, tx, p)
+	if err != nil {
+		return ModelRateRow{}, err
+	}
+	p.lane = lane
 	before, replacing, err := replacedModelRate(ctx, tx, p, effDate)
 	if err != nil {
 		return ModelRateRow{}, err
@@ -229,32 +281,34 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 		inMicro, outMicro, crMicro, cwMicro int64
 		eff                                 time.Time
 		provOut, modelOut                   string
+		laneOut                             Lane
 	)
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO ai_model_rate (
 			provider, model_id,
 			input_per_mtok_microusd, output_per_mtok_microusd,
 			cache_read_per_mtok_microusd, cache_write_per_mtok_microusd,
-			effective_date)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+			effective_date, lane)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (provider, model_id, effective_date)
 		DO UPDATE SET
 			input_per_mtok_microusd       = EXCLUDED.input_per_mtok_microusd,
 			output_per_mtok_microusd      = EXCLUDED.output_per_mtok_microusd,
 			cache_read_per_mtok_microusd  = EXCLUDED.cache_read_per_mtok_microusd,
-			cache_write_per_mtok_microusd = EXCLUDED.cache_write_per_mtok_microusd
+			cache_write_per_mtok_microusd = EXCLUDED.cache_write_per_mtok_microusd,
+			lane                          = EXCLUDED.lane
 		RETURNING id, provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-		          cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date`,
+		          cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane`,
 		p.provider, p.modelID,
-		p.input, p.output, p.cacheRead, p.cacheWrite, effDate,
-	).Scan(&id, &provOut, &modelOut, &inMicro, &outMicro, &crMicro, &cwMicro, &eff); err != nil {
+		p.input, p.output, p.cacheRead, p.cacheWrite, effDate, string(p.lane),
+	).Scan(&id, &provOut, &modelOut, &inMicro, &outMicro, &crMicro, &cwMicro, &eff, &laneOut); err != nil {
 		return ModelRateRow{}, fmt.Errorf("upsert ai_model_rate: %w", err)
 	}
 	out = ModelRateRow{
 		Provider: provOut, ModelID: modelOut,
 		InputUsd: MicroUSDToUsdPerMTok(inMicro), OutputUsd: MicroUSDToUsdPerMTok(outMicro),
 		CacheReadUsd: MicroUSDToUsdPerMTok(crMicro), CacheWriteUsd: MicroUSDToUsdPerMTok(cwMicro),
-		EffectiveDate: eff,
+		EffectiveDate: eff, Lane: laneOut,
 	}
 	// Audit the UTC-truncated day actually stored, not the caller's raw
 	// timestamp, so the ledger is faithful to the persisted rate (matches the
@@ -281,7 +335,7 @@ func (s *RateStore) ListLatestModelRates(ctx context.Context) ([]ModelRateRow, e
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane
 			FROM ai_model_rate
 			ORDER BY provider, model_id, effective_date DESC`)
 		if err != nil {
@@ -311,7 +365,7 @@ func (s *RateStore) ListEffectiveModelRates(ctx context.Context) ([]ModelRateRow
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane
 			FROM ai_model_rate WHERE effective_date <= $1
 			ORDER BY provider, model_id, effective_date DESC`, s.todayUTC())
 		if err != nil {
@@ -334,7 +388,7 @@ func (s *RateStore) ModelRateHistory(ctx context.Context, provider, modelID stri
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
 			SELECT provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane
 			FROM ai_model_rate WHERE provider = $1 AND model_id = $2
 			ORDER BY effective_date DESC`, strings.TrimSpace(provider), strings.TrimSpace(modelID))
 		if err != nil {
@@ -354,7 +408,7 @@ func scanModelRateRows(r pgx.Rows) ([]ModelRateRow, error) {
 			row                                 ModelRateRow
 			inMicro, outMicro, crMicro, cwMicro int64
 		)
-		if err := r.Scan(&row.Provider, &row.ModelID, &inMicro, &outMicro, &crMicro, &cwMicro, &row.EffectiveDate); err != nil {
+		if err := r.Scan(&row.Provider, &row.ModelID, &inMicro, &outMicro, &crMicro, &cwMicro, &row.EffectiveDate, &row.Lane); err != nil {
 			return nil, fmt.Errorf("scan ai_model_rate: %w", err)
 		}
 		row.InputUsd = MicroUSDToUsdPerMTok(inMicro)

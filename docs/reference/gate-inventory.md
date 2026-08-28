@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (39)
+## Parity (40)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -41,6 +41,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the SAME timestamp, or a card ages differently from the list that filed the deal stalled. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
+| `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve exactly what it offered. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `idempotencymap_test.go` | H3 | The idempotency allowlist as a fitness function: the contract is the authority on which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must mirror it exactly. |
@@ -59,7 +60,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (65)
+## Census (66)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -93,6 +94,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | The census as a fitness function, in both directions. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
+| `leadpersonlockorder_test.go` | H2 | ONE lock order over the lead and the person it was promoted into. |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |

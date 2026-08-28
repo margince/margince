@@ -5,6 +5,24 @@ package ai
 
 import "time"
 
+// Lane is what a model is FOR: the chat tiers, or the embeddings lane. It rides
+// the price sheet because the priced row is the one that must exist for a model
+// to be offered at all, and the routing form has nothing else to tell a chat
+// model from an embedder — a zero output price is every local chat row too.
+//
+// A property of the MODEL rather than of the effective-dated row: a re-price
+// never re-files what a model is for, which is why a write that omits it
+// inherits (RateStore.writeModelRate).
+type Lane string
+
+// The two lanes a bound model can serve. The chat tiers and the embeddings
+// lane bind separately because retrieval has to keep working when the chat
+// budget is exhausted, and the model is a different one even on one vendor.
+const (
+	LaneChat       Lane = "chat"
+	LaneEmbeddings Lane = "embeddings"
+)
+
 // ModelRate is one (provider, model, day) price line — the fx_rate-style
 // as-of-date price sheet a call's usage is priced against (ADR-0067).
 // Rates are micro-USD per million tokens (1 unit = 1e-6 USD / 1e6 tokens)
@@ -14,6 +32,7 @@ type ModelRate struct {
 	InputPerMTokMicroUSD, OutputPerMTokMicroUSD         int64
 	CacheReadPerMTokMicroUSD, CacheWritePerMTokMicroUSD int64
 	EffectiveDate                                       time.Time
+	Lane                                                Lane
 }
 
 // PriceCall returns the micro-USD estimate for one call's normalized
@@ -95,8 +114,20 @@ func rateOn(day time.Time, provider, model string, in, out, cacheRead, cacheWrit
 		Provider: provider, ModelID: model,
 		InputPerMTokMicroUSD: in, OutputPerMTokMicroUSD: out,
 		CacheReadPerMTokMicroUSD: cacheRead, CacheWritePerMTokMicroUSD: cacheWrite,
-		EffectiveDate: day,
+		EffectiveDate: day, Lane: LaneChat,
 	}
+}
+
+// embedOn is rateOn for the embeddings lane. A separate constructor rather than
+// a lane argument on every call: the chat rows outnumber the embedding rows six
+// to one, and a positional lane on each of them is a column of noise in which
+// the one row that differs stops standing out.
+//
+// Embeddings have no output and no cache, so those buckets are not offered.
+func embedOn(day time.Time, provider, model string, in int64) ModelRate {
+	r := rateOn(day, provider, model, in, 0, 0, 0)
+	r.Lane = LaneEmbeddings
+	return r
 }
 
 // vendorSheetRates are the cloud vendors' own published per-MTok sheet
@@ -157,7 +188,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// 2026-07-20 against https://ai.google.dev/gemini-api/docs/pricing);
 		// an operator relying on this cost should reconfirm against the
 		// live sheet the same way the gpt-5-mini row above asks for.
-		rateOn(day, providerGemini, "gemini-embedding-001", 150_000, 0, 0, 0),
+		embedOn(day, providerGemini, "gemini-embedding-001", 150_000),
 	}
 }
 
@@ -190,9 +221,9 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// is what a call actually pays.
 		rateOn(day, providerOpenAICompatible, "openai/gpt-oss-120b", 37_000, 170_000, 0, 0),
 		// Embedding lanes have no output and no cache — only input is nonzero.
-		rateOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000, 0, 0, 0),
-		rateOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000, 0, 0, 0),
-		rateOn(day, providerOpenAICompatible, "openai/text-embedding-3-small", 20_000, 0, 0, 0),
+		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
+		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),
+		embedOn(day, providerOpenAICompatible, "openai/text-embedding-3-small", 20_000),
 	}
 }
 
@@ -211,7 +242,7 @@ func localZeroRates(day time.Time) []ModelRate {
 		// id from defaultOllamaModel above (that one is the unbound CHAT
 		// tier's default, gemma3, which is not an embedding model), so it
 		// needs its own explicit zero row.
-		rateOn(day, providerOllama, "bge-m3", 0, 0, 0, 0),
+		embedOn(day, providerOllama, "bge-m3", 0),
 		// The offline fake provider carries no model id of its own — a
 		// binding that omits `model:` (the common case: `{provider: fake}`)
 		// resolves to model_id "" (routeMeta.model = cfg.Model, unmodified).
