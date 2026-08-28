@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { Button, Modal } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import { useUpdateRecord } from "./edit";
 import type { Project } from "./projects.form";
 
@@ -40,7 +41,6 @@ export function AssignProjectOwnerAction({
   disabledReasonId?: string;
 }>) {
   const t = useT();
-  const titleId = useId();
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
 
@@ -68,6 +68,13 @@ export function AssignProjectOwnerAction({
     },
   });
 
+  const skew = isVersionSkewOf(mutation.error);
+  const errorMessage = mutation.isError
+    ? skew
+      ? t("edit.versionSkew")
+      : problemMessageOf(mutation.error, t)
+    : null;
+
   return (
     <>
       <Button
@@ -78,17 +85,24 @@ export function AssignProjectOwnerAction({
       >
         {t("project.assignOwner")}
       </Button>
-      <Modal
+      <ConfirmModal
         open={open}
         onClose={() => {
           setOpen(false);
           setPicked(null);
         }}
-        labelledBy={titleId}
+        title={t("project.assignOwnerTitle")}
+        confirmLabel={t("deals.confirm")}
+        confirmReason={
+          picked ? undefined : t("project.assignOwnerNoneSelected")
+        }
+        onConfirm={() =>
+          picked &&
+          mutation.mutate({ values: { owner_id: picked.id }, rows: {} })
+        }
+        pending={mutation.isPending}
+        error={errorMessage}
       >
-        <h2 id={titleId} className="t-h2">
-          {t("project.assignOwnerTitle")}
-        </h2>
         <RecordPicker
           label={t("project.assignOwnerSearch")}
           searchTargets={searchColleagues}
@@ -96,28 +110,7 @@ export function AssignProjectOwnerAction({
           onPick={setPicked}
           disabled={mutation.isPending}
         />
-        <div className="actions">
-          <Button
-            onClick={() => {
-              setOpen(false);
-              setPicked(null);
-            }}
-          >
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            reason={picked ? undefined : t("project.assignOwnerNoneSelected")}
-            pending={mutation.isPending}
-            onClick={() =>
-              picked &&
-              mutation.mutate({ values: { owner_id: picked.id }, rows: {} })
-            }
-          >
-            {t("deals.confirm")}
-          </Button>
-        </div>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }

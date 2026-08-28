@@ -244,10 +244,11 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
 }
 
 /**
- * Edit, archive and share — the record's rare verbs, beside its identity.
+ * Edit, archive, assign an owner and share — the record's rare verbs, beside
+ * its identity.
  *
- * Edit in the row and the other two behind the overflow, as on the deal page.
- * A project has no primary action, so a labelled Archive left the DESTRUCTIVE
+ * Edit in the row and the rest behind the overflow, as on the deal page. A
+ * project has no primary action, so a labelled Archive left the DESTRUCTIVE
  * verb as the loudest control on the page: it draws in the danger colour, and
  * with nothing green beside it the eye went there first.
  */

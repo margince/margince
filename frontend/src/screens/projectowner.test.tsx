@@ -58,7 +58,10 @@ type Recorded = {
   ifMatch: string | null;
 };
 
-function stubApi(updated: Record<string, unknown>, calls: Recorded[]) {
+function stubApi(
+  response: { body: Record<string, unknown>; status?: number },
+  calls: Recorded[],
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -82,7 +85,7 @@ function stubApi(updated: Record<string, unknown>, calls: Recorded[]) {
         const body = rawBody ? JSON.parse(String(rawBody)) : null;
         const headers = request ? request.headers : new Headers(init?.headers);
         calls.push({ url, method, body, ifMatch: headers.get("If-Match") });
-        return jsonResponse(updated);
+        return jsonResponse(response.body, response.status ?? 200);
       }
       return jsonResponse({ data: [], page: { has_more: false } });
     }),
@@ -92,7 +95,7 @@ function stubApi(updated: Record<string, unknown>, calls: Recorded[]) {
 describe("AssignProjectOwnerAction", () => {
   it("searches, picks a named colleague, and PATCHes owner_id with the current version as If-Match", async () => {
     const calls: Recorded[] = [];
-    stubApi({ ...project, owner_id: "u-42", version: 6 }, calls);
+    stubApi({ body: { ...project, owner_id: "u-42", version: 6 } }, calls);
     const user = userEvent.setup();
     const { client } = render(<AssignProjectOwnerAction project={project} />);
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
@@ -121,7 +124,7 @@ describe("AssignProjectOwnerAction", () => {
 
   it("refuses to confirm before a colleague is picked", async () => {
     const calls: Recorded[] = [];
-    stubApi({ ...project, owner_id: "u-42", version: 6 }, calls);
+    stubApi({ body: { ...project, owner_id: "u-42", version: 6 } }, calls);
     const user = userEvent.setup();
     render(<AssignProjectOwnerAction project={project} />);
 
@@ -129,5 +132,38 @@ describe("AssignProjectOwnerAction", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(calls).toHaveLength(0);
+  });
+
+  it("renders a 409 conflict detail verbatim rather than failing silently", async () => {
+    const calls: Recorded[] = [];
+    stubApi(
+      {
+        body: {
+          title: "Conflict",
+          detail: "the project was changed by someone else",
+          code: "version_conflict",
+        },
+        status: 409,
+      },
+      calls,
+    );
+    const user = userEvent.setup();
+    render(<AssignProjectOwnerAction project={project} />);
+
+    await user.click(screen.getByTestId("assign-project-owner"));
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search colleagues" }),
+      "Jane",
+    );
+    await user.click(await screen.findByRole("button", { name: "Jane Doe" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(
+      await screen.findByText("the project was changed by someone else"),
+    ).toBeTruthy();
+    // The dialog stays open on failure — the reader can retry or cancel,
+    // rather than the write vanishing with nothing on screen.
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeTruthy();
   });
 });
