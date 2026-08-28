@@ -407,7 +407,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// as a feature. A nil binding renders the lane ABSENT (the contract's
 		// honest "this feed does not do commitments"), and rebinding is the
 		// one-line attentionCommitments{store: people.NewStore(db)} when #849
-		// lands. The seam type below stays, tested, ready for that day.
+		// lands. The seam type stays compiled against the interface (the
+		// assertion beside it in attentionlanesseam.go), and the store read
+		// behind it keeps its own integration test — what is NOT tested is
+		// the seam wiring itself, because nothing wires it.
 		nil,
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},

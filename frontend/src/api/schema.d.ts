@@ -22615,8 +22615,10 @@ export interface components {
             this_morning: components["schemas"]["AttentionItem"][];
             /**
              * @description Why `this_morning` holds what it holds: the night produced no run for this
-             *     reader; a run exists and every item is answered; or items are waiting (and
-             *     the lane carries them). Named because the lane's emptiness is ambiguous on
+             *     reader; a run exists and nothing in it still needs an answer (every item
+             *     answered — or the run ranked nothing worth the morning, which is the same
+             *     message to a reader); or items are waiting (and the lane carries them).
+             *     Named because the lane's emptiness is ambiguous on
              *     its own — "the night found nothing" and "you finished the morning" render
              *     identically as zero rows, and only one of them has earned a tick. Absent
              *     when the lane itself was withheld (`lanes_omitted` names it).
