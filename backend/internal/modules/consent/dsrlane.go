@@ -10,6 +10,7 @@ package consent
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,24 @@ type OpenDSR struct {
 	DueAt time.Time
 }
 
+// openDSRLaneDefault mirrors the worklist's small-lane page on purpose: the
+// lane exists to prompt, not to be the queue, and the caller passes its own
+// bound anyway — this is only the answer for a caller that passed none.
+const openDSRLaneDefault = 8
+
+// unresolvedDSRStatuses derives "still owed an answer" from the status
+// machine itself: a status is unresolved exactly while it has somewhere to
+// go. A new state added to dsrTransitions reaches this lane by existing,
+// instead of leaving it with an older idea of open.
+func unresolvedDSRStatuses() []string {
+	statuses := make([]string, 0, len(dsrTransitions))
+	for status := range dsrTransitions {
+		statuses = append(statuses, status)
+	}
+	sort.Strings(statuses)
+	return statuses
+}
+
 // OpenDSRsDueSoonest lists the cases nobody has resolved, soonest deadline
 // first. Gated exactly as the case queue is — requireDSRAdmin — so a caller
 // the queue refuses is refused here too, and the lane above renders that
@@ -34,15 +53,15 @@ func (s *Store) OpenDSRsDueSoonest(ctx context.Context, limit int) ([]OpenDSR, e
 		return nil, err
 	}
 	if limit <= 0 {
-		limit = 8
+		limit = openDSRLaneDefault
 	}
 	var out []OpenDSR
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT id, kind, due_at FROM data_subject_request
-			 WHERE status IN ('open', 'in_progress')
+			 WHERE status = ANY($1)
 			 ORDER BY due_at, id
-			 LIMIT $1`, limit)
+			 LIMIT $2`, unresolvedDSRStatuses(), limit)
 		if err != nil {
 			return err
 		}

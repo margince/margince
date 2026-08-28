@@ -59,7 +59,7 @@ func (l optionalLane) collect(
 	}
 }
 
-// optionalLanes describes the four, in the order they are read.
+// optionalLanes describes the optional lanes, in the order they are read.
 //
 // The meetings window opens at NOW rather than at midnight: a meeting that
 // began an hour ago cannot be prepared for, and one that ended would be plainly
