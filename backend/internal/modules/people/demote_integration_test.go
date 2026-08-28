@@ -13,6 +13,7 @@ package people
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -243,6 +244,72 @@ func (e *promoteConsentEnv) withGrants(objects map[string]principal.ObjectGrant)
 			RowScope: principal.RowScopeAll,
 		},
 	})
+}
+
+// asStranger answers a context for a DIFFERENT user, scoped to their own rows.
+// Every lead this suite seeds carries no owner, so none of them is theirs —
+// they hold the grants to demote a lead and the scope to reach none of these.
+func (e *promoteConsentEnv) asStranger() context.Context {
+	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
+	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())
+	other := ids.NewV7()
+	return principal.WithActor(opCtx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects: map[string]principal.ObjectGrant{
+				"lead":   {Create: true, Read: true, Update: true, Delete: true},
+				"person": {Create: true, Read: true, Update: true},
+			},
+			RowScope: principal.RowScopeOwn,
+		},
+	})
+}
+
+// A caller outside a lead's row scope learns NOTHING about it — including
+// whether it was ever promoted.
+//
+// The demote reads the lead before it holds any lock, because the lead names
+// the person its lock order requires it to take first. That read is therefore
+// in front of everything, so the row-scope probe has to be in front of IT.
+// Behind it, the two ids below answer differently: a promoted lead refuses at
+// the scope check and an unpromoted one refuses earlier, at the read, with
+// "never promoted" — which is the promotion state of somebody else's record,
+// one call at a time. The assertion is that they are the SAME refusal.
+func TestDemoteTellsAStrangerNothingAboutALeadTheyCannotSee(t *testing.T) {
+	e := setupPromoteConsent(t)
+	promoted := e.seedLead(t, "reachable@example.test")
+	if _, _, err := e.store.PromoteLead(e.ctx, promoted, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
+		t.Fatalf("promote the lead this test then hides: %v", err)
+	}
+	neverPromoted := e.seedLead(t, "untouched@example.test")
+
+	stranger := e.asStranger()
+	refusals := map[string]error{}
+	for _, lead := range []struct {
+		what string
+		id   ids.LeadID
+	}{{"promoted", promoted}, {"never promoted", neverPromoted}} {
+		_, err := e.store.DemoteLead(stranger, lead.id, "not mine to undo")
+		if err == nil {
+			t.Fatalf("a caller outside the row scope demoted a %s lead", lead.what)
+		}
+		var notPromoted *NotPromotedError
+		if errors.As(err, &notPromoted) {
+			t.Errorf("demoting a %s lead outside the caller's scope answered %v — the read that names the "+
+				"person ran ahead of the row-scope probe, so the refusal reports the lead's state to "+
+				"somebody who may not see the lead", lead.what, err)
+		}
+		refusals[lead.what] = err
+	}
+	// The refusal is not asserted to be one particular sentinel — which one the
+	// scope layer answers is its own decision. What must hold is that BOTH ids
+	// get the same one: a caller who can tell them apart has read the promotion
+	// state of a record they cannot see.
+	if got, want := fmt.Sprint(refusals["never promoted"]), fmt.Sprint(refusals["promoted"]); got != want {
+		t.Errorf("a promoted lead refuses with %q and an unpromoted one with %q; two answers to the same "+
+			"question is the leak", want, got)
+	}
 }
 
 // A rep who may work leads and create contacts — the grants promotion itself

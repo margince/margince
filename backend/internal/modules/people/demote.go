@@ -83,8 +83,28 @@ func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (c
 		// Which person to lock is written on the lead, so the lead is read
 		// FIRST and unlocked. That read is a hint, not a decision: the lead is
 		// re-read under both locks below and the answer is taken from there.
+		//
+		// BOTH row-scope probes therefore run before either lock, and the lead's
+		// runs before anything is read off it at all. Under lead-then-person the
+		// scope check sat behind the lead lock and ahead of every read, so
+		// nothing about the row could be learned by a caller it would refuse.
+		// Reading the lead first to name the person moves that read in front of
+		// the check, and unprobed it would answer a caller who may not see this
+		// lead whether it was ever promoted — "not promoted" rather than "not
+		// yours" — and then take a lock on a person they cannot see. This is
+		// unwindPerson's own rule, which its doc states for the deal probe, owed
+		// one frame earlier because the lock moved one frame earlier.
+		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+			return err
+		}
 		personID, err := promotedPersonOf(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+			return err
+		}
+		if err := auth.EnsureWritable(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, "person", personID.UUID, storekit.LiveOnly); err != nil {
@@ -93,9 +113,6 @@ func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (c
 		// The lead lock serializes a demote against a concurrent re-promote or
 		// second demote; the loser re-reads the state and answers 409.
 		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
-			return err
-		}
-		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}
 		lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)
@@ -205,7 +222,12 @@ func ensureNoLiveDeal(ctx context.Context, tx pgx.Tx, personID ids.PersonID) err
 // Both unwinds write the person (the lineage pointer at least), so the
 // person's grant and row scope are checked and the row locked BEFORE anything
 // is read about it: the deal probe must not tell a caller who cannot see the
-// person whether it sits on a live deal. Archiving the created person needs
+// person whether it sits on a live deal. Its one caller now owes the same
+// three one frame earlier — it locks the person before the lead — so these
+// re-ask a question already answered. They are kept rather than deleted
+// because they are what makes THIS function safe to read and to call: a guard
+// that lives only in a caller is a guard the next caller does not get.
+// Archiving the created person needs
 // no separate archive grant: the promotion that minted it ran under
 // lead.update + person.create, and its reversal is that same authority
 // exercised backwards — a rep who may promote must be able to undo the
