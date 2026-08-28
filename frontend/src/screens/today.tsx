@@ -564,6 +564,14 @@ export function TodayScreen() {
   );
 }
 
+// A lane is warn-toned only while it HOLDS a finding: bad news gets the
+// tint, an all-clear never borrows it.
+function warnWhenHolding(
+  items: readonly AttentionItem[] | undefined,
+): "warn" | undefined {
+  return (items ?? []).length > 0 ? "warn" : undefined;
+}
+
 function TodayLanes({
   day,
   complete,
@@ -587,12 +595,12 @@ function TodayLanes({
   // served this lane at all; warn-toned whenever it holds anything, because
   // every row is a deadline the law set.
   const requests = day.dsr;
-  const requestsTone = (requests ?? []).length > 0 ? "warn" : undefined;
-  const failedTone = (failed ?? []).length > 0 ? "warn" : undefined;
+  const requestsTone = warnWhenHolding(requests);
+  const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
   // Tinted only when the lane HAS a finding: a warn-toned panel drawn over "no
   // deal is drifting" would dress good news as bad.
-  const driftingTone = (atRisk ?? []).length > 0 ? "warn" : undefined;
+  const driftingTone = warnWhenHolding(atRisk);
   const meetings = day.meetings;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
