@@ -282,42 +282,72 @@ func activityFragmentsIn(decl ast.Decl) []fragmentBinding {
 		if !isValue {
 			continue
 		}
-		sql, reads := activitySQLIn(value)
-		if !reads {
-			continue
-		}
-		var names []string
-		for _, name := range value.Names {
-			if name.Name != "_" {
-				names = append(names, name.Name)
-			}
-		}
-		bindings = append(bindings, fragmentBinding{names: names, sql: sql})
+		bindings = append(bindings, activityBindingsInSpec(value)...)
 	}
 	return bindings
 }
 
-// activitySQLIn is the first statement in this binding's value that reads the
-// activity table, and whether there is one.
-func activitySQLIn(spec *ast.ValueSpec) (string, bool) {
-	found := ""
-	for _, value := range spec.Values {
-		ast.Inspect(value, func(node ast.Node) bool {
-			if found != "" {
-				return false
-			}
-			expr, isExpr := node.(ast.Expr)
-			if !isExpr {
-				return true
-			}
-			text, isText := gatekit.LiteralText(expr)
-			if isText && activityReadLiteral.MatchString(text) {
-				found = text
-				return false
-			}
-			return true
-		})
+// activityBindingsInSpec pairs each value in one spec with the name it is bound
+// to.
+//
+// One spec can bind several at once — `const activitySQL, personSQL = "…", "…"`
+// — so taking every name in the spec would let the person statement's name
+// answer for the activity one, in both directions: as evidence the activity
+// fragment is composed somewhere, and, when the function naming it reaches no
+// exclusion, as a reported reader of SQL it never touches.
+//
+// Names and values pair by index while their counts agree, which is what a
+// spec of literals always looks like. When they do not — `var a, b =
+// twoResults()` binds two names to one expression — the value is attributed to
+// every name in the spec, because there is no index to pair on and the
+// alternative is attributing it to nobody. That direction over-reports, which
+// is the safe one: it can turn a clean function into a finding somebody looks
+// at, never an activity reader into a clean one.
+func activityBindingsInSpec(spec *ast.ValueSpec) []fragmentBinding {
+	names := make([]string, 0, len(spec.Names))
+	for _, name := range spec.Names {
+		if name.Name != "_" {
+			names = append(names, name.Name)
+		}
 	}
+	paired := len(spec.Names) == len(spec.Values)
+	var bindings []fragmentBinding
+	for i, value := range spec.Values {
+		sql, reads := activitySQLIn(value)
+		if !reads {
+			continue
+		}
+		bound := names
+		if paired {
+			bound = nil
+			if spec.Names[i].Name != "_" {
+				bound = []string{spec.Names[i].Name}
+			}
+		}
+		bindings = append(bindings, fragmentBinding{names: bound, sql: sql})
+	}
+	return bindings
+}
+
+// activitySQLIn is the first statement in this value that reads the activity
+// table, and whether there is one.
+func activitySQLIn(value ast.Expr) (string, bool) {
+	found := ""
+	ast.Inspect(value, func(node ast.Node) bool {
+		if found != "" {
+			return false
+		}
+		expr, isExpr := node.(ast.Expr)
+		if !isExpr {
+			return true
+		}
+		text, isText := gatekit.LiteralText(expr)
+		if isText && activityReadLiteral.MatchString(text) {
+			found = text
+			return false
+		}
+		return true
+	})
 	return found, found != ""
 }
 
