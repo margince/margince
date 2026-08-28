@@ -143,9 +143,9 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: shipped
-    sites: [reply, person, account]
+    sites: [reply, person, account, first]
     company_context: {scopes: [positioning, sales, proof, market], token_budget: 1400}
-    doc: "Three sites, one task: the reply to an activity, the person page's composer, and the company page's first-touch outbound. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a fourth site; the composers gain theirs when Voice DNA reaches them."
+    doc: "Four sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, and the message that opens a conversation from a stated intent alone (draft_email over MCP, which names records to file under rather than records to write from). They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them."
 
   nl_search:
     ladder: [cheap_cloud, premium]

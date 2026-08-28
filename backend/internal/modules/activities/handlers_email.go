@@ -90,6 +90,24 @@ type DraftResult struct {
 	DraftRef *string
 }
 
+// FirstEmailDrafter drafts a message that OPENS a conversation, where
+// EmailDrafter answers one.
+//
+// It is a second method rather than an anchor that may be zero, because the two
+// take different evidence and a nil anchor would let a caller ask the reply
+// path a question it has no answer for. A reply reads the activity it answers —
+// its subject, its body, how long ago it arrived, who sent it. A first message
+// has none of that in existence: the caller's intent is the only subject
+// material there is, and everything else the draft is written from (the
+// language, the clock, who is signing) is server-derived either way.
+//
+// A drafter that implements only EmailDrafter leaves the first-message path on
+// the deterministic floor, which is what a deployment running no model gets on
+// both paths.
+type FirstEmailDrafter interface {
+	DraftFirstEmail(ctx context.Context, intent string) (string, string, error)
+}
+
 // ProvenanceEmailDrafter is the richer drafting seam: same draft, plus the
 // provenance the HTTP response stamps. A drafter that implements it is
 // preferred over the plain EmailDrafter shape; the plain seam stays for
