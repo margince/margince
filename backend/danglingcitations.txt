@@ -248,10 +248,6 @@ docs/how-to/apply-migrations.md core 0240
 docs/how-to/connect-telegram.md core 0251
 docs/how-to/connect-telegram.md core 0282
 docs/reference/make-targets.md core 0240
-extensions/notes/migrations/0001_note.up.sql core 0213
-extensions/notes/notes_test.go migration 0002
-extensions/notes/notes_test.go migration 0003
-extensions/notes/notes_test.go migration 0004
 frontend/e2e/leads.spec.ts migration 0038
 frontend/e2e/seed.ts migration 0042
 frontend/src/design-system/recordtimeline.ts migration 0038

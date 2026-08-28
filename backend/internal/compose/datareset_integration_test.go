@@ -500,7 +500,7 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 	e.WsExec(t, `INSERT INTO incumbent_connection (id, incumbent, region, status, credential_ref)
 		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), mine)
 	e.WsExec(t, `INSERT INTO extension_secret (id, extension_name, key, vault_ref)
-		VALUES ($1, 'relay-probe', 'api_key', $2)`, ids.NewV7(), extension)
+		VALUES ($1, 'openchannel', 'inbound', $2)`, ids.NewV7(), extension)
 	e.WsExec(t, `INSERT INTO webhook_subscription (id, owner_id, target_url, event_types, signing_secret_ref)
 		VALUES ($1, $2, 'https://example.test/hook', ARRAY['person.created'], $3)`,
 		ids.NewV7(), e.AdminUser, signing)
