@@ -38,8 +38,8 @@ export function itemTitle(item: AttentionItem, t: T): string {
 // mislabelling a legal duty.
 function dsrNoun(
   kind: string | undefined,
-): "access" | "erasure" | "rectification" | "generic" {
-  if (kind === "access" || kind === "erasure" || kind === "rectification") {
+): "access" | "erasure" | "rectify" | "generic" {
+  if (kind === "access" || kind === "erasure" || kind === "rectify") {
     return kind;
   }
   return "generic";

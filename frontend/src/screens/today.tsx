@@ -70,8 +70,21 @@ function leadLine(
   // A day with a lane missing from it is not a day this line may summarise:
   // "your day is clear" and "part of it is hidden from you" cannot both be on
   // one page, and the reader would believe the reassuring one.
-  if ((day.lanes_omitted ?? []).length > 0) {
+  //
+  // The dsr lane is the one exception: it is withheld BY ROLE — the case
+  // queue admits DSR admins and nobody else, by design and permanently — so
+  // for every other reader it is not a hidden part of THEIR day, and a
+  // banner that said so on every rep's page forever would drown the real
+  // warning the line exists to give.
+  const hidden = (day.lanes_omitted ?? []).filter((lane) => lane !== "dsr");
+  if (hidden.length > 0) {
     return t("day.lead.partial");
+  }
+  // A legal deadline outranks everything below: the reader this line reaches
+  // is the DSR admin, and the clock runs whether or not they act.
+  const owed = day.counts.dsr ?? 0;
+  if (owed > 0) {
+    return t("day.lead.dsr", { count: formatNumber(owed, locale) });
   }
   // Meetings lead every other lane, because a meeting is the one thing on this
   // page that happens whether or not the reader acts. A decision waits; an

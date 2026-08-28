@@ -179,6 +179,8 @@ export const vi = {
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
   "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.meetings": "{count} cuộc họp trên lịch hôm nay.",
+  "day.lead.dsr":
+    "{count} yêu cầu quyền riêng tư đang chạy hạn. Những việc đó trước.",
   "day.lead.didNotRun":
     "{count} việc bạn đã duyệt không chạy. Hãy xem những việc đó trước.",
   "day.lead.atRisk": "{count} đang lặng đi. Không còn gì khác chờ bạn.",
@@ -205,7 +207,7 @@ export const vi = {
   "day.dsr.empty": "Không có yêu cầu nào đang mở từ chủ thể dữ liệu.",
   "day.dsr.kind.access": "Có người muốn biết chúng ta giữ dữ liệu gì",
   "day.dsr.kind.erasure": "Có người muốn được xóa",
-  "day.dsr.kind.rectification": "Có người muốn sửa dữ liệu của họ",
+  "day.dsr.kind.rectify": "Có người muốn sửa dữ liệu của họ",
   "day.dsr.kind.generic": "Một yêu cầu quyền riêng tư đang mở",
   "day.didNotRun.empty": "Mọi việc bạn đã duyệt đều đã chạy.",
   "day.decay": "Những mối quan hệ đang nguội dần",

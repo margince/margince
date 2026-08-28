@@ -174,6 +174,8 @@ export const en = {
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
   "day.lead.promises": "You promised {count} — those come first.",
   "day.lead.meetings": "{count} on the calendar today.",
+  "day.lead.dsr":
+    "{count} privacy requests are on the clock. Those first.",
   "day.lead.didNotRun":
     "{count} you approved did not run. Look at those first.",
   "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
@@ -199,7 +201,7 @@ export const en = {
   "day.dsr.empty": "No open requests from data subjects.",
   "day.dsr.kind.access": "Someone wants to know what data we hold",
   "day.dsr.kind.erasure": "Someone wants to be deleted",
-  "day.dsr.kind.rectification": "Someone wants their data corrected",
+  "day.dsr.kind.rectify": "Someone wants their data corrected",
   "day.dsr.kind.generic": "An open privacy request",
   "day.didNotRun.empty": "Everything you approved actually ran.",
   "day.decay": "Relationships going quiet",
