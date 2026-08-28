@@ -103,6 +103,16 @@ func (s *Service) optionalLanes(
 			into: &out.DidNotRun, count: &out.Counts.DidNotRun,
 		},
 		{
+			name: "dsr", bound: s.dsrs != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				owed, err := s.dsrs.OpenDueSoonest(ctx, doneCap)
+				return renderEach(owed, func(request DSRCase) crmcontracts.AttentionItem {
+					return dsrItem(request, asOf)
+				}), err
+			},
+			into: &out.Dsr, count: &out.Counts.Dsr,
+		},
+		{
 			name: "relationship_decay", bound: s.decay != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, err := s.decay.Lapsed(ctx)

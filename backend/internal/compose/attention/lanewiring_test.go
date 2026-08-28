@@ -28,6 +28,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
+		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		nil,
 		fixedClock,
 	)
@@ -84,6 +85,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
+		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		nil,
 		fixedClock,
 	)
@@ -142,6 +144,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
+		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		nil,
 		fixedClock,
 	)
@@ -158,6 +161,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		"commitments": out.Commitments, "planned": &out.Planned,
 		"relationship_decay": out.RelationshipDecay,
 		"did_not_run":        out.DidNotRun,
+		"dsr":                out.Dsr,
 		"needs_you":          &out.NeedsYou,
 		"done_for_you":       &out.DoneForYou,
 	}

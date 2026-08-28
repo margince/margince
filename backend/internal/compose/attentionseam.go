@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -372,6 +373,22 @@ func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attent
 	return out, nil
 }
 
+// attentionDSRs binds the compliance lane to the consent module's own thin
+// read; the DSR-admin gate lives in the store, not here.
+type attentionDSRs struct{ store *consent.Store }
+
+func (d attentionDSRs) OpenDueSoonest(ctx context.Context, limit int) ([]attention.DSRCase, error) {
+	owed, err := d.store.OpenDSRsDueSoonest(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.DSRCase, 0, len(owed))
+	for _, request := range owed {
+		out = append(out, attention.DSRCase{ID: request.ID, Kind: request.Kind, DueAt: request.DueAt})
+	}
+	return out, nil
+}
+
 // attentionBriefing binds the briefing lane to the same engine entry point Home
 // and the agent tool read, so all three read one queue rather than three
 // readings of it.
@@ -452,6 +469,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
+		// The compliance clock: the open DSR cases, due-soonest first, served
+		// exactly as far as consent's own DSR-admin gate reaches — the store
+		// refuses everyone else and the lane renders that as withheld.
+		attentionDSRs{store: consent.NewStore(db)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

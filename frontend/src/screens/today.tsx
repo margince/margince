@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  Scale,
   ShieldAlert,
   Sparkles,
   Sunrise,
@@ -582,6 +583,11 @@ function TodayLanes({
   // Decisions this reader approved whose released work then failed. Warn-toned
   // whenever it holds anything: every row is a promise the product broke.
   const failed = day.did_not_run;
+  // Data-subject requests with running legal clocks. Only a DSR admin is
+  // served this lane at all; warn-toned whenever it holds anything, because
+  // every row is a deadline the law set.
+  const requests = day.dsr;
+  const requestsTone = (requests ?? []).length > 0 ? "warn" : undefined;
   const failedTone = (failed ?? []).length > 0 ? "warn" : undefined;
   const lapsed = day.relationship_decay;
   // Tinted only when the lane HAS a finding: a warn-toned panel drawn over "no
@@ -683,6 +689,22 @@ function TodayLanes({
         lane="at_risk"
         total={day.counts.at_risk ?? 0}
         tone={driftingTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={requests}
+        shape={{
+          title: t("day.dsr"),
+          empty: t("day.dsr.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: Scale,
+        }}
+        omitted={omitted}
+        lane="dsr"
+        total={day.counts.dsr ?? 0}
+        tone={requestsTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

@@ -201,6 +201,12 @@ export const vi = {
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
   "day.didNotRun": "Đã duyệt nhưng chưa chạy",
+  "day.dsr": "Yêu cầu quyền riêng tư",
+  "day.dsr.empty": "Không có yêu cầu nào đang mở từ chủ thể dữ liệu.",
+  "day.dsr.kind.access": "Có người muốn biết chúng ta giữ dữ liệu gì",
+  "day.dsr.kind.erasure": "Có người muốn được xóa",
+  "day.dsr.kind.rectification": "Có người muốn sửa dữ liệu của họ",
+  "day.dsr.kind.generic": "Một yêu cầu quyền riêng tư đang mở",
   "day.didNotRun.empty": "Mọi việc bạn đã duyệt đều đã chạy.",
   "day.decay": "Những mối quan hệ đang nguội dần",
   "day.decay.empty":

@@ -443,6 +443,25 @@ func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
 	}
 }
 
+// dsrItem is one data-subject request whose clock is running. The card
+// carries no subject and no verbs on purpose: the subject of a DSR is the
+// REQUEST, not a record with a page, and fulfilment lives on the case
+// queue's own screen — this card only makes sure somebody is prompted to
+// open it before the deadline does.
+func dsrItem(request DSRCase, asOf time.Time) crmcontracts.AttentionItem {
+	kind := request.Kind
+	due := request.DueAt
+	past := deadline.Passed(&due, asOf)
+	return crmcontracts.AttentionItem{
+		Id:      request.ID.String(),
+		Source:  crmcontracts.AttentionItemSource("dsr"),
+		Kind:    &kind,
+		DueAt:   &due,
+		Overdue: &past,
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
+}
+
 // subjectOf names the record an item concerns, when the producer named one.
 //
 // The label is deliberately absent here: resolving a display name is a read of
