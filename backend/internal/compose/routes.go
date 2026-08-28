@@ -17,6 +17,7 @@ import (
 	"crypto/subtle"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -229,7 +230,37 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		mux.HandleFunc("/.well-known/oauth-protected-resource/mcp", authH.ProtectedResourceMetadata)
 	}
 	mountProviderPushWebhooks(mux, srv, log)
+	mountInbound(mux, identitySvc, log)
 	return mux
+}
+
+// mountInbound mounts the composed units' session-less edges beside the
+// provider push receivers — the same posture and the same reason: the caller is
+// nobody this installation authenticated, and the verification lives inside.
+//
+// It sits on the operational mux rather than under /v1/ deliberately. ServeMux
+// prefers the longest match, so a /v1/ext/ registration here would win over the
+// /v1/ entry that carries the session middleware, and the extension REST surface
+// would quietly stop requiring a session. This is a different prefix, not a
+// relocation of that one.
+func mountInbound(mux *http.ServeMux, identitySvc *identity.Service, log *slog.Logger) {
+	exts := ComposedExtensions()
+	if len(exts) == 0 || identitySvc == nil {
+		return
+	}
+	routes := MountInboundEndpoints(mux, exts, identitySvc.InstallationWorkspace, boundExtensionRuntime(), log)
+	if len(routes) == 0 {
+		return
+	}
+	// Named, not counted. Every other route in this product is reached by
+	// somebody the installation authenticated; these are reached by a party
+	// holding a URL and a secret, so an operator reading a boot log should see
+	// exactly which paths those are.
+	patterns := make([]string, 0, len(routes))
+	for _, route := range routes {
+		patterns = append(patterns, route.Pattern)
+	}
+	log.Info("composed extension inbound edges mounted", "patterns", strings.Join(patterns, " "))
 }
 
 // mountProviderPushWebhooks mounts the provider push receivers:

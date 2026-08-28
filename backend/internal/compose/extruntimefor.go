@@ -85,3 +85,28 @@ func unattendedRuntimeFor(ctx context.Context, unit, version, via string, deps e
 	rt.unattended = true
 	return rt
 }
+
+// inboundRuntimeFor mints the Runtime for one request arriving on a unit's
+// session-less inbound edge.
+//
+// It is the only constructor here that is NOT unattended, and that is the whole
+// point of it. `unattended` is what closes Ingest (extingress.go), and this edge
+// must stay closed to it: the party on the wire is a stranger holding a shared
+// secret, not a member exercising authority, and a unit that could land a record
+// straight from a signed POST would be landing it on nobody's behalf. Capture
+// happens later, from the drain, on the endpoint owner's own live authority.
+//
+// So the principal is a BARE connector: PrincipalConnector, OnBehalfOf zero, and
+// empty Permissions. The empty set is load-bearing rather than incidental —
+// auth.Require has no connector branch, so a connector passes exactly what its
+// permissions allow, which here is nothing. Note that auth.RequireHuman does
+// admit connectors, so this edge must not reach a surface guarded by that alone;
+// a test pins that it reaches none.
+//
+// Caller() therefore answers a connector with no user, not the zero Caller. That
+// follows from unattended being false and is deliberate: a unit reading Caller
+// on this path should see "a connector, on nobody's behalf" rather than the
+// system identity a job tick answers as.
+func inboundRuntimeFor(ctx context.Context, unit, version, via string, deps extensionRuntimeBinding) *callRuntime {
+	return runtimeFor(ctx, unit, version, via, deps)
+}
