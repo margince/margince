@@ -29,6 +29,14 @@ ALTER TABLE signal_thread_scan
     ADD COLUMN scanned_from timestamptz,
     ADD COLUMN scanned_from_id uuid;
 
+-- One validated ADD, not NOT VALID + a later VALIDATE. The pair shortens the
+-- ACCESS EXCLUSIVE hold only when the ADD COMMITS FIRST and the VALIDATE runs in
+-- a later transaction: dbmigrate runs each file inside one (dbmigrate.go's
+-- inTx), so Postgres holds that lock through the scan either way.
+--
+-- And the scan is not the cost here. Both columns were added a statement ago, so
+-- every existing row holds NULL in both and satisfies the check trivially;
+-- signal_thread_scan holds one row per conversation being scanned, not history.
 ALTER TABLE signal_thread_scan
     ADD CONSTRAINT signal_thread_scan_scanned_from_shape
     CHECK ((scanned_from IS NULL) = (scanned_from_id IS NULL));
