@@ -133,9 +133,14 @@
   gap: var(--space-2);
 }
 
+/* Two fields per line only while two fit. The dialog is capped at
+   `min(32rem, 90vw)`, so on a phone the pair had ~160px each — a Select showing
+   a pipeline name and a label above it, in a box narrower than the name. The
+   fold is on the TRACK rather than in a media query because what runs out is
+   the dialog's width, not the viewport's. */
 .lead-qualify-deal {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: var(--space-2);
 }
 

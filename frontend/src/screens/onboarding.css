@@ -1412,4 +1412,12 @@
   .ob-core-dialog h1 {
     font-size: var(--fs-h1);
   }
+
+  /* The steps stay on one line — the connector behind them IS the journey, and
+     a stacked column would leave it ruled across the stack. What has to give is
+     the space between them: at this width every label wraps, and 4px apart two
+     wrapped labels read as one paragraph rather than as two stages. */
+  .ob-core-journey {
+    column-gap: var(--space-3);
+  }
 }

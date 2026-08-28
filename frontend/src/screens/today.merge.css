@@ -141,4 +141,11 @@
     grid-template-columns: 1fr;
     gap: var(--space-1);
   }
+
+  /* The pair folds with the tiles it mirrors. Left across three columns inside
+     an already-folded row, each value had a third of a phone to say an address
+     in, and the verdict between them was the widest of the three. */
+  .merge-evidence-values {
+    grid-template-columns: 1fr;
+  }
 }

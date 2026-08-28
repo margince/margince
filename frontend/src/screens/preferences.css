@@ -40,10 +40,14 @@
   padding: 16px 18px;
 }
 
+/* The toggle is `flex: none`, so this half is the only one that can give: a
+   floor of min-content here is what let a long purpose name push its own row
+   past the card's edge. */
 .pref-row-main {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .pref-row-head {

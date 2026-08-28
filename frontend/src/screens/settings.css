@@ -250,7 +250,9 @@ p.settings-panel-sub {
   display: flex;
   flex-direction: column;
 }
-.audit-entries > * + * {
+/* Named rather than universal: the trail's last child is the Load-more verb,
+   and a rule over a button says it is the final record in the log. */
+.audit-entries > .audit-row + .audit-row {
   border-top: 1px solid var(--borderSubtle);
 }
 .audit-row {

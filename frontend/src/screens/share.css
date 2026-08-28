@@ -60,9 +60,13 @@
   border-radius: var(--r-md);
 }
 
+/* Wrapping is the fold: both halves already carry min-width: 0, so under
+   pressure they shrank together and a name met the level it holds mid-word.
+   Dropping the trailing half to its own line keeps each one whole. */
 .share-subject-row {
   width: 100%;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;

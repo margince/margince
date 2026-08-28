@@ -51,7 +51,11 @@
   justify-content: space-between;
   gap: 12px;
 }
+/* The name yields, the figure never does: a row is read as "who, how much",
+   and a target broken across two lines stops being one number. min-width lets
+   the name wrap instead of pushing the mono figure off the row's end. */
 .quota-row-name {
+  min-width: 0;
   font-weight: 600;
   color: var(--textPrimary);
 }
@@ -88,7 +92,12 @@
   justify-content: space-between;
   gap: 12px;
 }
+/* Same bargain as the selector row above: the label is the half that can wrap,
+   so it is the half that carries the floor. Without it a long attainment label
+   and the 18px figure beside it both sit at their min-content width and the row
+   overflows the card. */
 .attain-row .k {
+  min-width: 0;
   font-size: 13px;
   color: var(--textSecondary);
 }
@@ -163,7 +172,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 4px 2px;
-  border-top: 2px solid var(--borderSubtle);
+  border-top: 1px solid var(--borderSubtle);
   margin-top: 6px;
 }
 .quota-foot .k {
@@ -183,10 +192,13 @@
   gap: 8px;
   margin-top: 10px;
 }
+/* The rail card's own section seam, drawn as an element because the two halves
+   it divides are siblings rather than rows. Its air is a section's interval, on
+   the scale, so it reads at the same distance as every other seam on the page. */
 .rail-div {
   height: 1px;
   background: var(--borderSubtle);
-  margin: 14px 0;
+  margin: var(--space-4) 0;
 }
 
 .quota-side {

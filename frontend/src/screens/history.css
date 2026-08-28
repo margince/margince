@@ -34,13 +34,16 @@
   gap: 10px;
 }
 
+/* A well inside the card, which is what --bgCard is for, and the list's own gap
+   is what separates two of them. `card-inset` states the same thing one tier up:
+   a recessed plate takes the fill and no border, because the outline would be a
+   second box drawn inside the box already around it. */
 .change {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
   background: var(--bgCard);
-  border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
 }
 
