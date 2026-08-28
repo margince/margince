@@ -544,3 +544,42 @@ func New() extension.Extension {
 		t.Fatalf("refusal said %q, which does not name the nil handler", err)
 	}
 }
+
+// An alias of an alias is the same type, so a nil spelled through it is the
+// same nil. A reader that resolved only the first hop would publish this
+// endpoint and leave boot to refuse it — the failure arriving at a shipped
+// binary's startup rather than at the composition its author runs.
+func TestInboundRefusesANilHandleSpelledThroughAnAliasOfAnAlias(t *testing.T) {
+	source := `package x
+
+import (
+	"context"
+	"time"
+
+	"github.com/margince/margince/backend/pkg/extension"
+)
+
+type Handler = extension.InboundHandler
+
+type Handler2 = Handler
+
+var _ = time.Minute
+
+func New() extension.Extension {
+	return extension.Extension{
+		Name:    "x",
+		Version: "0.1.0",
+		Inbound: []extension.InboundEndpoint{
+` + strings.Replace(wholeEndpoint, "Handle: receive,", "Handle: Handler2(nil),", 1) + `
+		},
+	}
+}
+`
+	_, err := deriveSynthetic(t, "x", source)
+	if err == nil {
+		t.Fatal("a nil handler spelled through an alias of an alias was published")
+	}
+	if !strings.Contains(err.Error(), "Handle: nil") {
+		t.Fatalf("refusal said %q, which does not name the nil handler", err)
+	}
+}

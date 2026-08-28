@@ -77,7 +77,49 @@ func collectHandlerAliases(pkgs map[string][]*ast.File, extensionPkg string) map
 			}
 		}
 	}
-	return aliases
+	// AN ALIAS OF AN ALIAS is the same type, so it must resolve the same way.
+	// `type H = extension.InboundHandler` is caught above because its right
+	// side names the published package; `type H2 = H` is not, because its
+	// right side is a bare identifier. Both spell the identical type, and a
+	// reader that saw only the first would publish `H2(nil)` as a real handler
+	// and leave boot to refuse it — the failure landing at a shipped binary's
+	// startup rather than at the `make composition` its author runs.
+	//
+	// To a fixed point rather than one extra pass, because the chain has no
+	// declared length: H3 = H2 is as legal as H2 = H, and stopping at a depth
+	// would put a silent horizon in a check whose whole job is to have none.
+	for {
+		grew := false
+		for _, files := range pkgs {
+			for _, f := range files {
+				for _, decl := range f.Decls {
+					d, ok := decl.(*ast.GenDecl)
+					if !ok || d.Tok != token.TYPE {
+						continue
+					}
+					for _, spec := range d.Specs {
+						ts, ok := spec.(*ast.TypeSpec)
+						if !ok || !ts.Assign.IsValid() {
+							continue
+						}
+						rhs, ok := ts.Type.(*ast.Ident)
+						if !ok {
+							continue
+						}
+						for _, names := range aliases {
+							if names[rhs.Name] && !names[ts.Name.Name] {
+								names[ts.Name.Name] = true
+								grew = true
+							}
+						}
+					}
+				}
+			}
+		}
+		if !grew {
+			return aliases
+		}
+	}
 }
 
 // isStaticallyNilHandler reports whether expr is nil at the declaration, for
