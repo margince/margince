@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The ext schema is core's (migrations/core/0213), and this table stands in for
+// The ext schema is core's, and this table stands in for
 // a unit's own. Created by the test rather than migrated in: the lane migrates
 // core and custom only, so no unit table exists here — and what is under test
 // is the probe's SQL against a table in that schema, which any table proves.

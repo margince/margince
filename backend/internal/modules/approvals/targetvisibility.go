@@ -253,7 +253,7 @@ func targetPermitted(ctx context.Context, tx pgx.Tx, targetType *string, targetI
 	// an arm added later inherits it without anyone remembering. A denial reads
 	// as not-visible — the caller turns that into the same existence-hiding
 	// answer the record's own read gives, never a 403 that would confirm the row.
-	readable, err := objectReadable(ctx, *targetType)
+	readable, err := objectReadable(ctx, readObjectFor(*targetType))
 	if err != nil || !readable {
 		return false, err
 	}

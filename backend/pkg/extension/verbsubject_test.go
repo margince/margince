@@ -34,7 +34,18 @@ func TestAConfirmFirstOperationDeclaresWhatItStagesAgainst(t *testing.T) {
 		// The id would be absent on every call, which is the dead capability
 		// again — discovered one refusal at a time instead of at generation.
 		"an argument the schema does not declare": func(v *Verb) { v.Subject.Arg = "gadget_id" },
-		"an operation that takes no arguments":    func(v *Verb) { v.InputSchema = nil },
+		// Staging reads the subject as a uuid string on every call, so an
+		// optional one stages on some invocations and is refused on others,
+		// and any other type is a call that can never stage at all.
+		"a subject the schema does not require": func(v *Verb) {
+			v.InputSchema = json.RawMessage(`{"type":"object",
+				"properties":{"widget_id":{"type":"string","format":"uuid"}}}`)
+		},
+		"a subject typed as something other than a string": func(v *Verb) {
+			v.InputSchema = json.RawMessage(`{"type":"object","required":["widget_id"],
+				"properties":{"widget_id":{"type":"integer"}}}`)
+		},
+		"an operation that takes no arguments": func(v *Verb) { v.InputSchema = nil },
 		// A unit may put its OWN rows in front of a human and no others.
 		"a table in another unit's namespace": func(v *Verb) { v.Subject.Table = "ext_other_widget" },
 		"a table that is not an identifier":   func(v *Verb) { v.Subject.Table = "ext_crm_demo_widget; DROP" },

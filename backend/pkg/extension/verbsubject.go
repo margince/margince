@@ -115,7 +115,10 @@ func (v Verb) validateSubject() error {
 // generation.
 func (v Verb) subjectArgIsDeclared() error {
 	var doc struct {
-		Properties map[string]json.RawMessage `json:"properties"`
+		Properties map[string]struct {
+			Type string `json:"type"`
+		} `json:"properties"`
+		Required []string `json:"required"`
 	}
 	if v.InputSchema == nil {
 		return fmt.Errorf("operation %s stages against argument %q but declares no arguments at all",
@@ -125,9 +128,29 @@ func (v Verb) subjectArgIsDeclared() error {
 		return fmt.Errorf("operation %s declares an InputSchema this reader cannot walk, so it cannot be "+
 			"told whether it takes the staging subject %q", v.OperationID, v.Subject.Arg)
 	}
-	if _, declared := doc.Properties[v.Subject.Arg]; !declared {
+	property, declared := doc.Properties[v.Subject.Arg]
+	if !declared {
 		return fmt.Errorf("operation %s stages against argument %q, which its own InputSchema does not "+
 			"declare — the id would be absent on every call", v.OperationID, v.Subject.Arg)
 	}
-	return nil
+	// REQUIRED, and a STRING, because staging reads it as one on every call: it
+	// unmarshals the property as a JSON string and parses that as a uuid. An
+	// optional subject is a call that stages on some invocations and is refused
+	// on others; a subject typed as anything else is a call that is refused on
+	// all of them. Both are declarations a client can generate a call from and
+	// a boot will serve, so they are refused at the declaration rather than
+	// discovered one staging at a time.
+	if property.Type != "string" {
+		return fmt.Errorf("operation %s stages against argument %q, which its InputSchema types as %q — "+
+			"a staged subject is read as a uuid string on every call, so any other type is a call that "+
+			"can never stage", v.OperationID, v.Subject.Arg, property.Type)
+	}
+	for _, name := range doc.Required {
+		if name == v.Subject.Arg {
+			return nil
+		}
+	}
+	return fmt.Errorf("operation %s stages against argument %q but does not require it — a call that omits "+
+		"it names no record, so the operation would stage on some invocations and be refused on others",
+		v.OperationID, v.Subject.Arg)
 }

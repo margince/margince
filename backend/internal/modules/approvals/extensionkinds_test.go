@@ -87,6 +87,14 @@ func TestRegisterExtensionKindsRefusesWhatCannotBeGoverned(t *testing.T) {
 			Verb: "promote_lead", TargetTable: "ext_notes_note",
 			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
 		}},
+		// The dangerous half of the same collision: decisionGrantsFor consults
+		// targetResolvedGrants BEFORE the registry, so a unit taking one of
+		// those names would be decided by the core rule with its own declared
+		// object and action silently ignored.
+		"a core kind whose grant resolves from its target": {{
+			Verb: "assign_owner", TargetTable: "ext_notes_note",
+			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+		}},
 		// Its existence probe would read another store's table.
 		"a core target type": {{
 			Verb: "notes_forget", TargetTable: tablePerson,
@@ -175,4 +183,31 @@ func count(values []string, want string) int {
 		}
 	}
 	return n
+}
+
+// The object-read floor asks about the object a role document can GRANT, not
+// about the table the rows are in.
+//
+// For a core type those are the same word. A unit's need not be: the table and
+// the object are two declarations, and nothing makes a unit spell them alike.
+// Asking about the table would refuse the staged row to a caller holding
+// exactly the operation's own grant — before the probe it was refused ahead of
+// ever ran.
+func TestTheReadFloorAsksAboutTheObjectAUnitDeclared(t *testing.T) {
+	registerOnly(t, ExtensionKind{
+		Verb: "notes_forget", TargetTable: "ext_notes_note",
+		RbacObject: "ext_notes_notepad", RbacAction: principal.ActionDelete,
+	})
+	if got := readObjectFor("ext_notes_note"); got != "ext_notes_notepad" {
+		t.Errorf("the read floor asks about %q, want the unit's declared object", got)
+	}
+	// A core type answers with itself, unchanged.
+	if got := readObjectFor(tablePerson); got != tablePerson {
+		t.Errorf("a core target type resolved to %q, want itself", got)
+	}
+	// And so does one nothing registered: an unknown type has no object to
+	// substitute, and inventing one would be a grant nobody asked for.
+	if got := readObjectFor("ext_unknown_thing"); got != "ext_unknown_thing" {
+		t.Errorf("an unregistered type resolved to %q, want itself", got)
+	}
 }

@@ -96,9 +96,19 @@ func RegisterExtensionKinds(kinds []ExtensionKind) error {
 		// went wrong, and it is also the only order in which the collision
 		// check is reachable, since the namespace grammar below would refuse
 		// every core name before it was asked about.
+		// BOTH static maps, because either one makes the verb a core kind and
+		// the second is the dangerous half: decisionGrantsFor consults
+		// targetResolvedGrants BEFORE the registry, so a unit taking one of
+		// those names would be admitted here, decided by the core rule, and its
+		// own declared object and action silently ignored — a verb that looks
+		// governed by the unit and is governed by something else.
 		if _, core := decisionGrants[kind.Verb]; core {
 			return fmt.Errorf("crmapprovals: extension verb %q is already a core staged kind — a unit may not "+
 				"re-govern a verb this module decides", kind.Verb)
+		}
+		if _, core := targetResolvedGrants[kind.Verb]; core {
+			return fmt.Errorf("crmapprovals: extension verb %q is already a core staged kind whose grant is "+
+				"resolved from its target — a unit may not re-govern a verb this module decides", kind.Verb)
 		}
 		if _, taken := registered[kind.Verb]; taken {
 			return fmt.Errorf("crmapprovals: extension verb %q registered twice", kind.Verb)
@@ -188,7 +198,7 @@ func extensionTargetTypes() []string {
 
 // extensionSchema is where every unit's tables live. The ext schema is shared
 // by all of them and the unit namespace in the table NAME is what keeps two
-// units from addressing each other's rows (backend/migrations/core/0213).
+// units from addressing each other's rows.
 //
 // Spelled here rather than assumed on a search_path, because this repository's
 // statements resolve names explicitly — a probe that relied on the search path

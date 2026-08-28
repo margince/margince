@@ -138,8 +138,10 @@ What the surface will and will not serve:
   it and the tool is registered at boot into the same registry and admission gate the core tools ride,
   so its tier and scope are enforced on every call. The verb must be declared by **your own** unit's
   contract fragment: naming another unit's served verb does not borrow its handler, it gets you a 501.
-- **A served tool is 🟢 only.** `TierConfirmationRequired` is refused for a handler-bearing tool: this
-  surface cannot stage an approval, so a confirm-first extension tool would be refused on every call.
+- **A served 🟡 tool declares what it stages against.** `TierConfirmationRequired` is served only when
+  the operation names the row its approval is about, under `x-mcp-tool.subject` — see the contract
+  section below. Without it the gate has nowhere to park the call it refuses, so a handler-bearing 🟡
+  tool with no subject is refused at boot rather than failing every call with no approval to redeem.
 - **A served tool may not DECLARE an outbound cap.** `ScopeSend` and `ScopeEnrich` are refused for a
   handler-bearing tool, because outbound work is confirm-first everywhere else in the product and a
   🟢 outbound verb would reach a destination nobody approved. This binds the declaration, not the

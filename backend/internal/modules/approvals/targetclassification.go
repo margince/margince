@@ -57,3 +57,23 @@ func ClassifiedTargetTypes() []string {
 	slices.Sort(types)
 	return types
 }
+
+// readObjectFor is the RBAC object the read floor asks about for one staged
+// target type.
+//
+// For a core type the two are the same word: `person` is both the table a
+// staging points at and the object a role document grants. A unit's are not
+// necessarily — the table its rows live in and the object its operation gates
+// on are two declarations, and nothing requires a unit to spell them alike. The
+// floor must ask about the one a role document can actually grant, or a caller
+// holding exactly the operation's own grant would be refused the row before
+// staging ever reached the probe.
+//
+// A type nothing registered answers with itself, which is the core rule
+// unchanged.
+func readObjectFor(targetType string) string {
+	if ext, registered := extensionTarget(targetType); registered {
+		return ext.RbacObject
+	}
+	return targetType
+}
