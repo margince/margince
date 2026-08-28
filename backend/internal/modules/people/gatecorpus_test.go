@@ -515,7 +515,7 @@ func packageStrings(t *testing.T) map[string]string {
 			if _, done := known[name]; done {
 				continue
 			}
-			if text, isText := staticText(expr, known); isText {
+			if text, isText := gatekit.StringExpr(expr, known, gatekit.FoldStrict); isText {
 				known[name] = text
 				progress = true
 			}
@@ -552,29 +552,6 @@ func collectDeclaredStrings(gen *ast.GenDecl, into map[string]ast.Expr) {
 	}
 }
 
-// staticText renders an expression that is a string known at parse time: a
-// literal, or a `+` chain of them and of names already indexed.
-func staticText(expr ast.Expr, known map[string]string) (string, bool) {
-	switch operand := expr.(type) {
-	case *ast.BasicLit:
-		return gatekit.LiteralText(operand)
-	case *ast.Ident:
-		text, isKnown := known[operand.Name]
-		return text, isKnown
-	case *ast.BinaryExpr:
-		if operand.Op != token.ADD {
-			return "", false
-		}
-		left, leftKnown := staticText(operand.X, known)
-		right, rightKnown := staticText(operand.Y, known)
-		if !leftKnown || !rightKnown {
-			return "", false
-		}
-		return left + right, true
-	}
-	return "", false
-}
-
 // concatenatedText joins the strings of a `+` chain, and names the literal
 // nodes it consumed so they are not also read on their own.
 //
@@ -605,7 +582,7 @@ func concatenatedText(expr ast.Expr, known map[string]string) (string, []ast.Nod
 			parts = append(parts, ast.Node(operand))
 			text.WriteString(value)
 		default:
-			if value, isKnown := staticText(operand, known); isKnown {
+			if value, isKnown := gatekit.StringExpr(operand, known, gatekit.FoldStrict); isKnown {
 				text.WriteString(value)
 				return
 			}
