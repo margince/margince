@@ -19,7 +19,9 @@ detail of what's actually writable — see [test-overlay-locally.md](test-overla
 > **Single-organization installation.** One installation serves one organization; the
 > server resolves its singleton organization itself, so no request selects a tenant — there is no
 > `X-Workspace-Slug` header. The `curl`s below carry only the session cookie. ("Workspace" still names
-> the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
+> the internal tenant identity `WithWorkspaceTx` carries on the context; it keeps the transaction
+> boundary and a fail-closed check that a workspace is present, but binds no database GUC — no table
+> carries a `workspace_id` column or a row-level policy.)
 
 ## Prerequisites
 

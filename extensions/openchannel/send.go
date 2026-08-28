@@ -78,9 +78,13 @@ func sendVia(ctx context.Context, rt extension.Runtime, msg extension.OutboundMe
 	if err != nil {
 		return extension.Receipt{}, err
 	}
+	// Called ONCE and reused for both the document and the signature: a receiver
+	// compares the two, and a real clock would put a marshalling-and-dialling gap
+	// between them where a fixed instant is what both sides must agree on.
+	at := now()
 	body, err := json.Marshal(departure{
 		MessageID: msg.IdempotencyKey, Attempt: msg.Attempt, ReplyTo: msg.ReplyTo,
-		OccurredAt: now(), Body: msg.Body,
+		OccurredAt: at, Body: msg.Body,
 		To: party{Account: msg.Recipient.ChannelUserID},
 	})
 	if err != nil {
@@ -92,7 +96,7 @@ func sendVia(ctx context.Context, rt extension.Runtime, msg extension.OutboundMe
 		// it is a definite answer however it reads.
 		return extension.Receipt{}, err
 	}
-	return transmit(ctx, rt, transmission{target: target, msg: msg, post: post, at: now()}, secret, body)
+	return transmit(ctx, rt, transmission{target: target, msg: msg, post: post, at: at}, secret, body)
 }
 
 // transmission is one attempt's subject, gathered so transmit takes an argument

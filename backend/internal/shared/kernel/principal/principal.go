@@ -223,8 +223,11 @@ const (
 	agentRunKey
 )
 
-// WithWorkspaceID binds the tenant key a store's statements narrow by and a
-// transaction helper refuses to open without.
+// WithWorkspaceID binds the workspace a request resolved. No statement
+// narrows by it — an installation holds exactly one workspace (ADR-0061) —
+// but WithWorkspaceTx still refuses to open a transaction without one bound,
+// as a programming-error check: a domain call reached with no workspace
+// resolved at all, not an isolation boundary.
 func WithWorkspaceID(ctx context.Context, id ids.UUID) context.Context {
 	return context.WithValue(ctx, workspaceKey, id)
 }

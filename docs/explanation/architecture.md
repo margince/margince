@@ -87,8 +87,10 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   itself before adding a seam rather than trusting that list: a seam missing from
   a page is how a second one gets written for a question already answered.
 - `internal/platform/` — technical plumbing, owns no domain:
-  `database` (pg pool + the `WithWorkspaceTx` GUC contract that binds every
-  tenant statement's workspace predicate) +
+  `database` (pg pool + the `WithWorkspaceTx` workspace-transaction contract:
+  a transaction boundary with a fail-closed check that a workspace is on the
+  context — it binds no database GUC, and no table carries a `workspace_id`
+  column or a row-level policy) +
   `database/storekit` (the ONE spelling of the audit+outbox write shape,
   keyset cursors, version patches), `auth` (the ONE admission point:
   `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the

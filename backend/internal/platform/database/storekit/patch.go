@@ -252,12 +252,12 @@ func LockRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, archived
 // endpoints. Unlike LockRow it locks regardless of archived state: the
 // caller's reads decide liveness UNDER the lock and keep their richer
 // diagnostics (already-merged conflict, dead-target refusal). A row
-// that does not exist at all is apperrors.ErrNotFound. The lock is
-// taken before any visibility check: this statement carries no
-// workspace predicate of its own, so what makes it safe is that both
-// ids arrive already resolved by the caller's own workspace-scoped
-// read, and the caller's RBAC gate still decides whether the flow may
-// proceed.
+// that does not exist at all is apperrors.ErrNotFound. This statement
+// carries no workspace predicate — an installation holds exactly one
+// (ADR-0061), so there is none to filter by — and the lock is taken
+// before any visibility check; what makes that safe is that both ids
+// arrive already resolved by the caller's own read, and the caller's
+// RBAC gate still decides whether the flow may proceed.
 func LockPair(ctx context.Context, tx pgx.Tx, table string, a, b ids.UUID) (la, lb RowLock, err error) {
 	if a == b {
 		return RowLock{}, RowLock{}, errors.New("storekit: LockPair needs two distinct rows")

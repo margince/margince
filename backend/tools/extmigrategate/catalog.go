@@ -13,14 +13,15 @@ import (
 )
 
 // appRole is the runtime role an extension table may be granted DML on. It is
-// the only grantee outside the owner that the allowlist admits: the app reads
-// and writes extension rows under RLS, and nothing else has business here.
+// the only grantee outside the owner that the allowlist admits: it is the
+// role a deployed installation's API process runs as, and nothing else has
+// business holding privileges on an extension table.
 const appRole = "margince_app"
 
 // tableDML is the privilege set appRole may hold on a TABLE, as PostgreSQL
 // spells it in an ACL item: a(ppend/INSERT), r(ead/SELECT), w(rite/UPDATE),
-// d(elete). Notably absent are D (TRUNCATE — bypasses the policy's USING clause
-// and empties every tenant's rows at once), x (REFERENCES) and t (TRIGGER).
+// d(elete). Notably absent are D (TRUNCATE — empties the whole table at once,
+// taking no predicate and honouring none), x (REFERENCES) and t (TRIGGER).
 const tableDML = "arwd"
 
 // sequenceUse is the equivalent for a SEQUENCE: r(SELECT), w(UPDATE) and
@@ -47,11 +48,13 @@ type relation struct {
 // validateCatalog asserts that what the unit's migrations left in the database
 // is exactly an allowlisted shape, and refuses everything else by name.
 //
-// It runs over the ext_<name> connection, not an admin one. Every fact below
-// is a catalog read that any role may make, so the choice does not change what
-// is visible — but the RLS probe at the end is only meaningful from a role that
-// row-level security actually binds, and running the whole validation from one
-// connection removes the chance of the probe drifting onto the exempt one.
+// It runs over the same ext_<name> connection that just applied the
+// migrations (applyUp), rather than opening a second one as admin. Every fact
+// it reads is a catalog row — pg_class, pg_attribute, pg_constraint, pg_policy
+// — visible to any role, so the choice does not change what validateCatalog
+// itself can see; it matters upstream, at applyUp, where running the
+// migrations under this role's narrow privileges is what proves they need
+// nothing wider than the allowlist grants.
 func validateCatalog(ctx context.Context, conn *pgx.Conn, namespace string) error {
 	if err := assertNoStrayObjects(ctx, conn, namespace); err != nil {
 		return err

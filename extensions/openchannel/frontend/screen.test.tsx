@@ -141,6 +141,13 @@ function renderScreen() {
   );
 }
 
+// The real descriptor, restored after every test so a locale this suite pins
+// for its own assertions cannot leak into a test elsewhere that needs another.
+const originalNavigatorLanguages = Object.getOwnPropertyDescriptor(
+  globalThis.navigator,
+  "languages",
+);
+
 beforeEach(() => {
   Object.defineProperty(globalThis.navigator, "languages", {
     value: ["en-GB"],
@@ -151,6 +158,13 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  if (originalNavigatorLanguages) {
+    Object.defineProperty(
+      globalThis.navigator,
+      "languages",
+      originalNavigatorLanguages,
+    );
+  }
 });
 
 describe("the openchannel screen", () => {

@@ -136,6 +136,37 @@ func TestMintingForAnotherMembersEndpointIsRefusedAsNotFound(t *testing.T) {
 	}
 }
 
+// A failure to record the rotation happens AFTER the seal, so a bare error
+// here would read as "nothing changed" when every already-configured sender
+// is already broken. The refusal must say the secret rotated, that senders
+// need the new value, and that the new value itself was not recorded.
+func TestASecondStepFailureAfterSealingSaysTheSecretAlreadyRotated(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.singleRows = [][]any{
+		endpointRow(endpointID, ownerUserID, "", true),
+		endpointRow(endpointID, ownerUserID, "", true),
+	}
+	// The FIRST transaction (ownership check) must succeed so the seal is
+	// reached; the SECOND (recording the rotation) is where this fails.
+	rt.tx.err = errors.New("boom")
+	rt.tx.failFrom = 2
+
+	_, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
+	if err == nil {
+		t.Fatal("a failed recording step was reported as success")
+	}
+	if !strings.Contains(err.Error(), "rotated") || !strings.Contains(err.Error(), "reconfigur") {
+		t.Fatalf("the refusal does not say the secret already rotated and senders must be reconfigured: %v", err)
+	}
+	if !strings.Contains(err.Error(), "not recorded") {
+		t.Fatalf("the refusal does not say the new value was not recorded: %v", err)
+	}
+	if _, ok := rt.secrets.stored[ownerUserID+"/"+inboundSecretKey]; !ok {
+		t.Fatal("the seal itself must have already happened — that is exactly what makes a bare error misleading")
+	}
+}
+
 func TestMintingRecordsTheRotationAgainstTheEndpoint(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()

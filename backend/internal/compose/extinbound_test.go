@@ -423,13 +423,37 @@ func TestTheInboundEdgeReachesNoRequireHumanGate(t *testing.T) {
 	for _, door := range inboundEdgeDoors {
 		walkInboundCalls(t, door, bodies, reached)
 	}
-	// The edge's own file declares nine functions; reaching fewer than that
-	// many in total means the walk stopped resolving calls and is reporting
-	// agreement with a corpus it failed to read.
-	if len(reached) < 9 {
+	// The floor is however many functions extinbound.go itself declares today,
+	// read from that file rather than hard-coded: a hard-coded number goes
+	// stale the moment the edge is split across files or grows a function, and
+	// either direction of drift is invisible to a count nobody derives from the
+	// file it is supposed to describe. Reaching fewer than that many in total
+	// means the walk stopped resolving calls and is reporting agreement with a
+	// corpus it failed to read.
+	floor := funcDeclCount(t, "extinbound.go")
+	if len(reached) < floor {
 		t.Fatalf("the walk reached only %d functions from the edge's doors, which is fewer than the "+
-			"edge itself declares — it is passing on a corpus it failed to read", len(reached))
+			"%d extinbound.go itself declares — it is passing on a corpus it failed to read", len(reached), floor)
 	}
+}
+
+// funcDeclCount counts the function declarations with a body in one file of
+// the compose package, using the same parse the census above already performs
+// over the whole directory.
+func funcDeclCount(t *testing.T, name string) int {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, name, nil, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", name, err)
+	}
+	count := 0
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+			count++
+		}
+	}
+	return count
 }
 
 // composeFuncDecls indexes every function the compose package declares, keyed
@@ -616,13 +640,29 @@ func TestInboundRefusesAnUngrammaticalRef(t *testing.T) {
 func TestInboundMetersOnTheDeclaredEndpointNotTheRef(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted}
 	mux, _ := mountProbe(t, p)
+
+	// EVERY REQUEST FROM ITS OWN ADDRESS, which is what makes this test about
+	// the endpoint bucket at all. The fixture allows 60 per IP and 120 per
+	// endpoint; driving one address past 60 refuses on the IP bucket and proves
+	// nothing about the other, so the refusal below has to arrive with every
+	// per-IP budget still untouched.
+	//
+	// A DISTINCT REF EACH TIME, because the ref is the caller-chosen segment: if
+	// it reached the limiter key, each of these would open its own budget and
+	// all 121 would be admitted.
 	codes := map[int]int{}
-	for i := range 62 {
-		ref := "ref" + strconv.Itoa(i)
-		codes[serve(mux, signedRequest("/webhooks/ext/u/capture/"+ref, time.Now(), "{}")).Code]++
+	for i := range 121 {
+		r := signedRequest("/webhooks/ext/u/capture/ref"+strconv.Itoa(i), time.Now(), "{}")
+		r.RemoteAddr = "10.0." + strconv.Itoa(i/250) + "." + strconv.Itoa(i%250+1) + ":1234"
+		codes[serve(mux, r).Code]++
 	}
 	if codes[http.StatusTooManyRequests] == 0 {
-		t.Fatalf("62 requests under 62 distinct refs were all admitted (%v) — the ref is buying its own budget", codes)
+		t.Fatalf("121 requests, each from its own address and under its own ref, were all admitted (%v) — "+
+			"the endpoint's 120/min budget was never spent, so the ref is buying a budget of its own", codes)
+	}
+	if codes[http.StatusAccepted] != 120 {
+		t.Fatalf("the endpoint admitted %d of 121 (%v), want exactly its declared 120 — "+
+			"a different number means the refusal came from some other bucket", codes[http.StatusAccepted], codes)
 	}
 }
 

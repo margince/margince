@@ -102,8 +102,24 @@ func attemptClass(err error) extension.FailureClass {
 // justifies them, so a screen never shows a send the ledger does not hold. They
 // move only for an accepted one: a counter that included refusals would say a
 // member's connector is busier than it is.
+//
+// THE COUNTER FOLLOWS THE ROW, NOT THE CALL. The upsert above collapses a
+// repeated attempt number into one row, but a worker can be killed after a
+// successful post and before this write completes — the retry of that same
+// attempt number then calls this function again with the same `sent` outcome.
+// Bumping on every call whose outcome is `sent` would count that one row
+// twice, so the previous outcome is read first and the bump fires only when
+// THIS call is what moves the row into `sent` for the first time.
 func recordAttempt(ctx context.Context, rt extension.Runtime, t transmission, outcome string, class extension.FailureClass) error {
 	return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
+		var previous string
+		err := tx.QueryRow(ctx,
+			`SELECT outcome FROM `+outboundTable+`
+			 WHERE endpoint_id = $1::uuid AND delivery_key = $2 AND attempt = $3`,
+			t.target.ID, t.msg.IdempotencyKey, t.msg.Attempt).Scan(&previous)
+		if err != nil && !errors.Is(err, extension.ErrNoRows) {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO `+outboundTable+`
 			   (endpoint_id, user_id, delivery_key, attempt, recipient, outcome, error_class)
@@ -114,14 +130,14 @@ func recordAttempt(ctx context.Context, rt extension.Runtime, t transmission, ou
 			t.msg.Recipient.ChannelUserID, outcome, class.Class); err != nil {
 			return err
 		}
-		if outcome != outcomeSent {
+		if outcome != outcomeSent || previous == outcomeSent {
 			return nil
 		}
 		// Deliberately not a version bump and not a ledger row, for the reason
 		// the inbound counters' touch is neither: it moves traffic columns and
 		// nothing a member decided, and the decision to send this message was
 		// recorded by the product where somebody made it.
-		_, err := tx.Exec(ctx,
+		_, err = tx.Exec(ctx,
 			`UPDATE `+endpointTable+` SET outbound_sent = outbound_sent + 1,
 			        last_outbound_at = now(), updated_at = now()
 			  WHERE id = $1::uuid`, t.target.ID)

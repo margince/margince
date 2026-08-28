@@ -222,8 +222,19 @@ func (r *extRole) assertRestricted(ctx context.Context) error {
 		return fmt.Errorf("reading the %s role's privileges: %w", r.name, err)
 	}
 	switch {
-	case super || bypass:
-		return fmt.Errorf("role %s holds rolsuper=%t rolbypassrls=%t — an exempt role is not bound by the grants every refusal below rests on, so the gate would prove nothing", r.name, super, bypass)
+	case super:
+		// A superuser bypasses every permission check outright, including the
+		// ACL checks assertNoCorePrivileges and assertNoWiderReferences run
+		// below — so every refusal they would report is unearned.
+		return fmt.Errorf("role %s holds rolsuper=true — a superuser is exempt from the ACL checks every refusal below rests on, so the gate would prove nothing", r.name)
+	case bypass:
+		// BYPASSRLS invalidates only row-level-security policy checks; it
+		// leaves the ACL checks below fully enforced. The role is still
+		// refused, because this tier's guarantee is that the runtime role
+		// holds neither attribute — not because BYPASSRLS would undermine the
+		// assertions that follow.
+		return fmt.Errorf("role %s holds rolbypassrls=true — this tier's guarantee is that the role holds neither rolsuper nor rolbypassrls, "+
+			"so it is refused even though BYPASSRLS invalidates only row-level-security policy checks and not the ACL checks below", r.name)
 	case createPublic:
 		return fmt.Errorf("role %s holds CREATE on schema public — the namespace wall is that it does not, and with it a migration can create a core-schema table that this gate would then have to detect rather than have refused", r.name)
 	case !usagePublic:

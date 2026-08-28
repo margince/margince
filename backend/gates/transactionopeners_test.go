@@ -76,6 +76,35 @@ func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
 	}
 }
 
+// TestBeginCallersOutsideCatchesAMethodValue proves the walk still finds a
+// second opener when the call target is a captured method VALUE
+// (begin := pool.Begin; begin(ctx)) rather than a selector expression at the
+// call site — the shape a walk that only inspected *ast.SelectorExpr call
+// targets would miss and report PASS on.
+func TestBeginCallersOutsideCatchesAMethodValue(t *testing.T) {
+	const source = `package database
+
+func other(ctx context.Context, pool *pgxpool.Pool) error {
+	begin := pool.Begin
+	tx, err := begin(ctx)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	if err != nil {
+		t.Fatalf("parsing fixture source: %v", err)
+	}
+	offenders := beginCallersOutside(file, "fixture.go")
+	if len(offenders) != 1 || offenders[0] != "fixture.go: other" {
+		t.Fatalf("beginCallersOutside(fixture) = %v, want exactly [\"fixture.go: other\"] — "+
+			"a transaction opener reached through a captured method value must be reported "+
+			"the same as one reached through pool.Begin(ctx) directly", offenders)
+	}
+}
+
 // beginCallersOutside names every function in file that calls a .Begin( other
 // than transactionOpener itself.
 func beginCallersOutside(file *ast.File, filename string) []string {
@@ -85,19 +114,34 @@ func beginCallersOutside(file *ast.File, filename string) []string {
 		if !ok || fn.Name.Name == transactionOpener || fn.Body == nil {
 			continue
 		}
+		// A Begin* method is an opener whether it is called directly
+		// (pool.Begin(ctx)) or captured first as a method VALUE
+		// (begin := pool.Begin; begin(ctx)): the second form still turns the
+		// pool into a transaction, so every identifier assigned from a
+		// Begin* selector is tracked as an opener alias before the calls are
+		// walked.
+		openerIdents := beginAliases(fn.Body)
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
 			call, ok := n.(*ast.CallExpr)
 			if !ok {
 				return true
 			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
-			// Every spelling pgx offers, not the one this package happens to
-			// use today: BeginTx and BeginFunc open exactly the same
-			// transaction, so a gate that matched only Begin would report PASS
-			// on the two ways around it — and under-recognition is the one way
-			// a census must not fail, because it reads a smaller subject and
-			// leaves no failing assertion to notice.
-			if !ok || !strings.HasPrefix(sel.Sel.Name, "Begin") {
+			switch fun := call.Fun.(type) {
+			case *ast.SelectorExpr:
+				// Every spelling pgx offers, not the one this package happens
+				// to use today: BeginTx and BeginFunc open exactly the same
+				// transaction, so a gate that matched only Begin would report
+				// PASS on the two ways around it — and under-recognition is
+				// the one way a census must not fail, because it reads a
+				// smaller subject and leaves no failing assertion to notice.
+				if !strings.HasPrefix(fun.Sel.Name, "Begin") {
+					return true
+				}
+			case *ast.Ident:
+				if !openerIdents[fun.Name] {
+					return true
+				}
+			default:
 				return true
 			}
 			offenders = append(offenders, filename+": "+fn.Name.Name)
@@ -105,4 +149,28 @@ func beginCallersOutside(file *ast.File, filename string) []string {
 		})
 	}
 	return offenders
+}
+
+// beginAliases names every identifier body assigns a Begin* method value to —
+// the name `begin := pool.Begin` binds, so a later call through that name is
+// recognized as the same opener a direct `pool.Begin(ctx)` would be.
+func beginAliases(body *ast.BlockStmt) map[string]bool {
+	aliases := map[string]bool{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		assign, ok := n.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		for i, rhs := range assign.Rhs {
+			sel, ok := rhs.(*ast.SelectorExpr)
+			if !ok || !strings.HasPrefix(sel.Sel.Name, "Begin") || i >= len(assign.Lhs) {
+				continue
+			}
+			if ident, ok := assign.Lhs[i].(*ast.Ident); ok {
+				aliases[ident.Name] = true
+			}
+		}
+		return true
+	})
+	return aliases
 }

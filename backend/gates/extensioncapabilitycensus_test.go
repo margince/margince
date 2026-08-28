@@ -249,8 +249,9 @@ func liveUnits(t *testing.T) []unit {
 	return units
 }
 
-// declaredCapabilities is the fields a unit's declaration sets, read from the
-// composite literal the composer's own reader reads.
+// declaredCapabilities is the fields a unit's declaration sets, less the
+// identity pair: a unit that sets only Name and Version has granted itself
+// nothing, and the census that follows depends on that unit reading as empty.
 func declaredCapabilities(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -280,7 +281,7 @@ func declaredCapabilities(t *testing.T, dir string) []string {
 		})
 	}
 	sort.Strings(declared)
-	return slices.Compact(declared)
+	return slices.DeleteFunc(slices.Compact(declared), func(f string) bool { return slices.Contains(identityFields, f) })
 }
 
 // isExtensionDeclaration reports whether a composite literal is an

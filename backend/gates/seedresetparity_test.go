@@ -101,12 +101,35 @@ func goPreservedTables(t *testing.T) []string {
 			if !ok {
 				continue
 			}
+			if !preservedValue(t, kv.Value) {
+				continue // set to false: this entry is not preserved
+			}
 			names = append(names, preservedKeyName(t, kv.Key))
 		}
 		return false
 	})
 	slices.Sort(names)
 	return names
+}
+
+// preservedValue resolves one map value. A false entry means the table is not
+// preserved — its key must not enter the corpus, or a table the product
+// deletes would still read here as one seed-reset must keep. Any shape other
+// than the bool literals fails loudly rather than being treated as either.
+func preservedValue(t *testing.T, value ast.Expr) bool {
+	t.Helper()
+	ident, ok := value.(*ast.Ident)
+	if !ok {
+		t.Fatalf("%s holds a value shape this gate cannot read: %T", preservedIdent, value)
+	}
+	switch ident.Name {
+	case "true":
+		return true
+	case "false":
+		return false
+	}
+	t.Fatalf("%s holds a value %q this gate cannot resolve to true or false", preservedIdent, ident.Name)
+	return false
 }
 
 // preservedKeyName resolves one map key. Most are string literals; the workspace

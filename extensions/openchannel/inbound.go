@@ -36,11 +36,16 @@ import (
 // It is ten times the batch the core's own recovery sweep takes in one pass, so
 // an edge stays open across several missed drains rather than refusing the
 // moment one is late; and against the 64 KiB body cap this endpoint declares it
-// bounds the evidence one endpoint can accumulate at 64 MiB, which is a number
-// an operator can hold in their head. Past it a sender is told 429 — a refusal
-// it can act on — rather than being allowed to fill the table, because the
-// alternative to a bounded queue is an anonymous party deciding how much
-// storage this installation spends.
+// holds the UN-ACTED-ON queue under 64 MiB per endpoint. Past it a sender is
+// told 429 — a refusal it can act on — rather than being allowed to fill the
+// table, because the alternative to a bounded queue is an anonymous party
+// deciding how much storage this installation spends.
+//
+// IT IS NOT A BOUND ON WHAT THE TABLE HOLDS, and the difference matters to
+// whoever sizes a disk. Only waiting rows are counted: a row that has landed or
+// stalled leaves the queue and is kept as evidence until the retention sweep
+// takes it. What the table holds is therefore bounded by the RETENTION WINDOW
+// against the rate a sender is metered at, not by this number — see retention.go.
 const maxPendingInbound = 1000
 
 // signaturePrefix is what the published header carries in front of the hex

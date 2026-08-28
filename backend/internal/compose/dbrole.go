@@ -39,9 +39,15 @@ const runtimeRoleQuery = `
 // AssertRuntimeRole refuses to serve when the runtime pool carries an
 // exemption the tier's guarantees assume it lacks. Extension code reaches the
 // database through this pool, so a deployment that points it at the migration
-// owner would void the DDL/runtime lane separation silently — a superuser or a
-// BYPASSRLS role is not bound by the grants that separation rests on, and an
-// owner of an ext relation can alter or drop that relation outright.
+// owner would void the DDL/runtime lane separation silently — a superuser
+// bypasses every ACL check outright, and an owner of an ext relation can alter
+// or drop that relation regardless of what it was granted.
+//
+// rolbypassrls invalidates only row-level-security policy checks, not grants;
+// this tree carries no RLS policy and no workspace_id column today, so the
+// guard's honest justification is defence in depth against a policy being
+// reintroduced under a role that would silently ignore it, not a claim that a
+// policy is enforced now.
 //
 // It cannot run before extension code: both binaries register the composed
 // extension set while assembling their configuration, which is earlier than

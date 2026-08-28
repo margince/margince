@@ -100,7 +100,11 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		}
 		return recordEndpoint(ctx, tx, extension.AuditUpdate, eventSecretMinted, before, &stored)
 	}); err != nil {
-		return nil, err
+		// The seal above already happened: every sender configured under the
+		// PREVIOUS secret is now broken, and only the new — unrecorded, unreturned
+		// — value verifies from this moment on. A bare err here would read as
+		// "nothing changed", which is the one answer that is false.
+		return nil, fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
 	}
 	return json.Marshal(struct {
 		SigningSecret string   `json:"signing_secret"`

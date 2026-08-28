@@ -99,9 +99,9 @@ var (
 		Sentence: "the openchannel drain failed for a cause this connector does not yet classify",
 		Remedy:   "Read the cause in this job's process log. A failure that keeps landing here is one this connector owes a name, so report it with that line.",
 	}
-	// classDeliveryRefused is the OUTBOUND direction's one class. It is declared
-	// beside the drain's because a unit declares ONE vocabulary — but no job
-	// returns it: a send runs on the product's own delivery ladder, and what
+	// classDeliveryRefused is one of the OUTBOUND direction's classes. It is
+	// declared beside the drain's because a unit declares ONE vocabulary — but no
+	// job returns it: a send runs on the product's own delivery ladder, and what
 	// reaches an operator there is the delivery, not a River row. It is here
 	// because it is what the outbound attempt ledger records, and one spelling
 	// for one failure is the rule this file exists for.
@@ -134,7 +134,7 @@ var (
 
 // failureClasses is the set this unit declares, in the order an operator meets
 // them: what a human must fix first, then what fixes itself, then the two
-// catch-alls, then the outbound direction's own two.
+// catch-alls, then the outbound direction's own classes.
 //
 // It is ONE list and every other reference is to it, so a class that exists in
 // the code and not in the declaration cannot happen — an undeclared class reaches

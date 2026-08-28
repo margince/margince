@@ -5,6 +5,7 @@ package openchannel
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -125,6 +126,40 @@ func TestASentMessageIsNotAValidArrivalAtOurOwnEdge(t *testing.T) {
 	if verified([]byte(senderSecret), relayed) {
 		t.Fatal("a message this connector SENT was admitted by the edge that guards what arrives — " +
 			"any party we transmit to can relay it back and be authenticated as the sender")
+	}
+}
+
+// advancingClock answers a later instant on every call, standing in for a real
+// clock where marshalling and dialling take real time. It is what makes the
+// single-call-vs-two-call difference observable: a fixed clock cannot, because
+// every call to it agrees by construction.
+func advancingClock(start time.Time) func() time.Time {
+	next := start
+	return func() time.Time {
+		at := next
+		next = next.Add(time.Minute)
+		return at
+	}
+}
+
+// The document's own OccurredAt and the instant the signature is stamped from
+// must be the SAME clock read, or a receiver comparing the two sees a gap that
+// grows with however long marshalling and dialling took.
+func TestTheDocumentAndTheSignatureShareOneClockRead(t *testing.T) {
+	t.Parallel()
+	got := &receiver{}
+	rt := sendableEndpoint(registeredURL)
+	if _, err := sendVia(context.Background(), rt, staged(), listening(t, got), advancingClock(signedAt)); err != nil {
+		t.Fatalf("sending: %v", err)
+	}
+	stamp, _, _ := sentSignature(t, got)
+	var doc departure
+	if err := json.Unmarshal(got.body, &doc); err != nil {
+		t.Fatalf("decoding what was posted: %v", err)
+	}
+	if !doc.OccurredAt.Equal(time.Unix(stamp, 0)) {
+		t.Fatalf("the document says it occurred at %s but the signature was stamped from %s",
+			doc.OccurredAt, time.Unix(stamp, 0))
 	}
 }
 

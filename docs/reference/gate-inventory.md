@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (42)
+## Parity (44)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -51,6 +51,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
+| `openchannelinboundschema_test.go` | H3 | The published OpenAPI body schema and the `arrival` struct it documents are ONE invariant spelled on both sides of a wire. |
+| `openchannellocaleparity_test.go` | H3 | The openchannel connector's failure vocabulary and its locale copy must name the SAME set of classes, or a member sees a raw translation key in place of a sentence for whichever class was renamed on one side and not the other. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |

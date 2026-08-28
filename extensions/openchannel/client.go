@@ -6,12 +6,18 @@ package openchannel
 // The outbound half's transport: one signed POST to an address a member
 // registered, and the bounds it is held to on the way out.
 //
-// THE SIGNATURE IS THE SAME SCHEME THE INBOUND EDGE ACCEPTS, and that is the
-// point of this connector rather than an economy. A receiver verifies what
-// leaves here with the code that verifies what arrives there — the same three
-// headers, the same material, the same algorithm prefix — so "point two of these
-// installations at each other" is a thing that works. The material is built by
-// the published SignedPayload and never re-spelled here: a second spelling is one
+// THE SIGNATURE USES THE SAME HEADERS, MATERIAL AND ALGORITHM THE INBOUND EDGE
+// VERIFIES, BUT A DIFFERENT SCOPE — extension.ScopeOutbound here, against
+// extension.ScopeInbound at the edge that admits arrivals. That difference is
+// deliberate and load-bearing, not an inconsistency to close: a message this
+// connector SENDS must not verify as a valid ARRIVAL at its own edge, because
+// this connector signs with the same member secret it uses to admit requests.
+// Same-scope material would let any party we transmit to relay our own bytes
+// back and be authenticated as the sender — the cheapest forgery available,
+// requiring no secret at all. So two installations of this connector do NOT
+// simply verify one another; each one only verifies what a member's own system
+// (holding no secret of ours) sends it. The material itself is built by the
+// published SignedPayload and never re-spelled here: a second spelling is one
 // that will one day differ from the sender's, and the failure looks like a wrong
 // secret rather than a rule that moved.
 //

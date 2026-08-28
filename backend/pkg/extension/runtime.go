@@ -77,8 +77,9 @@ type Runtime interface {
 	// carries is honoured — a shorter deadline, a cancellation, the values a
 	// handler put on it — but the workspace comes from the call the Runtime
 	// was minted for, so a handler cannot name a different one by building a
-	// context. What bounds the SQL inside is the unit's own tables and grants,
-	// not a policy; see Tx.
+	// context. What bounds the SQL inside is convention plus a static scan of
+	// the unit's own source (extensionsqlscope_test.go), not a policy or a
+	// grant; see Tx for what that leaves unwalled.
 	//
 	// fn returning an error rolls the transaction back; returning nil
 	// commits it. The Tx handed to fn is valid only for that call — it is

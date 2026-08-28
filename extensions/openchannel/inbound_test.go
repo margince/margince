@@ -39,10 +39,12 @@ func signedRequest(secret, nonce, body string) extension.InboundRequest {
 	return signedRequestTo(ownerRef, secret, nonce, body)
 }
 
-// signedRequestTo is the same, addressed at a given ref. The ref is NOT part of
-// SignedPayload and deliberately not signed: it is an address, not a
-// credential, and what stops a request landing on somebody else's endpoint is
-// that member's own secret.
+// signedRequestTo is the same, addressed at a given ref. The ref IS part of
+// SignedPayload, so a request captured on one member's endpoint cannot be
+// replayed against another: the signature binds the address as well as the
+// body. It is still not a credential by itself — the ref appears in access
+// logs exactly as the slug does, and what authenticates the request is the
+// signature, not the ref.
 func signedRequestTo(ref, secret, nonce, body string) extension.InboundRequest {
 	req := extension.InboundRequest{
 		Slug:      inboundSlug,
@@ -58,10 +60,10 @@ func signedRequestTo(ref, secret, nonce, body string) extension.InboundRequest {
 }
 
 // openEdge is the Runtime an arriving request meets when the endpoint is open,
-// enabled, and its owner's secret is sealed. The core mints an unattended
-// Runtime for this edge, so the fake does too.
+// enabled, and its owner's secret is sealed. The core mints a bare connector
+// for this edge (inboundRuntimeFor), so the fake does too.
 func openEdge(pending int64) *fakeRuntime {
-	rt := newRuntime().unattended()
+	rt := newRuntime().connector()
 	rt.secrets.stored[ownerUserID+"/"+inboundSecretKey] = []byte(senderSecret)
 	rt.tx.singleRows = [][]any{
 		{endpointID, ownerUserID, true},          // the endpoint lookup
@@ -127,23 +129,23 @@ func TestEveryRefusalIsTheSameRefusal(t *testing.T) {
 	t.Parallel()
 	for name, build := range map[string]func() (*fakeRuntime, extension.InboundRequest){
 		"an address nobody holds": func() (*fakeRuntime, extension.InboundRequest) {
-			rt := newRuntime().unattended()
+			rt := newRuntime().connector()
 			rt.tx.noRows = map[int]bool{1: true}
 			return rt, signedRequestTo("Zm9yZ2VkQWRkcmVzc18x", senderSecret, "n-1", "{}")
 		},
 		"the bare mounted path, carrying no address at all": func() (*fakeRuntime, extension.InboundRequest) {
-			rt := newRuntime().unattended()
+			rt := newRuntime().connector()
 			rt.tx.noRows = map[int]bool{1: true}
 			return rt, signedRequestTo("", senderSecret, "n-1", "{}")
 		},
 		"an endpoint that is paused": func() (*fakeRuntime, extension.InboundRequest) {
-			rt := newRuntime().unattended()
+			rt := newRuntime().connector()
 			rt.secrets.stored[ownerUserID+"/"+inboundSecretKey] = []byte(senderSecret)
 			rt.tx.singleRows = [][]any{{endpointID, ownerUserID, false}}
 			return rt, signedRequest(senderSecret, "n-1", "{}")
 		},
 		"an endpoint whose secret was never minted": func() (*fakeRuntime, extension.InboundRequest) {
-			rt := newRuntime().unattended()
+			rt := newRuntime().connector()
 			rt.tx.singleRows = [][]any{{endpointID, ownerUserID, true}}
 			return rt, signedRequest(senderSecret, "n-1", "{}")
 		},
@@ -182,7 +184,7 @@ func TestEveryRefusalIsTheSameRefusal(t *testing.T) {
 // signature does and make the installation's endpoints enumerable by clock.
 func TestEveryRefusalHasAKeyToVerifyAgainst(t *testing.T) {
 	t.Parallel()
-	rt := newRuntime().unattended()
+	rt := newRuntime().connector()
 
 	// An address nobody holds — and the bare path, which carries none —
 	// resolve to no endpoint at all.
@@ -219,7 +221,7 @@ func TestEveryRefusalHasAKeyToVerifyAgainst(t *testing.T) {
 func TestTheOwnerIsWhoeverTheAddressResolvesTo(t *testing.T) {
 	t.Parallel()
 	const colleagueRef = "Y29sbGVhZ3VlQWRkcmVzcw"
-	rt := newRuntime().unattended()
+	rt := newRuntime().connector()
 	rt.secrets.stored[colleagueUserID+"/"+inboundSecretKey] = []byte(senderSecret)
 	rt.tx.singleRows = [][]any{
 		{endpointID, colleagueUserID, true},
@@ -300,7 +302,7 @@ func TestOneRequestBelowTheCapStillLands(t *testing.T) {
 // refusal it should treat as bad credentials.
 func TestADatabaseFaultIsTransientRatherThanARefusal(t *testing.T) {
 	t.Parallel()
-	rt := newRuntime().unattended()
+	rt := newRuntime().connector()
 	rt.txErr = extension.ErrRuntimeExpired
 
 	outcome, err := receive(context.Background(), rt, signedRequest(senderSecret, "n-1", "{}"))

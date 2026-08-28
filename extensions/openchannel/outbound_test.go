@@ -97,6 +97,55 @@ func TestTheOutboundListingRefusesAnInvocationWithNobodyBehindIt(t *testing.T) {
 	}
 }
 
+// The upsert can collapse a repeated attempt into one row, but the counter
+// must follow that ROW rather than the call: a retry that finds the attempt
+// already `sent` changes nothing and must not be counted a second time, or the
+// counter drifts ahead of the rows that justify it — a worker killed after a
+// successful post but before this write is retried at the same attempt number
+// and must bump `outbound_sent` only once, not once per call.
+func TestTheOutboundCounterFollowsTheRowNotTheCall(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	subject := transmission{
+		target: endpoint{ID: endpointID, UserID: ownerUserID},
+		msg:    staged(),
+	}
+
+	// First call: nothing recorded yet for this attempt, so this call is what
+	// transitions the row into `sent`.
+	rt.tx.noRows[1] = true
+	if err := recordAttempt(context.Background(), rt, subject, outcomeSent, extension.FailureClass{}); err != nil {
+		t.Fatalf("recording: %v", err)
+	}
+	firstBumps := countOutboundBumps(rt.tx.statements)
+	if firstBumps != 1 {
+		t.Fatalf("the first transition into sent moved the counter %d time(s), want 1", firstBumps)
+	}
+
+	// Second call: the SAME attempt, already `sent` — the retry of a completed
+	// attempt, which upserts to the same values and must not count again.
+	rt.tx.singleRows = [][]any{{outcomeSent}}
+	if err := recordAttempt(context.Background(), rt, subject, outcomeSent, extension.FailureClass{}); err != nil {
+		t.Fatalf("recording the repeat: %v", err)
+	}
+	if bumps := countOutboundBumps(rt.tx.statements) - firstBumps; bumps != 0 {
+		t.Fatalf("a repeat of an already-sent attempt moved the counter %d more time(s), want 0 — "+
+			"the member's outbound total now exceeds the rows that justify it", bumps)
+	}
+}
+
+// countOutboundBumps counts how many times the endpoint's outbound counter was
+// asked to move, across every statement a test observed.
+func countOutboundBumps(statements []string) int {
+	n := 0
+	for _, sql := range statements {
+		if strings.Contains(sql, "outbound_sent = outbound_sent + 1") {
+			n++
+		}
+	}
+	return n
+}
+
 // The declared vocabulary is what a screen renders and what a row records, so
 // every class this unit can WRITE has to be one it declared: an undeclared class
 // reaches the operator surface as the unvetted substitute.

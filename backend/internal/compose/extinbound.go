@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -300,11 +301,23 @@ func readInboundBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byt
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		// Over-cap or truncated. 413 rather than the opaque 401: the size of a
-		// request is something the sender already knows, so saying so reveals
-		// nothing, and a sender told "too large" fixes it where one told
-		// "unauthorized" retries the same body forever.
-		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			// Over-cap. 413 rather than the opaque 401: the size of a request
+			// is something the sender already knows, so saying so reveals
+			// nothing, and a sender told "too large" fixes it where one told
+			// "unauthorized" retries the same body forever.
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return nil, false
+		}
+		// Every other read failure comes from the connection, not the limit —
+		// a client that vanished mid-body, a malformed chunked encoding — and
+		// is not a fact about this request's size either. 400 rather than 413,
+		// because there is no cap to raise; and 400 rather than the opaque 401,
+		// because a truncated upload is not an authentication question and
+		// telling the two apart here reveals nothing the sender does not
+		// already know from having sent a body that never finished.
+		w.WriteHeader(http.StatusBadRequest)
 		return nil, false
 	}
 	return body, true

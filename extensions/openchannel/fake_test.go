@@ -73,10 +73,22 @@ func newRuntime() *fakeRuntime {
 	}
 }
 
-// unattended is the Runtime the anonymous inbound edge holds: nobody behind it,
-// which is exactly what the core mints for a request that carries no session.
+// unattended is the Runtime a drain or outbound job tick holds: a scheduled
+// invocation with no principal behind it, which is what the core mints for a
+// job (see Job in the published surface).
 func (r *fakeRuntime) unattended() *fakeRuntime {
 	r.caller = extension.Caller{Type: extension.CallerSystem}
+	return r
+}
+
+// connector is the Runtime the anonymous inbound edge holds: a bare
+// CallerConnector with no user behind it and no permissions, which is exactly
+// what inboundRuntimeFor mints for a request that carries no session — see
+// TestInboundCallerIsABareConnector. It is deliberately not the same shape as
+// unattended: a unit reading Caller() on this path sees "a connector, on
+// nobody's behalf", not the system identity a job tick answers as.
+func (r *fakeRuntime) connector() *fakeRuntime {
+	r.caller = extension.Caller{Type: extension.CallerConnector, IsAgent: true}
 	return r
 }
 
