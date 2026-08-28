@@ -90,6 +90,19 @@ func OutboundTransport() *http.Transport {
 	guarded := transport.Clone()
 	dialer := &net.Dialer{Timeout: outboundDialTimeout, KeepAlive: 30 * time.Second, Control: RefuseNonPublic}
 	guarded.DialContext = dialer.DialContext
+	// NO PROXY, and this is the line that decides whether the guard means
+	// anything. The stdlib default is ProxyFromEnvironment, and a proxy turns
+	// the check inside out: the dial goes to the PROXY's address — public, so
+	// admitted — and the proxy is then asked to CONNECT to the target, which
+	// this side never sees. Every internal address the hook refuses is
+	// reachable that way by any deployment with HTTPS_PROXY set.
+	//
+	// So the clone's inherited proxy is dropped rather than trusted. A
+	// deployment that must egress through a proxy has to enforce the
+	// destination policy AT that proxy, which is the only place that can see
+	// the destination — and is a deployment decision rather than something
+	// this package can make on its behalf.
+	guarded.Proxy = nil
 	return guarded
 }
 

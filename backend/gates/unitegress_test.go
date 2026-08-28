@@ -41,6 +41,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // unitTrees are where a unit's Go lives. fixtures included: a reference unit is
@@ -54,11 +56,17 @@ var unitTrees = []string{"../extensions", "../fixtures/extensions"}
 // one that admits an address the core refuses is the worse half.
 var reservedCIDRLiteral = regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$|^[0-9a-fA-F:]+::?[0-9a-fA-F:]*/\d{1,3}$`)
 
-// publishedEgress are the published names a unit reaches the policy through.
-// A file using one is doing the right thing; the prohibitions below do not
-// apply to it, because a unit that composes its own client AROUND the
-// published hook is exactly the case the surface documents.
+// publishedEgress are the names on the published surface a unit reaches the
+// policy through. A dialer whose Control is one of these is doing what the
+// surface documents — composing its own client around the published hook — and
+// is not reported.
 var publishedEgress = []string{"RefuseNonPublic", "OutboundClient", "OutboundTransport", "ReservedNets"}
+
+// extensionSurface is the import path those names have to come from. Matching
+// the SPELLING alone would accept a unit that declared its own
+// RefuseNonPublic and wired that — which is the copy this gate exists to
+// refuse, under the one name guaranteed not to be reported.
+const extensionSurface = "github.com/margince/margince/backend/pkg/extension"
 
 func TestNoUnitDialsAroundTheInstallationsEgressPolicy(t *testing.T) {
 	t.Parallel()
@@ -100,6 +108,17 @@ func TestNoUnitDialsAroundTheInstallationsEgressPolicy(t *testing.T) {
 // unitEgressOffences names each place one unit file writes its own egress
 // policy.
 func unitEgressOffences(path string, file *ast.File) []string {
+	// The file's own alias for the published surface, so a hook is recognised
+	// by WHERE it comes from rather than by what it is called.
+	surface, dotImported := gatekit.ImportedAs(file, extensionSurface)
+	if dotImported {
+		// A dot-import puts the published names in the file's own scope, where
+		// this cannot tell them from a local declaration of the same name. No
+		// unit does it, and the honest answer is to say so rather than to
+		// guess: reported, so somebody looks.
+		return []string{path + ": dot-imports the published surface, and this gate cannot then tell " +
+			"extension.RefuseNonPublic from a local function of that name — import it qualified"}
+	}
 	var offences []string
 	ast.Inspect(file, func(node ast.Node) bool {
 		if literal, isLiteral := node.(*ast.BasicLit); isLiteral && literal.Kind == token.STRING {
@@ -111,7 +130,7 @@ func unitEgressOffences(path string, file *ast.File) []string {
 			}
 			return true
 		}
-		if dialerControl(node) {
+		if dialerControl(node, surface) {
 			offences = append(offences, path+": wires its own net.Dialer.Control — the guarded dialer is "+
 				"published as extension.OutboundClient (and extension.RefuseNonPublic for a unit that "+
 				"needs its own client settings), so a hand-written hook is a second answer to one question")
@@ -123,7 +142,7 @@ func unitEgressOffences(path string, file *ast.File) []string {
 
 // dialerControl reports a net.Dialer composite literal that sets Control to
 // anything other than the published hook.
-func dialerControl(node ast.Node) bool {
+func dialerControl(node ast.Node, surface string) bool {
 	lit, isLit := node.(*ast.CompositeLit)
 	if !isLit || !isNetDialer(lit.Type) {
 		return false
@@ -137,7 +156,7 @@ func dialerControl(node ast.Node) bool {
 		if !isIdent || key.Name != "Control" {
 			continue
 		}
-		return !namesPublishedEgress(kv.Value)
+		return !namesPublishedEgress(kv.Value, surface)
 	}
 	return false
 }
@@ -152,17 +171,32 @@ func isNetDialer(expr ast.Expr) bool {
 }
 
 // namesPublishedEgress reports whether an expression reaches one of the
-// published names, so a unit wrapping extension.RefuseNonPublic in its own
-// dialer is not reported for doing what the surface tells it to.
-func namesPublishedEgress(expr ast.Expr) bool {
+// published names THROUGH THE PUBLISHED PACKAGE, so a unit wrapping
+// extension.RefuseNonPublic in its own dialer is not reported for doing what
+// the surface tells it to.
+//
+// Qualified, never bare. A unit that declared its own func RefuseNonPublic and
+// wired that would otherwise pass under the one name this gate is guaranteed
+// not to report — the copy, wearing the name of the thing it copies. surface is
+// the file's own alias for the published package, and is empty when the file
+// does not import it at all, in which case nothing here can be reached and
+// every hook is the unit's own.
+func namesPublishedEgress(expr ast.Expr, surface string) bool {
+	if surface == "" {
+		return false
+	}
 	found := false
 	ast.Inspect(expr, func(node ast.Node) bool {
-		ident, isIdent := node.(*ast.Ident)
-		if !isIdent {
+		selector, isSelector := node.(*ast.SelectorExpr)
+		if !isSelector {
+			return true
+		}
+		pkg, isIdent := selector.X.(*ast.Ident)
+		if !isIdent || pkg.Name != surface {
 			return true
 		}
 		for _, name := range publishedEgress {
-			if ident.Name == name {
+			if selector.Sel.Name == name {
 				found = true
 			}
 		}

@@ -138,3 +138,21 @@ func TestEachOutboundTransportIsItsOwn(t *testing.T) {
 		t.Error("the guarded transport IS the process default — the guard would be everywhere or nowhere")
 	}
 }
+
+// A proxy turns the guard inside out: the dial goes to the proxy's own
+// address, which is public and admitted, and the proxy is then asked to
+// CONNECT to the target this side never sees. The stdlib default the clone
+// inherits is ProxyFromEnvironment, so this is one field away on any
+// deployment with HTTPS_PROXY set.
+func TestTheGuardedTransportRoutesThroughNoProxy(t *testing.T) {
+	if OutboundTransport().Proxy != nil {
+		t.Error("the guarded transport carries a proxy — every address the dial control refuses is " +
+			"reachable through it, because the proxy is what connects to the target and the dial only " +
+			"ever sees the proxy")
+	}
+	// And the inherited default is what it would have been, so this test is
+	// asserting a decision rather than restating a zero value.
+	if base, ok := http.DefaultTransport.(*http.Transport); !ok || base.Proxy == nil {
+		t.Skip("the stdlib default carries no proxy in this build, so nothing was inherited to drop")
+	}
+}
