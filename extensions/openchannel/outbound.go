@@ -64,7 +64,7 @@ func outcomeOf(err error) string {
 	switch {
 	case err == nil:
 		return outcomeSent
-	case errors.Is(err, errBlocked):
+	case errors.Is(err, extension.ErrEgressRefused):
 		// Definite: the guard runs before a connection exists, so nothing left.
 		return outcomeRefused
 	case errors.Is(err, errUnanswered):
@@ -81,7 +81,7 @@ func attemptClass(err error) extension.FailureClass {
 	switch {
 	case err == nil:
 		return extension.FailureClass{}
-	case errors.Is(err, errBlocked):
+	case errors.Is(err, extension.ErrEgressRefused):
 		return classDeliveryBlocked
 	case errors.Is(err, errUnanswered):
 		return classDeliveryUnanswered

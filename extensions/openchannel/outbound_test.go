@@ -203,7 +203,7 @@ func TestTheEgressGuardsRefusalIsItsOwnClass(t *testing.T) {
 	if sendErr == nil {
 		t.Fatal("a loopback destination was posted to")
 	}
-	if !errors.Is(sendErr, errBlocked) {
+	if !errors.Is(sendErr, extension.ErrEgressRefused) {
 		t.Fatalf("the guard's refusal came back as %v, which is not the blocked class — "+
 			"an operator reads it as the receiver failing to answer", sendErr)
 	}

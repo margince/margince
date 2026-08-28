@@ -34,10 +34,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -48,6 +46,12 @@ import (
 // package-level initializer that CALLS anything, because an initializer runs at
 // import — before the declaration has been validated. A string-kinded error type
 // is comparable, so errors.Is answers about these exactly as about a sentinel.
+//
+// A blocked dial is not a third member of this vocabulary: the egress guard is
+// published, not written here, and it publishes its own sentinel —
+// extension.ErrEgressRefused — for exactly the same reason this unit publishes
+// none of ITS classes to a caller: the distinction that matters downstream
+// belongs to whoever produces it.
 const (
 	// errRefused is an answer the receiver actually sent, saying no. It is a
 	// DEFINITE answer, so nothing was delivered and the product's ladder may
@@ -62,14 +66,6 @@ const (
 	// product's ladder would send the rep's message a second time with nothing
 	// able to detect it.
 	errUnanswered sendError = "openchannel: the registered address never reported the outcome"
-
-	// errBlocked is the egress guard refusing to dial the address a member
-	// registered. NOTHING LEFT — the guard runs on the resolved address before
-	// a connection is made — so it is a definite answer, and telling it apart
-	// from errUnanswered is the difference between an operator reading "their
-	// system did not answer" and "this installation would not call it". Only
-	// the second is actionable, and only by us.
-	errBlocked sendError = "openchannel: this installation refused to post to the registered address"
 )
 
 // sendError is one of this unit's own outbound refusal classes.
@@ -114,6 +110,12 @@ type senderFactory func(url string) (*sender, error)
 // installation's own worker post a signed request to its cloud metadata endpoint.
 // The address grammar was already checked where the member could read the refusal
 // (url.go); what is left is the part only the resolver knows.
+//
+// The guard itself is extension.OutboundTransport's, not this unit's own: the
+// dialer, its Control hook and the published denylist behind it live once, in
+// the core, so a range added there reaches this connector without this file
+// changing. What this unit still owns is what OutboundTransport deliberately
+// leaves to the caller — the client-wide Timeout and the redirect policy below.
 func newSender(address string) (*sender, error) {
 	// Re-checked here rather than trusted from the row. The row holds what was
 	// legal when it was written, and this is the last moment before a packet
@@ -123,12 +125,11 @@ func newSender(address string) (*sender, error) {
 	if err != nil {
 		return nil, err
 	}
-	dialer := &net.Dialer{Timeout: sendTimeout, Control: refusePrivate}
 	return &sender{
 		url: dialable,
 		http: &http.Client{
 			Timeout:   sendTimeout,
-			Transport: &http.Transport{DialContext: dialer.DialContext},
+			Transport: extension.OutboundTransport(),
 			// A redirect is another address, chosen by the receiver rather than
 			// by the member — and following one would carry a signed body to a
 			// host the guard never judged. Refusing is cheap: a receiver that
@@ -138,43 +139,6 @@ func newSender(address string) (*sender, error) {
 			},
 		},
 	}, nil
-}
-
-// refusePrivate refuses to dial anything that is not a globally routable unicast
-// address, on the CONCRETE address the resolver returned.
-//
-// The reserved ranges are read from the published surface rather than restated
-// here. A hand-copy drifts, and a range the core refuses while this unit admits
-// it is a member-supplied host reaching an internal address.
-func refusePrivate(_, address string, _ syscall.RawConn) error {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		return fmt.Errorf("openchannel: the address %q is not host:port", address)
-	}
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return fmt.Errorf("openchannel: %q did not resolve to an address", host)
-	}
-	if !publicIP(ip) {
-		return fmt.Errorf("%w: %s is not a public address, and an address a member registered must not become a probe of this deployment's own network", errBlocked, ip)
-	}
-	return nil
-}
-
-// publicIP reports whether ip is a globally routable unicast address: what the
-// stdlib's own predicates already answer, plus the core's published denylist for
-// the ranges they miss.
-func publicIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsMulticast() || ip.IsUnspecified() {
-		return false
-	}
-	for _, reserved := range extension.ReservedNets() {
-		if reserved.Contains(ip) {
-			return false
-		}
-	}
-	return true
 }
 
 // post transmits one signed document and classifies whatever comes back.
@@ -197,9 +161,12 @@ func (s *sender) post(ctx context.Context, secret []byte, nonce string, at time.
 		// nothing was transmitted and the outcome is certain — where a genuine
 		// unanswered POST may be at the recipient and may not. Reporting the
 		// two alike would park a delivery that certainly never left, under a
-		// sentence blaming a system this installation declined to call.
-		if errors.Is(err, errBlocked) {
-			return fmt.Errorf("%w: %s", errBlocked, err.Error())
+		// sentence blaming a system this installation declined to call. The
+		// sentinel comes from the guard itself, not from a class this unit
+		// invented for it: extension.ErrEgressRefused survives the http.Client
+		// and net.OpError wrapping between the dial and here.
+		if errors.Is(err, extension.ErrEgressRefused) {
+			return fmt.Errorf("%w: %s", extension.ErrEgressRefused, err.Error())
 		}
 		// The request went out and this side never learned what was decided.
 		// No answer exists, so the send path treats it as unknown rather than
