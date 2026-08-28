@@ -129,7 +129,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 			names:     map[string]bool{employmentHelper: true, primaryHelper: true},
 		}
 		for _, decl := range file.Decls {
-			if plantedProbe(decl) {
+			if plantedProbe(path, decl) {
 				continue
 			}
 			for _, sql := range employmentStatements(decl, scope) {
@@ -487,12 +487,23 @@ const probeMarker = "//gate:probe"
 // the tree.
 const probeOwner = gateDir + "/employmentcurrency_test.go"
 
-// plantedProbe reports whether a declaration carries the marker.
+// plantedProbe reports whether a declaration in path carries the marker.
+//
+// Honoured in the PROBE OWNER only, which is what keeps the marker from being a
+// way past these censuses. Written tree-wide it would be exactly that: a doc
+// comment on any declaration anywhere would exempt it from both, and the file
+// teaching the marker is the one somebody copies from. Refusing it elsewhere
+// closes that by construction rather than by a test that notices afterwards —
+// and TestNoStrayProbeMarker reports one anyway, so somebody who writes it is
+// told it does nothing instead of believing it worked.
 //
 // The doc comment specifically, not any comment in the declaration's span: a
 // marker inside a function body would exempt the function it sits in, which is
 // a way to silence a finding rather than to declare evidence.
-func plantedProbe(decl ast.Decl) bool {
+func plantedProbe(path string, decl ast.Decl) bool {
+	if filepath.ToSlash(path) != probeOwner {
+		return false
+	}
 	var doc *ast.CommentGroup
 	switch node := decl.(type) {
 	case *ast.GenDecl:
@@ -541,7 +552,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 			names:     map[string]bool{currentPrimarySlotPredicate: true},
 		}
 		for _, decl := range file.Decls {
-			if plantedProbe(decl) {
+			if plantedProbe(path, decl) {
 				continue
 			}
 			for _, sql := range slotStatements(decl, scope) {
@@ -721,7 +732,7 @@ func TestTheProbeMarkerExemptsTheProbesAndNothingElse(t *testing.T) {
 	var marked []string
 	judged := 0
 	for _, decl := range file.Decls {
-		if plantedProbe(decl) {
+		if plantedProbe(probeOwner, decl) {
 			marked = append(marked, declaredName(decl))
 			continue
 		}
@@ -763,4 +774,44 @@ func declaredName(decl ast.Decl) string {
 		}
 	}
 	return "an unnamed declaration"
+}
+
+// TestNoStrayProbeMarker reports a marker written where it does nothing.
+//
+// plantedProbe honours the marker in its own file only, so a stray one cannot
+// exempt anything — the vulnerability is closed by construction. What is left is
+// the reader who wrote one and believes it worked, and a silent no-op is the
+// worst answer to give them: they think a declaration is declared evidence, and
+// it is being judged.
+//
+// It is also the arm that keeps the construction honest. If plantedProbe were
+// ever widened to honour the marker tree-wide, this is what would already be
+// standing there to catch the first stray.
+func TestNoStrayProbeMarker(t *testing.T) {
+	t.Parallel()
+	fset := token.NewFileSet()
+	var stray []string
+	for _, path := range handWrittenGoSources(t) {
+		if filepath.ToSlash(path) == probeOwner {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		for _, group := range file.Comments {
+			for _, line := range group.List {
+				if strings.TrimSpace(line.Text) == probeMarker {
+					stray = append(stray,
+						fmt.Sprintf("%s:%d", filepath.ToSlash(path), fset.Position(line.Pos()).Line))
+				}
+			}
+		}
+	}
+	if len(stray) > 0 {
+		t.Errorf("%s appears in %v, where it exempts nothing. The marker is honoured in %s alone, "+
+			"which is what stops it becoming a way past these censuses — so a copy elsewhere is a "+
+			"declaration somebody believes is evidence while it is being judged. Delete it, or fix the "+
+			"finding it was written to silence", probeMarker, stray, probeOwner)
+	}
 }
