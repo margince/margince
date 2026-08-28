@@ -9,7 +9,6 @@ package relayprobe
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,76 +16,12 @@ import (
 	"testing"
 )
 
-// The guard's real definition. base_url is text a member typed, so without this
-// a name resolving to a link-local address turns this installation's own worker
-// into a probe of its network — and the answer comes back to whoever asked.
-func TestTheEgressGuardRefusesEveryNonPublicAddress(t *testing.T) {
-	for address, public := range map[string]bool{
-		// Routable, and the only class that may be dialed.
-		"93.184.216.34":     true,
-		"2606:2800:220:1::": true,
-		// Loopback, private, link-local — the obvious three.
-		"127.0.0.1":       false,
-		"10.0.0.5":        false,
-		"192.168.1.10":    false,
-		"172.16.4.4":      false,
-		"169.254.169.254": false,
-		"::1":             false,
-		"fe80::1":         false,
-		// The ranges the stdlib predicates miss, and the reason the list of
-		// CIDRs exists at all: each of these reads as ordinary public space to
-		// IsPrivate.
-		"0.0.0.0":              false,
-		"0.1.2.3":              false,
-		"100.64.0.1":           false, // CGNAT
-		"192.0.0.1":            false, // protocol assignment
-		"192.0.2.5":            false, // documentation
-		"198.18.0.1":           false, // benchmarking
-		"198.51.100.5":         false,
-		"203.0.113.5":          false,
-		"240.0.0.1":            false, // reserved
-		"255.255.255.255":      false,
-		"192.88.99.1":          false, // 6to4 relay anycast
-		"2001:db8::1":          false, // documentation
-		"3fff::1":              false, // documentation, the newer range
-		"64:ff9b::a9fe:a9fe":   false, // NAT64 onto the metadata address
-		"64:ff9b:1::a9fe:a9fe": false, // local-use NAT64 onto the same address
-		"2002:7f00:1::1":       false, // 6to4 carrying 127.0.0.1
-		"2001::1":              false, // Teredo, inside the 2001::/23 blanket
-		"100::1":               false, // discard-only
-		"100:0:0:1::1":         false, // dummy prefix
-		"5f00::1":              false, // SRv6 SIDs
-		"fec0::1":              false, // deprecated site-local
-		"::ffff:0:a9fe:a9fe":   false, // IPv4-translated onto the metadata address
-		"::ffff:127.0.0.1":     false, // IPv4-mapped loopback
-	} {
-		t.Run(address, func(t *testing.T) {
-			ip := net.ParseIP(address)
-			if ip == nil {
-				t.Fatalf("%q is not an address — the fixture is wrong, which would make this row pass for free", address)
-			}
-			if got := publicIP(ip); got != public {
-				t.Errorf("publicIP(%s) = %v, want %v", address, got, public)
-			}
-		})
-	}
-}
-
-// The control hook is what actually runs, on the CONCRETE address the resolver
-// returned — so a DNS answer pointing inward cannot bypass a check made on the
-// name.
-func TestTheDialControlRefusesAResolvedPrivateAddress(t *testing.T) {
-	if err := refusePrivate("tcp", "169.254.169.254:443", nil); err == nil {
-		t.Fatal("the dial control admitted the cloud metadata address")
-	}
-	if err := refusePrivate("tcp", "93.184.216.34:443", nil); err != nil {
-		t.Fatalf("the dial control refused a public address: %v", err)
-	}
-	if err := refusePrivate("tcp", "not-an-address", nil); err == nil {
-		t.Error("the dial control admitted something that is not host:port")
-	}
-}
-
+// What this unit owes about egress is that its PRODUCTION client is wired to
+// the installation's guard — not what that guard decides, which is the
+// surface's own question and is answered in pkg/extension's tests against the
+// full corpus of addresses this unit used to carry, and held equal to the core
+// by TestThePublishedEgressDecisionMatchesTheGuards.
+//
 // The guard is attached by the production constructor, which is the property
 // that matters: a client built the way a poll builds it cannot reach a loopback
 // listener, however the URL was spelled.
@@ -102,9 +37,10 @@ func TestTheProductionClientCannotDialLoopback(t *testing.T) {
 	if err == nil {
 		t.Fatal("the production client reached a loopback host")
 	}
-	// Asserted on the guard's own words rather than on any failure: a name that
-	// did not resolve would fail too, and would prove nothing about the guard.
-	if !strings.Contains(err.Error(), "not a public address") {
+	// Asserted on the PUBLISHED guard's own words rather than on any failure: a
+	// name that did not resolve would fail too and would prove nothing, and a
+	// refusal in this unit's own words would mean the copy came back.
+	if !strings.Contains(err.Error(), "extension: refusing to dial non-public address") {
 		t.Fatalf("err = %v, want the egress guard's refusal", err)
 	}
 }
