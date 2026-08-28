@@ -541,7 +541,6 @@ internal/platform/auth/rbac.go#func UpsertAction
 internal/platform/auth/rbac.go#func refuseBuyer
 internal/platform/auth/rowscope.go#var ownerPrivateTables
 internal/platform/cliflags/cliflags.go#method Env.Items
-internal/platform/database/database.go#func withBoundTx
 internal/platform/database/statementbudget.go#func BoundStatement
 internal/platform/database/storekit/customcolumns.go#func quoteColumnIdentifier
 internal/platform/database/storekit/predicate.go#func ReferenceTargets

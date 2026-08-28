@@ -130,9 +130,10 @@ type InboundRequest struct {
 	Body []byte
 }
 
-// SignedPayload is the exact material an InboundRequest's signature covers, so
-// a unit computing the expected MAC and a sender computing the presented one
-// cannot disagree about the spelling.
+// SignedPayload is the exact material an InboundRequest's signature covers.
+// Compute the expected MAC over this and over nothing else: a verifier that
+// re-spells the concatenation is a verifier that will one day spell it
+// differently from the sender, and the failure looks like a wrong secret.
 func (r InboundRequest) SignedPayload() []byte {
 	prefix := fmt.Sprintf("%d.%s.", r.Timestamp.Unix(), r.Nonce)
 	payload := make([]byte, 0, len(prefix)+len(r.Body))
@@ -216,10 +217,10 @@ const MaxInboundBody int64 = 1 << 20
 // bounded nonce store can cover.
 const MaxInboundSkew = 15 * time.Minute
 
-// Validate enforces what an endpoint must state to be mountable. It is the
-// published check the manifest generator and the boot preflight both run, so
-// generation time and boot time cannot disagree about which declarations are
-// legal.
+// Validate enforces what an endpoint must state to be mountable. Both the
+// manifest generator and the boot preflight run this same check, so a
+// declaration that reached the composed set outside the generator path is
+// judged the same way.
 func (e InboundEndpoint) Validate() error {
 	if err := e.validateSlug(); err != nil {
 		return err

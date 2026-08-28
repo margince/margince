@@ -121,6 +121,8 @@ func WithInfraTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error)
 // runTx is the one spelling of this package's transaction discipline — begin,
 // roll back on every path that is not a commit, commit once — so the seams
 // above cannot drift from each other while both exist.
+//
+// Held by: TestTheDatabasePackageOpensATransactionInOneFunction (backend/gates/transactionopeners_test.go)
 func runTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
