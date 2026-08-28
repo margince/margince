@@ -262,6 +262,24 @@ type Extension struct {
 	// before this field existed.
 	Ingress []IngressSource
 
+	// Inbound are the session-less HTTP edges this unit asks the core to mount:
+	// a signed POST from a party that holds no session and no seat.
+	//
+	// Like a Tool's tier this is a REQUEST an operator resolves — declaring one
+	// mounts nothing an operator has not enabled, and the bounds a unit asks for
+	// are clamped by the installation's own ceiling, with the manifest recording
+	// what was asked and what was granted.
+	//
+	// It is declared HERE rather than in a contract fragment because a fragment
+	// adds capabilities and never the shape of the document: the merge layer
+	// refuses a top-level block of contract structure by argument, which is what
+	// an inbound edge is. Ingress and Channels are declared the same way and for
+	// the same reason.
+	//
+	// Presence is the enablement. A unit declaring none has no anonymous edge,
+	// which is the state every unit was in before this field existed.
+	Inbound []InboundEndpoint
+
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
