@@ -150,11 +150,10 @@ export function GrowthFitPanel({
             <Button
               small
               onClick={() => reassess.mutate()}
-              disabled={reassess.isPending}
+              pending={reassess.isPending}
+              busyLabel={t("co.growthFit.reassessing")}
             >
-              {reassess.isPending
-                ? t("co.growthFit.reassessing")
-                : t("co.growthFit.reassess")}
+              {t("co.growthFit.reassess")}
             </Button>
           </div>
         )

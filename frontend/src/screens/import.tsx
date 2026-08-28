@@ -267,6 +267,7 @@ function ImportWizard({
           onUndo={() => undo.mutate(run)}
           onRestart={flow.restart}
           error={commit.error}
+          commitBusy={commit.isPending}
           undoError={undo.error}
           undoBusy={undo.isPending}
         />
@@ -294,6 +295,7 @@ function ImportOutcome({
   onUndo,
   onRestart,
   error,
+  commitBusy,
   undoError,
   undoBusy,
 }: Readonly<{
@@ -309,6 +311,11 @@ function ImportOutcome({
   onUndo: () => void;
   onRestart: () => void;
   error: unknown;
+  // `busy` is every import mutation; `commitBusy` and `undoBusy` are the one
+  // this control started. A button barred because a SIBLING write is out is a
+  // precondition; a button waiting on its own write is a wait, and only there
+  // does the reader keep focus on the control they just pressed.
+  commitBusy: boolean;
   undoError: unknown;
   undoBusy: boolean;
 }>) {
@@ -387,16 +394,28 @@ function ImportOutcome({
       ) : null}
 
       {!committed ? (
-        <Button small variant="primary" disabled={busy} onClick={onCommit}>
-          {busy
-            ? t("import.importing")
-            : commitLabel(plural, locale, d.created + d.updated)}
+        <Button
+          small
+          variant="primary"
+          disabled={busy && !commitBusy}
+          pending={commitBusy}
+          busyLabel={t("import.importing")}
+          onClick={onCommit}
+        >
+          {commitLabel(plural, locale, d.created + d.updated)}
         </Button>
       ) : null}
 
       {resumable ? (
-        <Button small variant="primary" disabled={busy} onClick={onCommit}>
-          {busy ? t("import.importing") : t("import.resume")}
+        <Button
+          small
+          variant="primary"
+          disabled={busy && !commitBusy}
+          pending={commitBusy}
+          busyLabel={t("import.importing")}
+          onClick={onCommit}
+        >
+          {t("import.resume")}
         </Button>
       ) : null}
       {error ? (
@@ -462,12 +481,17 @@ function UndoSection({
       {undone ? <UndoOutcome undo={report.undo} /> : null}
 
       {undoable || undoInterrupted ? (
-        <Button small variant="ghost" disabled={busy} onClick={onUndo}>
-          {undoBusy
-            ? t("import.undoing")
-            : undoInterrupted
-              ? t("import.continueUndo")
-              : undoLabel(plural, locale, report.disposition.created)}
+        <Button
+          small
+          variant="ghost"
+          disabled={busy && !undoBusy}
+          pending={undoBusy}
+          busyLabel={t("import.undoing")}
+          onClick={onUndo}
+        >
+          {undoInterrupted
+            ? t("import.continueUndo")
+            : undoLabel(plural, locale, report.disposition.created)}
         </Button>
       ) : null}
       {undoError ? (
@@ -641,10 +665,12 @@ function ImportMappingStep({
       <Button
         small
         variant="primary"
-        disabled={busy || !identifiedBy}
+        disabled={!identifiedBy || (busy && !pending)}
+        pending={pending}
+        busyLabel={t("import.validating")}
         onClick={onValidate}
       >
-        {pending ? t("import.validating") : t("import.validate")}
+        {t("import.validate")}
       </Button>
       {error ? (
         <Callout tone="danger" live="alert">

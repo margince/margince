@@ -2706,7 +2706,6 @@ export const en = {
   "docs.add.errNoFile": "Choose a file to upload.",
   "docs.add.errNoDeal": "Pick the deal to file this against.",
   "docs.add.errRefused": "You may not add documents to this record.",
-  "docs.add.errInFlight": "This document is still uploading.",
   "docs.add.errTooLarge":
     "That file is larger than {size}, which is the most this installation accepts. Choose a smaller one.",
   "docs.add.failedTitle": "The upload did not go through",

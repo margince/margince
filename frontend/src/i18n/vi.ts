@@ -2657,7 +2657,6 @@ export const vi = {
   "docs.add.errNoFile": "Hãy chọn một tệp để tải lên.",
   "docs.add.errNoDeal": "Hãy chọn thương vụ để gắn tài liệu này vào.",
   "docs.add.errRefused": "Bạn không được thêm tài liệu vào bản ghi này.",
-  "docs.add.errInFlight": "Tài liệu này vẫn đang được tải lên.",
   "docs.add.errTooLarge":
     "Tệp này lớn hơn {size}, là mức tối đa bản cài đặt này nhận. Hãy chọn tệp nhỏ hơn.",
   "docs.add.failedTitle": "Tải lên không thành công",

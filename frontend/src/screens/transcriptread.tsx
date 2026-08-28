@@ -220,10 +220,13 @@ export function TranscriptReadCard({
       title={t("transcriptread.title")}
       sub={t("transcriptread.sub")}
       actions={
-        <Button small disabled={start.isPending} onClick={() => start.mutate()}>
-          {start.isPending
-            ? t("transcriptread.starting")
-            : t("transcriptread.cta")}
+        <Button
+          small
+          pending={start.isPending}
+          busyLabel={t("transcriptread.starting")}
+          onClick={() => start.mutate()}
+        >
+          {t("transcriptread.cta")}
         </Button>
       }
       style={{ marginTop: "var(--space-3)" }}

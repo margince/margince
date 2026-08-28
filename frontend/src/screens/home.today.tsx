@@ -56,14 +56,13 @@ export function TodaySection({
         titleAction={
           <Button
             small
-            disabled={refresh.isPending}
+            pending={refresh.isPending}
+            busyLabel={t("home.refreshing")}
             onClick={() => refresh.mutate()}
             data-testid="brief-refresh"
           >
             <RefreshCw aria-hidden />{" "}
-            {refresh.isPending
-              ? t("home.refreshing")
-              : t(brief ? "home.refresh" : "home.generate")}
+            {t(brief ? "home.refresh" : "home.generate")}
           </Button>
         }
         footer={

@@ -738,13 +738,12 @@ function BuildControls({
                 blocked === null ? undefined : control["aria-describedby"]
               }
               aria-describedby={control["aria-describedby"]}
-              disabled={build.isPending || tooThin || intakeBusy}
+              disabled={!build.isPending && (tooThin || intakeBusy)}
+              pending={build.isPending}
+              busyLabel={t("settings.voice.building")}
               onClick={() => build.mutate()}
             >
-              <Sparkles aria-hidden />{" "}
-              {build.isPending
-                ? t("settings.voice.building")
-                : t("settings.voice.rebuild")}
+              <Sparkles aria-hidden /> {t("settings.voice.rebuild")}
             </Button>
             {/* Mounted whether or not there is an outcome yet. A build runs for
                 about a minute behind a poll, so the reader who started it has

@@ -919,9 +919,11 @@ function DraftOffer({
           variant="ai"
           onClick={draft.run}
           disabled={draft.disabled}
+          pending={draft.pending}
+          busyLabel={t("compose.drafting")}
         >
           <Sparkles aria-hidden="true" />
-          {draft.pending ? t("compose.drafting") : t("compose.draftWithAi")}
+          {t("compose.draftWithAi")}
         </Button>
       </div>
       {unavailable && (
@@ -2174,10 +2176,10 @@ export function ComposeModal({
         },
       }),
     pending: draft.isPending,
-    disabled:
-      draft.isPending ||
-      rejectionInFlight ||
-      (groundable && !account.recipientId),
+    // The write in flight is NOT spelled here: a drafting button keeps its full
+    // ink and a turning mark, and only a precondition the reader could meet
+    // takes the control away from them.
+    disabled: rejectionInFlight || (groundable && !account.recipientId),
     error: draft.isError ? problemMessageOf(draft.error, t) : null,
   };
   // The account-started path's two additions to the mail's head — who this is

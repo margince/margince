@@ -371,9 +371,10 @@ function PartnerForm({
           small
           variant="primary"
           type="submit"
-          disabled={mutation.isPending}
+          pending={mutation.isPending}
+          busyLabel={t("create.saving")}
         >
-          {mutation.isPending ? t("create.saving") : t(submitLabel)}
+          {t(submitLabel)}
         </Button>
       </div>
     </form>

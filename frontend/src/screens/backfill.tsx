@@ -400,8 +400,13 @@ function EstimateCard({
         </p>
       )}
       <p className="t-small">{t("backfill.estimateNote")}</p>
-      <Button variant="primary" disabled={starting} onClick={onStart}>
-        {starting ? t("backfill.starting") : t("backfill.startCta")}
+      <Button
+        variant="primary"
+        pending={starting}
+        busyLabel={t("backfill.starting")}
+        onClick={onStart}
+      >
+        {t("backfill.startCta")}
       </Button>
     </div>
   );

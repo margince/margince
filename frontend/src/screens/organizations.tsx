@@ -1063,8 +1063,13 @@ function DeepReadCard({ orgId }: Readonly<{ orgId: string }>) {
       title={t("deepread.title")}
       sub={t("deepread.sub")}
       actions={
-        <Button small disabled={start.isPending} onClick={() => start.mutate()}>
-          {start.isPending ? t("deepread.starting") : t("deepread.cta")}
+        <Button
+          small
+          pending={start.isPending}
+          busyLabel={t("deepread.starting")}
+          onClick={() => start.mutate()}
+        >
+          {t("deepread.cta")}
         </Button>
       }
       style={{ marginBottom: "var(--space-4)" }}

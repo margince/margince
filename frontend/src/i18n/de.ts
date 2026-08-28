@@ -2673,7 +2673,6 @@ export const de = {
     "Wählen Sie den Deal, dem das Dokument zugeordnet werden soll.",
   "docs.add.errRefused":
     "Sie dürfen zu diesem Datensatz keine Dokumente hinzufügen.",
-  "docs.add.errInFlight": "Dieses Dokument wird noch hochgeladen.",
   "docs.add.errTooLarge":
     "Diese Datei ist größer als {size} — mehr nimmt diese Installation nicht an. Bitte eine kleinere wählen.",
   "docs.add.failedTitle": "Der Upload ist fehlgeschlagen",
@@ -6934,7 +6933,7 @@ export const de = {
   "project.advance.reasonRequired":
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
-  "deal.projectNew": "Neues Projekt …",
+  "deal.projectNew": "Neues Projekt…",
   "deal.projectWithheld": "Projekt nicht sichtbar",
   "deal.projectNeedsCompany":
     "Wähle zuerst das Unternehmen des Deals — ein Projekt wird an einem Unternehmen gestartet.",
