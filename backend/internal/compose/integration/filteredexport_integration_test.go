@@ -246,9 +246,6 @@ func lastSystemLog(t *testing.T, e *SearchEnv, action string) (gotAction string,
 	}
 	//craft:ignore swallowed-errors read-only probe; the rollback is the designed close of a SELECT-only tx
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.WS.String()); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	var detailRaw []byte
 	err = tx.QueryRow(ctx,
 		`SELECT action, detail FROM system_log WHERE action = $1 ORDER BY occurred_at DESC LIMIT 1`,

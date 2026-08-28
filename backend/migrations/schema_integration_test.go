@@ -173,9 +173,6 @@ func withGUC(t *testing.T, conn *pgx.Conn, wsID string, fn func(pgx.Tx) error) e
 	//craft:ignore swallowed-errors error-path safety net: after the Commit below this rollback is a designed no-op, and fn's error already reached the caller
 	defer func() { _ = tx.Rollback(ctx) }()
 	if wsID != "" {
-		if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, wsID); err != nil {
-			t.Fatalf("set_config: %v", err)
-		}
 	}
 	if err := fn(tx); err != nil {
 		return err

@@ -471,7 +471,7 @@ func TestACallThatCannotGetTheOccurrenceLockIsStillTraced(t *testing.T) {
 	}
 	// The same key the announcement will build, taken the same way, so this is
 	// the lock it really contends for and not one that merely looks like it.
-	if err := lockRailOccurrence(t, held, f.env.WS, f.corr, ai.TaskSummarize); err != nil {
+	if err := lockRailOccurrence(t, held, f.corr, ai.TaskSummarize); err != nil {
 		t.Fatalf("taking the occurrence lock: %v", err)
 	}
 
@@ -495,18 +495,10 @@ func TestACallThatCannotGetTheOccurrenceLockIsStillTraced(t *testing.T) {
 // lockRailOccurrence takes the very lock the announcement takes, by calling the
 // production function rather than restating its SQL.
 //
-// Both halves of that matter. A hand-copied key would stop contending the moment
-// storekit changed its spelling, and the test would then pass by holding a lock
-// nothing else wants — which is the drift this test exists to catch, reproduced
-// inside the test itself. And the WORKSPACE GUC has to be bound first, because
-// storekit's key includes current_setting('app.workspace_id'): the first version
-// of this helper left it unset, locked a different key, and watched the
-// announcement sail past a lock it believed it was holding.
-func lockRailOccurrence(t *testing.T, tx pgx.Tx, ws ids.UUID, corr ids.UUID, task ai.Task) error {
+// A hand-copied key would stop contending the moment storekit changed its
+// spelling, and the test would then pass by holding a lock nothing else wants —
+// which is the drift this test exists to catch, reproduced inside the test.
+func lockRailOccurrence(t *testing.T, tx pgx.Tx, corr ids.UUID, task ai.Task) error {
 	t.Helper()
-	if _, err := tx.Exec(context.Background(),
-		`SELECT set_config('app.workspace_id', $1, true)`, ws.String()); err != nil {
-		return err
-	}
 	return storekit.LockWriteIdentity(context.Background(), tx, "ai_task_run", corr.String()+":"+string(task))
 }

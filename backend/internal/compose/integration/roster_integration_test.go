@@ -65,9 +65,6 @@ func seedInWorkspace(t *testing.T, e *apptest.AppEnv, ws ids.UUID, stmts ...seed
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, ws.String()); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	for _, s := range stmts {
 		if _, err := tx.Exec(ctx, s.sql, s.args...); err != nil {
 			t.Fatalf("seed exec %q: %v", s.sql, err)

@@ -439,14 +439,6 @@ func TestABundleTooLargeToDecideIsRefusedAndStillHiddenFromOutsiders(t *testing.
 
 // competingTx opens the OTHER side of a race: a transaction this test drives by
 // hand, to hold a row or commit a verdict while the code under test runs.
-//
-// It binds app.workspace_id even though the owner connection is RLS-exempt
-// wherever this suite runs today. The binding is what keeps that from being
-// load-bearing: FORCE row-level security does not reach a superuser or a
-// BYPASSRLS role, so an unbound write here works on every machine that has one
-// and filters to zero rows on any that does not — and a race probe that quietly
-// writes nothing is a test that passes having proved the opposite of what it
-// says.
 func (e *stagingEnv) competingTx(t *testing.T) pgx.Tx {
 	t.Helper()
 	ctx := context.Background()
@@ -458,9 +450,6 @@ func (e *stagingEnv) competingTx(t *testing.T) pgx.Tx {
 		//craft:ignore swallowed-errors a rollback after the test's own Commit is a designed no-op; the Commit itself is asserted
 		_ = tx.Rollback(context.Background())
 	})
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatalf("binding the competing transaction to the workspace: %v", err)
-	}
 	return tx
 }
 

@@ -144,9 +144,6 @@ func TestStageUnlessDeclinedWaitsForACompetingPassBeforeReading(t *testing.T) {
 			t.Errorf("releasing the competing transaction: %v", err)
 		}
 	})
-	if _, err := blocker.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatal(err)
-	}
 	if err := lockProposalIdentity(ctx, blocker, e.ws, in); err != nil {
 		t.Fatalf("taking the identity lock: %v", err)
 	}

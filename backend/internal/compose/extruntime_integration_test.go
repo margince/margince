@@ -6,15 +6,12 @@
 package compose
 
 // What the per-call Runtime does once it is live, over real migrated
-// Postgres: the transaction it opens is already pinned to the invoking
+// Postgres: the callback runs inside ONE transaction carrying the invoking
 // workspace, and the secret namespace it hands out belongs to the invoking
-// unit and no other. Neither is checkable without a database — both are
-// made of a transaction-local GUC and the policies that read it.
+// unit and no other. Neither is checkable without a database.
 //
 // Everything here rides the APP pool (integration.Setup's Env.Pool, off
-// MARGINCE_TEST_APP_DSN). The integration cluster's owner role is BYPASSRLS
-// and FORCE ROW LEVEL SECURITY does not override that, so an assertion about
-// tenant filtering made over the owner connection proves nothing.
+// MARGINCE_TEST_APP_DSN), which is the role a unit's SQL actually runs as.
 
 import (
 	"bytes"
@@ -72,23 +69,34 @@ func (e *extRuntimeEnv) runtime(unit string) (*callRuntime, context.Context) {
 	return runtimeFor(ctx, unit, "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, vault: e.vault}), ctx
 }
 
-// TestRuntimeTxIsPinnedToTheInvokingWorkspace: the core binds the tenant GUC
-// BEFORE the callback runs, so a handler's very first statement is already
-// scoped — and there is no parameter through which it could ask for another
-// workspace. The assertion reads the GUC the tenant policies read, which is
-// the same fact from the same place rather than a restatement of the wiring.
-func TestRuntimeTxIsPinnedToTheInvokingWorkspace(t *testing.T) {
+// TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace: the callback is
+// handed the invocation's tenant and a single transaction. Two statements
+// reporting the same txid is what "one transaction" means from inside it —
+// a helper that opened a connection per statement would report two.
+func TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace(t *testing.T) {
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 
-	var pinned string
+	var scoped ids.UUID
+	var first, second uint64
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		return tx.QueryRow(ctx, `SELECT current_setting('app.workspace_id', true)`).Scan(&pinned)
+		ws, ok := principal.WorkspaceID(ctx)
+		if !ok {
+			return errors.New("the callback ran with no workspace on its context")
+		}
+		scoped = ws
+		if err := tx.QueryRow(ctx, `SELECT txid_current()`).Scan(&first); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT txid_current()`).Scan(&second)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if pinned != e.WS.String() {
-		t.Fatalf("the callback ran pinned to workspace %q, want the invoking %q", pinned, e.WS)
+	if scoped != e.WS {
+		t.Fatalf("the callback ran on workspace %q, want the invoking %q", scoped, e.WS)
+	}
+	if first != second {
+		t.Fatalf("the callback's two statements ran in transactions %d and %d, want one", first, second)
 	}
 }
 
@@ -202,10 +210,9 @@ func (e *extRuntimeEnv) seatName(ctx context.Context, t *testing.T, rt *callRunt
 	}
 	// The row was VISIBLE, which is the only thing a primary-key lookup can
 	// report: zero would mean the seam hid it, not that a second one appeared.
-	// It is NOT a proof of the tenant pin either — core carries no
-	// deny-on-unset policy since 0217, so an unpinned read would see this row
-	// too. The pin is proved against the GUC the policies read, in
-	// TestRuntimeTxIsPinnedToTheInvokingWorkspace.
+	// Nothing in the database filters by tenant, so this says nothing about
+	// which workspace the callback carries — that is
+	// TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace's subject.
 	if seen != 1 {
 		t.Fatalf("the read saw %d rows for the seeded seat's primary key, want it visible through the seam", seen)
 	}
@@ -306,10 +313,8 @@ func sqlState(err error) string {
 // TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself is the design's
 // load-bearing claim, made structural. A handler holds a context and can
 // build another; what it must not be able to do is make the transaction run
-// somewhere else. The core re-binds the tenant from the invocation every
-// time, so a context naming a different workspace is simply overwritten —
-// and the assertion reads the GUC the policies read, so this is the pin
-// itself and not a restatement of the wiring.
+// somewhere else. The core re-derives the tenant from the invocation every
+// time, so a context naming a different workspace is simply overwritten.
 func TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself(t *testing.T) {
 	e := setupExtRuntime(t)
 	rt, _ := e.runtime("alpha")
@@ -320,17 +325,22 @@ func TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself(t *testing.T) {
 	elsewhere := ids.NewV7()
 	hostile := principal.WithWorkspaceID(e.callCtx(e.WS), elsewhere)
 
-	var pinned string
-	if err := rt.Tx(hostile, func(ctx context.Context, tx extension.Tx) error {
-		return tx.QueryRow(ctx, `SELECT current_setting('app.workspace_id', true)`).Scan(&pinned)
+	var pinned ids.UUID
+	if err := rt.Tx(hostile, func(ctx context.Context, _ extension.Tx) error {
+		ws, ok := principal.WorkspaceID(ctx)
+		if !ok {
+			return errors.New("the callback ran with no workspace on its context")
+		}
+		pinned = ws
+		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if pinned == elsewhere.String() {
+	if pinned == elsewhere {
 		t.Fatalf("the handler re-pointed its own transaction at workspace %q", pinned)
 	}
-	if pinned != e.WS.String() {
-		t.Fatalf("the transaction ran pinned to %q, want the invoking %q", pinned, e.WS)
+	if pinned != e.WS {
+		t.Fatalf("the transaction ran on %q, want the invoking %q", pinned, e.WS)
 	}
 
 	// The same for the secret namespace, which resolves its tenant from the

@@ -38,33 +38,26 @@ func webhookSweepCtx(ws ids.UUID) context.Context {
 	return principal.WithWorkspaceID(context.Background(), ws)
 }
 
-// failDueScansFor makes reading a webhook_delivery row raise inside ONE
-// tenant's transactions, leaving every other tenant's reads untouched. The
-// victim must therefore have a delivery the scan would return: the policy is
-// evaluated as the scan reads rows, so a tenant with nothing due sweeps
+// failDueScans makes reading a webhook_delivery row raise, so the sweep's due
+// SCAN fails. There must therefore be a delivery the scan would return: the
+// policy is evaluated as the scan reads rows, so a sweep with nothing due runs
 // cleanly even while armed.
 //
 // A RESTRICTIVE row-level policy is the fault seam, not the trigger the other
-// fan-out suites use: the only workspace-level failure this pass can suffer is
-// its due SCAN failing, and no trigger fires on a SELECT. The predicate names
-// the victim through the workspace GUC the sweep's own transaction binds
-// rather than through the row's own column, so no other tenant's scan can trip
-// over it whatever order the planner evaluates the quals in.
+// fan-out suites use: the only failure this pass can suffer is its due SCAN
+// failing, and no trigger fires on a SELECT.
 //
 // It is dropped in cleanup — the integration lane resets rows between tests but
 // keeps the schema, so a surviving policy would blind every later suite that
 // reads a delivery.
-func failDueScansFor(t *testing.T, owner *pgx.Conn, ws ids.UUID) {
+func failDueScans(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
 	if _, err := owner.Exec(ctx, `
-		CREATE OR REPLACE FUNCTION webhook_due_scan_fault(victim uuid) RETURNS boolean
+		CREATE OR REPLACE FUNCTION webhook_due_scan_fault() RETURNS boolean
 		LANGUAGE plpgsql AS $$
 		BEGIN
-		  IF current_setting('app.workspace_id', true) = victim::text THEN
-		    RAISE EXCEPTION 'webhook due-scan fault injection';
-		  END IF;
-		  RETURN true;
+		  RAISE EXCEPTION 'webhook due-scan fault injection';
 		END $$`); err != nil {
 		t.Fatalf("creating the fault-injection function: %v", err)
 	}
@@ -74,15 +67,12 @@ func failDueScansFor(t *testing.T, owner *pgx.Conn, ws ids.UUID) {
 	// policy below still drops first.
 	t.Cleanup(func() {
 		if _, err := owner.Exec(context.Background(),
-			`DROP FUNCTION webhook_due_scan_fault(uuid)`); err != nil {
+			`DROP FUNCTION webhook_due_scan_fault()`); err != nil {
 			t.Errorf("dropping the fault-injection function: %v", err)
 		}
 	})
-	// The injector arms row security ITSELF, for this table and this test only.
-	// It used to ride the product's own tenant isolation, which phase A retired
-	// (ADR-0091 §8) — but a restrictive policy is still the only way to make a
-	// SELECT fail for one tenant and no other, and a fault injector owning its
-	// mechanism is what keeps this test about the sweep rather than about RLS.
+	// The injector arms row security ITSELF, for this table and this test only:
+	// a fault injector owning its mechanism keeps this test about the sweep.
 	// ENABLE without FORCE is deliberate: the app role the sweep runs as is not
 	// this table's owner, so the policy binds it, while the owner connection
 	// this fixture seeds through stays unaffected.
@@ -110,12 +100,10 @@ func failDueScansFor(t *testing.T, owner *pgx.Conn, ws ids.UUID) {
 			t.Errorf("dropping the permissive base policy: %v", err)
 		}
 	})
-	// CREATE POLICY takes no bind parameters, so the tenant is interpolated;
-	// it is a UUID rendered by ids.UUID.String(), never caller text.
 	if _, err := owner.Exec(ctx, `
 		CREATE POLICY webhook_delivery_scan_fault ON webhook_delivery
 		AS RESTRICTIVE FOR SELECT
-		USING (webhook_due_scan_fault('`+ws.String()+`'::uuid))`); err != nil {
+		USING (webhook_due_scan_fault())`); err != nil {
 		t.Fatalf("arming the fault-injection policy: %v", err)
 	}
 	t.Cleanup(func() {
@@ -157,7 +145,7 @@ func TestWebhookRetryReportsASweepWhoseDueScanFailed(t *testing.T) {
 		t.Fatalf("the endpoint saw %d attempts, want the enqueue attempt plus one re-attempt — the sweep never reached the parked delivery", got)
 	}
 
-	failDueScansFor(t, owner, we.wsID)
+	failDueScans(t, owner)
 	now = now.Add(64 * time.Second)
 
 	err := deliverer.SweepOnce(webhookSweepCtx(we.wsID))
@@ -200,7 +188,7 @@ func TestWebhookRetryRecordsAFailedPassAsAFailedRow(t *testing.T) {
 	// Permanent, not transient: the row fires a failure event on every attempt,
 	// and a fault that healed would let a later attempt complete and record the
 	// pass as green — the exact outcome this test denies.
-	failDueScansFor(t, owner, we.wsID)
+	failDueScans(t, owner)
 
 	_, completed, failed := jobtest.StartTestJobRunner(t, we.pool, compose.JobRunnerConfig{
 		CloseDateInterval: time.Hour,

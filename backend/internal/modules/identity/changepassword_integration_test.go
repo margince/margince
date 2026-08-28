@@ -631,10 +631,6 @@ func withOperatorTx(t *testing.T, e *revocationEnv, fn func(pgx.Tx) error) error
 	}
 	//craft:ignore swallowed-errors error-path safety net only — the commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx,
-		`SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatal(err)
-	}
 	if err := fn(tx); err != nil {
 		return err
 	}

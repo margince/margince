@@ -411,8 +411,7 @@ func TestWebhookFanOutStopsAtRevokedOwner(t *testing.T) {
 
 	we.createSubscription(t, rcv.server.URL+"/hook", []string{"deal.created"})
 
-	// Revoke the owner (the bootstrap admin) by archiving the user row,
-	// through a workspace-bound owner tx so FORCE RLS admits the update.
+	// Revoke the owner (the bootstrap admin) by archiving the user row.
 	ctx := context.Background()
 	tx, err := we.Owner.Begin(ctx)
 	if err != nil {
@@ -420,9 +419,6 @@ func TestWebhookFanOutStopsAtRevokedOwner(t *testing.T) {
 	}
 	//craft:ignore swallowed-errors error-path safety net; the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, we.wsID.String()); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	if _, err := tx.Exec(ctx, `UPDATE app_user SET archived_at = now()`); err != nil {
 		t.Fatalf("revoke owner: %v", err)
 	}
@@ -671,11 +667,9 @@ func (we *webhookEnv) insertApproval(t *testing.T, id ids.UUID, targetType *stri
 		id, targetType, targetID)
 }
 
-// execInWorkspace runs one statement under a workspace-bound owner tx so
-// FORCE RLS admits the write, committing it (the same pattern the
-// revoked-owner test uses to mutate app_user). It answers the rows the
-// statement matched: a rewrite that silently matched nothing is the failure
-// mode a fixture cannot see any other way.
+// execInWorkspace runs one statement on an owner tx and commits it. It answers
+// the rows the statement matched: a rewrite that silently matched nothing is
+// the failure mode a fixture cannot see any other way.
 func (we *webhookEnv) execInWorkspace(t *testing.T, sql string, args ...any) int {
 	t.Helper()
 	var affected int64
@@ -687,9 +681,9 @@ func (we *webhookEnv) execInWorkspace(t *testing.T, sql string, args ...any) int
 	return int(affected)
 }
 
-// inWorkspaceTx binds the workspace GUC on an owner tx, runs one statement
-// through it and commits — the one spelling of that shape, so a reading fixture
-// and a writing one cannot bind the tenant differently.
+// inWorkspaceTx runs one statement on an owner tx and commits — the one
+// spelling of that shape, so a reading fixture and a writing one cannot open
+// their transaction differently.
 func (we *webhookEnv) inWorkspaceTx(t *testing.T, run func(pgx.Tx) error) {
 	t.Helper()
 	ctx := context.Background()
@@ -699,9 +693,6 @@ func (we *webhookEnv) inWorkspaceTx(t *testing.T, run func(pgx.Tx) error) {
 	}
 	//craft:ignore swallowed-errors error-path safety net; the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, we.wsID.String()); err != nil {
-		t.Fatalf("set guc: %v", err)
-	}
 	if err := run(tx); err != nil {
 		t.Fatalf("statement: %v", err)
 	}

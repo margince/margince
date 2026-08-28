@@ -43,10 +43,6 @@ func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := holder.Exec(holderCtx,
-		`SELECT set_config('app.workspace_id', $1::text, true)`, e.WS); err != nil {
-		t.Fatal(err)
-	}
 	var holderPID int
 	if err := holder.QueryRow(holderCtx,
 		`UPDATE person SET archived_at = now() WHERE id = $1 RETURNING pg_backend_pid()`,

@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -275,9 +274,6 @@ func (e *dedupeEnv) beginBlockingRefresh(ctx context.Context, t *testing.T, ci c
 			t.Errorf("releasing the blocking transaction: %v", err)
 		}
 	})
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, e.ws.String()); err != nil {
-		t.Fatalf("binding the workspace GUC: %v", err)
-	}
 	var pid int
 	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 		t.Fatalf("reading the blocking backend pid: %v", err)
@@ -550,17 +546,6 @@ func takeOrgNameLockOnAFreshConnection(ctx context.Context) (err error) {
 			err = errors.Join(err, rollback)
 		}
 	}()
-	// Bind the workspace, as every real writer's transaction does: the advisory
-	// key is built from the TRANSACTION's binding, so a racer that skipped it
-	// would take a different key and contend with nobody — the test would then
-	// report a working lock as broken.
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("the racer's context carries no workspace")
-	}
-	if _, err := tx.Exec(ctx, `SELECT set_config('app.workspace_id', $1, true)`, ws.String()); err != nil {
-		return fmt.Errorf("binding the racer's workspace: %w", err)
-	}
 	return lockOrgNameWrites(ctx, tx)
 }
 
