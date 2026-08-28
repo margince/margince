@@ -230,6 +230,15 @@ func createdSubjects(outcome EnsureOutcome) []createdSubject {
 // produce — leaves them where they were, and a count read off the run row is
 // the number of rows behind it.
 //
+// Never DOWN, though, and that is not a hedge against the ledger. A run still
+// paging while this ships is walked by the old binary, which counts in the
+// column and writes no ledger row; the migration seeds the ledger from a
+// snapshot taken before those increments, so the first recompute after the
+// rollout would otherwise discard them. `greatest` costs nothing in steady
+// state — the ledger only grows, so the projection alone never lowers the
+// number — and it is what makes the deploy window safe without draining every
+// backfill first.
+//
 // The run row is LOCKED first, and the lock is what makes the projection safe
 // under concurrency. A page may walk its messages in parallel — nothing in the
 // connector contract forbids it — and at READ COMMITTED two recomputes running
@@ -255,7 +264,8 @@ func (c *pageProgress) recordCreations(ctx context.Context, created []createdSub
 		}
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_backfill b
-			SET people_created = counted.people, organizations_created = counted.organizations
+			SET people_created = greatest(counted.people, b.people_created),
+			    organizations_created = greatest(counted.organizations, b.organizations_created)
 			FROM (
 				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
 				       count(*) FILTER (WHERE kind = 'organization_queued') AS organizations

@@ -670,7 +670,8 @@ func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 		}
 		_, err := tx.Exec(e.Admin(), `
 			UPDATE capture_backfill b
-			SET people_created = counted.people, organizations_created = counted.organizations
+			SET people_created = greatest(counted.people, b.people_created),
+			    organizations_created = greatest(counted.organizations, b.organizations_created)
 			FROM (
 				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
 				       count(*) FILTER (WHERE kind = 'organization_queued') AS organizations

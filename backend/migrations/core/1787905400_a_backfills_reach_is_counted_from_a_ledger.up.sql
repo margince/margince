@@ -47,6 +47,13 @@ CREATE TABLE capture_backfill_creation (
 -- had already counted and have it land as a second row — bounded by that one
 -- page, and in the direction of an overcount rather than the silent floor this
 -- whole change exists to remove.
+--
+-- The other direction is closed in the projection rather than here. The seed is
+-- a SNAPSHOT, and a run still walked by the old binary keeps incrementing the
+-- column with no ledger row to show for it, so the first recompute after the
+-- rollout would discard those increments. The projection takes greatest(ledger,
+-- column) for exactly that window — see recordCreations. Nothing needs draining
+-- before this runs.
 INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
 SELECT b.id, 'person', 'counted-before-the-ledger:' || n
   FROM capture_backfill b, generate_series(1, b.people_created) AS n
