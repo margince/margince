@@ -1127,7 +1127,13 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
 
   if (rollupQuery.isPending) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-3)",
+        }}
+      >
         <Skeleton width="60%" />
         <Skeleton width="90%" />
         <Skeleton width="75%" />
@@ -1168,13 +1174,13 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
         </div>
       </dl>
       {rollup.restricted_excluded.length > 0 && (
-        <p className="t-caption" style={{ marginTop: 10 }}>
+        <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
           {t("rollup.excluded", {
             count: formatNumber(rollup.restricted_excluded.length, locale),
           })}
         </p>
       )}
-      <p className="t-caption" style={{ marginTop: 10 }}>
+      <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
         {t("rollup.computedAt", {
           when: formatDateTime(rollup.computed_at, locale, recordZone),
         })}

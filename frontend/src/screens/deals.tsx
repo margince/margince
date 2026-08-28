@@ -2294,7 +2294,7 @@ export function DealsScreen({
       {advance.isError && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: 10 }}
+          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
         >
           {problemMessageOf(advance.error, t)}
         </p>
@@ -2719,9 +2719,9 @@ function ReopenAction({
         <div
           style={{
             display: "flex",
-            gap: 6,
+            gap: "var(--space-2)",
             flexWrap: "wrap",
-            margin: "10px 0",
+            margin: "var(--space-3) 0",
           }}
         >
           {openStages.map((s) => (

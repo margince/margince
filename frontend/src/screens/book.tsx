@@ -118,7 +118,7 @@ function SessionBookingScreen() {
       <div
         style={{
           display: "flex",
-          gap: 10,
+          gap: "var(--space-2)",
           alignItems: "center",
           marginBottom: 12,
         }}
@@ -146,7 +146,7 @@ function SessionBookingScreen() {
         />
       </div>
       {recognized && (
-        <p className="t-caption" style={{ marginBottom: 10 }}>
+        <p className="t-caption" style={{ marginBottom: "var(--space-3)" }}>
           {t("book.welcomeBack", { name: recognized })}
         </p>
       )}
@@ -267,7 +267,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       <div
         style={{
           display: "flex",
-          gap: 10,
+          gap: "var(--space-2)",
           alignItems: "center",
           flexWrap: "wrap",
           marginBottom: 12,

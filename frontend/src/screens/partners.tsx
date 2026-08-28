@@ -237,7 +237,7 @@ function PartnerForm({
         event.preventDefault();
         mutation.mutate(partner);
       }}
-      style={{ display: "flex", flexDirection: "column", gap: 10 }}
+      className="form-stack"
     >
       <Field label={t("partner.role")} required>
         {(control) => (
