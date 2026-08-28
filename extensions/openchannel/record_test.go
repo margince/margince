@@ -171,6 +171,37 @@ func TestAnAccountNamesTheCounterpartyAndTheAddressCorroborates(t *testing.T) {
 	}
 }
 
+// The case this connector exists for: a party identified by an opaque account
+// and nothing else, on both ends. The core admits an empty address set precisely
+// when the counterparty names no email, because the internal-message gate reads
+// every party from that set and over an empty one answers "not internal" and
+// keeps the record. Refusing it here would park every message from a provider
+// that issues account ids and no mail.
+func TestAMessageNamingOnlyAccountsIsLandable(t *testing.T) {
+	t.Parallel()
+	doc := landableArrival()
+	doc.From = party{Account: "acct-77", Name: "Ada Buyer"}
+	doc.To = party{Account: "acct-mine"}
+	rec, err := recordFor(ownerRef, arrivalJSON(t, doc), signedAt)
+	if err != nil {
+		t.Fatalf("a message identified only by account was refused: %v", err)
+	}
+	if len(rec.Addresses) != 0 {
+		t.Fatalf("the record names addresses %v that the document did not carry", rec.Addresses)
+	}
+	if rec.Counterparty.Email != "" {
+		t.Fatalf("the counterparty carries address %q the document did not name", rec.Counterparty.Email)
+	}
+	if rec.Counterparty.ChannelIdentity.ChannelUserID != "acct-77" {
+		t.Fatal("the counterparty is not repliable, which is the whole of what a channel record is for")
+	}
+	// The core's own door, so this test fails if the two rules ever diverge
+	// rather than only if this unit's does.
+	if err := rec.Validate(); err != nil {
+		t.Fatalf("the core refuses a record this unit built: %v", err)
+	}
+}
+
 func TestAnAddressOnlySenderGoesThroughTheMailLadder(t *testing.T) {
 	t.Parallel()
 	doc := landableArrival()
@@ -236,9 +267,6 @@ func TestADocumentThisConnectorCannotLandIsRefusedByName(t *testing.T) {
 		{"a body that is not the document at all", []byte("not json")},
 		{"a document naming no message id", arrivalJSON(t, arrival{
 			From: party{Email: "buyer@example.com"},
-		})},
-		{"a document naming no address at either end", arrivalJSON(t, arrival{
-			MessageID: "m-1", From: party{Account: "acct-77"},
 		})},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

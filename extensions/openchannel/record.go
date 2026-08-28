@@ -94,10 +94,18 @@ func recordFor(ref string, body []byte, sentAt time.Time) (extension.Record, err
 	if strings.TrimSpace(doc.MessageID) == "" {
 		return extension.Record{}, fmt.Errorf("%w: the request names no message_id, which is what makes a redelivery land nothing rather than a second copy", errPayload)
 	}
+	// An empty address set is NOT refused, and the reason is the case this
+	// connector exists for: a party identified by an opaque account and nothing
+	// else. The core states the rule on Record.Validate — an empty set is
+	// admitted precisely when the counterparty names no email, because the
+	// internal-message gate reads every party from that set and over an empty
+	// one answers "not internal" and keeps the record.
+	//
+	// The pairing that WOULD be wrong — a counterparty named by address while no
+	// addresses are listed — cannot be built here: addressesOf reads the sender's
+	// address, so an empty set already means the sender named none. The core's
+	// door holds it anyway for a record assembled some other way.
 	addresses := addressesOf(doc)
-	if len(addresses) == 0 {
-		return extension.Record{}, fmt.Errorf("%w: the request names no address at either end, so the CRM cannot tell a customer's message from two colleagues talking", errPayload)
-	}
 	occurred := doc.OccurredAt
 	if occurred.IsZero() {
 		occurred = sentAt
