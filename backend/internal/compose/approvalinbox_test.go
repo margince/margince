@@ -125,6 +125,7 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 	inert := map[string]bool{
 		"coldstart": true, "enrich": true, "deepread": true, "site_lead": true,
 		"capture_counterparty": true, "org_name_promotion": true, "linkedin_match": true,
+		"vcard_create":     true,
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
 		"deal_follow_up": true, "transcript_proposal": true,
 		"fx_rate_proposal": true, "ai_model_rate_proposal": true,

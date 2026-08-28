@@ -347,3 +347,26 @@ func vcardEvidence(entry VCardEntry) string {
 	}
 	return strings.Join(parts, " · ")
 }
+
+// CreateFromVCardReview creates the person a reviewed card proposed, after a
+// human decided the near-match is somebody else.
+//
+// The dedupe pass deliberately does NOT run again: the decision being executed
+// IS the answer to the question that pass would re-ask, and re-asking it would
+// stage a second review of a review. The creating authority is the caller's —
+// the deciding human — so the store's own create gate answers for them.
+func (s *Store) CreateFromVCardReview(ctx context.Context, entry VCardEntry) (ids.PersonID, error) {
+	var created ids.PersonID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
+		if err != nil {
+			return err
+		}
+		created = ids.From[ids.PersonKind](ids.UUID(person.Id))
+		return s.attachVCardEmployer(ctx, tx, created, entry)
+	})
+	if err != nil {
+		return ids.PersonID{}, fmt.Errorf("people: creating the reviewed card's person: %w", err)
+	}
+	return created, nil
+}

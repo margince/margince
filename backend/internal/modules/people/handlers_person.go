@@ -124,9 +124,31 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
+	h.stageVCardReviews(r.Context(), entries, results)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VCardImportReport{
 		Results: toContractVCardResults(results),
 	})
+}
+
+// stageVCardReviews turns each near-match the import refused to create into a
+// durable proposal, so the question outlives the upload response instead of
+// dying with it. A staging fault is logged and the import's own answer stands:
+// the cards are already written or refused, the report is already honest, and
+// failing the whole upload for a queueing fault would un-tell the reader what
+// DID happen. The card can be re-imported, which re-stages.
+func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, results []VCardResult) {
+	if h.stageVCardReview == nil {
+		return
+	}
+	for _, result := range results {
+		if result.Outcome != VCardNeedsReview {
+			continue
+		}
+		if err := h.stageVCardReview(ctx, entries[result.Index], result.PersonID); err != nil {
+			slog.ErrorContext(ctx, "people: a vCard near-match could not be proposed for review",
+				"card_index", result.Index, "err", err)
+		}
+	}
 }
 
 func toContractVCardResults(results []VCardResult) []crmcontracts.VCardImportResult {

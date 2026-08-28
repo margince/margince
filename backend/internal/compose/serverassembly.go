@@ -53,6 +53,7 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 	return people.NewHandlers(InstallationDB(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
+		WithVCardReviewStager(vcardCreateStager(pool)).
 		WithSettings(NewSettingsStore(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())})
 }

@@ -196,6 +196,11 @@ var decisionGrants = map[string][]grantRequirement{
 	// the domain is free-mail, the organization behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	"capture_counterparty": {{tablePerson, principal.ActionCreate}, {tableOrganization, principal.ActionCreate}},
+	// Accepting a vcard_create proposal (an imported card the dedupe pass
+	// refused to create beside its near-match) creates the person and their
+	// employer edge — so deciding it needs the create grant, exactly as if
+	// the approver had typed the card in.
+	"vcard_create": {{tablePerson, principal.ActionCreate}},
 	// Accepting an org_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
 	// the organization — the same update authority the name editor needs.
