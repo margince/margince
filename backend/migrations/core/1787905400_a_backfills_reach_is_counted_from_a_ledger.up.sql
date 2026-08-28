@@ -32,3 +32,27 @@ CREATE TABLE capture_backfill_creation (
     CONSTRAINT capture_backfill_creation_pkey PRIMARY KEY (backfill_id, kind, subject),
     CONSTRAINT capture_backfill_creation_kind CHECK (kind IN ('person', 'organization_queued'))
 );
+
+-- Every run that already reported a reach gets a ledger that reproduces it.
+--
+-- The columns become a PROJECTION of this table, so a run that finished before
+-- the ledger existed would report zero the moment anything recomputed it — its
+-- creations happened, and the rows recording them do not exist. They cannot be
+-- reconstructed: the accumulation counted, it did not name. So one placeholder
+-- row per counted creation, which is exactly what the count is.
+--
+-- The placeholders cannot collide with a real subject: a person's is a uuid and
+-- a queued organization's is a domain, and neither is spelled this way. A run
+-- still walking a page when this lands can therefore create a counterparty it
+-- had already counted and have it land as a second row — bounded by that one
+-- page, and in the direction of an overcount rather than the silent floor this
+-- whole change exists to remove.
+INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
+SELECT b.id, 'person', 'counted-before-the-ledger:' || n
+  FROM capture_backfill b, generate_series(1, b.people_created) AS n
+ WHERE b.people_created > 0;
+
+INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
+SELECT b.id, 'organization_queued', 'counted-before-the-ledger:' || n
+  FROM capture_backfill b, generate_series(1, b.organizations_created) AS n
+ WHERE b.organizations_created > 0;

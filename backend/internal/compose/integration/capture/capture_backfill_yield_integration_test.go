@@ -12,6 +12,8 @@ package capture
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -42,6 +44,10 @@ type mailPageConnector struct {
 	// messages have been captured — the retryable fault whose counterparty
 	// yields no later attempt can re-count.
 	failAfterMessages int
+	// parallel walks the page's messages at once instead of in order. Nothing
+	// in the connector contract forbids it, and what the counters do under it
+	// is the question TestConcurrentCreationsAreAllCounted asks.
+	parallel bool
 }
 
 func (m *mailPageConnector) Descriptor() connector.Descriptor {
@@ -72,6 +78,9 @@ func (m *mailPageConnector) EstimateBackfill(context.Context, connector.Auth, ti
 }
 
 func (m *mailPageConnector) BackfillPage(ctx context.Context, _ connector.Auth, _ time.Time, _ string, sink connector.Sink) (connector.BackfillPageResult, error) {
+	if m.parallel {
+		return m.walkAtOnce(ctx, sink)
+	}
 	res := connector.BackfillPageResult{}
 	for _, raw := range m.raws {
 		msg, err := mailmap.Parse(raw, captureOwner)
@@ -99,6 +108,39 @@ func (m *mailPageConnector) BackfillPage(ctx context.Context, _ connector.Auth, 
 		if m.failAfterMessages > 0 && res.Captured == m.failAfterMessages {
 			return connector.BackfillPageResult{}, &connector.RateLimitedError{}
 		}
+	}
+	return res, nil
+}
+
+// walkAtOnce captures every message in the page concurrently, which is what the
+// counters have to survive: they are written per creation, from whichever
+// goroutine made it.
+func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink) (connector.BackfillPageResult, error) {
+	var mu sync.Mutex
+	var walking sync.WaitGroup
+	res := connector.BackfillPageResult{}
+	var failed error
+	for _, raw := range m.raws {
+		walking.Add(1)
+		go func() {
+			defer walking.Done()
+			msg, err := mailmap.Parse(raw, captureOwner)
+			if err == nil {
+				_, err = sink.Upsert(ctx, msg.ToRecord("gmail", raw))
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				failed = err
+				return
+			}
+			res.Scanned++
+			res.Captured++
+		}()
+	}
+	walking.Wait()
+	if failed != nil {
+		return connector.BackfillPageResult{}, failed
 	}
 	return res, nil
 }
@@ -612,17 +654,80 @@ func readCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) (in
 	return people, organizations
 }
 
-// replayCreationLedger writes every row the ledger already holds a second time,
-// which is what a retried page does.
+// replayCreationLedger writes every creation the ledger already holds a second
+// time AND recomputes the run's columns, which is both halves of what a retried
+// page does. Replaying only the rows would assert nothing: the insert is a
+// no-op by the primary key, and a projection that double-counted would never
+// be asked to.
 func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(e.Admin(), `
+		if _, err := tx.Exec(e.Admin(), `
 			INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
 			SELECT backfill_id, kind, subject FROM capture_backfill_creation WHERE backfill_id = $1
-			ON CONFLICT (backfill_id, kind, subject) DO NOTHING`, id)
+			ON CONFLICT (backfill_id, kind, subject) DO NOTHING`, id); err != nil {
+			return err
+		}
+		_, err := tx.Exec(e.Admin(), `
+			UPDATE capture_backfill b
+			SET people_created = counted.people, organizations_created = counted.organizations
+			FROM (
+				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
+				       count(*) FILTER (WHERE kind = 'organization_queued') AS organizations
+				  FROM capture_backfill_creation
+				 WHERE backfill_id = $1
+			) counted
+			WHERE b.id = $1`, id)
 		return err
 	}); err != nil {
 		t.Fatalf("replaying the creation ledger: %v", err)
+	}
+}
+
+// TestConcurrentCreationsAreAllCounted walks one page's messages at once.
+//
+// The reported reach is a projection of the ledger, recomputed per creation.
+// Two recomputes running at once at READ COMMITTED each count a snapshot
+// without the other's uncommitted row, so the later committer would write a
+// total that is missing the earlier one — a lost update the accumulation this
+// replaced could not have had, and one no later creation repairs once the run
+// has no creations left to make. What stops it is the run row's lock, taken
+// before the ledger rows are written.
+func TestConcurrentCreationsAreAllCounted(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	const counterparties = 8
+	raws := make([][]byte, 0, counterparties)
+	for i := range counterparties {
+		raws = append(raws, email(
+			fmt.Sprintf("racer%d@gmail.com", i), fmt.Sprintf("Racer %d", i),
+			captureOwner, fmt.Sprintf("race%d@gmail.com", i), ""))
+	}
+	registry.Register(&mailPageConnector{raws: raws, sent: map[string]bool{}, parallel: true})
+
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1),
+		6, counterparties, enqueueNothing)
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if _, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil {
+		t.Fatalf("RunBackfillStep: %v", stepErr)
+	}
+
+	people, _ := readBackfillYieldColumns(t, e, run.ID)
+	ledgered, _ := readCreationLedger(t, e, run.ID)
+	if ledgered != counterparties {
+		t.Fatalf("the page ledgered %d creations of %d, so there was no race to lose",
+			ledgered, counterparties)
+	}
+	if people != ledgered {
+		t.Errorf("the run reports %d people and its ledger holds %d — every creation counts, "+
+			"whichever goroutine made it", people, ledgered)
 	}
 }

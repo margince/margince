@@ -229,8 +229,21 @@ func createdSubjects(outcome EnsureOutcome) []createdSubject {
 // ledger, so a second call for the same creation — which the retry above can
 // produce — leaves them where they were, and a count read off the run row is
 // the number of rows behind it.
+//
+// The run row is LOCKED first, and the lock is what makes the projection safe
+// under concurrency. A page may walk its messages in parallel — nothing in the
+// connector contract forbids it — and at READ COMMITTED two recomputes running
+// at once each count a snapshot without the other's uncommitted row, so the
+// later committer writes a total that is missing the earlier one. An increment
+// could not lose that; a projection can, and no later creation repairs it once
+// the run has no creations left to make. Taken BEFORE the inserts, so the whole
+// write is one queue rather than a race between the insert and the count.
 func (c *pageProgress) recordCreations(ctx context.Context, created []createdSubject) error {
 	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`SELECT 1 FROM capture_backfill WHERE id = $1 FOR UPDATE`, c.backfillID); err != nil {
+			return err
+		}
 		for _, made := range created {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
