@@ -14,15 +14,14 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -115,7 +114,7 @@ func OrgHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID
 			return err
 		}
 
-		fx := &fxConverter{tx: tx, baseCurrency: baseCurrency, asOf: asOf, rates: map[string]pgtype.Numeric{}}
+		fx := &fxConverter{tx: tx, rates: deals.NewFXRates(baseCurrency, asOf), asOf: asOf}
 		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx); err != nil {
 			return err
 		}
@@ -284,46 +283,32 @@ func orgReadablePredicate(ctx context.Context, tx pgx.Tx, nodes []orgTreeNode) (
 	return func(id ids.UUID) bool { return readable[id] }, nil
 }
 
-// fxConverter converts open-deal amounts to the workspace base currency
-// at the stored as-of rate, memoizing one lookup per currency for the
-// duration of a single rollup read. Rates stay pgtype.Numeric end to
-// end: the conversion is exact decimal arithmetic, the same discipline
-// closed-won gets from Postgres ROUND over numeric.
+// fxConverter is the rollup's missing-rate POLICY over the shared engine
+// (deals.FXRates): a currency with no stored rate on or before the as-of day
+// fails the whole read with the typed error, because a partial sum or a silent
+// rate of 1 would be a lie about money.
+//
+// The company page's read has the opposite policy over the same engine — it
+// prices what it can and reports how many deals reached the figure — and that
+// difference is the only thing the two surfaces are allowed to disagree about.
+// The lookup and the arithmetic are one implementation, so they cannot come
+// apart on rounding.
 type fxConverter struct {
-	tx           pgx.Tx
-	baseCurrency string
-	asOf         time.Time
-	rates        map[string]pgtype.Numeric
+	tx    pgx.Tx
+	rates *deals.FXRates
+	asOf  time.Time
 }
 
-// toBase converts amountMinor from currency to the base currency. A
-// currency with no stored rate on or before the as-of day fails the
-// whole read with the typed error — a partial sum or a silent rate of 1
-// would be a lie about money.
+// toBase converts amountMinor from currency to the base currency.
 func (c *fxConverter) toBase(ctx context.Context, amountMinor int64, currency string) (int64, error) {
-	if currency == c.baseCurrency {
-		return amountMinor, nil
+	rate, found, err := c.rates.For(ctx, c.tx, currency)
+	if err != nil {
+		return 0, err
 	}
-	rate, ok := c.rates[currency]
-	if !ok {
-		// The as-of day is the UTC calendar date, matching fx_rate's
-		// one-rate-per-pair-per-UTC-day grain; the text bind + cast
-		// keeps the comparison independent of the session timezone.
-		err := c.tx.QueryRow(ctx, `
-			SELECT rate FROM fx_rate
-			WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3::date
-			ORDER BY rate_date DESC
-			LIMIT 1`,
-			currency, c.baseCurrency, c.asOf.Format(time.DateOnly)).Scan(&rate)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, &FXRateUnavailableError{Currency: currency, AsOf: c.asOf}
-		}
-		if err != nil {
-			return 0, err
-		}
-		c.rates[currency] = rate
+	if !found {
+		return 0, &FXRateUnavailableError{Currency: currency, AsOf: c.asOf}
 	}
-	return convertToBase(amountMinor, rate)
+	return deals.ConvertToBase(amountMinor, rate.Rate)
 }
 
 // openDealRow is one open deal's contribution inputs: nullable money

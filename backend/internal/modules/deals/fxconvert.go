@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package deals
+
+// Converting one money amount to the installation's base currency, at the rate
+// the estate stored.
+//
+// It lives HERE because this module owns fx_rate, and it is exported because
+// two readers outside the module ask the same question of it: the hierarchy
+// rollup's weighted pipeline, and the company page's own open-pipeline read.
+// They had one implementation each — Go over big.Int in one, a SQL lateral with
+// Postgres round() in the other — encoding the same four decisions: the
+// direction, the as-of cutoff, newest-wins, and the multiply-and-round.
+//
+// The two agreed. Nothing made them keep agreeing, and the first divergence
+// would have been rounding — half-away-from-zero against Postgres round() — so
+// a one-minor-unit disagreement between the company page and the rollup for the
+// same account, which is the class of defect nobody can reproduce on demand.
+//
+// WHAT IS NOT SHARED is the missing-rate policy, and that is deliberate: the
+// rollup refuses the whole read, because a partial total presented as a total
+// is a lie about money; the company page prices what it can and counts the rest,
+// because its contract says how many deals reached the figure. Both are right
+// for their own surface. The engine answers "is there a rate, and what does it
+// make of this amount" and leaves what to DO about a missing one to the caller.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math/big"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+// FXRate is one stored rate and the day it is dated. They are ONE answer and
+// must travel together: a date coalesced from somewhere else could name a day
+// whose rate is not the rate a figure was computed at.
+type FXRate struct {
+	Rate pgtype.Numeric
+	On   time.Time
+}
+
+// FXRates answers what one currency converts at, memoizing a lookup per
+// currency for the life of one read.
+//
+// Per READ and not per process: a rate is appended forward and a long-lived
+// cache would price a rollup at a rate the estate has since corrected. The
+// caller builds one, uses it, and drops it.
+type FXRates struct {
+	base  string
+	asOf  time.Time
+	found map[string]FXRate
+	// missing is remembered too. A currency with no rate is a fact about the
+	// estate, and re-asking per deal turns one refusal into a query per row.
+	missing map[string]bool
+}
+
+// NewFXRates opens a lookup against the installation's base currency, reading
+// the newest rate dated on or before asOf.
+func NewFXRates(base string, asOf time.Time) *FXRates {
+	return &FXRates{base: base, asOf: asOf, found: map[string]FXRate{}, missing: map[string]bool{}}
+}
+
+// Base is the currency everything converts to.
+func (r *FXRates) Base() string { return r.base }
+
+// For answers the rate that converts currency into the base, and whether the
+// estate holds one at all.
+//
+// A currency that IS the base answers a rate of exactly 1 dated the as-of day,
+// rather than making every caller special-case it. That is not an invented
+// rate: it is the identity, and the alternative — each caller comparing
+// currencies before asking — is how one of them comes to compare them
+// differently.
+func (r *FXRates) For(ctx context.Context, tx pgx.Tx, currency string) (FXRate, bool, error) {
+	if currency == r.base {
+		return FXRate{Rate: oneRate(), On: r.asOf}, true, nil
+	}
+	if rate, ok := r.found[currency]; ok {
+		return rate, true, nil
+	}
+	if r.missing[currency] {
+		return FXRate{}, false, nil
+	}
+	var rate FXRate
+	// The as-of day is the UTC calendar date, matching fx_rate's
+	// one-rate-per-pair-per-UTC-day grain; the text bind + cast keeps the
+	// comparison independent of the session timezone.
+	err := tx.QueryRow(ctx, `
+		SELECT rate, rate_date FROM fx_rate
+		WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3::date
+		ORDER BY rate_date DESC
+		LIMIT 1`,
+		currency, r.base, r.asOf.Format(time.DateOnly)).Scan(&rate.Rate, &rate.On)
+	if errors.Is(err, pgx.ErrNoRows) {
+		r.missing[currency] = true
+		return FXRate{}, false, nil
+	}
+	if err != nil {
+		return FXRate{}, false, fmt.Errorf("read the stored FX rate for %s: %w", currency, err)
+	}
+	r.found[currency] = rate
+	return rate, true, nil
+}
+
+// oneRate is the identity rate, as a numeric rather than as a special case in
+// the arithmetic below.
+func oneRate() pgtype.Numeric {
+	return pgtype.Numeric{Int: big.NewInt(1), Exp: 0, Valid: true}
+}
+
+// ConvertToBase rounds amountMinor × rate half away from zero, in EXACT decimal
+// arithmetic over the rate's stored numeric digits (Int × 10^Exp).
+//
+// Never float64, so a converted amount carries the same exactness Postgres
+// ROUND over numeric gives a closed deal's frozen figure, and an amount past
+// float64's 2^53 exact-integer ceiling cannot lose a minor unit.
+//
+// A non-finite rate or an overflowing result refuses loudly: both would
+// otherwise put a silently wrong number in a money total.
+func ConvertToBase(amountMinor int64, rate pgtype.Numeric) (int64, error) {
+	if !rate.Valid || rate.NaN || rate.InfinityModifier != pgtype.Finite {
+		return 0, errors.New("stored FX rate is not a finite number; correct the fx_rate row before retrying")
+	}
+	product := new(big.Int).Mul(big.NewInt(amountMinor), rate.Int)
+	if rate.Exp >= 0 {
+		product.Mul(product, Pow10(int64(rate.Exp)))
+	} else {
+		product = DivRoundHalfAwayFromZero(product, Pow10(int64(-rate.Exp)))
+	}
+	if !product.IsInt64() {
+		return 0, errors.New("converted amount exceeds the representable money range in the base currency")
+	}
+	return product.Int64(), nil
+}
+
+// DivRoundHalfAwayFromZero is numerator/denominator with the quotient rounded
+// half away from zero. denominator is always a positive power of ten here.
+func DivRoundHalfAwayFromZero(numerator, denominator *big.Int) *big.Int {
+	negative := numerator.Sign() < 0
+	quotient, remainder := new(big.Int).QuoRem(numerator, denominator, new(big.Int))
+	remainder.Abs(remainder)
+	remainder.Lsh(remainder, 1) // 2·|remainder| ≥ denominator ⇔ the dropped fraction is ≥ half
+	if remainder.Cmp(denominator) < 0 {
+		return quotient
+	}
+	if negative {
+		return quotient.Sub(quotient, big.NewInt(1))
+	}
+	return quotient.Add(quotient, big.NewInt(1))
+}
+
+// Pow10 returns 10^exp as a big integer; exp is a numeric's scale magnitude,
+// always small and never negative here.
+func Pow10(exp int64) *big.Int {
+	return new(big.Int).Exp(big.NewInt(10), big.NewInt(exp), nil)
+}
