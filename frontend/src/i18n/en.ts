@@ -5219,7 +5219,7 @@ export const en = {
   "corpusAsk.retrievalUnavailable":
     "Nothing was searched: this installation has no search index configured, so the documents could not be looked at. That is a setup matter rather than anything about your question.",
   "corpusAsk.unreviewed":
-    "Nothing has read these passages. They are what the search found nearest to your question — no writer judged whether they answer it.",
+    "The search found these passages nearest to your question. Nothing has read them, so nothing has judged whether they answer it.",
   "corpusAsk.notCovered.title": "Not covered by this set",
   "corpusAsk.notCovered.body":
     "{name} was searched in full and holds nothing close enough to answer this. It covers:",

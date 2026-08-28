@@ -256,9 +256,7 @@ describe("CorpusAskCard", () => {
 
     // The reader is TOLD, above the passage, rather than left to infer it from
     // a badge — a passage presented like an answer is read as one.
-    expect(
-      await screen.findByText(/nothing has read these passages/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/nothing has read them/i)).toBeTruthy();
     // And the passage is still on screen: the search did find it, and hiding it
     // would throw away the only thing the ask produced.
     expect(

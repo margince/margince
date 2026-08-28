@@ -5107,7 +5107,7 @@ export const vi = {
   "corpusAsk.retrievalUnavailable":
     "Không có gì được tìm: bản cài đặt này chưa cấu hình chỉ mục tìm kiếm, nên không thể xem tài liệu. Đây là vấn đề cài đặt, không phải do câu hỏi của bạn.",
   "corpusAsk.unreviewed":
-    "Chưa có gì đọc các đoạn này. Đây là những đoạn tìm kiếm thấy gần câu hỏi của bạn nhất — chưa có gì đánh giá liệu chúng có trả lời câu hỏi hay không.",
+    "Tìm kiếm đã tìm được các đoạn gần câu hỏi của bạn nhất. Chưa có gì đọc chúng, nên chưa có gì đánh giá liệu chúng có trả lời câu hỏi hay không.",
   "corpusAsk.notCovered.title": "Bộ này không bao gồm",
   "corpusAsk.notCovered.body":
     "{name} đã được tìm toàn bộ và không có gì đủ gần để trả lời. Bộ này bao gồm:",

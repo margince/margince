@@ -18,11 +18,12 @@ package knowledge
 // "your documents do not cover this" for a corpus that is merely half-ingested
 // is an affirmative false claim about documents that DO cover it.
 //
-// not_covered is about the QUESTION, and this file cannot settle it. It reports
-// not_covered only where nothing was ranked at all — an empty question, or a
-// question the lane could answer only with a zero vector. Whether a corpus that
-// WAS searched covers a question is decided downstream by the writer that reads
-// the passages, because ranking cannot decide it: cosine is not calibrated, and
+// not_covered is about the QUESTION, and this file cannot settle it in general.
+// It reports not_covered where nothing reached the model to be read: an empty
+// question, a question the lane could answer only with a zero vector, or a
+// ranking the grounding floor emptied. Whether a corpus that DID hand over
+// passages covers the question is decided downstream by the writer that reads
+// them, because ranking cannot decide it: cosine is not calibrated, and
 // under mistral-embed-2312 a covered question against a one-document corpus
 // measured 0.670 while an unrelated one measured 0.672. The floor below removes
 // what is obviously far; it does not tell those two apart, and no value of it
