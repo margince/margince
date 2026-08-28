@@ -732,3 +732,77 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 			"whichever goroutine made it", people, ledgered)
 	}
 }
+
+// TestACountTheLedgerCannotSeeIsKept is the migration window.
+//
+// The migration seeds the ledger from a SNAPSHOT of the counted columns. A run
+// still walked by the old binary keeps incrementing the column after that
+// snapshot with no ledger row to show for it, so a recompute that took the
+// ledger's count alone would discard exactly those increments — the reach too
+// low again, in the one window where nothing repairs it. The projection takes
+// greatest(ledger, column), and this is the direction that guard exists for.
+func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	conn := &mailPageConnector{
+		raws: [][]byte{
+			email("gina@gmail.com", "Gina Example", captureOwner, "w1@gmail.com", ""),
+			email("hank@gmail.com", "Hank Example", captureOwner, "w2@gmail.com", ""),
+		},
+		sent: map[string]bool{},
+	}
+	// Three creations the old binary counted and the seed did not see, added
+	// after the first message so the second one is the recompute that would
+	// have thrown them away.
+	const unledgered = 3
+	var run capture.BackfillRun
+	captured := 0
+	conn.afterMessage = func() {
+		captured++
+		if captured == 1 {
+			keepUnledgeredCount(t, e, run.ID, unledgered)
+		}
+	}
+	registry.Register(conn)
+
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 10, enqueueNothing)
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+	run = started
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if _, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil {
+		t.Fatalf("RunBackfillStep: %v", stepErr)
+	}
+
+	people, _ := readBackfillYieldColumns(t, e, run.ID)
+	ledgered, _ := readCreationLedger(t, e, run.ID)
+	if ledgered != 2 {
+		t.Fatalf("the fixture ledgered %d creations, so the column never sat above the ledger", ledgered)
+	}
+	// The guard is a FLOOR, not an addition: the column stood at 1+3 when the
+	// second creation recomputed, the ledger said 2, and what must survive is
+	// the 4. Adding the two would double-count the creation the column and the
+	// ledger both already hold.
+	if want := 1 + unledgered; people != want {
+		t.Errorf("the run reports %d people and the ledger holds %d, but %d had already been "+
+			"reported when the recompute ran — a recompute keeps the higher of the two, or the "+
+			"migration window loses every count the seed's snapshot missed", people, ledgered, want)
+	}
+}
+
+// keepUnledgeredCount raises the run's reported people without writing ledger
+// rows, which is what an old binary's increment after the seed leaves.
+func keepUnledgeredCount(t *testing.T, e *integration.SearchEnv, id ids.UUID, by int) {
+	t.Helper()
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE capture_backfill SET people_created = people_created + $2 WHERE id = $1`,
+		id, by); err != nil {
+		t.Fatalf("keeping an unledgered count: %v", err)
+	}
+}
