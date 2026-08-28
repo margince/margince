@@ -102,14 +102,22 @@ func MountInboundEndpoints(
 		perIP:   inboundLimiters(units, func(e extension.InboundEndpoint) extension.Rate { return e.Rate.PerIP }),
 		perSlug: inboundLimiters(units, func(e extension.InboundEndpoint) extension.Rate { return e.Rate.PerEndpoint }),
 	}
-	// One registration per declared endpoint, not a prefix handler. A prefix
-	// would answer for every path beneath it, so an undeclared slug would reach
-	// this code and be refused there — turning "does this endpoint exist" into a
+	// Exact patterns per declared endpoint, never a prefix. A prefix would
+	// answer for every path beneath it, so an undeclared slug would reach this
+	// code and be refused there — turning "does this endpoint exist" into a
 	// question the handler answers, which is exactly the enumeration the opaque
 	// 401 exists to prevent. ServeMux answering 404 for what was never declared
 	// is both cheaper and less informative.
+	//
+	// TWO patterns each, because a declared slug is the same for every caller
+	// and a connector usually needs one URL per member. The second carries a
+	// trailing {ref} the unit minted and resolves for itself; ServeMux still
+	// matches only this exact shape, so a third segment is a 404 from the mux
+	// rather than something this code has to consider.
 	for _, route := range routes {
-		mux.Handle(route.Pattern, httpserver.Correlate(httpserver.AccessLog(log, handler)))
+		wrapped := httpserver.Correlate(httpserver.AccessLog(log, handler))
+		mux.Handle(route.Pattern, wrapped)
+		mux.Handle(route.Pattern+"/{ref}", wrapped)
 	}
 	return routes
 }
@@ -145,7 +153,7 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	unit, slug, ok := splitInboundPath(r.URL.Path)
+	unit, slug, ref, ok := splitInboundPath(r.URL.Path)
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -217,6 +225,7 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	outcome, handleErr := h.invoke(r.Context(), ws, u, endpoint, extension.InboundRequest{
 		Slug:      slug,
+		Ref:       ref,
 		Timestamp: stamp,
 		Nonce:     nonce,
 		Signature: signature,
@@ -317,17 +326,37 @@ func inboundHeaders(r *http.Request) (stamp time.Time, nonce, signature string, 
 	return time.Unix(secs, 0), nonce, signature, true
 }
 
-// splitInboundPath takes the unit and slug out of a mounted path. It reads the
-// path only to look them up against what was declared — nothing derived from
-// here is ever used as a key or reflected to the caller.
-func splitInboundPath(path string) (unit, slug string, ok bool) {
+// splitInboundPath takes the unit, the slug and the optional trailing ref out of
+// a mounted path.
+//
+// The unit and slug are read only to look them up against what was DECLARED —
+// neither is ever used as a key before that lookup succeeds. The ref is never
+// looked up here at all: it is handed to the unit, which resolves it against its
+// own table, and it is deliberately kept out of every limiter key for the reason
+// ratelimit states — an over-long key is unmetered and admitted, so a
+// caller-chosen value must not be one.
+func splitInboundPath(path string) (unit, slug, ref string, ok bool) {
 	rest, found := strings.CutPrefix(path, inboundPrefix)
 	if !found {
-		return "", "", false
+		return "", "", "", false
 	}
-	unit, slug, found = strings.Cut(rest, "/")
-	if !found || unit == "" || slug == "" || strings.Contains(slug, "/") {
-		return "", "", false
+	unit, rest, found = strings.Cut(rest, "/")
+	if !found || unit == "" {
+		return "", "", "", false
 	}
-	return unit, slug, true
+	slug, ref, hasRef := strings.Cut(rest, "/")
+	if slug == "" {
+		return "", "", "", false
+	}
+	if !hasRef {
+		return unit, slug, "", true
+	}
+	// Bounded and grammatical before it travels any further. A ref outside the
+	// published rule is a 404 rather than an empty one passed on: a unit that
+	// received "" for a value the caller did spell would resolve the wrong row,
+	// or none, and answer the same opaque 401 either way.
+	if !extension.ValidInboundRef(ref) {
+		return "", "", "", false
+	}
+	return unit, slug, ref, true
 }

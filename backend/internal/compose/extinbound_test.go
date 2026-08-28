@@ -215,7 +215,9 @@ func TestInboundMountsExactPatternsAndShadowsNothing(t *testing.T) {
 	// The half a prefix registration would break: a sibling path under
 	// /webhooks/ that nothing declared must 404 from the mux, not reach the
 	// extension handler and be judged there.
-	for _, path := range []string{"/webhooks/unclaimed", "/webhooks/ext/u/capture/extra"} {
+	// A single trailing segment IS a declared shape now (the per-member ref), so
+	// the undeclared cases are a sibling path and a second trailing segment.
+	for _, path := range []string{"/webhooks/unclaimed", "/webhooks/ext/u/capture/ref/extra"} {
 		if got := serve(mux, signedRequest(path, time.Now(), "{}")).Code; got != http.StatusNotFound {
 			t.Errorf("%s answered %d, want 404 — the mount is answering for paths it never declared", path, got)
 		}
@@ -394,5 +396,78 @@ func TestTheInboundEdgeReachesNoRequireHumanGate(t *testing.T) {
 	if strings.Contains(string(source), "RequireHuman") {
 		t.Fatal("the inbound edge reaches a RequireHuman gate — connectors pass that check, " +
 			"so it would admit an anonymous signed request as though a person had made it")
+	}
+}
+
+// A declared slug is the same for every caller, so a connector needing one URL
+// per member gets a trailing ref it minted and resolves for itself.
+func TestInboundCarriesTheTrailingRefToTheUnit(t *testing.T) {
+	p := &inboundProbe{outcome: extension.InboundAccepted}
+	mux, _ := mountProbe(t, p)
+	if got := serve(mux, signedRequest("/webhooks/ext/u/capture/mB1e-7Zq", time.Now(), "{}")).Code; got != http.StatusAccepted {
+		t.Fatalf("a request with a ref answered %d", got)
+	}
+	if p.saw.Ref != "mB1e-7Zq" {
+		t.Fatalf("the unit saw ref %q, want the trailing segment", p.saw.Ref)
+	}
+	if p.saw.Slug != "capture" {
+		t.Fatalf("the unit saw slug %q — the ref must not displace the declared slug", p.saw.Slug)
+	}
+}
+
+// The bare form still serves, and answers an empty ref rather than refusing: an
+// endpoint that needs no per-member handle should not have to invent one.
+func TestInboundWithoutARefAnswersAnEmptyOne(t *testing.T) {
+	p := &inboundProbe{outcome: extension.InboundAccepted}
+	mux, _ := mountProbe(t, p)
+	if got := serve(mux, signedRequest("/webhooks/ext/u/capture", time.Now(), "{}")).Code; got != http.StatusAccepted {
+		t.Fatalf("the bare form answered %d", got)
+	}
+	if p.saw.Ref != "" {
+		t.Fatalf("a request with no ref carried %q", p.saw.Ref)
+	}
+}
+
+// A ref outside the published rule is a 404, never an empty one passed on: a
+// unit handed "" for a value the caller did spell would resolve the wrong row,
+// or none, and answer the same opaque 401 either way.
+func TestInboundRefusesAnUngrammaticalRef(t *testing.T) {
+	p := &inboundProbe{outcome: extension.InboundAccepted}
+	mux := http.NewServeMux()
+	ws := ids.From[ids.WorkspaceKind](ids.MustParse("00000000-0000-0000-0000-0000000000a1"))
+	MountInboundEndpoints(mux, []extension.Extension{p.unit("u")},
+		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
+		extensionRuntimeBinding{}, quietLog())
+	h, _ := mux.Handler(signedRequest("/webhooks/ext/u/capture", time.Now(), "{}"))
+	for _, ref := range []string{
+		strings.Repeat("r", extension.MaxInboundRef+1),
+		"has.dot",
+		"has~tilde",
+		"has:colon",
+	} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, signedRequest("/webhooks/ext/u/capture/"+ref, time.Now(), "{}"))
+		if w.Code != http.StatusNotFound {
+			t.Errorf("ref %q answered %d, want 404", ref, w.Code)
+		}
+	}
+	if p.calls != 0 {
+		t.Fatalf("an ungrammatical ref reached the unit %d times", p.calls)
+	}
+}
+
+// A ref is a handle, not a credential — it must never become a rate-limiter key,
+// because ratelimit leaves an over-long key unmetered and ADMITTED, which would
+// make a long ref a self-serve way off the meter.
+func TestInboundMetersOnTheDeclaredEndpointNotTheRef(t *testing.T) {
+	p := &inboundProbe{outcome: extension.InboundAccepted}
+	mux, _ := mountProbe(t, p)
+	codes := map[int]int{}
+	for i := range 62 {
+		ref := "ref" + strconv.Itoa(i)
+		codes[serve(mux, signedRequest("/webhooks/ext/u/capture/"+ref, time.Now(), "{}")).Code]++
+	}
+	if codes[http.StatusTooManyRequests] == 0 {
+		t.Fatalf("62 requests under 62 distinct refs were all admitted (%v) — the ref is buying its own budget", codes)
 	}
 }

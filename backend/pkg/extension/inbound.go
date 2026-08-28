@@ -112,6 +112,27 @@ type InboundRequest struct {
 	// resolved by the core, never the raw path segment.
 	Slug string
 
+	// Ref is the trailing path segment, opaque to the core and owned by the
+	// unit. Empty when the caller addressed the endpoint without one.
+	//
+	// It exists because Slug is DECLARED and therefore the same for every
+	// caller, while a connector usually needs one URL per member. The unit
+	// mints a Ref when a member opens an endpoint, stores it, and resolves it
+	// back to that member's row and secret here.
+	//
+	// The core never interprets it, never keys a rate limiter on it, and never
+	// resolves anything from it. That is the whole reason it is safe to accept
+	// from the path: a value a caller chose becomes a limiter key only after it
+	// has been resolved against something declared, and this one is resolved
+	// against the unit's own table instead.
+	//
+	// It is bounded (MaxInboundRef) and drawn from a closed alphabet, so it is
+	// loggable and cannot be used to smuggle a path. It is NOT a credential —
+	// it appears in access logs exactly as the slug does, and the signature is
+	// what authenticates the request. A unit that treats a Ref as a secret has
+	// published its secret in every proxy log between here and the sender.
+	Ref string
+
 	// Timestamp is the value the caller signed, already checked against Skew.
 	Timestamp time.Time
 
@@ -205,6 +226,24 @@ var inboundSlugGrammar = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 // over-long key by leaving it UNMETERED, so a slug that could grow without
 // bound would be a self-serve way off the meter.
 const maxInboundSlugLength = 32
+
+// MaxInboundRef bounds the trailing path segment a caller may address an
+// endpoint with. Short, because it is a handle the unit minted and not a
+// payload: anything longer is a caller trying to use the URL as a channel.
+const MaxInboundRef = 64
+
+// inboundRefGrammar bounds a Ref to what sits in one URL path segment and an
+// access log without escaping. It admits upper case, unlike a slug, because a
+// unit mints these and base64url or hex is the obvious way to.
+var inboundRefGrammar = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// ValidInboundRef reports whether a trailing path segment is one the core will
+// pass to a unit. It is published so a unit minting a Ref can hold itself to the
+// same rule the edge applies, rather than discovering the mismatch as a 404 on a
+// URL it has already given to somebody.
+func ValidInboundRef(ref string) bool {
+	return len(ref) <= MaxInboundRef && inboundRefGrammar.MatchString(ref)
+}
 
 // MaxInboundBody is the largest body any declared endpoint may ask for. It
 // bounds what one unauthenticated request costs before its signature is even
