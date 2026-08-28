@@ -28,6 +28,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
+		nil,
 		fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
@@ -83,6 +84,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
+		nil,
 		fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())
@@ -140,6 +142,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
+		nil,
 		fixedClock,
 	)
 	out, err := svc.Assemble(context.Background())

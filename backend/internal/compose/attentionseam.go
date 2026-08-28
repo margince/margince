@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -451,6 +452,15 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
+		// The label resolver: every card that names a record gets that
+		// record's display name under the reader's own grants, one gated get
+		// per distinct subject (attentionnames.go).
+		attentionNames{
+			people:     people.NewStore(db),
+			deals:      deals.NewStore(db, DealsInstallation()),
+			activities: activities.NewStore(db),
+			projects:   projects.NewStore(db),
+		},
 		now,
 	)
 }
