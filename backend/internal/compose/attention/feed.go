@@ -55,17 +55,20 @@ type Service struct {
 	decay    Decay
 	meetings Meetings
 	failed   FailedEffects
-	now      Clock
+	// names is OPTIONAL like the lanes above it: nil means subjects travel
+	// unnamed and the client resolves display names itself (labels.go).
+	names Names
+	now   Clock
 }
 
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, n Names, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r,
-		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, failed: f, now: now,
+		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, failed: f, names: n, now: now,
 	}
 }
 
@@ -138,6 +141,11 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 
 	if len(omitted) > 0 {
 		out.LanesOmitted = &omitted
+	}
+	// Last, over the assembled lanes: every card that names a record gets its
+	// display name under this reader's own grants (labels.go).
+	if err := s.fillSubjectLabels(ctx, &out); err != nil {
+		return crmcontracts.Attention{}, err
 	}
 	return out, nil
 }

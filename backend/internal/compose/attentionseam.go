@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -451,47 +452,15 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
+		// The label resolver: every card that names a record gets that
+		// record's display name under the reader's own grants, one gated get
+		// per distinct subject (attentionnames.go).
+		attentionNames{
+			people:     people.NewStore(db),
+			deals:      deals.NewStore(db, DealsInstallation()),
+			activities: activities.NewStore(db),
+			projects:   projects.NewStore(db),
+		},
 		now,
 	)
-}
-
-// The three faces a merge decision compares.
-//
-// Each answers the same two questions in that record's own terms: which one is
-// this, and which side carries more. `detail` is the field a reader actually
-// uses to tell two near-identical records apart — a company's domain, a
-// person's address — never an id.
-
-func organizationFace(row crmcontracts.Organization) attention.RecordFace {
-	face := attention.RecordFace{
-		Label:        row.DisplayName,
-		CreatedAt:    &row.CreatedAt,
-		RelatedCount: row.ContactCount,
-	}
-	if row.Domains != nil && len(*row.Domains) > 0 {
-		face.Detail = (*row.Domains)[0].Domain
-	}
-	return face
-}
-
-func personFace(row crmcontracts.Person) attention.RecordFace {
-	face := attention.RecordFace{Label: row.FullName, CreatedAt: &row.CreatedAt}
-	if row.Emails != nil && len(*row.Emails) > 0 {
-		face.Detail = string((*row.Emails)[0].Email)
-	}
-	return face
-}
-
-func leadFace(row crmcontracts.Lead) attention.RecordFace {
-	face := attention.RecordFace{CreatedAt: &row.CreatedAt}
-	if row.FullName != nil {
-		face.Label = *row.FullName
-	}
-	switch {
-	case row.Email != nil:
-		face.Detail = string(*row.Email)
-	case row.CompanyName != nil:
-		face.Detail = *row.CompanyName
-	}
-	return face
 }
