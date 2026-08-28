@@ -38,6 +38,8 @@ import (
 	"go/token"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -117,16 +119,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		if filepath.ToSlash(path) == employmentCurrencyOwner {
 			continue
 		}
-		// This file holds the planted probes below, which are deliberate
-		// defects — judging them would report the gate's own evidence as a
-		// finding. Skipped by name rather than by "_test.go", because a real
-		// test that hand-writes an employment currency test is still a finding
-		// and there is no reason to stop looking at the ones that do not plant
-		// anything.
-		if filepath.ToSlash(path) == slotProbeFile {
-			continue
-		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -136,6 +129,9 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 			names:     map[string]bool{employmentHelper: true, primaryHelper: true},
 		}
 		for _, decl := range file.Decls {
+			if plantedProbe(decl) {
+				continue
+			}
 			for _, sql := range employmentStatements(decl, scope) {
 				judged++
 				if !endedAtCurrency.MatchString(sql) {
@@ -239,6 +235,8 @@ type employmentProbe struct {
 // directly, which is the half that makes the census mean anything.
 //
 // Every case here exists because the gate was once green over it.
+//
+//gate:probe
 var employmentProbes = []employmentProbe{
 	{"the bare form that shipped, one literal", true, "", `
 func read() string {
@@ -470,10 +468,48 @@ var (
 	slotArchivedTerm = regexp.MustCompile(`(\w+\.)?archived_at\s+is\s+null\b`)
 )
 
-// slotProbeFile plants the probes below, which are deliberate defects. Named by
-// PATH and not by basename: a basename skip silently exempts any future file
-// that takes the same name anywhere in the tree.
-const slotProbeFile = gateDir + "/employmentcurrency_test.go"
+// probeMarker exempts ONE DECLARATION from the censuses above, for the only
+// reason a gate's own file needs exempting: it plants deliberate defects as
+// evidence, and judging them would report the gate's proof as a finding.
+//
+// A declaration and not a file, which is the whole change. This file used to be
+// skipped whole — and it is the file most likely to attract a real hand-written
+// currency test, because it is where somebody working on this rule is already
+// editing. The one place the rule did not apply was the one place it was most
+// needed.
+//
+// Not "_test.go" either, for the reason the file skip already gave: a real test
+// that hand-writes an employment currency test is still a finding.
+const probeMarker = "//gate:probe"
+
+// probeOwner is this gate's own file, where both probe tables live. By PATH and
+// not by basename: a basename would name any future file so called, anywhere in
+// the tree.
+const probeOwner = gateDir + "/employmentcurrency_test.go"
+
+// plantedProbe reports whether a declaration carries the marker.
+//
+// The doc comment specifically, not any comment in the declaration's span: a
+// marker inside a function body would exempt the function it sits in, which is
+// a way to silence a finding rather than to declare evidence.
+func plantedProbe(decl ast.Decl) bool {
+	var doc *ast.CommentGroup
+	switch node := decl.(type) {
+	case *ast.GenDecl:
+		doc = node.Doc
+	case *ast.FuncDecl:
+		doc = node.Doc
+	}
+	if doc == nil {
+		return false
+	}
+	for _, line := range doc.List {
+		if strings.TrimSpace(line.Text) == probeMarker {
+			return true
+		}
+	}
+	return false
+}
 
 // slotColumn is what makes a statement a candidate at all, and it is the floor
 // this census counts against: `is_current_primary` is a relationship column and
@@ -495,11 +531,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 		if filepath.ToSlash(path) == employmentCurrencyOwner {
 			continue
 		}
-		// This file plants the probes below, which are deliberate defects.
-		if filepath.ToSlash(path) == slotProbeFile {
-			continue
-		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -509,6 +541,9 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 			names:     map[string]bool{currentPrimarySlotPredicate: true},
 		}
 		for _, decl := range file.Decls {
+			if plantedProbe(decl) {
+				continue
+			}
 			for _, sql := range slotStatements(decl, scope) {
 				judged++
 				if !spellsSlotPredicate(sql) {
@@ -571,6 +606,8 @@ func firstSlotLine(sql string) string {
 // for it. Every case is a shape the census would read green over if the
 // detector stopped seeing it — the census itself passes identically over a
 // clean tree and over a detector that has stopped detecting.
+//
+//gate:probe
 var slotProbes = []struct {
 	name  string
 	fires bool
@@ -660,4 +697,70 @@ func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestTheProbeMarkerExemptsTheProbesAndNothingElse is what makes the narrowing
+// real rather than a differently-spelled whole-file skip.
+//
+// Both censuses above used to skip this file entirely, and the consequence was
+// the opposite of what a gate is for: the one file where the rule did not apply
+// was the file most likely to attract a violation, because it is where somebody
+// working on this rule is already editing. Skipping declarations closes that —
+// but only while the marker stays on the evidence and off everything else.
+//
+// So: this file must be JUDGED, exactly two declarations may carry the marker,
+// and they must be the probe tables.
+func TestTheProbeMarkerExemptsTheProbesAndNothingElse(t *testing.T) {
+	t.Parallel()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, probeOwner, nil, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parsing this gate's own file: %v", err)
+	}
+
+	var marked []string
+	judged := 0
+	for _, decl := range file.Decls {
+		if plantedProbe(decl) {
+			marked = append(marked, declaredName(decl))
+			continue
+		}
+		judged++
+	}
+
+	if judged == 0 {
+		t.Fatal("every declaration in this file is marked as a probe, which is the whole-file skip " +
+			"this test exists to prevent, spelled differently")
+	}
+	want := []string{"employmentProbes", "slotProbes"}
+	sort.Strings(marked)
+	if !slices.Equal(marked, want) {
+		t.Errorf("the probe marker is on %v, want exactly %v — it exempts a declaration from BOTH "+
+			"censuses, so a marker anywhere else is a finding silenced rather than evidence declared",
+			marked, want)
+	}
+}
+
+// declaredName names a declaration for a failure message.
+func declaredName(decl ast.Decl) string {
+	switch node := decl.(type) {
+	case *ast.FuncDecl:
+		if node.Name != nil {
+			return node.Name.Name
+		}
+	case *ast.GenDecl:
+		for _, spec := range node.Specs {
+			switch value := spec.(type) {
+			case *ast.ValueSpec:
+				if len(value.Names) > 0 {
+					return value.Names[0].Name
+				}
+			case *ast.TypeSpec:
+				if value.Name != nil {
+					return value.Name.Name
+				}
+			}
+		}
+	}
+	return "an unnamed declaration"
 }

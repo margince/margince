@@ -15,10 +15,10 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 // Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/gates/employmentcurrency_test.go)
 // — it reads every hand-written Go source outside this file for a hand-spelled
 // `ended_at` currency test, so a second definition fails rather than drifting.
-// With ONE gap, stated because a binding that overclaims is what this
-// convention exists to stop: the census skips its own file whole, so a
-// hand-written currency test added to `backend/gates/employmentcurrency_test.go`
-// itself is outside this guard.
+// The census reaches its OWN file too: it exempts the two declarations holding
+// its planted probes and judges everything else, so a currency test written
+// beside them is a finding like any other.
+//
 // `date` is the
 // end-date expression at the call site: a column on a read, the incoming value
 // on a create, the patched-or-existing one on an update.
