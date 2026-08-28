@@ -22,6 +22,7 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { DEAL_COVERAGE_KEY } from "./activitykeys";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { EditAction } from "./edit";
@@ -41,9 +42,16 @@ type RelationshipKind = Relationship["kind"];
 
 // Which 360 this tab is rendered from — fixes which side of the edge is
 // "this record" and which is the picked "other side".
+//
+// A deal is a scope of its own, not a counterparty of somebody else's: a
+// deal_stakeholder edge was creatable only from the PERSON's side, so adding a
+// champion to a deal meant knowing which person to open first, and a deal
+// nobody had thought to name from a contact page had no stakeholder surface at
+// all. `GET /relationships` filters on deal_id for exactly this reading.
 export type RelationshipScope =
   | { person_id: string }
-  | { organization_id: string };
+  | { organization_id: string }
+  | { deal_id: string };
 
 const KIND_LABELS: Record<RelationshipKind, MessageKey> = {
   employment: "rel.kind.employment",
@@ -69,16 +77,55 @@ const SEARCH_DEBOUNCE_MS = 250;
 function scopeQuery(scope: RelationshipScope): {
   person_id?: string;
   organization_id?: string;
+  deal_id?: string;
 } {
-  return "person_id" in scope
-    ? { person_id: scope.person_id }
-    : { organization_id: scope.organization_id };
+  if ("person_id" in scope) {
+    return { person_id: scope.person_id };
+  }
+  if ("deal_id" in scope) {
+    return { deal_id: scope.deal_id };
+  }
+  return { organization_id: scope.organization_id };
 }
 
 function scopeQueryKey(scope: RelationshipScope): [string, string, string] {
-  return "person_id" in scope
-    ? ["relationships", "person", scope.person_id]
-    : ["relationships", "organization", scope.organization_id];
+  if ("person_id" in scope) {
+    return ["relationships", "person", scope.person_id];
+  }
+  if ("deal_id" in scope) {
+    return ["relationships", "deal", scope.deal_id];
+  }
+  return ["relationships", "organization", scope.organization_id];
+}
+
+// The words this panel uses on the record it is rendered from, and whether that
+// record anchors a single kind.
+//
+// A deal anchors only deal_stakeholder, so it says "stakeholder" where a
+// person's page says "relationship": the generic word sends a reader looking for
+// a control the deal page does not have, and a Kind picker holding one option —
+// or a Kind column repeating one badge down every row — asks a question with a
+// single answer.
+function scopeCopy(scope: RelationshipScope): {
+  title: MessageKey;
+  add: MessageKey;
+  empty: MessageKey;
+  singleKind: boolean;
+} {
+  if ("deal_id" in scope) {
+    return {
+      title: "rel.dealStakeholders",
+      add: "rel.addStakeholder",
+      empty: "rel.dealStakeholdersEmpty",
+      singleKind: true,
+    };
+  }
+  return {
+    title: "tab.relationships",
+    add: "rel.add",
+    empty: "rel.empty",
+    singleKind: false,
+  };
 }
 
 async function fetchRelationships(
@@ -105,6 +152,11 @@ export function counterpartyRef(
   rel: Relationship,
   scope: RelationshipScope,
 ): { kind: EntityKind; id: string } | null {
+  // From a deal, every edge is a person: deal_stakeholder is the only kind the
+  // deal_id filter can return (rel_*_shape, migration 0007).
+  if ("deal_id" in scope) {
+    return rel.person_id ? { kind: "person", id: rel.person_id } : null;
+  }
   if ("person_id" in scope) {
     if (rel.deal_id) {
       return { kind: "deal", id: rel.deal_id };
@@ -217,6 +269,11 @@ export type EdgeOption = {
 // (→person) and the three org↔org kinds (→counterparty org). Offering the
 // rest would only earn an endpoint-shape 422.
 export function edgeOptions(scope: RelationshipScope): EdgeOption[] {
+  // A deal anchors its stakeholders and nothing else — employment is a fact
+  // about a person and a company, and the org↔org kinds name no deal.
+  if ("deal_id" in scope) {
+    return [{ kind: "deal_stakeholder", entity: "person", field: "person_id" }];
+  }
   if ("person_id" in scope) {
     return [
       { kind: "employment", entity: "organization", field: "organization_id" },
@@ -261,6 +318,30 @@ export function endpointBody(
   }
 }
 
+/**
+ * Every cached read a relationship write staleifies, invalidated in one place.
+ *
+ * `["relationships"]` is this panel's own list. A deal_stakeholder edge also
+ * feeds the deal's coverage — the rail's seats, the committee map and the risk
+ * chips all read `GET /deals/{id}/coverage`, and the map sits directly above
+ * this panel on the deal page. Without this, seating a champion filled the table
+ * while the map one panel up still said the champion was missing.
+ *
+ * The whole coverage prefix rather than one deal's: a stakeholder can be seated
+ * from the PERSON's page too, where the deal being changed is the picked target
+ * rather than the scope, and a page that knows only "some deal moved" cannot
+ * name which key to drop.
+ */
+function invalidateAfterEdge(
+  queryClient: ReturnType<typeof useQueryClient>,
+  touchesADeal: boolean,
+) {
+  queryClient.invalidateQueries({ queryKey: ["relationships"] });
+  if (touchesADeal) {
+    queryClient.invalidateQueries({ queryKey: DEAL_COVERAGE_KEY });
+  }
+}
+
 // The "add relationship" affordance: kind + role + start date, plus the
 // other-side target picker (mirrors merge.tsx's debounced search-and-pick —
 // the source of the edge is fixed by scope, so there is no "exclude self"
@@ -272,6 +353,7 @@ function AddRelationshipAction({
   const queryClient = useQueryClient();
   const headingId = useId();
   const options = edgeOptions(scope);
+  const copy = scopeCopy(scope);
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<CreatableRelationshipKind>(options[0].kind);
   const [role, setRole] = useState("");
@@ -319,23 +401,31 @@ function AddRelationshipAction({
     };
   }, [open, term, entity]);
 
-  // The picked target arrives as the mutation's variable, not through this
-  // closure: react-query re-arms a mutation's options in a passive effect, so a
-  // submit landing between the commit that enables the button and that effect
-  // runs the previous render's function — where nothing had been picked yet.
+  // EVERY answer the form holds arrives as the mutation's variable, not through
+  // this closure: react-query re-arms a mutation's options in a passive effect,
+  // so a submit landing between the commit that enables the button and that
+  // effect runs the previous render's function. The target alone used to travel,
+  // which left the kind, the role and the start date one render behind — a write
+  // stating choices nobody had made yet.
   const mutation = useMutation({
-    mutationFn: async (target: Candidate) => {
+    mutationFn: async (chosen: {
+      target: Candidate;
+      kind: CreatableRelationshipKind;
+      field: EdgeOption["field"];
+      role: string;
+      startedAt: string;
+    }) => {
       const body: CreateRelationshipRequest = {
-        kind,
-        role: role.trim() || undefined,
-        started_at: startedAt || undefined,
+        kind: chosen.kind,
+        role: chosen.role.trim() || undefined,
+        started_at: chosen.startedAt || undefined,
         source: "manual",
         // Not sent at all. This form offers every relationship kind and no
         // primary control, so `false` here was a literal rather than anybody's
         // decision — and for an employment it silently blocked the server's own
         // rule that a person's only current job is their current primary one.
         ...scopeQuery(scope),
-        ...endpointBody(endpoint.field, target.id),
+        ...endpointBody(chosen.field, chosen.target.id),
       };
       const { data, error } = await api.POST("/relationships", { body });
       if (error) {
@@ -343,8 +433,8 @@ function AddRelationshipAction({
       }
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["relationships"] });
+    onSuccess: (created) => {
+      invalidateAfterEdge(queryClient, created.deal_id != null);
       close();
     },
   });
@@ -378,29 +468,31 @@ function AddRelationshipAction({
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
       >
-        {t("rel.add")}
+        {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
         <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
-          {t("rel.add")}
+          {t(copy.add)}
         </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Field label={t("rel.kind")}>
-            {(control) => (
-              <Select
-                {...control}
-                value={kind}
-                onChange={(value) => {
-                  const kinds = options.map((o) => o.kind);
-                  if (isOption(value, kinds)) selectKind(value);
-                }}
-                options={options.map((option) => ({
-                  value: option.kind,
-                  label: t(KIND_LABELS[option.kind]),
-                }))}
-              />
-            )}
-          </Field>
+          {!copy.singleKind && (
+            <Field label={t("rel.kind")}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={kind}
+                  onChange={(value) => {
+                    const kinds = options.map((o) => o.kind);
+                    if (isOption(value, kinds)) selectKind(value);
+                  }}
+                  options={options.map((option) => ({
+                    value: option.kind,
+                    label: t(KIND_LABELS[option.kind]),
+                  }))}
+                />
+              )}
+            </Field>
+          )}
           <Field label={t("rel.role")}>
             {(control) => (
               <TextInput
@@ -469,7 +561,16 @@ function AddRelationshipAction({
               small
               variant="primary"
               disabled={!target || mutation.isPending}
-              onClick={() => target && mutation.mutate(target)}
+              onClick={() =>
+                target &&
+                mutation.mutate({
+                  target,
+                  kind,
+                  field: endpoint.field,
+                  role,
+                  startedAt,
+                })
+              }
               data-testid="add-relationship-submit"
             >
               {t("create.save")}
@@ -507,6 +608,7 @@ export function RelationshipsTab({
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
+  const copy = scopeCopy(scope);
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),
@@ -514,44 +616,50 @@ export function RelationshipsTab({
 
   // Two-step confirm, mirroring ArchiveAction (archive.tsx) — Remove is a
   // hard DELETE with no restore path, so it never fires from a single click.
-  const [removing, setRemoving] = useState<string | null>(null);
+  // The ROW, not its id: what the write invalidates depends on whether the edge
+  // names a deal, and an id alone cannot answer that.
+  const [removing, setRemoving] = useState<Relationship | null>(null);
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (doomed: Relationship) => {
       const { data, error } = await api.DELETE("/relationships/{id}", {
-        params: { path: { id } },
+        params: { path: { id: doomed.id } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["relationships"] });
+    onSuccess: (_removed, doomed) => {
+      invalidateAfterEdge(queryClient, doomed.deal_id != null);
       setRemoving(null);
     },
   });
 
   return (
     <Card
-      title={t("tab.relationships")}
+      title={t(copy.title)}
       actions={<AddRelationshipAction scope={scope} />}
     >
       <QueryGate query={query}>
         {(rows) =>
           rows.length === 0 ? (
-            <EmptyState>{t("rel.empty")}</EmptyState>
+            <EmptyState>{t(copy.empty)}</EmptyState>
           ) : (
             <DataTable
-              label={t("tab.relationships")}
+              label={t(copy.title)}
               columns={[
-                {
-                  key: "kind",
-                  header: t("rel.kind"),
-                  render: (rel: Relationship) => (
-                    <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
-                  ),
-                },
+                ...(copy.singleKind
+                  ? []
+                  : [
+                      {
+                        key: "kind",
+                        header: t("rel.kind"),
+                        render: (rel: Relationship) => (
+                          <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
+                        ),
+                      },
+                    ]),
                 {
                   key: "role",
                   header: t("rel.role"),
@@ -616,7 +724,7 @@ export function RelationshipsTab({
                       <Button
                         small
                         variant="danger"
-                        onClick={() => setRemoving(rel.id)}
+                        onClick={() => setRemoving(rel)}
                         data-testid="remove-relationship"
                       >
                         {t("rel.remove")}

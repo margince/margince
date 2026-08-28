@@ -527,27 +527,75 @@ function stubBackend(
 }
 
 describe("mapDealUpdate", () => {
-  it("rebuilds amount_minor from major units and nulls blanks", () => {
-    const body = mapDealUpdate({
-      name: "Fleet retrofit",
-      amount: "2120",
-      currency: "EUR",
-      organization_id: "",
-      owner_id: "u-me",
-      partner_org_id: "",
-      forecast_category: "commit",
-      expected_close_date: "2026-09-01",
-      wait_until: "",
-    });
-    expect(body.name).toBe("Fleet retrofit");
+  // The form's controls as a person who changed nothing left them. Every value
+  // here is exactly what dealEditRecord seeded, so a key reaching the body is
+  // the form reporting a change nobody made.
+  const untouched = {
+    name: "Fleet retrofit",
+    amount: "2120",
+    currency: "EUR",
+    owner_id: "u-me",
+    organization_id: "",
+    partner_org_id: "",
+    partner_attribution: "",
+    forecast_category: "",
+    expected_close_date: "",
+    wait_until: "",
+    project_id: "",
+  };
+
+  it("rebuilds amount_minor from major units for the fields the person moved", () => {
+    const body = mapDealUpdate(
+      {
+        ...untouched,
+        amount: "2120",
+        currency: "EUR",
+        owner_id: "u-me",
+        forecast_category: "commit",
+        expected_close_date: "2026-09-01",
+      },
+      { ...untouched, amount: "", currency: "", owner_id: "" },
+    );
     expect(body.amount_minor).toBe(212_000);
     expect(body.currency).toBe("EUR");
-    expect(body.organization_id).toBeNull();
     expect(body.owner_id).toBe("u-me");
-    expect(body.partner_org_id).toBeNull();
     expect(body.forecast_category).toBe("commit");
     expect(body.expected_close_date).toBe("2026-09-01");
-    expect(body.wait_until).toBeNull();
+    // Named nowhere in the edit, so named nowhere in the body.
+    expect("name" in body).toBe(false);
+    expect("wait_until" in body).toBe(false);
+  });
+
+  // The reported defect. The body used to carry every field on every save, so a
+  // deal with no company resubmitted `organization_id: null` — and the API,
+  // correctly, refused to clear a field the person never touched. On an
+  // installation with no partners the refusal named `partner_attribution`, a
+  // field the form does not even render.
+  it("sends nothing at all when the person changed nothing", () => {
+    const body = mapDealUpdate(untouched, untouched);
+
+    expect(Object.keys(body)).toEqual([]);
+  });
+
+  it("names only the field the person moved, on a deal missing every optional value", () => {
+    const bare = {
+      name: "Any Deal",
+      amount: "",
+      currency: "",
+      owner_id: "",
+      organization_id: "",
+      partner_org_id: "",
+      partner_attribution: "",
+      forecast_category: "",
+      expected_close_date: "",
+      wait_until: "",
+      project_id: "",
+    };
+
+    const body = mapDealUpdate({ ...bare, name: "Renamed" }, bare);
+
+    expect(Object.keys(body)).toEqual(["name"]);
+    expect(body.name).toBe("Renamed");
   });
 
   // A withheld reference arrives as null with masked_fields naming it —
@@ -558,18 +606,65 @@ describe("mapDealUpdate", () => {
   it("does not clear a partner it was never allowed to see", () => {
     const body = mapDealUpdate(
       { name: "Fleet retrofit", partner_org_id: "", partner_attribution: "" },
+      {
+        name: "Fleet retrofit",
+        partner_org_id: "p-1",
+        partner_attribution: "sourced",
+      },
       ["partner_org_id"],
     );
     expect("partner_org_id" in body).toBe(false);
     // The attribution is withheld WITH its partner, so it goes too — returning
     // half the pair would decide what a partner nobody could see is owed.
     expect("partner_attribution" in body).toBe(false);
-    expect(body.name).toBe("Fleet retrofit");
   });
 
   it("still clears a partner the reader could see and chose to remove", () => {
-    const body = mapDealUpdate({ name: "x", partner_org_id: "" }, []);
+    const body = mapDealUpdate(
+      { ...untouched, partner_org_id: "" },
+      { ...untouched, partner_org_id: "p-1", partner_attribution: "sourced" },
+    );
     expect(body.partner_org_id).toBeNull();
+    // The claim goes with the partner, server-side, as one fact. Naming its own
+    // null here would state a claim with nobody left to attribute it to, which
+    // is the one shape the API refuses.
+    expect("partner_attribution" in body).toBe(false);
+  });
+
+  // The scale is part of the amount: amount_minor is denominated in the
+  // currency's OWN minor units, so a currency moving alone re-denominates the
+  // figure the row holds. 10000 JPY re-saved as EUR is €100, and the fx freeze
+  // and the forecast history then record that as the price.
+  it("re-sends the figure at the new scale when only the currency moved", () => {
+    const priced = { ...untouched, amount: "10000", currency: "JPY" };
+
+    const body = mapDealUpdate({ ...priced, currency: "EUR" }, priced);
+
+    expect(body.currency).toBe("EUR");
+    expect(body.amount_minor).toBe(1_000_000);
+  });
+
+  // Naming a currency on a deal with no figure is half a money value, and the
+  // server's own pair refusal says so better than an amount this form invents.
+  it("invents no figure when a currency is named on an unpriced deal", () => {
+    const bare = { ...untouched, amount: "", currency: "" };
+
+    const body = mapDealUpdate({ ...bare, currency: "EUR" }, bare);
+
+    expect(Object.keys(body)).toEqual(["currency"]);
+  });
+
+  it("moves the claim alone when the partner stays put", () => {
+    const body = mapDealUpdate(
+      {
+        ...untouched,
+        partner_org_id: "p-1",
+        partner_attribution: "influenced",
+      },
+      { ...untouched, partner_org_id: "p-1", partner_attribution: "sourced" },
+    );
+    expect(Object.keys(body)).toEqual(["partner_attribution"]);
+    expect(body.partner_attribution).toBe("influenced");
   });
 });
 
@@ -1587,10 +1682,14 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     expect(screen.getByText("via")).toBeTruthy();
   });
 
-  // A form omits nothing the record already carries. The partner picker offers
-  // one capped page of partners, so a deal's own partner can be missing from
-  // it — and a select whose stored value is not an option shows blank, which
-  // on save clears the partner and the commission attribution with it.
+  // A form offers nothing the record already carries as a blank. The partner
+  // picker offers one capped page of partners, so a deal's own partner can be
+  // missing from it — and a select whose stored value is not an option shows
+  // blank, which the patch then reads as the person having chosen "Unset" and
+  // sends as a real null, clearing the partner and its commission attribution.
+  //
+  // The save says nothing about the partner at all, which is what makes it
+  // safe: omitted means unchanged.
   it("keeps a partner the picker cannot reach, rather than clearing it on save", async () => {
     const user = userEvent.setup();
     const patches: { body: unknown }[] = [];
@@ -1614,12 +1713,9 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patches.length).toBe(1));
-    const body = patches[0].body as {
-      partner_org_id: string | null;
-      partner_attribution: string | null;
-    };
-    expect(body.partner_org_id).toBe("p-offpage");
-    expect(body.partner_attribution).toBe("sourced");
+    const body = patches[0].body as Record<string, unknown>;
+    expect("partner_org_id" in body).toBe(false);
+    expect("partner_attribution" in body).toBe(false);
   });
 
   // Same guarantee when the partner list never arrives at all — a failed or
@@ -1651,12 +1747,9 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patches.length).toBe(1));
-    const body = patches[0].body as {
-      partner_org_id: string | null;
-      partner_attribution: string | null;
-    };
-    expect(body.partner_org_id).toBe("p-offpage");
-    expect(body.partner_attribution).toBe("influenced");
+    const body = patches[0].body as Record<string, unknown>;
+    expect("partner_org_id" in body).toBe(false);
+    expect("partner_attribution" in body).toBe(false);
   });
 
   // The facts run together without a separator: three adjacent spans in a

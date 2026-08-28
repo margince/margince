@@ -532,6 +532,9 @@ export const de = {
   "partner.stage.noFit": "Keine Passung",
 
   "rel.add": "Beziehung hinzufügen",
+  "rel.addStakeholder": "Beteiligten hinzufügen",
+  "rel.dealStakeholders": "Beteiligte",
+  "rel.dealStakeholdersEmpty": "Für diesen Deal ist niemand erfasst",
   "rel.kind": "Art",
   "rel.saveDone": "Beziehung gespeichert",
   "rel.role": "Rolle",
@@ -6894,6 +6897,14 @@ export const de = {
   "project.stakeholders.title": "Beteiligte",
   "project.stakeholders.empty":
     "Noch niemand ist an diesem Projekt beteiligt. Beteiligte sind Personen mit einer Rolle hier — Sponsor, Projektleitung, Champion.",
+  "project.stakeholders.add": "Beteiligten hinzufügen",
+  "project.stakeholders.addHint":
+    "Eine Rolle pro Person. Wer schon an diesem Projekt beteiligt ist, wechselt auf die hier gewählte Rolle.",
+  "project.stakeholders.searchLabel": "Personen nach Namen suchen",
+  "project.stakeholders.removeTitle": "Diese Person vom Projekt nehmen?",
+  "project.stakeholders.removeConfirm":
+    "{name} ist dann nicht mehr an diesem Projekt beteiligt. Die Aktivitäten bleiben erhalten.",
+  "project.stakeholders.removeOne": "{name} vom Projekt nehmen",
   "project.role.sponsor": "Sponsor",
   "project.role.project_lead": "Projektleitung",
   "project.role.delivery_lead": "Umsetzungsleitung",

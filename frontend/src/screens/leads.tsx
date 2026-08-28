@@ -1431,7 +1431,10 @@ function LeadActions({
             },
             body: {
               ...mapLeadUpdate(values),
-              ...cf.toBody(values),
+              // A diff against what the form prefilled from: a snapshot sends
+              // `null` for every empty custom field, and the API reads that as
+              // clearing a column nobody touched.
+              ...cf.toPatch(values, cf.recordSlice(lead)),
             },
           });
           if (error) {

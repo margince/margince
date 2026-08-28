@@ -6,6 +6,7 @@ import {
   customFieldHref,
   customFieldsRecordSlice,
   customFieldsToBody,
+  customFieldsToPatch,
   customFieldToFormField,
 } from "./customfields.form";
 
@@ -233,5 +234,104 @@ describe("customFieldHref", () => {
     ]) {
       expect(customFieldHref(value)).toBeNull();
     }
+  });
+});
+
+// An UPDATE body carries only what the person moved. customFieldsToBody is a
+// snapshot, which is right for a create and wrong here: an empty field coerces
+// to null, the API reads a top-level null as "forget this column", and no cf_*
+// column is clearable — so one empty custom field refused every save of the
+// record, naming a field nobody had touched.
+describe("customFieldsToPatch", () => {
+  const priority = cf({ column_name: "cf_priority", type: "text" });
+  const renewal = cf({
+    id: "cf-2",
+    column_name: "cf_renewal",
+    type: "date",
+  });
+  const fields = [priority, renewal];
+
+  it("says nothing about a field the person left alone", () => {
+    const seeded = { cf_priority: "", cf_renewal: "2026-09-01" };
+
+    const body = customFieldsToPatch({ ...seeded }, seeded, fields);
+
+    expect(body).toEqual({});
+  });
+
+  // The reported defect, in the half of the body the core diff does not reach.
+  it("does not resubmit an empty field as an instruction to clear it", () => {
+    const seeded = { cf_priority: "", cf_renewal: "" };
+
+    const body = customFieldsToPatch(
+      { ...seeded, cf_renewal: "2026-09-01" },
+      seeded,
+      fields,
+    );
+
+    expect(Object.keys(body)).toEqual(["cf_renewal"]);
+    expect(body.cf_renewal).toBe("2026-09-01");
+  });
+
+  it("still carries a blank over a stored value, which is a real edit", () => {
+    const body = customFieldsToPatch(
+      { cf_priority: "", cf_renewal: "2026-09-01" },
+      { cf_priority: "high", cf_renewal: "2026-09-01" },
+      fields,
+    );
+
+    expect(Object.keys(body)).toEqual(["cf_priority"]);
+    expect(body.cf_priority).toBeNull();
+  });
+
+  // The prefill converts a currency column's minor units to major; the diff has
+  // to read the stored value the same way or it reports every currency field as
+  // edited on every save, and rewrites a figure nobody touched.
+  it("reads a currency field in the major units the control shows", () => {
+    const budget = cf({
+      id: "cf-4",
+      column_name: "cf_budget",
+      type: "currency",
+      currency: "EUR",
+    });
+
+    expect(
+      customFieldsToPatch({ cf_budget: "12.5" }, { cf_budget: 1250 }, [budget]),
+    ).toEqual({});
+    // And a real edit still travels, back in minor units.
+    expect(
+      customFieldsToPatch({ cf_budget: "20" }, { cf_budget: 1250 }, [budget]),
+    ).toEqual({ cf_budget: 2000 });
+  });
+
+  // A currency whose scale is not two digits: a dong has none, so 1250 VND is
+  // 1250 major, not 12.5. A hard-coded hundred here reports it as edited and
+  // then writes a hundredfold figure on the next real save.
+  it("reads a currency field at its own scale", () => {
+    const dong = cf({
+      id: "cf-5",
+      column_name: "cf_budget_vnd",
+      type: "currency",
+      currency: "VND",
+    });
+
+    expect(
+      customFieldsToPatch({ cf_budget_vnd: "1250" }, { cf_budget_vnd: 1250 }, [
+        dong,
+      ]),
+    ).toEqual({});
+  });
+
+  // A record read carries a number or a boolean where the form holds a string.
+  // Comparing the two spellings directly reports every such field as moved on
+  // every save, which is the defect again with an extra step.
+  it("reads a non-string stored value in the form's own spelling", () => {
+    const count = cf({ id: "cf-3", column_name: "cf_count", type: "number" });
+
+    const body = customFieldsToPatch({ cf_count: "12" }, { cf_count: 12 }, [
+      count,
+    ]);
+
+    expect(body).toEqual({});
   });
 });

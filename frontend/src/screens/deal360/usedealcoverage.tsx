@@ -19,13 +19,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { DEAL_COVERAGE_KEY } from "../activitykeys";
 import { throwProblem } from "../common";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
-/** The cache key every coverage reader shares. */
+/**
+ * The cache key every coverage reader shares.
+ *
+ * Built on the prefix the WRITERS name (activitykeys.DEAL_COVERAGE_KEY): a
+ * stakeholder edge is created from the person's page as readily as from the
+ * deal's, so the writer usually knows only that some deal's seats moved and
+ * drops the prefix. Two spellings of it would leave the map on this page
+ * confidently stale.
+ */
 export function dealCoverageKey(dealId: string) {
-  return ["deal-coverage", dealId] as const;
+  return [...DEAL_COVERAGE_KEY, dealId] as const;
 }
 
 /**

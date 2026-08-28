@@ -545,6 +545,9 @@ export const en = {
   "partner.stage.noFit": "No fit",
 
   "rel.add": "Add relationship",
+  "rel.addStakeholder": "Add stakeholder",
+  "rel.dealStakeholders": "Stakeholders",
+  "rel.dealStakeholdersEmpty": "No stakeholder is recorded on this deal",
   "rel.kind": "Kind",
   "rel.saveDone": "Relationship saved",
   "rel.role": "Role",
@@ -6982,6 +6985,14 @@ export const en = {
   "project.stakeholders.title": "Stakeholders",
   "project.stakeholders.empty":
     "Nobody is seated on this project yet. A stakeholder is a person with a role here — a sponsor, a project lead, a champion.",
+  "project.stakeholders.add": "Add stakeholder",
+  "project.stakeholders.addHint":
+    "One seat per person. Naming somebody already on this project moves them to the role you pick here.",
+  "project.stakeholders.searchLabel": "Search people by name",
+  "project.stakeholders.removeTitle": "Take this person off the project?",
+  "project.stakeholders.removeConfirm":
+    "{name} stops being a stakeholder on this project. Their activity stays where it is.",
+  "project.stakeholders.removeOne": "Take {name} off the project",
   "project.role.sponsor": "Sponsor",
   "project.role.project_lead": "Project lead",
   "project.role.delivery_lead": "Delivery lead",

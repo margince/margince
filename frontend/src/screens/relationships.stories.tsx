@@ -73,3 +73,53 @@ export const Empty: Story = {
     );
   },
 };
+
+const stakeholderRel = {
+  ...employmentRel,
+  id: "rel-3",
+  kind: "deal_stakeholder",
+  deal_id: "d-1",
+  organization_id: null,
+  role: "champion",
+  is_current_primary: false,
+};
+
+// The same panel under a deal scope: one kind, so the Kind column and the Kind
+// picker both go — a column repeating one badge down every row, and a question
+// with a single answer.
+export const DealStakeholders: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /relationships": () =>
+        jsonResponse({
+          data: [
+            stakeholderRel,
+            { ...stakeholderRel, id: "rel-4", role: "economic_buyer" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <RelationshipsTab scope={{ deal_id: "d-1" }} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const DealStakeholdersEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /relationships": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <RelationshipsTab scope={{ deal_id: "d-1" }} />
+      </StoryProviders>
+    );
+  },
+};

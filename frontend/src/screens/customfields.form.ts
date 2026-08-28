@@ -34,18 +34,10 @@ export function customFieldToFormField(
     case "date":
       return { ...base, type: "date" };
     case "currency":
-      // Stored as bigint minor units; the form edits major units, at the scale
-      // THIS field's own currency carries. The catalog holds that code
-      // (CF-T06) — the same one the renderer below formats with — so a
-      // hard-coded hundred here made the form and the display disagree for
-      // every currency that is not two-decimal.
       return {
         ...base,
         type: "number",
-        toInput: (raw) =>
-          raw == null || raw === ""
-            ? ""
-            : String(toMajorUnits(Number(raw), field.currency ?? "")),
+        toInput: (raw) => customFieldFormValue(field, raw),
       };
     case "picklist":
       return {
@@ -72,6 +64,35 @@ export function customFieldToFormField(
 
 // Coerce one field's form string to its stored value. Empty → null so a cleared
 // field actually clears the column.
+/**
+ * One stored value in the FORM's spelling — the string the control is prefilled
+ * with, and therefore the string an unchanged control still holds.
+ *
+ * The currency case is the reason this is a function rather than a
+ * `String(...)`: the column is bigint MINOR units and the form edits MAJOR
+ * units, at the scale this field's own currency carries. The catalog holds that
+ * code (CF-T06) — the same one the renderer formats with — so a hard-coded
+ * hundred here made the form and the display disagree for every currency that
+ * is not two-decimal.
+ *
+ * The prefill (`toInput`) and the diff (`customFieldsToPatch`) both read it, so
+ * they cannot disagree about what a value looks like on screen. They did: the
+ * diff compared a submitted "12.5" against a stored 1250 and reported every
+ * currency field as edited on every save.
+ */
+export function customFieldFormValue(
+  field: CustomField,
+  stored: unknown,
+): string {
+  if (stored == null || stored === "") {
+    return "";
+  }
+  if (field.type === "currency") {
+    return String(toMajorUnits(Number(stored), field.currency ?? ""));
+  }
+  return String(stored).trim();
+}
+
 function coerceWrite(field: CustomField, raw: string): unknown {
   const value = raw.trim();
   if (value === "") {
@@ -120,6 +141,46 @@ export function customFieldsToBody(
       field,
       raw == null ? "" : String(raw),
     );
+  }
+  return body;
+}
+
+/**
+ * The write-body slice as a DIFF against the record the form opened on.
+ *
+ * `customFieldsToBody` is the right shape for a CREATE, where every field is
+ * being stated for the first time. On an UPDATE it is not: an empty field
+ * coerces to `null`, the API reads a top-level null as *forget this column*
+ * (httperr.ClearedFields), and no `cf_*` column is clearable — so a full
+ * snapshot refused every save of any record with an empty custom field, naming
+ * a field the person had not touched. That is the same defect the core fields
+ * had, in the other half of the same body.
+ *
+ * Compared on the FORM's own strings, the way the core diff is: a control left
+ * alone holds exactly what it was seeded with, and the stored shape (minor
+ * units, a boolean, a trimmed string) is derived from that string afterwards.
+ *
+ * A blank over a stored value is still a change and still travels as null. The
+ * API refuses that today — no catalog column is clearable — which is a real gap
+ * and a different one: it is about what the custom-field contract can express,
+ * not about a form sending fields nobody edited.
+ */
+export function customFieldsToPatch(
+  values: Record<string, unknown>,
+  seeded: Record<string, unknown>,
+  fields: CustomField[],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const field of fields) {
+    const column = field.column_name;
+    // The submitted value is already a form string; the stored one is put into
+    // the same spelling first, which is what the control was prefilled with.
+    const submitted =
+      values[column] == null ? "" : String(values[column]).trim();
+    if (submitted === customFieldFormValue(field, seeded[column])) {
+      continue;
+    }
+    body[column] = coerceWrite(field, submitted);
   }
   return body;
 }
@@ -184,6 +245,13 @@ export type ObjectCustomFields = {
   formFields: CreateField[];
   recordSlice: (record: Record<string, unknown>) => Record<string, unknown>;
   toBody: (values: Record<string, unknown>) => Record<string, unknown>;
+  // The same slice as a diff, for an EDIT. `seeded` is the record the form
+  // opened on — `recordSlice`'s own output, which is what the form prefilled
+  // from, so the two cannot disagree about what "unchanged" means.
+  toPatch: (
+    values: Record<string, unknown>,
+    seeded: Record<string, unknown>,
+  ) => Record<string, unknown>;
 };
 
 const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
@@ -231,5 +299,6 @@ export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
     formFields,
     recordSlice: (record) => customFieldsRecordSlice(record, fields),
     toBody: (values) => customFieldsToBody(values, fields),
+    toPatch: (values, seeded) => customFieldsToPatch(values, seeded, fields),
   };
 }

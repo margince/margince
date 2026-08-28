@@ -78,8 +78,19 @@ export function derivedRecordKeys(
   return derived ? [derived] : [];
 }
 
+// A deal's COVERAGE is written from its stakeholder edges: the rail's seats,
+// the committee map and the risk chips all read GET /deals/{id}/coverage, and
+// every one of them is stale the moment a seat is added, re-roled or removed.
+// Keyed per deal by the reader (dealCoverageKey); named here as the prefix,
+// because a writer usually knows only that SOME deal's edges moved — a
+// stakeholder is seated from the person's page as readily as from the deal's.
+export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
+
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey> = {
   deal: (id) => DEAL_STATUS_KEY(id),
+  // Keyed on the relationship's own id nowhere: what goes stale is the deal the
+  // edge names, and the edit form knows only the edge. The prefix covers it.
+  relationship: () => DEAL_COVERAGE_KEY,
 };
 
 // A task is also a row in the standing work queue, which is keyed per workspace
