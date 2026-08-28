@@ -21,12 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// NewPool opens a pgxpool with explicit operational limits (a defaultless
-// pool under load exhausts Postgres connections and hides slow queries).
-// Each limit is a fallback, not a mandate: an operator who sized the pool
-// in the DSN (pool_max_conns=…) knows their Postgres better than a
-// hardcoded 16 does, so a DSN-provided value always wins.
-func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+// PoolConfig is what a pool of this product IS: the operational limits, the
+// runtime parameters and the per-connection registration every pool needs,
+// settled from dsn and applied to nothing yet.
+//
+// It is separate from NewPool so that WHEN a pool dials is the caller's choice
+// and WHAT it is is not. NewPool opens eagerly and pings, which is right for a
+// process whose next act is to serve traffic: a bad DSN should fail the boot,
+// not the first request. A caller that must not dial during construction — a
+// test asserting what a CLOSED pool does, whose DSN points at nothing on
+// purpose — takes the config and opens it itself, and still gets the ID type
+// registration and the JIT setting rather than pgxpool's bare defaults.
+//
+// Each limit is a fallback, not a mandate: an operator who sized the pool in
+// the DSN (pool_max_conns=…) knows their Postgres better than a hardcoded 16
+// does, so a DSN-provided value always wins.
+func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("pg: parsing DSN: %w", err)
@@ -72,7 +82,19 @@ func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 		RegisterIDTypes(conn)
 		return nil
 	}
+	return cfg, nil
+}
 
+// NewPool opens a pgxpool on PoolConfig's terms and proves it can reach the
+// database before handing it back. A defaultless pool under load exhausts
+// Postgres connections and hides slow queries; a pool that cannot connect at
+// all is a boot failure, and saying so here is cheaper than discovering it on
+// the first query.
+func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	cfg, err := PoolConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("pg: opening pool: %w", err)

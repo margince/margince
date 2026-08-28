@@ -36,8 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // embedReindexStatusWire mirrors crmcontracts.EmbedReindexStatus field by
@@ -110,7 +110,7 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	// apptest.SetupAppWithOptions opens below — jobs.NewInserter just needs
 	// SOME pool reaching the same Postgres, not the exact same *pgxpool.Pool
 	// object (mirrors SchemaPool(t)'s own separate-connection precedent).
-	wirePool, err := database.NewPool(ctx, appDSN)
+	wirePool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatalf("opening the insert-only wiring pool: %v", err)
 	}

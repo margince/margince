@@ -22,13 +22,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -210,7 +209,7 @@ func TestAnUnreadableSettingRowFallsBackToTheEnvironment(t *testing.T) {
 
 	// A pool that is closed is how a database looks when it has gone away
 	// mid-boot: every query fails immediately rather than hanging.
-	dead, err := pgxpool.New(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	dead, err := testdb.OwnPool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
 		t.Fatalf("opening the pool to close: %v", err)
 	}

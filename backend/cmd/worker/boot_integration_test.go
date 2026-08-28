@@ -30,8 +30,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
@@ -91,7 +91,7 @@ func workerTestPool(t *testing.T) *pgxpool.Pool {
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
 	}
-	pool, err := database.NewPool(t.Context(), dsn)
+	pool, err := testdb.OwnPool(t.Context(), dsn)
 	if err != nil {
 		t.Fatalf("opening the app pool: %v", err)
 	}

@@ -71,6 +71,14 @@ var poolConstructors = []struct{ pkg, symbol string }{
 	{databasePath, "NewPool"},
 	{pgxpoolPath, "New"},
 	{pgxpoolPath, "NewWithConfig"},
+	// The lane's own bounded constructors. A suite reaching for these has a
+	// pool of its OWN — bounded now, which is a different property from shared
+	// and the one TestNoIntegrationSuiteOpensAnUnboundedPool holds. Without
+	// them here this gate would stop seeing the suites it judges the moment
+	// they were made to fit the budget, and read green over a package that had
+	// simply moved its per-test pool behind a tidier door.
+	{testdbPath, "OwnPool"},
+	{testdbPath, "OwnPoolFromConfig"},
 }
 
 // ownPools ratifies module suites that build a pool of their own, each bound to

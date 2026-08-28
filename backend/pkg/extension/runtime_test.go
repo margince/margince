@@ -35,6 +35,10 @@ func (r *fakeRuntime) Secrets() Secrets { return r.secrets }
 // answers after release too).
 func (r *fakeRuntime) Caller() Caller { return r.caller }
 
+// SyncNow answers for the seam's shape only: what it means is the composition
+// layer's (compose/extsyncnow.go), which is where its bounds are tested.
+func (r *fakeRuntime) SyncNow(context.Context, JobName) error { return nil }
+
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {
 		return ErrRuntimeExpired

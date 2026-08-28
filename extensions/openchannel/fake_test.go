@@ -435,3 +435,19 @@ func (t *fakeTx) statementMentioning(tb testing.TB, needle string) (string, []an
 	tb.Fatalf("no statement mentions %q; the handler issued:\n%s", needle, strings.Join(t.statements, "\n---\n"))
 	return "", nil
 }
+
+// SyncNow answers for the one job this unit declares and refuses every other
+// name, which is the core's rule: a name is resolved against the CALLING
+// unit's declarations, so a unit cannot ask for a job it does not own. A fake
+// that accepted any string would let a handler reach for a name that fails at
+// run time and still pass here.
+func (*fakeRuntime) SyncNow(_ context.Context, job extension.JobName) error {
+	if job != declaredJob {
+		return extension.ErrNoSuchJob
+	}
+	return nil
+}
+
+// declaredJob is the job named in api/jobs.yaml, spelled here so the fake
+// refuses exactly what the core refuses.
+const declaredJob = extension.JobName("poll_inbox")
