@@ -145,10 +145,15 @@ func TestTheEnginesOwnRowStillDoesNotCountAsEngagement(t *testing.T) {
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
 	linkQuietTouch(t, owner, e.WS, "organization", org)
 
+	// captured_by is the NAMESPACED principal the time scan actually binds,
+	// not the bare "system" the bus path uses. A case planting the bare form
+	// passes against an equality on it and says nothing about the rows this
+	// engine writes — which is how a reminder that reset its own clock
+	// reached main behind a green gate.
 	engineRow := ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-		 VALUES ($1, 'task', 'Follow up (engine-minted)', $2, 'system', 'system')`,
+		 VALUES ($1, 'task', 'Follow up (engine-minted)', $2, 'system', 'system:time-scan')`,
 		engineRow, eligibilityScanNow.AddDate(0, 0, -1)); err != nil {
 		t.Fatalf("seeding the engine row: %v", err)
 	}
