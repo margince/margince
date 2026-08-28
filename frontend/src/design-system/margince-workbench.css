@@ -159,14 +159,11 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* --textMeta, not --textTertiary: tokens.css names Meta the AA floor for
-     everything under 13px, and every label in this chrome is 9-11px. */
-  color: var(--textMeta);
+  /* The type is .t-eyebrow's, carried by the element rather than restated here.
+     Only the face is set: this chrome runs on the body font where the shared
+     class is agnostic, and the colour it brings (--textMeta) is the AA floor
+     tokens.css names for everything under 13px, which every label here is. */
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The hairline that makes five stops one rail. Drawn, not marked up: a
@@ -256,14 +253,12 @@
   min-width: 0;
 }
 
+/* The type is .t-eyebrow's, carried by the element rather than restated here:
+   this is the same uppercase micro-label the token exists for, and a sheet that
+   respelled it is how five of them came to disagree at 11px and 12px. */
 .mw-identity span {
   display: block;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .mw-identity h1 {

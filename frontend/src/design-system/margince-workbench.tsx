@@ -116,7 +116,7 @@ export function MarginceWorkbench({
         className="mw-core"
       />
       <div className="mw-identity">
-        <span>{eyebrow}</span>
+        <span className="t-eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
         <p>
           <i data-state={state} aria-hidden /> {status}
@@ -237,7 +237,7 @@ function StepRail({ steps }: Readonly<{ steps: readonly WorkbenchStep[] }>) {
       {steps.map((step, index) => (
         <li
           key={step.label}
-          className={`mw-step is-${step.state}`}
+          className={`mw-step t-eyebrow is-${step.state}`}
           aria-current={step.state === "now" ? "step" : undefined}
         >
           <b aria-hidden>{ordinalNumber(index + 1)}</b>
