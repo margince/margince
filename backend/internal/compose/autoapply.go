@@ -46,11 +46,17 @@ const autoApplyActorID = "agent:auto-apply"
 // approval row, and a table name assembled from stored text is how a catalog
 // name becomes an injection. A target type absent here is not applied — which
 // is the honest answer for a record whose owner this cannot establish.
+//
+// Two entries, because two is what the eligible kinds can name: a close-date
+// correction targets a deal, and both a rename and a lifecycle move target an
+// organization. A kind joining AutoApplyKinds against another record type adds
+// its row here, and until then a speculative entry would be a table this can
+// reach that nothing asks it to.
+//
+//nolint:goconst // wire record-type names read as data; a shared constant would tie this map to whichever other concept spells the same word
 var ownedTables = map[string]string{
 	"deal":         "deal",
 	"organization": "organization",
-	"person":       "person",
-	"project":      "project",
 }
 
 // autoApplier decides and applies proposals that their owner has put on
@@ -180,16 +186,28 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 
 // asOwnersAgent binds the product acting FOR the owner.
 //
-// An agent principal carrying OnBehalfOf, never the system principal. The
-// system principal bypasses both object RBAC and row scope, so an apply running
-// under it would write where the rep no longer may — an ownership or role
-// change landing after the proposal was staged would be ignored. Carrying the
-// owner's own grants, teams and seat means an automatic apply can do exactly
-// what that person could do by hand and nothing more, which is the whole basis
-// on which it is allowed to happen without asking.
+// An agent principal carrying OnBehalfOf, never the system principal, because
+// what this principal must pass is the DECISION: decidable() checks the
+// staged action's own grants against these permissions and the target's
+// visibility against this row scope, and a system principal passes both
+// unconditionally. Resolving the owner's real grants at apply time is what
+// makes an ownership or role change landing after staging count.
+//
+// What it does NOT bound is every write that follows. Two of the three
+// eligible effects deliberately swap in a system principal before writing —
+// an org rename and a lifecycle move stamp their own machine provenance — so
+// the honest statement is that the DECISION is gated by the owner's authority
+// and the effect then runs exactly as it does after a human's click. That is
+// the same bound a person gets, which is the point: this path is not a wider
+// authority than the button, only an unattended one.
 //
 // actingForAHuman admits this shape already: an agent naming the person it acts
 // for is somebody's agent, and a credential nobody lent is what it refuses.
+//
+// dealOwnerAuthority.asOwner (dealownerseam.go) binds an owner the same way and
+// is deliberately not shared with this: it builds a PrincipalHuman for a READ,
+// where an OnBehalfOf and a scope ceiling would mean nothing. This one must
+// carry both, because what it binds goes on to release a decision.
 func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context.Context, error) {
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
@@ -223,8 +241,9 @@ func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context
 //
 // Derived from the module's own AutoApplyKinds rather than restated, so the
 // scan cannot come to look for a set the applier would then refuse. Sorted so
-// the statement is stable — a query text that varies per process defeats
-// statement caching and makes two installations' logs incomparable.
+// the ARGUMENT is deterministic: the kinds travel as one $1 parameter, so the
+// query text never varies, but a set iterated in map order would send the same
+// list differently on every tick and make two runs incomparable.
 func pendingAutoKinds() []string {
 	kinds := make([]string, 0, len(approvals.AutoApplyKinds))
 	for kind := range approvals.AutoApplyKinds {
@@ -281,12 +300,14 @@ const autoApplySweepBatch = 200
 // Sweep applies every due proposal whose owner has said to, and reports how
 // many it applied.
 //
-// One proposal's refusal never stops the pass: an owner who has left and a
-// record whose type this cannot own are ordinary outcomes for THAT row, and
-// letting either end the sweep would let one stale proposal park every other
-// rep's automation behind it. A genuine fault — the database is unreachable —
-// still ends it, because continuing would report a clean pass over rows it
-// never read.
+// One proposal's refusal never stops the pass, and the batch is ORDERED, which
+// is what makes that rule load-bearing rather than tidy. A row that can never
+// apply sits at the head of every tick until it expires, so ending the sweep on
+// it would park every other rep's automation behind one stale proposal —
+// reachable by anyone who can edit the record a pinned proposal names.
+//
+// A genuine fault still ends the pass, because continuing would report a clean
+// sweep over rows it never read.
 func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 	due, err := a.duePending(ctx, autoApplySweepBatch)
 	if err != nil {
@@ -295,14 +316,42 @@ func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 	var applied int
 	for _, id := range due {
 		ok, err := a.Apply(ctx, id)
-		if err != nil {
+		switch {
+		case err == nil:
+			if ok {
+				applied++
+			}
+		case refusesThisRow(err):
+			// The row itself cannot apply and says why on its own record: the
+			// decision path marks a failed effect on the approval, so the
+			// proposal is visible as needing a person rather than silently
+			// skipped here.
+			continue
+		default:
 			return applied, err
-		}
-		if ok {
-			applied++
 		}
 	}
 	return applied, nil
+}
+
+// refusesThisRow reports whether an error is about ONE proposal rather than
+// about the pass.
+//
+// Version skew is the case that forces this to exist and the reason it is not
+// exotic: a close-date proposal pins the deal version it was staged against, so
+// anybody editing that deal afterwards makes its apply fail forever. That is an
+// ordinary edit, not a race, and it must not stop the rows behind it.
+//
+// The others are the same shape. A decision already taken, a target the owner
+// may no longer reach, a redemption whose token no longer fits — each is a fact
+// about that proposal, and each leaves it pending for a person.
+func refusesThisRow(err error) bool {
+	var decided *approvals.AlreadyDecidedError
+	return errors.As(err, &decided) ||
+		errors.Is(err, apperrors.ErrVersionSkew) ||
+		errors.Is(err, apperrors.ErrApprovalTokenInvalid) ||
+		errors.Is(err, apperrors.ErrNotFound) ||
+		errors.Is(err, apperrors.ErrPermissionDenied)
 }
 
 // SweepAutoApply runs one auto-apply pass over the bound workspace.

@@ -14,7 +14,7 @@ package compose
 // It is a sweep rather than a hook at staging time for two reasons. The answer
 // can change after the proposal is made, so a rep turning automatic on today
 // should see yesterday's suggestions applied without re-staging them. And
-// staging happens at nineteen call sites, where a rule spread across all of
+// staging happens at many call sites, where a rule spread across all of
 // them is a rule one of them will forget.
 
 import (
@@ -58,11 +58,11 @@ type approvalAutoApplyWorker struct {
 
 // Work applies what is due.
 //
-// The pass binds no actor of its own, and that is the point. Each apply runs
-// under the OWNER's authority — an agent principal carrying their grants, teams
-// and seat — resolved inside autoApplier at the moment it applies, so the write
-// is bounded by exactly what that rep could do by hand. A pass-wide system
-// principal would bypass object RBAC and row scope for every row it touched.
+// The pass binds no actor of its own, and that is the point. Each DECISION is
+// taken under the OWNER's authority — an agent principal carrying their grants,
+// teams and seat — resolved inside autoApplier at the moment it applies, so the
+// same gate a rep's click passes is the gate here. A pass-wide system principal
+// would pass that gate unconditionally for every row it touched.
 //
 // The correlation id groups one tick's applies as the single pass they are,
 // which is what lets a reader follow an unexpected batch back to its cause.

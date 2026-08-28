@@ -892,7 +892,7 @@ kinds:
       It is a sweep rather than a call at staging time because the answer can
       change after a proposal is made. A rep who turns automatic on today
       should not have to re-stage yesterday's suggestions to see them applied,
-      and staging happens at nineteen call sites — a rule spread across all of
+      and staging happens at many call sites — a rule spread across all of
       them is a rule one of them will forget.
 
       One attempt, not three: the retry is the next tick, a minute away, and a

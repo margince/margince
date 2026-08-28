@@ -107,7 +107,7 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 	if !servesRecordType(entityType) && entityType != edgeEntityType {
 		return nil, fmt.Errorf("compose: %q is not a record type this path reads", entityType)
 	}
-	asked, err := coupledImage(after)
+	asked, err := coupledImage(entityType, after)
 	if err != nil {
 		return nil, err
 	}
@@ -213,14 +213,14 @@ func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, er
 // updated_at whatever else moved, and comparing it would read every entry as
 // superseded. The money pair's coupling is judged by moneyMovedUnderIt, which
 // needs the trail rather than the image alone.
-func coupledImage(after json.RawMessage) ([]byte, error) {
+func coupledImage(entityType string, after json.RawMessage) ([]byte, error) {
 	var image map[string]json.RawMessage
 	if err := json.Unmarshal(after, &image); err != nil {
 		return nil, fmt.Errorf("compose: after-image is not a JSON object: %w", err)
 	}
 	judged := map[string]json.RawMessage{}
 	for key, value := range image {
-		if derivedColumns[key] {
+		if derivedColumns[key] || provenanceStamps[entityType][key] {
 			continue
 		}
 		judged[key] = value

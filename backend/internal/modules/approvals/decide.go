@@ -39,7 +39,7 @@ func (e *InvalidEditError) Unwrap() error { return e.Cause }
 // UUID may take. An undecidable approval reads as absent, exactly like
 // Get, so Decide never becomes the lookup oracle the inbox filter closed.
 func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string) (row, error) {
-	return s.decide(ctx, id, approve, reason, nil, decidedByPerson)
+	return s.recordDecision(ctx, id, approve, reason, nil, decidedByPerson)
 }
 
 // DecideEdited is the ADR-0036 §4 modify-then-approve arm: the human's
@@ -65,7 +65,7 @@ func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited js
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.decide(ctx, id, true, nil, edited, decidedByPerson)
+	return s.recordDecision(ctx, id, true, nil, edited, decidedByPerson)
 }
 
 // decider says whether a person answered this or the product applied it under
@@ -80,7 +80,7 @@ const (
 	decidedBySystem decider = true
 )
 
-func (s *Service) decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
+func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return row{}, err
 	}
@@ -262,6 +262,50 @@ func serverProposed(a row) bool { return a.PassportID == nil }
 // modify-then-approve edit, the status write, and the write shape. It
 // returns the re-read row so the follow-on effect runs against committed
 // state.
+// countIfAPersonDecided records the track record, and records nothing for an
+// automatic apply.
+//
+// The counters are one person's experience of one kind, and the clean-approval
+// column is the one a promotion offer is read from — so a pass running every
+// minute under a policy the rep already set would manufacture unbounded
+// evidence that they keep agreeing, about proposals they never saw. The ladder
+// is climbed by decisions, not by the automation a previous rung enabled.
+func countIfAPersonDecided(
+	ctx context.Context, tx pgx.Tx, userID ids.UUID, kind string,
+	approve bool, edited json.RawMessage, by decider,
+) error {
+	if by != decidedByPerson {
+		return nil
+	}
+	return countDecisionTx(ctx, tx, userID, kind, decisionOutcomeOf(approve, edited))
+}
+
+// landEditedPayload writes a modify-then-approve edit, and refuses the one kind
+// that may not carry one.
+//
+// A step-up carries nothing a human should rewrite. Its payload IS the question
+// they were shown — which counter, which window, how much was spent — so an
+// edit releases something other than what was asked. The meter refuses the
+// impossible ones (a hard-stop counter, a window that has not started), but a
+// read step-up edited into a write release is neither impossible nor what
+// anyone saw.
+//
+// Refused inside the transaction, before the edit lands and before the status
+// is written: there is no correct edit here, so there is nothing to salvage and
+// nothing should be recorded as decided.
+func landEditedPayload(
+	ctx context.Context, tx pgx.Tx, id ids.ApprovalID, edited json.RawMessage,
+	a row, auditEvidence map[string]any, decidedPayload *crmcontracts.PublicEventApprovalDecided,
+) error {
+	if edited == nil {
+		return nil
+	}
+	if a.Kind == KindQuotaRelease {
+		return &InvalidEditError{Cause: errors.New("a step-up is answered yes or no, not edited")}
+	}
+	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
+}
+
 func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
 	// The row lock makes the pending pre-read and the status write below
 	// one race-free unit: two concurrent decisions cannot both pass the
@@ -306,29 +350,14 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	}
 	// decided_by is a pointer because ONE verdict has no decider: the expiry
 	// sweep's. A human decision always names theirs, so it is always set here.
-	decider := openapi_types.UUID(p.UserID)
+	decidedBy := openapi_types.UUID(p.UserID)
 	decidedPayload := crmcontracts.PublicEventApprovalDecided{
 		Kind:      a.Kind,
 		Verdict:   crmcontracts.PublicEventApprovalDecidedVerdict(verdict),
-		DecidedBy: &decider,
+		DecidedBy: &decidedBy,
 	}
-	if edited != nil {
-		// A step-up carries nothing a human should rewrite. Its payload IS the
-		// question they were shown — which counter, which window, how much was
-		// spent — so an edit releases something other than what was asked. The
-		// meter refuses the impossible ones (a hard-stop counter, a window that
-		// has not started), but a read step-up edited into a write release is
-		// neither impossible nor what anyone saw.
-		//
-		// Refused inside the transaction, before the edit lands and before the
-		// status is written: there is no correct edit here, so there is nothing
-		// to salvage and nothing should be recorded as decided.
-		if a.Kind == KindQuotaRelease {
-			return row{}, &InvalidEditError{Cause: errors.New("a step-up is answered yes or no, not edited")}
-		}
-		if err := applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, &decidedPayload); err != nil {
-			return row{}, err
-		}
+	if err := landEditedPayload(ctx, tx, id, edited, a, auditEvidence, &decidedPayload); err != nil {
+		return row{}, err
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4,
@@ -341,7 +370,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// transaction as the decision it counts. A counter that could outlive a
 	// rolled-back approval would offer a rep autonomy on evidence of a decision
 	// they never made.
-	if err := countDecisionTx(ctx, tx, p.UserID, a.Kind, decisionOutcomeOf(approve, edited)); err != nil {
+	if err := countIfAPersonDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
 	auditID, err := s.audit(ctx, tx, p, action, id.UUID, auditEvidence)
@@ -449,5 +478,5 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 // would be a second answer to whether this may run, from the place with less
 // context about whose policy was consulted.
 func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID) (row, error) {
-	return s.decide(ctx, id, true, nil, nil, decidedBySystem)
+	return s.recordDecision(ctx, id, true, nil, nil, decidedBySystem)
 }

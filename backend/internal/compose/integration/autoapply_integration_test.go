@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // stageCtx is the server-proposal context the sweeps stage under: a system
@@ -339,16 +339,26 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	// button uses. The route is human-only, which is the other half of the
 	// bargain: the machine may apply without asking, and only somebody who can
 	// see the record may put it back.
-	// The undoing rep needs the same grants the apply spent — RepPerms is a
-	// fixture that cannot write an organization, so binding the role this test
-	// actually granted is what puts the person on equal footing with the
-	// machine that acted for them.
-	undoCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
-		Objects: map[string]principal.ObjectGrant{
-			"organization": {Read: true, Update: true},
-		},
-		RowScope: principal.RowScopeAll,
+	// The undoing rep's authority is RESOLVED, not declared. The machine got
+	// its grants from role_assignment through EffectiveAuthority, so a
+	// hand-written Permissions here would put the person on a different footing
+	// and the test would pass even if grantOrgRepRole granted the wrong thing.
+	// Same call, same source, both sides.
+	rbac, seat, err := identity.NewService(e.Pool).EffectiveAuthority(
+		principal.WithWorkspaceID(context.Background(), e.WS), e.WS, e.Rep1)
+	if err != nil {
+		t.Fatalf("resolving the rep's own authority: %v", err)
+	}
+	undoCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	undoCtx = principal.WithActor(undoCtx, principal.Principal{
+		Type:        principal.PrincipalHuman,
+		ID:          principal.HumanIDPrefix + e.Rep1.String(),
+		UserID:      e.Rep1,
+		SeatType:    seat,
+		TeamIDs:     rbac.TeamIDs,
+		Permissions: rbac.Permissions,
 	})
+	undoCtx = principal.WithCorrelationID(undoCtx, ids.NewV7())
 	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(
 		compose.NewProvider(e.Pool), nil, e.Pool))
 	if _, err := seam.Restore(undoCtx, "organization", org, auditID, version); err != nil {
@@ -378,4 +388,66 @@ func grantOrgRepRole(t *testing.T, e *Env, user ids.UUID) {
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
 		SELECT r.id, $1 FROM role r WHERE r.key = $2`,
 		user, roleKey)
+}
+
+// A proposal that can NEVER apply must not park the ones behind it.
+//
+// The batch is ordered oldest first, so a row that fails every time sits at the
+// head of every tick until it expires. A close-date proposal pins the deal
+// version it was staged against, and anybody editing that deal afterwards makes
+// its apply fail permanently — an ordinary edit, not a race. Ending the pass
+// there would let one edited deal hold every other rep's automation, so the
+// sweep steps over it and keeps going.
+//
+// "Stranded" is about the WRITE, not the decision: the decision commits and the
+// effect then fails, exactly as it does when a person clicks approve on a stale
+// pin. What this holds is that the failure stays with its own row.
+func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+	svc := approvals.NewService(e.DB())
+	grantDealRepRole(t, e, e.Rep1)
+	turnAutoApplyOn(t, svc, e, e.Rep1)
+
+	// Staged first, so it leads the batch.
+	stuck := e.SeedDeal(t, "Edited since", pipeline, open, &e.Rep1)
+	stuckApproval := stageCloseDateCorrection(t, svc, e, stuck)
+	// The pin the real close-date sweep stages with, and then the edit that
+	// strands it: the deal moves on and the staged version no longer matches.
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE approval SET target_version = (SELECT version FROM deal WHERE id = $2)
+		  WHERE id = $1`, stuckApproval, stuck); err != nil {
+		t.Fatalf("pinning the staged version: %v", err)
+	}
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE deal SET version = version + 1 WHERE id = $1`, stuck); err != nil {
+		t.Fatalf("editing the deal the proposal pinned: %v", err)
+	}
+
+	behind := e.SeedDeal(t, "Behind it", pipeline, open, &e.Rep1)
+	behindApproval := stageCloseDateCorrection(t, svc, e, behind)
+
+	applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool)
+	if err != nil {
+		t.Fatalf("one stranded proposal ended the whole pass: %v", err)
+	}
+	if applied != 1 {
+		t.Fatalf("applied %d, want the one behind the stranded proposal", applied)
+	}
+	if status, _ := statusOf(t, behindApproval); status != "approved" {
+		t.Errorf("the proposal behind the stranded one is %q, want approved", status)
+	}
+	// The stranded row does not vanish quietly. Its decision commits and its
+	// effect then fails, which is the same shape a human's click produces on a
+	// stale pin — and effect_failure is what makes it findable rather than a
+	// row that silently never took.
+	var failure *string
+	if err := owner.QueryRow(context.Background(),
+		`SELECT effect_failure FROM approval WHERE id = $1`, stuckApproval).Scan(&failure); err != nil {
+		t.Fatal(err)
+	}
+	if failure == nil {
+		t.Error("the stranded proposal records no failure, so nothing would ever surface it to a person")
+	}
 }
