@@ -5906,7 +5906,7 @@ export const vi = {
     "Gửi một lần và niêm phong trong két khóa. Nếu môi trường đã đặt {envVar}, máy chủ đọc từ đó.",
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
-    "Chỉ là điểm khởi đầu. Bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
+    "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.google.title": "Kết nối ứng dụng Google",
   "firstRun.google.sub":
@@ -5956,6 +5956,8 @@ export const vi = {
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
   "aiRouting.model.label": "Mô hình",
+  "aiRouting.model.help":
+    "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
   "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saved": "Đã lưu định tuyến. Mọi tiến trình đang phục vụ theo nó.",

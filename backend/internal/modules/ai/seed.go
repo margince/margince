@@ -27,6 +27,11 @@ import (
 // keep in sync). Idempotent (ON CONFLICT ... DO NOTHING on the table's
 // (provider, model_id, effective_date) uniqueness): a rerun
 // never double-inserts.
+//
+// The lane comes from the sheet too, so a fresh workspace can tell a chat model
+// from an embedder the moment it is provisioned — which is what the routing
+// form's picker reads, and the reason a seeded embedder must never land as the
+// column default.
 func SeedWorkspaceDefaultsTx(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	for _, r := range SeedModelRates(now) {
 		if _, err := tx.Exec(ctx, `
@@ -34,13 +39,13 @@ func SeedWorkspaceDefaultsTx(ctx context.Context, tx pgx.Tx, now time.Time) erro
 				provider, model_id,
 				input_per_mtok_microusd, output_per_mtok_microusd,
 				cache_read_per_mtok_microusd, cache_write_per_mtok_microusd,
-				effective_date
-			) VALUES ($1, $2, $3, $4, $5, $6, $7)
+				effective_date, lane
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (provider, model_id, effective_date) DO NOTHING`,
 			r.Provider, r.ModelID,
 			r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
 			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD,
-			r.EffectiveDate); err != nil {
+			r.EffectiveDate, string(r.Lane)); err != nil {
 			return fmt.Errorf("ai: seed workspace default rates: %w", err)
 		}
 	}

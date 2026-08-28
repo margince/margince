@@ -118,6 +118,35 @@ export function formatMoneyCompact(
  *
  * Ten is the scale the server stores a rate at, so it is the ceiling here.
  */
+/**
+ * One AI model price, as the sheet spells it: USD per million tokens.
+ *
+ * Always USD, and not a caller's choice — `ai_model_rate` stores µUSD integers
+ * that carry no currency, and the contract calls the four buckets USD outright.
+ * A currency argument here would be a knob that can only be set wrong.
+ *
+ * The FRACTION DIGITS are the whole reason this is not `formatMoney`. That one
+ * rounds to the currency's minor unit, which is two digits for USD — and the
+ * cheap end of this sheet lives below a cent, where two digits render a real
+ * price as `$0.00`. Free is a claim this product is careful never to make by
+ * accident (an unpriced call reports UNPRICED for the same reason), so the
+ * digits stretch until the first significant one survives, and stop at six
+ * because a rate finer than that is not a number anybody reads.
+ */
+export function formatUsdPerMTok(price: string, locale: Locale): string {
+  const value = Number(price);
+  const digits =
+    value === 0
+      ? 2
+      : Math.min(6, Math.max(2, Math.ceil(-Math.log10(Math.abs(value)))));
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
 export function formatRate(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     maximumFractionDigits: 10,

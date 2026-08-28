@@ -6007,7 +6007,7 @@ export const en = {
     "Sent once and sealed in the key vault. The server reads it as {envVar} when one is set in the environment instead.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. Any model id your provider serves will do.",
+    "A starting point. The listed prices are per million tokens, in → out; any model id your provider serves will do.",
   "firstRun.ai.embedModel": "Embedding model",
   "firstRun.google.title": "Connect a Google app",
   "firstRun.google.sub":
@@ -6059,6 +6059,8 @@ export const en = {
   "aiRouting.baseUrl.help":
     "The vendor's host root, with no version segment. The adapter adds /v1. Required for openai_compatible, which has no default of its own.",
   "aiRouting.model.label": "Model",
+  "aiRouting.model.help":
+    "The models listed are the ones this installation can price, per million tokens in → out. Any other id your provider serves works too — type it.",
   "aiRouting.save": "Save routing",
   "aiRouting.saving": "Saving the binding…",
   "aiRouting.saved": "Routing saved. Every process is now serving it.",

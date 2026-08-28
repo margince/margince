@@ -42,3 +42,40 @@ export async function pickOption(
   const listbox = screen.getByRole("listbox");
   await user.click(within(listbox).getByRole("option", { name: optionLabel }));
 }
+
+/**
+ * The ONE way a test drives a Margince `ComboBox`.
+ *
+ * `pickOption`'s sibling, and deliberately not the same function: a `Select`
+ * opens on a click and a `ComboBox` opens on focus, so the one thing that would
+ * have to be shared — the click that opens the popup — is the one thing that
+ * differs. What they DO share is the reason both exist: neither is a native
+ * control, so a suite that wants a choice made has to reach into a portalled
+ * listbox, and thirty files doing that by hand encode the markup thirty times.
+ *
+ * ```ts
+ * await pickSuggestion(user, screen.getByRole("combobox", { name: "Model" }), /^gemini-3\.5-flash/);
+ * ```
+ *
+ * A suggestion's accessible name is the WHOLE row — its value and whatever hint
+ * sits beside it, which is what a screen reader hears — so a bare string has to
+ * match all of it. Pass a RegExp anchored on the value when the hint is not the
+ * part you mean.
+ *
+ * The press is `pointerDown`-suppressed inside the component so focus stays in
+ * the text box; a plain `user.click` on the option is therefore the whole
+ * interaction, and no second step is needed to commit it.
+ *
+ * Throws if the list does not open or the suggestion is not in it, rather than
+ * returning quietly: a pick that silently did nothing is how a test ends up
+ * asserting the field's unchanged initial value and passing.
+ */
+export async function pickSuggestion(
+  user: UserEvent,
+  control: HTMLElement,
+  suggestion: string | RegExp,
+): Promise<void> {
+  await user.click(control);
+  const listbox = screen.getByRole("listbox");
+  await user.click(within(listbox).getByRole("option", { name: suggestion }));
+}
