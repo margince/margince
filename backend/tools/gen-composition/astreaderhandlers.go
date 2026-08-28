@@ -61,7 +61,7 @@ func collectHandlerAliases(pkgs map[string][]*ast.File, extensionPkg string) map
 					if !ok || !ts.Assign.IsValid() {
 						continue
 					}
-					sel, ok := ts.Type.(*ast.SelectorExpr)
+					sel, ok := unwrapType(ts.Type).(*ast.SelectorExpr)
 					if !ok {
 						continue
 					}
@@ -102,7 +102,7 @@ func collectHandlerAliases(pkgs map[string][]*ast.File, extensionPkg string) map
 						if !ok || !ts.Assign.IsValid() {
 							continue
 						}
-						rhs, ok := ts.Type.(*ast.Ident)
+						rhs, ok := unwrapType(ts.Type).(*ast.Ident)
 						if !ok {
 							continue
 						}
@@ -165,4 +165,17 @@ func (r *unitReader) isStaticallyNilHandler(expr ast.Expr, ext, typeName string)
 		return r.isStaticallyNilHandler(e.X, ext, typeName)
 	}
 	return false
+}
+
+// unwrapType strips redundant parentheses from a type expression. `type H2 =
+// (H)` names the same type as `type H2 = H`, and a reader that saw only the
+// second would publish a nil spelled through the first.
+func unwrapType(expr ast.Expr) ast.Expr {
+	for {
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			return expr
+		}
+		expr = paren.X
+	}
 }

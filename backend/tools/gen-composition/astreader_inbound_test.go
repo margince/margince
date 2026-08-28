@@ -545,7 +545,8 @@ func New() extension.Extension {
 	}
 }
 
-// An alias of an alias is the same type, so a nil spelled through it is the
+// An alias of an alias is the same type — parentheses included, since `(H)`
+// names what `H` names. A nil spelled through either is the
 // same nil. A reader that resolved only the first hop would publish this
 // endpoint and leave boot to refuse it — the failure arriving at a shipped
 // binary's startup rather than at the composition its author runs.
@@ -561,7 +562,7 @@ import (
 
 type Handler = extension.InboundHandler
 
-type Handler2 = Handler
+type Handler2 = (Handler)
 
 var _ = time.Minute
 
