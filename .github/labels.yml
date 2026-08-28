@@ -116,6 +116,9 @@
 - name: "fast-track-debt"
   color: "6E5494"
   description: "Shipped fast under time pressure; known issue deferred for team cleanup"
+- name: "margince-qc"
+  color: "0052CC"
+  description: "Found by margince-qc, the UAT acceptance-test repo, while building or running a scenario"
 
 # ---------------------------------------------------------------------------
 # GitHub's own defaults, kept because they are what a drive-by contributor and
