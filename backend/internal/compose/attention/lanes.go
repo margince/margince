@@ -142,6 +142,21 @@ type FailedEffect struct {
 	TargetID   ids.UUID
 }
 
+// DSRs reads the data-subject requests nobody has resolved, soonest legal
+// deadline first, bounded. The read is refused for everyone but a DSR
+// admin, and the lane renders that refusal as withheld.
+type DSRs interface {
+	OpenDueSoonest(ctx context.Context, limit int) ([]DSRCase, error)
+}
+
+// DSRCase is one request still owed an answer: what was asked, and by when
+// the law expects it answered.
+type DSRCase struct {
+	ID    ids.UUID
+	Kind  string
+	DueAt time.Time
+}
+
 // Briefing is the overnight brief's queue for the acting rep, best-ranked
 // first.
 //

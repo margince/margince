@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  Scale,
   ShieldAlert,
   Sparkles,
   Sunrise,
@@ -69,8 +70,21 @@ function leadLine(
   // A day with a lane missing from it is not a day this line may summarise:
   // "your day is clear" and "part of it is hidden from you" cannot both be on
   // one page, and the reader would believe the reassuring one.
-  if ((day.lanes_omitted ?? []).length > 0) {
+  //
+  // The dsr lane is the one exception: it is withheld BY ROLE — the case
+  // queue admits DSR admins and nobody else, by design and permanently — so
+  // for every other reader it is not a hidden part of THEIR day, and a
+  // banner that said so on every rep's page forever would drown the real
+  // warning the line exists to give.
+  const hidden = (day.lanes_omitted ?? []).filter((lane) => lane !== "dsr");
+  if (hidden.length > 0) {
     return t("day.lead.partial");
+  }
+  // A legal deadline outranks everything below: the reader this line reaches
+  // is the DSR admin, and the clock runs whether or not they act.
+  const owed = day.counts.dsr ?? 0;
+  if (owed > 0) {
+    return t("day.lead.dsr", { count: formatNumber(owed, locale) });
   }
   // Meetings lead every other lane, because a meeting is the one thing on this
   // page that happens whether or not the reader acts. A decision waits; an
@@ -563,6 +577,14 @@ export function TodayScreen() {
   );
 }
 
+// A lane is warn-toned only while it HOLDS a finding: bad news gets the
+// tint, an all-clear never borrows it.
+function warnWhenHolding(
+  items: readonly AttentionItem[] | undefined,
+): "warn" | undefined {
+  return (items ?? []).length > 0 ? "warn" : undefined;
+}
+
 function TodayLanes({
   day,
   complete,
@@ -582,11 +604,16 @@ function TodayLanes({
   // Decisions this reader approved whose released work then failed. Warn-toned
   // whenever it holds anything: every row is a promise the product broke.
   const failed = day.did_not_run;
-  const failedTone = (failed ?? []).length > 0 ? "warn" : undefined;
+  // Data-subject requests with running legal clocks. Only a DSR admin is
+  // served this lane at all; warn-toned whenever it holds anything, because
+  // every row is a deadline the law set.
+  const requests = day.dsr;
+  const requestsTone = warnWhenHolding(requests);
+  const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
   // Tinted only when the lane HAS a finding: a warn-toned panel drawn over "no
   // deal is drifting" would dress good news as bad.
-  const driftingTone = (atRisk ?? []).length > 0 ? "warn" : undefined;
+  const driftingTone = warnWhenHolding(atRisk);
   const meetings = day.meetings;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
@@ -683,6 +710,22 @@ function TodayLanes({
         lane="at_risk"
         total={day.counts.at_risk ?? 0}
         tone={driftingTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={requests}
+        shape={{
+          title: t("day.dsr"),
+          empty: t("day.dsr.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: Scale,
+        }}
+        omitted={omitted}
+        lane="dsr"
+        total={day.counts.dsr ?? 0}
+        tone={requestsTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

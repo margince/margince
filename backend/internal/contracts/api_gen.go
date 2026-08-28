@@ -1252,6 +1252,7 @@ const (
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
 	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedDsr               AttentionLanesOmitted = "dsr"
 	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
 	AttentionLanesOmittedPlanned           AttentionLanesOmitted = "planned"
@@ -1269,6 +1270,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedDidNotRun:
 		return true
 	case AttentionLanesOmittedDoneForYou:
+		return true
+	case AttentionLanesOmittedDsr:
 		return true
 	case AttentionLanesOmittedMeetings:
 		return true
@@ -1349,6 +1352,7 @@ const (
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceDsr               AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
@@ -1367,6 +1371,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceDsr:
 		return true
 	case AttentionItemSourceFailedApproval:
 		return true
@@ -13687,6 +13693,20 @@ type Attention struct {
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
+	// Dsr Data-subject requests nobody has resolved, soonest legal deadline
+	// first — the cases whose clocks run whether or not anyone opens the
+	// compliance screen. Each card carries the request's kind and its
+	// deadline; working the case stays on the case queue's own screen,
+	// so the card offers no verbs.
+	//
+	// Withheld — named in `lanes_omitted` — for every reader the case
+	// queue itself refuses: the lane is served exactly as far as the
+	// DSR admin gate reaches, and no further.
+	//
+	// Absent — not empty — on an installation whose feed does not read
+	// the case queue.
+	Dsr *[]AttentionItem `json:"dsr,omitempty"`
+
 	// LanesOmitted Lanes withheld because the caller may not read what they contain. Never returned empty instead.
 	LanesOmitted *[]AttentionLanesOmitted `json:"lanes_omitted,omitempty"`
 
@@ -13773,6 +13793,9 @@ type AttentionCounts struct {
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
+
+	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
+	Dsr *int `json:"dsr,omitempty"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`

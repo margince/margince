@@ -55,6 +55,9 @@ type Service struct {
 	decay    Decay
 	meetings Meetings
 	failed   FailedEffects
+	// dsrs is OPTIONAL like the lanes above it, and withheld-by-grant on top:
+	// even where it is bound, only a DSR admin's read succeeds.
+	dsrs DSRs
 	// names is OPTIONAL like the lanes above it: nil means subjects travel
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
@@ -64,11 +67,11 @@ type Service struct {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, n Names, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, n Names, now Clock,
 ) *Service {
 	return &Service{
-		approvals: a, duplicates: d, tasks: t, receipts: r,
-		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, failed: f, names: n, now: now,
+		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
+		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, names: n, now: now,
 	}
 }
 

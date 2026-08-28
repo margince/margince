@@ -59,7 +59,7 @@ func (l optionalLane) collect(
 	}
 }
 
-// optionalLanes describes the four, in the order they are read.
+// optionalLanes describes the optional lanes, in the order they are read.
 //
 // The meetings window opens at NOW rather than at midnight: a meeting that
 // began an hour ago cannot be prepared for, and one that ended would be plainly
@@ -101,6 +101,16 @@ func (s *Service) optionalLanes(
 				return renderEach(undone, failedItem), err
 			},
 			into: &out.DidNotRun, count: &out.Counts.DidNotRun,
+		},
+		{
+			name: "dsr", bound: s.dsrs != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				owed, err := s.dsrs.OpenDueSoonest(ctx, doneCap)
+				return renderEach(owed, func(request DSRCase) crmcontracts.AttentionItem {
+					return dsrItem(request, asOf)
+				}), err
+			},
+			into: &out.Dsr, count: &out.Counts.Dsr,
 		},
 		{
 			name: "relationship_decay", bound: s.decay != nil,
