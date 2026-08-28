@@ -230,15 +230,21 @@ func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 // answer two pools, and closing one does not affect the other. The caller closes
 // it — nothing here will.
 //
-// The schema check is the shared pool's, for the shared pool's reason: a session
-// open across EnsureSchema's DROP SCHEMA blocks it, and the package then dies at
-// its go-test timeout with nothing naming the cause. Owning the pool does not
-// make that safe.
+// It does NOT carry the shared pool's ErrSchemaNotReady check, and that is a
+// decision rather than an omission. The check is a proxy for "this process has
+// called EnsureSchema", which for a MEMOIZED pool is the right question: it
+// outlives every test, so one opened beforehand is still open across the
+// migration's DROP SCHEMA and blocks it. An owned pool's lifetime is its
+// test's. And the proxy is wrong here in the direction that matters: a suite
+// running in a package the lane already migrated has never called EnsureSchema
+// itself, so the flag is false while the schema is perfectly ready — refusing
+// there would refuse working suites for a hazard they do not have.
 func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
-	if !schemaReady.Load() {
-		return nil, ErrSchemaNotReady
-	}
 	tuned, err := withTestPoolParams(dsn)
+	if err != nil {
+		return nil, err
+	}
+	tuned, err = capToLaneCeiling(tuned)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +253,61 @@ func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("opening a caller-owned test pool: %w", err)
 	}
 	return pool, nil
+}
+
+// capToLaneCeiling lowers a DSN's own pool_max_conns to the lane's when the DSN
+// asks for more.
+//
+// withTestPoolParams fills what a DSN leaves out and never overrides what it
+// names, which is right for every other parameter: whoever sized the pool
+// explicitly wins. It is wrong for THIS one. The lane's budget is stated in
+// terms of the ceiling, so a DSN naming a larger number is not a caller's
+// preference — it is the budget being wrong by exactly that much, quietly, in
+// the one parameter the lane rather than the caller decides.
+//
+// A DSN asking for FEWER keeps its own: a suite that wants a single-connection
+// pool is asking for something the ceiling does not forbid.
+func capToLaneCeiling(dsn string) (string, error) {
+	params, err := poolParams()
+	if err != nil {
+		return "", err
+	}
+	ceiling, declared := params["pool_max_conns"]
+	if !declared {
+		return dsn, nil
+	}
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", fmt.Errorf("parsing the test DSN: %w", err)
+	}
+	q := u.Query()
+	asked := q.Get("pool_max_conns")
+	if asked == "" {
+		return dsn, nil
+	}
+	lower, err := lowerCount(asked, ceiling)
+	if err != nil {
+		return "", err
+	}
+	q.Set("pool_max_conns", lower)
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+// lowerCount answers the smaller of two connection counts, as text.
+func lowerCount(a, b string) (string, error) {
+	first, err := strconv.Atoi(a)
+	if err != nil {
+		return "", fmt.Errorf("testdb: pool_max_conns=%q is not a connection count: %w", a, err)
+	}
+	second, err := strconv.Atoi(b)
+	if err != nil {
+		return "", fmt.Errorf("testdb: pool_max_conns=%q is not a connection count: %w", b, err)
+	}
+	if first <= second {
+		return a, nil
+	}
+	return b, nil
 }
 
 // OwnPoolFromConfig opens a caller-owned pool from a config the caller built,
@@ -266,9 +327,6 @@ func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 // A ceiling the lane did not declare leaves MaxConns as the caller set it,
 // which is the same posture withTestPoolParams takes for a DSN that names one.
 func OwnPoolFromConfig(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
-	if !schemaReady.Load() {
-		return nil, ErrSchemaNotReady
-	}
 	params, err := poolParams()
 	if err != nil {
 		return nil, err
@@ -281,7 +339,14 @@ func OwnPoolFromConfig(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool,
 		if convErr != nil {
 			return nil, fmt.Errorf("testdb: the lane's ceiling %q is not a connection count: %w", ceiling, convErr)
 		}
-		cfg.MaxConns = int32(n)
+		// The LOWER of the two, never the ceiling flatly. A caller that asked
+		// for one connection is asking for something the budget does not
+		// forbid, and raising it would break the suites most likely to have
+		// asked — the contention tests, whose whole subject is what happens
+		// when the only connection is busy.
+		if cfg.MaxConns <= 0 || int32(n) < cfg.MaxConns {
+			cfg.MaxConns = int32(n)
+		}
 	}
 	// Nothing is dialled until a test asks, which is the cost the shared pool
 	// removed and the one an ad-hoc pool most often reintroduces.

@@ -29,6 +29,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/build/constraint"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -129,10 +130,31 @@ func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile 
 	return suites
 }
 
+// inIntegrationLane reports whether Go would BUILD this file with the
+// integration tag set.
+//
+// Parsed with go/build/constraint rather than matched as text, because the two
+// answers differ in both directions. `//go:build !integration` contains the
+// word and is the file Go EXCLUDES when the tag is on — judging it would report
+// a unit-lane file for a rule it is not under. And a `//go:build` line below
+// the package clause is not a constraint at all; Go ignores it, and so must
+// this, or a sentence in a doc comment could enrol a file in a lane it never
+// runs in.
 func inIntegrationLane(file *ast.File) bool {
 	for _, group := range file.Comments {
+		// Constraints sit ABOVE the package clause. A group starting after it
+		// is prose, whatever it says.
+		if group.Pos() > file.Package {
+			break
+		}
 		for _, line := range group.List {
-			if strings.HasPrefix(line.Text, "//go:build") && strings.Contains(line.Text, "integration") {
+			expr, err := constraint.Parse(line.Text)
+			if err != nil {
+				continue
+			}
+			// Evaluated with the tag ON, which is the question: would this file
+			// be built in the integration lane.
+			if expr.Eval(func(tag string) bool { return tag == "integration" }) {
 				return true
 			}
 		}
