@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -141,11 +142,22 @@ func TestAnAskedForRunCoalescesAndIsNotAFleetPass(t *testing.T) {
 	if !asked.UniqueOpts.ByArgs || len(asked.UniqueOpts.ByState) == 0 {
 		t.Error("an asked-for run does not coalesce: a member holding down save enqueues a tick per press")
 	}
-	// Not a fleet pass. The sweep gauges count tagged rows, and a run somebody
-	// asked for would inflate the coverage reading of a pass that never ran.
+	// Not a fleet pass. The sweep gauges count rows carrying jobs.SweepTag, and
+	// a run somebody asked for would inflate the coverage reading of a pass
+	// that never ran.
+	//
+	// The TAG, by name, rather than a count of tags: a count is silent about
+	// which tags those are, so an asked-for run that later grew a second tag
+	// beside the sweep one would read as different-and-therefore-fine. It is
+	// also what the gauge reads — sweepTagPredicate is `'sweep' = ANY(tags)` —
+	// so this asks the question the gauge asks.
 	fleet := workspaceSweepOpts(child)
-	if len(asked.Tags) != 0 && len(asked.Tags) == len(fleet.Tags) {
-		t.Error("an asked-for run carries the fleet sweep's tag, so the sweep gauges count it as coverage")
+	if !slices.Contains(fleet.Tags, jobs.SweepTag) {
+		t.Fatalf("the fleet sweep's opts carry tags %v, not the %q this test is checking the asked-for run is free of — "+
+			"the marker moved and this assertion is no longer about anything", fleet.Tags, jobs.SweepTag)
+	}
+	if slices.Contains(asked.Tags, jobs.SweepTag) {
+		t.Errorf("an asked-for run carries %q, so the sweep gauges count it as coverage of a pass that never ran", jobs.SweepTag)
 	}
 	// Same queue and attempt cap as every other share of this kind: one
 	// workspace's tick is one workspace's tick however it was asked for.
