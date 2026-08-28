@@ -123,7 +123,7 @@ func TestTheModelWritesTheReasonAndNeverTheVerb(t *testing.T) {
 	}
 	written := WrittenStatus{
 		Story:      []WrittenLine{{Text: "It went out.", Evidence: []string{id}}},
-		MoveReason: "the model's reason",
+		MoveReason: WrittenLine{Text: "the model's reason", Evidence: []string{id}},
 	}
 	card := foldWritten(composeDeterministic(f, rules), written, f, rules)
 	if card.Next == nil {
@@ -135,8 +135,12 @@ func TestTheModelWritesTheReasonAndNeverTheVerb(t *testing.T) {
 	if (*card.Next.Arguments)["activity_id"] != id {
 		t.Fatalf("arguments = %v, want the rules' operand", *card.Next.Arguments)
 	}
-	if len(card.Next.Evidence) != 1 {
-		t.Fatalf("evidence = %+v, want the rules' own", card.Next.Evidence)
+	// The evidence is now the REASON's, because the reason on screen is the
+	// model's: a sentence shown beside another sentence's sources is the one
+	// thing a reader following a citation must not meet.
+	if len(card.Next.Evidence) != 1 || card.Next.Evidence[0].ActivityId == nil ||
+		card.Next.Evidence[0].ActivityId.String() != id {
+		t.Fatalf("evidence = %+v, want the record the model's reason cites", card.Next.Evidence)
 	}
 	if card.Next.Reason != "the model's reason" {
 		t.Fatalf("reason = %q, want the model's words", card.Next.Reason)

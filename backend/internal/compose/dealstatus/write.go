@@ -149,7 +149,7 @@ func foldWritten(
 	out.Blocker = optionalSection(w.Blocker, f)
 	out.Buyer = optionalSection(w.Buyer, f)
 	out.Verdict = verdictOf(w, f)
-	out.Next = writtenMove(mv, w)
+	out.Next = writtenMove(mv, w, f)
 	return out
 }
 
@@ -186,15 +186,44 @@ func verdictOf(w WrittenStatus, f facts) *crmcontracts.DealStatusCardVerdict {
 // written here would be a fifth surface outside that block: no sender, no
 // recipient, no register, and none of the rules the others learned the hard
 // way. The reader drafts through the composer, which has them.
-func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus) *crmcontracts.DealStatusCardMove {
+func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus, f facts) *crmcontracts.DealStatusCardMove {
 	if mv.Action == ActionNone {
 		return nil
 	}
 	written := mv
-	if w.MoveReason != "" {
-		written.Reason = w.MoveReason
+	if w.MoveReason.Text == "" {
+		return &written
 	}
+	// The sentence AND what it rests on. Every other sentence on this card is
+	// shown beside the records it cites; a reason shown beside the rules'
+	// evidence instead would put a model's words next to a different sentence's
+	// sources, which is the one thing a reader following a citation must be
+	// able to trust.
+	//
+	// The rules' evidence stands when the model's citation names a record this
+	// build no longer holds: the sentence is still the model's, but there is
+	// nothing to open, and an empty list beside prose reads as uncited.
+	cited := moveEvidence(w.MoveReason, f)
+	if len(cited) == 0 {
+		return &written
+	}
+	written.Reason = w.MoveReason.Text
+	written.Evidence = cited
 	return &written
+}
+
+// moveEvidence resolves the reason's citations to the card's own evidence
+// shape. A citation naming a row this build no longer holds is dropped, exactly
+// as wire drops one — the filter admitted an id, and only the read here can say
+// whether the record is still there.
+func moveEvidence(reason WrittenLine, f facts) []crmcontracts.DealNextBestActionEvidence {
+	out := make([]crmcontracts.DealNextBestActionEvidence, 0, len(reason.Evidence))
+	for _, id := range reason.Evidence {
+		if a, ok := citedRecord(f, id); ok {
+			out = append(out, evidenceOf(a, subjectOf(a)))
+		}
+	}
+	return out
 }
 
 // wire turns the lane's cited lines into sentences the reader can follow back
