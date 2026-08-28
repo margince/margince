@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (41)
+## Parity (42)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -48,6 +48,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `issuelabels_test.go` | H3 | The label taxonomy is written down once and read from there. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
+| `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
