@@ -146,8 +146,8 @@ func TestCollectUnitFrontendAcceptsAWellFormedLayer(t *testing.T) {
 	}
 }
 
-// A unit with no frontend layer is the common case — de, yogi and crm-hello
-// are all shaped that way — and composes normally.
+// A unit with no frontend layer is the common case — de and crm-hello are
+// both shaped that way — and composes normally.
 func TestCollectUnitFrontendAbsentIsNotAnError(t *testing.T) {
 	got, err := collectUnitFrontend("demo", t.TempDir())
 	if err != nil || got != nil {
@@ -266,7 +266,7 @@ func representativeUnitNames() []string {
 // TestExtScreensGenImportsOnlyUnitsWithAScreen: the registry is the join
 // between the enabled set and the units that actually ship a screen. A unit
 // without one contributes nothing and is not an error — App.tsx falls through
-// to the generic published-operations card, which is what de and yogi get.
+// to the generic published-operations card, which is what de gets.
 func TestExtScreensGenImportsOnlyUnitsWithAScreen(t *testing.T) {
 	got := string(extScreensGen([]extensionUnit{
 		{Name: "notes", Frontend: &unitFrontend{Package: "@margince-ext/notes", Export: "@margince-ext/notes"}},

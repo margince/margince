@@ -79,7 +79,7 @@ func TestTheNamespaceWallFixtureDeclaresTheSameKeyAsNotes(t *testing.T) {
 		path string
 		// removable marks a file that a legitimate operation deletes. The
 		// FIXTURE is part of the repository and its absence is a defect; the
-		// installed UNIT is one `git rm -r extensions/notes` away, which is
+		// installed UNIT is one `git rm -r extensions/<unit>` away, which is
 		// the documented removal recipe. A t.Fatal on the second made removal a
 		// THREE-place operation — delete the unit, delete its core screen, and
 		// edit this test — and the third place is one nobody would find until

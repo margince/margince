@@ -295,11 +295,11 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// entirely. An extension tool CAN therefore answer from native state for a
 	// workspace whose system of record is the overlay mirror.
 	//
-	// Nothing is exposed today: yogi is the only served first-party unit and it
-	// ignores its Runtime, and the composed set is the trust boundary (see
-	// buildExtensionTools). The guard — or the per-unit grants that would make
-	// it unnecessary — is issue #627, to settle before a unit reads a domain
-	// table.
+	// Nothing is exposed today: openchannel is the only served first-party unit
+	// and its SQL reaches none but its own tables, and the composed set is the
+	// trust boundary (see buildExtensionTools). The guard — or the per-unit
+	// grants that would make it unnecessary — is issue #627, to settle before a
+	// unit reads a domain table.
 	registerComposedTools(registry)
 	return registry
 }

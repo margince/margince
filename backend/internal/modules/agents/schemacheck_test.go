@@ -231,8 +231,8 @@ func TestNullIsAHoleEverywhereButAnOptionalMember(t *testing.T) {
 }
 
 // A schema that closes itself is making a promise, and a result carrying more
-// than it declared breaks it from the other side. `extensions/yogi` is the
-// surface's own closed schema, so this is not hypothetical.
+// than it declared breaks it from the other side. `extensions/openchannel`
+// closes its own tool results, so this is not hypothetical.
 func TestAClosedSchemaRefusesAMemberItDidNotDeclare(t *testing.T) {
 	closed := `{"type":"object","properties":{"quote":{"type":"string"}},"required":["quote"],"additionalProperties":false}`
 	if defect := ResultDefect(json.RawMessage(closed), json.RawMessage(`{"quote":"a","extra":1}`)); defect == "" {

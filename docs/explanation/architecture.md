@@ -156,10 +156,10 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   is its own Go module importing ONLY the marker-allowlisted
   `backend/pkg/**` surface; presence under `extensions/` is the
   enablement. The vanilla tree's own units are `de` (the German
-  jurisdiction pack — GoBD calendar-year retention floors), `notes`,
-  `relay-probe` (the provider-facing reference — capture, a merge-key
-  declaration and a transport) and `yogi` (one served 🟢/read agent tool —
-  the worked example of the governed-tool kind).
+  jurisdiction pack — GoBD calendar-year retention floors) and
+  `openchannel` (the reference connector — an anonymous signed inbound
+  edge, a drain job, capture with a merge-key declaration, a transport,
+  seven served governed tools and a screen).
   Read `extensions/` for the live list rather than trusting this sentence — a
   list in prose goes stale the first time somebody adds a unit, and it reads
   no differently when it has. `make composition` (run by every build lane)

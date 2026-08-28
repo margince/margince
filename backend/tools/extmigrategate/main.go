@@ -26,7 +26,7 @@
 //
 // Usage:
 //
-//	extmigrategate -unit notes -dir extensions/notes/migrations -dsn <throwaway>
+//	extmigrategate -unit openchannel -dir extensions/openchannel/migrations -dsn <throwaway>
 //
 // The DSN must name a THROWAWAY database, migrated to head (the gate needs
 // public.workspace and the ext schema) whose owner may create roles. The gate

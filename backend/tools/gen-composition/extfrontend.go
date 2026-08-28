@@ -63,7 +63,7 @@ type unitPackageJSON struct {
 }
 
 // collectUnitFrontend reads a unit's frontend layer. Absent is the common case
-// (de, yogi and crm-hello are all shaped that way) and composes nothing.
+// (de and crm-hello are shaped that way) and composes nothing.
 //
 // Each refusal below is a failure that would otherwise happen somewhere worse:
 // a name collision resolves to whichever member pnpm saw last, a missing entry

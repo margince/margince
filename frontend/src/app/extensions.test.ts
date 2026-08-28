@@ -129,7 +129,7 @@ describe("placing a unit by its declared secret scope", () => {
     secretScope: "user",
     verbs: [],
   };
-  // A unit declaring no secret: yogi and de in the shipped tree.
+  // A unit declaring no secret: de in the shipped tree.
   const YOGI: ExtensionDescriptor = {
     name: "yogi",
     secretScope: "",

@@ -13,11 +13,10 @@ specifically, the live capability is retention floors; the running example below
 
 An extension is its own Go module reaching the core through only the marker-allowlisted
 `backend/pkg/**` surface. **Presence under `extensions/` is the enablement** — there is no flag to
-flip. `extensions/notes` is the **reference unit** for a unit that owns data or serves routes — copy it
-first. `extensions/relay-probe` is the reference for a unit that faces an outside provider:
-capture, a merge-key declaration, and a transport replies leave on. `extensions/de` (a jurisdiction
-pack), `extensions/yogi` (one served agent tool) and `fixtures/extensions/crm-hello` (the
-walking-skeleton) are the smaller shapes.
+flip. `extensions/openchannel` is the **reference unit** — it owns data, serves routes, faces an
+outside provider with capture, a merge-key declaration and a transport replies leave on, and ships
+a screen. Copy it first. `extensions/de` (a jurisdiction pack) and
+`fixtures/extensions/crm-hello` (the walking-skeleton) are the smaller shapes.
 
 A unit owns **all six** surfaces, frontend included: `extensions/<name>/frontend/` is a pnpm workspace
 package whose default export the SPA mounts at `#/ext/<name>`. A unit that ships none still gets a
@@ -109,7 +108,7 @@ Get the statutory content right — it's legal content, not a default. Pin it wi
 ## Declare a governed agent tool (optional)
 
 A unit may also contribute **agent tools** — named verbs the MCP surface serves alongside the core
-ones. `extensions/yogi` is the first-party worked example; copy its shape:
+ones. `extensions/openchannel` is the first-party worked example; copy its shape:
 
 **Governance lives in the contract, not in Go.** An `extension.Tool` is a **verb and a function** and
 nothing else — the tier, the Passport scope, the RBAC object, the title, the prose, the version and both
@@ -117,15 +116,15 @@ schemas all come from the contract operation that declares the verb (see the nex
 
 ```go
 Tools: []extension.Tool{{
-	Name:   "yogi_quote", // lower snake_case; must equal an x-mcp-tool verb in THIS unit's api/ fragment
-	Handle: quote,        // omit for a contract-only request: declared, published, answers 501
+	Name:   "openchannel_open", // lower snake_case; must equal an x-mcp-tool verb in THIS unit's api/ fragment
+	Handle: open,               // omit for a contract-only request: declared, published, answers 501
 }}
 ```
 
 The handler signature carries the capability handle:
 
 ```go
-func quote(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error)
+func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error)
 ```
 
 `rt` is the **only** thing the core hands a unit, it is minted per invocation, and it is invalid the
@@ -156,8 +155,8 @@ What the surface will and will not serve:
   the act actually spends.
 
 **Validate arguments yourself — the declared input schema is client-facing documentation, and nothing
-on this seam checks a request body against it before your handler runs.** Copy
-`extensions/notes/notes.go`'s `decode`; do not write your own from
+on this seam checks a request body against it before your handler runs.** Call
+`extension.DecodeArgs[T]` (`backend/pkg/extension/args.go`); do not write your own from
 `Decoder.DisallowUnknownFields` alone, which this guide used to recommend and which leaves four holes
 that each let a document the published schema forbids decide what your handler stores:
 
@@ -186,7 +185,7 @@ the core contract it extends** — `api/crm.yaml` extends `backend/api/crm.yaml`
 the job contract. `gen-composition` merges them into `build/composition/api/`, and the merged document is
 what the operator manifest, the generated client types, the mounted routes and the docs all read.
 
-Copy `extensions/notes/api/crm.yaml`. The rules that will otherwise bite:
+Copy `extensions/openchannel/api/crm.yaml`. The rules that will otherwise bite:
 
 - **Paths are relative to the document's own `servers` url**, which already ends in `/v1`. Write
   `/ext/<name>/notes/list`, never `/v1/ext/...` — the server puts the base path back when it mounts the
@@ -303,8 +302,8 @@ restricted role against a throwaway database and re-reads the catalog):
 product's own records: `tx.Core().Activities().Create(…)` files an activity through the same write path
 the HTTP surface uses, so it is checked against the CALLER's live permissions, refused with `ErrNotFound`
 for a subject they cannot see, audited, published as an event, and attributed to your unit — all inside
-the transaction your own row is in, so the two commit together or not at all. `extensions/notes/filing.go`
-is the worked example, and `backend/pkg/extension/crm` holds the shapes it takes and returns.
+the transaction your own row is in, so the two commit together or not at all.
+`backend/pkg/extension/crm` holds the shapes it takes and returns.
 
 Three refusals to design for rather than discover: a scheduled JOB TICK gets `ErrForbidden` (it runs as
 your unit, with no caller whose permissions a core write could be checked against — your own tables stay
@@ -318,15 +317,15 @@ on the shared `margince_app` role, so a statement naming `person` would work, wh
 file your unit ships**, folds the string constants a table name is usually spelled through, and refuses
 a table outside `ext.ext_<name>_…`. A unit test that seeds a core table fails it exactly as a handler
 would, and that is deliberate: a test is where the habit starts. Qualify the schema — `ext` is on no `search_path` the app connects with,
-so a bare `ext_notes_note` names a *public* table you do not own — and keep the name in a constant: a
+so a bare `ext_openchannel_inbound` names a *public* table you do not own — and keep the name in a constant: a
 name assembled at run time is a finding too, because a reader that cannot see the table cannot vouch
 for it. This is defence against mistakes, not a wall; see "what the tier does NOT protect against" in
 [extensibility.md](../explanation/extensibility.md).
 
 **A new migration is a new file — including for an index.** `dbmigrate` keys on the version, so a line
 added to an already-applied `0001` runs on exactly the installations that did not need it (a fresh one)
-and never on the ones that do. `extensions/notes/migrations/0003_note_workspace_index.up.sql` is the
-worked example: the index it adds belongs to the table `0001` created, and it is still its own file.
+and never on the ones that do. `extensions/openchannel/migrations/0003_drain.up.sql` is the worked
+example: what it adds belongs to tables the earlier files created, and it is still its own file.
 
 **Index what your reads order by.** A list that reads newest-first and bounds the page is a sequential
 scan plus a sort of every row the unit has ever written until an index covers that order — fine at the

@@ -4,14 +4,12 @@ How a bounded add-on lands in this product **without editing a single upstream-o
 recorded exception, below**. This is
 the *extension tier*: one named, versioned unit under `extensions/<name>/`, its own Go module,
 reaching the core through one narrow published surface and composed in at build time. The vanilla tree
-already ships four:
+already ships two:
 
 | Unit | What it is |
 |---|---|
 | `extensions/de` | The German jurisdiction pack — statutory retention floors, and nothing else |
-| `extensions/yogi` | The reference unit that serves one governed agent tool |
-| `extensions/notes` | The reference extension for a unit that owns data: its own table under RLS, six governed operations, its own RBAC object, a stored signing key it signs with and never emits, and a scheduled heartbeat |
-| `extensions/relay-probe` | The reference unit that reaches the outside world: it captures messages from its provider and carries replies back out on its own transport |
+| `extensions/openchannel` | The reference unit, and it exercises every capability the tier has: its own tables, seven governed agent tools, an anonymous signed inbound edge, a drain job, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 This page is for a contributor who wants the whole idea first, then the detail. Start here; to
 actually *build* a unit, jump to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -261,8 +259,8 @@ record, and a send happens only because a human staged one. An
 **agent tool** (`extension.Tool`) is the *governed* kind proper: it derives a risk-tier
 request into `manifest.generated.json` for operator resolution (§7), and a tool declaring a `Handle`
 **is served** — `buildExtensionTools` adapts it to the core `mcp.Tool` seam and boot registers it into
-the same `agents.Registry`, admission gate, and tool listing the core tools ride (`extensions/yogi` is
-the reference unit that exercises that path end to end). Two limits hold there: a handler-less
+the same `agents.Registry`, admission gate, and tool listing the core tools ride (`extensions/openchannel`
+is the reference unit that exercises that path end to end). Two limits hold there: a handler-less
 declaration stays a manifest request and serves nothing, and a *served* 🟡 confirm-first tool is
 refused at boot rather than registered, because this data-only adapter cannot implement the registry's
 staging seam — its approvals could never be staged, so the capability would be dead on every call. A
@@ -321,7 +319,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   unauditable, and a ledger row with no event is a change nothing downstream is told about, which the
   core grants itself no exemption from either. It is OFFERED rather than enforced: the three SQL
   verbs still write whatever a unit tells them to, and a write made through `Exec` alone records
-  nothing, which is a choice a unit makes (`extensions/notes/heartbeat.go` makes it, and says why). The type on the bus is `ext_<namespace>.<verb>` — the
+  nothing, which is a choice a unit makes. The type on the bus is `ext_<namespace>.<verb>` — the
   core prefixes the namespace from the invocation, so a unit can publish neither under another unit's
   name nor inside a core family — and every extension event rides one stream,
   `gw:events:crm:extension`, which no core consumer group carries.
@@ -357,7 +355,7 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   Authority is the mirror image of `tx.Core()`'s: an ingest is refused from an ATTENDED invocation, and
   it runs on the LIVE authority of the member named in `on` — who must currently hold one of this unit's
   user-scoped secrets, because depositing a credential with a unit is the act that says "act for me
-  here". `extensions/relay-probe` is the unit that exercises the path end to end.
+  here". `extensions/openchannel` is the unit that exercises the path end to end.
 
 - **Its own messaging transport** — a `Channel` declares a provider the unit can carry messages on, so
   a rep's reply to a captured conversation leaves through the unit, on the member's own credential,
@@ -496,11 +494,11 @@ the whole path).
 | The committed vanilla stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
 | The first-party German pack | `extensions/de/de.go` |
-| The reference served-tool unit | `extensions/yogi/yogi.go` |
-| The reference extension (every capability) | `extensions/notes/notes.go` |
-| The reference connector: ingress, merge key, transport | `extensions/relay-probe/relayprobe.go`, `record.go`, `send.go` |
-| Its screen, in the unit's own workspace package | `extensions/notes/frontend/screen.tsx` |
-| That screen's tests, and the lane that runs them | `extensions/notes/frontend/screen.test.tsx`, `frontend/vitest.ext.config.ts` |
+| The reference unit (every capability), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
+| Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
+| Its anonymous inbound edge | `extensions/openchannel/inbound.go` |
+| Its screen, in the unit's own workspace package | `extensions/openchannel/frontend/screen.tsx` |
+| That screen's tests, and the lane that runs them | `extensions/openchannel/frontend/screen.test.tsx`, `frontend/vitest.ext.config.ts` |
 | The reference fixture | `fixtures/extensions/crm-hello/crmhello.go` |
 | The negative migration fixtures | `fixtures/extensions/bad-unprefixed-table/`, `bad-overbudget-table/` |
 | The secrets namespace-wall fixture | `fixtures/extensions/crm-nosy/crmnosy.go` |

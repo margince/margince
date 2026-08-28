@@ -172,8 +172,8 @@ func generate(root string) error {
 	// cannot resolve its own dependencies.
 	// Only units that actually ship a frontend layer. A member naming a
 	// directory that does not exist is a claim pnpm currently tolerates by
-	// ignoring it, which is not a property to depend on — and `de` and `yogi`
-	// ship no frontend/ at all.
+	// ignoring it, which is not a property to depend on — and `de` ships no
+	// frontend/ at all.
 	unitNames := make([]string, 0, len(composed.Manifests))
 	for _, m := range composed.Manifests {
 		if m.Unit.Frontend == nil {

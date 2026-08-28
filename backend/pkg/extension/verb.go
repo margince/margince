@@ -146,8 +146,8 @@ const APIBasePath = "/v1"
 // operation's arguments are its body or its query string (see CarriesBody), both
 // of which the seam already decodes, and admitting a template would mean it had
 // to route and decode a third place. An operation addressing one record takes
-// the id as an argument — notes's remove is DELETE /ext/notes/remove?id=…,
-// not /ext/notes/{id}.
+// the id as an argument — a removal is DELETE /ext/<unit>/remove?id=…,
+// not /ext/<unit>/{id}.
 //
 // Anchored at /ext, which also makes the one mistake this convention exists to
 // prevent a loud refusal rather than a silent double prefix: a fragment that
@@ -279,7 +279,7 @@ func (v Verb) validateGovernance() error {
 	// is enforced when an object is DECLARED, and nothing required one — so "a
 	// governed operation that changes installation state under no RBAC object"
 	// was expressible, and the first unit to use the secrets surface expressed
-	// it: notes's store-signing-key declared neither, the object check in the
+	// it: its store-signing-key operation declared neither, the object check in the
 	// serving adapter therefore never ran, and the operation was admitted on
 	// scope ∧ seat ∧ tier ∧ quota alone. For a cookie-session human that is any
 	// authenticated seat. A read-only user replaced the installation's signing
@@ -289,7 +289,7 @@ func (v Verb) validateGovernance() error {
 	// Scope is what this can key on and it is the honest signal: `write` and
 	// `draft` are the two Passport classes that persist something. `read` is
 	// exempt because a read that owns no records has nothing to gate — that is
-	// yogi, de and crm-hello, and refusing them would be refusing the common
+	// de and crm-hello, and refusing them would be refusing the common
 	// case. The outbound classes never reach here on a served tool (the adapter
 	// refuses them outright), and a handler-LESS declaration is held to the same
 	// rule on purpose: it is published, a client can generate a call from it, and
