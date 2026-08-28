@@ -35,6 +35,7 @@ package gates
 // whole variable's worth of output into a consumer that stops early.
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,11 +45,17 @@ import (
 
 const shellGateDir = "../scripts"
 
-// `printf '%s' "$var" | grep -q…` or `echo "$var" | grep -q…`, which is the
+// `printf '%s' "$var" | grep -q…` or `echo "…$var…" | grep -q…`, which is the
 // shape that broke. A pipe into a `grep` without -q consumes all of its input
 // and does not race.
+//
+// Both quotings of the format string, and a variable ANYWHERE in the operand:
+// `printf "%s"` is the same producer as `printf '%s'`, and `echo "at $sha"`
+// writes just as much into a consumer that stops early. A prohibition that
+// recognised one spelling would be avoidable by using the other, which is not a
+// property a prohibition may have.
 var shellVariableIntoQuietGrep = regexp.MustCompile(
-	`(?:printf\s+'%s(?:\\n)?'|echo)\s+"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?"\s*\|\s*grep\s+-[A-Za-z]*q`)
+	`(?:printf\s+["']%s(?:\\n)?["']|echo)\s+"[^"]*\$\{?[A-Za-z_][A-Za-z0-9_]*\}?[^"]*"\s*\|\s*grep\s+-[A-Za-z]*q`)
 
 // The setting that turns a broken pipe into the pipeline's verdict — recognised
 // by the word rather than by the flag letters around it. `set -Eeuo pipefail`,
@@ -60,14 +67,37 @@ var pipefailSetting = regexp.MustCompile(`(?m)^\s*set\s+.*\bpipefail\b`)
 func TestNoShellGateReadsAVerdictThroughAPipeThatCanBreak(t *testing.T) {
 	t.Parallel()
 
-	scripts, err := filepath.Glob(filepath.Join(shellGateDir, "*.sh"))
+	// The whole tree, not its top level. `scripts/deploy/` already holds two
+	// entrypoints, and a glob of `*.sh` judged neither — an under-scoped census
+	// reports a pass over the part it read, and the empty-tree guard below
+	// cannot see the difference between "nothing there" and "nothing looked at".
+	var scripts []string
+	err := filepath.WalkDir(shellGateDir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && strings.HasSuffix(path, ".sh") {
+			scripts = append(scripts, path)
+		}
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("listing %s: %v", shellGateDir, err)
+		t.Fatalf("walking %s: %v", shellGateDir, err)
 	}
-	// A glob that matched nothing would report a pass over an empty tree, which
-	// is the one way a prohibition must not fail.
 	if len(scripts) == 0 {
 		t.Fatalf("%s holds no *.sh — this prohibition read an empty tree", shellGateDir)
+	}
+	// And it reaches BELOW the top level, which is the scoping the glob got
+	// wrong: a tree with subdirectories that this walk flattens to one level
+	// would pass every assertion below while judging none of them.
+	nested := 0
+	for _, path := range scripts {
+		if strings.Count(filepath.ToSlash(path), "/") > strings.Count(filepath.ToSlash(shellGateDir), "/")+1 {
+			nested++
+		}
+	}
+	if nested == 0 {
+		t.Errorf("the walk found no *.sh below the top level of %s, and scripts/deploy/ holds two — the census is reading one directory where it means the tree", shellGateDir)
 	}
 	judged := 0
 	for _, path := range scripts {
@@ -113,6 +143,27 @@ func TestEverySpellingOfPipefailIsRecognised(t *testing.T) {
 	} {
 		if got := pipefailSetting.MatchString(setting); got != want {
 			t.Errorf("pipefailSetting.MatchString(%q) = %v, want %v", setting, got, want)
+		}
+	}
+}
+
+func TestEverySpellingOfTheBreakablePipeIsRecognised(t *testing.T) {
+	t.Parallel()
+
+	// The shape, not one way of writing it. Each false case is a pipe that does
+	// NOT race: a grep without -q reads its input to the end.
+	for line, want := range map[string]bool{
+		`printf '%s' "$body" | grep -q X`:    true,
+		`printf "%s" "$body" | grep -q X`:    true,
+		`printf '%s\n' "$body" | grep -qF X`: true,
+		`echo "$body" | grep -Eq X`:          true,
+		`echo "at $sha" | grep -q X`:         true,
+		`printf '%s' "$body" | grep X`:       false,
+		`git log -1 | grep -q X`:             false,
+		`printf '%s' "$body" > "$out"`:       false,
+	} {
+		if got := shellVariableIntoQuietGrep.MatchString(line); got != want {
+			t.Errorf("shellVariableIntoQuietGrep.MatchString(%q) = %v, want %v", line, got, want)
 		}
 	}
 }

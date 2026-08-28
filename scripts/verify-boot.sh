@@ -106,22 +106,42 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
   done
 }
 
-find_person() { # find_person <full-name> — prints the matching row, empty when absent
-  # Matched on the whole name: `q` answers with everything that shares a word.
-  find_first "/people?q=$(jq -rn --arg v "$1" '$v|@uri')" '.full_name == $name' --arg name "$1"
+find_person() { # find_person <full-name> <email> — the row, empty when absent
+  # `q` is full-text over name and title only, so the name narrows and the EMAIL
+  # decides. Two people can share a full name, and the address is the key the
+  # seeded row was created with — checking whichever row the query answered with
+  # first would report on somebody else's record and call it this one's.
+  find_first "/people?q=$(jq -rn --arg v "$1" '$v|@uri')" \
+    '.full_name == $name and any(.emails[]?; .email == $email)' \
+    --arg name "$1" --arg email "$2"
 }
 
-# Read from the seeder rather than listed here, so a record added there is
-# checked the day it is added instead of the day somebody remembers to widen
-# this list. A grep that matched nothing would turn this whole step into a pass,
-# so the count is asserted first.
-seeded_people="$(sed -n 's/^ensure "person \(.*\)" \/people \\$/\1/p' "$REPO_DIR/scripts/seed-dev.sh")"
-[ -n "$seeded_people" ] || fail "found no 'ensure \"person …\" /people' lines in scripts/seed-dev.sh — this step would pass by reading nothing"
+# The seeded records, read from the seeder's own payloads rather than listed
+# here, so a record added there is checked the day it is added instead of the day
+# somebody remembers to widen a list. A census that matched nothing would turn
+# the whole step into a pass, so each one is asserted non-empty before it is
+# walked.
+#
+# awk rather than sed: the payload is the line AFTER the one naming the record,
+# and the portable sed spelling for that is not the same on both platforms this
+# script runs on.
+seeded_payloads() { # seeded_payloads <resource> — one JSON body per line
+  awk -v want_prefix="ensure \"$1 " '
+    index($0, want_prefix) == 1 { want = 1; next }
+    want { sub(/^  ./, ""); sub(/.$/, ""); print; want = 0 }
+  ' "$REPO_DIR/scripts/seed-dev.sh"
+}
 
-while IFS= read -r name; do
-  person="$(find_person "$name")"
+seeded_people="$(seeded_payloads person)"
+[ -n "$seeded_people" ] || fail "found no 'ensure \"person …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+while IFS= read -r body; do
+  name="$(printf '%s' "$body" | jq -r '.full_name')"
+  email="$(printf '%s' "$body" | jq -r 'first(.emails[]?.email) // empty')"
+  [ -n "$email" ] || fail "the seeder creates '$name' with no email, so this check cannot tell them from a namesake"
+  person="$(find_person "$name" "$email")"
   if [ -z "$person" ]; then
-    fail "seeded person '$name' missing from GET /v1/people — seed absent or stale (make seed-dev)"
+    fail "seeded person '$name' <$email> missing from GET /v1/people — seed absent or stale (make seed-dev)"
   fi
   # And employed somewhere, on the edge the PRODUCT reads. A person who works
   # nowhere shows on no company page, which is the demo dataset's own verify rule
@@ -140,7 +160,7 @@ while IFS= read -r name; do
     cat "$workdir/page.json" >&2
     fail "seeded person '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
   fi
-  echo "  OK: found '$name', currently employed"
+  echo "  OK: found '$name' <$email>, currently employed"
 done <<< "$seeded_people"
 
 # The other rule the seeded records used to break: an account left on the
@@ -151,14 +171,14 @@ done <<< "$seeded_people"
 # page, this installation may carry hundreds of companies from the demo dataset,
 # and a check that reads the first hundred of them is a check that stops finding
 # what it is looking for the day the dataset grows.
-# awk rather than sed: the payload is the line AFTER the one that matches, and
-# the portable sed spelling for that is not the same on both platforms this
-# script runs on.
-seeded_org_bodies="$(awk '
-  /^ensure "organization / { want = 1; next }
-  want { sub(/^  ./, ""); sub(/.$/, ""); print; want = 0 }
-' "$REPO_DIR/scripts/seed-dev.sh")"
-[ -n "$seeded_org_bodies" ] || fail "found no 'ensure \"organization …\" /organizations' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+seeded_org_bodies="$(seeded_payloads organization)"
+[ -n "$seeded_org_bodies" ] || fail "found no 'ensure \"organization …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+# The stage the seeder actually writes, read from the seeder. "Anything but the
+# default" would accept a stage nobody wrote — a boot proof reads the state the
+# seed produces, not a range of states it might have.
+seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | head -1)"
+[ -n "$seeded_lifecycle" ] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
 
 while IFS= read -r body; do
   org_name="$(printf '%s' "$body" | jq -r '.display_name')"
@@ -170,7 +190,7 @@ while IFS= read -r body; do
     fail "seeded account '$org_name' missing from GET /v1/organizations — seed absent or stale (make seed-dev)"
   fi
   lifecycle="$(printf '%s' "$org" | jq -r '.lifecycle // "unknown"')"
-  [ "$lifecycle" != "unknown" ] || fail "seeded account '$org_name' is still on the default lifecycle — the demo dataset's verify pass refuses the installation for it"
+  [ "$lifecycle" = "$seeded_lifecycle" ] || fail "seeded account '$org_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
   echo "  OK: '$org_name' stands at '$lifecycle'"
 done <<< "$seeded_org_bodies"
 

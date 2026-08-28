@@ -299,10 +299,17 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
   done
 }
 
-person_id() { # person_id <full-name> — prints the id, empty when absent
-  # Matched on the whole name rather than taken from the first hit: `q` is a
-  # full-text query, so it answers with everything that shares a word.
-  find_first "/people?q=$(url_encode "$1")" '.full_name == $name' --arg name "$1" \
+# The person, identified the way the seed identifies them: their EMAIL.
+#
+# `q` is full-text over name and title only, so it cannot fetch by address — it
+# narrows, and the email then decides. Two people can share a full name, and
+# taking the first hit would attach an employment to whichever row the query
+# happened to answer with; the address is the natural key the seeded row was
+# created with, so it is the one that says "this is that record".
+person_id() { # person_id <full-name> <email> — prints the id, empty when absent
+  find_first "/people?q=$(url_encode "$1")" \
+    '.full_name == $name and any(.emails[]?; .email == $email)' \
+    --arg name "$1" --arg email "$2" \
     | jq -r '.id // empty'
 }
 
@@ -323,10 +330,10 @@ org_id="$(find_first '/organizations?domain=demo.test' '.display_name == "Demo G
 # no way to un-end one on purpose — a former employment keeps its row — so the
 # person is re-hired with a new edge instead, which is also what happened in the
 # story the demo tells.
-employ() { # employ <full-name> <role>
-  local name="$1" role="$2" id edges standing rel_id rel_version status
-  id="$(person_id "$name")"
-  [ -n "$id" ] || fail "$name is not in the installation the seed just wrote to"
+employ() { # employ <full-name> <email> <role>
+  local name="$1" email="$2" role="$3" id edges standing rel_id rel_version status
+  id="$(person_id "$name" "$email")"
+  [ -n "$id" ] || fail "$name <$email> is not in the installation the seed just wrote to"
   edges="/relationships?kind=employment&person_id=$id"
   if [ -n "$(find_first "$edges" ".organization_id == \$org and $CURRENT_PRIMARY_JQ" --arg org "$org_id")" ]; then
     echo "  OK: $name already employed at Demo GmbH"
@@ -358,9 +365,9 @@ employ() { # employ <full-name> <role>
       '{kind:"employment",person_id:$p,organization_id:$o,role:$r,source:"seed"}')"
 }
 
-employ "Alice Müller" "Head of Operations"
-employ "Bob Schmidt" "Procurement Lead"
-employ "Carol Wagner" "Managing Director"
+employ "Alice Müller" "alice@demo.test" "Head of Operations"
+employ "Bob Schmidt" "bob@demo.test" "Procurement Lead"
+employ "Carol Wagner" "carol@demo.test" "Managing Director"
 
 echo "== seed-dev: demo account lifecycle =="
 status="$(api GET "/organizations/$org_id")"

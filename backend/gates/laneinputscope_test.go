@@ -70,6 +70,10 @@ var scriptReference = regexp.MustCompile(`(?:frontend/)?scripts/[\w.-]+\.(?:sh|m
 // `make check-fe`, `make db-up && make migrate`.
 var makeInvocation = regexp.MustCompile(`\bmake\s+([a-z][a-z0-9-]*)`)
 
+// `SHELL := /bin/bash` after a target's colon: an assignment scoped to that
+// target, which names no prerequisite.
+var targetSpecificAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*\s*[:?+]?=`)
+
 // A `NAME=value` word set for the duration of one recipe command.
 var environmentAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*=\S*$`)
 
@@ -185,12 +189,18 @@ func parseRecipes(t *testing.T, path string) (map[string]*recipeTarget, map[stri
 			continue
 		}
 		current = strings.Fields(match[1])
+		// `verify-demo: SHELL := /bin/bash` sets a variable FOR that target; the
+		// words after the colon are an assignment, not prerequisites, and reading
+		// them as edges puts `SHELL`, `:=` and a path into the graph.
+		prerequisites := strings.Fields(expandRefs(match[2], vars))
+		if targetSpecificAssignment.MatchString(match[2]) {
+			prerequisites = nil
+		}
 		for _, name := range current {
 			if targets[name] == nil {
 				targets[name] = &recipeTarget{}
 			}
-			targets[name].pulls = append(targets[name].pulls,
-				strings.Fields(expandRefs(match[2], vars))...)
+			targets[name].pulls = append(targets[name].pulls, prerequisites...)
 		}
 	}
 	return targets, vars
@@ -434,22 +444,38 @@ func TestAScriptReachedOnlyThroughMakeIsStillALaneInput(t *testing.T) {
 	// path appears nowhere in ci.yml. A walk that stopped at the make target
 	// would judge that lane against the Makefile alone and pass it, so at least
 	// one lane must owe a script no step spells out.
-	reached := map[string][]string{}
+	// The EDGE, named: `make seed-dev` runs scripts/seed-dev.sh, `make
+	// verify-boot` runs scripts/verify-boot.sh, and neither path appears in
+	// ci.yml. Both halves are asserted from the Makefile, so this cannot be
+	// satisfied by some unrelated lane happening to reach some unrelated script
+	// — which is what "any lane owes any make-only script" allowed.
+	targets, vars := parseRecipes(t, rootMakefile)
+	for target, script := range map[string]string{
+		"seed-dev":    "scripts/seed-dev.sh",
+		"verify-boot": "scripts/verify-boot.sh",
+	} {
+		found := scriptsUnder(targets, vars, target)
+		if !slices.Contains(found, script) {
+			t.Errorf("the walk from `make %s` does not reach %s, and the Makefile's recipe runs it: found %v.\n"+
+				"A lane whose steps only say `make %s` is then judged against the Makefile alone, which is how a change to that script classified as touching nothing.",
+				target, script, found, target)
+		}
+	}
+
+	// And a lane actually owes one of those scripts without naming it, which is
+	// the property the census depends on.
+	owed := map[string][]string{}
 	for _, lane := range lanes {
 		named := strings.Join(jobCommands(t, workflow, workflow.Jobs[lane.name].Uses, lane.name), "\n")
 		for _, input := range lane.inputs {
 			if input != makefilePath && !strings.Contains(named, input) {
-				reached[lane.name] = append(reached[lane.name], input)
+				owed[lane.name] = append(owed[lane.name], input)
 			}
 		}
 	}
-	if len(reached) > 0 {
-		return
+	if len(owed) == 0 {
+		t.Errorf("no lane owes a script that only its make targets name, and live-boot owes two — the workflow reader stopped following `run: make …` into the Makefile")
 	}
-	targets, vars := parseRecipes(t, rootMakefile)
-	t.Errorf("no lane owes a script that only its make targets name, and one does: `make seed-dev` reaches %s.\n"+
-		"The recipe walk stopped following prerequisites and $(MAKE) delegations, which leaves every lane judged against the Makefile alone.",
-		strings.Join(scriptsUnder(targets, vars, "seed-dev"), ", "))
 }
 
 func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
