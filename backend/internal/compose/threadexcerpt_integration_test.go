@@ -19,6 +19,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,7 +60,7 @@ func TestAThreadReportsHowMuchOfItselfWasNotRead(t *testing.T) {
 	var messages []threadMessage
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		messages, err = threadMessages(context.Background(), tx, key)
+		messages, err = threadMessages(context.Background(), tx, &settledThread{Key: key})
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -82,5 +83,217 @@ func TestAThreadReportsHowMuchOfItselfWasNotRead(t *testing.T) {
 		t.Errorf("the truncated mail reported %d runes unread, want %d — the limit alone cannot say "+
 			"what was lost, because a body one rune over and one far over arrive identically",
 			messages[1].UnreadRunes, over)
+	}
+}
+
+// TestABackfillIsReadRatherThanMarkedRead is the defect this closes.
+//
+// The read always took the newest six messages. A backfill changes the message
+// count, so the thread becomes due again — the same newest six are re-read, and
+// the new count is recorded. The inserted older messages never reach the model
+// and the thread now looks read: the state says handled, nothing errored, and
+// nothing says content was skipped.
+func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
+	e := integration.Setup(t)
+	key := "backfill-" + ids.NewV7().String()
+
+	// A thread longer than one window, so the newest six do not cover it.
+	base := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
+	for i := range 8 {
+		seedThreadMailAt(t, e, key, base.Add(time.Duration(i)*time.Hour))
+	}
+
+	// The first read: the newest window, and the cursor it leaves behind.
+	first := settledThread{Key: key, Newest: base.Add(7 * time.Hour), Count: 8}
+	read(t, e, &first)
+	if len(first.Messages) != extractThreadMessages {
+		t.Fatalf("the first read took %d messages, want the window of %d",
+			len(first.Messages), extractThreadMessages)
+	}
+	if first.ReadFromNow == nil {
+		t.Fatal("the first read recorded no cursor, so nothing tells the next one where it started")
+	}
+	firstOldest := *first.ReadFromNow
+
+	// Now a backfill: three messages older than anything the thread held.
+	for i := range 3 {
+		seedThreadMailAt(t, e, key, base.Add(-time.Duration(i+1)*time.Hour))
+	}
+
+	// The thread is due again — the count moved — and nothing is NEWER than
+	// what was read, so the window must walk backwards rather than re-reading
+	// the same six.
+	second := settledThread{
+		Key: key, Newest: base.Add(7 * time.Hour), Count: 11,
+		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
+	}
+	read(t, e, &second)
+	if len(second.Messages) == 0 {
+		t.Fatal("the second read took nothing, so a backfilled message is never sent to the model")
+	}
+	for _, message := range second.Messages {
+		if !message.At.Before(firstOldest) {
+			t.Errorf("the second read took a message at %s, which the first read had already covered "+
+				"(it started at %s) — the window did not move", message.At, firstOldest)
+		}
+	}
+	// And it reached the backfill specifically, not merely something older.
+	if oldest := second.Messages[0].At; !oldest.Before(base) {
+		t.Errorf("the oldest message read was %s, and the backfill sits before %s — the window walked "+
+			"back but not far enough to reach it", oldest, base)
+	}
+}
+
+// New mail outranks a backfill: a reply nobody has read is why the conversation
+// is interesting now, and a thread walking backwards through its history while
+// that sits there would be reading its least useful end.
+func TestNewMailIsReadBeforeTheOlderRange(t *testing.T) {
+	e := integration.Setup(t)
+	key := "newmail-" + ids.NewV7().String()
+
+	base := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
+	for i := range 8 {
+		seedThreadMailAt(t, e, key, base.Add(time.Duration(i)*time.Hour))
+	}
+	first := settledThread{Key: key, Newest: base.Add(7 * time.Hour), Count: 8}
+	read(t, e, &first)
+	firstOldest := *first.ReadFromNow
+
+	// A reply arrives, and older messages remain unread below the cursor.
+	reply := base.Add(20 * time.Hour)
+	seedThreadMailAt(t, e, key, reply)
+
+	second := settledThread{
+		Key: key, Newest: reply, Count: 9,
+		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
+	}
+	read(t, e, &second)
+	newest := second.Messages[len(second.Messages)-1].At
+	if !newest.Equal(reply) {
+		t.Errorf("the window ends at %s, want the new message at %s — a thread with unread mail must "+
+			"read that before walking back through its history", newest, reply)
+	}
+}
+
+func timePtr(at time.Time) *time.Time { return &at }
+
+// seedThreadMailAt places one message on a thread at an exact instant, which is
+// what a window test needs: the ordering IS the subject, and "minutes ago"
+// cannot express a backfill below everything already there.
+func seedThreadMailAt(t *testing.T, e *integration.Env, threadKey string, at time.Time) {
+	t.Helper()
+	id := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
+			                      source_system, source_id, source, captured_by)
+			VALUES ($1, 'email', 'a subject', 'a body', 'inbound', $2, $3,
+			        'gmail', $4, 'gmail:seed', 'connector:gmail')`,
+			id, threadKey, at, id.String())
+		return err
+	}); err != nil {
+		t.Fatalf("seeding a message at %s: %v", at, err)
+	}
+}
+
+// read runs one window read in a transaction, filling the thread's messages and
+// its cursor the way the pass does.
+func read(t *testing.T, e *integration.Env, thread *settledThread) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		messages, err := threadMessages(context.Background(), tx, thread)
+		thread.Messages = messages
+		return err
+	}); err != nil {
+		t.Fatalf("reading the conversation: %v", err)
+	}
+}
+
+// TestNothingOlderLeftFallsBackToTheNewestWindow holds the case the cursor got
+// wrong first.
+//
+// "Nothing NEWER than the last read" is not "nothing to read". A conversation
+// grows at the same instant as its newest message — the count moves and the
+// clock does not, which is the whole reason signal_thread_scan records a count
+// — and a thread whose history is fully covered has an empty older window every
+// pass. Sending either backwards reads nothing and the model is never called,
+// which is the defect this change exists to fix, reintroduced at the other end.
+func TestNothingOlderLeftFallsBackToTheNewestWindow(t *testing.T) {
+	e := integration.Setup(t)
+	key := "sameinstant-" + ids.NewV7().String()
+
+	at := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
+	seedThreadMailAt(t, e, key, at)
+
+	first := settledThread{Key: key, Newest: at, Count: 1}
+	read(t, e, &first)
+	if len(first.Messages) != 1 {
+		t.Fatalf("the first read took %d messages, want the one on the thread", len(first.Messages))
+	}
+	firstOldest := *first.ReadFromNow
+
+	// A second message at the SAME instant: the thread grew and the clock did
+	// not, so nothing is newer than what was read and nothing is older than
+	// where reading started.
+	seedThreadMailAt(t, e, key, at)
+
+	second := settledThread{
+		Key: key, Newest: at, Count: 2,
+		ReadTo: timePtr(at), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
+	}
+	read(t, e, &second)
+	if len(second.Messages) != 2 {
+		t.Errorf("the read took %d messages, want both — with nothing older left the window is the newest "+
+			"end, and a read that takes nothing never reaches the model at all", len(second.Messages))
+	}
+}
+
+// TestAWindowOfMessagesAtOneInstantIsNotSplit holds the half a timestamp
+// cannot: an instant is not a message boundary.
+//
+// Mail imported in bulk shares an occurred_at routinely. A cursor that is a
+// timestamp alone either drops the rest of that group unread — which is the
+// defect this change exists to fix, at a smaller scale — or, made inclusive,
+// re-reads it every pass and never gets past it.
+func TestAWindowOfMessagesAtOneInstantIsNotSplit(t *testing.T) {
+	e := integration.Setup(t)
+	key := "sameclock-" + ids.NewV7().String()
+
+	// More messages at ONE instant than a window holds.
+	at := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
+	const group = extractThreadMessages + 3
+	for range group {
+		seedThreadMailAt(t, e, key, at)
+	}
+
+	first := settledThread{Key: key, Newest: at, Count: group}
+	read(t, e, &first)
+	if len(first.Messages) != extractThreadMessages {
+		t.Fatalf("the first read took %d messages, want the window of %d",
+			len(first.Messages), extractThreadMessages)
+	}
+
+	// Nothing is newer, and the rest of the group is below the cursor — which
+	// is only expressible as a pair, since every one of them shares its instant.
+	second := settledThread{
+		Key: key, Newest: at, Count: group,
+		ReadTo: timePtr(at), ReadFrom: first.ReadFromNow, ReadFromID: first.ReadFromIDNow,
+	}
+	read(t, e, &second)
+
+	read1 := map[string]bool{}
+	for _, message := range first.Messages {
+		read1[message.ID.String()] = true
+	}
+	fresh := 0
+	for _, message := range second.Messages {
+		if !read1[message.ID.String()] {
+			fresh++
+		}
+	}
+	if fresh != group-extractThreadMessages {
+		t.Errorf("the second read brought %d messages the first had not seen, want %d — a group sharing "+
+			"one instant is walked through by (occurred_at, id), never split by the instant alone",
+			fresh, group-extractThreadMessages)
 	}
 }
