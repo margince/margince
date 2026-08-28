@@ -23065,11 +23065,11 @@ export interface components {
             id: string;
             name: string;
             description?: string | null;
-            /** @description What this corpus covers, in the workspace's own words. Quoted back in the refusal when a question falls below the grounding floor, so it is read by a person at their least patient moment — write it as a sentence, not a label. */
+            /** @description What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a person at their least patient moment — write it as a sentence, not a label. */
             topic_statement: string;
             /**
              * Format: double
-             * @description The grounding floor. Below it a question is refused before any model call.
+             * @description The grounding floor: the cosine a passage must reach before it may be cited at all. It removes what is obviously far and is NOT what tells a covered question from an uncovered one — cosine is not calibrated across embedding models, and under some bindings no value separates the two. A reader is told what read the passages by generated_by and by the unreviewed outcome.
              */
             min_similarity: number;
             /** @description The corpus the command palette's ask lands on. At most one per workspace. */
@@ -23134,11 +23134,11 @@ export interface components {
         };
         KnowledgeAnswer: {
             /**
-             * @description The four are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all. Collapsing them is the failure this endpoint exists to avoid.
+             * @description The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
              * @enum {string}
              */
-            outcome: "answered" | "not_covered" | "not_ready" | "retrieval_unavailable";
-            /** @description The answer IS this list, in order. Empty unless outcome is answered. */
+            outcome: "answered" | "not_covered" | "not_ready" | "retrieval_unavailable" | "unreviewed";
+            /** @description The answer IS this list, in order, when outcome is answered. Under unreviewed it is the nearest passages instead, which nothing has judged. Empty under every other outcome. */
             claims?: components["schemas"]["KnowledgeClaim"][];
             corpus: components["schemas"]["KnowledgeAnswerCorpus"];
             coverage: components["schemas"]["KnowledgeCoverage"];

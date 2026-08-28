@@ -210,13 +210,17 @@ func TestAnAnswerWhoseClaimsAllFailIsNotCovered(t *testing.T) {
 
 // With no lane, the answer is the passages themselves — quoted, cited, and
 // honestly labelled. The grounded part of a grounded answer was never the prose.
-func TestWithNoLaneTheAnswerIsThePassagesThemselves(t *testing.T) {
+// With no lane the passages still come back — but as unreviewed, because
+// nothing read them. Calling it answered asserts that these passages answer the
+// question, and retrieval cannot establish that: an uncovered question and a
+// covered one score inside one range under a real embedding binding.
+func TestWithNoLaneThePassagesComeBackUnreviewed(t *testing.T) {
 	passages := askPassages()
 	answer := AnswerCorpus(t.Context(), nil, answeredState(), "how long are messages kept", passages,
 		string(textlang.English), corpusQuietLog())
 
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
-		t.Fatalf("outcome = %q, want answered", answer.Outcome)
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeUnreviewed {
+		t.Fatalf("outcome = %q, want unreviewed", answer.Outcome)
 	}
 	if answer.GeneratedBy != crmcontracts.Deterministic {
 		t.Fatalf("generated_by = %q, want deterministic", answer.GeneratedBy)
@@ -237,15 +241,16 @@ func TestWithNoLaneTheAnswerIsThePassagesThemselves(t *testing.T) {
 }
 
 // A lane that fails degrades to the same passages rather than surfacing an
-// error. The degrade is declared, and the reader gets a useful answer.
-func TestAFailedLaneDegradesToThePassages(t *testing.T) {
+// error. The degrade is declared as unreviewed for the same reason a missing
+// lane is: a lane that timed out read nothing.
+func TestAFailedLaneDegradesToUnreviewedPassages(t *testing.T) {
 	passages := askPassages()
 	lane := &fixedLane{err: errors.New("the lane timed out")}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept", passages,
 		string(textlang.English), corpusQuietLog())
 
-	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
-		t.Fatalf("outcome = %q, want answered", answer.Outcome)
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeUnreviewed {
+		t.Fatalf("outcome = %q, want unreviewed", answer.Outcome)
 	}
 	if answer.GeneratedBy != crmcontracts.Deterministic {
 		t.Fatalf("generated_by = %q, want deterministic", answer.GeneratedBy)
@@ -264,6 +269,7 @@ func TestARefusalNeverReachesTheLane(t *testing.T) {
 		crmcontracts.KnowledgeAnswerOutcomeNotReady,
 		crmcontracts.KnowledgeAnswerOutcomeNotCovered,
 		crmcontracts.KnowledgeAnswerOutcomeRetrievalUnavailable,
+		crmcontracts.KnowledgeAnswerOutcomeUnreviewed,
 	} {
 		state := answeredState()
 		state.Outcome = outcome
@@ -352,5 +358,26 @@ func TestTheReplySchemaAndTheParserAgreeOnEveryKey(t *testing.T) {
 	}
 	if len(claim.Required) != 3 {
 		t.Fatalf("the schema requires %d keys, want all three", len(claim.Required))
+	}
+}
+
+// The one outcome a reader could mistake for an answer is the one that must
+// never be reached with a working lane: a lane that read the passages and wrote
+// a surviving claim HAS reviewed them.
+func TestAWrittenAnswerIsNeverUnreviewed(t *testing.T) {
+	passages := askPassages()
+	lane := &fixedLane{text: corpusReply(askedClaim{
+		Text:  "Messages are kept for 400 days.",
+		ID:    passages[0].ChunkID.String(),
+		Quote: "kept for 400 days",
+	})}
+	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
+		passages, string(textlang.English), corpusQuietLog())
+
+	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		t.Fatalf("outcome = %q, want answered", answer.Outcome)
+	}
+	if answer.GeneratedBy != crmcontracts.Model {
+		t.Fatalf("generated_by = %q, want model", answer.GeneratedBy)
 	}
 }

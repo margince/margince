@@ -5407,6 +5407,7 @@ const (
 	KnowledgeAnswerOutcomeNotCovered           KnowledgeAnswerOutcome = "not_covered"
 	KnowledgeAnswerOutcomeNotReady             KnowledgeAnswerOutcome = "not_ready"
 	KnowledgeAnswerOutcomeRetrievalUnavailable KnowledgeAnswerOutcome = "retrieval_unavailable"
+	KnowledgeAnswerOutcomeUnreviewed           KnowledgeAnswerOutcome = "unreviewed"
 )
 
 // Valid indicates whether the value is a known member of the KnowledgeAnswerOutcome enum.
@@ -5419,6 +5420,8 @@ func (e KnowledgeAnswerOutcome) Valid() bool {
 	case KnowledgeAnswerOutcomeNotReady:
 		return true
 	case KnowledgeAnswerOutcomeRetrievalUnavailable:
+		return true
+	case KnowledgeAnswerOutcomeUnreviewed:
 		return true
 	default:
 		return false
@@ -18556,7 +18559,7 @@ type JobKindHealth struct {
 
 // KnowledgeAnswer defines model for KnowledgeAnswer.
 type KnowledgeAnswer struct {
-	// Claims The answer IS this list, in order. Empty unless outcome is answered.
+	// Claims The answer IS this list, in order, when outcome is answered. Under unreviewed it is the nearest passages instead, which nothing has judged. Empty under every other outcome.
 	Claims *[]KnowledgeClaim `json:"claims,omitempty"`
 
 	// Corpus The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply.
@@ -18569,11 +18572,11 @@ type KnowledgeAnswer struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
-	// Outcome The four are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all. Collapsing them is the failure this endpoint exists to avoid.
+	// Outcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
 	Outcome KnowledgeAnswerOutcome `json:"outcome"`
 }
 
-// KnowledgeAnswerOutcome The four are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all. Collapsing them is the failure this endpoint exists to avoid.
+// KnowledgeAnswerOutcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
 type KnowledgeAnswerOutcome string
 
 // KnowledgeAnswerCorpus The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply.
@@ -18612,14 +18615,14 @@ type KnowledgeCorpus struct {
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 
-	// MinSimilarity The grounding floor. Below it a question is refused before any model call.
+	// MinSimilarity The grounding floor: the cosine a passage must reach before it may be cited at all. It removes what is obviously far and is NOT what tells a covered question from an uncovered one — cosine is not calibrated across embedding models, and under some bindings no value separates the two. A reader is told what read the passages by generated_by and by the unreviewed outcome.
 	MinSimilarity float64 `json:"min_similarity"`
 	Name          string  `json:"name"`
 
 	// Reindexing A re-embed is in flight; every ask answers not_ready until it finishes.
 	Reindexing *bool `json:"reindexing,omitempty"`
 
-	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back in the refusal when a question falls below the grounding floor, so it is read by a person at their least patient moment — write it as a sentence, not a label.
+	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a person at their least patient moment — write it as a sentence, not a label.
 	TopicStatement string `json:"topic_statement"`
 }
 

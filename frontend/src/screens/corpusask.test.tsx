@@ -229,6 +229,44 @@ describe("CorpusAskCard", () => {
     expect(screen.queryByText(/not finished being read/i)).toBeNull();
   });
 
+  it("says nothing read the passages when no writer was in the path", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          outcome: "unreviewed",
+          generated_by: "deterministic",
+          // The passage the search ranked nearest, carrying no written
+          // sentence — which is the shape a claim takes when nobody wrote one.
+          claims: [
+            {
+              chunk_id: "00000000-0000-4000-8000-0000000000c1",
+              document_id: "00000000-0000-4000-8000-0000000000b1",
+              document_name: "operating.md",
+              line: 14,
+              column: 3,
+              quote: "kept for 400 days from the day they arrive",
+            },
+          ],
+        }),
+      }).fetchMock,
+    );
+    render(<CorpusAskCard />);
+    await askAbout("what is the boiling point of nitrogen");
+
+    // The reader is TOLD, above the passage, rather than left to infer it from
+    // a badge — a passage presented like an answer is read as one.
+    expect(await screen.findByText(/nothing has read them/i)).toBeTruthy();
+    // And the passage is still on screen: the search did find it, and hiding it
+    // would throw away the only thing the ask produced.
+    expect(
+      screen.getByText(/kept for 400 days from the day they arrive/i),
+    ).toBeTruthy();
+    // It is not dressed as a refusal either. The set was searched in full and
+    // the question may well be covered — nothing checked.
+    expect(screen.queryByText(/not covered by this set/i)).toBeNull();
+  });
+
   it("asks the question the palette carried, without making the reader retype it", async () => {
     const backend = backendFor(ASKER);
     vi.stubGlobal("fetch", backend.fetchMock);

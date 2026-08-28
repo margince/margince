@@ -233,9 +233,10 @@ func embedReindexOption(pool *pgxpool.Pool, modelPath *compose.ModelPath, logger
 //
 // Both may be absent and neither absence is an error. With no embed lane the
 // ask reports retrieval_unavailable — nothing was searched — and with no chat
-// lane it answers the retrieved passages themselves. The option is always
-// applied, because the endpoint's 501 is for an installation that composed no
-// retrieval AT ALL, not for one whose lanes are unconfigured.
+// lane it reports unreviewed, carrying the retrieved passages: they are what
+// the search found, and nothing read them. The option is always applied,
+// because the endpoint's 501 is for an installation that composed no retrieval
+// AT ALL, not for one whose lanes are unconfigured.
 func knowledgeAskOption(modelPath *compose.ModelPath, log *slog.Logger) compose.Option {
 	if modelPath == nil {
 		return compose.WithCorpusAsk(nil, nil, log)

@@ -5106,6 +5106,8 @@ export const vi = {
     "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",
   "corpusAsk.retrievalUnavailable":
     "Không có gì được tìm: bản cài đặt này chưa cấu hình chỉ mục tìm kiếm, nên không thể xem tài liệu. Đây là vấn đề cài đặt, không phải do câu hỏi của bạn.",
+  "corpusAsk.unreviewed":
+    "Tìm kiếm đã tìm được các đoạn gần câu hỏi của bạn nhất. Chưa có gì đọc chúng, nên chưa có gì đánh giá liệu chúng có trả lời câu hỏi hay không.",
   "corpusAsk.notCovered.title": "Bộ này không bao gồm",
   "corpusAsk.notCovered.body":
     "{name} đã được tìm toàn bộ và không có gì đủ gần để trả lời. Bộ này bao gồm:",

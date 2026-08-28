@@ -38,6 +38,11 @@ import { problemMessageOf, throwProblem } from "./common";
 //                          searched at all. Nothing is wrong with the question
 //                          OR the set
 //
+// `unreviewed` is not a refusal and is not an answer. The set WAS searched and
+// the nearest passages are on screen, but no writer read them — so the reader
+// is told that in a callout above them, because a passage presented like an
+// answer is read as one.
+//
 // And `generated_by` is on screen whenever there is an answer. A reader
 // deciding how much to trust a sentence needs to know whether a model wrote it
 // or whether they are looking at the passages themselves.
@@ -177,12 +182,20 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
   // A line and a column are MAGNITUDES a person counts with, so they take the
   // reader's own notation like every other figure on the page.
   const { locale } = useLocale();
-  if (answer.outcome !== "answered") {
+  if (answer.outcome !== "answered" && answer.outcome !== "unreviewed") {
     return <Refusal answer={answer} />;
   }
   const claims = answer.claims ?? [];
   return (
     <div className="form-stack">
+      {/* NOBODY READ THESE. The passages are what the search ranked nearest,
+          and under `unreviewed` no writer judged whether they answer the
+          question — ranking alone cannot, so a reader who is not told would
+          read the nearest passage as the answer. It leads the panel rather
+          than sitting under it for that reason. */}
+      {answer.outcome === "unreviewed" ? (
+        <Callout tone="warn">{t("corpusAsk.unreviewed")}</Callout>
+      ) : null}
       {/* WHO WROTE THIS. Never omitted, and never inferred from whether the
           claims carry sentences: a reader deciding how much to trust a line
           needs to be told, not to work it out from the shape of the page. */}

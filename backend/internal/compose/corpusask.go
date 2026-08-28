@@ -11,12 +11,26 @@ package compose
 // have already cleared the floor. This file's whole job is prose, and it is
 // allowed to produce none.
 //
-// The guardrail has four steps, and only the fourth involves reading a reply:
+// The guardrail has four steps, and the last two are here:
 //
 //  1. readiness            — deterministic, upstream
 //  2. retrieval            — deterministic, upstream
 //  3. the grounding floor  — deterministic, upstream
-//  4. the quote check      — here
+//  4. reading the passages — here, and it is a MODEL that reads them
+//  5. the quote check      — here
+//
+// Step 4 is the one that decides whether the retrieved passages answer the
+// question, and no deterministic step can stand in for it. Cosine is not
+// calibrated: measured against gemini-embedding-001 and mistral-embed-2312 on
+// the same one-document corpus, an uncovered question scores 0.45–0.72 and a
+// covered one 0.67–0.84, and under the second binding the two ranges overlap
+// outright — "what should I do when a customer escalates" (0.670) sits BELOW
+// "what does Vietnamese consumer law say about liability" (0.672). No floor
+// separates those, which is why the floor upstream removes only what is
+// obviously far and never claims to have judged relevance.
+//
+// The quote check is step 5 and answers a narrower question: are these the
+// document's own words. It proves nothing about whether they answer anything.
 //
 // A claim whose quote is not found verbatim in the passage it cites is dropped.
 // An answer with no surviving claim is not_covered, because an answer that
@@ -196,12 +210,18 @@ func renderCorpusAsk(question string, passages []knowledge.Passage) string {
 
 // AnswerCorpus turns retrieved passages into the reply the endpoint serves.
 //
-// With no lane, or a reply nothing survives, the answer is the PASSAGES
-// THEMSELVES with their citations and no written summary, and generated_by says
-// deterministic. That is deal_health's rule for deal_health's reason, and it is
-// honest here for a reason of its own: the grounded part of a grounded answer
-// was never the prose. A reader gets the passages that answer their question,
-// correctly attributed, and is told nobody wrote them a summary.
+// With no lane, or a lane that failed, the passages still come back with their
+// citations — but as `unreviewed`, never as `answered`. The distinction is the
+// whole point: `answered` says something read these passages and found the
+// question answered in them, and with no writer in the path NOTHING did.
+// Retrieval cannot stand in for that, because ranking by cosine cannot tell a
+// covered question from an uncovered one under every binding this product
+// supports (see the file header for the measurements).
+//
+// Calling that `answered` is how a corpus holding one freshly-filed document
+// came to answer a question about the boiling point of nitrogen by quoting its
+// escalation notes: the floor admitted the only passage there was, and with no
+// writer to refuse, the passage WAS the answer.
 func AnswerCorpus(
 	ctx context.Context, lane corpusAskLane, state knowledge.Readiness,
 	question string, passages []knowledge.Passage, lang string, log *slog.Logger,
@@ -218,17 +238,20 @@ func AnswerCorpus(
 	claims := passageClaims(passages)
 	answer.Claims = &claims
 	if lane == nil {
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeUnreviewed
 		return answer
 	}
 
 	written, err := askCorpusLane(ctx, lane, question, passages, lang)
 	if err != nil {
 		// The degrade is declared, but a SILENT one is indistinguishable from a
-		// lane nobody wired: the reader sees the passages either way, and only
-		// this line says which. It carries the reason rather than the reply,
-		// because the reply quotes a third party's document.
+		// lane nobody wired: the outcome tells the reader nothing read the
+		// passages either way, and only this line says which. It carries the
+		// reason rather than the reply, because the reply quotes a third
+		// party's document.
 		log.WarnContext(ctx, "corpus ask fell back to the retrieved passages",
 			"corpus_id", state.Corpus.Id.String(), "reason", err)
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeUnreviewed
 		return answer
 	}
 	if len(written) == 0 {
