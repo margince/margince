@@ -76,8 +76,8 @@ two concurrent creates; lock order is row-then-advisory in every flow holding bo
 paths cannot deadlock each other.
 
 `privilege_boundary_test.go` pins both downgrade call sites, because deleting one is invisible: the
-schema pool's role is superuser in dev, so `FORCE RLS` would not bite and every other test would
-still pass.
+schema pool's role is superuser in dev, so a missing downgrade grants the catalog insert more
+authority than production has and every other test still passes.
 
 **Two honest surprises.** The schema pool is **unwired by default** — without `--schema-dsn`, create
 and options-edit answer 501 and declare the gap by omission rather than nil-dereferencing at request

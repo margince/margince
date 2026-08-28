@@ -197,7 +197,7 @@ when you read a kind's row in `river_job`:
   and for those a completed job means "this attempt is concluded", not "the
   work succeeded".
 - **`args:` says what each field of a kind's payload carries.** River persists
-  args verbatim in a table with no workspace column and no RLS, so a job names
+  args verbatim in a table with no workspace column, so a job names
   a row and the worker reads it: every field is declared an id, or waived as a
   scalar with the reason a value that is not an id is safe there — and a field
   whose *name* reads like content (`Body`, `Subject`, `RecipientEmail`) owes a
@@ -270,8 +270,8 @@ in the handler. It reports, for each kind, the waiting/running/retrying/dead
 counts and the oldest waiting age, plus up to 50 recent failures.
 
 - **It is scoped to the caller's own workspace plus the untenanted
-  dispatcher rows, never the fleet.** `river_job` has no workspace column
-  and therefore no RLS, so the handler imposes the scope itself. The
+  dispatcher rows, never the fleet.** `river_job` has no workspace column, so
+  the handler imposes the scope itself. The
   untenanted arm is a closed set of declared dispatcher kinds — an
   unrecognised untenanted row is omitted rather than shared.
 - **The failure `reason` is the job layer's own vetted sentence.**

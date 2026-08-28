@@ -240,7 +240,6 @@ codegen, and the store shape above into one checklist:
 | Postgres / Redis / MinIO | `localhost:15432` / `16379` / `29000` |
 | Owner DSN (migrate) | `postgres://margince_owner:dev@localhost:15432/margince` |
 | App DSN (api/worker) | `postgres://margince_app:margince_app_dev@localhost:15432/margince` |
-| Tenant GUC | `app.workspace_id` (set transaction-local by `WithWorkspaceTx`) |
 | Contract | `backend/api/crm.yaml` — regenerate with `make gen` |
 | Generated (never edit) | `internal/contracts/api_gen.go`, `compose/stubs_gen.go`, `compose/agentpolicy_gen.go`, `modules/ai/tasks_gen.go`, `config/margince.schema.json` |
 | Merge gate | `make check` (+ `make test-integration`, needs `make db-up`) |

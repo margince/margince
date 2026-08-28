@@ -12,9 +12,9 @@ The signatures are abbreviated (contexts/errors elided) — read the package for
 ## `platform/` — plumbing
 
 ### `platform/database` — the pool & the workspace transaction
-The **only** place the RLS GUC contract is implemented; no store issues its own `SET LOCAL`.
-- `WithWorkspaceTx(ctx, pool, fn func(pgx.Tx) error) error` — the workspace transaction every store uses (binds the tenant to `app.workspace_id`).
-- `WithInfraTx(ctx, pool, fn) error` — a no-tenant-GUC transaction for the few cross-tenant infra paths (relay, bootstrap).
+The **only** place a module transaction is opened; no store issues its own `pool.Begin`.
+- `WithWorkspaceTx(ctx, pool, fn func(pgx.Tx) error) error` — the workspace transaction every store uses; refuses with `ErrNoWorkspace` when the context carries no tenant.
+- `WithInfraTx(ctx, pool, fn) error` — a transaction for the few installation-wide infra paths (relay, bootstrap), which need no tenant on the context.
 - `NewPool(ctx, dsn) (*pgxpool.Pool, error)`, `RegisterIDTypes(conn)`.
 - **Reach for it when:** you need a DB transaction — always through these, never a raw `pool.Begin`.
 
@@ -36,7 +36,7 @@ Object RBAC + row scope enforced at every store entry point, so HTTP and MCP rid
 lives here: [authorization.md](../explanation/authorization.md).)
 - `Require(ctx, object, action)` — object-level gate (may this role do this verb on this type?).
 - `EnsureVisible(ctx, tx, table, id)` — row scope on a single-row get/update/archive (out-of-scope → `ErrNotFound`).
-- `EnsureLinkTarget(ctx, tx, table, id)` — RLS-scoped existence probe for FK targets.
+- `EnsureLinkTarget(ctx, tx, table, id)` — row-scoped existence probe for FK targets.
 - `VisibleTo(ctx, tx, table, id) (bool, error)` — non-erroring probe for dedupe-409 paths.
 - `ScopeClause` / `ScopeClauseFor(table, alias, arg)` — the SQL row-visibility predicate for list/search builders.
 - `AuthzRule(p, entityType, action)` — the `audit_log.authorization_rule` attribution string.

@@ -369,9 +369,8 @@ Two neighbouring lifecycle rules follow the same shape:
   The alternative duplicated the arithmetic and, being written as a delete, left a surviving pair's
   counts stale whenever the activity was not its last evidence.
 
-Both tables are `ENABLE` + `FORCE ROW LEVEL SECURITY` with the ordinary `app.workspace_id` tenant
-policy, reached only through `database.WithWorkspaceTx` — see
-[authorization.md](authorization.md) and [privacy-and-consent.md](privacy-and-consent.md).
+Both tables are reached only through `database.WithWorkspaceTx`, like every other module statement —
+see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-and-consent.md).
 
 ## Honest limitations
 

@@ -76,13 +76,11 @@ of it holds, and three of the reasons are structural rather than unfinished work
   connection, reach the network, or import anything its own `go.mod` lists. No published-surface design
   can prevent this while the code runs in the process; only a different execution model (out-of-process
   units, WASM) would.
-- **The tenant pin is a settable GUC.** `Runtime.Tx` binds `app.workspace_id` from the invocation and the
-  RLS policies read it — but a unit can rebind it with `SELECT set_config('app.workspace_id', …, true)`
-  through the very verbs the seam publishes. **Verified against the shipped schema, not assumed.** It is
-  not fixable at that layer: re-binding before every statement is defeated by one statement (a CTE that
-  rebinds and a sibling scan that reads under the new value), and a PostgreSQL GUC cannot be made
-  immutable. SQL-parsing defences are explicitly rejected — a wall made of statement inspection is a wall
-  made of guesses.
+- **Nothing in the database narrows a unit's SQL to a workspace.** No unit table carries a tenant
+  column and none carries a policy; `Runtime.Tx` hands the callback the invocation's workspace on its
+  context, which is a statement's input rather than a wall around it. A tenant predicate keyed on
+  anything a unit can itself set would not be a wall either — SQL-parsing defences are explicitly
+  rejected, since a wall made of statement inspection is a wall made of guesses.
 - **One shared runtime role.** Every handler runs as `margince_app`, which holds DML on core tables, on
   *every* unit's `ext_<name>_*` tables, and on `extension_secret`. So within one tenant the unit wall
   exists at the *port* (the `Secrets` interface cannot express another namespace) and not in the
@@ -547,15 +545,12 @@ the `Migrations` field. `check-ext-migrations` and the derived-identifier collis
 forgot the field would pass every gate green — the SQL blessed, the catalog checked — and its table would
 never be created. Nothing requires the field. Both canonical docs now carry this as a fenced warning.
 
-**What RLS guarantees.** Extension runtime code cannot alter or disable RLS and cannot read a core table
-it holds no grant on. **What it does not:** the tenant predicate is
-`current_setting('app.workspace_id', true)` (`0014_rls.up.sql:33`) and `set_config` is unprivileged, so any
-code holding a connection — extension or core — can re-bind it. RLS prevents *accidental* and *unscoped*
-cross-tenant access, not *deliberate* re-binding. That sits inside §2's conceded boundary.
+**What the grant surface guarantees.** Extension runtime code cannot read a core table it holds no grant
+on. **What it does not:** it does not bound which of the installation's rows a unit's SQL reaches, because
+nothing in the database keys on a tenant. That sits inside §2's conceded boundary.
 
 **The migration gate is positive catalog validation, applied as `ext_<name>`.** A deny-list is unclosable:
-a table with no `workspace_id`, or one with `CREATE POLICY … USING (true)`, breaks tenancy while violating
-nothing on a list — and nothing in the repo inspects policy predicates today.
+a table declaring something the list never thought to name violates nothing on it.
 
 The gate applies the unit's migrations to a throwaway database **as a minted `ext_<name>` role** —
 NOSUPERUSER, NOBYPASSRLS, CREATE/USAGE on `ext` only, **no grants on `public`** (reusing the role-minting

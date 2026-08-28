@@ -418,8 +418,8 @@ object needs the contract overlay — which is why the API surface landed before
 are **reviewed, first-party or otherwise trusted code**, compiled into the same process. Every wall
 described in this document is defence in depth against *mistakes* — it makes the accidental
 cross-tenant query or the forgotten scope a loud failure — and none of it is a sandbox against a unit
-that is trying. In-process Go can read the keyvault root key from the environment; `Runtime.Tx` can
-rebind the `app.workspace_id` GUC the RLS policies key on; and every handler runs as the shared
+that is trying. In-process Go can read the keyvault root key from the environment; nothing in the database narrows a
+unit's SQL to a workspace; and every handler runs as the shared
 `margince_app` role, which holds DML on core tables, on every *other* unit's tables, and on
 `extension_secret`. Issue #628 (a per-unit database role) is the one change that would move any of this
 from convention to enforcement, and even then the in-process reach remains. `backend/pkg/extension/runtime.go`
@@ -437,7 +437,7 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | Vanilla composition reproduces the committed stub byte-for-byte | `make check-composition` |
 | The published surface doesn't break compatibility (advisory before the first release tag, enforcing after) | `scripts/check-pkg-freeze.sh` |
 | The core stays jurisdiction-neutral | `scripts/check-no-jurisdiction.sh` |
-| Every unit table carries FORCE RLS and a workspace-bound policy, and touches nothing in `public` | `make check-ext-migrations` (applies each unit's migrations as a minted restricted role) |
+| No unit table carries a workspace column, row-level security or a policy, and none touches anything in `public` | `make check-ext-migrations` (applies each unit's migrations as a minted restricted role) |
 | Every unit table grants the runtime role exactly `SELECT, INSERT, UPDATE, DELETE` — a table granting *nothing* satisfied the old one-sided allowlist and then answered `permission denied` at the first call | `make check-ext-migrations` |
 | A unit's SQL names only that unit's own `ext.ext_<name>_…` tables — the mistake-defence half of the shared-role reach described above, reading through the string constants a table name is spelled with | `backend/gates/extensionsqlscope_test.go` |
 | A unit's write to a CORE record goes through the product's own write path — the caller's live RBAC, the row-scope check on the subject, the audit row, the outbox event — and carries the unit's attribution under a core-stamped evidence member no caller may supply | `extension.Tx.Core()` (`internal/compose/extcore.go`), `storekit.withExtensionAttribution` |

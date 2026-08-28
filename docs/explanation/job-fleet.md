@@ -33,7 +33,7 @@ backend/api/jobs.yaml
         │  dispatchPerWorkspace | dispatchWith | dispatchOne
         ▼  one child per fan-out UNIT, one InsertMany, tagged `sweep`
    WORKER row × N            role: worker       ·   jobs.WorkspaceScoped
-        │  workspaceJobCtx binds args.WorkspaceID() → app.workspace_id (RLS)
+        │  workspaceJobCtx binds args.WorkspaceID() onto the context
         │  Work(…) ──► jobs.FaultContext(ctx, err)
         ▼
    river_job: one row per tenant — it succeeds, retries and FAILS on its own
@@ -248,9 +248,9 @@ the role declaration a label *beside* the binding rather than the thing that gov
 `WorkspaceID()` is what keeps the declaration load-bearing: a worker cannot claim one workspace and
 work in another.
 
-The **zero id is refused rather than bound**. An unbound GUC — the `app.workspace_id` session
-variable RLS reads, see [write-backbone.md](write-backbone.md) — does not fail here; it fails at the
-first tenant query, somewhere far less legible, and only after the job has already begun. A zero is
+The **zero id is refused rather than bound**. A zero bound onto the context does not fail here; it
+fails at the first statement that narrows by it, somewhere far less legible, and only after the job
+has already begun. A zero is
 also what an args type decodes to when a queued row predates a change to its wire key, so the refusal
 is the difference between a loud failure and a pass that quietly touches nothing.
 

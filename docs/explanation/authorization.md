@@ -118,26 +118,23 @@ holding `write` does not imply holding `send` or `enrich`. A passport whose gran
 `enrich` is refused an enrichment call with `ErrScopeExceeded` before the tier is ever consulted,
 whether it arrives over MCP or REST.
 
-## The structural backstop — Postgres row-level security
+## The structural backstop — one transaction seam and the app role's grants
 
-Everything above is application code; beneath it, the database itself enforces tenant isolation, so a
-bug in a scope clause still cannot cross a workspace boundary.
+No table carries row-level security and no policy exists to read: an installation holds one
+organization (ADR-0061), so what a statement reaches is decided by the statement and by the role
+issuing it.
 
-- Every tenant table has `ENABLE`+`FORCE` row-level security with a **deny-on-unset** policy keyed on
-  the `app.workspace_id` GUC (`FORCE` binds even the table owner; `ENABLE`-only "looks secure and is
-  not").
-- Those tables are reachable **only** through `database.WithWorkspaceTx`, which binds the GUC
-  transaction-local (`SELECT set_config('app.workspace_id', $1, true)`) and **fails closed before any
-  SQL** if no workspace is bound. If the GUC is unset, the policy's `NULLIF(current_setting(...), '')`
-  is `NULL` and `workspace_id = NULL` is never true → the connection **sees zero rows and writes
-  nothing**.
+- Module statements are reachable **only** through `database.WithWorkspaceTx`, which **fails closed
+  before any SQL** if no workspace is bound. That one seam is the auditable transaction boundary —
+  `scripts/check-rls-store-path.sh` refuses a module statement issued over the bare pool.
 - The runtime **`margince_app`** role is not a superuser, has no `BYPASSRLS`, and does not own the
-  tables — so there is no bypass path. (The schema owner `margince_owner` is used only by migrations.)
-- Every tenant-local foreign key is composite `(workspace_id, col)`, so a cross-workspace reference is
-  rejected by the database.
+  tables, so its DML-only grants bind it. `compose.AssertRuntimeRole` refuses to serve otherwise, at
+  boot and on `/readyz`. (The schema owner `margince_owner` is used only by migrations.)
+- Row scope is the application's: `auth.Require`, `auth.EnsureVisible` and the list-scope clauses in
+  `platform/auth` decide what a principal reaches, with object denial answering 403 and a row-scope
+  miss answering 404.
 
-Both RLS coverage and composite-FK obligations are fitness functions derived from the live schema —
-see [write-backbone.md](write-backbone.md) for the write path that rides inside this transaction.
+See [write-backbone.md](write-backbone.md) for the write path that rides inside this transaction.
 
 ## How it is wired
 

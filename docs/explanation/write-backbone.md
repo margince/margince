@@ -17,7 +17,7 @@ HTTP request / agent run / bus consumer
         │  (middleware binds actor + workspace + correlation_id onto ctx)
         ▼
   module Handler ──► Store.tx(ctx, fn)  ==  database.WithWorkspaceTx(ctx, pool, fn)
-                          │  SET LOCAL app.workspace_id  (RLS bound)
+                          │  (refused before any SQL if no workspace is bound)
                           ▼
         ┌───────────────── ONE transaction ─────────────────┐
         │  INSERT INTO <domain table> …           ← the change │

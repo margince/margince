@@ -31,10 +31,10 @@ docker build --target web    -t margince-web:local .
 
 ## The two-role database model (required — read this first)
 
-Margince enforces tenant isolation with `FORCE ROW LEVEL SECURITY`. It stops the
-table **owner** from bypassing RLS, but superusers and any role with the
-`BYPASSRLS` attribute still bypass it. So **both** runtime roles must be neither a
-superuser nor granted `BYPASSRLS`. Two such roles are required:
+Margince separates what serves traffic from what applies DDL, and that wall is
+made of table grants. A superuser ignores every grant, so **both** runtime roles
+must be neither a superuser nor granted `BYPASSRLS` — the api refuses to serve on
+an exempt runtime role. Two such roles are required:
 
 - **`margince_owner`** — owns the database + tables, runs migrations (DDL) and the
   custom-fields runtime-DDL pool.

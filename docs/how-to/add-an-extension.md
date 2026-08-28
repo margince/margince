@@ -288,19 +288,16 @@ restricted role against a throwaway database and re-reads the catalog):
 
 - Create tables only in the `ext` schema, named `ext_<name>_<table>` — the schema is shared by every
   installed unit, so the prefix is what keeps two of them apart.
-- Carry `workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE`.
-- `ENABLE` **and** `FORCE ROW LEVEL SECURITY`, with exactly one permissive policy keyed on
-  `current_setting('app.workspace_id', true)` in both `USING` and `WITH CHECK`. `FORCE` is not optional:
-  the runtime owner is `margince_owner`, and `ENABLE` alone exempts a table's owner from its own policies.
-- `GRANT SELECT, INSERT, UPDATE, DELETE ... TO margince_app` — **exactly those four**, on every tenant
-  table. Not more: `TRUNCATE` empties every workspace's rows without consulting the policy's `USING`
-  clause, and `REFERENCES` and `TRIGGER` are refused too. Not fewer, and not none: the gate used to ask
-  only "nothing outside the list", which granting *nothing* satisfies perfectly — and the table then
-  answers `permission denied` at the first handler call, having passed every check.
-- Touch nothing in `public`. The one core dependency a unit may take is the `workspace(id)` foreign key
-  above; the gate grants `REFERENCES` on that column alone and refuses a role that can point anywhere
-  else, because a foreign key onto a core table takes a lock on core writes and can refuse a core
-  delete forever after.
+- Carry NO workspace column, no row-level security and no policy — an installation holds one
+  organization, so such a predicate would separate nothing, and the gate refuses all three outright.
+- `GRANT SELECT, INSERT, UPDATE, DELETE ... TO margince_app` — **exactly those four**, on every unit
+  table. Not more: no unit verb issues a `TRUNCATE`, and `REFERENCES` and `TRIGGER` are refused too.
+  Not fewer, and not none: the gate used to ask only "nothing outside the list", which granting
+  *nothing* satisfies perfectly — and the table then answers `permission denied` at the first handler
+  call, having passed every check.
+- Touch nothing in `public` — the minted role holds nothing there at all, so a foreign key out of `ext`
+  is refused rather than detected. A key onto a core table takes a lock on core writes and can refuse a
+  core delete forever after.
 
 **A core record is not yours to write in SQL — the port is.** `tx.Core()` is the governed door onto the
 product's own records: `tx.Core().Activities().Create(…)` files an activity through the same write path
@@ -331,10 +328,9 @@ added to an already-applied `0001` runs on exactly the installations that did no
 and never on the ones that do. `extensions/notes/migrations/0003_note_workspace_index.up.sql` is the
 worked example: the index it adds belongs to the table `0001` created, and it is still its own file.
 
-**Index the tenant column.** A unit's table is cross-tenant, so every read the policy admits still has
-to find this workspace's rows among every other workspace's — and, less obviously, deleting one
-workspace sequentially scans the whole table once per row it removes unless an index *begins* with the
-referencing column. `(workspace_id, <your list order>)` covers both.
+**Index what your reads order by.** A list that reads newest-first and bounds the page is a sequential
+scan plus a sort of every row the unit has ever written until an index covers that order — fine at the
+size a unit starts at, and not the size it stays at.
 
 ## Own secrets
 

@@ -199,12 +199,11 @@ envelope, the relay, dedupe — is detailed in
 
 ## Tenancy as structure
 
-Every tenant table carries `ENABLE`+`FORCE` row-level security with
-deny-on-unset policies, reachable only through the one
-workspace-transaction helper; every tenant-local foreign key is
-composite `(workspace_id, col)`, so a cross-workspace reference is
-rejected by the database itself. Both invariants are fitness functions
-derived from the live schema.
+An installation holds ONE organization (ADR-0061), so no table carries a
+row-level policy. Every module statement still goes through the one
+workspace-transaction helper — the auditable boundary a fitness function
+derived from the live tree holds — and row scope is decided by
+`platform/auth`, not by the database.
 
 ## One governed agent surface
 
