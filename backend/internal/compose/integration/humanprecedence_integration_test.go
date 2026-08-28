@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -180,7 +180,7 @@ func stagePersonAndAgent(t *testing.T, e *apptest.AppEnv, fullName, label string
 // passport per call, exactly as the stdio/hosted transports do.
 func mcpAgentInvoker(t *testing.T, agentToken string) func(tool, args string) (json.RawMessage, error) {
 	t.Helper()
-	pool, err := database.NewPool(context.Background(), apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
 	if err != nil {
 		t.Fatal(err)
 	}

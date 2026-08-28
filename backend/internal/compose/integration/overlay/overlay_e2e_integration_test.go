@@ -53,6 +53,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -103,7 +104,7 @@ func openAppPool(t *testing.T) *pgxpool.Pool {
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
 	}
-	pool, err := database.NewPool(context.Background(), dsn)
+	pool, err := testdb.OwnPool(context.Background(), dsn)
 	if err != nil {
 		t.Fatalf("opening the app pool: %v", err)
 	}

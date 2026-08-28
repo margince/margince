@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,7 +42,7 @@ import (
 // scripted candidate needs to cite a source_id minted during that seed).
 func setupWithOfferDraft(t *testing.T) (*apptest.AppEnv, *ai.FakeClient) {
 	t.Helper()
-	pool, err := database.NewPool(context.Background(), apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
 	if err != nil {
 		t.Fatalf("opening the offer-draft retriever's pool: %v", err)
 	}

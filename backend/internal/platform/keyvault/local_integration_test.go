@@ -71,7 +71,7 @@ func singleConnPool(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
 	cfg.MaxConns, cfg.MinConns = 1, 1
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	pool, err := testdb.OwnPoolFromConfig(ctx, cfg)
 	if err != nil {
 		t.Fatalf("opening the single-connection pool: %v", err)
 	}

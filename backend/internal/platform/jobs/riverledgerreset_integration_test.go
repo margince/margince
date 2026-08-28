@@ -33,7 +33,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
@@ -61,7 +60,7 @@ func TestResetPreservesRiversMigrationLedger(t *testing.T) {
 	// the ones River itself wrote. Applied whether or not this process's
 	// EnsureSchema rebuilt: on the reuse path the clone already carries them, and
 	// EnsureRiverSchema is a no-op there.
-	ownerPool, err := database.NewPool(ctx, ownerDSN)
+	ownerPool, err := testdb.OwnPool(ctx, ownerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}

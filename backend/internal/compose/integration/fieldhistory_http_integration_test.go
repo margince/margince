@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -94,7 +95,7 @@ func fieldHistoryHTTPEnv(t *testing.T, e *apptest.AppEnv) *Env {
 	t.Helper()
 	ctx := context.Background()
 	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Owner)
-	pool, err := database.NewPool(ctx, apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(ctx, apptest.AppDSN(t))
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}

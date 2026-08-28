@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -672,7 +673,7 @@ func singleConnectionPool(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
 	cfg.MaxConns, cfg.MinConns = 1, 1
-	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	pool, err := testdb.OwnPoolFromConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("opening the single-connection pool: %v", err)
 	}

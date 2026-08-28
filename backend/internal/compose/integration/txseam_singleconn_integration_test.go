@@ -48,6 +48,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -120,7 +121,7 @@ func singleConnPool(t *testing.T) *pgxpool.Pool {
 	q.Set("pool_min_conns", "1")
 	u.RawQuery = q.Encode()
 
-	pool, err := database.NewPool(context.Background(), u.String())
+	pool, err := testdb.OwnPool(context.Background(), u.String())
 	if err != nil {
 		t.Fatalf("opening the single-connection pool: %v", err)
 	}

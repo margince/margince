@@ -74,7 +74,7 @@ func setupEstimator(t *testing.T) *estEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := database.NewPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

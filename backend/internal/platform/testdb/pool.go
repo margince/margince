@@ -210,6 +210,89 @@ func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// OwnPool opens a pool the CALLER owns and closes, tuned by the same lane
+// ceiling the shared one takes.
+//
+// Most suites want Pool: one pool per DSN per process, memoized, which is the
+// cheapest thing that works. A few genuinely cannot — a suite that asserts what
+// happens when a pool is closed, one that needs a DSN of its own with extra
+// parameters, one that hands a pool to a component that will close it — and
+// before this existed those reached for database.NewPool directly.
+//
+// That is the hole this closes. database.NewPool's fallback is MaxConns=16 with
+// MinConns=2 dialled eagerly, and the lane's budget is sized on the ceiling it
+// hands out in PoolMaxConnsEnv — so one such suite could hold 8 (owner) + 8
+// (app) + 16 (its own) against a declared per-package allowance of 24 while the
+// lane's own arithmetic read green. The budget was a measured high-water mark
+// rather than a ceiling, and this is what makes it the second thing.
+//
+// It is NOT memoized, which is the whole reason a caller asks for it: two calls
+// answer two pools, and closing one does not affect the other. The caller closes
+// it — nothing here will.
+//
+// The schema check is the shared pool's, for the shared pool's reason: a session
+// open across EnsureSchema's DROP SCHEMA blocks it, and the package then dies at
+// its go-test timeout with nothing naming the cause. Owning the pool does not
+// make that safe.
+func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	if !schemaReady.Load() {
+		return nil, ErrSchemaNotReady
+	}
+	tuned, err := withTestPoolParams(dsn)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := database.NewPool(ctx, tuned)
+	if err != nil {
+		return nil, fmt.Errorf("opening a caller-owned test pool: %w", err)
+	}
+	return pool, nil
+}
+
+// OwnPoolFromConfig opens a caller-owned pool from a config the caller built,
+// with the lane's ceiling applied to it.
+//
+// For the suites that cannot express what they need in a DSN: a runtime
+// parameter set per connection, an AfterConnect hook, a dial that has to be
+// bounded. Before this they reached for pgxpool.NewWithConfig and got pgxpool's
+// own default — outside the lane's arithmetic exactly like database.NewPool's
+// fallback, and quieter about it.
+//
+// It overrides MaxConns and MinConns and NOTHING else. The rest of the config
+// is the caller's, because the reason they built one is that they needed
+// something this package has no opinion about; the two it takes are the two the
+// lane's budget is stated in.
+//
+// A ceiling the lane did not declare leaves MaxConns as the caller set it,
+// which is the same posture withTestPoolParams takes for a DSN that names one.
+func OwnPoolFromConfig(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
+	if !schemaReady.Load() {
+		return nil, ErrSchemaNotReady
+	}
+	params, err := poolParams()
+	if err != nil {
+		return nil, err
+	}
+	if ceiling, declared := params["pool_max_conns"]; declared {
+		// ParseInt with an explicit bit size rather than Atoi: MaxConns is an
+		// int32, and a conversion that could overflow is one the compiler
+		// cannot see and a reader has to reason about.
+		n, convErr := strconv.ParseInt(ceiling, 10, 32)
+		if convErr != nil {
+			return nil, fmt.Errorf("testdb: the lane's ceiling %q is not a connection count: %w", ceiling, convErr)
+		}
+		cfg.MaxConns = int32(n)
+	}
+	// Nothing is dialled until a test asks, which is the cost the shared pool
+	// removed and the one an ad-hoc pool most often reintroduces.
+	cfg.MinConns = 0
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("opening a caller-owned test pool from a config: %w", err)
+	}
+	return pool, nil
+}
+
 // withTestPoolParams adds testPoolParams to dsn without disturbing what is
 // already there — a DSN that names one of them keeps its own value, matching
 // database.NewPool's rule that whoever sized the pool explicitly wins.
