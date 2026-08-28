@@ -36,8 +36,17 @@ var signedAt = time.Date(2026, 5, 12, 8, 15, 0, 0, time.UTC)
 // fixture that re-spelled the concatenation would agree with a verifier that
 // re-spelled it the same way, and neither would agree with a real sender.
 func signedRequest(secret, nonce, body string) extension.InboundRequest {
+	return signedRequestTo(ownerRef, secret, nonce, body)
+}
+
+// signedRequestTo is the same, addressed at a given ref. The ref is NOT part of
+// SignedPayload and deliberately not signed: it is an address, not a
+// credential, and what stops a request landing on somebody else's endpoint is
+// that member's own secret.
+func signedRequestTo(ref, secret, nonce, body string) extension.InboundRequest {
 	req := extension.InboundRequest{
 		Slug:      inboundSlug,
+		Ref:       ref,
 		Timestamp: signedAt,
 		Nonce:     nonce,
 		Body:      []byte(body),
@@ -72,6 +81,10 @@ func TestASignedRequestLandsOneRowStampedFromTheEndpoint(t *testing.T) {
 	}
 	if outcome != extension.InboundAccepted {
 		t.Fatalf("a correctly signed request answered outcome %d, want accepted", outcome)
+	}
+	_, lookup := rt.tx.statementMentioning(t, "WHERE ref = $1")
+	if lookup[0] != ownerRef {
+		t.Fatalf("the endpoint was resolved by %v rather than by the address the request arrived on", lookup[0])
 	}
 	sql, args := rt.tx.statementMentioning(t, "ON CONFLICT (endpoint_id, nonce) DO NOTHING")
 	if args[0] != endpointID {
@@ -113,10 +126,15 @@ func TestTheOwnerIsNeverTakenFromThePayload(t *testing.T) {
 func TestEveryRefusalIsTheSameRefusal(t *testing.T) {
 	t.Parallel()
 	for name, build := range map[string]func() (*fakeRuntime, extension.InboundRequest){
-		"a slug nobody opened": func() (*fakeRuntime, extension.InboundRequest) {
+		"an address nobody holds": func() (*fakeRuntime, extension.InboundRequest) {
 			rt := newRuntime().unattended()
 			rt.tx.noRows = map[int]bool{1: true}
-			return rt, signedRequest(senderSecret, "n-1", "{}")
+			return rt, signedRequestTo("Zm9yZ2VkQWRkcmVzc18x", senderSecret, "n-1", "{}")
+		},
+		"the bare mounted path, carrying no address at all": func() (*fakeRuntime, extension.InboundRequest) {
+			rt := newRuntime().unattended()
+			rt.tx.noRows = map[int]bool{1: true}
+			return rt, signedRequestTo("", senderSecret, "n-1", "{}")
 		},
 		"an endpoint that is paused": func() (*fakeRuntime, extension.InboundRequest) {
 			rt := newRuntime().unattended()
@@ -166,13 +184,14 @@ func TestEveryRefusalHasAKeyToVerifyAgainst(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime().unattended()
 
-	// A slug nobody opened resolves to no endpoint at all.
+	// An address nobody holds — and the bare path, which carries none —
+	// resolve to no endpoint at all.
 	key, err := admittingSecret(context.Background(), rt, nil)
 	if err != nil {
-		t.Fatalf("an unresolved slug must still yield a key: %v", err)
+		t.Fatalf("an unresolved address must still yield a key: %v", err)
 	}
 	if len(key) == 0 {
-		t.Fatal("an unresolved slug yielded an empty key, so its refusal skips the comparison every other refusal makes")
+		t.Fatal("an unresolved address yielded an empty key, so its refusal skips the comparison every other refusal makes")
 	}
 	if verified(key, signedRequest(senderSecret, "n-1", "{}")) {
 		t.Fatal("a request signed with a real secret verified against the stand-in")
@@ -191,6 +210,38 @@ func TestEveryRefusalHasAKeyToVerifyAgainst(t *testing.T) {
 	}
 	if len(unminted) == 0 {
 		t.Fatal("an unminted endpoint yielded an empty key")
+	}
+}
+
+// The owner is whoever the ADDRESS resolves to, not whoever the payload names
+// and not some ambient default. This is what makes one mounted edge serve every
+// member without an arrival ever landing under the wrong name.
+func TestTheOwnerIsWhoeverTheAddressResolvesTo(t *testing.T) {
+	t.Parallel()
+	const colleagueRef = "Y29sbGVhZ3VlQWRkcmVzcw"
+	rt := newRuntime().unattended()
+	rt.secrets.stored[colleagueUserID+"/"+inboundSecretKey] = []byte(senderSecret)
+	rt.tx.singleRows = [][]any{
+		{endpointID, colleagueUserID, true},
+		{int64(0)},
+		{"7d2e5c14-9a83-4b60-8f21-3c6d0e4a1b95"},
+	}
+
+	outcome, err := receive(context.Background(), rt,
+		signedRequestTo(colleagueRef, senderSecret, "n-1", "{}"))
+	if err != nil {
+		t.Fatalf("receiving: %v", err)
+	}
+	if outcome != extension.InboundAccepted {
+		t.Fatalf("answered outcome %d, want accepted", outcome)
+	}
+	_, lookup := rt.tx.statementMentioning(t, "WHERE ref = $1")
+	if lookup[0] != colleagueRef {
+		t.Fatalf("the endpoint was resolved by %v, not the address the request arrived on", lookup[0])
+	}
+	_, args := rt.tx.statementMentioning(t, "ON CONFLICT (endpoint_id, nonce) DO NOTHING")
+	if args[1] != colleagueUserID {
+		t.Fatalf("the row was stamped %v; the owner is whoever the address resolves to", args[1])
 	}
 }
 

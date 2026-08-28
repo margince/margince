@@ -8,13 +8,20 @@
 //
 // WHAT MAKES IT A CONNECTOR RATHER THAN A WEBHOOK. The core owns admission and
 // this unit owns meaning, and the split is the whole design. Before Handle is
-// called the core has already refused an undeclared slug, capped the body,
-// spent both rate budgets, bounded the timestamp and resolved the
-// installation's workspace — everything decidable WITHOUT a secret. What is
-// left is the part the core cannot do, because the secret lives in this unit's
-// own namespace and the core has no way to read it: resolve the slug to its
-// owner, fetch that owner's secret, verify the signature, and record what
-// arrived.
+// called the core has already refused an undeclared slug and an ungrammatical
+// address, capped the body, spent both rate budgets, bounded the timestamp and
+// resolved the installation's workspace — everything decidable WITHOUT a
+// secret. What is left is the part the core cannot do, because it interprets
+// nothing in the address and cannot read a secret in this unit's namespace:
+// resolve the address to its owner, fetch that owner's secret, verify the
+// signature, and record what arrived.
+//
+// ONE MOUNTED EDGE, ONE ENDPOINT PER MEMBER. The declared slug is a literal and
+// therefore the same for every caller, so an opened endpoint carries a minted
+// `ref` — the trailing path segment — and that is what an arrival is resolved
+// by. The ref is an ADDRESS AND NOT A CREDENTIAL: it travels in the path and
+// reaches every access log between a sender and here. The signing secret is the
+// only thing that admits a request.
 //
 // The anonymous edge carries NO authority. Its principal is a bare connector
 // with empty permissions, so the only honest thing a verified request can buy
@@ -24,10 +31,10 @@
 //
 // Tables owned:
 //
-//   - ext_openchannel_endpoint — one row per opened edge: which declared slug
-//     it is, whose consent stands behind it, where its replies go, and the
-//     traffic counters a screen renders. It deliberately does NOT hold the
-//     signing secret.
+//   - ext_openchannel_endpoint — one row per member per declared edge: which
+//     edge it belongs to, the minted address senders are pointed at, whose
+//     consent stands behind it, where its replies go, and the traffic counters
+//     a screen renders. It deliberately does NOT hold the signing secret.
 //   - ext_openchannel_inbound — the received-but-not-yet-ingested queue, keyed
 //     for replay by (endpoint_id, nonce). It keeps the body verbatim, because
 //     the body is what the signature covered.

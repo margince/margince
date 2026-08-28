@@ -8,13 +8,22 @@
 # document — not the Go — is where every operation's risk tier, Passport scope,
 # RBAC object, prose and I/O schemas are declared.
 #
-# FIVE OPERATIONS, all about the CALLER's own endpoint. None of them takes a
+# SIX OPERATIONS, all about the CALLER's own endpoint. None of them takes a
 # user id, and that absence is the load-bearing part of this document: the owner
 # recorded on an endpoint is whose sealed secret verifies every request that
 # arrives on it and whose authority the payload is eventually acted under, so an
 # operation that let one member open, re-point or read ANOTHER member's endpoint
 # would hand a stranger's name to whatever a remote party sends. The member is
 # taken from the invocation, exactly as captured_by is.
+#
+# EVERY MEMBER GETS THEIR OWN ADDRESS. The mounted edge is declared once and is
+# therefore the same for everybody, so an opened endpoint carries a minted `ref`
+# — the trailing path segment a sender addresses — and that is what an arriving
+# request is resolved by. The ref is NOT A CREDENTIAL: it travels in the path,
+# so it reaches every access log and every proxy between a sender and this
+# installation. The signing secret is what admits a request, and the prose below
+# says so wherever a ref is returned, because a member who believes the URL is
+# the secret will paste it somewhere.
 #
 # TWO RBAC OBJECTS, held by no seeded role. ext_openchannel_endpoint is the
 # WRITE object: holding it means being able to open a path into this
@@ -55,11 +64,13 @@ actions:
           description: >-
             Open the calling person's own inbound endpoint, so a remote system
             can be pointed at this CRM. It always opens the endpoint of whoever
-            is calling: there is no way to open somebody else's. Opening does
-            not by itself let anything in — until a signing secret is minted,
-            every request that arrives is refused, because the secret is the
-            only thing that admits one. Asking twice returns the same endpoint
-            rather than a second one.
+            is calling: there is no way to open somebody else's, and every
+            person gets their own address. Opening does not by itself let
+            anything in — until a signing secret is minted, every request that
+            arrives is refused, because the secret is the only thing that admits
+            one, and the address in the URL is not a secret. Asking twice
+            returns the same endpoint, with the same address, rather than a
+            second one.
         requestBody:
           required: true
           content:
@@ -88,7 +99,7 @@ actions:
                   # of.
                   type: object
                   additionalProperties: false
-                  required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                  required: [id, user_id, slug, ref, url, enabled, inbound_received, outbound_sent, version]
                   description: >-
                     One member's inbound endpoint: which anonymous path it is, who owns
                     it, where this connector talks back to, and what has passed through
@@ -106,9 +117,18 @@ actions:
                     slug:
                       type: string
                       description: >-
-                        The last segment of the public path senders post to. It is not a
-                        credential — the path appears in access logs, and only the signing
-                        secret admits a request.
+                        The declared edge, second-to-last segment of the public path
+                        senders post to. It is the same for every person here.
+                    ref:
+                      type: string
+                      description: >-
+                        This person's own address on that edge — the last segment of the
+                        public path, minted when the endpoint was opened and unchanged by
+                        re-opening it. IT IS NOT A SECRET: it appears in access logs and
+                        in every proxy between a sender and this installation, exactly as
+                        the rest of the path does. Only the signing secret admits a
+                        request, so this may be shared with whoever configures the sender
+                        and must never be relied on to keep anyone out.
                     url:
                       type: string
                       description: >-
@@ -127,11 +147,67 @@ actions:
                     version: { type: integer }
           '401': { $ref: '#/components/responses/Unauthorized' }
           '403': { $ref: '#/components/responses/Forbidden' }
-          # Declared because this operation genuinely answers it: the
-          # installation's one anonymous path for this unit can be held by one
-          # member, so a second member asking for it is refused rather than
-          # given a duplicate. `extension.ErrConflict` is what the unit raises.
-          '409': { $ref: '#/components/responses/Conflict' }
+
+      # GET on the same path the open operation writes, taking no arguments at
+      # all: the endpoint it reports is the caller's own, so there is nothing to
+      # name.
+      get:
+        operationId: openchannelReadEndpoint
+        summary: Report the calling member's own inbound endpoint.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_endpoint
+        x-rbac-action: read
+        x-mcp-tool:
+          verb: openchannel_read_endpoint
+          version: 1.0.0
+          title: Read an inbound endpoint
+          # 🟢 read: it reads one row of the unit's own table and changes
+          # nothing. It returns no secret, because no operation but the minting
+          # one ever does.
+          tier: auto_execute
+          scope: read
+          description: >-
+            Report whether the calling person has opened an inbound endpoint,
+            and if so what address senders should be pointed at, whether it is
+            currently accepting, where it talks back to, and how much has passed
+            through it. It reports that person's own endpoint only, and never
+            returns the signing secret — a lost secret is re-minted rather than
+            recovered.
+        responses:
+          '200':
+            description: The caller's endpoint, or the absence of one.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [opened]
+                  properties:
+                    opened:
+                      type: boolean
+                      description: >-
+                        Whether this person has opened an endpoint. False is the ordinary
+                        state before anyone opens one, not an error.
+                    endpoint:
+                      type: object
+                      additionalProperties: false
+                      required: [id, user_id, slug, ref, url, enabled, inbound_received, outbound_sent, version]
+                      description: >-
+                        See the open operation for what each member means.
+                      properties:
+                        id: { type: string, format: uuid }
+                        user_id: { type: string, format: uuid }
+                        slug: { type: string }
+                        ref: { type: string }
+                        url: { type: string }
+                        enabled: { type: boolean }
+                        inbound_received: { type: integer, format: int64 }
+                        outbound_sent: { type: integer, format: int64 }
+                        last_inbound_at: { type: string, format: date-time }
+                        last_outbound_at: { type: string, format: date-time }
+                        version: { type: integer }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
 
   - target: $.paths['/ext/openchannel/endpoint/secret']
     update:
@@ -193,14 +269,16 @@ actions:
                     endpoint:
                       type: object
                       additionalProperties: false
-                      required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                      required: [id, user_id, slug, ref, url, enabled, inbound_received, outbound_sent, version]
                       description: >-
                         The endpoint this secret admits requests to. See the open
-                        operation for what each member means.
+                        operation for what each member means — in particular that `ref`
+                        is an address and not a second secret.
                       properties:
                         id: { type: string, format: uuid }
                         user_id: { type: string, format: uuid }
                         slug: { type: string }
+                        ref: { type: string }
                         url: { type: string }
                         enabled: { type: boolean }
                         inbound_received: { type: integer, format: int64 }
@@ -260,13 +338,14 @@ actions:
                 schema:
                   type: object
                   additionalProperties: false
-                  required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                  required: [id, user_id, slug, ref, url, enabled, inbound_received, outbound_sent, version]
                   description: >-
                     See the open operation for what each member means.
                   properties:
                     id: { type: string, format: uuid }
                     user_id: { type: string, format: uuid }
                     slug: { type: string }
+                    ref: { type: string }
                     url: { type: string }
                     enabled: { type: boolean }
                     inbound_received: { type: integer, format: int64 }
@@ -323,13 +402,14 @@ actions:
                 schema:
                   type: object
                   additionalProperties: false
-                  required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                  required: [id, user_id, slug, ref, url, enabled, inbound_received, outbound_sent, version]
                   description: >-
                     See the open operation for what each member means.
                   properties:
                     id: { type: string, format: uuid }
                     user_id: { type: string, format: uuid }
                     slug: { type: string }
+                    ref: { type: string }
                     url: { type: string }
                     enabled: { type: boolean }
                     inbound_received: { type: integer, format: int64 }

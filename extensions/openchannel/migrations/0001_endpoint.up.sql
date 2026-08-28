@@ -17,14 +17,27 @@
 CREATE TABLE ext.ext_openchannel_endpoint (
     id              uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
 
-    -- WHICH declared inbound edge this row owns. The unit declares its edges
-    -- as literals, so a slug is not a value a member invents: opening an
-    -- endpoint CLAIMS one of the declared slugs, and the anonymous handler
-    -- resolves the slug it was called on back to this row to find the owner
-    -- and the secret. UNIQUE because two rows claiming one slug would be two
-    -- answers to "whose endpoint is this", and the handler would take whichever
-    -- the planner returned.
+    -- WHICH declared inbound edge this row belongs to. The unit declares its
+    -- edges as literals, so a slug is not a value a member invents — and it is
+    -- the same for every member, which is exactly why it cannot be what an
+    -- arriving request is resolved by.
     slug            text        NOT NULL CHECK (length(slug) > 0),
+
+    -- THE HANDLE THAT MAKES ONE URL PER MEMBER: the trailing path segment a
+    -- sender addresses, minted when a member opens their endpoint, and what the
+    -- anonymous handler resolves back to the owner and their secret.
+    --
+    -- IT IS NOT A CREDENTIAL. It travels in the path, so it reaches every access
+    -- log and every proxy between a sender and here; the signing secret is what
+    -- admits a request. A member who believed otherwise would paste it
+    -- somewhere.
+    --
+    -- The only check here is that it is present. Its alphabet and its length
+    -- bound are the CORE's published ones (extension.ValidInboundRef), held
+    -- where the ref is minted: a regex restated in SQL would be a copy of a rule
+    -- this file cannot derive from the constant that owns it, and a copy that
+    -- admitted one character more would mint URLs the edge answers 404 for.
+    ref             text        NOT NULL CHECK (length(ref) > 0),
 
     -- WHOSE endpoint this is: the member whose sealed secret verifies every
     -- request that arrives on it, and whose authority the drain will act
@@ -74,10 +87,14 @@ CREATE TABLE ext.ext_openchannel_endpoint (
     created_at      timestamptz NOT NULL DEFAULT now(),
     updated_at      timestamptz NOT NULL DEFAULT now(),
 
-    CONSTRAINT ext_openchannel_endpoint_one_per_slug UNIQUE (slug),
-    -- One endpoint per member, so "this member's endpoint" is a question with
-    -- one answer everywhere the governed surface asks it.
-    CONSTRAINT ext_openchannel_endpoint_one_per_member UNIQUE (user_id)
+    -- One row per ref, because the ref is what an arriving request resolves
+    -- through: two rows on one ref would be two answers to "whose endpoint is
+    -- this", and the handler would take whichever the planner returned.
+    CONSTRAINT ext_openchannel_endpoint_one_per_ref UNIQUE (ref),
+    -- One endpoint per member per declared edge, so "this member's endpoint on
+    -- this edge" has one answer everywhere the governed surface asks it. Two
+    -- members hold two endpoints on the SAME edge, which is what the ref is for.
+    CONSTRAINT ext_openchannel_endpoint_one_per_member UNIQUE (user_id, slug)
 );
 
 -- The app role runs the unit's handlers. TRUNCATE is deliberately absent: no

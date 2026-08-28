@@ -34,6 +34,9 @@ const (
 	ownerUserID     = "9f1d0c4a-3b2e-4f57-9a10-2c8e6b5d4f31"
 	colleagueUserID = "1b7f6e25-8c43-4a90-b6d1-5e2a7c3f9081"
 	endpointID      = "3c5a1f80-6d24-4b19-8e77-0a4b2d6c9e13"
+	// ownerRef is the address on the owner's endpoint. A fixed value shaped
+	// like a minted one, so a fixture reads as the thing it stands for.
+	ownerRef = "Qm4xT2lZc0hkRGZLbGFwWQ"
 )
 
 // fakeRuntime is one invocation's Runtime.
@@ -345,7 +348,7 @@ func (e errScripted) Error() string {
 // added to the projection is ONE edit in the fixtures rather than one per
 // scripted row.
 func endpointRow(id, userID, url string, enabled bool) []any {
-	return []any{id, userID, inboundSlug, url, enabled, int64(0), int64(0), nil, nil, 1}
+	return []any{id, userID, inboundSlug, ownerRef, url, enabled, int64(0), int64(0), nil, nil, 1}
 }
 
 // jsonOf decodes a handler's answer, failing the test rather than the caller.

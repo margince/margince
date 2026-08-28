@@ -81,7 +81,8 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
 			`UPDATE `+endpointTable+` SET version = version + 1, updated_at = now()
-			 WHERE user_id = $1::uuid RETURNING `+endpointColumns, member).Scan)
+			 WHERE user_id = $1::uuid AND slug = $2
+			 RETURNING `+endpointColumns, member, inboundSlug).Scan)
 		if err != nil {
 			return err
 		}

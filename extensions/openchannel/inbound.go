@@ -6,12 +6,14 @@ package openchannel
 // The anonymous edge: verify a signed request, record it, reveal nothing.
 //
 // WHAT THE CORE HAS ALREADY DONE by the time receive runs — the method guard,
-// the undeclared slug, both rate buckets, the body cap, the three headers and
-// the freshness window — is not redone here. What is left is the part the core
-// cannot do, because the secret lives in this unit's own namespace: resolve the
-// slug to its owner, read that owner's secret, verify, and enqueue.
+// the undeclared slug, an ungrammatical or over-long ref, both rate buckets,
+// the body cap, the three headers and the freshness window — is not redone
+// here. What is left is the part the core cannot do, because it interprets
+// nothing in the ref and cannot read a secret in this unit's namespace: resolve
+// the ref to its owner, read that owner's secret, verify, and enqueue.
 //
-// EVERY REFUSAL IS THE SAME REFUSAL. An unknown slug, a paused endpoint, an
+// EVERY REFUSAL IS THE SAME REFUSAL. An address nobody holds — including the
+// bare mounted path, which carries no address at all — a paused endpoint, an
 // endpoint whose secret was never minted, a replayed nonce and a wrong
 // signature all answer InboundUnauthenticated, which the core turns into one
 // opaque 401 with an empty body. Nothing here logs which of them it was, and
@@ -67,7 +69,10 @@ type inboundTarget struct {
 
 // receive is the unit's whole anonymous surface.
 func receive(ctx context.Context, rt extension.Runtime, req extension.InboundRequest) (extension.InboundOutcome, error) {
-	target, err := acceptingEndpoint(ctx, rt, req.Slug)
+	// THE REF, not the slug. The slug is declared and therefore the same for
+	// every caller; the ref is the handle this unit minted for one member, and
+	// resolving it is what turns one mounted edge into one endpoint per member.
+	target, err := acceptingEndpoint(ctx, rt, req.Ref)
 	if err != nil {
 		return extension.InboundTransient, err
 	}
@@ -85,14 +90,20 @@ func receive(ctx context.Context, rt extension.Runtime, req extension.InboundReq
 	return enqueue(ctx, rt, *target, req)
 }
 
-// acceptingEndpoint resolves a slug to the endpoint that is currently taking
+// acceptingEndpoint resolves a ref to the endpoint that is currently taking
 // requests on it, or to nothing.
 //
-// A paused endpoint answers nothing, exactly as an unopened one does: from
+// A paused endpoint answers nothing, exactly as an unminted ref does, and so
+// does the EMPTY one a caller sends by addressing the bare mounted path: from
 // outside, "this installation is not accepting here" is the whole of what a
 // sender is entitled to learn, and a second answer would say that the endpoint
-// exists.
-func acceptingEndpoint(ctx context.Context, rt extension.Runtime, slug string) (*inboundTarget, error) {
+// exists. The empty ref takes no branch of its own for that reason — it matches
+// no row, which is the same thing a wrong ref does.
+//
+// The ref is read out of the path, and it is used HERE and nowhere else: it is
+// resolved against this unit's own table and never keyed on, so nothing
+// downstream is addressed by a value a caller chose.
+func acceptingEndpoint(ctx context.Context, rt extension.Runtime, ref string) (*inboundTarget, error) {
 	var found *inboundTarget
 	err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		var (
@@ -100,7 +111,7 @@ func acceptingEndpoint(ctx context.Context, rt extension.Runtime, slug string) (
 			enabled bool
 		)
 		err := tx.QueryRow(ctx,
-			`SELECT id::text, user_id::text, enabled FROM `+endpointTable+` WHERE slug = $1`, slug).
+			`SELECT id::text, user_id::text, enabled FROM `+endpointTable+` WHERE ref = $1`, ref).
 			Scan(&target.id, &target.owner, &enabled)
 		if err != nil {
 			if errors.Is(err, extension.ErrNoRows) {

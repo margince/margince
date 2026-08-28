@@ -32,8 +32,8 @@
         "write"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:48baa29453b9bef9f94ff36464518f42e0d44b1714a9ed6c7b96610dd879278a",
-      "digest": "sha256:cbdeaeaf872cca96097e798e072b6819eba0c1e6eb92c82cc6d6e30fe5c2a695"
+      "fragment_hash": "sha256:a4e0ad19e185d5880fdcff29cd7a1cff41763447c04ca9828b82247949a5c5fe",
+      "digest": "sha256:42a1154573817db023e6d60b1c33dcdda65276030e8c1c92531ed048db69449a"
     },
     {
       "id": "tool/openchannel_open",
@@ -48,8 +48,24 @@
         "write"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:7b2337fe329e0544a013069d5be27c3d57264f558a96201f121f1bafa50c9120",
-      "digest": "sha256:5c9cdc4432bc3e7622821cb4dd7860fc93a48f91fa07f0f799b439403906087e"
+      "fragment_hash": "sha256:b2194507991eb0090a72cdc3250fb1ba8458884d671e392a6b7b84aa0e741ef6",
+      "digest": "sha256:fbf2ee83eeb1466679fb88336168bbd0ac553a1ccbf4c6c1802e43a6ebca522a"
+    },
+    {
+      "id": "tool/openchannel_read_endpoint",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelReadEndpoint",
+      "route": "/ext/openchannel/endpoint",
+      "method": "GET",
+      "scopes": [
+        "read"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:ad7b1deccc93f5f41167b61a2d59cd4f2b1f38ff030df0bfaf16b8e2e6eff5b9",
+      "digest": "sha256:b137f164baacc937995ee2fda571ce39ba268698a3ccacfe562ed65930bfdd5f"
     },
     {
       "id": "tool/openchannel_register_url",
@@ -64,8 +80,8 @@
         "write"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:10921c2d0e8a6d664f8c4a11bd5983e06c29f221964577c43db569cc6ef4c752",
-      "digest": "sha256:b054b0d77191d6e275c72094a6cf0c56abe553d5f5754ba7743cd20b506df8ef"
+      "fragment_hash": "sha256:4f78401e090926331cfd53c7902c13268f29557a3cd0a87ae9e9913e0c09f2b4",
+      "digest": "sha256:aa45f671cb26a01642d46b15cc645dc8508f61018235d8ca56dab0470dcb5f9a"
     },
     {
       "id": "tool/openchannel_set_enabled",
@@ -80,8 +96,8 @@
         "write"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:19f0750e88c08a4705b4a3b2a98d2abe57d962b1722cb19c0e5b7bd34987b4d1",
-      "digest": "sha256:3859ffa509cd04c2aa03098890fcd7f70c48f0fea1378611f0ae5cc3e485f05e"
+      "fragment_hash": "sha256:72960d48c74cb08ee24aba74e7c30bc8b23c6ea5d7d0a9750813b00ac6b6d9f2",
+      "digest": "sha256:da21428043dc4167081d0cabd7bd2e16c15e8990f745ae931cd67f9591644d1b"
     }
   ],
   "secrets": [

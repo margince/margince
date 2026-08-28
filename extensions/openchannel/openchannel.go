@@ -18,6 +18,12 @@ import (
 //go:embed migrations
 var migrations embed.FS
 
+// migrationsLayer names the directory the directive above carries. The
+// directive takes a path and not a constant, so the name is written twice on
+// purpose; what walks the pair is the embed test, which reads this directory
+// off disk and opens every file it finds out of the embedded copy.
+const migrationsLayer = "migrations"
+
 // New returns the unit's declaration: inert data, holding no handle into the
 // core. Every field is a literal, because the operator manifest is derived from
 // this function's AST without compiling it.
@@ -27,6 +33,7 @@ func New() extension.Extension {
 		Version: "1.0.0",
 		Tools: []extension.Tool{
 			{Name: "openchannel_open", Handle: open},
+			{Name: "openchannel_read_endpoint", Handle: readEndpoint},
 			{Name: "openchannel_mint_secret", Handle: mintSecret},
 			{Name: "openchannel_set_enabled", Handle: setEnabled},
 			{Name: "openchannel_register_url", Handle: registerURL},
@@ -85,10 +92,13 @@ func New() extension.Extension {
 const inboundSecretKey = "inbound"
 
 // inboundSlug names the declared edge above, as the code that reaches for it
-// names it: the last segment of the public path senders POST to, the value an
-// opened endpoint claims, and what the handler resolves back to an owner. It is
-// a literal there for the reason inboundSecretKey is, and a mismatch would open
-// an endpoint at a path nothing ever arrives on.
+// names it: the second-to-last segment of the public path senders POST to, and
+// the edge each opened endpoint belongs to. It is a literal there for the reason
+// inboundSecretKey is, and a mismatch would key every endpoint to an edge no
+// request arrives on.
+//
+// It is not what an ARRIVING request is resolved by — it is the same for every
+// member. That is the minted ref's job (ref.go).
 //
 // Held by: TestTheDeclaredSlugIsTheOneAnOpenedEndpointClaims (extensions/openchannel/openchannel_test.go)
 const inboundSlug = "receive"

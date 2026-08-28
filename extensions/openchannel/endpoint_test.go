@@ -21,25 +21,103 @@ const noArgs = `{}`
 func TestOpeningStampsTheOwnerFromTheInvocation(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()
-	// Two reads answer nothing — no endpoint for this member, and nobody
-	// holding the slug — and the insert returns the row it wrote.
-	rt.tx.noRows = map[int]bool{1: true, 2: true}
+	// The read answers nothing — this member has no endpoint — and the insert
+	// returns the row it wrote.
+	rt.tx.noRows = map[int]bool{1: true}
 	rt.tx.singleRows = [][]any{endpointRow(endpointID, ownerUserID, "", true)}
 
 	out, err := open(context.Background(), rt, json.RawMessage(noArgs))
 	if err != nil {
 		t.Fatalf("opening: %v", err)
 	}
-	sql, args := rt.tx.statementMentioning(t, "VALUES ($1::uuid, $2)")
-	if len(args) != 2 || args[0] != ownerUserID {
+	sql, args := rt.tx.statementMentioning(t, "VALUES ($1::uuid, $2, $3)")
+	if len(args) != 3 || args[0] != ownerUserID {
 		t.Fatalf("the insert must stamp the caller as the owner; it bound %v in\n%s", args, sql)
 	}
 	if args[1] != inboundSlug {
-		t.Fatalf("the insert must claim the unit's declared slug %q; it bound %v", inboundSlug, args[1])
+		t.Fatalf("the insert must name the unit's declared slug %q; it bound %v", inboundSlug, args[1])
+	}
+	minted, ok := args[2].(string)
+	if !ok || !extension.ValidInboundRef(minted) {
+		t.Fatalf("the insert stored %v as the address, which the inbound edge would not route", args[2])
 	}
 	stored := jsonOf[endpoint](t, out)
 	if stored.UserID != ownerUserID {
 		t.Fatalf("the answer names %q as the owner, not the caller", stored.UserID)
+	}
+	if stored.Ref == "" {
+		t.Fatal("the answer carries no address, so the member has nothing to point a sender at")
+	}
+}
+
+// The whole reason the ref exists: one declared edge, one endpoint per person.
+// A second member opening is an ordinary open, not a refusal — that refusal was
+// the symptom of resolving arrivals by the declared slug.
+func TestASecondMemberOpensTheirOwnEndpointOnTheSameEdge(t *testing.T) {
+	t.Parallel()
+	refs := map[string]bool{}
+	for _, member := range []string{ownerUserID, colleagueUserID} {
+		rt := newRuntime()
+		rt.caller = extension.Caller{Type: extension.CallerHuman, UserID: member}
+		rt.tx.noRows = map[int]bool{1: true}
+		rt.tx.singleRows = [][]any{endpointRow(endpointID, member, "", true)}
+
+		out, err := open(context.Background(), rt, json.RawMessage(noArgs))
+		if err != nil {
+			t.Fatalf("opening for %s: %v", member, err)
+		}
+		if got := jsonOf[endpoint](t, out).UserID; got != member {
+			t.Fatalf("the answer names %q as the owner, not %q", got, member)
+		}
+		_, args := rt.tx.statementMentioning(t, "VALUES ($1::uuid, $2, $3)")
+		ref, ok := args[2].(string)
+		if !ok {
+			t.Fatalf("the minted address is %T, not text", args[2])
+		}
+		if refs[ref] {
+			t.Fatalf("two members were given the same address %q, so one of them would receive the other's requests", ref)
+		}
+		refs[ref] = true
+	}
+}
+
+// A member's endpoint is keyed by the member AND the declared edge. A read on
+// the member alone would answer an arbitrary one of their endpoints the day this
+// unit declares a second edge.
+func TestReadingAnEndpointNamesTheDeclaredEdgeAsWellAsTheMember(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.singleRows = [][]any{endpointRow(endpointID, ownerUserID, "", true)}
+
+	out, err := readEndpoint(context.Background(), rt, json.RawMessage(noArgs))
+	if err != nil {
+		t.Fatalf("reading: %v", err)
+	}
+	_, args := rt.tx.statementMentioning(t, "user_id = $1::uuid AND slug = $2")
+	if args[0] != ownerUserID || args[1] != inboundSlug {
+		t.Fatalf("the read is keyed on %v, not on the caller and the declared edge", args)
+	}
+	answer := jsonOf[struct {
+		Opened   bool      `json:"opened"`
+		Endpoint *endpoint `json:"endpoint"`
+	}](t, out)
+	if !answer.Opened || answer.Endpoint == nil || answer.Endpoint.Ref != ownerRef {
+		t.Fatalf("the read answered %+v", answer)
+	}
+}
+
+// Not having opened one is the ordinary state of the screen this serves.
+func TestReadingBeforeOpeningIsNotAnError(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.noRows = map[int]bool{1: true}
+
+	out, err := readEndpoint(context.Background(), rt, json.RawMessage(noArgs))
+	if err != nil {
+		t.Fatalf("reading before opening must not be a failure: %v", err)
+	}
+	if strings.Contains(string(out), `"opened":true`) || strings.Contains(string(out), `"endpoint"`) {
+		t.Fatalf("the read reported an endpoint that does not exist:\n%s", out)
 	}
 }
 
@@ -68,31 +146,22 @@ func TestOpeningTwiceAnswersTheSameEndpointAndInsertsNothing(t *testing.T) {
 		t.Fatalf("re-opening: %v", err)
 	}
 	for _, sql := range rt.tx.statements {
-		if strings.Contains(sql, "VALUES ($1::uuid, $2)") {
+		if strings.Contains(sql, "VALUES ($1::uuid, $2, $3)") {
 			t.Fatalf("re-opening inserted a second endpoint:\n%s", sql)
 		}
 	}
-	if got := jsonOf[endpoint](t, out).ID; got != endpointID {
-		t.Fatalf("re-opening answered %q, not the endpoint that already existed", got)
+	stored := jsonOf[endpoint](t, out)
+	if stored.ID != endpointID {
+		t.Fatalf("re-opening answered %q, not the endpoint that already existed", stored.ID)
+	}
+	// The address MUST survive. A new one on every open would break every
+	// sender already pointed at the old URL, silently and at the moment a
+	// member did the least alarming thing available to them.
+	if stored.Ref != ownerRef {
+		t.Fatalf("re-opening changed the address to %q, breaking every sender pointed at %q", stored.Ref, ownerRef)
 	}
 	if len(rt.tx.audited) != 0 {
 		t.Fatalf("re-opening recorded %d ledger rows for a write it did not make", len(rt.tx.audited))
-	}
-}
-
-func TestOpeningRefusesASlugAnotherMemberHolds(t *testing.T) {
-	t.Parallel()
-	rt := newRuntime()
-	// This member has no endpoint; the declared slug is held by a colleague.
-	rt.tx.noRows = map[int]bool{1: true}
-	rt.tx.singleRows = [][]any{endpointRow(endpointID, colleagueUserID, "", true)}
-
-	_, err := open(context.Background(), rt, json.RawMessage(noArgs))
-	if !errors.Is(err, extension.ErrConflict) {
-		t.Fatalf("a slug another member holds must be a conflict, got %v", err)
-	}
-	if strings.Contains(err.Error(), colleagueUserID) {
-		t.Fatalf("the refusal names the holder, which tells the caller who they are: %v", err)
 	}
 }
 
@@ -117,6 +186,10 @@ func TestEveryEndpointOperationRefusesAnInvocationWithNobodyBehindIt(t *testing.
 		},
 		"list": func(ctx context.Context, rt extension.Runtime) error {
 			_, err := listInbound(ctx, rt, json.RawMessage(noArgs))
+			return err
+		},
+		"read": func(ctx context.Context, rt extension.Runtime) error {
+			_, err := readEndpoint(ctx, rt, json.RawMessage(noArgs))
 			return err
 		},
 	} {

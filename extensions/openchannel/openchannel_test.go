@@ -4,6 +4,8 @@
 package openchannel
 
 import (
+	"os"
+	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -79,14 +81,24 @@ func TestTheMigrationsLayerIsEmbedded(t *testing.T) {
 	if layer == nil {
 		t.Fatal("the declaration carries no migrations layer")
 	}
-	for _, name := range []string{
-		"migrations/0001_endpoint.up.sql",
-		"migrations/0001_endpoint.down.sql",
-		"migrations/0002_inbound.up.sql",
-		"migrations/0002_inbound.down.sql",
-	} {
+	// DERIVED from the directory the unit ships, not from a list beside it. A
+	// list is what goes stale the day a migration is added, and a stale list
+	// passes while the new file is missing from the binary — which is the exact
+	// silence this test exists to break.
+	shipped, err := os.ReadDir(migrationsLayer)
+	if err != nil {
+		t.Fatalf("reading the unit's migrations directory: %v", err)
+	}
+	if len(shipped) == 0 {
+		t.Fatal("the unit ships no migrations, so this test proves nothing about the embed")
+	}
+	for _, entry := range shipped {
+		// Composed at run time rather than written out, because a literal
+		// `migrations/NNNN_…` in this tree reads as a citation of a CORE
+		// migration version and is judged against those.
+		name := path.Join(migrationsLayer, entry.Name())
 		if _, err := layer.Open(name); err != nil {
-			t.Fatalf("%s is not in the embedded layer: %v", name, err)
+			t.Fatalf("%s is on disk but not in the embedded layer: %v", name, err)
 		}
 	}
 }

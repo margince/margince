@@ -4,7 +4,8 @@
 package openchannel
 
 // The endpoint a member owns, and the operations they drive from the screen:
-// open it, pause or resume it, and say where this connector talks back to.
+// open it, read it back, pause or resume it, and say where this connector talks
+// back to.
 //
 // None of them names a member. All of them take one from the INVOCATION, which
 // is the rule that keeps this unit's own surface from forging the consent the
@@ -25,7 +26,7 @@ import (
 
 // endpointColumns is the projection every read and every write returns, in one
 // place so a column added to the table is one edit rather than five.
-const endpointColumns = `id::text, user_id::text, slug, coalesce(url, ''), enabled,
+const endpointColumns = `id::text, user_id::text, slug, ref, coalesce(url, ''), enabled,
 	inbound_received, outbound_sent, last_inbound_at, last_outbound_at, version`
 
 // endpoint is one member's edge, as this unit reads and renders it.
@@ -36,11 +37,12 @@ const endpointColumns = `id::text, user_id::text, slug, coalesce(url, ''), enabl
 type endpoint struct {
 	ID     string `json:"id"`
 	UserID string `json:"user_id"`
-	// Slug is which declared anonymous edge this row owns — the last segment of
-	// the public path senders POST to. It is not a credential: the path appears
-	// in access logs, and the signing secret is the only thing that admits a
-	// request.
+	// Slug and Ref are the last two segments of the public path senders POST to:
+	// the declared edge, and this member's own handle on it. NEITHER IS A
+	// CREDENTIAL — both reach every access log a request passes through, and the
+	// signing secret is the only thing that admits one.
 	Slug string `json:"slug"`
+	Ref  string `json:"ref"`
 	// URL is where this connector talks back to, empty until a member registers
 	// one. Empty is the ordinary state of an endpoint that only receives.
 	URL     string `json:"url"`
@@ -67,7 +69,7 @@ func scanEndpoint(scan func(...any) error) (endpoint, error) {
 		e                         endpoint
 		lastInbound, lastOutbound *time.Time
 	)
-	err := scan(&e.ID, &e.UserID, &e.Slug, &e.URL, &e.Enabled,
+	err := scan(&e.ID, &e.UserID, &e.Slug, &e.Ref, &e.URL, &e.Enabled,
 		&e.InboundReceived, &e.OutboundSent, &lastInbound, &lastOutbound, &e.Version)
 	if err != nil {
 		return endpoint{}, err
@@ -87,22 +89,31 @@ func renderTime(at *time.Time) string {
 	return at.UTC().Format(time.RFC3339)
 }
 
-// open claims the unit's declared edge for the CALLER and records it.
+// open gives the CALLER their own address on the unit's declared edge.
 //
-// It mints nothing. Opening an endpoint and holding the credential that admits
-// requests to it are two acts, and separating them is what makes minting
+// EVERY MEMBER GETS ONE. The declared slug is a literal and therefore the same
+// for everybody, so the row that tells an arriving request whose it is carries a
+// minted ref instead — one URL per member on one mounted edge.
+//
+// It mints no SECRET. Opening an endpoint and holding the credential that
+// admits requests to it are two acts, and separating them is what makes minting
 // idempotent to ask for and destructive only when asked: an open that also
 // minted would silently stop every already-registered sender each time a member
-// re-opened the screen.
+// re-opened the screen. The ref is not that credential and is minted here,
+// because an endpoint without an address is not an endpoint.
 //
-// Re-opening is the same endpoint, not a second one. The row is unique on the
-// member and on the slug, and the slug is the unit's own declared literal, so
-// there is exactly one endpoint to claim and exactly one member who holds it.
+// Re-opening is the same endpoint, not a second one, and it keeps the same ref
+// — a new one would break every sender already pointed at the old URL, which is
+// exactly what re-opening must not do.
 func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
 	if _, err := extension.DecodeArgs[struct{}](in); err != nil {
 		return nil, err
 	}
 	member, err := callingMember(rt, "opening an endpoint")
+	if err != nil {
+		return nil, err
+	}
+	ref, err := newEndpointRef()
 	if err != nil {
 		return nil, err
 	}
@@ -113,23 +124,14 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 			return err
 		}
 		if mine != nil {
+			// The ref minted above is discarded rather than stored: a member
+			// asking again is asking for their endpoint, not for a new address.
 			stored = *mine
 			return nil
 		}
-		// The declared slug is the installation's ONE anonymous path for this
-		// unit, so a second member cannot also hold it. Checked here so the
-		// refusal is a sentence a person can act on; the UNIQUE constraint is
-		// what actually holds under two simultaneous opens.
-		held, err := endpointBySlug(ctx, tx, inboundSlug)
-		if err != nil {
-			return err
-		}
-		if held != nil {
-			return fmt.Errorf("%w: this installation's open channel is already held by another member — they have to release it before it can be opened again", extension.ErrConflict)
-		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
-			`INSERT INTO `+endpointTable+` (user_id, slug) VALUES ($1::uuid, $2)
-			 RETURNING `+endpointColumns, member, inboundSlug).Scan)
+			`INSERT INTO `+endpointTable+` (user_id, slug, ref) VALUES ($1::uuid, $2, $3)
+			 RETURNING `+endpointColumns, member, inboundSlug, ref).Scan)
 		if err != nil {
 			return err
 		}
@@ -194,7 +196,8 @@ func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) 
 // same every time and the parts that must not vary are the ones a copy would
 // eventually drop: the owner predicate, the version bump, and the ledger row
 // carrying both images. The assignment is a compile-time literal from this
-// file — never a string off a request — and its one bound value arrives as $2.
+// file — never a string off a request — and its one bound value arrives as $2,
+// beside the owner and the declared edge the row is keyed by.
 //
 // The value is constrained to the two column types the governed operations set,
 // so a caller cannot bind something the schema has no place for and find out
@@ -215,7 +218,8 @@ func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtim
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
 			`UPDATE `+endpointTable+` SET `+assignment+`, version = version + 1, updated_at = now()
-			 WHERE user_id = $1::uuid RETURNING `+endpointColumns, member, value).Scan)
+			 WHERE user_id = $1::uuid AND slug = $3
+			 RETURNING `+endpointColumns, member, value, inboundSlug).Scan)
 		if err != nil {
 			return err
 		}
@@ -245,16 +249,14 @@ func callingMember(rt extension.Runtime, doing string) (string, error) {
 	return member, nil
 }
 
-// endpointOf reads one member's endpoint, or nothing.
+// endpointOf reads one member's endpoint on the unit's declared edge, or
+// nothing. Both halves of the key are named: a member holds one endpoint PER
+// EDGE, and a read on the member alone would answer an arbitrary one of them the
+// day this unit declares a second.
 func endpointOf(ctx context.Context, tx extension.Tx, member string) (*endpoint, error) {
 	return oneEndpoint(tx.QueryRow(ctx,
-		`SELECT `+endpointColumns+` FROM `+endpointTable+` WHERE user_id = $1::uuid`, member).Scan)
-}
-
-// endpointBySlug reads whoever holds one declared slug, or nothing.
-func endpointBySlug(ctx context.Context, tx extension.Tx, slug string) (*endpoint, error) {
-	return oneEndpoint(tx.QueryRow(ctx,
-		`SELECT `+endpointColumns+` FROM `+endpointTable+` WHERE slug = $1`, slug).Scan)
+		`SELECT `+endpointColumns+` FROM `+endpointTable+`
+		 WHERE user_id = $1::uuid AND slug = $2`, member, inboundSlug).Scan)
 }
 
 // oneEndpoint turns a single-row read into a row or an absence.
@@ -272,4 +274,36 @@ func oneEndpoint(scan func(...any) error) (*endpoint, error) {
 		return nil, err
 	}
 	return &found, nil
+}
+
+// readEndpoint answers the CALLER's own endpoint, or the absence of one.
+//
+// Their own, and not one named in the arguments: the row carries the address
+// senders are pointed at and the traffic that has passed through it, which
+// together say who has been messaging that member. That is not a fact this unit
+// hands to a colleague because they hold the same RBAC object.
+//
+// Having no endpoint is `opened: false` and not an error — not having opened one
+// is the ordinary state of this screen, and it is exactly what the caller is
+// asking about.
+func readEndpoint(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
+	if _, err := extension.DecodeArgs[struct{}](in); err != nil {
+		return nil, err
+	}
+	member, err := callingMember(rt, "reading an endpoint")
+	if err != nil {
+		return nil, err
+	}
+	var found *endpoint
+	err = rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
+		found, err = endpointOf(ctx, tx, member)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		Opened   bool      `json:"opened"`
+		Endpoint *endpoint `json:"endpoint,omitempty"`
+	}{Opened: found != nil, Endpoint: found})
 }
