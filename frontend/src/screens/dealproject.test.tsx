@@ -96,6 +96,11 @@ function dealBackend(opts: {
   // What an advance answers; null for the default success.
   onAdvance?: () => Response | null;
   companies?: { id: string; display_name: string }[];
+  // Which companies the server would match each project for, by project id.
+  // A project is worked by several companies and a row names only its ANCHOR,
+  // so a fixture that could not say this could not express the case the deal
+  // form exists to serve: the company on a project as a partner.
+  projectCompanies?: Record<string, string[]>;
   // What the deal reads back as once a PATCH has landed.
   afterPatch?: (row: Deal) => Deal;
 }): Call[] {
@@ -168,8 +173,21 @@ function dealBackend(opts: {
         return jsonResponse({ id: "o-1", display_name: "Brandt Automotive" });
       }
       if (pathname.endsWith("/projects")) {
+        // The list endpoint answers about ONE company when asked, which is what
+        // both deal forms now do. It matches ANY of a project's companies, not
+        // just the anchor — the whole reason the narrowing cannot be done in
+        // the browser — so a fixture may name the others through
+        // `projectCompanies`, and falls back to the anchor when it does not.
+        const asked = new URL(url).searchParams.get("organization_id");
+        const rows = (opts.projects ?? []).filter((row) => {
+          if (!asked) {
+            return true;
+          }
+          const on = opts.projectCompanies?.[row.id];
+          return on ? on.includes(asked) : row.organization_id === asked;
+        });
         return jsonResponse({
-          data: opts.projects ?? [],
+          data: rows,
           page: { next_cursor: null, has_more: false },
         });
       }
@@ -259,6 +277,53 @@ describe("the deal form's project picker", () => {
     expect(writes[0].url.endsWith("/projects")).toBe(true);
     expect(writes[1].url.endsWith("/deals")).toBe(true);
     expect(writes[1].body).toMatchObject({ project_id: "pr-born" });
+  });
+
+  // The case the create form could not serve at all, and the reason
+  // `optionsFor` was not enough: the newly chosen company is on the project as
+  // a PARTNER, so nothing on a project row says it belongs. Filtering a fetched
+  // page in the browser can only ever match the anchor, and the answer has to
+  // come from a re-read the form's own answers drive.
+  it("repopulates the picker from the server when the form names a different company", async () => {
+    const user = userEvent.setup();
+    dealBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout" }),
+        // Anchored at a THIRD company. Nothing on this row names o-2.
+        project({
+          id: "pr-joint",
+          name: "Joint rollout",
+          organization_id: "o-customer",
+        }),
+      ],
+      projectCompanies: { "pr-1": ["o-1"], "pr-joint": ["o-customer", "o-2"] },
+      companies: [
+        { id: "o-1", display_name: "Brandt Automotive" },
+        { id: "o-2", display_name: "Other GmbH" },
+      ],
+    });
+    render(<DealsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await pickOption(
+      user,
+      screen.getByLabelText("Company"),
+      "Brandt Automotive",
+    );
+    await user.click(screen.getByLabelText("Project"));
+    expect(screen.getByRole("option", { name: "CRM rollout" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Joint rollout" })).toBeNull();
+    await user.keyboard("{Escape}");
+
+    // The reader changes their mind mid-form. The picker used to go empty here
+    // and stay empty until the deal was saved and reopened.
+    await pickOption(user, screen.getByLabelText("Company"), "Other GmbH");
+    await user.click(screen.getByLabelText("Project"));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("option", { name: "Joint rollout" }),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByRole("option", { name: "CRM rollout" })).toBeNull();
   });
 
   it("holds the picker until a company is chosen, and drops a pick the new company does not own", async () => {
@@ -439,9 +504,12 @@ describe("the deal page", () => {
   // PARTNER matched nothing, so the list came back empty on an installation
   // full of projects.
   //
-  // The edit form asks the server for its own company's projects now — the
-  // server matches ANY of a project's companies — and passes narrowedByServer,
-  // which is what stops the second filter from undoing the answer.
+  // BOTH forms ask the server for one company's projects now — the server
+  // matches ANY of a project's companies — and name the company they asked
+  // about, which is what stops a second filter here from undoing the answer.
+  // The create form gets there by following the answers the open form
+  // publishes (CreateAction's onValuesChange), which is the read a pure
+  // `optionsFor` cannot do.
   it("does not re-filter a list the server already narrowed to one company", () => {
     const partnerProject = project({
       id: "pr-1",
@@ -456,7 +524,6 @@ describe("the deal page", () => {
       t,
       [partnerProject],
       undefined,
-      true,
       "o-partner",
     );
     const asked = narrowed.find((field) => field.key === "project_id");
@@ -464,11 +531,13 @@ describe("the deal page", () => {
       asked?.optionsFor?.({ organization_id: "o-partner" }).map((o) => o.label),
     ).toContain("Joint rollout");
 
-    // And the create form, which has no company to ask about and narrows here,
-    // still keeps its own filter: it would otherwise offer every project in the
-    // installation under whichever company was picked.
-    const unnarrowed = dealProjectFields(t, [partnerProject]);
-    const client = unnarrowed.find((field) => field.key === "project_id");
+    // A list read for NO company answers about no company. That is the state
+    // before the form has named one — not a list to filter, which is the
+    // shortcut a project row cannot support: organization_id names only the
+    // CUSTOMER, so filtering on it hides every project this company is on as a
+    // partner, which is the defect above in the other direction.
+    const unread = dealProjectFields(t, [partnerProject]);
+    const client = unread.find((field) => field.key === "project_id");
     expect(
       client
         ?.optionsFor?.({ organization_id: "o-partner" })
@@ -484,15 +553,15 @@ describe("the deal page", () => {
     });
     const t = (key: string) => key;
     // The list was read for o-partner; the reader has since changed the form's
-    // company to o-other. Nothing on a project row says whether o-other is on
-    // this project, so the only honest answer is none — offering the old
-    // company's projects is what lets a save carry a pairing the server
-    // refuses (deal_project_same_org, 422).
+    // company to o-other and the read for it is still in flight. Nothing on a
+    // project row says whether o-other is on this project, so the only honest
+    // answer for that moment is none — offering the old company's projects is
+    // what lets a save carry a pairing the server refuses
+    // (deal_project_same_org, 422).
     const fields = dealProjectFields(
       t,
       [partnerProject],
       { id: "pr-1", label: "Joint rollout" },
-      true,
       "o-partner",
     );
     const asked = fields.find((field) => field.key === "project_id");
