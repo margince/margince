@@ -282,3 +282,155 @@ func TestFirstResponseKeepsTheEarliestReplyWhateverTheDeliveryOrder(t *testing.T
 		t.Errorf("first_response_at = %v, want the earliest reply %v", got.FirstResponseAt, early)
 	}
 }
+
+// seedLeadActivity links one activity to a lead, exactly as a capture would
+// have committed it — and WITHOUT running the subscriber that projects
+// lead.first_response_at from it. That gap is the whole subject: the scan has
+// to survive the window between the activity's commit and the projection.
+func (e *promoteConsentEnv) seedLeadTouch(t *testing.T, lead ids.LeadID, kind, direction, capturedBy, source string, at time.Time) {
+	t.Helper()
+	id := ids.NewV7()
+	ctx := context.Background()
+	// direction is NULL for a note: the column's CHECK admits inbound and
+	// outbound and nothing else, and a note has neither.
+	var carried *string
+	if direction != "" {
+		carried = &direction
+	}
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)
+		 VALUES ($1, $2, 'Reply', $3, $4, $5, $6)`,
+		id, kind, carried, at, source, capturedBy); err != nil {
+		t.Fatalf("seeding the %s activity: %v", kind, err)
+	}
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`,
+		id, lead); err != nil {
+		t.Fatalf("linking the activity to the lead: %v", err)
+	}
+}
+
+// A lead answered before its deadline is not breached, even when the scan runs
+// before the projection catches up.
+//
+// lead.first_response_at is written by a subscriber reacting to
+// activity.captured, so it lags the activity's own commit by the bus's
+// latency. An outbound reply committed at 11:59 against a 12:00 deadline can
+// still be unprojected when a 12:01 scan runs — and the scan owns the
+// consequence: a breach event, an escalation task, and a number on somebody's
+// review. Every activity below is committed WITHOUT running the subscriber,
+// which is the window this reproduces.
+func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	started := time.Now().UTC().Add(-DefaultFirstResponseTarget - time.Hour)
+
+	for name, seed := range map[string]func(lead ids.LeadID, deadline time.Time){
+		// A person's outbound reply, one minute inside the deadline: the case
+		// from the report.
+		"a human's outbound reply": func(lead ids.LeadID, deadline time.Time) {
+			e.seedLeadTouch(t, lead, "email", "outbound", "human:"+e.user.String(), "manual", deadline.Add(-time.Minute))
+		},
+		// A note the rep typed into the composer counts too (§18.1) — the
+		// stepper shows the lead as contacted, so it must not go on to breach
+		// as if nobody had answered.
+		"a note a rep logged": func(lead ids.LeadID, deadline time.Time) {
+			e.seedLeadTouch(t, lead, "note", "", "human:"+e.user.String(), "manual", deadline.Add(-time.Minute))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			lead := e.seedLeadCreatedAt(t, name+"@sla.test", started)
+			state, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+			if err != nil {
+				t.Fatalf("read the lead's deadline: %v", err)
+			}
+			if state.SlaDeadlineAt == nil {
+				t.Fatal("the lead has no first-response deadline, so this case tests nothing")
+			}
+			seed(lead, *state.SlaDeadlineAt)
+
+			breaches, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
+			if err != nil {
+				t.Fatalf("scan: %v", err)
+			}
+			for _, b := range breaches {
+				if b.LeadID == lead {
+					t.Fatal("a lead answered before its deadline was marked breached — the scan read " +
+						"lead.first_response_at, which the subscriber had not projected yet")
+				}
+			}
+			// And the scan stamped the column itself from what it found, so the
+			// subscriber's later write is the replay it already answers as a
+			// no-op rather than a second first response.
+			after, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if after.FirstResponseAt == nil {
+				t.Error("the scan found the response and did not record it, so the next scan re-reads " +
+					"every activity on this lead to reach the same answer")
+			}
+			if after.SlaState != nil && *after.SlaState == crmcontracts.LeadSlaStateBreached {
+				t.Error("the lead reads sla_state=breached")
+			}
+		})
+	}
+}
+
+// And the scan still breaches a lead nobody answered: a version that returned
+// "answered" for everything would pass the test above while switching the
+// whole target off.
+func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	lead := e.seedLeadCreatedAt(t, "unanswered@sla.test", time.Now().UTC().Add(-DefaultFirstResponseTarget-time.Hour))
+
+	// An activity that is NOT a first response: an inbound the lead sent, and
+	// an agent's outbound with nothing to respond to (§18.1's anti-pollution
+	// case). Neither may keep the breach away.
+	state, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil || state.SlaDeadlineAt == nil {
+		t.Fatalf("read the lead's deadline: %v (%v)", err, state.SlaDeadlineAt)
+	}
+	e.seedLeadTouch(t, lead, "email", "outbound", "agent:scheduler", "connector", state.SlaDeadlineAt.Add(-time.Minute))
+
+	breaches, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	found := false
+	for _, b := range breaches {
+		if b.LeadID == lead {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("a lead nobody answered was not breached — an agent's cold outbound is not a first " +
+			"response, and treating it as one turns the whole target off")
+	}
+}
+
+// A reply AFTER the deadline is not an answer in time, and must not rescue the
+// lead from a breach it has already earned.
+func TestALateReplyDoesNotRescueTheLead(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	lead := e.seedLeadCreatedAt(t, "late@sla.test", time.Now().UTC().Add(-DefaultFirstResponseTarget-time.Hour))
+	state, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil || state.SlaDeadlineAt == nil {
+		t.Fatalf("read the lead's deadline: %v (%v)", err, state.SlaDeadlineAt)
+	}
+	e.seedLeadTouch(t, lead, "email", "outbound", "human:"+e.user.String(), "manual", state.SlaDeadlineAt.Add(time.Minute))
+
+	breaches, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	for _, b := range breaches {
+		if b.LeadID == lead {
+			return
+		}
+	}
+	t.Fatal("a lead answered a minute LATE was not breached — the re-check must be bounded by the " +
+		"deadline, or the target only ever fires for a lead nobody answered at all")
+}

@@ -147,14 +147,39 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 		if err != nil {
 			return fmt.Errorf("select breached leads: %w", err)
 		}
-		breaches, err = collectBreaches(rows)
+		candidates, err := collectBreaches(rows)
 		if err != nil {
 			return err
 		}
-		for _, b := range breaches {
+		// Each candidate is re-checked against the ACTIVITIES before it is
+		// marked. first_response_at is projected by an event subscriber
+		// reacting to activity.captured, so it lags the activity's own commit
+		// by the bus's latency: a reply committed at 11:59 against a 12:00
+		// deadline can still be unprojected when a 12:01 scan runs, and the
+		// lead reads as unanswered because the projection has not caught up
+		// rather than because nobody answered.
+		//
+		// The scan owns the consequence — a breach event, an escalation task,
+		// and a number on somebody's review — so it reads the ground truth
+		// rather than the projection. Where it finds one, it stamps the column
+		// itself: the subscriber's later write is then the replay
+		// recordFirstResponseTx already answers as a no-op.
+		breaches = breaches[:0]
+		for _, b := range candidates {
+			answered, err := answeredBy(ctx, tx, b.LeadID, b.Deadline)
+			if err != nil {
+				return err
+			}
+			if answered != nil {
+				if _, err := recordFirstResponseTx(ctx, tx, b.LeadID, *answered); err != nil {
+					return err
+				}
+				continue
+			}
 			if err := markBreach(ctx, tx, b, now); err != nil {
 				return err
 			}
+			breaches = append(breaches, b)
 		}
 		return nil
 	})
@@ -230,6 +255,24 @@ func (s *Store) RecordLeadFirstResponse(ctx context.Context, leadID ids.LeadID, 
 	}
 	set := false
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		set, err = recordFirstResponseTx(ctx, tx, leadID, at)
+		return err
+	})
+	return set, err
+}
+
+// recordFirstResponseTx is RecordLeadFirstResponse's body, inside a
+// transaction the caller already holds.
+//
+// Two callers, one spelling: the outbox subscriber opens its own transaction
+// for it, and the breach scan calls it while holding the lead row it is about
+// to judge. A second implementation there would be a second answer to "what
+// counts as the first response" and to "when is a stamp a replay", in the one
+// place where getting either wrong marks a lead that was answered.
+func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at time.Time) (bool, error) {
+	set := false
+	err := func() error {
 		// The outbox subscriber that drives this is unbounded, so the probe is a
 		// no-op today; it is here so the write carries its own scope the day a
 		// human-facing caller stamps a first response.
@@ -265,7 +308,7 @@ func (s *Store) RecordLeadFirstResponse(ctx context.Context, leadID ids.LeadID, 
 		return storekit.EmitEvent(ctx, tx, auditID, leadID.UUID, crmcontracts.PublicEventLeadUpdated{
 			ChangedFields: map[string]any{eventKeyDelta: map[string]any{firstResponseColumn: at}},
 		})
-	})
+	}()
 	return set, err
 }
 
@@ -289,4 +332,72 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 		return true
 	}
 	return t.hadInbound
+}
+
+// answeredBy is the ground truth the breach scan judges on: the earliest
+// genuine first response linked to this lead that happened at or before the
+// deadline, or nil when there is none.
+//
+// It reads the ACTIVITIES rather than lead.first_response_at, because that
+// column is a projection an event subscriber writes and the scan's whole
+// hazard is running in the window before it catches up. What it must not be is
+// a second definition of "genuine response": the touches come back in the same
+// shape the subscriber judges, and isFirstResponseActivity — the §18.1 rule
+// itself — decides each of them.
+//
+// EARLIEST, not any: the stamp this feeds is the first response, and a lead
+// answered twice before its deadline must record the first of the two, exactly
+// as the subscriber does when the bus delivers them out of order.
+func answeredBy(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time.Time) (*time.Time, error) {
+	touches, err := leadTouchesFor(ctx, tx, leadID, deadline)
+	if err != nil {
+		return nil, err
+	}
+	var earliest *time.Time
+	for _, t := range touches {
+		if !isFirstResponseActivity(t) {
+			continue
+		}
+		if earliest == nil || t.occurredAt.Before(*earliest) {
+			at := t.occurredAt
+			earliest = &at
+		}
+	}
+	return earliest, nil
+}
+
+// leadTouchesFor answers this lead's activities up to the deadline in the shape
+// isFirstResponseActivity reads.
+//
+// The same columns and the same hadInbound sub-select as leadResponseTouches,
+// asked from the other end: that one starts from ONE activity and finds the
+// leads it is linked to, which is what an event subscriber knows; this starts
+// from one LEAD and finds its activities, which is what a scan knows. Neither
+// can be expressed as the other without asking the database for rows its
+// caller has no use for.
+func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time.Time) ([]leadResponseTouch, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT coalesce(a.direction, ''), a.captured_by, a.occurred_at,
+		       EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
+		               WHERE li.lead_id = $1 AND ai.direction = 'inbound'
+		                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
+		                 AND ai.occurred_at < a.occurred_at),
+		       a.kind, coalesce(a.meeting_status, ''), a.source
+		FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		WHERE l.lead_id = $1 AND a.archived_at IS NULL AND a.occurred_at <= $2
+		  AND `+auth.ActivityAvailableClause("a"), leadID, deadline)
+	if err != nil {
+		return nil, fmt.Errorf("read the lead's activities before its deadline: %w", err)
+	}
+	defer rows.Close()
+	var out []leadResponseTouch
+	for rows.Next() {
+		t := leadResponseTouch{lead: leadID}
+		if err := rows.Scan(&t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound,
+			&t.kind, &t.meetingStatus, &t.source); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
 }
