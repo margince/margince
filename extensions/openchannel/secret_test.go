@@ -27,6 +27,9 @@ func TestMintingSealsTheSecretUnderTheCallerAndShowsItOnce(t *testing.T) {
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The version the claim reserved, which the recording transaction
+		// then requires to still be the endpoint's own.
+		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
@@ -65,9 +68,16 @@ func TestMintingSealsTheSecretUnderTheCallerAndShowsItOnce(t *testing.T) {
 func TestMintingTwiceReplacesTheSecretRatherThanAddingOne(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()
+	// Two mints, each: ownership read, the version its claim reserved, the
+	// recording read, the recording write.
 	rows := [][]any{}
-	for range 6 {
-		rows = append(rows, endpointRow(endpointID, ownerUserID, "", true))
+	for range 2 {
+		rows = append(rows,
+			endpointRow(endpointID, ownerUserID, "", true),
+			[]any{1},
+			endpointRow(endpointID, ownerUserID, "", true),
+			endpointRow(endpointID, ownerUserID, "", true),
+		)
 	}
 	rt.tx.singleRows = rows
 
@@ -147,12 +157,18 @@ func TestASecondStepFailureAfterSealingSaysTheSecretAlreadyRotated(t *testing.T)
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The version the claim reserved, which the recording transaction
+		// then requires to still be the endpoint's own.
+		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
-	// The FIRST transaction (ownership check) must succeed so the seal is
-	// reached; the SECOND (recording the rotation) is where this fails.
+	// The CLAIM transaction — the ownership read and the version it reserves —
+	// must succeed so the seal is reached; the recording transaction after it
+	// is where this fails. Failing earlier would exercise a refusal that
+	// happens BEFORE anything is sealed, which is the case that may honestly
+	// say nothing changed.
 	rt.tx.err = errors.New("boom")
-	rt.tx.failFrom = 2
+	rt.tx.failFrom = 3
 
 	_, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
 	if err == nil {
@@ -174,6 +190,9 @@ func TestMintingRecordsTheRotationAgainstTheEndpoint(t *testing.T) {
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The version the claim reserved, which the recording transaction
+		// then requires to still be the endpoint's own.
+		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 		endpointRow(endpointID, ownerUserID, "", true),
 	}

@@ -90,13 +90,20 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		if err != nil {
 			return err
 		}
-		// The seal, and then the record of it. In that order because the
-		// sealed material is what actually changes who can reach this
-		// installation: a ledger row written first would name a moment at
-		// which nothing had yet changed, and "when did this endpoint's secret
-		// last change" is exactly the question the row exists to answer. The
-		// row lock above is what keeps this seal from racing another one.
-		claimed = before.Version
+		// THE CLAIM RESERVES, it does not merely read. Taking the version as
+		// it stands would hand both of two overlapping mints the same number:
+		// each would pass its own check, one would record and return a secret,
+		// and the other would then overwrite the stored material and report a
+		// conflict — leaving the caller who was told it succeeded holding a
+		// secret the endpoint no longer verifies with. Bumping here under the
+		// row lock is what makes the two claims different, so the loser can be
+		// told it lost.
+		if err := tx.QueryRow(ctx,
+			`UPDATE `+endpointTable+` SET version = version + 1, updated_at = now()
+			 WHERE user_id = $1::uuid AND slug = $2
+			 RETURNING version`, member, inboundSlug).Scan(&claimed); err != nil {
+			return err
+		}
 		return nil
 	}); err != nil {
 		return nil, err
@@ -121,7 +128,7 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 			return fmt.Errorf("%w: another signing secret was minted for this endpoint while this one was being sealed, so the value this call would have returned may already have been replaced — mint again and use the secret that mint returns", extension.ErrConflict)
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
-			`UPDATE `+endpointTable+` SET version = version + 1, updated_at = now()
+			`UPDATE `+endpointTable+` SET updated_at = now()
 			 WHERE user_id = $1::uuid AND slug = $2
 			 RETURNING `+endpointColumns, member, inboundSlug).Scan)
 		if err != nil {
