@@ -27,10 +27,11 @@ func TestMintingSealsTheSecretUnderTheCallerAndShowsItOnce(t *testing.T) {
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
-		// The version the claim reserved, which the recording transaction
-		// then requires to still be the endpoint's own.
+		// The secret_version the claim reserved.
 		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The endpoint's live secret_version: unchanged, so the claim stands.
+		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
 
@@ -71,11 +72,14 @@ func TestMintingTwiceReplacesTheSecretRatherThanAddingOne(t *testing.T) {
 	// Two mints, each: ownership read, the version its claim reserved, the
 	// recording read, the recording write.
 	rows := [][]any{}
-	for range 2 {
+	for i := range 2 {
+		// Each mint reserves the next secret_version and then finds its own.
+		reserved := []any{i + 1}
 		rows = append(rows,
 			endpointRow(endpointID, ownerUserID, "", true),
-			[]any{1},
+			reserved,
 			endpointRow(endpointID, ownerUserID, "", true),
+			reserved,
 			endpointRow(endpointID, ownerUserID, "", true),
 		)
 	}
@@ -157,8 +161,7 @@ func TestASecondStepFailureAfterSealingSaysTheSecretAlreadyRotated(t *testing.T)
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
-		// The version the claim reserved, which the recording transaction
-		// then requires to still be the endpoint's own.
+		// The secret_version the claim reserved.
 		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
@@ -190,10 +193,11 @@ func TestMintingRecordsTheRotationAgainstTheEndpoint(t *testing.T) {
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
-		// The version the claim reserved, which the recording transaction
-		// then requires to still be the endpoint's own.
+		// The secret_version the claim reserved.
 		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The endpoint's live secret_version: unchanged, so the claim stands.
+		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
 

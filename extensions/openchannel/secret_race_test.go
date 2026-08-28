@@ -37,8 +37,12 @@ func TestAMintWhoseClaimWasSupersededAnswersConflict(t *testing.T) {
 	superseded[len(superseded)-1] = 9
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The secret_version this mint reserved.
 		{1},
 		superseded,
+		// What the endpoint's secret_version actually is by the time this mint
+		// records: another mint reserved after it.
+		{9},
 	}
 
 	_, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
@@ -57,8 +61,11 @@ func TestAMintWhoseClaimStandsAnswersTheSecret(t *testing.T) {
 	rt := newRuntime()
 	rt.tx.singleRows = [][]any{
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The secret_version the claim reserved.
 		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
+		// The endpoint's live secret_version: unchanged, so the claim stands.
+		{1},
 		endpointRow(endpointID, ownerUserID, "", true),
 	}
 

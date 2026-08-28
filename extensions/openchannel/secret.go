@@ -90,18 +90,22 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		if err != nil {
 			return err
 		}
-		// THE CLAIM RESERVES, it does not merely read. Taking the version as
-		// it stands would hand both of two overlapping mints the same number:
-		// each would pass its own check, one would record and return a secret,
-		// and the other would then overwrite the stored material and report a
-		// conflict — leaving the caller who was told it succeeded holding a
-		// secret the endpoint no longer verifies with. Bumping here under the
-		// row lock is what makes the two claims different, so the loser can be
-		// told it lost.
+		// THE CLAIM RESERVES, it does not merely read. Taking a number as it
+		// stands would hand both of two overlapping mints the same one: each
+		// would pass its own check, one would record and return a secret, and
+		// the other would then overwrite the stored material and report a
+		// conflict — leaving the caller that was told it succeeded holding a
+		// secret the endpoint no longer verifies with.
+		//
+		// It reserves secret_version and NOT version, because version moves on
+		// every write to this row. A mint that watched version would refuse a
+		// member who registered an address in the same moment, saying another
+		// mint had run when none had — and the screen discards the secret on
+		// that refusal, throwing away a credential that is live.
 		if err := tx.QueryRow(ctx,
-			`UPDATE `+endpointTable+` SET version = version + 1, updated_at = now()
+			`UPDATE `+endpointTable+` SET secret_version = secret_version + 1, updated_at = now()
 			 WHERE user_id = $1::uuid AND slug = $2
-			 RETURNING version`, member, inboundSlug).Scan(&claimed); err != nil {
+			 RETURNING secret_version`, member, inboundSlug).Scan(&claimed); err != nil {
 			return err
 		}
 		return nil
@@ -120,7 +124,13 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		if err != nil {
 			return err
 		}
-		if before == nil || before.Version != claimed {
+		var live int
+		if err := tx.QueryRow(ctx,
+			`SELECT secret_version FROM `+endpointTable+`
+			  WHERE user_id = $1::uuid AND slug = $2`, member, inboundSlug).Scan(&live); err != nil {
+			return err
+		}
+		if before == nil || live != claimed {
 			// Another mint sealed between this one's claim and this write.
 			// Both secrets reached the store and the later one is what the
 			// endpoint now verifies with — which may not be the one this call
