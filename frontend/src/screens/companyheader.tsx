@@ -563,7 +563,11 @@ function CompanyEditAction({
           },
           body: {
             ...mapOrgUpdate(values, rows ?? {}, org.domains),
-            ...cf.toBody(values),
+            // A DIFF, like the core half above. recordSlice is what the form
+            // prefilled from, so it is what "unchanged" is measured against —
+            // a snapshot here sends `null` for every empty custom field, which
+            // the API reads as an instruction to clear a column nobody touched.
+            ...cf.toPatch(values, cf.recordSlice(org)),
           },
         });
         if (error) {

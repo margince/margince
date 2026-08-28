@@ -137,7 +137,7 @@ func TestAttributionWithoutAPartnerIsRefused(t *testing.T) {
 	sourced := attributionSourced
 	in := UpdateDealInput{PartnerAttribution: &sourced}
 
-	err := applyPartnerAttributionPatch(t.Context(), nil, crmcontracts.Deal{}, in, p, unreachablePartnerCheck(t))
+	err := applyPartnerAttributionPatch(t.Context(), nil, crmcontracts.Deal{}, in, p, false, unreachablePartnerCheck(t))
 
 	var unpaired *PartnerAttributionUnpairedError
 	if !errors.As(err, &unpaired) {
@@ -159,7 +159,7 @@ func TestAnUnknownAttributionIsRefusedBeforeTheDatabaseSeesIt(t *testing.T) {
 	// does not depend on a transaction being present.
 	in := UpdateDealInput{PartnerAttribution: &bogus}
 
-	err := applyPartnerAttributionPatch(t.Context(), nil, dealNamingPartner(attributionSourced), in, p, unreachablePartnerCheck(t))
+	err := applyPartnerAttributionPatch(t.Context(), nil, dealNamingPartner(attributionSourced), in, p, false, unreachablePartnerCheck(t))
 
 	var invalid *PartnerAttributionValueError
 	if !errors.As(err, &invalid) {
@@ -176,7 +176,7 @@ func TestAnUnknownAttributionIsRefusedBeforeTheDatabaseSeesIt(t *testing.T) {
 func TestTouchingNeitherHalfLeavesThePairAlone(t *testing.T) {
 	p := storekit.NewPatch()
 
-	if err := applyPartnerAttributionPatch(t.Context(), nil, dealNamingPartner(attributionSourced), UpdateDealInput{}, p, unreachablePartnerCheck(t)); err != nil {
+	if err := applyPartnerAttributionPatch(t.Context(), nil, dealNamingPartner(attributionSourced), UpdateDealInput{}, p, false, unreachablePartnerCheck(t)); err != nil {
 		t.Fatalf("an update naming neither half: %v", err)
 	}
 	if len(p.After()) != 0 {
@@ -299,5 +299,101 @@ func TestAWithheldPartnerTakesItsAttributionWithIt(t *testing.T) {
 	}
 	if d.PartnerOrgId != nil {
 		t.Error("the partner link survived its own mask")
+	}
+}
+
+// The clear surface names the pair once. A deal edited back to having no
+// partner writes both columns in the same patch, because the CHECK admits no
+// row where one half survived the other.
+func TestForgettingThePartnerForgetsWhatTheyDid(t *testing.T) {
+	p := storekit.NewPatch()
+	current := dealNamingPartner(attributionSourced)
+
+	if err := applyPartnerAttributionPatch(t.Context(), nil, current, UpdateDealInput{}, p, true, unreachablePartnerCheck(t)); err != nil {
+		t.Fatalf("clearing the partner: %v", err)
+	}
+	for _, column := range []string{filterPartnerOrgID, partnerAttributionField} {
+		value, set := p.After()[column]
+		if !set {
+			t.Errorf("%s never reached the patch; the pairing CHECK rejects a row where only one half was forgotten", column)
+			continue
+		}
+		if value != nil {
+			t.Errorf("%s = %v, want nil", column, value)
+		}
+	}
+	// The audit image is the only record of what was forgotten once the write
+	// lands, so it carries what the row held rather than the nil it now holds.
+	if p.Before()[partnerAttributionField] != current.PartnerAttribution {
+		t.Errorf("before[%s] = %v, want the claim the row carried", partnerAttributionField, p.Before()[partnerAttributionField])
+	}
+}
+
+func TestForgettingThePartnerWhileNamingItsClaimIsRefused(t *testing.T) {
+	p := storekit.NewPatch()
+	sourced := attributionSourced
+	in := UpdateDealInput{PartnerAttribution: &sourced}
+
+	err := applyPartnerAttributionPatch(t.Context(), nil, dealNamingPartner(attributionInfluenced), in, p, true, unreachablePartnerCheck(t))
+
+	var unpaired *PartnerAttributionUnpairedError
+	if !errors.As(err, &unpaired) {
+		t.Fatalf("error = %v, want PartnerAttributionUnpairedError — the request forgets the partner the claim describes", err)
+	}
+	if len(p.After()) != 0 {
+		t.Errorf("patch wrote %v; a refused request must leave the pair alone", p.After())
+	}
+}
+
+// splitDealClears is what keeps the pair off the single-column path. A list that
+// still carried partner_org_id into ApplyClears would set one column and earn a
+// constraint violation from the database rather than a decision from the store.
+func TestThePairedClearLeavesTheSingleColumnPath(t *testing.T) {
+	p := storekit.NewPatch()
+	current := dealNamingPartner(attributionSourced)
+
+	rest, partner := splitDealClears(p,
+		[]string{"wait_until", filterPartnerOrgID, filterOrganizationID}, current)
+
+	if !partner {
+		t.Error("the partner clear was not recognised")
+	}
+	if len(rest) != 2 || rest[0] != "wait_until" || rest[1] != filterOrganizationID {
+		t.Errorf("rest = %v, want the two plain columns in order", rest)
+	}
+	for _, column := range []string{filterPartnerOrgID, partnerAttributionField} {
+		if _, stillGeneric := clearableDealColumns(current)[column]; stillGeneric {
+			t.Errorf("%s is in the single-column map; ApplyClears would set one half of the pair", column)
+		}
+	}
+}
+
+// Either name reaches the whole fact. The pairing CHECK admits no row where one
+// half survived, so there is no state for one name to mean on its own — and a
+// restore reverting a partner-add names both halves as null.
+func TestEitherHalfsNameForgetsTheWholePair(t *testing.T) {
+	for _, named := range []string{filterPartnerOrgID, partnerAttributionField} {
+		t.Run(named, func(t *testing.T) {
+			p := storekit.NewPatch()
+
+			if _, partner := splitDealClears(p, []string{named}, dealNamingPartner(attributionSourced)); !partner {
+				t.Fatalf("clearing %s was not recognised as forgetting the partner", named)
+			}
+			for _, column := range []string{filterPartnerOrgID, partnerAttributionField} {
+				value, set := p.After()[column]
+				if !set || value != nil {
+					t.Errorf("after[%s] = %v (set=%v), want nil", column, value, set)
+				}
+			}
+		})
+	}
+}
+
+// A deal without a company is an ordinary deal — the column is nullable and a
+// deal is created without one — so the contract's nullable organization_id must
+// actually be reachable.
+func TestADealsCompanyCanBeForgotten(t *testing.T) {
+	if _, clearable := clearableDealColumns(crmcontracts.Deal{})[filterOrganizationID]; !clearable {
+		t.Error("organization_id cannot be cleared; the edit form offers unsetting the company and would earn a 422")
 	}
 }

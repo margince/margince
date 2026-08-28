@@ -126,6 +126,7 @@ import {
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
 import { invalidateRecord } from "./recordwritekeys";
+import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
@@ -502,6 +503,9 @@ type CreateDealRequest = components["schemas"]["CreateDealRequest"];
 // keeping it inline made a component that already draws badges, an edit dialog
 // and an archive verb carry a twentieth concern.
 //
+// It is also the patch's BASELINE (mapDealUpdate), so a field this function
+// misreads becomes a field every save reports as changed.
+//
 // Every absent value becomes "" rather than a default. A currency the FORM
 // chose is a currency the SAVE writes, so seeding one made an unpriced deal
 // acquire it the moment a reader edited its name — and since amount and
@@ -583,11 +587,23 @@ function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
 }
 
 /**
- * The edit form's values as a deal patch.
+ * The edit form's values as a deal patch — a DIFF, not a snapshot.
  *
- * A blank scalar clears the field on the wire (explicit null); a set value
- * trims through. `amount` arrives in major units from the form, the wire is
- * minor units (deal creation applies the same conversion above).
+ * `seeded` is the record the form opened on (`dealEditRecord`). A key appears
+ * only where the form's value differs from it, and that is the whole point: the
+ * body used to carry every field on every save, so a deal missing a value the
+ * form does not even RENDER — `partner_attribution` on an installation with no
+ * partners — resubmitted `null` as a real instruction to clear it. The API reads
+ * an explicit null as "forget this" and refused, correctly, naming a field the
+ * person had never seen. Nothing the person did not touch travels now.
+ *
+ * A blank over a stored value is still a change, and still travels as null: the
+ * pickers offer "Unset" in words, so clearing a company or a partner is a
+ * choice somebody made rather than a gap in what the form knows.
+ *
+ * `amount` arrives in major units from the form and the wire is minor units
+ * (deal creation applies the same conversion above). The two money halves are
+ * compared as the form spells them, because that is where the person's edit is.
  *
  * `masked` names the fields THIS reader was not shown. A withheld reference
  * arrives as null with `masked_fields` naming it — deliberately, so a reader
@@ -598,28 +614,81 @@ function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
  */
 export function mapDealUpdate(
   values: Record<string, unknown>,
+  seeded: Record<string, unknown> = {},
   masked: readonly string[] = [],
 ): UpdateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
-  const amount = str(values.amount);
-  const owner = str(values.owner_id);
-  const forecast = str(values.forecast_category);
   const currency = str(values.currency);
-  const patch: UpdateDealRequest = {
-    name: str(values.name) || undefined,
-    amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
-    currency: currency || undefined,
-    organization_id: str(values.organization_id) || null,
-    owner_id: owner || null,
-    partner_org_id: str(values.partner_org_id) || null,
-    partner_attribution: partnerAttribution(str(values.partner_attribution)),
-    forecast_category: forecastCategory(forecast),
-    expected_close_date: str(values.expected_close_date) || null,
-    wait_until: str(values.wait_until) || null,
-    // Resolved by the screen before mapping: the "new project" answer has
-    // already become an id by the time the patch is built.
-    project_id: str(values.project_id) || null,
-  };
+  const amount = str(values.amount);
+  const patch: UpdateDealRequest = {};
+  // One reading of "the person moved this field", over the form's own spelling
+  // of the value rather than the wire's: a select left alone holds exactly the
+  // string it was seeded with, and the wire shape (minor units, a narrowed
+  // vocabulary) is derived from that string afterwards.
+  //
+  // The wire key and the form key are named together at every call, because the
+  // one place this can go wrong is a field compared under one name and sent
+  // under another — which sends an untouched field, or swallows a real edit.
+  const moved = (formKey: string) =>
+    str(values[formKey]) !== str(seeded[formKey]);
+  function onMove<K extends keyof UpdateDealRequest>(
+    formKey: string,
+    wireKey: K,
+    value: () => UpdateDealRequest[K],
+  ) {
+    if (moved(formKey)) {
+      patch[wireKey] = value();
+    }
+  }
+  // A required field: an emptied name is a form the person has not finished,
+  // not an instruction to erase the deal's name.
+  onMove("name", "name", () => str(values.name) || undefined);
+  // The money pair travels together whenever either half moves, because the
+  // SCALE is part of the amount: amount_minor is denominated in the currency's
+  // own minor units — a dong has none, a dinar has three — so a currency moving
+  // alone re-denominates the figure the row already holds. 10000 JPY re-saved as
+  // EUR became 10000 minor EUR, which is €100, and the fx freeze and the
+  // forecast history then recorded that as the price.
+  //
+  // The exception is a deal with no figure at all: naming a currency there is
+  // half a money value, and the server's own pair refusal says so better than an
+  // amount_minor this form would have to invent.
+  if (moved("amount") || (moved("currency") && amount)) {
+    patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
+  }
+  onMove("currency", "currency", () => currency || undefined);
+  onMove(
+    "organization_id",
+    "organization_id",
+    () => str(values.organization_id) || null,
+  );
+  onMove("owner_id", "owner_id", () => str(values.owner_id) || null);
+  onMove(
+    "partner_org_id",
+    "partner_org_id",
+    () => str(values.partner_org_id) || null,
+  );
+  // Only alongside a partner. Clearing the partner clears what they did with
+  // it — the two are one fact, stored under one CHECK — so sending the
+  // attribution's own null beside it would name a claim with nobody left to
+  // attribute it to, which the API refuses.
+  if (str(values.partner_org_id)) {
+    onMove("partner_attribution", "partner_attribution", () =>
+      partnerAttribution(str(values.partner_attribution)),
+    );
+  }
+  onMove("forecast_category", "forecast_category", () =>
+    forecastCategory(str(values.forecast_category)),
+  );
+  onMove(
+    "expected_close_date",
+    "expected_close_date",
+    () => str(values.expected_close_date) || null,
+  );
+  onMove("wait_until", "wait_until", () => str(values.wait_until) || null);
+  // Resolved by the screen before mapping: the "new project" answer has
+  // already become an id by the time the patch is built.
+  onMove("project_id", "project_id", () => str(values.project_id) || null);
   return withoutMasked(patch, masked);
 }
 
@@ -2732,6 +2801,52 @@ function editProjectFields(
   );
 }
 
+// The two people surfaces under the deal's overview.
+//
+// The seats are in the RAIL as context — who these people are. The map is in
+// the column because it is a working surface: it draws how the deal is threaded
+// and where the cover is missing, which is what a reader acts on.
+//
+// The stakeholders panel is where a seat is ADDED, changed and removed. The
+// rail's seats and the map both read the coverage view, which carries no
+// relationship id and so can carry no verb — a deal's stakeholders were
+// readable on three surfaces and writable on none of them, reachable only from
+// whichever person happened to already be linked. It is the generic
+// relationships panel under a deal scope, not a second one: create, edit and
+// remove have one implementation for every kind.
+//
+// Named rather than inlined so DealScreen's render callback stays under the
+// complexity ceiling.
+function DealPeoplePanels({
+  dealId,
+  coverage,
+  overlay,
+}: Readonly<{
+  dealId: string;
+  coverage: ReturnType<typeof useDealCoverage>;
+  overlay: boolean;
+}>) {
+  return (
+    <>
+      <div style={{ marginTop: "var(--space-4)" }}>
+        <DealCommitteeMap
+          coverage={coverage.coverage}
+          withheld={coverage.withheld}
+          pending={coverage.pending}
+          overlay={overlay}
+        />
+      </div>
+      {/* Out in overlay mode, where the deal is a mirror with no native row for
+          a relationship to point at. */}
+      {!overlay && (
+        <div style={{ marginTop: "var(--space-4)" }}>
+          <RelationshipsTab scope={{ deal_id: dealId }} />
+        </div>
+      )}
+    </>
+  );
+}
+
 // This deal's VERBS — split out of DealScreen's render so the record-view
 // callback stays readably small. An archived deal is read-only (no
 // edit/archive/advance path exists server-side for a non-live row), so its
@@ -2808,6 +2923,11 @@ function DealActions({
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
     : undefined;
+  // What the form OPENS on, named once because two things need the same answer:
+  // the form seeds its controls from it, and the patch is a diff against it.
+  // Two spellings of "the record as the form read it" would drift, and the one
+  // that drifts decides whether an untouched field is sent as a change.
+  const seeded = { ...dealEditRecord(deal), ...cf.recordSlice(deal) };
   return (
     <>
       <EditAction<Deal>
@@ -2837,7 +2957,7 @@ function DealActions({
           }),
           ...cf.formFields,
         ]}
-        record={{ ...dealEditRecord(deal), ...cf.recordSlice(deal) }}
+        record={seeded}
         update={async (values) => {
           // The company the form SUBMITS, not the one the deal had: a
           // project started here belongs to the company the save names.
@@ -2855,9 +2975,14 @@ function DealActions({
             body: {
               ...mapDealUpdate(
                 { ...values, project_id: projectId ?? "" },
+                seeded,
                 masked,
               ),
-              ...cf.toBody(values),
+              // The other half of the same body, diffed the same way and
+              // against the same baseline. A snapshot here reproduced the
+              // reported defect exactly: `cf_*` columns are clearable through
+              // no path, so one empty custom field refused every save.
+              ...cf.toPatch(values, seeded),
             },
           });
           if (error) {
@@ -3637,19 +3762,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   }}
                 />
               )}
-              {/* The seats are in the rail as CONTEXT — who these people are.
-                  The map is in the column because it is a working surface: it
-                  draws how the deal is threaded and where the cover is
-                  missing, which is what a reader acts on. */}
               {tab === "overview" && (
-                <div style={{ marginTop: "var(--space-4)" }}>
-                  <DealCommitteeMap
-                    coverage={coverageRead.coverage}
-                    withheld={coverageRead.withheld}
-                    pending={coverageRead.pending}
-                    overlay={overlay}
-                  />
-                </div>
+                <DealPeoplePanels
+                  dealId={deal.id}
+                  coverage={coverageRead}
+                  overlay={overlay}
+                />
               )}
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}

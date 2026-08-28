@@ -96,7 +96,17 @@ func moved[T comparable](current, supplied *T) bool {
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
-	if err := storekit.ApplyClears(p, in.Clear, clearableDealColumns(current)); err != nil {
+	// FORGETTING a link is a write about the record it points at, so it needs
+	// the same permission naming that record would — the same rule the
+	// re-attribution branch below already states, and the reason it cannot wait
+	// until after the patch is built.
+	if err := ensureClearedLinksVisible(ctx, tx, current, in.Clear); err != nil {
+		return nil, err
+	}
+	// A paired clear leaves the generic path because it writes two columns, not
+	// one (dealClearPairs); everything else in the list is a plain column.
+	clears, clearPartner := splitDealClears(p, in.Clear, current)
+	if err := storekit.ApplyClears(p, clears, clearableDealColumns(current)); err != nil {
 		return nil, err
 	}
 	if in.Name != nil {
@@ -113,7 +123,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if moved(current.Currency, in.Currency) {
 		p.Set(currencyField, current.Currency, *in.Currency)
 	}
-	if err := applyDealLinkPatches(ctx, tx, current, in, p,
+	if err := applyDealLinkPatches(ctx, tx, current, in, p, clearPartner,
 		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
 		return nil, err
 	}
@@ -159,7 +169,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 // is what stands in for it. A visibility-only gate here would let any seat
 // attach any project in the workspace and then force it into `delivering`.
 func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
-	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
+	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
 	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
 ) error {
 	if in.OrganizationID != nil {
@@ -177,7 +187,7 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		}
 		p.Set("project_id", current.ProjectId, *in.ProjectID)
 	}
-	return applyPartnerAttributionPatch(ctx, tx, current, in, p, ensurePartner)
+	return applyPartnerAttributionPatch(ctx, tx, current, in, p, clearPartner, ensurePartner)
 }
 
 // applyPartnerAttributionPatch writes the partner link and what that partner
@@ -192,9 +202,20 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 // worse than saying no. Re-attributing a deal that already names a partner
 // leaves the link alone and moves only the claim.
 func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
-	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
+	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
 	ensurePartner EnsurePartner,
 ) error {
+	if clearPartner {
+		// A request that forgets the partner while naming what they did has
+		// nobody left to attribute it to, which is the refusal an attribution
+		// standing alone already earns.
+		if in.PartnerAttribution != nil {
+			return &PartnerAttributionUnpairedError{}
+		}
+		p.Set("partner_org_id", current.PartnerOrgId, nil)
+		p.Set("partner_attribution", current.PartnerAttribution, nil)
+		return nil
+	}
 	if in.PartnerAttribution != nil {
 		if err := validPartnerAttribution(*in.PartnerAttribution); err != nil {
 			return err

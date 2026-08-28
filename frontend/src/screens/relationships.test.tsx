@@ -18,6 +18,7 @@ type Relationship = components["schemas"]["Relationship"];
 
 const personScope: RelationshipScope = { person_id: "p-1" };
 const orgScope: RelationshipScope = { organization_id: "o-1" };
+const dealScope: RelationshipScope = { deal_id: "d-1" };
 
 function baseRel(over: Partial<Relationship>): Relationship {
   return {
@@ -38,6 +39,15 @@ describe("edgeOptions — creatable kinds per scope", () => {
     expect(edgeOptions(personScope)).toEqual([
       { kind: "employment", entity: "organization", field: "organization_id" },
       { kind: "deal_stakeholder", entity: "deal", field: "deal_id" },
+    ]);
+  });
+
+  // A deal had no scope of its own, so a stakeholder was creatable only from
+  // the PERSON's side: adding a champion meant knowing which contact to open
+  // first, and a deal nobody had linked from a contact page had no way in.
+  it("a deal anchors its stakeholders and nothing else", () => {
+    expect(edgeOptions(dealScope)).toEqual([
+      { kind: "deal_stakeholder", entity: "person", field: "person_id" },
     ]);
   });
 
@@ -86,6 +96,25 @@ describe("counterpartyRef — the other end of an existing edge, typed for Entit
       kind: "deal",
       id: "d-1",
     });
+  });
+
+  // From the deal, the far end is the PERSON — the deal is the anchor, not the
+  // counterparty, so returning the deal here would point every row at the page
+  // the reader is already on.
+  it("a stakeholder edge resolves to the person when the deal is the scope", () => {
+    const rel = baseRel({
+      kind: "deal_stakeholder",
+      deal_id: "d-1",
+      person_id: "p-1",
+    });
+    expect(counterpartyRef(rel, dealScope)).toEqual({
+      kind: "person",
+      id: "p-1",
+    });
+  });
+
+  it("names no far end for a deal edge that carries no person", () => {
+    expect(counterpartyRef(baseRel({ deal_id: "d-1" }), dealScope)).toBeNull();
   });
 
   it("an org↔org edge resolves to the counterparty org from the anchor side", () => {

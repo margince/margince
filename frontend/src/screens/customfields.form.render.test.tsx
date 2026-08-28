@@ -14,6 +14,7 @@ import type { CreateField } from "./create";
 import {
   type CustomField,
   customFieldsToBody,
+  customFieldsToPatch,
   customFieldToFormField,
 } from "./customfields.form";
 import { EditAction } from "./edit";
@@ -107,6 +108,48 @@ describe("custom fields on the record edit form", () => {
     const submitted = update.mock.calls[0][0];
     expect(customFieldsToBody(submitted, [ceilingCf])).toEqual({
       cf_budget_ceiling: 2000,
+    });
+  });
+
+  // The reported defect, in the half of the body the core diff does not reach:
+  // an empty custom field coerces to null, the API reads a top-level null as
+  // "forget this column", and no cf_* column is clearable — so one empty field
+  // refused every save of the record, naming a field nobody had touched.
+  it("says nothing about an empty custom field the person never touched", async () => {
+    const update = vi.fn(async (_values: Record<string, unknown>) => ({
+      id: "d1",
+    }));
+    const seeded = { id: "d1", version: 2, name: "Globex" };
+    render(
+      <EditAction
+        label="Edit"
+        fields={[
+          coreField,
+          divider,
+          customFieldToFormField(ceilingCf, { yes: "Yes", no: "No" }),
+        ]}
+        // The deal carries no value for the field, which is the ordinary state
+        // of a field somebody added to the workspace last week.
+        record={seeded}
+        update={update}
+        invalidate="deals"
+        recordKey="deal"
+        savedMessage="Saved."
+      />,
+    );
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const name = screen.getByLabelText(/Deal name/) as HTMLInputElement;
+    await userEvent.clear(name);
+    await userEvent.type(name, "Globex Renewal");
+    await userEvent.click(screen.getByText("Save"));
+
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    const submitted = update.mock.calls[0][0];
+    expect(customFieldsToPatch(submitted, seeded, [ceilingCf])).toEqual({});
+    // What the snapshot would have sent, and why it earned a 422: the same
+    // save, one function apart.
+    expect(customFieldsToBody(submitted, [ceilingCf])).toEqual({
+      cf_budget_ceiling: null,
     });
   });
 

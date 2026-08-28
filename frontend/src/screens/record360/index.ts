@@ -17,7 +17,12 @@ export {
   WrittenBy,
   type WrittenByWriter,
 } from "./citations";
-export { dealRoleLabel, signalKindLabel, signalTone } from "./labels";
+export {
+  dealRoleLabel,
+  projectRoleLabel,
+  signalKindLabel,
+  signalTone,
+} from "./labels";
 export {
   incompleteGraph,
   OverlayFallback,

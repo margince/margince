@@ -24,7 +24,11 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
-import { dealRoleLabel } from "./record360";
+import {
+  AddProjectStakeholder,
+  RemoveProjectStakeholder,
+} from "./projectstakeholders";
+import { projectRoleLabel } from "./record360";
 
 // The project page's sections, each drawn from ONE composite read
 // (GET /projects/{id}/360). Every card below answers the same three questions
@@ -96,26 +100,6 @@ export function stateOf(
     return present ? (count === 0 ? "empty" : "ready") : "unavailable";
   }
   return sectionState(view, section, present, count);
-}
-
-// The delivery roles a project adds to the deal-stakeholder vocabulary. The
-// five deal roles fall through to the company page's own labels, so one word
-// names a champion on a deal and on the project it became.
-const PROJECT_ROLE_LABELS: Record<string, MessageKey> = {
-  sponsor: "project.role.sponsor",
-  project_lead: "project.role.project_lead",
-  delivery_lead: "project.role.delivery_lead",
-  subject_matter_expert: "project.role.subject_matter_expert",
-};
-
-export function projectRoleLabel(
-  role: string,
-  t: (key: MessageKey) => string,
-): string {
-  const key = Object.hasOwn(PROJECT_ROLE_LABELS, role)
-    ? PROJECT_ROLE_LABELS[role]
-    : undefined;
-  return key ? t(key) : dealRoleLabel(role, t);
 }
 
 function phaseWord(phase: string, t: (key: MessageKey) => string): string {
@@ -245,10 +229,27 @@ function ProjectDealRow({
   );
 }
 
-/** The people seated on the project, each with the seat they hold. */
+/**
+ * The people seated on the project, each with the seat they hold — and the
+ * verbs that put them there.
+ *
+ * The verbs ride `titleAction`, which `SectionPanel` draws only on a section
+ * that is ready or empty. That is deliberate rather than incidental: a reader
+ * whose grant withheld the seats is told so, and offering them an Add button
+ * over a list they were not allowed to read would invite a write against
+ * records they cannot see.
+ */
 export function StakeholdersCard({
   view,
-}: Readonly<{ view: Project360 | undefined }>) {
+  projectId,
+  readOnly,
+}: Readonly<{
+  view: Project360 | undefined;
+  projectId: string;
+  // An archived project is read-only: the endpoints refuse a write against a
+  // non-live row, so a verb here could only ever fail.
+  readOnly?: boolean;
+}>) {
   const t = useT();
   const seats = view?.stakeholders?.data ?? [];
   const state = stateOf(
@@ -257,29 +258,47 @@ export function StakeholdersCard({
     Boolean(view?.stakeholders),
     seats.length,
   );
+  const writable = !readOnly && (state === "ready" || state === "empty");
   return (
     <SectionPanel
       title={t("project.stakeholders.title")}
       state={state}
       emptyLabel={t("project.stakeholders.empty")}
+      titleAction={
+        writable ? <AddProjectStakeholder projectId={projectId} /> : undefined
+      }
     >
       {seats.map((seat) => (
-        <StakeholderRow key={seat.relationship_id} seat={seat} />
+        <StakeholderRow
+          key={seat.relationship_id}
+          seat={seat}
+          projectId={projectId}
+          writable={writable}
+        />
       ))}
     </SectionPanel>
   );
 }
 
-function StakeholderRow({ seat }: Readonly<{ seat: Stakeholder }>) {
+function StakeholderRow({
+  seat,
+  projectId,
+  writable,
+}: Readonly<{ seat: Stakeholder; projectId: string; writable: boolean }>) {
   const t = useT();
   return (
     <PanelRow className="project-row">
       <EntityRef kind="person" id={seat.person_id} name={seat.person_name} />
-      {seat.role && (
-        <span className="project-row-meta">
-          <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>
-        </span>
-      )}
+      <span className="project-row-meta">
+        {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
+        {writable && (
+          <RemoveProjectStakeholder
+            projectId={projectId}
+            personId={seat.person_id}
+            personName={seat.person_name}
+          />
+        )}
+      </span>
     </PanelRow>
   );
 }

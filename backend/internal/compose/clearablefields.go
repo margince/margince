@@ -24,6 +24,10 @@ package compose
 //     semantics rather than to the reversal path.
 //   - a deal's amount_minor and currency are absent because money is read as one
 //     field, and a half-cleared pair states an amount in no currency.
+//   - a deal's partner_org_id and partner_attribution are BOTH present and mean
+//     one instruction. deal_partner_attribution_pairing admits no row where one
+//     half survived the other, so forgetting either forgets both, and a reversal
+//     of a partner-add names both halves as null.
 //   - a lead's status and score override are absent because they are lifecycle
 //     positions and a sticky decision, not values.
 //   - a person's full_name and an organization's display_name are absent because
@@ -37,7 +41,10 @@ var clearableFields = map[string][]string{
 		"linkedin_url", "owner_id", "parent_org_id",
 	},
 	"lead": {"title", "company_name", "candidate_org_key", "project_id", "owner_id"},
-	"deal": {"expected_close_date", "forecast_category", "wait_until", "owner_id", "project_id"},
+	"deal": {
+		"expected_close_date", "forecast_category", "wait_until", "owner_id",
+		"organization_id", "project_id", "partner_org_id", "partner_attribution",
+	},
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",
 	},

@@ -148,7 +148,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             companies={project.organizations}
             readOnly={Boolean(project.archived_at)}
           />
-          <StakeholdersCard view={view} />
+          <StakeholdersCard
+            view={view}
+            projectId={project.id}
+            readOnly={Boolean(project.archived_at)}
+          />
           <ProjectContractsCard view={view} />
           <ProjectDocumentsCard view={view} />
           <PhaseHistoryCard view={view} />

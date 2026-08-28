@@ -124,6 +124,46 @@ export function customFieldsToBody(
   return body;
 }
 
+/**
+ * The write-body slice as a DIFF against the record the form opened on.
+ *
+ * `customFieldsToBody` is the right shape for a CREATE, where every field is
+ * being stated for the first time. On an UPDATE it is not: an empty field
+ * coerces to `null`, the API reads a top-level null as *forget this column*
+ * (httperr.ClearedFields), and no `cf_*` column is clearable — so a full
+ * snapshot refused every save of any record with an empty custom field, naming
+ * a field the person had not touched. That is the same defect the core fields
+ * had, in the other half of the same body.
+ *
+ * Compared on the FORM's own strings, the way the core diff is: a control left
+ * alone holds exactly what it was seeded with, and the stored shape (minor
+ * units, a boolean, a trimmed string) is derived from that string afterwards.
+ *
+ * A blank over a stored value is still a change and still travels as null. The
+ * API refuses that today — no catalog column is clearable — which is a real gap
+ * and a different one: it is about what the custom-field contract can express,
+ * not about a form sending fields nobody edited.
+ */
+export function customFieldsToPatch(
+  values: Record<string, unknown>,
+  seeded: Record<string, unknown>,
+  fields: CustomField[],
+): Record<string, unknown> {
+  const spelled = (source: Record<string, unknown>, key: string) => {
+    const raw = source[key];
+    return raw == null ? "" : String(raw).trim();
+  };
+  const body: Record<string, unknown> = {};
+  for (const field of fields) {
+    const column = field.column_name;
+    if (spelled(values, column) === spelled(seeded, column)) {
+      continue;
+    }
+    body[column] = coerceWrite(field, spelled(values, column));
+  }
+  return body;
+}
+
 // One field's display string for the read-only 360, or null when the record
 // carries no value (evidence-or-omit: an empty field is absent, never guessed).
 export function customFieldDisplay(
@@ -184,6 +224,13 @@ export type ObjectCustomFields = {
   formFields: CreateField[];
   recordSlice: (record: Record<string, unknown>) => Record<string, unknown>;
   toBody: (values: Record<string, unknown>) => Record<string, unknown>;
+  // The same slice as a diff, for an EDIT. `seeded` is the record the form
+  // opened on — `recordSlice`'s own output, which is what the form prefilled
+  // from, so the two cannot disagree about what "unchanged" means.
+  toPatch: (
+    values: Record<string, unknown>,
+    seeded: Record<string, unknown>,
+  ) => Record<string, unknown>;
 };
 
 const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
@@ -231,5 +278,6 @@ export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
     formFields,
     recordSlice: (record) => customFieldsRecordSlice(record, fields),
     toBody: (values) => customFieldsToBody(values, fields),
+    toPatch: (values, seeded) => customFieldsToPatch(values, seeded, fields),
   };
 }

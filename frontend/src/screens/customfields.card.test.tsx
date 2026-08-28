@@ -19,6 +19,7 @@ vi.mock("./customfields.form", async (importOriginal) => {
       formFields: [],
       recordSlice: () => ({}),
       toBody: () => ({}),
+      toPatch: () => ({}),
     }),
   };
 });

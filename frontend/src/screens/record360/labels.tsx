@@ -89,3 +89,31 @@ export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
     : undefined;
   return key ? t(key) : role.replace(/_/g, " ");
 }
+
+// The delivery roles a project adds to the deal-stakeholder vocabulary. The
+// five deal roles fall through to their own labels below, so one word names a
+// champion on a deal and on the project it became.
+const PROJECT_ROLE_LABELS: Record<string, MessageKey> = {
+  sponsor: "project.role.sponsor",
+  project_lead: "project.role.project_lead",
+  delivery_lead: "project.role.delivery_lead",
+  subject_matter_expert: "project.role.subject_matter_expert",
+};
+
+/**
+ * projectRoleLabel names a stakeholder's seat on a project.
+ *
+ * Beside dealRoleLabel because it IS dealRoleLabel plus four words: the project
+ * vocabulary is the deal one with the delivery roles added, and the card that
+ * draws a seat and the dialog that offers one must not each keep their own copy
+ * of that list.
+ */
+export function projectRoleLabel(
+  role: string,
+  t: (key: MessageKey) => string,
+): string {
+  const key = Object.hasOwn(PROJECT_ROLE_LABELS, role)
+    ? PROJECT_ROLE_LABELS[role]
+    : undefined;
+  return key ? t(key) : dealRoleLabel(role, t);
+}

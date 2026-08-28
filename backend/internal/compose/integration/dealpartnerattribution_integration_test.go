@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -142,5 +143,176 @@ func TestDeletingAPartnerOrganizationDetachesItsDealsIntact(t *testing.T) {
 	if got.PartnerOrgId != nil || got.PartnerAttribution != nil {
 		t.Errorf("deal kept partner %v / attribution %v after its partner was deleted; both halves leave together",
 			got.PartnerOrgId, got.PartnerAttribution)
+	}
+}
+
+// The clear surface names the pair ONCE, as `partner_org_id`, and forgetting the
+// partner forgets what they did. Routed through the single-column clear path
+// instead, this write would set one half and earn the constraint violation the
+// test above proves is really there.
+func TestForgettingADealsPartnerForgetsItsClaimToo(t *testing.T) {
+	e := Setup(t)
+	deal, _ := seedDealWithPartner(t, e)
+
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		Clear: []string{"partner_org_id"},
+	}); err != nil {
+		t.Fatalf("clearing the deal's partner: %v", err)
+	}
+
+	got, err := e.Deals.GetDeal(e.Admin(), deal, 0)
+	if err != nil {
+		t.Fatalf("reading the deal back: %v", err)
+	}
+	if got.PartnerOrgId != nil || got.PartnerAttribution != nil {
+		t.Errorf("deal kept partner %v / attribution %v; both halves leave together",
+			got.PartnerOrgId, got.PartnerAttribution)
+	}
+}
+
+func TestForgettingThePartnerWhileClaimingSomethingOfThemIsRefused(t *testing.T) {
+	e := Setup(t)
+	deal, _ := seedDealWithPartner(t, e)
+	influenced := "influenced"
+
+	_, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		Clear:              []string{"partner_org_id"},
+		PartnerAttribution: &influenced,
+	})
+
+	var unpaired *deals.PartnerAttributionUnpairedError
+	if !errors.As(err, &unpaired) {
+		t.Fatalf("error = %v, want PartnerAttributionUnpairedError — the request forgets the partner the claim describes", err)
+	}
+}
+
+// Naming the claim forgets the whole pair, because there is no state where a
+// deal carries a partner it claims nothing about. A restore reverting a
+// partner-add names both halves as null, and refusing either would leave that
+// reversal impossible to express.
+func TestNamingTheClaimForgetsTheWholePair(t *testing.T) {
+	e := Setup(t)
+	deal, _ := seedDealWithPartner(t, e)
+
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		Clear: []string{"partner_attribution"},
+	}); err != nil {
+		t.Fatalf("clearing the deal's claim about its partner: %v", err)
+	}
+
+	got, err := e.Deals.GetDeal(e.Admin(), deal, 0)
+	if err != nil {
+		t.Fatalf("reading the deal back: %v", err)
+	}
+	if got.PartnerOrgId != nil || got.PartnerAttribution != nil {
+		t.Errorf("deal kept partner %v / attribution %v; both halves leave together",
+			got.PartnerOrgId, got.PartnerAttribution)
+	}
+}
+
+// Forgetting a link is a write ABOUT the record it points at, so it carries the
+// permission naming that record would. Without this a rep who was not shown the
+// deal's partner — masked_fields says so — could still destroy the attribution a
+// commission accrues on.
+func TestForgettingAPartnerTheReaderCannotSeeIsRefused(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	partnerOrg := e.SeedPartnerOrg(t, "Northgate Partners", nil, &e.Rep3)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))
+	partnerID := orgIDOf(partnerOrg)
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		PartnerOrganizationID: &partnerID,
+	}); err != nil {
+		t.Fatalf("linking the deal to its partner: %v", err)
+	}
+	e.MakeCapturePrivate(t, "organization", partnerOrg, e.Rep3)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+
+	_, err := e.Deals.UpdateDeal(rep, deal, deals.UpdateDealInput{
+		Clear: []string{"partner_org_id"},
+	})
+
+	if err == nil {
+		t.Fatal("a reader who cannot open the partner cleared it; that is a write about an organization they may not name")
+	}
+	// Not-found rather than forbidden: existence stays hidden, which is what
+	// EnsureLinkTarget answers on the set path too.
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("error = %v, want ErrNotFound", err)
+	}
+	// Read off the ROW, not through the store: the same masking that withholds
+	// this partner from the rep withholds it from any reader whose scope cannot
+	// reach the capture-private organization, so a store read here cannot tell a
+	// surviving link from a cleared one.
+	partner, claim := partnerPairOnTheRow(t, e, deal)
+	if partner == nil || claim == nil {
+		t.Errorf("refused clear still moved the pair: partner %v / attribution %v", partner, claim)
+	}
+}
+
+// partnerPairOnTheRow reads both halves straight off the deal row.
+func partnerPairOnTheRow(t *testing.T, e *Env, deal ids.DealID) (partner, claim *string) {
+	t.Helper()
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT partner_org_id::text, partner_attribution FROM deal WHERE id = $1`,
+			deal).Scan(&partner, &claim)
+	}); err != nil {
+		t.Fatalf("reading the deal's partner pair off the row: %v", err)
+	}
+	return partner, claim
+}
+
+// The company arm of the same rule.
+func TestForgettingACompanyTheReaderCannotSeeIsRefused(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	org := e.SeedOrg(t, "Meridian Labs", &e.Rep3)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep1))
+	orgID := orgIDOf(org)
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		OrganizationID: &orgID,
+	}); err != nil {
+		t.Fatalf("linking the deal to its company: %v", err)
+	}
+	e.MakeCapturePrivate(t, "organization", org, e.Rep3)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+
+	_, err := e.Deals.UpdateDeal(rep, deal, deals.UpdateDealInput{
+		Clear: []string{"organization_id"},
+	})
+
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("error = %v, want ErrNotFound — the company is one this reader was never shown", err)
+	}
+}
+
+// A deal without a company is an ordinary deal — the column is nullable and a
+// deal is created without one — so the nullability crm.yaml declares has to be
+// reachable. It was not: the edit form offers unsetting the company, and the
+// store refused the null it sent.
+func TestADealCanBeUnlinkedFromItsCompany(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Kestrel renewal", pipeline, open, &e.Rep1))
+	org := orgIDOf(e.SeedOrg(t, "Kestrel Foods", nil))
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		OrganizationID: &org,
+	}); err != nil {
+		t.Fatalf("linking the deal to its company: %v", err)
+	}
+
+	if _, err := e.Deals.UpdateDeal(e.Admin(), deal, deals.UpdateDealInput{
+		Clear: []string{"organization_id"},
+	}); err != nil {
+		t.Fatalf("unlinking the deal from its company: %v", err)
+	}
+
+	got, err := e.Deals.GetDeal(e.Admin(), deal, 0)
+	if err != nil {
+		t.Fatalf("reading the deal back: %v", err)
+	}
+	if got.OrganizationId != nil {
+		t.Errorf("organization_id = %v, want nil", got.OrganizationId)
 	}
 }

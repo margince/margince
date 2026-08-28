@@ -535,6 +535,10 @@ export const vi = {
   "partner.stage.noFit": "Không phù hợp",
 
   "rel.add": "Thêm quan hệ",
+  "rel.addStakeholder": "Thêm người liên quan",
+  "rel.dealStakeholders": "Người liên quan",
+  "rel.dealStakeholdersEmpty":
+    "Chưa ghi nhận người liên quan nào cho giao dịch này",
   "rel.kind": "Loại",
   "rel.saveDone": "Đã lưu mối quan hệ",
   "rel.role": "Vai trò",
@@ -6837,6 +6841,14 @@ export const vi = {
   "project.stakeholders.title": "Các bên liên quan",
   "project.stakeholders.empty":
     "Chưa ai có vai trò trong dự án này. Bên liên quan là người giữ một vai trò ở đây — nhà tài trợ, trưởng dự án, người ủng hộ.",
+  "project.stakeholders.add": "Thêm bên liên quan",
+  "project.stakeholders.addHint":
+    "Mỗi người một vai trò. Chọn lại người đã có trong dự án sẽ đổi họ sang vai trò bạn chọn ở đây.",
+  "project.stakeholders.searchLabel": "Tìm người theo tên",
+  "project.stakeholders.removeTitle": "Đưa người này ra khỏi dự án?",
+  "project.stakeholders.removeConfirm":
+    "{name} sẽ không còn là bên liên quan của dự án này. Hoạt động đã ghi nhận vẫn giữ nguyên.",
+  "project.stakeholders.removeOne": "Đưa {name} ra khỏi dự án",
   "project.role.sponsor": "Nhà tài trợ",
   "project.role.project_lead": "Trưởng dự án",
   "project.role.delivery_lead": "Trưởng triển khai",
