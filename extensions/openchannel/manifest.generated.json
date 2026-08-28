@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "name": "openchannel",
+  "version": "1.0.0",
+  "risk_tiers": [],
+  "secrets": [
+    {
+      "key": "inbound",
+      "scope": "user"
+    }
+  ]
+}
