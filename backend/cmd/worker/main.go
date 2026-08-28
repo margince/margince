@@ -91,6 +91,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := compose.AssertInstallationRelease(ctx, pool, logger, buildinfo.ReleaseVersion); err != nil {
 		return err
 	}
+	// And again on a tick, because the boot check answers once.
+	ctx, stopForReleaseSkew, releaseSkewErr := watchReleaseSkew(ctx, pool, logger)
+	defer stopForReleaseSkew()
 
 	// Before this role does any work, so an operator mistake never leaves a
 	// worker running on a license the api refuses to boot on. The RUNNING
@@ -204,7 +207,22 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer started.draining()
 
 	relayUntilSignal(ctx, cfg, pool, rdb, logger, stdout)
-	return nil
+	return releaseSkewRefusal(releaseSkewErr)
+}
+
+// releaseSkewRefusal is why the relay returned: a signal, or the release guard.
+//
+// The relay wakes on either, and only one of them is a fault. A signal leaves
+// the channel empty and the role exits zero; a confirmed release change answers
+// the refusal, so the process exits non-zero into the crash loop the boot guard
+// already produces.
+func releaseSkewRefusal(refused <-chan error) error {
+	select {
+	case err := <-refused:
+		return err
+	default:
+		return nil
+	}
 }
 
 // registerComposedExtensions registers the composed extension set before
@@ -331,4 +349,46 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, deployCfg deployconfig.Config, posture runtimeenv.Environment) error {
 	_, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, posture, config.FromOS)
 	return err
+}
+
+// watchReleaseSkew starts the periodic half of the release guard and hands run
+// what it needs to act on it: a context the watcher can put the role down
+// through, the cancel to release on the ordinary path, and the channel the exit
+// reads.
+//
+// The boot check answers once. Roll only the api and this role keeps the relay,
+// the retention evaluator and the agent runner pointed at a schema and an event
+// contract that are not its own, with nothing logged and nothing crash-looping
+// — the state the guard exists to prevent, reached by a partial deploy rather
+// than a torn pull.
+//
+// The cancel is what turns the watcher's answer into an exit: the lanes and the
+// relay all run on the context returned here, so cancelling it puts the role
+// down the way a signal does, and run returns the refusal afterwards so the
+// process exits NON-ZERO into the crash loop the boot guard already produces.
+//
+// The refusal travels by CHANNEL rather than by a variable the goroutine
+// writes: the send happens before the cancel that lets the relay return, so
+// run's read is ordered after it by the channel rather than by an argument
+// about when the relay wakes.
+//
+// See compose/releasewatch.go for why a single differing read is not enough and
+// why a read failure is not a difference.
+func watchReleaseSkew(
+	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger,
+) (context.Context, context.CancelFunc, <-chan error) {
+	ctx, stop := context.WithCancel(ctx)
+	skew := compose.WatchInstallationRelease(
+		ctx, pool, logger, buildinfo.ReleaseVersion, compose.ReleaseRecheckInterval)
+	refused := make(chan error, 1)
+	go func() {
+		err, stopping := <-skew
+		if !stopping || err == nil {
+			return
+		}
+		refused <- err
+		logger.Error("release guard: stopping this role", "err", err)
+		stop()
+	}()
+	return ctx, stop, refused
 }
