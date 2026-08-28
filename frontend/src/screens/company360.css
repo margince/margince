@@ -149,7 +149,9 @@
 .co-row-main {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1); /* matches .co-row-meta below, which the same row aligns to */
+  gap: var(
+    --space-1
+  ); /* matches .co-row-meta below, which the same row aligns to */
 }
 
 .co-row-meta {
