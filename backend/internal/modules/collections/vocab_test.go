@@ -300,6 +300,27 @@ func TestTheRelationshipLeafExcludesWithdrawnRows(t *testing.T) {
 	}
 }
 
+// An account's domain is multi-valued and a removed one is a fact it no longer
+// carries — the relationship leaf's rule, owed by every leaf that reaches a
+// child table.
+func TestTheDomainLeafExcludesRemovedRows(t *testing.T) {
+	field, ok := segmentEngines["organization"].Fields[domainFilterField]
+	if !ok {
+		t.Fatal("organizations cannot be filtered by domain")
+	}
+	if !strings.Contains(field.Link, "od.archived_at IS NULL") {
+		t.Errorf("the domain leaf keeps selecting on removed domains: %q", field.Link)
+	}
+	if !strings.Contains(field.Link, "od.organization_id = t.id") {
+		t.Errorf("the domain leaf does not correlate to the account: %q", field.Link)
+	}
+	// Text, not a picklist: there is no enum of domains to compare against, and
+	// a picklist leaf with no Options would refuse every value a caller sent.
+	if field.Type != storekit.FieldText {
+		t.Errorf("the domain leaf is typed %v, want text", field.Type)
+	}
+}
+
 // A project is a taggable record (taggable's own CHECK admits it) and its
 // list membership must offer the same filter every other taggable type does.
 func TestProjectIsFilterableByTag(t *testing.T) {

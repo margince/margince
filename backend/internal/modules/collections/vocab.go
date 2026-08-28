@@ -95,6 +95,10 @@ func tagLinkFor(entity string) storekit.Field {
 // dial — as distinct from ownerTeamField below, the leaf it names.
 const ownerTeamIDField = "owner_team_id"
 
+// domainFilterField is the vocabulary's name for the account's web domain, as
+// distinct from domainField below, the leaf it names.
+const domainFilterField = "domain"
+
 // ownerTeamField selects the records owned by any member of one team: the same
 // rows the `owner_team_id` list parameter answers, reached the way a link leaf
 // can express.
@@ -147,6 +151,30 @@ var relationshipTypeField = storekit.Field{
 	Options: relationshipTypeValues,
 	Link: "EXISTS (SELECT 1 FROM organization_relationship_type rt" +
 		" WHERE rt.organization_id = t.id AND rt.archived_at IS NULL AND %s)",
+}
+
+// domainField is the account's web domain, which is MULTI-VALUED for the same
+// reason its relationship is: a company acquires, rebrands and runs product
+// sites, so an account can carry several and the fact lives in its own table.
+// The leaf selects accounts that hold AT LEAST this one, and says nothing about
+// which is primary — "the account whose domain is acme.com" is the question a
+// segment asks, and a primary-only leaf would answer it wrongly for exactly the
+// accounts that have more than one.
+//
+// Archived rows are excluded inside the wrapper, on the relationship leaf's
+// reasoning: a withdrawn domain is one the account no longer has, and a segment
+// naming it would otherwise keep selecting on a fact somebody deliberately
+// removed.
+//
+// FieldText rather than a picklist: a domain is free text with no enum to
+// compare against, and the column is stored lower-cased (org_domain_norm), so a
+// caller's value matches the stored form only when they spell it the same way.
+// That is the same contract every other text leaf here offers.
+var domainField = storekit.Field{
+	Expr: "od.domain",
+	Type: storekit.FieldText,
+	Link: "EXISTS (SELECT 1 FROM organization_domain od" +
+		" WHERE od.organization_id = t.id AND od.archived_at IS NULL AND %s)",
 }
 
 // customerLink is the EXISTS template a deal's filter reaches its customer
@@ -261,6 +289,7 @@ var segmentEngines = map[string]storekit.Query{
 			// below, so no surface OFFERS it for a new clause.
 			"classification":    {Expr: "t.classification", Type: storekit.FieldPicklist},
 			"relationship_type": relationshipTypeField,
+			domainFilterField:   domainField,
 			tagFilterField:      tagLinkFor("organization"),
 		},
 	},
