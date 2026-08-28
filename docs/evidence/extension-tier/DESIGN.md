@@ -486,8 +486,8 @@ mutation-verified; and a tree-wide trap was recorded on the way — an owner con
 > which mints it against a throwaway database. Everything below that reads as a runtime property of
 > ownership is gate-time only. Consequences, stated plainly rather than left to be inferred:
 > altering another unit's table does **not** fail in Postgres; `DROP OWNED BY` has nothing to bite, so
-> §2.2's non-purge is structural and not an omission; and the runtime unit wall is FORCE RLS plus the
-> tenant GUC, nothing else. **Issue #628** tracks minting the role, and it is the single change that
+> §2.2's non-purge is structural and not an omission; and at runtime there is no unit wall at all
+> beyond the shared role's grants. **Issue #628** tracks minting the role, and it is the single change that
 > would turn any of this from convention into enforcement.
 >
 > The gap was found twice independently. Codex's whole-branch review found the shipped reference
