@@ -190,10 +190,13 @@ func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limi
 			continue
 		}
 		due := *row.DueAt
+		linkType, linkID := primaryLink(row)
 		open = append(open, attention.Task{
-			ID:      ids.UUID(row.Id),
-			Subject: subjectOfActivity(row),
-			DueAt:   &due,
+			ID:       ids.UUID(row.Id),
+			Subject:  subjectOfActivity(row),
+			DueAt:    &due,
+			LinkType: linkType,
+			LinkID:   linkID,
 		})
 	}
 	return open, nil
@@ -207,6 +210,48 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 		return *row.Subject
 	}
 	return "(untitled task)"
+}
+
+// linkPriority orders the records a task may be filed under, most specific
+// first. A task raised for a lead is ABOUT that lead even when the same row
+// also names the company it came from, so the lead is what the reader wants to
+// open. A rank absent here is a record kind this surface does not route to.
+var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
+	flipObjectLead: 1,
+	flipObjectDeal: 2,
+	crmcontracts.ActivityLinkEntityTypeProject: 3,
+	flipObjectPerson:       4,
+	flipObjectOrganization: 5,
+}
+
+// primaryLink picks the one record a task row points at.
+//
+// An activity may be filed under several, and the lane shows one row with one
+// destination. Choosing by a stated priority rather than by the order the store
+// happened to return them is what keeps the destination stable: the same task
+// must not lead to the company on one read and the lead on the next.
+//
+// The links this reads are already row-scope filtered by the activities read,
+// so a record the reader may not see never becomes a destination here.
+func primaryLink(row crmcontracts.Activity) (string, ids.UUID) {
+	if row.Links == nil {
+		return "", ids.UUID{}
+	}
+	best := 0
+	var bestType string
+	var bestID ids.UUID
+	for _, link := range *row.Links {
+		rank, routable := linkPriority[link.EntityType]
+		if !routable {
+			continue
+		}
+		if best == 0 || rank < best {
+			best = rank
+			bestType = string(link.EntityType)
+			bestID = ids.UUID(link.EntityId)
+		}
+	}
+	return bestType, bestID
 }
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -274,12 +319,19 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 		if row.Summary != nil {
 			summary = *row.Summary
 		}
-		out = append(out, attention.Receipt{
+		receipt := attention.Receipt{
 			ID:         ids.UUID(row.Id),
 			Kind:       row.Kind,
 			Summary:    summary,
 			OccurredAt: *row.DecidedAt,
-		})
+		}
+		// Both or neither: a type with no id names nothing, and an id with no
+		// type says where to look without saying at what.
+		if row.TargetEntityType != nil && row.TargetEntityId != nil {
+			receipt.TargetType = *row.TargetEntityType
+			receipt.TargetID = ids.UUID(*row.TargetEntityId)
+		}
+		out = append(out, receipt)
 	}
 	return out
 }

@@ -513,6 +513,81 @@ describe("what the night left on the worklist", () => {
     expect(screen.getByText("No contact for 19 days.")).toBeTruthy();
     expect(screen.queryByText("Your day is clear.")).toBeNull();
   });
+  // A drifting deal is reachable from the row that reports it. Naming a deal as
+  // going quiet and then making the rep go and find it by hand is a warning
+  // they cannot act on, which is what this lane was before.
+  it("lets the reader open the deal that has gone quiet", async () => {
+    stub({
+      ...emptyDay,
+      at_risk: [
+        {
+          id: "deal-1",
+          source: "deal_at_risk",
+          kind: "quiet",
+          title: "Fleet retrofit",
+          detail: "19",
+          subject: { type: "deal", id: "deal-1" },
+          actions: ["open"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, at_risk: 1 },
+    });
+    renderToday();
+
+    const row = await screen.findByRole("link", { name: /Fleet retrofit/ });
+    expect(row.getAttribute("href")).toBe("#/deals/deal-1");
+  });
+  // A planned task reaches the lead it was raised for, and keeps its verbs. The
+  // row carries both because the title is the link and the buttons are their
+  // own targets — a whole-row link would swallow Done and Tomorrow.
+  it("links a task to its record without losing its verbs", async () => {
+    stub({
+      ...emptyDay,
+      planned: [
+        {
+          id: "task-1",
+          source: "task",
+          title: "Follow up with the new lead",
+          due_at: "2026-08-25T09:00:00Z",
+          overdue: true,
+          subject: { type: "lead", id: "lead-9" },
+          actions: ["complete", "snooze"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 1 },
+    });
+    renderToday();
+
+    const link = await screen.findByRole("link", {
+      name: "Follow up with the new lead",
+    });
+    expect(link.getAttribute("href")).toBe("#/leads/lead-9");
+    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tomorrow" })).toBeTruthy();
+  });
+  // A meeting's subject is the activity behind it, which is a timeline entry
+  // and not a record with a page. The row stays text rather than offering a
+  // link to a screen that does not exist.
+  it("draws a meeting as text, having nowhere to send the reader", async () => {
+    stub({
+      ...emptyDay,
+      meetings: [
+        {
+          id: "act-1",
+          source: "meeting",
+          title: "Vogt — Angebotsbesprechung",
+          due_at: "2026-08-25T11:00:00Z",
+          subject: { type: "activity", id: "act-1" },
+          actions: [],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, meetings: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Vogt — Angebotsbesprechung");
+    expect(screen.queryByRole("link", { name: /Vogt/ })).toBeNull();
+  });
   // A deal past its close date reports THAT, not a silence. The two grounds are
   // different facts and the card must not blur them.
   it("names the passed close date rather than reporting silence", async () => {

@@ -24,6 +24,11 @@ import (
 // them to navigate. A card that printed `organization_id` at a reader was
 // showing them the plumbing and calling it information.
 
+// actionOpen sends the reader to the record named in the item's `subject`, so
+// only a card carrying a subject that IS a record may offer it —
+// lanewiring_test.go refuses the rest.
+const actionOpen crmcontracts.AttentionItemActions = "open"
+
 // duplicateItem renders one open candidate pair, with both records named.
 //
 // The title is left EMPTY and the kind carries the record type, because this
@@ -189,6 +194,7 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		Id:      task.ID.String(),
 		Source:  crmcontracts.AttentionItemSource("task"),
 		Title:   &subject,
+		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
 	if task.DueAt != nil {
@@ -234,10 +240,10 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // against what was actually written, and a card showing only the paraphrase
 // asks them to trust the extractor instead.
 //
-// It offers NO verb. Marking a promise kept is the claim's own endpoint's job,
-// and this feed adds no authority the record does not already have. `open` is
-// not sent either, for the reason the other two cards do not send it: this
-// surface wires no navigation, so the verb would reach no control.
+// Marking a promise kept is the claim's own endpoint's job, and this feed adds
+// no authority the record does not already have. What it does offer is `open`:
+// the person the promise was made to is named on the card, and a reader who
+// cannot reach them has been told about a debt and denied the way to pay it.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
 	body := promise.Body
 	quote := promise.Quote
@@ -251,7 +257,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Subject: subjectOf("person", promise.PersonID),
 		DueAt:   &due,
 		Overdue: &past,
-		Actions: []crmcontracts.AttentionItemActions{},
+		Actions: []crmcontracts.AttentionItemActions{actionOpen},
 	}
 	if promise.SourceLabel != "" {
 		label := promise.SourceLabel
@@ -272,10 +278,10 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 // both is reported as overdue, because a date the customer agreed to outranks
 // a silence nobody agreed to.
 //
-// It offers NO verb. What to do about a quiet deal is a judgement, and a queue
-// that answered it here would be deciding rather than warning. `open` is not
-// sent either: this surface wires no navigation, and an action a card cannot
-// perform is a promise to a client that nothing keeps.
+// It offers no verb that DECIDES. What to do about a quiet deal is a judgement,
+// and a queue that answered it here would be deciding rather than warning. It
+// does offer `open`, which decides nothing: naming a deal as drifting and then
+// leaving the reader to go and find it by hand is a warning they cannot act on.
 func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 	name := deal.Name
 	ground := "quiet"
@@ -289,7 +295,7 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 		Title:   &name,
 		Subject: subjectOf("deal", deal.DealID),
 		Overdue: &deal.CloseOverdue,
-		Actions: []crmcontracts.AttentionItemActions{},
+		Actions: []crmcontracts.AttentionItemActions{actionOpen},
 	}
 	// The idle count rides as the detail's own number, so the card can say the
 	// window the server actually applied instead of implying one.
@@ -343,9 +349,11 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 //
 // It offers NO verb. The pre-meeting brief is its own surface with its own eight
 // cited sections, and a queue that tried to summarise it here would be a second
-// answer to "prepare me for this". `open` is not sent because this surface
-// wires no navigation, and an advertised action nothing performs is worse than
-// none: a client is entitled to render a control for what the server offers.
+// answer to "prepare me for this". `open` is withheld for a narrower reason than
+// it once was: this card's subject is the ACTIVITY, which is a timeline entry
+// rather than a record with a page of its own, so the verb would advertise a
+// destination that does not exist. The two cards whose subject IS a record —
+// the quiet deal and the promise — now send it.
 func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	starts := meeting.StartsAt
@@ -361,20 +369,29 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 
 // receiptItem renders one thing the system did on its own.
 //
-// Its only verb is `open`. A receipt reports a finished act, and offering a
-// decision on it would ask the reader to answer a question that has already
-// been answered.
+// It offers no decision: a receipt reports a finished act, and asking the reader
+// to answer a question already answered is not a verb this lane has.
+//
+// It offers `open` only when the decision named a record. Not every approval is
+// about one, and a card that advertised the verb regardless would send a client
+// that trusts it to a destination the card never carried.
 func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 	kind := receipt.Kind
 	occurred := receipt.OccurredAt
 	summary := receipt.Summary
+	subject := subjectOf(receipt.TargetType, receipt.TargetID)
+	actions := []crmcontracts.AttentionItemActions{}
+	if subject != nil {
+		actions = append(actions, actionOpen)
+	}
 	return crmcontracts.AttentionItem{
 		Id:         receipt.ID.String(),
 		Source:     crmcontracts.AttentionItemSource("approval"),
 		Kind:       &kind,
 		Title:      &summary,
+		Subject:    subject,
 		OccurredAt: &occurred,
-		Actions:    []crmcontracts.AttentionItemActions{"open"},
+		Actions:    actions,
 	}
 }
 
