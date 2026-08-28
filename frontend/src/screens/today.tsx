@@ -17,7 +17,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, pluralKey, useLocale, useT } from "../i18n";
 import { itemDetail, itemTitle } from "./attentionitemcopy";
 import { subjectHref } from "./attentionsubject";
 import { BriefQueueItem } from "./briefqueue";
@@ -84,7 +84,9 @@ function leadLine(
   // is the DSR admin, and the clock runs whether or not they act.
   const owed = day.counts.dsr ?? 0;
   if (owed > 0) {
-    return t("day.lead.dsr", { count: formatNumber(owed, locale) });
+    return t(pluralKey(locale, "day.lead.dsr", owed), {
+      count: formatNumber(owed, locale),
+    });
   }
   // Meetings lead every other lane, because a meeting is the one thing on this
   // page that happens whether or not the reader acts. A decision waits; an

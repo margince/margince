@@ -172,7 +172,9 @@ export const de = {
   "day.lead.plannedOnly": "Nichts zu entscheiden — {count} für heute geplant.",
   "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.meetings": "{count} heute im Kalender.",
-  "day.lead.dsr":
+  "day.lead.dsr_one":
+    "{count} Datenschutzanfrage läuft gegen die Frist. Die zuerst.",
+  "day.lead.dsr_other":
     "{count} Datenschutzanfragen laufen gegen die Frist. Die zuerst.",
   "day.lead.didNotRun":
     "{count} freigegebene Aufgaben sind nicht gelaufen. Sieh sie dir zuerst an.",

@@ -227,6 +227,25 @@ describe("what the day's surface offers", () => {
     ).toBeTruthy();
   });
 
+  // One request is one request. The lead reaches this line whenever owed > 0,
+  // and a catalogue entry with only a plural arm renders "1 privacy requests"
+  // — grammatically wrong in English and wrong in German too ("1
+  // Datenschutzanfragen"), on a legal-deadline surface where the sentence is
+  // the product. Both arms are asserted, because a fix that only added _one
+  // would pass a singular case while breaking every other count.
+  it("counts one privacy request in the singular and two in the plural", async () => {
+    stub({ ...emptyDay, counts: { ...emptyDay.counts, dsr: 1 } });
+    renderToday();
+    await screen.findByText("1 privacy request is on the clock. That first.");
+    cleanup();
+
+    stub({ ...emptyDay, counts: { ...emptyDay.counts, dsr: 2 } });
+    renderToday();
+    await screen.findByText(
+      "2 privacy requests are on the clock. Those first.",
+    );
+  });
+
   // A lane the reader may not see must SAY so, and the page must stop claiming
   // otherwise.
   //

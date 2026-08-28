@@ -12,10 +12,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Each optional lane fills ITS OWN field. The four are wired through
+// Each optional lane fills ITS OWN field. They are wired through
 // pointers-to-pointers into one response struct, which is exactly the shape
 // where a copy-paste slip puts the meetings into at_risk and nothing fails to
 // compile.
+//
+// The lane is identified by Source rather than by Title, because Source is what
+// every renderer stamps and a title is not: a DSR item carries no Title at all
+// (renderaccountability.go's dsrItem sets Id/Source/Kind/DueAt/Overdue), so a
+// title-keyed check reads "absent" for it and would pass against any lane that
+// also happened to leave one unset. Title stays asserted where the fixture gives
+// the lane a distinguishable one, because it catches a swap the Source would
+// survive — two lanes rendered by the same helper.
 func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
@@ -37,21 +45,36 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		t.Fatalf("assembling: %v", err)
 	}
 	for _, lane := range []struct {
-		name  string
-		items *[]crmcontracts.AttentionItem
-		want  string
+		name   string
+		items  *[]crmcontracts.AttentionItem
+		source string
+		title  string // empty when the lane's renderer sets no Title
 	}{
-		{"meetings", out.Meetings, "a meeting"},
-		{"at_risk", out.AtRisk, "a deal"},
-		{"relationship_decay", out.RelationshipDecay, "a contact"},
-		{"commitments", out.Commitments, "a promise"},
+		{"meetings", out.Meetings, "meeting", "a meeting"},
+		{"at_risk", out.AtRisk, "deal_at_risk", "a deal"},
+		{"relationship_decay", out.RelationshipDecay, "relationship_decay", "a contact"},
+		{"commitments", out.Commitments, "conversation_claim", "a promise"},
+		// The two lanes the fixture already seeded and this loop did not read.
+		// A slip writing either into another lane's field compiled and passed:
+		// the case names field isolation and covered four of the six fields it
+		// isolates.
+		{
+			"did_not_run", out.DidNotRun, "failed_approval",
+			"this was approved, but the work it released did not run",
+		},
+		{"dsr", out.Dsr, "dsr", ""},
 	} {
 		if lane.items == nil || len(*lane.items) != 1 {
 			t.Fatalf("%s carries %v, want one item", lane.name, lane.items)
 		}
-		if got := (*lane.items)[0]; got.Title == nil || *got.Title != lane.want {
-			t.Errorf("%s holds %q, want %q — a lane wrote into the wrong field",
-				lane.name, stringOr(got.Title), lane.want)
+		got := (*lane.items)[0]
+		if string(got.Source) != lane.source {
+			t.Errorf("%s holds source %q, want %q — a lane wrote into the wrong field",
+				lane.name, string(got.Source), lane.source)
+		}
+		if lane.title != "" && (got.Title == nil || *got.Title != lane.title) {
+			t.Errorf("%s holds title %q, want %q — a lane wrote into the wrong field",
+				lane.name, stringOr(got.Title), lane.title)
 		}
 	}
 }

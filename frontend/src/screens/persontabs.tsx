@@ -171,24 +171,19 @@ export function PersonTimelineTab({
                 : { onRetry: chronology.changes.refetch }
             }
           >
-            <>
-              {/* Half the chronology is missing and the other half is right
+            {/* Half the chronology is missing and the other half is right
                   here. Taking the exchanges away because the change feed fell
                   over would serve nobody, and leaving the reader to take a
                   partial record for a complete one is the failure this line
                   exists to prevent. Above the rows, because a caveat under a
                   list is read after the list it qualifies. */}
-              {chronology.changesUnread && (
-                <p className="t-caption">{t("state.failed")}</p>
-              )}
-              <GroupedTimelineList
-                groups={groupChronology(
-                  chronology.entries,
-                  timeline.hasNextPage,
-                )}
-                zone={recordZone}
-              />
-            </>
+            {chronology.changesUnread && (
+              <p className="t-caption">{t("state.failed")}</p>
+            )}
+            <GroupedTimelineList
+              groups={groupChronology(chronology.entries, timeline.hasNextPage)}
+              zone={recordZone}
+            />
           </SurfaceState>
         )}
       </PanelBody>

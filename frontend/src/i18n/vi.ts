@@ -179,7 +179,9 @@ export const vi = {
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
   "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.meetings": "{count} cuộc họp trên lịch hôm nay.",
-  "day.lead.dsr":
+  "day.lead.dsr_one":
+    "{count} yêu cầu quyền riêng tư đang chạy hạn. Những việc đó trước.",
+  "day.lead.dsr_other":
     "{count} yêu cầu quyền riêng tư đang chạy hạn. Những việc đó trước.",
   "day.lead.didNotRun":
     "{count} việc bạn đã duyệt không chạy. Hãy xem những việc đó trước.",
