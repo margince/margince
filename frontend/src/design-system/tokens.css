@@ -11,28 +11,37 @@
  */
 :root {
   /*
-   * The GROUNDS are neutral grey; the green is the accent, the states and the
-   * status families. This is the one place the §2 Ledger-Green identity is
-   * deliberately not carried, and the reason is what a tinted ground does to a
-   * whole application rather than to one surface: a green-cast page reads as a
-   * business tool from two decades ago, and it casts every neutral above it —
-   * a grey border, a monogram fill, a screenshot pasted into a record — toward
-   * the same hue. An accent is a choice a reader sees; a ground is the light
-   * everything else is seen in. The hue therefore lives where it is a decision
-   * (--accent, --success/--warn/--danger, --ai) and the grounds stay out of the
-   * way. tokens.test.ts pins these values in the retired mockup's place.
+   * The GROUNDS carry the brand hue at a whisper: every light rung below sits
+   * on --accent's own hue, at --accent's own chroma multiplied by 0.08, at the
+   * LIGHTNESS the neutral rung already had. Two halves, and both are load-
+   * bearing. Taking the hue is what stops the application reading as a grey
+   * chassis with a green sticker on it — the dark theme has always been tinted
+   * (its grounds are ink-green, and so is --bgRail in BOTH themes), so a
+   * neutral-grey light theme was the product disagreeing with itself between
+   * two settings of one switch. Holding the lightness is what keeps the tint
+   * from becoming a colour: the ladder's steps, every contrast ratio a reader
+   * depends on, and the neutrality of anything laid ON these grounds — a
+   * screenshot pasted into a record, a monogram fill, another company's logo —
+   * are all functions of lightness, and none of them moves.
+   *
+   * 0.08 rather than more because the failure mode in the other direction is
+   * real: a page mixed far enough toward the accent stops being a ground and
+   * starts being a surface with an opinion, and every neutral above it inherits
+   * the opinion. 0.08 is also the floor that DOES something — --borderSubtle
+   * already sat at 0.05 of the accent's chroma while every ground beside it was
+   * cool grey, which is how the two families came to disagree in the first place.
    *
    * A ladder, darkest first, from the recessed chrome up to the surface a card
    * floats on. Each rung is one visible step off its neighbours, and the ORDER
    * is the part that carries meaning — tokens.test.ts asserts the ordering in
    * both themes rather than trusting six plausible values to stay in sequence:
    *
-   *   --bgSidebarHover #dfdfe4  a pointer resting on a rail row
-   *   --bgSidebar      #e9e9ec  the application's left edge, BELOW the page
-   *   --bgCard         #eaeaee  a well inside a card: a chip, an inset row
-   *   --bgHover        #ededf0  a pointer resting on a row on the page
-   *   --bgPage         #f5f5f6  the reading ground
-   *   --bgElevated     #ffffff  a card, a panel, a menu, and the ACTIVE rail row
+   *   --bgSidebarHover #dbe2de  a pointer resting on a rail row
+   *   --bgSidebar      #e5ebe8  the application's left edge, BELOW the page
+   *   --bgCard         #e6ece9  a well inside a card: a chip, an inset row
+   *   --bgHover        #e9efec  a pointer resting on a row on the page
+   *   --bgPage         #f0f7f3  the reading ground
+   *   --bgElevated     #fafffd  a card, a panel, a menu, and the ACTIVE rail row
    *
    * The dark theme is NOT this list mirrored. On a dark ground every surface
    * lifts toward the light, so the ladder runs the other way and only the
@@ -42,13 +51,13 @@
    * a card is therefore separated by its own lightness rather than by the
    * shadow alone. That is what lets --shadow-card be as slight as it now is.
    */
-  --bgPage: #f5f5f6;
-  --bgElevated: #ffffff;
-  /* 1.20:1 against --bgElevated, which it usually sits on, and 1.10:1 against
+  --bgPage: #f0f7f3;
+  --bgElevated: #fafffd;
+  /* 1.19:1 against --bgElevated, which it usually sits on, and 1.10:1 against
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
-  --bgCard: #eaeaee;
-  --bgHover: #ededf0;
+  --bgCard: #e6ece9;
+  --bgHover: #e9efec;
   /* The sidebar's own ground, DARKER than the page rather than lighter: the
    * application's left edge is visible without a second border, and chrome that
    * recedes is chrome that stops competing with what it frames. A token rather
@@ -56,17 +65,17 @@
    * when card grounds are re-tuned. The rail's own hover is --bgSidebarHover
    * below, because --bgHover is LIGHTER than this ground and a hover that
    * brightens the row it is on collides with the active row's plate. */
-  --bgSidebar: #e9e9ec;
+  --bgSidebar: #e5ebe8;
   /* A pointer resting on a rail row: one step DOWN from --bgSidebar (1.10:1),
    * the same direction --bgHover moves off --bgPage. The active row moves the
    * other way — up to --bgElevated — so the two states cannot be confused. */
-  --bgSidebarHover: #dfdfe4;
+  --bgSidebarHover: #dbe2de;
   /* The top strip, which the content scrolls UNDER: the page's own ground,
    * translucent, with an 8px blur behind it (app/topbar.css). Stated as an
    * alpha colour rather than a solid because the blur is only visible where the
    * ground is see-through, and the alpha is what makes the strip show the
    * content sliding past it. */
-  --bgTopbar: rgba(245, 245, 246, 0.9);
+  --bgTopbar: rgba(240, 247, 243, 0.9);
 
   --accent: #0b7a53;
   /* The accent as TEXT, split from the accent as a FILL, and now diverging from
@@ -109,8 +118,8 @@
    * palette below is what makes it diverge. */
   --textOnStatusControl: #fff;
 
-  --borderSubtle: #e5e9e7;
-  --borderStrong: #d2d8d4;
+  --borderSubtle: #e3eae6;
+  --borderStrong: #d1d8d4;
   /* The boundary of an INTERACTIVE control — a text input, a button that carries
      no fill — and it is a separate token from --borderStrong because it answers
      to a different rule. --borderStrong divides content, where any visible
@@ -118,7 +127,7 @@
      a rectangle accepts typing, and WCAG 1.4.11 therefore asks it for 3:1
      against its background. --borderStrong measures 1.45:1 on white and cannot
      be raised to 3:1 without turning every content divider into a hard rule.
-     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.33 / 3.06),
+     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.30 / 3.06),
      since controls sit on both. */
   --borderControl: #868f89;
 
