@@ -26,6 +26,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
 	"path"
 	"regexp"
 	"sort"
@@ -276,19 +277,34 @@ func activityFragmentsIn(decl ast.Decl) []fragmentBinding {
 	if !isGen {
 		return nil
 	}
+	// A const spec with no values REPEATS the previous one's — `const ( a =
+	// "…"; b )` binds b to a's expression — so the statement has to be carried
+	// forward or a function naming only the repeated name escapes entirely.
+	// Only for const: a var has no implicit repetition, and carrying there
+	// would attribute a statement to a name that was merely declared.
+	var carried []ast.Expr
 	var bindings []fragmentBinding
 	for _, spec := range gen.Specs {
 		value, isValue := spec.(*ast.ValueSpec)
 		if !isValue {
 			continue
 		}
-		bindings = append(bindings, activityBindingsInSpec(value)...)
+		values := value.Values
+		switch {
+		case len(values) > 0:
+			carried = values
+		case gen.Tok == token.CONST:
+			values = carried
+		}
+		bindings = append(bindings, activityBindingsInSpec(value, values)...)
 	}
 	return bindings
 }
 
-// activityBindingsInSpec pairs each value in one spec with the name it is bound
-// to.
+// activityBindingsInSpec pairs each of this spec's values with the name it is
+// bound to. values is passed in rather than read off the spec because a const
+// spec may be repeating the previous one's, and only the caller walking the
+// block knows what that was.
 //
 // One spec can bind several at once — `const activitySQL, personSQL = "…", "…"`
 // — so taking every name in the spec would let the person statement's name
@@ -303,16 +319,16 @@ func activityFragmentsIn(decl ast.Decl) []fragmentBinding {
 // alternative is attributing it to nobody. That direction over-reports, which
 // is the safe one: it can turn a clean function into a finding somebody looks
 // at, never an activity reader into a clean one.
-func activityBindingsInSpec(spec *ast.ValueSpec) []fragmentBinding {
+func activityBindingsInSpec(spec *ast.ValueSpec, values []ast.Expr) []fragmentBinding {
 	names := make([]string, 0, len(spec.Names))
 	for _, name := range spec.Names {
 		if name.Name != "_" {
 			names = append(names, name.Name)
 		}
 	}
-	paired := len(spec.Names) == len(spec.Values)
+	paired := len(spec.Names) == len(values)
 	var bindings []fragmentBinding
-	for i, value := range spec.Values {
+	for i, value := range values {
 		sql, reads := activitySQLIn(value)
 		if !reads {
 			continue
