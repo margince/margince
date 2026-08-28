@@ -193,7 +193,13 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	}
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		return nil, discarding(ctx, t.imports, profile.SourceRef, err)
+		// NOT discarded. Staging persists its run before it validates, and a
+		// run that failed validation is resumable from its SourceRef — so
+		// deleting the file here would turn a run somebody can fix into one
+		// nobody can. The orphan on this path is the pre-existing cost of a
+		// tool call that stores before it can know, and it is a different
+		// change from this one.
+		return nil, err
 	}
 	return json.Marshal(ImportPreviewResult{
 		Run:      importRunResult(run),
@@ -205,6 +211,10 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 
 // discarding removes the stored source behind a call that is about to fail, and
 // returns the failure unchanged.
+//
+// Only for a refusal BEFORE anything is staged. Past that point a run exists
+// that references the source and can be resumed from it, and deleting the file
+// would turn a run somebody can fix into one nobody can.
 //
 // The refusal is what the caller needs to read, so a failure to clean up cannot
 // replace it: an orphan blob is a cost, and the wrong error is a wrong answer.

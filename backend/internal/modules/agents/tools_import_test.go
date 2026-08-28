@@ -129,6 +129,16 @@ type recordingImports struct {
 	columns   []string
 	targets   []string
 	discarded *[]string
+	stageErr  error
+}
+
+func (r recordingImports) StageRun(
+	_ context.Context, _ crmcontracts.CreateImportRunRequest,
+) (crmcontracts.ImportRun, error) {
+	if r.stageErr != nil {
+		return crmcontracts.ImportRun{}, r.stageErr
+	}
+	return crmcontracts.ImportRun{}, nil
 }
 
 func (r recordingImports) DiscardSource(_ context.Context, ref string) error {
@@ -335,5 +345,29 @@ func TestAnEmptyMappingIsTheSameQuestionAsNoMapping(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), `"Company"`) {
 		t.Errorf("the refusal does not name the column it could not place:\n%s", err.Error())
+	}
+}
+
+// A staging failure keeps its file, because a run already references it.
+//
+// stageRun persists its run before it validates, and a run that failed
+// validation is resumable from its SourceRef — so discarding here would turn a
+// run somebody can fix into one nobody can. The refusal BEFORE staging is the
+// only one where the file is provably unreferenced.
+func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
+	var discarded []string
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id", "Company": "display_name"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+		discarded: &discarded,
+		stageErr:  errors.New("the estate refused this mapping"),
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`))
+	if err == nil {
+		t.Fatal("a staging failure was reported as success")
+	}
+	if len(discarded) != 0 {
+		t.Errorf("discarded = %v, and a failed run is resumable from that source", discarded)
 	}
 }
