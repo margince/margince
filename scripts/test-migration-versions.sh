@@ -158,7 +158,7 @@ expect() {
     case_fails=$((case_fails + 1))
     return
   fi
-  if ! printf '%s' "$out" | grep -qF -- "$diagnostic"; then
+  if ! grep -qF -- "$diagnostic" <<<"$out"; then
     printf 'FAIL  %s\n      exit %s was right, but the gate never said %s —\n' \
       "$name" "$rc" "'$diagnostic'" >&2
     printf '      so this case was satisfied by some OTHER outcome than the one it planted\n' >&2

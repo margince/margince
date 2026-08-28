@@ -18,6 +18,7 @@ import {
   type FormRow,
   type FormRows,
   RecordFormBody,
+  usePublishedValues,
 } from "./create";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
@@ -187,6 +188,7 @@ export function EditRecordModal({
   existing,
   resolveExisting,
   onSubmit,
+  onValuesChange,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -202,9 +204,14 @@ export function EditRecordModal({
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
+  // The form's live answers, published so a caller can drive a SERVER read
+  // from them — the narrowing optionsFor cannot do, because it is a pure
+  // function of the values. See usePublishedValues (create.tsx).
+  onValuesChange?: (values: Record<string, string>) => void;
 }>) {
   const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
+  usePublishedValues(values, onValuesChange);
   // Repeatable-row fields prefill from the record's current rows (e.g. a
   // company's domains) so an edit starts from the live set rather than blank.
   const [rows, setRows] = useState<FormRows>({});
@@ -277,6 +284,7 @@ export function EditAction<Updated extends { id: string }>({
   resolveExisting,
   disabledReasonId,
   labelled,
+  onValuesChange,
 }: Readonly<{
   label: string;
   /**
@@ -311,6 +319,10 @@ export function EditAction<Updated extends { id: string }>({
   // Symmetric with CreateAction's dedupe link — edit rarely collides, but the
   // API stays uniform for the screens that adopt it.
   resolveExisting?: (code: string, id: string) => Route;
+  // The form's live answers, for a screen whose field list depends on them —
+  // a dependent picker whose options only the server can narrow. See
+  // usePublishedValues (create.tsx).
+  onValuesChange?: (values: Record<string, string>) => void;
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
@@ -376,6 +388,7 @@ export function EditAction<Updated extends { id: string }>({
         }
         existing={existing}
         resolveExisting={resolveExisting}
+        onValuesChange={onValuesChange}
         onSubmit={(values, rows) =>
           mutation.mutate({ values, rows: rows ?? {} })
         }

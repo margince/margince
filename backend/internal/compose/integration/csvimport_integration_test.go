@@ -24,6 +24,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path"
+	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -865,4 +866,80 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
 	}
+}
+
+// TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted is
+// the case that separates a report from a prediction.
+//
+// The estate moves between the preview and the approval — a colleague creates
+// one of the companies, an earlier run lands it — and a finished report is
+// supposed to describe what happened. Counting only what the dry run saw makes
+// "0 duplicates" a statement about a database that no longer exists, and the
+// person reading it has already approved on the strength of it.
+//
+// The four load-bearing counts are checked either side, because the fix must
+// not disturb them: a duplicate that lands is counted in Created and nowhere
+// else, and `duplicates` sits outside the sum by design.
+func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t *testing.T) {
+	e := setupImportApp(t)
+
+	const file = "Company,Industry\nZephyr Freight,logistics\n"
+	profile, _ := uploadCSV(t, e, "organization", file)
+	run, status := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		map[string]string{"Company": "display_name", "Industry": "industry"})
+	if status != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", status)
+	}
+
+	var preview importReportDTO
+	if code := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &preview); code != http.StatusOK {
+		t.Fatalf("preview report → %d, want 200", code)
+	}
+	if preview.Disposition.Duplicates == nil || *preview.Disposition.Duplicates != 0 {
+		t.Fatalf("the preview found %v duplicate(s) against an estate that holds none; "+
+			"this test needs a clean prediction to have something to disagree with later",
+			duplicatesSaid(preview))
+	}
+
+	// A colleague creates the company, after the preview and before the
+	// approval. Directly, the way real ones arrive: the importer's identity map
+	// remembers only rows IT wrote, so this one is invisible to it.
+	if code := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Zephyr Freight", "industry": "logistics"}, nil, nil); code != http.StatusCreated {
+		t.Fatalf("creating the company between preview and approval → %d, want 201", code)
+	}
+
+	if code := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); code != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", code)
+	}
+
+	var final importReportDTO
+	if code := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &final); code != http.StatusOK {
+		t.Fatalf("final report → %d, want 200", code)
+	}
+	if final.Disposition.Duplicates == nil || *final.Disposition.Duplicates != 1 {
+		t.Errorf("the finished run reports %v duplicate(s); the commit met one, and a report that "+
+			"repeats the prediction describes an estate that no longer exists",
+			duplicatesSaid(final))
+	}
+	if got := final.Disposition.Created + final.Disposition.Updated +
+		final.Disposition.Unchanged + final.Disposition.Skipped; got != final.RowsRead {
+		t.Errorf("the finished disposition sums to %d for %d row(s) read; a duplicate is counted in "+
+			"Created and nowhere else, so the four must still sum to rows_read", got, final.RowsRead)
+	}
+	if final.Disposition.Created != 1 {
+		t.Errorf("created = %d, want 1 — the duplicate lands and the review queue picks up the pair",
+			final.Disposition.Created)
+	}
+}
+
+// duplicatesSaid renders the duplicate count for a failure message. The field
+// is a pointer because "not reported" and "none found" are different answers,
+// and %v on it prints an address — which tells a reader of a failed run
+// nothing at all about what the report said.
+func duplicatesSaid(report importReportDTO) string {
+	if report.Disposition.Duplicates == nil {
+		return "no"
+	}
+	return strconv.Itoa(*report.Disposition.Duplicates)
 }

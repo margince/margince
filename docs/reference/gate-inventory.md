@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (44)
+## Parity (45)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -60,11 +60,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is DECLARED in the contract and restated in Go, and the two must not drift. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be TOTAL over the column it reads. |
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
+| `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this person currently employed?" the way the PRODUCT asks it, and they ask it in the same words. |
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (67)
+## Census (68)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -99,6 +100,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | The census as a fitness function, in both directions. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
+| `laneinputscope_test.go` | H3 | A path-filtered lane runs on a change to the scripts it EXECUTES. |
 | `leadpersonlockorder_test.go` | H2 | ONE lock order over the lead and the person it was promoted into. |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
@@ -182,7 +184,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 
-## Prohibition (32)
+## Prohibition (33)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -205,6 +207,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
 | `modulepoolsharing_test.go` | H2 | Pool-sharing discipline for the module suites, as a fitness function. |
 | `moduletablespelling_test.go` | H2 | A package that names its table does not pass that name as a bare string. |
+| `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | Prompt-boundary fitness functions: no prompt may declare a data boundary the writer of that data can spell. |
 | `publicreferences_test.go` | H1 | This repository is public. |

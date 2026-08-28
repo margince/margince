@@ -38,7 +38,7 @@ while IFS= read -r line; do
     ./*) continue ;; # local composite action: versioned with the repo itself
   esac
   ref="${pin##*@}"
-  if [ "$ref" = "$pin" ] || ! echo "$ref" | grep -qE '^([0-9a-f]{40}|[0-9a-f]{64}|sha256:[0-9a-f]{64})$'; then
+  if [ "$ref" = "$pin" ] || ! grep -qE '^([0-9a-f]{40}|[0-9a-f]{64}|sha256:[0-9a-f]{64})$' <<<"$ref"; then
     echo "UNPINNED REF: $line" >&2
     fail=1
   fi
@@ -60,7 +60,7 @@ while IFS= read -r line; do
     \#*) continue ;;                                # commented out — not pulled
   esac
   image=$(echo "$content" | sed 's/.*image:[[:space:]]*//' | cut -d'#' -f1 | tr -d ' "'"'")
-  if ! echo "$image" | grep -qE '@sha256:[0-9a-f]{64}$'; then
+  if ! grep -qE '@sha256:[0-9a-f]{64}$' <<<"$image"; then
     echo "UNPINNED IMAGE (pin as tag@sha256:<digest>): $line" >&2
     fail=1
   fi

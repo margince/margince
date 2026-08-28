@@ -95,11 +95,17 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 
 // DraftAccountEmail composes the first message to a record.
 //
-// There is no thread to read, so the DraftContext is built from what a first
-// message actually is rather than from prior correspondence: BandFresh (this
-// IS the opening), Threaded false (nothing is being answered), and the intent
-// as the topic — the caller's own words for what the message should do, which
-// is the only subject material in existence before a conversation starts.
+// There is no thread to read, so the draft is built from what a first message
+// actually is rather than from prior correspondence: BandFresh (this IS the
+// opening), Threaded false (nothing is being answered), and the intent as the
+// whole of the subject material — the caller's own words for what the message
+// should do, which is all that exists before a conversation starts.
+//
+// It reaches the SAME routed lane the reply path does, one method along
+// (activities.FirstEmailDrafter). It used not to, and the reason was never a
+// decision about first messages: EmailDrafter took an anchor by signature, so a
+// draft with no activity behind it could not be asked for. What a caller got
+// instead was a template to rewrite.
 //
 // It deliberately does NOT resolve a recipient. DraftEmail can ask the store
 // who a thread is with; here the caller names the addressee at send time
@@ -118,12 +124,14 @@ func (c commsAdapter) DraftAccountEmail(
 			"links must name at least one record this conversation is filed under; " +
 				"a first message has no thread to inherit them from")}
 	}
-	// Deterministic only, for now. activities.EmailDrafter (the routed model
-	// lane) takes an anchor by signature — DraftEmail(ctx, anchor, intent) —
-	// so a first message cannot reach it without widening that interface and
-	// the AI task behind it. Deliberately left for its own change: the tool's
-	// value is that a first message can be drafted AT ALL, and the copy says
-	// plainly that the fallback is a short deterministic note.
+	// The routed model lane when the drafter can open a conversation, and the
+	// deterministic floor when it cannot. Which one answers is a property of
+	// the deployment — a role that composed no drafting model binds a drafter
+	// that implements only the reply seam, or none at all — so this branch is
+	// the same one the reply path takes, asked one method along.
+	if first, ok := c.draft.(activities.FirstEmailDrafter); ok {
+		return first.DraftFirstEmail(ctx, intent)
+	}
 	// Topic stays EMPTY, and the intent is passed once. DeterministicEmailDraft
 	// renders Topic into a "following up on …" line AND appends the intent as
 	// its own paragraph (handlers_email.go), so naming both would print the

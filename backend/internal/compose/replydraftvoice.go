@@ -47,14 +47,14 @@ func (d replyDrafter) loadVoice(ctx context.Context) voiceContext {
 // failure as a rejected learning signal.
 func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data replyActivityData, voice voiceContext) (replyDraft, *int, *string, error) {
 	if !voice.ok {
-		draft, err := d.completeChecked(ctx, data, nil)
+		draft, err := d.completeChecked(ctx, replyDraftSystem, data, nil)
 		return draft, nil, nil, err
 	}
 	block := func(fence promptfence.Fence) string {
 		return voiceDraftPromptBlock(voice.profile.PersonalityMD, voice.version.VoiceProfileMD,
 			ai.VersionExemplars(voice.version), ai.DecodeVersionStats(voice.version), fence)
 	}
-	draft, err := d.completeChecked(ctx, data, block)
+	draft, err := d.completeChecked(ctx, replyDraftSystem, data, block)
 	if err != nil {
 		return replyDraft{}, nil, nil, err
 	}
@@ -80,7 +80,7 @@ func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data 
 		// The voice-styled draft kept tripping the floor: serve the plain
 		// draft instead and let the failure feed the learning panel.
 		d.recordVoiceRejection(ctx, voice, anchor, draft)
-		plain, plainErr := d.completeChecked(ctx, data, nil)
+		plain, plainErr := d.completeChecked(ctx, replyDraftSystem, data, nil)
 		return plain, nil, nil, plainErr
 	}
 	d.recordVoiceDraft(ctx, voice, anchor, draft)
@@ -139,7 +139,7 @@ func (d replyDrafter) recordVoiceRejection(ctx context.Context, voice voiceConte
 
 // replyDraftVoiceSystem replaces the no-voice guard when a profile block is
 // supplied: the profile controls expression, never facts.
-const replyDraftVoiceSystem = `Draft a professional email reply on behalf of the CRM user's company, written in the user's own voice.
+const replyDraftVoiceSystem draftSystem = `Draft a professional email reply on behalf of the CRM user's company, written in the user's own voice.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The activity and stated intent are the authoritative reason for this reply.
 - The supplied voice profile controls expression — rhythm, vocabulary, directness, structure — never facts.

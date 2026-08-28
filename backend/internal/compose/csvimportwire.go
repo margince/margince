@@ -231,7 +231,17 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			out.Disposition.Created += o.WillCreate
 			out.Disposition.Updated += o.WillUpdate
 		}
-		duplicates += o.Duplicates
+		// The commit's own count once there is one, for the same reason
+		// Created replaces WillCreate above: the estate moves between the
+		// preview and the approval — a colleague creates one of the companies,
+		// an earlier run lands it — and a finished report that stated the
+		// prediction would describe what was expected rather than what
+		// happened.
+		if committed {
+			duplicates += o.Duplicated
+		} else {
+			duplicates += o.WillDuplicate
+		}
 		for _, s := range o.Skipped {
 			// The same row skipped by the dry run and again by the commit is
 			// ONE row the human must go fix, named by its line.

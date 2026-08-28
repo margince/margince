@@ -66,6 +66,27 @@ api() { # api <method> <path> [json-body] — prints the HTTP status, body lands
     ${data:+--data "$data"} || true
 }
 
+# A query-string value, escaped. The seeded names carry a space and an umlaut,
+# and an unescaped `q=Alice Müller` is a malformed request line rather than a
+# lookup that quietly misses.
+url_encode() { # url_encode <value>
+  jq -rn --arg v "$1" '$v|@uri'
+}
+
+# The same request carrying the row version it was read at. A seeder is an
+# automated writer, and the contract discourages those from omitting the
+# precondition: without it a PATCH is last-write-wins, so a re-run racing
+# anything else editing the same account would silently overwrite it.
+api_if_match() { # api_if_match <method> <path> <version> <json-body>
+  local method="$1" path="$2" version="$3" data="$4"
+  curl -sS --max-time 30 -o "$workdir/body" -D "$workdir/headers" -w '%{http_code}' \
+    -X "$method" "$API_BASE/v1$path" \
+    -H 'Content-Type: application/json' \
+    -H "If-Match: $version" \
+    ${SESSION:+--cookie "crm_session=$SESSION"} \
+    --data "$data" || true
+}
+
 # The session cookie is Secure, which curl's jar refuses to replay over
 # plain-http localhost — so pull the token out and send it explicitly.
 capture_session() {
@@ -224,6 +245,149 @@ ensure "person Carol Wagner" /people \
 echo "== seed-dev: demo organization =="
 ensure "organization Demo GmbH" /organizations \
   '{"display_name":"Demo GmbH","domains":[{"domain":"demo.test","is_primary":true}],"source":"seed"}'
+
+# What these records are FOR is being looked at, so they are held to the bar the
+# demo dataset's own verify pass states: every person employed somewhere, every
+# account off `unknown`. Three people who work nowhere show on no company page,
+# and an account left at the default makes "who are our customers?" return
+# everything — which is exactly what `make verify-demo` reports, and it reported
+# it against these four rows rather than against the dataset's.
+#
+# Read back rather than remembered from the create: `ensure` answers 409 on a
+# re-run, and a seeder that only knew the ids it created this time would do half
+# its job on every run after the first.
+echo "== seed-dev: demo employment =="
+
+# The current-primary rule, spelled once here and once in verify-boot.sh because
+# each script is a client of the same API and neither can call the other's shell.
+# `ended_at` is a date and ISO dates compare as strings, so a future end is still
+# current — the same reading the server's own predicate takes.
+CURRENT_PRIMARY_JQ='.is_current_primary and (.ended_at == null or (.ended_at | tostring) >= $today)'
+TODAY="$(date -u +%F)"
+
+# The first row of a list that matches, across EVERY page of it.
+#
+# One page was enough while the dev seed was the only thing in the installation.
+# It is not enough on a stack that also carries the demo dataset: `q` is a
+# full-text query, so a page of matches can be all the people who share a word
+# with the one being looked for, and a lookup that reads the first hundred of
+# them reports "absent" for a record that is present. That is the failure a
+# census must never have — it stops finding what it is looking for and says so
+# in the voice of a pass — so the cursor is followed to exhaustion.
+#
+# `select` is a jq filter over ONE row, and any further arguments are handed to
+# jq — a name goes in as `--arg`, never spliced into the filter. `$today` is
+# bound for the callers that ask about employment currency.
+find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
+  local path="$1" select="$2" cursor="" sep status row
+  shift 2
+  while :; do
+    case "$path" in *\?*) sep="&" ;; *) sep="?" ;; esac
+    status="$(api GET "$path${sep}limit=100${cursor:+&cursor=$(url_encode "$cursor")}")"
+    [ "$status" = "200" ] || fail "GET /v1${path} returned HTTP $status"
+    row="$(jq -c --arg today "$TODAY" "$@" "first(.data[] | select($select)) // empty" "$workdir/body")"
+    if [ -n "$row" ]; then
+      printf '%s' "$row"
+      return
+    fi
+    cursor="$(jq -r 'if .page.has_more then (.page.next_cursor // "") else "" end' "$workdir/body")"
+    # Absent is an ANSWER, not a failure: every caller asks "is this here?" and
+    # handles no for itself. A bare `return` here carries the test's own exit
+    # status, which is 1 when the cursor is empty — and under `set -e` that
+    # killed the whole script the first time a lookup legitimately found nothing.
+    [ -n "$cursor" ] || return 0
+  done
+}
+
+# The person, identified the way the seed identifies them: their EMAIL.
+#
+# `q` is full-text over name and title only, so it cannot fetch by address — it
+# narrows, and the email then decides. Two people can share a full name, and
+# taking the first hit would attach an employment to whichever row the query
+# happened to answer with; the address is the natural key the seeded row was
+# created with, so it is the one that says "this is that record".
+person_id() { # person_id <full-name> <email> — prints the id, empty when absent
+  find_first "/people?q=$(url_encode "$1")" \
+    '.full_name == $name and any(.emails[]?; .email == $email)' \
+    --arg name "$1" --arg email "$2" \
+    | jq -r '.id // empty'
+}
+
+org_id="$(find_first '/organizations?domain=demo.test' '.display_name == "Demo GmbH"' | jq -r '.id // empty')"
+[ -n "$org_id" ] || fail "Demo GmbH is not in the installation the seed just wrote to"
+
+# The roles are the demo's own: a company page whose three contacts have no
+# titles reads as a page that failed to load them.
+#
+# What counts as employed is the CURRENT PRIMARY edge, which is the one the
+# product reads: a company page, a person card and the enrichment path all ask
+# `is_current_primary AND not ended`, so an ended or secondary row leaves the
+# contact off the very page this seed exists to draw, and an existence probe
+# would call that state seeded and repair nothing.
+#
+# Two repairs, because the two states are not the same fact. A standing edge that
+# merely lost the flag is promoted. An ENDED edge is history, and the API offers
+# no way to un-end one on purpose — a former employment keeps its row — so the
+# person is re-hired with a new edge instead, which is also what happened in the
+# story the demo tells.
+employ() { # employ <full-name> <email> <role>
+  local name="$1" email="$2" role="$3" id edges standing rel_id rel_version status
+  id="$(person_id "$name" "$email")"
+  [ -n "$id" ] || fail "$name <$email> is not in the installation the seed just wrote to"
+  edges="/relationships?kind=employment&person_id=$id"
+  if [ -n "$(find_first "$edges" ".organization_id == \$org and $CURRENT_PRIMARY_JQ" --arg org "$org_id")" ]; then
+    echo "  OK: $name already employed at Demo GmbH"
+    return
+  fi
+  standing="$(find_first "$edges" \
+    '.organization_id == $org and (.ended_at == null or (.ended_at | tostring) >= $today)' \
+    --arg org "$org_id")"
+  if [ -n "$standing" ]; then
+    rel_id="$(printf '%s' "$standing" | jq -r '.id')"
+    rel_version="$(printf '%s' "$standing" | jq -r '.version // ""')"
+    [ -n "$rel_version" ] || fail "GET /v1/relationships answered $name's employment without a version to write against"
+    status="$(api_if_match PATCH "/relationships/$rel_id" "$rel_version" '{"is_current_primary":true}')"
+    case "$status" in
+      200) echo "  OK: $name's employment at Demo GmbH is their primary one again" ;;
+      *)
+        echo "  response body:" >&2
+        cat "$workdir/body" >&2
+        fail "PATCH /v1/relationships/$rel_id returned HTTP $status"
+        ;;
+    esac
+    return
+  fi
+  # `is_current_primary` is left out on purpose: the server makes an employment
+  # primary when the person has no other current one, and stating it here would
+  # be this script deciding something it has not read.
+  ensure "employment $name at Demo GmbH" /relationships \
+    "$(jq -n --arg p "$id" --arg o "$org_id" --arg r "$role" \
+      '{kind:"employment",person_id:$p,organization_id:$o,role:$r,source:"seed"}')"
+}
+
+employ "Alice Müller" "alice@demo.test" "Head of Operations"
+employ "Bob Schmidt" "bob@demo.test" "Procurement Lead"
+employ "Carol Wagner" "carol@demo.test" "Managing Director"
+
+echo "== seed-dev: demo account lifecycle =="
+status="$(api GET "/organizations/$org_id")"
+[ "$status" = "200" ] || fail "GET /v1/organizations/$org_id returned HTTP $status"
+org_lifecycle="$(jq -r '.lifecycle // ""' "$workdir/body")"
+org_version="$(jq -r '.version // ""' "$workdir/body")"
+if [ "$org_lifecycle" = "customer" ]; then
+  echo "  OK: Demo GmbH is already a customer"
+else
+  [ -n "$org_version" ] || fail "GET /v1/organizations/$org_id answered without a version to write against"
+  status="$(api_if_match PATCH "/organizations/$org_id" "$org_version" '{"lifecycle":"customer"}')"
+  case "$status" in
+    200) echo "  OK: Demo GmbH is a customer" ;;
+    *)
+      echo "  response body:" >&2
+      cat "$workdir/body" >&2
+      fail "PATCH /v1/organizations/$org_id (lifecycle) returned HTTP $status"
+      ;;
+  esac
+fi
 
 echo "== seed-dev: demo deals =="
 # Deals have no natural key, so idempotency is a name probe against the

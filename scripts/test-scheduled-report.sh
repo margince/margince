@@ -208,7 +208,7 @@ expect_health() {
 		failures=$((failures + 1))
 		return
 	fi
-	if [ -n "$suspects" ] && ! printf '%s' "$body" | grep -qF -- "deadbeef"; then
+	if [ -n "$suspects" ] && ! grep -qF -- "deadbeef" <<<"$body"; then
 		echo "FAIL: $name — the issue was filed but the suspect range never reached its body"
 		failures=$((failures + 1))
 		return
@@ -217,7 +217,7 @@ expect_health() {
 	# Without this the no-range cases pass for free: an arm that dropped the
 	# fallback would still file, and "a red lane with no range still files"
 	# would go on reporting ok over a body that says nothing about the window.
-	if [ -z "$suspects" ] && ! printf '%s' "$body" | grep -qF -- "no suspect range was computed"; then
+	if [ -z "$suspects" ] && ! grep -qF -- "no suspect range was computed" <<<"$body"; then
 		echo "FAIL: $name — filed without saying the suspect range is unknown"
 		failures=$((failures + 1))
 		return
@@ -373,11 +373,11 @@ fi
 for lane in $lanes; do
 	# MAIN_UAT_RESULT -> uat
 	job="$(printf '%s' "$lane" | sed -E 's/^MAIN_(.+)_RESULT$/\1/' | tr '[:upper:]' '[:lower:]')"
-	if ! printf '%s' "$report_job" | grep -qE "needs\.${job}\.result == 'failure'"; then
+	if ! grep -qE "needs\.${job}\.result == 'failure'" <<<"$report_job"; then
 		echo "FAIL: $lane has a reporter arm, but main-health's report job does not run for a failing '${job}' — the arm is unreachable"
 		failures=$((failures + 1))
 	fi
-	if ! printf '%s' "$report_job" | grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}"; then
+	if ! grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}" <<<"$report_job"; then
 		echo "FAIL: $lane has a reporter arm, but main-health never passes needs.${job}.result in as $lane"
 		failures=$((failures + 1))
 	fi

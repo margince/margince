@@ -76,6 +76,16 @@ type EnsureResult struct {
 	Unchanged  bool
 	Skipped    bool
 	SkipReason string
+	// Duplicate marks a row that named a record the estate ALREADY held and
+	// that this importer had not landed before. It is not an outcome — the row
+	// is also Created, or Skipped when the run asked for that — which is why it
+	// is a flag beside them rather than a fifth case.
+	//
+	// It is answered on the commit for the reason the preview answers it: the
+	// estate moves between the two. A colleague creates one of the companies,
+	// or an earlier run lands it, and a finished report carrying only the
+	// prediction states a duplicate count that was true when the preview ran.
+	Duplicate bool
 	// Disclosure names a lossy-but-disclosed mapping decision (e.g. a
 	// deal materialized onto the default pipeline because the source
 	// stage identity did not resolve).
@@ -138,11 +148,24 @@ type ObjectReport struct {
 	// warning exists so a person approving "create 3" is not surprised by a
 	// duplicate afterwards.
 	Collisions []SkippedRow `json:"collisions,omitempty"`
-	// Duplicates counts rows naming a record the estate already holds. It
-	// overlaps the other counts by design — each duplicate is also in Created
-	// or in Skipped — so it is never added to them.
-	Duplicates  int      `json:"duplicates,omitempty"`
-	Disclosures []string `json:"disclosures,omitempty"`
+	// WillDuplicate and Duplicated count rows naming a record the estate
+	// already holds: what the PREVIEW predicted, and what the COMMIT observed.
+	// Both overlap the other counts by design — each is also in Created or in
+	// Skipped — so neither is ever added to them.
+	//
+	// Two fields for the reason WillCreate and Created are two fields, and the
+	// merge is why it has to be. A run's stored report is the dry run's folded
+	// together with every commit attempt's, and the two walk the SAME rows: one
+	// field would report a file with one duplicate as having two the moment it
+	// was approved. Each attempt writes only its own, so addition stays honest
+	// across a resume, where the checkpoint does guarantee disjoint rows.
+	//
+	// WillDuplicate keeps the `duplicates` tag it was written under. The name
+	// is what changed, not the field: a report stored before the commit learned
+	// to count still decodes into the half it actually described.
+	WillDuplicate int      `json:"duplicates,omitempty"`
+	Duplicated    int      `json:"duplicated,omitempty"`
+	Disclosures   []string `json:"disclosures,omitempty"`
 }
 
 // Report is the run (or dry-run) outcome: per-object dispositions plus
@@ -363,6 +386,12 @@ func (or *ObjectReport) record(externalID string, res EnsureResult) {
 	default:
 		or.Updated++
 	}
+	if res.Duplicate {
+		// Counted beside the outcome rather than instead of it: this row is
+		// already in Created or in Skipped above, and the four load-bearing
+		// counts must keep summing to the rows read.
+		or.Duplicated++
+	}
 	if res.Disclosure != "" {
 		or.Disclosures = append(or.Disclosures, res.Disclosure)
 	}
@@ -440,7 +469,8 @@ func (r Report) mergedWith(next Report) Report {
 		into.MirrorCount = or.MirrorCount
 		into.Skipped = append(into.Skipped, or.Skipped...)
 		into.Collisions = append(into.Collisions, or.Collisions...)
-		into.Duplicates += or.Duplicates
+		into.WillDuplicate += or.WillDuplicate
+		into.Duplicated += or.Duplicated
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
 	}
 	return out

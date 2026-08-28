@@ -969,12 +969,14 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
-// Reject (OP-10) never touches the deal's amount, so unlike accept it only
-// ever needs the offer's own query updated. The optional reason is a plain
-// text field, not a bespoke form — proportionate to a non-money-moving
-// action, but still routed through the shared ConfirmModal chrome (no
-// `tier`: rejecting isn't a confirm-first 🟡 operation) for the same
-// disable-while-pending / inline-error affordances Send and Accept get.
+// Reject (OP-10) never touches the deal's amount, but the deal screen reads
+// this offer's STATUS through the same ["deal", id] / ["deal-offers", id]
+// caches accept invalidates — so reject invalidates them too, on the status
+// change alone. The optional reason is a plain text field, not a bespoke
+// form — proportionate to a non-money-moving action, but still routed
+// through the shared ConfirmModal chrome (no `tier`: rejecting isn't a
+// confirm-first 🟡 operation) for the same disable-while-pending /
+// inline-error affordances Send and Accept get.
 function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -997,6 +999,10 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
+      queryClient.invalidateQueries({ queryKey: ["deal", offer.deal_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["deal-offers", offer.deal_id],
+      });
       setOpen(false);
       setReason("");
     },

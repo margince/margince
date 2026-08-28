@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
@@ -127,6 +127,41 @@ export type CreateField = {
    */
   optionsFor?: (values: Record<string, string>) => CreateFieldOption[];
 };
+
+/**
+ * Publishes a form's live answers to a caller that asked for them.
+ *
+ * `optionsFor` covers the dependent field whose narrowing the browser can do
+ * for itself: it is a pure function of the values, so it can only filter a
+ * list the parent already fetched. It cannot RE-READ, and some narrowings are
+ * questions only the server can answer — which projects a company may be
+ * filed under is decided by relationship rows, and a project list row carries
+ * only its anchor company, so nothing in the browser can compute membership.
+ * This is the seam for that: the parent watches the values, runs its own
+ * query, and hands the narrowed list back as ordinary options.
+ *
+ * From an EFFECT rather than from the setter, because values are set from two
+ * places. The reader typing is one; the seed that runs during the closed→open
+ * transition is the other, and it runs during render — where calling a
+ * parent's setState is exactly what React refuses. Publishing from the setter
+ * would miss it, and the answers a form OPENS with are the first thing a
+ * dependent query needs.
+ *
+ * The dependency is the values object alone. It is a new identity only when
+ * they change, which is precisely when a caller wants to hear; adding the
+ * callback would republish on every render for the callers most likely to
+ * pass an inline one.
+ */
+export function usePublishedValues(
+  values: Record<string, string>,
+  publish?: (values: Record<string, string>) => void,
+): void {
+  const latest = useRef(publish);
+  latest.current = publish;
+  useEffect(() => {
+    latest.current?.(values);
+  }, [values]);
+}
 
 /** A field's choices right now: the dependent list when it has one. */
 export function fieldOptions(
@@ -328,10 +363,15 @@ export function CreateAction<Created extends { id: string }>({
   aboutId,
   keepOpen = false,
   onCreated,
+  onValuesChange,
   testId,
 }: Readonly<{
   label: string;
   fields: CreateField[];
+  // The form's live answers, for a screen whose field list depends on them —
+  // a dependent picker whose options only the server can narrow. See
+  // usePublishedValues.
+  onValuesChange?: (values: Record<string, string>) => void;
   create: (values: Record<string, string>, rows?: FormRows) => Promise<Created>;
   invalidate: string;
   screen: Screen;
@@ -406,6 +446,7 @@ export function CreateAction<Created extends { id: string }>({
         existing={existing}
         resolveExisting={resolveExisting}
         resetToken={saved}
+        onValuesChange={onValuesChange}
         onSubmit={(values, rows) =>
           mutation.mutate({ values, rows: rows ?? {} })
         }
@@ -849,6 +890,7 @@ export function CreateRecordModal({
   existing,
   resolveExisting,
   onSubmit,
+  onValuesChange,
   resetToken = 0,
 }: Readonly<{
   open: boolean;
@@ -860,6 +902,9 @@ export function CreateRecordModal({
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
+  // The form's live answers, published so a caller can drive a SERVER read
+  // from them. See the note on the shared publisher below.
+  onValuesChange?: (values: Record<string, string>) => void;
   // Emptying the form WITHOUT closing it, for a modal that stays open to take
   // the next record. The caller bumps this after a save it kept open, and the
   // seeding below treats it exactly like a fresh open. A number rather than a
@@ -882,6 +927,7 @@ export function CreateRecordModal({
   // Starts false, not `open`: a modal mounted already open still has to seed.
   const [seededOpen, setSeededOpen] = useState(false);
   const [seededReset, setSeededReset] = useState(resetToken);
+  usePublishedValues(values, onValuesChange);
   const reopened = open !== seededOpen;
   const cleared = open && resetToken !== seededReset;
   if (reopened || cleared) {

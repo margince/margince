@@ -26,7 +26,7 @@ case_is() {
 		failures=$((failures + 1))
 		return
 	fi
-	if [[ -n "$must_say" ]] && ! printf '%s' "$out" | grep -qF -- "$must_say"; then
+	if [[ -n "$must_say" ]] && ! grep -qF -- "$must_say" <<<"$out"; then
 		echo "FAIL: $name — exited $want but never named '$must_say'" >&2
 		printf '%s\n' "$out" >&2
 		failures=$((failures + 1))
