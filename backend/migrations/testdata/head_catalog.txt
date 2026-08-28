@@ -1035,10 +1035,15 @@ public.comms_outbound.attachments jsonb NOT NULL gen=- def='[]'::jsonb
 public.comms_outbound.attempts integer NOT NULL gen=- def=0
 public.comms_outbound.bcc jsonb gen=- def=-
 public.comms_outbound.body text NOT NULL gen=- def=-
+public.comms_outbound.bounce_kind text gen=- def=-
+public.comms_outbound.bounce_reason text gen=- def=-
+public.comms_outbound.bounced_at timestamp with time zone gen=- def=-
 public.comms_outbound.cc jsonb gen=- def='[]'::jsonb
 public.comms_outbound.channel_user_id text gen=- def=-
 public.comms_outbound.comms_outbound_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.comms_outbound.comms_outbound_attachments_shape CHECK (comms_outbound_attachments_well_formed(attachments))
+public.comms_outbound.comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL)))) NOT VALID
+public.comms_outbound.comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text])))) NOT VALID
 public.comms_outbound.comms_outbound_cc_array CHECK ((jsonb_typeof(cc) = 'array'::text))
 public.comms_outbound.comms_outbound_inflight_is_channel CHECK (((inflight_at IS NULL) OR (channel_user_id IS NOT NULL)))
 public.comms_outbound.comms_outbound_message_unique UNIQUE (message_id)
@@ -1077,6 +1082,7 @@ public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- ac
            OR f->>'filename' IS NULL
      );
 
+public.comms_outbound_bounced_idx CREATE INDEX comms_outbound_bounced_idx ON public.comms_outbound USING btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
