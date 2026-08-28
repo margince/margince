@@ -9,7 +9,6 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // needsYouPage is how many decisions one read carries.
@@ -33,224 +32,6 @@ const plannedCap = 12
 // on the page rather than a scrollback.
 const doneCap = 8
 
-// Approvals is the staged-proposal queue, read through its owning service.
-//
-// CountPending is separate from the page because the lane is bounded and the
-// count is not: a reader with forty decisions must be told forty, then shown
-// the nine worth one sitting.
-type Approvals interface {
-	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
-	CountPending(ctx context.Context) (int, error)
-}
-
-// ApprovalQuery is what this feed asks the approvals engine for. Narrower than
-// the engine's own input on purpose: the feed reads one page of one status and
-// takes no part in choosing scope, which stays the engine's to decide.
-type ApprovalQuery struct {
-	Status string
-	Limit  int
-}
-
-// Duplicates is the dedupe queue, read through the people module. Every method
-// carries that module's both-sides-visible rule; nothing here re-derives it.
-//
-// Describe names the two records of a pair. It is separate from OpenCandidates
-// because naming a record is a READ of that record: the queue row proves a pair
-// was detected, never that this reader may see what it points at.
-type Duplicates interface {
-	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
-	CountOpen(ctx context.Context) (int, error)
-	Describe(ctx context.Context, entityType string, id ids.UUID) (RecordFace, error)
-}
-
-// DuplicatePair is one open candidate: the pair, and what the detector saw.
-type DuplicatePair struct {
-	ID         ids.UUID
-	EntityType string
-	Confidence float64
-	LeftID     ids.UUID
-	RightID    ids.UUID
-	Evidence   []FieldComparison
-}
-
-// FieldComparison is one row of the detection-time snapshot.
-type FieldComparison struct {
-	Field  string
-	Left   *string
-	Right  *string
-	Signal string
-}
-
-// RecordFace is how much of a record a merge decision needs: enough to tell the
-// two sides apart, and nothing more.
-type RecordFace struct {
-	Label        string
-	Detail       string
-	CreatedAt    *time.Time
-	RelatedCount *int
-}
-
-// Tasks is the open-task read, through the activities module.
-type Tasks interface {
-	OpenForViewer(ctx context.Context, until time.Time, limit int) ([]Task, error)
-}
-
-// Task is one piece of agreed work.
-type Task struct {
-	ID      ids.UUID
-	Subject string
-	DueAt   *time.Time
-}
-
-// Receipts is what the system did on its own, most recent first.
-type Receipts interface {
-	Recent(ctx context.Context, since time.Time, limit int) ([]Receipt, error)
-}
-
-// Receipt is one completed autonomous act, reported rather than asked about.
-type Receipt struct {
-	ID         ids.UUID
-	Kind       string
-	Summary    string
-	OccurredAt time.Time
-}
-
-// Briefing is the overnight brief's queue for the acting rep, best-ranked
-// first.
-//
-// No run for today is NOT a refusal: the night has simply not produced one, or
-// there was nothing worth ranking, and both are honestly an empty lane. The
-// implementation therefore answers an empty slice rather than an error for that
-// case, and reserves apperrors.ErrPermissionDenied for a caller who may not
-// read the queue at all.
-type Briefing interface {
-	Queue(ctx context.Context) ([]BriefEntry, error)
-}
-
-// BriefEntry is one UNANSWERED queue entry: what it is about, and where it
-// ranks.
-//
-// It carries the item id and the deal, not the factor vector or the evidence.
-// The card that draws those reads the brief's own endpoint, which the screen
-// already calls — copying the ranking payload through this feed would put the
-// same numbers on two wires and let them disagree.
-//
-// There is no state field, because the seam has already dropped the answered
-// entries. The brief owns what its states mean and what each spells; a copy of
-// that vocabulary here would be a second place to keep it right.
-type BriefEntry struct {
-	ID     ids.UUID
-	DealID ids.UUID
-	Rank   int
-}
-
-// Commitments is the rep's own outstanding promises, soonest-due first.
-//
-// Read from the claims extracted out of captured conversations rather than from
-// the task list, because a commitment card has to show BOTH halves — when it is
-// due, and where it was promised. An open task carries the date and no
-// provenance; a message labelled as a commitment carries the provenance and no
-// date. Only the claim carries both.
-//
-// An installation that reads no claims binds nothing here, and the lane is then
-// absent rather than empty: nil means "this feed does not do commitments",
-// which is a different fact from "you owe nobody anything today".
-type Commitments interface {
-	DueBy(ctx context.Context, by time.Time, limit int) ([]Commitment, error)
-}
-
-// Commitment is one promise this rep made, with the evidence behind it.
-//
-// Body and Quote both travel: the claim contract's rule is that a claim is
-// checkable against what was actually written, and a card that showed only the
-// paraphrase would be asking the reader to trust the extractor.
-type Commitment struct {
-	ID          ids.UUID
-	PersonID    ids.UUID
-	Body        string
-	Quote       string
-	SourceLabel string
-	OccurredAt  time.Time
-	DueAt       time.Time
-}
-
-// AtRisk is the open deals going quiet, or already past their expected close.
-//
-// The seam behind it reads the SAME candidate engine the whats_slipping tool
-// reads, at a shorter idle window. A second at-risk rule living here would be
-// two answers to one question, and the two would disagree in front of a rep.
-//
-// Optional exactly as Commitments is: nil means this feed does not do deal risk,
-// which is a different fact from a pipeline with nothing wrong in it.
-type AtRisk interface {
-	Quiet(ctx context.Context) ([]RiskyDeal, error)
-}
-
-// RiskyDeal is one deal the pipeline should worry about, and the ground it is
-// worried on.
-//
-// Both flags travel because they are different warnings: a deal nobody has
-// touched is neglected, and a deal past its close date is late whether or not
-// anyone touched it. A card that collapsed them would say "at risk" and leave
-// the rep to guess which.
-type RiskyDeal struct {
-	DealID ids.UUID
-	Name   string
-	// QuietDays is how long the deal has been idle, which is the number the
-	// card says out loud. Zero for a deal admitted only by its close date.
-	QuietDays int
-	// CloseOverdue is set when the expected close date has already passed.
-	CloseOverdue      bool
-	ExpectedCloseDate *time.Time
-}
-
-// Decay is the reader's own relationships that have gone silent.
-//
-// A separate lane from AtRisk rather than more rows in it, because the two rest
-// on different records and warn about different things: AtRisk is a DEAL nobody
-// is moving, and this is a PERSON nobody is talking to. A contact carrying no
-// open deal never reaches that lane at all, and those are exactly the
-// relationships that lapse without anyone noticing.
-//
-// The seam behind it derives the silence through the same §4 change engine the
-// contact's own page reads, so there is one quiet rule in the product rather
-// than a second threshold spelled here.
-//
-// Optional exactly as the others are: nil means this feed does not derive
-// relationship changes, which is a different fact from a rep whose
-// relationships are all current.
-type Decay interface {
-	Lapsed(ctx context.Context) ([]QuietRelationship, error)
-}
-
-// QuietRelationship is one contact this reader has stopped talking to.
-type QuietRelationship struct {
-	PersonID ids.UUID
-	Name     string
-	// QuietDays is how long the silence has run, which is the number the card
-	// says out loud. It comes from the derivation rather than from the
-	// projection's own last_at, so the card and the contact's page agree.
-	QuietDays int
-	// LastAt is when they last spoke, so the card can date the silence rather
-	// than only measure it.
-	LastAt time.Time
-}
-
-// Meetings is today's booked meetings that have not happened yet.
-//
-// Optional as the other two are: nil means this feed does not read meetings,
-// which is not the same as a day with none in it.
-type Meetings interface {
-	Today(ctx context.Context, from, until time.Time, limit int) ([]Meeting, error)
-}
-
-// Meeting is one appointment still ahead of the reader.
-type Meeting struct {
-	ID       ids.UUID
-	Subject  string
-	StartsAt time.Time
-}
-
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
 type Clock func() time.Time
@@ -273,17 +54,21 @@ type Service struct {
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
 	meetings Meetings
-	now      Clock
+	failed   FailedEffects
+	// names is OPTIONAL like the lanes above it: nil means subjects travel
+	// unnamed and the client resolves display names itself (labels.go).
+	names Names
+	now   Clock
 }
 
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, n Names, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r,
-		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, now: now,
+		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, failed: f, names: n, now: now,
 	}
 }
 
@@ -307,10 +92,11 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
-	morning, err := s.thisMorning(ctx)
+	morning, morningState, err := s.thisMorning(ctx)
 	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = morning
 		out.Counts.ThisMorning = len(morning)
+		out.ThisMorningState = &morningState
 	})
 	if err != nil {
 		return crmcontracts.Attention{}, err
@@ -356,6 +142,11 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	if len(omitted) > 0 {
 		out.LanesOmitted = &omitted
 	}
+	// Last, over the assembled lanes: every card that names a record gets its
+	// display name under this reader's own grants (labels.go).
+	if err := s.fillSubjectLabels(ctx, &out); err != nil {
+		return crmcontracts.Attention{}, err
+	}
 	return out, nil
 }
 
@@ -374,16 +165,27 @@ type laneCount struct {
 // this lane is a worklist that must be finishable and a row that cannot be
 // removed is the opposite of finishing. Home still shows what was answered,
 // which is where a rep looks to see what she did.
-func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem, error) {
-	queue, err := s.briefing.Queue(ctx)
+func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem, crmcontracts.AttentionThisMorningState, error) {
+	queue, ran, err := s.briefing.Queue(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	items := make([]crmcontracts.AttentionItem, 0, len(queue))
 	for _, entry := range queue {
 		items = append(items, briefItem(entry))
 	}
-	return items, nil
+	// The state names WHY the lane holds what it holds. A run that ranked
+	// nothing reads all_answered too: "nothing worth your first hour" and
+	// "you answered everything" are the same message to a reader — nothing
+	// to do here — while no_run_today is the one that must not wear a tick.
+	state := crmcontracts.ItemsWaiting
+	switch {
+	case !ran:
+		state = crmcontracts.NoRunToday
+	case len(items) == 0:
+		state = crmcontracts.AllAnswered
+	}
+	return items, state, nil
 }
 
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,

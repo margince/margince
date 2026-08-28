@@ -28,21 +28,42 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// taskSourceSystem is activity.source as the automation engine's create
-// executor stamps it (automation's systemSource — spelled again here
-// because a module cannot import a sibling's constant; the provenance
-// reservation that keeps clients from writing it names the same value,
-// provenance.ReservedSystemSource). Never trusted alone: source arrives
-// on the client create wire, so every selector below pairs it with
-// systemCapturedBy, which no client can write.
-const taskSourceSystem = "system"
+// systemSource is activity.source as the automation engine's create
+// executor stamps it (automation's own systemSource — spelled again here
+// because a module cannot import a sibling's constant). Never trusted
+// alone, and deliberately NOT reserved at the create wire: the engine's
+// own creates flow through the same mapper as a client's
+// (LogActivityInputFrom), so a value-level refusal there would refuse the
+// engine itself. A caller can spell it — so every selector over it in
+// this package (the follow-up resolver below, the last-touch scan's
+// genuine-engagement exclusion) pairs it with systemCapturedBy, which no
+// client can write, and that PAIRING is the security boundary. The one
+// pair of constants for the package, so the next selector cannot copy
+// half the predicate.
+const systemSource = "system"
 
 // systemCapturedBy is captured_by as the workflow engine's runs stamp it:
 // storekit.CapturedBy writes the authenticated principal's ID, and the
 // engine binds the system principal with ID "system" (automation's
 // HandleEvent). captured_by never comes from a request body, so it is the
-// unforgeable half of the "the system minted this task" predicate.
+// unforgeable half of the "the system wrote this row" predicate.
 const systemCapturedBy = "system"
+
+// systemCapturedByPattern is the LIKE pattern that matches every system
+// principal, because captured_by carries the principal's ID and those IDs
+// are NAMESPACED: the bus binds a bare "system", while every job binds its
+// own "system:<job>" — "system:time-scan", "system:brief-overnight",
+// "system:comms-send" and thirty-odd more.
+//
+// Comparing against the bare literal alone is what let a reminder task the
+// TIME SCAN minted count as a genuine engagement: it carries
+// captured_by "system:time-scan", the equality missed it, and the row the
+// engine wrote reset the very clock the engine reads. A prefix match is a
+// spelling test and would normally be refused here — it earns its place
+// because the ':' namespace IS the convention every system actor is bound
+// under, and because captured_by is server-stamped from the principal, so
+// no caller can reach this pattern by writing one.
+const systemCapturedByPattern = systemCapturedBy + ":%"
 
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
@@ -171,8 +192,8 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // task no longer matches the open filter.
 //
 // "System-minted" is decided by source AND captured_by together: source
-// rides the client create wire (and is merely refused there, not
-// impossible), while captured_by is stamped from the authenticated
+// rides the client create wire verbatim (any caller can spell "system" —
+// see systemSource's doc), while captured_by is stamped from the authenticated
 // principal — a planted source alone hands nothing to this path. It
 // answers a COUNT rather than rows, so nothing about which records exist
 // leaves a call that takes no read gate of its own; each completion's
@@ -184,9 +205,10 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 			SELECT a.id FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
-			  AND a.captured_by = $4
+			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), taskSourceSystem, systemCapturedBy)
+			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), systemSource,
+			systemCapturedBy, systemCapturedByPattern)
 		if err != nil {
 			return err
 		}

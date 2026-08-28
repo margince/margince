@@ -415,13 +415,15 @@ func selectedLegalEntityFields(entities []SiteReadLegalEntity, in ConfirmCompany
 		return nil
 	}
 	address := PrintedSiteReadValue(pointerValue(in.Fields[fieldRegisteredAddress]))
-	register := PrintedSiteReadValue(pointerValue(in.Fields[fieldRegisterVat]))
+	register := PrintedSiteReadValue(pointerValue(in.Fields[fieldRegisterNumber]))
+	vat := PrintedSiteReadValue(pointerValue(in.Fields[fieldRegisterVat]))
 	var selected *SiteReadLegalEntity
 	for i := range entities {
 		entity := &entities[i]
 		if !samePrintedValue(entity.Name, legalName) ||
 			(address != "" && !samePrintedValue(entity.RegisteredAddress, address)) ||
-			(register != "" && !samePrintedValue(entity.RegisterNumber, register)) {
+			(register != "" && !samePrintedValue(entity.RegisterNumber, register)) ||
+			(vat != "" && !samePrintedValue(entity.VatNumber, vat)) {
 			continue
 		}
 		if selected != nil {
@@ -444,7 +446,8 @@ func selectedLegalEntityFields(entities []SiteReadLegalEntity, in ConfirmCompany
 		value string
 	}{
 		{name: fieldRegisteredAddress, value: PrintedSiteReadValue(selected.RegisteredAddress)},
-		{name: fieldRegisterVat, value: PrintedSiteReadValue(selected.RegisterNumber)},
+		{name: fieldRegisterNumber, value: PrintedSiteReadValue(selected.RegisterNumber)},
+		{name: fieldRegisterVat, value: PrintedSiteReadValue(selected.VatNumber)},
 	} {
 		if field.value != "" {
 			fields = append(fields, DeepReadField{

@@ -328,7 +328,7 @@ func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
 // absent from the row's jsonb and the query skips it — so this holds the one
 // exclusion that is a judgement rather than a fact about the schema.
 func TestAStampIsNotComparedForSupersession(t *testing.T) {
-	asked, err := coupledImage(json.RawMessage(`{"updated_at":"2026-01-01T00:00:00Z","title":"CTO"}`))
+	asked, err := coupledImage("person", json.RawMessage(`{"updated_at":"2026-01-01T00:00:00Z","title":"CTO"}`))
 	if err != nil {
 		t.Fatalf("narrow the image: %v", err)
 	}
@@ -419,5 +419,42 @@ func TestSettingACustomFieldFromEmptyIsRefusedRatherThanSilentlyDropped(t *testi
 		if field == "cf_referral_code" {
 			t.Error("the custom field was asked to be cleared, which no module's write can do")
 		}
+	}
+}
+
+// A provenance stamp is dropped for the record type that STAMPS it, and never
+// for one that treats the same word as a field.
+//
+// `source` is the case this exists for. An organization's lifecycle move writes
+// it as machine provenance, so a restore must not replay it. A LEAD's source is
+// a value a rep types and can edit, and dropping it would leave the tampered
+// value in place while reporting the undo a success — the silent-drop failure
+// the whole refusal set exists to prevent.
+func TestAProvenanceStampIsDroppedOnlyForTheRecordThatStampsIt(t *testing.T) {
+	orgPatch, unspellable, err := filterImage("organization",
+		json.RawMessage(`{"display_name":"Weber GmbH","name_source":"domain"}`))
+	if err != nil {
+		t.Fatalf("filter the organization image: %v", err)
+	}
+	if _, kept := orgPatch["name_source"]; kept {
+		t.Error("a rename's provenance stamp travelled back into the record")
+	}
+	if _, kept := orgPatch["display_name"]; !kept {
+		t.Error("the name the entry actually changed did not survive the filter")
+	}
+	// Dropped, not refused: an unspellable key would make the whole entry
+	// un-undoable, which is the limit this filtering removes.
+	if len(unspellable) != 0 {
+		t.Errorf("unspellable = %v, want the stamp dropped silently", unspellable)
+	}
+
+	leadPatch, _, err := filterImage("lead",
+		json.RawMessage(`{"full_name":"Anna Weber","source":"webinar"}`))
+	if err != nil {
+		t.Fatalf("filter the lead image: %v", err)
+	}
+	if _, kept := leadPatch["source"]; !kept {
+		t.Error("a lead's own source was dropped, so undoing an edit to it would " +
+			"leave the changed value in place and report success")
 	}
 }

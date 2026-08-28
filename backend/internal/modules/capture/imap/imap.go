@@ -89,6 +89,19 @@ type Connector struct {
 	// against an in-memory server (the production dialer's TLS + SSRF guard
 	// are its own tested properties).
 	dial func(context.Context, Credentials) (*imapclient.Client, net.Conn, error)
+
+	// bounces records the delivery reports this mailbox receives against the
+	// outbound mail they name. Nil keeps the old behaviour: the report is
+	// dropped with the rest of the delivery-system mail.
+	bounces connector.BounceSink
+}
+
+// WithBounceSink returns a copy that records delivery reports instead of
+// only dropping them.
+func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
+	copied := *c
+	copied.bounces = sink
+	return &copied
 }
 
 // syncState is one pull's mutable state — owner identity, counters, and the
@@ -188,6 +201,9 @@ func (c *Connector) capture(ctx context.Context, raw []byte, sink connector.Sink
 		return nil
 	}
 	if _, drop := parsed.SkipReason(); drop {
+		if err := mailmap.RecordIfBounce(ctx, raw, c.bounces); err != nil {
+			return err
+		}
 		st.stats.Skipped++
 		return nil
 	}

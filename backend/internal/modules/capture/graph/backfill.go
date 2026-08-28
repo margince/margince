@@ -108,5 +108,5 @@ func (c *Connector) backfillOne(ctx context.Context, access string, msg MessageR
 		// provider is waited out, anything else ends the run.
 		return false, err
 	}
-	return captureOne(ctx, raw, sink, owner, msg.ParentFolderID == sentFolder)
+	return captureOne(ctx, raw, sink, c.bounces, owner, msg.ParentFolderID == sentFolder)
 }

@@ -282,6 +282,10 @@ var catalog = map[string]struct {
 	// reply; a duplicate inbound for the same reply does not re-emit).
 	"engagement.reply": {activityStreamEntity, 1},
 
+	// A returned send is a fact about the sent activity, so it rides the
+	// activity stream the send's own events ride.
+	"comms.delivery_bounced": {activityStreamEntity, 1},
+
 	"approval.requested": {approvalStreamEntity, 1},
 	"approval.decided":   {approvalStreamEntity, 1},
 

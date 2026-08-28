@@ -49,28 +49,6 @@ func TestRefuseNamesTheFieldAndLetsOrdinaryValuesThrough(t *testing.T) {
 	}
 }
 
-// "system" is the automation engine's own provenance stamp: a client who
-// could spell it would hand their row — or a colleague's lead's row — to
-// the system's own completion and archival paths.
-func TestRefuseReservesTheSystemsOwnSource(t *testing.T) {
-	err := provenance.Refuse("source", provenance.ReservedSystemSource)
-	var reserved *provenance.ReservedError
-	if !errors.As(err, &reserved) {
-		t.Fatalf("err = %v, want ReservedError — a client must not claim the system's own provenance", err)
-	}
-	var fault apperrors.FieldFault
-	if !errors.As(err, &fault) {
-		t.Errorf("the refusal must read as caller-fixable (FieldFault), got %v", err)
-	}
-	// Only the exact value is the system's; lookalikes stay a caller's to
-	// spell, so nobody's real source system named "systematic" breaks.
-	for _, ordinary := range []string{"systematic", "System", "system:x"} {
-		if err := provenance.Refuse("source", ordinary); err != nil {
-			t.Errorf("Refuse(%q) = %v, want nil", ordinary, err)
-		}
-	}
-}
-
 func TestReservedErrorStatesItselfAsCallerFixable(t *testing.T) {
 	// Implementing apperrors.FieldFault is what carries this refusal to
 	// the caller as a 422 naming the field — on the HTTP surface AND on

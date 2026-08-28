@@ -402,19 +402,25 @@ func TestCompanyFieldMentionUnderstandsTheCompleteGermanVocabulary(t *testing.T)
 		fieldDisplayName:       "Unser Firmenname ist Acme",
 		fieldLegalName:         "Unsere Firmierung ist Acme GmbH",
 		fieldRegisteredAddress: "Unsere Geschäftsanschrift ist Berlin",
-		fieldRegisterVat:       "Unsere Handelsregisternummer ist HRB 42",
-		fieldIndustry:          "Unsere Branche ist Software",
-		fieldHistory:           "Unsere Unternehmensgeschichte begann 2020",
-		fieldOfferSummary:      "Unser Leistungsangebot ist Beratung",
-		fieldICP:               "Unser ideales Kundenprofil sind Mittelständler",
-		fieldValueProposition:  "Unser Wertversprechen ist Zeitersparnis",
-		fieldUSP:               "Unser Alleinstellungsmerkmal ist Geschwindigkeit",
-		fieldCustomerPains:     "Die Kundenprobleme sind hohe Kosten",
-		fieldDesiredOutcomes:   "Die gewünschten Ergebnisse sind mehr Umsatz",
-		fieldBuyingCenter:      "Unser Einkaufsgremium umfasst IT und Einkauf",
-		fieldBuyingIntents:     "Die Kaufsignale sind konkrete Projektanfragen",
-		fieldCommonObjections:  "Die häufigen Einwände betreffen den Preis",
-		fieldSalesMotion:       "Unser Vertriebsmodell ist founder-led",
+		// The court's register and the tax office's number are different
+		// questions in German too, and a rep naming one must not be offered
+		// the other's field.
+		fieldRegisterNumber:   "Unsere Handelsregisternummer ist HRB 42",
+		fieldRegisterVat:      "Unsere Umsatzsteuer-ID ist DE123456789",
+		fieldRegisterCourt:    "Unser Registergericht ist Charlottenburg",
+		fieldLegalForm:        "Unsere Rechtsform ist GmbH",
+		fieldIndustry:         "Unsere Branche ist Software",
+		fieldHistory:          "Unsere Unternehmensgeschichte begann 2020",
+		fieldOfferSummary:     "Unser Leistungsangebot ist Beratung",
+		fieldICP:              "Unser ideales Kundenprofil sind Mittelständler",
+		fieldValueProposition: "Unser Wertversprechen ist Zeitersparnis",
+		fieldUSP:              "Unser Alleinstellungsmerkmal ist Geschwindigkeit",
+		fieldCustomerPains:    "Die Kundenprobleme sind hohe Kosten",
+		fieldDesiredOutcomes:  "Die gewünschten Ergebnisse sind mehr Umsatz",
+		fieldBuyingCenter:     "Unser Einkaufsgremium umfasst IT und Einkauf",
+		fieldBuyingIntents:    "Die Kaufsignale sind konkrete Projektanfragen",
+		fieldCommonObjections: "Die häufigen Einwände betreffen den Preis",
+		fieldSalesMotion:      "Unser Vertriebsmodell ist founder-led",
 	}
 	for field, message := range examples {
 		if !companyFieldMentioned(message, field) {

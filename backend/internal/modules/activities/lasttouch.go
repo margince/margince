@@ -27,22 +27,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// automationSource is the activity.source value the automation engine
-// stamps on every activity it creates (its create_task / create_record
-// output, automation/engine.go's systemSource). LastTouchBefore
-// excludes these so the engine's OWN reminder task cannot count as a
-// "touch" that resets the very clock it fires off. A module never imports
-// a sibling (ADR-0054 §9), so this is the value-level shadow of that
-// constant, not a shared symbol — kept in lockstep by the integration
-// proof (compose/integration), which fires a real reminder and asserts
-// the anchor does not move.
-const automationSource = "system"
-
 // LastTouchCandidate is one REMINDER-ELIGIBLE linked entity whose most
 // recent GENUINE engagement (across every kind and every link) landed
 // before the caller's cutoff. "Genuine" excludes the automation engine's
-// own output (automationSource); "eligible" is the live-work test each
-// entity type gets in the query — see LastTouchBefore.
+// own output — source AND captured_by together (systemSource,
+// systemCapturedBy, followupresolve.go), because source alone rides the
+// client create wire and a planted value must not let a caller hide real
+// engagement or move a record's anchor; "eligible" is the live-work test
+// each entity type gets in the query — see LastTouchBefore.
 type LastTouchCandidate struct {
 	EntityType string
 	EntityID   ids.UUID
@@ -55,14 +47,20 @@ type LastTouchCandidate struct {
 // the link-id coalesce, and the organization walk — and it sits apart from the
 // scan so the scan reads as what it does with the rows.
 //
-// $1 is the source the automation engine stamps, $2 the cutoff, $3 the cap.
+// $1/$4/$5 are the source and captured_by the automation engine stamps —
+// excluded only TOGETHER, since source alone is a client's to spell. $5 is
+// the namespaced form: captured_by carries the principal's ID and every job
+// binds its own ("system:time-scan"), so matching the bare "system" alone
+// missed the engine's own writes and let a reminder reset the clock it
+// reads. $2 the cutoff, $3 the cap.
 func lastTouchCandidateQuery() string {
 	return storekit.SQLf(`
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
 				FROM activity a
 				WHERE a.archived_at IS NULL
-				  AND a.source <> $1
+				  AND NOT (a.source = $1
+				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
 			), direct AS (
 				SELECT al.entity_type AS entity_type,
 				       %[1]s AS entity_id,
@@ -131,11 +129,11 @@ func lastTouchCandidateQuery() string {
 // "No activity for N days" means the rep has not ENGAGED the record — a
 // human touch (call, email, meeting, note), an inbound reply, or a
 // captured mail (Gmail/IMAP, source "gmail:…"/"imap:…") all count. The
-// automation engine's OWN writes (source = automationSource) do NOT: a
+// automation engine's OWN writes (source AND captured_by both "system") do NOT: a
 // reminder task the engine created must not look like engagement, or the
 // firing would reset its own anchor to ~now, age out of the candidate
 // set, then re-surface with the task's timestamp as a fresh anchor and
-// nag every N days forever. Excluding automationSource keeps the anchor
+// nag every N days forever. Excluding the engine's writes keeps the anchor
 // pinned to the last real touch, so no_activity_reminder fires ONCE per
 // quiet spell (recurring "check in every N days regardless" is
 // check_in_cadence's job, not this trigger's).
@@ -198,7 +196,8 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), automationSource, cutoff, limit)
+		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), systemSource, cutoff, limit,
+			systemCapturedBy, systemCapturedByPattern)
 		if err != nil {
 			return err
 		}

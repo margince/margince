@@ -25,10 +25,16 @@ import (
 // stated, which is the one thing this read exists to prevent.
 type corpusLegalEntity struct {
 	Name string `json:"name"`
-	// RegisteredAddress and RegisterNumber are empty when the page states
-	// the entity but not that detail — never guessed to fill the block.
+	// RegisteredAddress, RegisterNumber and VatNumber are empty when the page
+	// states the entity but not that detail — never guessed to fill the block.
+	//
+	// The two numbers are separate because the authorities behind them are: a
+	// court issues the register entry and a tax office issues the VAT ID, and
+	// a company states both. Reading them into one field meant whichever the
+	// page printed first stood for the other.
 	RegisteredAddress string `json:"registered_address,omitempty"`
 	RegisterNumber    string `json:"register_number,omitempty"`
+	VatNumber         string `json:"vat_number,omitempty"`
 	EvidenceSnippet   string `json:"evidence_snippet,omitempty"`
 	SourceURL         string `json:"source_url"`
 }
@@ -39,8 +45,16 @@ type corpusLegalEntity struct {
 // ("Gradion Singapur") above the entity that trades there. A register
 // number is the identity a registry issues, so blocks sharing one are the
 // same company however they are labelled; entities without one fall back
-// to their normalized name. The richest sighting wins, so a locale that
-// printed the address is not lost to one that omitted it.
+// to their normalized name. The richest sighting wins the block it is shown
+// under, so a locale that printed the address is not lost to one that
+// omitted it.
+//
+// Details the winner lacks are taken from the sighting it replaced rather
+// than discarded. They are three different facts about one company and the
+// page order decides nothing: an imprint printing the address and the VAT ID
+// and a second locale printing the address and the register entry tie on
+// count, so a winner-takes-all rule kept whichever came first and dropped
+// the other's number entirely.
 func dedupeLegalEntities(entities []corpusLegalEntity) []corpusLegalEntity {
 	var out []corpusLegalEntity
 	for _, entity := range entities {
@@ -50,10 +64,39 @@ func dedupeLegalEntities(entities []corpusLegalEntity) []corpusLegalEntity {
 			continue
 		}
 		if legalEntityDetail(entity) > legalEntityDetail(out[at]) {
+			entity = fillLegalDetailsFrom(entity, out[at])
 			out[at] = entity
+			continue
 		}
+		out[at] = fillLegalDetailsFrom(out[at], entity)
 	}
 	return removeBrandOnlyLegalAliases(out)
+}
+
+// fillLegalDetailsFrom completes one sighting of an entity from another of
+// the same entity on the SAME page. Only a detail the kept sighting lacks is
+// taken.
+//
+// The page restriction is what keeps the evidence honest. An entity carries
+// ONE snippet and one source URL, and every field filled from it is published
+// citing them (fillLegalTrioFromCensus). A number borrowed from another page
+// would arrive quoting a passage that never printed it — the exact claim the
+// no-guess gate exists to refuse. Two sightings on one page are two blocks of
+// the same notice, which that page's snippet does cover.
+func fillLegalDetailsFrom(kept, other corpusLegalEntity) corpusLegalEntity {
+	if kept.SourceURL != other.SourceURL {
+		return kept
+	}
+	if kept.RegisteredAddress == "" {
+		kept.RegisteredAddress = other.RegisteredAddress
+	}
+	if kept.RegisterNumber == "" {
+		kept.RegisterNumber = other.RegisterNumber
+	}
+	if kept.VatNumber == "" {
+		kept.VatNumber = other.VatNumber
+	}
+	return kept
 }
 
 // matchingLegalEntity joins locale variants without collapsing genuinely
@@ -61,20 +104,39 @@ func dedupeLegalEntities(entities []corpusLegalEntity) []corpusLegalEntity {
 // number that another locale printed; those sightings still match by name.
 // When both sightings carry different register numbers, the registry
 // identities win and the entities remain separate even if their names match.
+//
+// A VAT ID is the same kind of evidence one authority weaker: a tax office
+// issues it to one company, so two sightings sharing one are the same
+// company and two carrying different ones are not. It decides only where no
+// register number does, because a group's entities can share neither.
+// Without it a page printing only VAT IDs had no identity at all: sightings
+// of one entity split under their locale names and could trip the
+// multi-entity abstention, and two different companies printed under one
+// name merged into whichever was seen first.
 func matchingLegalEntity(existing []corpusLegalEntity, candidate corpusLegalEntity) int {
 	candidateName := legalEntityNameKey(candidate.Name)
 	candidateRegister := normalizeEvidence(candidate.RegisterNumber)
+	candidateVat := normalizeEvidence(candidate.VatNumber)
 	for i, entity := range existing {
 		name := legalEntityNameKey(entity.Name)
 		register := normalizeEvidence(entity.RegisterNumber)
+		vat := normalizeEvidence(entity.VatNumber)
 		sameRegister := candidateRegister != "" && register != "" && candidateRegister == register
+		sameVat := candidateVat != "" && vat != "" && candidateVat == vat
 		compatibleName := candidateName != "" && candidateName == name &&
-			(candidateRegister == "" || register == "" || candidateRegister == register)
-		if sameRegister || compatibleName {
+			bothOrEitherEmpty(candidateRegister, register) &&
+			bothOrEitherEmpty(candidateVat, vat)
+		if sameRegister || sameVat || compatibleName {
 			return i
 		}
 	}
 	return -1
+}
+
+// bothOrEitherEmpty reports whether two identifiers can belong to one
+// company: they agree, or at least one sighting did not print its own.
+func bothOrEitherEmpty(left, right string) bool {
+	return left == "" || right == "" || left == right
 }
 
 // legalEntityNameKey treats punctuation-only legal-form variants as the
@@ -122,8 +184,10 @@ func removeBrandOnlyLegalAliases(entities []corpusLegalEntity) []corpusLegalEnti
 // enrichLegalEntitiesFromProfile shares already-gated legal trio values
 // with the single legal choice shown to the human. Both lanes cite shallow
 // legal pages and the census has established that there is only one entity;
-// this avoids asking the user to retype a VAT number one lane recovered when
-// the entity lane's 300-rune block ended between the address and identifier.
+// this avoids asking the user to retype a number one lane recovered when the
+// entity lane's 300-rune block ended between the address and the identifiers.
+// Each field fills its own: a register entry recovered elsewhere cannot stand
+// in for a VAT ID the page never printed.
 func enrichLegalEntitiesFromProfile(entities []corpusLegalEntity, fields []evidencedField) []corpusLegalEntity {
 	if len(entities) != 1 {
 		return entities
@@ -135,9 +199,13 @@ func enrichLegalEntitiesFromProfile(entities []corpusLegalEntity, fields []evide
 			if out[0].RegisteredAddress == "" {
 				out[0].RegisteredAddress = field.Value
 			}
-		case string(crmcontracts.ColdStartFieldFieldRegisterVat):
+		case string(crmcontracts.ColdStartFieldFieldRegisterNumber):
 			if out[0].RegisterNumber == "" {
 				out[0].RegisterNumber = field.Value
+			}
+		case string(crmcontracts.ColdStartFieldFieldRegisterVat):
+			if out[0].VatNumber == "" {
+				out[0].VatNumber = field.Value
 			}
 		}
 	}
@@ -194,7 +262,8 @@ func fillLegalTrioFromCensus(fields []evidencedField, entities []corpusLegalEnti
 	}{
 		{string(crmcontracts.ColdStartFieldFieldLegalName), entity.Name},
 		{string(crmcontracts.ColdStartFieldFieldRegisteredAddress), entity.RegisteredAddress},
-		{string(crmcontracts.ColdStartFieldFieldRegisterVat), entity.RegisterNumber},
+		{string(crmcontracts.ColdStartFieldFieldRegisterNumber), entity.RegisterNumber},
+		{string(crmcontracts.ColdStartFieldFieldRegisterVat), entity.VatNumber},
 	} {
 		if present[candidate.field] || strings.TrimSpace(candidate.value) == "" {
 			continue
@@ -228,7 +297,7 @@ const censusFieldConfidence = 1
 // printed — the tie-break when the same entity is seen twice.
 func legalEntityDetail(entity corpusLegalEntity) int {
 	filled := 0
-	for _, value := range []string{entity.RegisteredAddress, entity.RegisterNumber} {
+	for _, value := range []string{entity.RegisteredAddress, entity.RegisterNumber, entity.VatNumber} {
 		if strings.TrimSpace(value) != "" {
 			filled++
 		}

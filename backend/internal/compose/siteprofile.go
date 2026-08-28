@@ -67,7 +67,8 @@ const (
 var profileSystem = fmt.Sprintf(`You extract a company's profile from numbered passages of key pages of its website, for a CRM.
 Return ONLY a JSON object: {"fields":[{"f":field,"v":value,"e":passage id,"c":confidence 0.0-1.0}]} with at most one entry per field.
 Allowed fields: %s.
-Cite the passage id that grounds each value; write v in the site's own terms. legal_name, registered_address and register_vat ONLY from a legal-notice page's passages, and ONLY when the site's legal pages name exactly one entity.
+Cite the passage id that grounds each value; write v in the site's own terms. legal_name, registered_address, legal_form, register_court, register_number and register_vat ONLY from a legal-notice page's passages, and ONLY when the site's legal pages name exactly one entity.
+register_number is the court's commercial-register entry ("HRB 12345 B"); register_vat is the tax identifier ("DE123456789"). Different authorities issue them and a notice prints both — never put one in the other's place.
 OMIT any field the passages do not ground — never guess.`,
 	strings.Join(extractionFieldNames, ", "))
 
@@ -84,6 +85,14 @@ var hardGateProfileFields = map[string]bool{
 	string(crmcontracts.ColdStartFieldFieldLegalName):         true,
 	string(crmcontracts.ColdStartFieldFieldRegisteredAddress): true,
 	string(crmcontracts.ColdStartFieldFieldRegisterVat):       true,
+	// The rest of the imprint block. Each is copied off the page verbatim —
+	// a legal form, a court's name and a register entry are quotations, not
+	// paraphrases — so each earns the same gate the two beside it have. A
+	// register entry that reached the warning-only path would be a legal
+	// identity nobody printed, appended with a drop already reported.
+	string(crmcontracts.ColdStartFieldFieldLegalForm):      true,
+	string(crmcontracts.ColdStartFieldFieldRegisterCourt):  true,
+	string(crmcontracts.ColdStartFieldFieldRegisterNumber): true,
 }
 
 // profileReply is the profile call's JSON shape.

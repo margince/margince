@@ -79,12 +79,25 @@ type SiteRead struct {
 // SiteReadLegalEntity is one legal entity a legal notice states, with the
 // identity details printed alongside it. A group publishes several, and
 // the read refuses to guess which one an installation belongs to — so it
-// keeps them all and the human picks. Address and register number are
-// empty when the page named the entity without them.
+// keeps them all and the human picks. Address, register number and VAT
+// number are empty when the page named the entity without them.
+//
+// A dossier written before the two numbers were told apart carries only
+// RegisterNumber, holding whichever of the two its page printed. Nothing
+// rewrites those: which one it holds cannot be recovered without parsing,
+// and the read that replaces it will fill both fields honestly.
+//
+// Picking an entity out of such a dossier therefore offers that value as the
+// register entry, which is right when it is one and wrong when it is a VAT
+// ID. It was equally a coin flip before, filed under the other field, and a
+// person sees the value on the card they are picking from and can correct it.
+// A dossier is a crawl result rather than a record: re-reading the site is
+// what settles one, and is cheaper than a scheme for guessing backwards.
 type SiteReadLegalEntity struct {
 	Name              string `json:"name"`
 	RegisteredAddress string `json:"registered_address,omitempty"`
 	RegisterNumber    string `json:"register_number,omitempty"`
+	VatNumber         string `json:"vat_number,omitempty"`
 	EvidenceSnippet   string `json:"evidence_snippet,omitempty"`
 	SourceURL         string `json:"source_url"`
 }

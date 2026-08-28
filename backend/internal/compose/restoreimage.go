@@ -27,9 +27,37 @@ import (
 // They are the write path's own output, not a person's decision, and replaying
 // one would state a stamp nobody made.
 //
+// Every entry here applies to EVERY record type, so a name one record type uses
+// as a stamp and another as a field does not belong in it —
+// provenanceStamps below is where such a key goes.
+//
 //nolint:goconst // the four stamps, spelled where they are judged
 var derivedColumns = map[string]bool{
 	"updated_at": true, "created_at": true, "id": true, "version": true,
+}
+
+// provenanceStamps are the per-record-type columns that say WHO or WHAT last
+// wrote a field, rather than what the field says.
+//
+// They are dropped for the same reason as derivedColumns — undo puts the value
+// back, and what wrote it is history — but they are keyed by entity type
+// because the same word is a stamp on one record and a field on another.
+// `source` is the worked example: on an organization it is the lifecycle
+// move's provenance, and on a LEAD it is a value a rep types and can edit
+// (UpdateLeadRequest.Source). Dropping it globally would silently omit a lead's
+// own source from its restore, which is the silent-drop failure this file's
+// refusal set exists to prevent.
+//
+// Filtering these is what makes their records reversible at all. An
+// organization rename records `name_source` in BOTH images, so before this
+// entry the before-image filtered to nothing spellable and the whole entry
+// refused with not_restorable_by_this_path — every promoted rename permanently
+// un-undoable, the same limit the address folding below exists to avoid, and a
+// worse one now that the product applies some of those changes without asking.
+//
+//nolint:goconst // as namedByTheShapeButNotWrittenByThePatch below: the rows are wire names read as data
+var provenanceStamps = map[string]map[string]bool{
+	"organization": {"name_source": true, "source": true},
 }
 
 // addressColumns maps the address_* columns an audit image carries onto the
@@ -170,7 +198,8 @@ const (
 // spell decides how one image key reaches the update path, so filterImage reads
 // as the assembly it is rather than as the decision and the assembly at once.
 func spell(entityType, key string, value json.RawMessage, allowed map[string]bool) spelling {
-	if derivedColumns[key] || namedByTheShapeButNotWrittenByThePatch[entityType][key] {
+	if derivedColumns[key] || provenanceStamps[entityType][key] ||
+		namedByTheShapeButNotWrittenByThePatch[entityType][key] {
 		return spelledDropped
 	}
 	if _, isAddress := addressColumns[key]; isAddress && allowed[addressField] {

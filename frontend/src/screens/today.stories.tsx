@@ -91,10 +91,16 @@ export const AFullDay: Story = {
       },
     ],
     planned: [
+      // Filed under the person it is about, so the title is a link while the
+      // row keeps its own verbs — one of the two link shapes this screen draws.
       {
         id: "t-1",
         source: "task",
         title: "Call Anna about the renewal",
+        subject: {
+          type: "person",
+          id: "018f3a1b-0000-7000-8000-0000000000c1",
+        },
         due_at: "2026-08-23T10:00:00Z",
         overdue: true,
         actions: ["complete", "snooze"],
@@ -109,11 +115,15 @@ export const AFullDay: Story = {
       },
     ],
     done_for_you: [
+      // Verb-less but for `open`, so the WHOLE row is the press target — the
+      // other link shape. The subject is what earns the verb: a receipt whose
+      // decision named no record carries neither.
       {
         id: "ap-2",
         source: "approval",
         kind: "close_date_correction",
         title: "Moved the Acme close date to 27 Sep",
+        subject: { type: "deal", id: "018f3a1b-0000-7000-8000-0000000000d1" },
         occurred_at: "2026-08-25T06:12:00Z",
         actions: ["open"],
       },

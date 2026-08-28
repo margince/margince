@@ -94,6 +94,78 @@ func TestQuietOrganizationWithAnOpenDealFiresOnceAndStaysClaimed(t *testing.T) {
 	}
 }
 
+// A row a CALLER dressed as the system's still counts as engagement. source
+// arrives verbatim on the create wire, so anyone can write source='system' —
+// only the pair (source AND captured_by, which is stamped from the principal)
+// marks the engine's own output. Were source alone the exclusion, a caller
+// could hide real engagement from this scan, or plant an old-dated row to
+// drag a worked account into the reminder draw forever.
+func TestAPlantedSystemSourceRowStillCountsAsEngagement(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	org := e.SeedOrg(t, "Planted Account", nil)
+	deal := e.SeedDeal(t, "Planted Account Renewal", pipeline, open, nil)
+	attachDealToOrg(t, owner, deal, org)
+	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+	linkQuietTouch(t, owner, e.WS, "organization", org)
+
+	// The planted row: recent, source claims the system, captured_by names
+	// the human who actually wrote it. It IS this account's latest touch.
+	planted := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		 VALUES ($1, 'note', 'Dressed as the system', $2, 'system', 'human:x')`,
+		planted, eligibilityScanNow.AddDate(0, 0, -1)); err != nil {
+		t.Fatalf("seeding the planted row: %v", err)
+	}
+	linkTouch(t, owner, e.WS, planted, "organization", org)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+	if got := taskCountOn(t, e, "organization", org); got != 0 {
+		t.Fatalf("reminder tasks = %d, want 0 — the planted row is a real recent touch, and excluding it on its source alone would let a caller steer the scan", got)
+	}
+}
+
+// The engine's OWN recent output still does not count: both halves of the
+// pair are the system's, and a reminder task must not reset the very clock
+// it fires off.
+func TestTheEnginesOwnRowStillDoesNotCountAsEngagement(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	org := e.SeedOrg(t, "Reminded Account", nil)
+	deal := e.SeedDeal(t, "Reminded Account Renewal", pipeline, open, nil)
+	attachDealToOrg(t, owner, deal, org)
+	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+	linkQuietTouch(t, owner, e.WS, "organization", org)
+
+	// captured_by is the NAMESPACED principal the time scan actually binds,
+	// not the bare "system" the bus path uses. A case planting the bare form
+	// passes against an equality on it and says nothing about the rows this
+	// engine writes — which is how a reminder that reset its own clock
+	// reached main behind a green gate.
+	engineRow := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		 VALUES ($1, 'task', 'Follow up (engine-minted)', $2, 'system', 'system:time-scan')`,
+		engineRow, eligibilityScanNow.AddDate(0, 0, -1)); err != nil {
+		t.Fatalf("seeding the engine row: %v", err)
+	}
+	linkTouch(t, owner, e.WS, engineRow, "organization", org)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+	if got := taskCountOn(t, e, "organization", org); got == 0 {
+		t.Fatal("no reminder fired — the engine's own output counted as engagement and reset the clock it fires off")
+	}
+}
+
 func TestTwoRecordsSharingOneLastTouchInstantEachGetTheirOwnReminder(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)

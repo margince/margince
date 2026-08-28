@@ -185,7 +185,7 @@ func decidableMembers(ctx context.Context, tx pgx.Tx, p principal.Principal, row
 // the older clock, which would see it as still pending and answer
 // "already_decided" — telling a human somebody decided a question nobody did.
 func (s *Service) decideMemberInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, a row, approve bool, reason *string) (BundleMember, error) {
-	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil)
+	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, decidedByPerson)
 	if err == nil {
 		return BundleMember{Approval: decided, Outcome: BundleDecided}, nil
 	}

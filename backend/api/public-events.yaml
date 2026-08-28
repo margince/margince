@@ -89,6 +89,7 @@ components:
         - activity.archived
         - activity.updated
         - engagement.reply
+        - comms.delivery_bounced
         - consent.changed
         - email_signature.changed
         - user_locale.changed
@@ -1780,6 +1781,39 @@ components:
         changed_fields:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
       additionalProperties: false
+
+    PublicEventCommsDeliveryBounced:
+      type: object
+      x-event-type: comms.delivery_bounced
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for comms.delivery_bounced — the receiving mail system
+        returned a sent message (comms/store.go's RecordBounce). The entity
+        is the sent message's timeline activity. kind separates the two
+        facts a consumer can act on: `hard` — the address does not accept
+        mail and retrying is sending to nobody; `soft` — a temporary
+        refusal (full mailbox, greylisting) that says nothing durable
+        about the address.
+      required:
+        - message_id
+        - kind
+      properties:
+        message_id:
+          type: string
+          description: >-
+            The bounced message's own RFC 5322 Message-ID — the identity
+            the delivery report named, and the key the outbound record
+            was matched on.
+        kind:
+          type: string
+          enum: [hard, soft]
+          description: Whether the refusal is durable (`hard`) or temporary (`soft`).
+        reason:
+          type: string
+          description: >-
+            The delivery report's stated reason, bounded and safe to show
+            an operator; empty when the report carried none.
 
     PublicEventEngagementReply:
       type: object
