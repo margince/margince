@@ -13,7 +13,21 @@ SET LOCAL lock_timeout = '3s';
 ALTER TABLE scheduled_send
     ADD COLUMN also_links jsonb;
 
+-- ADD ... NOT VALID then VALIDATE, rather than one validated ADD.
+--
+-- Every existing row has NULL in a column added a statement ago, so the scan can
+-- only pass — but Postgres still takes ACCESS EXCLUSIVE for its whole length,
+-- and scheduled_send is read and written by the timer that releases messages.
+-- NOT VALID takes that lock without scanning; VALIDATE downgrades to SHARE
+-- UPDATE EXCLUSIVE for the pass. So a deployment blocks scheduling for a moment
+-- rather than for a table scan.
+--
+-- The runner wraps each file in one transaction (dbmigrate.go), so a failure at
+-- either statement rolls both back: the column can never be left without its
+-- shape.
 ALTER TABLE scheduled_send
     ADD CONSTRAINT scheduled_send_also_links_shape
     CHECK (also_links IS NULL
-           OR (origin_kind = 'reply'::text AND jsonb_typeof(also_links) = 'array'::text));
+           OR (origin_kind = 'reply'::text AND jsonb_typeof(also_links) = 'array'::text)) NOT VALID;
+
+ALTER TABLE scheduled_send VALIDATE CONSTRAINT scheduled_send_also_links_shape;

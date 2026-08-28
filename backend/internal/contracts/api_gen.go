@@ -24279,6 +24279,12 @@ type SendEmailRequest struct {
 	//
 	// Bounded at 25 for the reason the account-started list is: each probe is its own
 	// query, and a message about more records than that is about none of them.
+	//
+	// The bound is on the MERGED total, not on this list alone. A reply is refused 422
+	// `too_many_links` when the anchor's own links plus these exceed 25 — so a conversation
+	// already filed under many records leaves room for fewer additions than the `maxItems`
+	// here suggests. The refusal arrives at request time, before consent is asked and
+	// before anything is scheduled, so a caller learns it while they can still shorten it.
 	AlsoLinks *[]ActivityLinkInput `json:"also_links,omitempty"`
 
 	// AttachmentIds Files already in the record library to send with this message, named by id
