@@ -22,14 +22,47 @@ lane refuse to run on a fresh checkout.
 """
 
 import json
+import os
 import re
 import sys
+import tempfile
+
+# The two trees every path this script opens actually lives under: the repo
+# itself (scenario files, and the records directory they get written to) and
+# the system temp directory (the per-run transcript files scripts/e2e-llm.sh
+# writes under its own `mktemp -d`). Neither is a fixed single directory —
+# E2E_LLM_SCENARIOS/E2E_LLM_RECORDS can move the first, and the mktemp name is
+# different on every run — so the check is containment in one of the two
+# roots, not an exact match.
+_REPO_ROOT = os.path.realpath(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+_TEMP_ROOT = os.path.realpath(tempfile.gettempdir())
+
+
+def _open_checked(path):
+    """Open a file this script was told to read, refusing anything outside
+    the repo or the system temp directory.
+
+    Every path this script opens arrives as one of its own CLI arguments,
+    built by scripts/e2e-llm.sh from a scenario glob or its own mktemp
+    workdir — never from anything the assistant under test said or called, so
+    this is not a defense against a hostile caller. It exists because those
+    arguments are still just strings by the time they reach here, and a typo
+    or a misconfigured E2E_LLM_SCENARIOS should fail with a clear reason
+    rather than open whatever the resulting path happened to resolve to.
+    """
+    real = os.path.realpath(path)
+    roots = (_REPO_ROOT + os.sep, _TEMP_ROOT + os.sep)
+    if real != _REPO_ROOT and not real.startswith(roots):
+        raise ValueError(f"refusing to open {path!r}: outside the repo and the system temp directory")
+    return open(real, encoding="utf-8")
 
 
 def parse_scenario(path):
     """Read the subset of YAML the scenario files use."""
     data, key, block, block_indent, seq = {}, None, None, 0, None
-    for raw in open(path, encoding="utf-8").read().splitlines():
+    for raw in _open_checked(path).read().splitlines():
         if block is not None:
             # A block scalar runs until a line that is neither blank nor
             # indented past the key.
@@ -82,7 +115,7 @@ def read_transcript(path):
     and is included so a scenario checking the closing sentence sees it.
     """
     called, said = [], []
-    for line in open(path, encoding="utf-8"):
+    for line in _open_checked(path):
         line = line.strip()
         if not line:
             continue

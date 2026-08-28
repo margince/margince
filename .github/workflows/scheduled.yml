@@ -393,10 +393,14 @@ jobs:
       - name: Install the frontend
         if: steps.funded.outputs.configured == 'yes'
         working-directory: .
-        run: pnpm install --frozen-lockfile
+        # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
+        # install; esbuild ships prebuilt platform binaries as optional deps.
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install the Claude CLI
         if: steps.funded.outputs.configured == 'yes'
-        run: npm install -g @anthropic-ai/claude-code
+        uses: ./.github/actions/install-claude-cli
+        with:
+          version: 2.1.236
       - name: Start the dev infra stack (compose + app role)
         if: steps.funded.outputs.configured == 'yes'
         working-directory: .

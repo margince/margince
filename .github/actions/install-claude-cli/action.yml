@@ -1,0 +1,41 @@
+name: install-claude-cli
+description: >-
+  Install a pinned, signature-verified build of the Claude CLI onto PATH.
+
+# Isolated in its own file so the S6505/S8543 waivers this step needs
+# (sonar-project.properties) name only this action, not the workflow that calls
+# it. A waiver scoped to a whole workflow file also hides a genuine finding
+# anywhere else in that file; a waiver scoped to this one-step action cannot.
+#
+# Installed project-local into a scratch directory rather than `-g`: a global
+# install has no lockfile and `npm audit signatures` refuses to run against one
+# (EAUDITGLOBAL) — there would be nothing here to verify. A local install gets
+# its own throwaway package-lock.json and IS auditable, so this step fails
+# closed if the registry's signature over the exact tarball installed does not
+# verify, which is the integrity guarantee CodeRabbit asked for on a global
+# install that has none of its own.
+#
+# --ignore-scripts is not an option, unlike the pnpm installs elsewhere in CI:
+# the package's own postinstall (install.cjs) is what places the platform
+# binary bin/claude execs, so skipping it ships a CLI that cannot run. The
+# mitigation is the version pin (S8543 — an unpinned install tracks whatever
+# npm resolves at run time) plus the signature audit above.
+
+inputs:
+  version:
+    description: The exact @anthropic-ai/claude-code version to install.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install and verify the Claude CLI
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+        mkdir -p install-claude-cli
+        cd install-claude-cli
+        npm install "@anthropic-ai/claude-code@${{ inputs.version }}"
+        npm audit signatures
+        echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
