@@ -71,6 +71,27 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 	}
 }
 
+// An activity is a timeline entry with no page of its own: the card may name
+// it, but offering `open` on it would be a link the client cannot route.
+func TestAFailureAboutATimelineEntryNamesItWithoutOfferingOpen(t *testing.T) {
+	svc := failedLaneService(&stubFailedEffects{rows: []FailedEffect{{
+		ID: ids.NewV7(), Kind: "send_email",
+		Sentence: "this was approved, but the work it released did not run",
+		FailedAt: readInstant, TargetType: "activity", TargetID: ids.NewV7(),
+	}}})
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	item := (*out.DidNotRun)[0]
+	if item.Subject == nil || item.Subject.Type != "activity" {
+		t.Fatalf("the card lost its subject: %+v", item)
+	}
+	if slices.Contains(item.Actions, "open") {
+		t.Error("open was offered on a timeline entry no screen answers to")
+	}
+}
+
 // Absent versus withheld versus empty are three different answers, and each
 // must survive as itself: no reader wired means no lane on the wire, a
 // refusal names the lane, and a clear lane is an empty list.

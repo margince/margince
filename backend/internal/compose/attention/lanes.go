@@ -122,7 +122,8 @@ type Receipt struct {
 }
 
 // FailedEffects reads the decisions the acting rep approved whose released
-// work then failed — newest failure first, bounded.
+// work then failed — bounded, newest-staged first (the approvals queue's own
+// order; a failure on an old staging sorts beneath newer rows).
 type FailedEffects interface {
 	Failed(ctx context.Context, limit int) ([]FailedEffect, error)
 }

@@ -384,7 +384,7 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 	summary := receipt.Summary
 	subject := subjectOf(receipt.TargetType, receipt.TargetID)
 	actions := []crmcontracts.AttentionItemActions{}
-	if subject != nil {
+	if openableSubject(subject) {
 		actions = append(actions, actionOpen)
 	}
 	return crmcontracts.AttentionItem{
@@ -429,7 +429,7 @@ func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
 	occurred := failed.FailedAt
 	subject := subjectOf(failed.TargetType, failed.TargetID)
 	actions := []crmcontracts.AttentionItemActions{}
-	if subject != nil {
+	if openableSubject(subject) {
 		actions = append(actions, actionOpen)
 	}
 	return crmcontracts.AttentionItem{
@@ -468,4 +468,19 @@ var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	"lead":         "lead",
 	"activity":     "activity",
 	"project":      "project",
+}
+
+// openableSubject reports whether a subject names a record with a page of its
+// own — the only kind `open` may be offered on. An activity is a timeline
+// entry: naming it on the card is honest, promising navigation to it is not,
+// and the client's router answers exactly this set.
+func openableSubject(subject *crmcontracts.AttentionSubject) bool {
+	if subject == nil {
+		return false
+	}
+	switch subject.Type {
+	case "organization", "person", "deal", "lead", "project":
+		return true
+	}
+	return false
 }

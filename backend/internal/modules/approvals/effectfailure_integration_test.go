@@ -106,6 +106,22 @@ func TestAFailedEffectIsListedForItsDeciderAlone(t *testing.T) {
 		t.Errorf("the wire row carries no failure mark: %+v", rows[0])
 	}
 
+	// The target archived AFTER the failure must not hide the row: the lane
+	// exists to tell the decider work they released did not run, and the
+	// probe that would re-ask "could you decide this now" answers a
+	// different question.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE organization SET archived_at = now() WHERE id = $1`, org); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err = e.svc.ListWire(deciding, ListInput{FailedForDecider: true, Limit: 8})
+	if err != nil {
+		t.Fatalf("listing after the target archived: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("the failure vanished when its target archived: %d rows", len(rows))
+	}
+
 	stranger := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Other Rep')`,

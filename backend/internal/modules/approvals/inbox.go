@@ -141,18 +141,17 @@ type ListInput struct {
 	// page can discard everything the page held and hide the recent decision
 	// underneath. In SQL, the limit only ever counts rows inside the window.
 	DecidedAfter *time.Time
-	// FailedForDecider narrows to the approved rows THIS caller decided whose
-	// released work then failed (decide.go's mark) — the one lane that can
-	// carry a decision back to the person who made it. A flag rather than a
-	// caller-supplied decider id, so no caller can read another person's
-	// failures by naming them; List binds the acting user itself.
+	// FailedForDecider narrows to the approved rows THIS caller decided
+	// whose released work then failed (decide.go's mark). A flag rather
+	// than a caller-supplied decider id — List binds the acting user
+	// itself, so nobody reads another person's failures by naming them.
 	FailedForDecider bool
 	Limit            int
 	// Cursor continues a previous page: the opaque keyset token that page
 	// reported as next_cursor. Empty starts at the newest row.
 	Cursor string
-	// failedDecider is FailedForDecider resolved to the acting user — set by
-	// List from the principal, never by a caller.
+	// failedDecider is FailedForDecider resolved to the acting user;
+	// set by List from the principal, never by a caller.
 	failedDecider *ids.UUID
 }
 
@@ -195,6 +194,15 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
 		if in.targeted() {
 			out, page, err = listForTarget(ctx, tx, p, in, start)
+			return err
+		}
+		// The caller's own failed decisions skip the per-row decidability
+		// probe: it asks "could this caller decide this NOW", and a failure
+		// must not vanish when that answer changes — target archived, grant
+		// narrowed — because the row exists to tell its decider that work
+		// THEY released did not run. Scope is decided_by = the acting user.
+		if in.failedDecider != nil {
+			out, page, err = scanOwnDecisions(ctx, tx, in, start)
 			return err
 		}
 		out, page, err = scanInbox(ctx, tx, p, in, start)
