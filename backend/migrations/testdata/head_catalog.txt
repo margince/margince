@@ -2951,7 +2951,10 @@ END;
 
 public.organization_open_pipeline_rollup acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.organization_id,
-    sum(conv.minor_base) AS open_pipeline_minor_base,
+        CASE
+            WHEN ((sum(conv.minor_base) >= ('-9223372036854775808'::bigint)::numeric) AND (sum(conv.minor_base) <= ('9223372036854775807'::bigint)::numeric)) THEN sum(conv.minor_base)
+            ELSE NULL::numeric
+        END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
     count(*) FILTER (WHERE (conv.minor_base IS NOT NULL)) AS priced_deal_count
    FROM (((deal d

@@ -34,3 +34,7 @@ CREATE VIEW organization_open_pipeline_rollup WITH (security_invoker='true') AS
    ) live ON true
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
   GROUP BY d.organization_id;
+
+-- And the comment the DROP above took with it, as 1787480000 wrote it.
+COMMENT ON VIEW organization_open_pipeline_rollup IS
+  'Open pipeline per organization in the installation base currency. Open deals hold no frozen rate — that happens on close — so each foreign-currency deal converts at the latest fx_rate on or before today. A deal with no usable rate contributes nothing and is still counted in open_deal_count, so a partial sum is detectable rather than silently short.';

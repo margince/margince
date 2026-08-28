@@ -30,7 +30,22 @@ DROP VIEW IF EXISTS organization_open_pipeline_rollup;
 
 CREATE VIEW organization_open_pipeline_rollup WITH (security_invoker='true') AS
  SELECT d.organization_id,
-    sum(conv.minor_base) AS open_pipeline_minor_base,
+    -- The SUM is bounded too, and separately from its summands. sum(bigint)
+    -- answers in numeric, so a set of individually representable deals can add
+    -- to a figure no bigint holds — and the reader scans this column into an
+    -- int64. Guarding one deal and not the total would have moved the same
+    -- failure one level up: the record unreadable because the deals are large
+    -- rather than because one of them is.
+    --
+    -- Out of range answers NULL, which the caller already knows how to report:
+    -- the deals were priced, the total cannot be stated, and a figure nobody
+    -- can represent is not a figure to publish.
+    CASE
+      WHEN sum(conv.minor_base)
+           BETWEEN -9223372036854775808 AND 9223372036854775807
+        THEN sum(conv.minor_base)
+      ELSE NULL
+    END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
     -- How many deals actually reached the sum. SUM ignores a null summand
     -- silently, so without this a total covering one of two deals is
@@ -85,3 +100,9 @@ CREATE VIEW organization_open_pipeline_rollup WITH (security_invoker='true') AS
    ) conv ON true
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
   GROUP BY d.organization_id;
+
+-- DROP took the view's comment with it. Restated rather than left off: it is
+-- what a reader querying the schema is told the view means, and the sentence is
+-- unchanged except for the case this migration adds.
+COMMENT ON VIEW organization_open_pipeline_rollup IS
+  'Open pipeline per organization in the installation base currency. Open deals hold no frozen rate — that happens on close — so each foreign-currency deal converts at the latest fx_rate on or before today. A deal with no usable rate, or whose converted amount does not fit a bigint, contributes nothing and is still counted in open_deal_count, so a partial sum is detectable rather than silently short. The total itself answers NULL when it does not fit either.';

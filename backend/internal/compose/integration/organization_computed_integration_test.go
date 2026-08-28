@@ -517,3 +517,49 @@ func TestOrganizationComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord
 			open0.ValueMinor)
 	}
 }
+
+// TestOrganizationComputed_ATotalThatCannotBeRepresented_RefusesTheFigure is the
+// same hazard one level up.
+//
+// Guarding each deal and not the total would have moved the failure rather than
+// removed it: sum(bigint) answers in numeric, so a set of individually
+// representable deals can add to a figure no bigint holds — and the reader
+// scans that column into an int64. The record would have been unreadable
+// because the deals are large rather than because one of them is.
+func TestOrganizationComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	orgID := e.SeedOrg(t, "Big Numbers GmbH", nil)
+
+	// Two deals, each a legal bigint, whose sum is not. No conversion is
+	// involved — both are in the installation's own currency — so this is the
+	// aggregate's bound and nothing else.
+	for _, amount := range []int64{9_000_000_000_000_000_000, 9_000_000_000_000_000_000} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Large deal", AmountMinor: int64Ptr(amount), Currency: strPtr("EUR"),
+			PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		}); err != nil {
+			t.Fatalf("seeding a large deal: %v", err)
+		}
+	}
+
+	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("the organization could not be read at all: %v — a total nobody can represent must "+
+			"refuse the figure, never the record", err)
+	}
+
+	minor, count, found := directOpenPipelineRead(e.Admin(), t, e, orgID)
+	if !found {
+		t.Fatal("the view returned no row for an organization with two open deals")
+	}
+	if count != 2 {
+		t.Errorf("open_deal_count = %d, want 2", count)
+	}
+	if minor != nil {
+		t.Errorf("open_pipeline_minor_base = %d, want NULL — a sum that does not fit is not a sum", *minor)
+	}
+	if open0 := computedFieldByKey(*org.ComputedFields, "open_pipeline"); open0.Computable {
+		t.Errorf("open_pipeline reads computable over a total that cannot be represented: %+v", open0)
+	}
+}
