@@ -404,3 +404,75 @@ func TestTheLaneRunsOnTheCloneItDeclares(t *testing.T) {
 			"A template migrated before content digests existed reads this way; `make test-db-up` rebuilds it.", reason)
 	}
 }
+
+// TestACloneCarryingARowRuleIsNeverReused holds the readability half of the
+// emptiness proof. EXISTS over a table with row-level security enabled answers
+// about the ROLE running the probe rather than about the table — a bypassing
+// role is shown every row, a non-bypassing one only what the policies admit,
+// and under FORCE not even the owner is exempt. One clone then reads empty to
+// one lane and populated to the next, while EnsureSchema baselines every table
+// size on whichever answer it happened to get.
+func TestACloneCarryingARowRuleIsNeverReused(t *testing.T) {
+	ctx := context.Background()
+	owner := ownerConn(t)
+
+	const planted = "ext.ext_row_rule_probe"
+	if _, err := owner.Exec(ctx, `CREATE TABLE `+planted+` (id integer PRIMARY KEY)`); err != nil {
+		t.Fatalf("planting a table a reset acts on: %v", err)
+	}
+	dropped := false
+	t.Cleanup(func() {
+		if dropped {
+			return
+		}
+		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS `+planted); err != nil {
+			t.Errorf("dropping the planted table: %v", err)
+		}
+	})
+	if _, err := owner.Exec(ctx, `ALTER TABLE `+planted+` ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY`); err != nil {
+		t.Fatalf("arming the planted table with a row rule: %v", err)
+	}
+
+	// The corpus first: a check that read a smaller list than the reset acts on
+	// would find no row rule among what it did read and report a clean schema,
+	// which is the one direction this refusal must not break in.
+	tables, err := probedTables(ctx, owner)
+	if err != nil {
+		t.Fatalf("listing the tables the probe reads: %v", err)
+	}
+	if len(tables) == 0 {
+		t.Fatal("the probe reads no tables at all on a migrated database, so every assertion below would pass vacuously")
+	}
+	var listed bool
+	for _, table := range tables {
+		if table.ident != planted {
+			continue
+		}
+		listed = true
+		if !table.rowSecurity {
+			t.Fatalf("%s carries a row rule that the catalog read did not report", planted)
+		}
+	}
+	if !listed {
+		t.Fatalf("%s is a table a reset acts on and the probe does not list it", planted)
+	}
+
+	reason, err := schemaEmpty(ctx, owner)
+	if err != nil {
+		t.Fatalf("probing for rows: %v", err)
+	}
+	if reason == "" {
+		t.Fatalf("the probe vouched for a clone carrying a row rule on %s — EnsureSchema would baseline every table size on an answer that changes with the role reading it", planted)
+	}
+	if !strings.Contains(reason, planted) {
+		t.Errorf("the refusal does not name what it found: %q", reason)
+	}
+
+	if _, err := owner.Exec(ctx, `DROP TABLE `+planted); err != nil {
+		t.Fatalf("dropping the planted table: %v", err)
+	}
+	dropped = true
+	if reason, err := schemaEmpty(ctx, owner); err != nil || reason != "" {
+		t.Fatalf("with the row rule gone the same clone was still refused (err=%v): %s", err, reason)
+	}
+}
