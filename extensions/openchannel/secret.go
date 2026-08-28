@@ -17,6 +17,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -50,16 +51,21 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		secret string
 		stored endpoint
 	)
-	// EVERYTHING BELOW RUNS UNDER ONE ROW LOCK, taken before anything is
-	// sealed rather than checked after. lockedEndpointOf's FOR UPDATE blocks a
-	// second, overlapping mint at the same point — before it has minted or
-	// sealed anything — until this transaction commits or rolls back. That is
-	// what makes the operation serial rather than merely checked: there is no
-	// window between "sealed" and "recorded" for a second mint to occupy,
-	// because the second mint cannot even begin sealing until this one is
-	// fully done. A read-back after the fact cannot close that window — by
-	// the time it runs, the wrong value may already have been handed to a
-	// caller — so ordering the lock first is what closes it instead.
+	// THE SEAL HAPPENS BETWEEN TWO TRANSACTIONS AND INSIDE NEITHER, and that
+	// shape is forced rather than chosen. Secrets().PutUser opens a pool
+	// transaction of its own, so calling it while one of this unit's is open
+	// takes a second connection while holding the first — which on a small
+	// pool does not fail, it hangs, and enough concurrent mints hang every
+	// caller until cancellation. It is the same nesting the capture port
+	// refuses outright.
+	//
+	// So: claim the right to mint under a row lock, close that transaction,
+	// seal, then record under a version the claim pinned. The claim is what
+	// serialises two overlapping mints — the second blocks on the first's
+	// FOR UPDATE and comes away with a different version — and the recording
+	// transaction refuses if the version moved under it, so a mint that lost
+	// the race is told it lost instead of reporting success.
+	var claimed int
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		before, err := lockedEndpointOf(ctx, tx, member)
 		if err != nil {
@@ -90,27 +96,53 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 		// which nothing had yet changed, and "when did this endpoint's secret
 		// last change" is exactly the question the row exists to answer. The
 		// row lock above is what keeps this seal from racing another one.
-		if err := rt.Secrets().PutUser(ctx, extension.UserID(member), inboundSecretKey, []byte(secret)); err != nil {
+		claimed = before.Version
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// Outside every transaction of this unit's, for the reason stated above.
+	if err := rt.Secrets().PutUser(ctx, extension.UserID(member), inboundSecretKey, []byte(secret)); err != nil {
+		return nil, err
+	}
+
+	var before *endpoint
+	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
+		before, err = lockedEndpointOf(ctx, tx, member)
+		if err != nil {
 			return err
+		}
+		if before == nil || before.Version != claimed {
+			// Another mint sealed between this one's claim and this write.
+			// Both secrets reached the store and the later one is what the
+			// endpoint now verifies with — which may not be the one this call
+			// is holding, so it must not be returned as though it were live.
+			return fmt.Errorf("%w: another signing secret was minted for this endpoint while this one was being sealed, so the value this call would have returned may already have been replaced — mint again and use the secret that mint returns", extension.ErrConflict)
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
 			`UPDATE `+endpointTable+` SET version = version + 1, updated_at = now()
 			 WHERE user_id = $1::uuid AND slug = $2
 			 RETURNING `+endpointColumns, member, inboundSlug).Scan)
 		if err != nil {
-			// The seal above already happened: every sender configured under
-			// the PREVIOUS secret is now broken, and only the new —
-			// unrecorded, unreturned — value verifies from this moment on. A
-			// bare err here would read as "nothing changed", which is the one
-			// answer that is false.
-			return fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
+			return err
 		}
-		if err := recordEndpoint(ctx, tx, extension.AuditUpdate, eventSecretMinted, before, &stored); err != nil {
-			return fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
-		}
-		return nil
+		return recordEndpoint(ctx, tx, extension.AuditUpdate, eventSecretMinted, before, &stored)
 	}); err != nil {
-		return nil, err
+		// EVERY failure below the seal reaches here, and every one of them
+		// happens after the material was stored: the endpoint verifies with
+		// the new secret from that moment, so a bare error would read as
+		// "nothing changed" — the one answer that is false. A caller told that
+		// leaves every configured sender broken and does not know it.
+		//
+		// The conflict is passed through as itself so the sentinel survives:
+		// it is the one failure here that means "somebody else's secret is the
+		// live one", which is a different instruction from "yours is live and
+		// unrecorded".
+		if errors.Is(err, extension.ErrConflict) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
 	}
 	return json.Marshal(struct {
 		SigningSecret string   `json:"signing_secret"`
