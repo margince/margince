@@ -95,6 +95,10 @@ func tagLinkFor(entity string) storekit.Field {
 // dial — as distinct from ownerTeamField below, the leaf it names.
 const ownerTeamIDField = "owner_team_id"
 
+// domainFilterField is the vocabulary's name for the account's web domain, as
+// distinct from domainField below, the leaf it names.
+const domainFilterField = "domain"
+
 // ownerTeamField selects the records owned by any member of one team: the same
 // rows the `owner_team_id` list parameter answers, reached the way a link leaf
 // can express.
@@ -128,25 +132,6 @@ var ownerTeamField = storekit.Field{
 	References: storekit.RefTeam,
 	Link: "EXISTS (SELECT 1 FROM team_membership tm WHERE tm.user_id = " + colOwnerID +
 		" AND %s)",
-}
-
-// relationshipTypeField is the account's relationship to us, which is
-// MULTI-VALUED: an account can be a customer and a partner at once, so the fact
-// lives in its own table and this leaf selects accounts that are AT LEAST this.
-//
-// Archived rows are excluded inside the wrapper. A retired relationship is one
-// the account no longer has, and a segment naming it would otherwise keep
-// selecting accounts on a fact somebody deliberately withdrew.
-//
-// A picklist leaf compares text and the engine holds no per-field enum, so a
-// value no row carries selects nothing rather than being refused.
-// TestAPicklistLeafComparesAnUnrecognisedValueRatherThanRefusingIt gates that.
-var relationshipTypeField = storekit.Field{
-	Expr:    "rt.relationship_type",
-	Type:    storekit.FieldPicklist,
-	Options: relationshipTypeValues,
-	Link: "EXISTS (SELECT 1 FROM organization_relationship_type rt" +
-		" WHERE rt.organization_id = t.id AND rt.archived_at IS NULL AND %s)",
 }
 
 // customerLink is the EXISTS template a deal's filter reaches its customer
@@ -261,6 +246,7 @@ var segmentEngines = map[string]storekit.Query{
 			// below, so no surface OFFERS it for a new clause.
 			"classification":    {Expr: "t.classification", Type: storekit.FieldPicklist},
 			"relationship_type": relationshipTypeField,
+			domainFilterField:   domainField,
 			tagFilterField:      tagLinkFor("organization"),
 		},
 	},
