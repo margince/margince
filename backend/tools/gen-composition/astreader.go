@@ -388,6 +388,12 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.Channels = append(m.Channels, channels...)
 		}
+	case "Inbound":
+		var endpoints []inboundEndpoint
+		endpoints, err = r.readInbound(kv.Value, file)
+		if err == nil {
+			m.Inbound = append(m.Inbound, endpoints...)
+		}
 	default:
 		// Fail closed: a field this generator does not recognize could be a
 		// future governed capability, and a manifest that silently omitted
