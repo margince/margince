@@ -33,28 +33,6 @@ type Deal = components["schemas"]["Deal"];
 export const NEW_PROJECT = "__new_project__";
 
 /**
- * The open projects a deal may be filed under, with the company each belongs
- * to, because the deal form chooses its company in the same dialog and the
- * server refuses a project on another company (422). A closed project is not
- * offered: a deal born into a closed project would reopen nothing.
- */
-// The live projects of ONE company, asked of the server rather than filtered
-// here.
-//
-// A project is worked by several companies now, and `organization_id` names
-// only its CUSTOMER — so filtering a full page of projects on that field in the
-// browser hides every project this company is on as a partner or a
-// subcontractor. The list endpoint matches ANY of a project's companies, which
-// is the question the deal form is actually asking.
-//
-// It also stops paging past the answer: the old read took the first 200
-// projects and filtered them, so an installation with more than 200 offered an
-// empty picker to whichever company sorted last.
-export function useOpenProjects(organizationId?: string): Project[] {
-  return useProjectPage(organizationId, true);
-}
-
-/**
  * The live projects of ONE company, asked of the server, and NOTHING when there
  * is no company to ask about.
  *
@@ -111,19 +89,16 @@ export function dealProjectFields(
   // form shows the value it has rather than a blank picker whose save would
   // clear it.
   current?: { id: string; label: string },
-  // Whether `projects` was already narrowed to one company by the SERVER. The
-  // edit form asks for its deal's company and gets the projects that company is
-  // on, whatever role it holds; the create form has no company until the reader
-  // picks one, so it asks for all of them and narrows here — on the anchor,
-  // which is the only company a list row names. That is a known narrower answer
-  // for the create form, and the honest fix is a per-company read once the form
-  // can report which company is chosen.
-  narrowedByServer = false,
-  // The company `projects` was read for, when the server narrowed it. The form
-  // can change its company while the list stands, and the list is keyed on the
-  // company the record HAD; comparing the two lets the picker go empty rather
-  // than offer the old company's projects under the new one, which the server
-  // refuses (deal_project_same_org, 422).
+  // The company `projects` was read FOR. Both forms now read per company — the
+  // create form follows the answers the open form publishes — so the list is
+  // always the server's answer about one company, and this says which.
+  //
+  // It is still compared against the form's own answer, and the gap it covers
+  // is a render rather than a workaround: the reader changes the company, the
+  // new query is in flight, and for that moment the list on hand is the
+  // previous company's. Offering it would let a save carry a pairing the server
+  // refuses (deal_project_same_org, 422), so the picker holds nothing until the
+  // answer for the company on screen arrives.
   narrowedFor?: string,
 ): CreateField[] {
   return [
@@ -137,16 +112,13 @@ export function dealProjectFields(
           return [];
         }
         // A list the server narrowed is trustworthy only for the company it
-        // was narrowed FOR. Once the form names a different one, this page
-        // answers the wrong question and the honest answer is none: a list row
-        // names only a project's anchor company, so nothing here can tell
-        // which of the new company's projects belong.
-        const stale = narrowedByServer && narrowedFor !== company;
-        const reachable = stale
-          ? []
-          : narrowedByServer
-            ? projects
-            : projects.filter((project) => project.organization_id === company);
+        // was narrowed FOR. While a read for a newly chosen company is in
+        // flight, this page still answers about the previous one, and the
+        // honest answer is none: a list row names only a project's anchor
+        // company, so nothing here can tell which of the new company's
+        // projects belong.
+        const stale = narrowedFor !== company;
+        const reachable = stale ? [] : projects;
         // The NAME alone. The key belongs where a reader needs to recognise it
         // — a subject line, the project's own chip — and a picker of one
         // company's projects is already unambiguous without it.

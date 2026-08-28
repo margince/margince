@@ -104,7 +104,6 @@ import {
   dealProjectFields,
   resolveDealProject,
   StartDeliveryPrompt,
-  useOpenProjects,
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealRoomAside } from "./dealroom";
@@ -1891,7 +1890,17 @@ export function DealsScreen({
   // The picker asks the server for ONE company's projects, so the form's chosen
   // company is what it is keyed on: a project is worked by several companies,
   // and only the server can say which of them this one is on.
-  const openProjects = useOpenProjects();
+  //
+  // The company comes from the OPEN FORM rather than from anything on this
+  // screen, because there is nothing else it could come from: a create form has
+  // no record, and the reader picks the company inside the same dialog. The
+  // form publishes its answers (CreateAction's onValuesChange) and the query
+  // follows them, which is the read `optionsFor` cannot do — it is a pure
+  // function of the values, so it can only filter a list already fetched, and a
+  // project list row names only its anchor company, so nothing in the browser
+  // can compute which projects a company is on.
+  const [formCompany, setFormCompany] = useState("");
+  const openProjects = useProjectsOfCompany(formCompany || undefined);
 
   const createDeal = async (values: Record<string, string>) => {
     const pipeline = effectivePipeline;
@@ -1990,6 +1999,7 @@ export function DealsScreen({
       screen="deals"
       create={createDeal}
       startOpen={startCreating}
+      onValuesChange={(values) => setFormCompany(values.organization_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
         { key: "amount", label: "create.amount", type: "number" },
@@ -2024,7 +2034,10 @@ export function DealsScreen({
         },
         // The body of work this deal is about, chosen or started here: a
         // project begins during the deal, in its initiative phase.
-        ...dealProjectFields(t, openProjects),
+        // Narrowed BY THE SERVER, for the company the form currently names:
+        // the query above re-reads when the reader changes it, so the picker
+        // repopulates instead of going empty.
+        ...dealProjectFields(t, openProjects, undefined, formCompany),
         // A deal brought by a partner is attributed at birth, not by editing
         // it afterwards: the win that pays them can come before anybody thinks
         // to revisit the record.
@@ -2797,7 +2810,6 @@ function editProjectFields(
     t,
     opts.openProjects,
     opts.currentProject,
-    true,
     opts.company,
   );
 }
