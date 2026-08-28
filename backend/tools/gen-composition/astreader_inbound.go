@@ -62,8 +62,8 @@ func (r *unitReader) readInbound(expr ast.Expr, file *ast.File) ([]inboundEndpoi
 }
 
 // readInboundEndpoint reads one extension.InboundEndpoint literal and validates
-// it through the same published grammar the boot preflight runs, so gen-time
-// acceptance cannot diverge from boot-time.
+// it through the same published grammar the boot preflight runs, so a
+// declaration this generator accepts is one the boot accepts too.
 func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext string) (inboundEndpoint, error) {
 	lit, ok := elt.(*ast.CompositeLit)
 	if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "InboundEndpoint")) {

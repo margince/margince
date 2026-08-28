@@ -239,10 +239,7 @@ func admitRate(rate *WebhookRate, r *http.Request) bool {
 	if rate == nil {
 		return true
 	}
-	admitted := true
-	if rate.PerIP != nil && !rate.PerIP.Allow(httpserver.ClientIP(r)) {
-		admitted = false
-	}
+	admitted := rate.PerIP == nil || rate.PerIP.Allow(httpserver.ClientIP(r))
 	if rate.PerEndpoint != nil && rate.EndpointKey != nil && !rate.PerEndpoint.Allow(rate.EndpointKey(r)) {
 		admitted = false
 	}

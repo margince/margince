@@ -331,9 +331,9 @@ func (h *hubspotWebhookHandler) enqueueRefetch(r *http.Request, workspace ids.UU
 // webhookMaxSkew of now. A missing or unparseable timestamp is not fresh.
 //
 // The parsing is HubSpot's — it sends epoch milliseconds, where the extension
-// edge sends seconds — and the comparison is withinSkew, shared with the
-// chassis stage so the absolute-distance rule and the inclusive bound are
-// spelled once.
+// edge sends seconds — and the comparison delegates to withinSkew, which the
+// chassis stage also calls: the absolute-distance rule and the inclusive bound
+// live there.
 func freshTimestamp(ts string) bool {
 	ms, err := strconv.ParseInt(ts, 10, 64)
 	if err != nil {
