@@ -115,7 +115,7 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext, timePkg string) (inb
 			// generation succeed on a declaration boot can never start,
 			// moving the failure from a `make composition` a unit author
 			// runs locally to a shipped binary's boot log.
-			if isStaticallyNilInboundHandle(kv.Value, ext) {
+			if r.isStaticallyNilHandler(kv.Value, ext, "InboundHandler") {
 				handleNil = true
 			} else {
 				sawHandler = true
@@ -137,26 +137,6 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext, timePkg string) (inb
 		return inboundEndpoint{}, r.errPos(lit, "%v", err)
 	}
 	return endpoint, nil
-}
-
-// isStaticallyNilInboundHandle reports whether an InboundEndpoint.Handle
-// expression is nil at the declaration.
-//
-// Two spellings, for the reason isStaticallyNil (Tool.Handle) gives: the bare
-// `nil`, and a conversion through the published extension.InboundHandler type.
-// The CallExpr arm checks the callee, not just the argument count, for the
-// same reason stated there — a syntactic conversion and an ordinary
-// one-argument call parse identically.
-func isStaticallyNilInboundHandle(expr ast.Expr, ext string) bool {
-	switch e := expr.(type) {
-	case *ast.Ident:
-		return e.Name == "nil"
-	case *ast.CallExpr:
-		return len(e.Args) == 1 && isSelector(e.Fun, ext, "InboundHandler") && isStaticallyNilInboundHandle(e.Args[0], ext)
-	case *ast.ParenExpr:
-		return isStaticallyNilInboundHandle(e.X, ext)
-	}
-	return false
 }
 
 // readInboundRate reads the two metering buckets.

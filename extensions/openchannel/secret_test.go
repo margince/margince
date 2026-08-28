@@ -169,32 +169,6 @@ func TestASecondStepFailureAfterSealingSaysTheSecretAlreadyRotated(t *testing.T)
 	}
 }
 
-// TestAnOverlappingMintRefusesRatherThanHandBackAStaleSecret covers the race
-// where a second mint commits its own PutUser between this call's seal and
-// its response: without the read-back this test guards, the caller would be
-// handed a secret that already stopped verifying by the time they read it.
-func TestAnOverlappingMintRefusesRatherThanHandBackAStaleSecret(t *testing.T) {
-	t.Parallel()
-	rt := newRuntime()
-	rt.tx.singleRows = [][]any{
-		endpointRow(endpointID, ownerUserID, "", true),
-		endpointRow(endpointID, ownerUserID, "", true),
-		endpointRow(endpointID, ownerUserID, "", true),
-	}
-	// Simulate a second, overlapping mint whose own PutUser commits right
-	// after this call's — the racer's bytes are what is actually current by
-	// the time this call would otherwise answer.
-	rt.secrets.clobberAfterPut = []byte("a-racing-mints-secret")
-
-	_, err := mintSecret(context.Background(), rt, json.RawMessage(ownArgs))
-	if !errors.Is(err, extension.ErrConflict) {
-		t.Fatalf("an overlapping mint must be refused as a conflict, got %v", err)
-	}
-	if string(rt.secrets.stored[ownerUserID+"/"+inboundSecretKey]) != "a-racing-mints-secret" {
-		t.Fatal("the loser must not have clobbered the racer's secret back")
-	}
-}
-
 func TestMintingRecordsTheRotationAgainstTheEndpoint(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()

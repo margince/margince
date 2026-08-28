@@ -76,6 +76,15 @@ var (
 		Sentence: "the CRM's capture pipeline could not be reached, so nothing that arrived was landed this pass",
 		Remedy:   "Nothing to do: the drain catches up by itself and no received request is lost. If every tick reports it, this installation's database is what to look at.",
 	}
+	// classRecordGone is THIS REQUEST'S OWN fault, not the pipeline's: the
+	// counterparty record it would have landed on is gone, or a version it
+	// named no longer matches what the core holds. No later attempt changes
+	// either fact, so it parks on the first attempt rather than the fifth.
+	classRecordGone = extension.FailureClass{
+		Class:    "capture_record_gone",
+		Sentence: "the request named a CRM record that no longer exists, or that changed under this attempt",
+		Remedy:   "The record this would have landed on was removed, merged or changed since the request arrived. It stays parked on the member's openchannel screen to re-send once the record is right.",
+	}
 	// classEveryRequestFailed is the mixed case, and it exists because one tick
 	// drains many members' requests rather than exactly one.
 	//
@@ -146,6 +155,7 @@ var failureClasses = []extension.FailureClass{
 	classMemberNotPermitted,
 	classCaptureNotDeclared,
 	classCaptureUnavailable,
+	classRecordGone,
 	classEveryRequestFailed,
 	classDrainFailed,
 	classDeliveryRefused,

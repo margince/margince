@@ -46,23 +46,32 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 	if err != nil {
 		return nil, err
 	}
-	secret, err := newSigningSecret()
-	if err != nil {
-		return nil, err
-	}
-	var stored endpoint
+	var (
+		secret string
+		stored endpoint
+	)
+	// EVERYTHING BELOW RUNS UNDER ONE ROW LOCK, taken before anything is
+	// sealed rather than checked after. lockedEndpointOf's FOR UPDATE blocks a
+	// second, overlapping mint at the same point — before it has minted or
+	// sealed anything — until this transaction commits or rolls back. That is
+	// what makes the operation serial rather than merely checked: there is no
+	// window between "sealed" and "recorded" for a second mint to occupy,
+	// because the second mint cannot even begin sealing until this one is
+	// fully done. A read-back after the fact cannot close that window — by
+	// the time it runs, the wrong value may already have been handed to a
+	// caller — so ordering the lock first is what closes it instead.
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		mine, err := endpointOf(ctx, tx, member)
+		before, err := lockedEndpointOf(ctx, tx, member)
 		if err != nil {
 			return err
 		}
-		if mine == nil {
+		if before == nil {
 			// Refused BEFORE anything is sealed: material stored under a
 			// member who owns no endpoint is a credential this surface has no
 			// operation to revoke.
 			return errNoEndpoint()
 		}
-		if mine.ID != args.EndpointID {
+		if before.ID != args.EndpointID {
 			// A staged approval names its subject by id, which means the id is
 			// a request argument — but this operation still acts on the
 			// caller's own endpoint only. Naming another one answers exactly
@@ -71,57 +80,37 @@ func mintSecret(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 			// endpoint" from the outside.
 			return errNoEndpoint()
 		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	// The seal, and then the record of it. In that order because the sealed
-	// material is what actually changes who can reach this installation: a
-	// ledger row written first would name a moment at which nothing had yet
-	// changed, and "when did this endpoint's secret last change" is exactly the
-	// question the row exists to answer.
-	if err := rt.Secrets().PutUser(ctx, extension.UserID(member), inboundSecretKey, []byte(secret)); err != nil {
-		return nil, err
-	}
-	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		before, err := lockedEndpointOf(ctx, tx, member)
+		secret, err = newSigningSecret()
 		if err != nil {
 			return err
 		}
-		if before == nil {
-			return errNoEndpoint()
+		// The seal, and then the record of it. In that order because the
+		// sealed material is what actually changes who can reach this
+		// installation: a ledger row written first would name a moment at
+		// which nothing had yet changed, and "when did this endpoint's secret
+		// last change" is exactly the question the row exists to answer. The
+		// row lock above is what keeps this seal from racing another one.
+		if err := rt.Secrets().PutUser(ctx, extension.UserID(member), inboundSecretKey, []byte(secret)); err != nil {
+			return err
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
 			`UPDATE `+endpointTable+` SET version = version + 1, updated_at = now()
 			 WHERE user_id = $1::uuid AND slug = $2
 			 RETURNING `+endpointColumns, member, inboundSlug).Scan)
 		if err != nil {
-			return err
+			// The seal above already happened: every sender configured under
+			// the PREVIOUS secret is now broken, and only the new —
+			// unrecorded, unreturned — value verifies from this moment on. A
+			// bare err here would read as "nothing changed", which is the one
+			// answer that is false.
+			return fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
 		}
-		return recordEndpoint(ctx, tx, extension.AuditUpdate, eventSecretMinted, before, &stored)
+		if err := recordEndpoint(ctx, tx, extension.AuditUpdate, eventSecretMinted, before, &stored); err != nil {
+			return fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
+		}
+		return nil
 	}); err != nil {
-		// The seal above already happened: every sender configured under the
-		// PREVIOUS secret is now broken, and only the new — unrecorded, unreturned
-		// — value verifies from this moment on. A bare err here would read as
-		// "nothing changed", which is the one answer that is false.
-		return nil, fmt.Errorf("openchannel: the signing secret has already rotated and every already-configured sender must be reconfigured with the new one, but recording that rotation failed, so the new value was not recorded: %s", err.Error())
-	}
-	// A second mint can overlap this one: PutUser is replace-and-destroy, and
-	// two overlapping calls both seal, both record, and only the LAST seal to
-	// commit is what verifies from now on. Without this read-back, the loser
-	// would still answer 200 with a secret it just sealed, and the caller
-	// would paste in a value that already stopped working before they ever
-	// saw it. Re-reading what is actually current — rather than trusting the
-	// value this call itself sealed — is what makes the invariant hold at the
-	// write's own finish line instead of relying on a lock this package has no
-	// way to hold across two separate stores (see PutUser's replace-then-
-	// commit shape).
-	current, err := rt.Secrets().GetUser(ctx, extension.UserID(member), inboundSecretKey)
-	if err != nil {
-		return nil, fmt.Errorf("openchannel: the secret was sealed and its rotation recorded, but confirming it is still current failed: %w", err)
-	}
-	if string(current) != secret {
-		return nil, fmt.Errorf("%w: another mint for this endpoint completed while this one was still in flight, so the secret this call sealed is no longer the one that verifies — mint again to see the secret that is actually current", extension.ErrConflict)
+		return nil, err
 	}
 	return json.Marshal(struct {
 		SigningSecret string   `json:"signing_secret"`

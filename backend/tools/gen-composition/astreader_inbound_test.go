@@ -503,3 +503,41 @@ func TestInboundRefusesAnIndirectSlice(t *testing.T) {
 		t.Fatalf("refusal said %q, which does not name the shape", err)
 	}
 }
+
+// A unit that names the published handler type through its own alias is
+// declaring the same nil, and generation has to see it. Publishing an endpoint
+// whose Handle is nil moves the refusal from a `make composition` the author
+// runs to a shipped binary's boot log, which is the failure landing furthest
+// from its cause.
+func TestInboundRefusesANilHandleSpelledThroughALocalAlias(t *testing.T) {
+	source := `package x
+
+import (
+	"context"
+	"time"
+
+	"github.com/margince/margince/backend/pkg/extension"
+)
+
+type Handler = extension.InboundHandler
+
+var _ = time.Minute
+
+func New() extension.Extension {
+	return extension.Extension{
+		Name:    "x",
+		Version: "0.1.0",
+		Inbound: []extension.InboundEndpoint{
+` + strings.Replace(wholeEndpoint, "Handle: receive,", "Handle: Handler(nil),", 1) + `
+		},
+	}
+}
+`
+	_, err := deriveSynthetic(t, "x", source)
+	if err == nil {
+		t.Fatal("a nil handler spelled through the unit's own alias was published")
+	}
+	if !strings.Contains(err.Error(), "Handle: nil") {
+		t.Fatalf("refusal said %q, which does not name the nil handler", err)
+	}
+}

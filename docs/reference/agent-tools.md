@@ -28,9 +28,12 @@ live surface differ from the table below:
 - **Extensions register onto the same registry.** `registerComposedTools` runs
   last in `internal/compose/registry.go`, after the core registrars, so an
   extension unit can add verbs (and a name that collides with a core verb fails
-  loudly at boot). A served extension tool declares 🟢 and an inbound cap — the
-  boot refuses a handler-bearing confirm-first or `send`/`enrich` declaration,
-  because neither could be staged for the human this surface has no way to ask.
+  loudly at boot). A served extension tool declares an inbound cap, and a
+  confirm-first one must also declare `x-mcp-tool.subject` — the argument
+  carrying a row id and the unit-owned table it lives in — because an approval
+  needs a row to park against and to show the approver. Boot refuses a
+  confirm-first declaration without one, and refuses `send`/`enrich` outright,
+  since neither could be staged for the human this surface has no way to ask.
   That governs what a unit may CLAIM; what its handler does is bounded by the
   composed set being a trust boundary, not by the gate. The
   vanilla tree ships two first-party units: `extensions/de` registers no tools,

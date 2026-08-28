@@ -312,13 +312,13 @@ func TestAnEmptyQueueIsNotAFailure(t *testing.T) {
 	}
 }
 
-// A fleet-wide outage must not spend a request's own budget. The attempt cap is
+// A fleet-wide outage must not spend a request's own attempt budget. The cap is
 // there to stop ONE request being retried forever on a fault of its own; an
 // unreachable capture pipeline is a fault of nothing in the row, and every
-// waiting row gets the same answer at the same moment. Counting it would park
-// an installation's whole queue the moment an outage outlived five cadences —
-// and classCaptureUnavailable's remedy tells an operator, in those words, that
-// no received request is lost and the drain catches up by itself.
+// waiting row gets the same answer in the same tick. Counting it would park an
+// installation's whole queue the moment an outage outlived five cadences — and
+// classCaptureUnavailable's remedy tells an operator, in those words, that no
+// received request is lost and the drain catches up by itself.
 func TestAnOutageDoesNotSpendTheRequestsOwnAttemptBudget(t *testing.T) {
 	t.Parallel()
 	req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
@@ -329,27 +329,54 @@ func TestAnOutageDoesNotSpendTheRequestsOwnAttemptBudget(t *testing.T) {
 	_, args := rt.tx.statementMentioning(t, "SET state =")
 	if args[1] != stateWaiting {
 		t.Fatalf("a request on its last attempt was moved to %v by an outage — the queue parks itself "+
-			"the moment an outage outlives the cadence budget, which is what the class promises cannot happen", args[1])
+			"the moment an outage outlives the cadence budget, which the class promises cannot happen", args[1])
 	}
 	if args[4] != 0 {
 		t.Fatalf("an outage spent %v of the request's own attempt budget", args[4])
 	}
 }
 
-// And a fault the REQUEST owns still spends it, or the cap stops bounding
-// anything and one poison body is retried forever.
+// AND THE EXEMPTION MUST NOT LEAK. Every class below is one production's own
+// classifier hands to markStalled for a fault the ROW owns — a member whose
+// authority went, a body the core will not take, a record that is gone. Each
+// must still spend the budget and park at the cap, or the exemption above has
+// swallowed the very thing the cap exists to bound and a permanent fault is
+// retried on every cadence forever.
+//
+// Driven through drainFailure rather than named directly, so a class that stops
+// being reachable, or a new one that starts landing in the shared bucket, fails
+// here instead of quietly widening the exemption.
 func TestAFaultTheRequestOwnsStillSpendsItsBudget(t *testing.T) {
 	t.Parallel()
-	req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
-	rt := &fakeRuntime{tx: &fakeTx{}}
-	if err := markStalled(context.Background(), rt, req, classDrainFailed, false); err != nil {
-		t.Fatalf("marking stalled: %v", err)
+	tests := []struct {
+		name  string
+		cause error
+	}{
+		{"a member whose authority is gone", extension.ErrForbidden},
+		{"a body the core refuses", extension.ErrInvalid},
+		{"a record that no longer exists", extension.ErrNotFound},
+		{"a record that changed under the attempt", extension.ErrConflict},
 	}
-	_, args := rt.tx.statementMentioning(t, "SET state =")
-	if args[1] != stateParked {
-		t.Fatalf("a request on its last attempt was left %v by a fault of its own", args[1])
-	}
-	if args[4] != 1 {
-		t.Fatalf("a fault the request owns spent %v of its budget, want 1", args[4])
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			class, terminal := drainFailure(tc.cause)
+			if class.Class == classCaptureUnavailable.Class {
+				t.Fatalf("%v is classified as the shared outage class, which is exempt from the attempt "+
+					"budget — a fault this request owns would be retried on every cadence forever", tc.cause)
+			}
+			req := queued{id: "11111111-1111-1111-1111-111111111111", attempts: maxDrainAttempts - 1}
+			rt := &fakeRuntime{tx: &fakeTx{}}
+			if err := markStalled(context.Background(), rt, req, class, terminal); err != nil {
+				t.Fatalf("marking stalled: %v", err)
+			}
+			_, args := rt.tx.statementMentioning(t, "SET state =")
+			if args[1] != stateParked {
+				t.Fatalf("a request on its last attempt was left %v by a fault of its own", args[1])
+			}
+			if args[4] != 1 {
+				t.Fatalf("a fault the request owns spent %v of its budget, want 1", args[4])
+			}
+		})
 	}
 }

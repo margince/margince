@@ -71,6 +71,7 @@ describe("the published frontend surface", () => {
       "api",
       "isVersionSkew",
       "problemMessageOf",
+      "resetToSignedOut",
       "throwProblem",
     ]);
     expect(Object.keys(appSurface).sort()).toEqual([

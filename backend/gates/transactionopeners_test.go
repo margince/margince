@@ -134,6 +134,65 @@ func other(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 }
 
+// TestBeginCallersOutsideCatchesAParenthesizedSelectorCall is the gap a walk
+// that switches on call.Fun's exact node type leaves open: `(pool.Begin)(ctx)`
+// parenthesizes the call target, so it parses as *ast.ParenExpr rather than
+// the *ast.SelectorExpr the switch's Begin* case matches — and a walk that did
+// not unwrap it first would read this call as neither a selector nor a tracked
+// alias and report PASS.
+func TestBeginCallersOutsideCatchesAParenthesizedSelectorCall(t *testing.T) {
+	const source = `package database
+
+func other(ctx context.Context, pool *pgxpool.Pool) error {
+	tx, err := (pool.Begin)(ctx)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	if err != nil {
+		t.Fatalf("parsing fixture source: %v", err)
+	}
+	offenders := beginCallersOutside(file, "fixture.go")
+	if len(offenders) != 1 || offenders[0] != "fixture.go: other" {
+		t.Fatalf("beginCallersOutside(fixture) = %v, want exactly [\"fixture.go: other\"] — "+
+			"a transaction opener called through a parenthesized selector must be reported "+
+			"the same as one reached through pool.Begin(ctx) directly", offenders)
+	}
+}
+
+// TestBeginCallersOutsideCatchesAParenthesizedAliasCall is the same gap on the
+// alias path: `(begin)(ctx)` parenthesizes the call target around a tracked
+// alias identifier, so it parses as *ast.ParenExpr rather than the *ast.Ident
+// the switch's alias case matches — and a walk that did not unwrap it first
+// would read this call as neither a selector nor a tracked alias and report
+// PASS.
+func TestBeginCallersOutsideCatchesAParenthesizedAliasCall(t *testing.T) {
+	const source = `package database
+
+func other(ctx context.Context, pool *pgxpool.Pool) error {
+	begin := pool.Begin
+	tx, err := (begin)(ctx)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	if err != nil {
+		t.Fatalf("parsing fixture source: %v", err)
+	}
+	offenders := beginCallersOutside(file, "fixture.go")
+	if len(offenders) != 1 || offenders[0] != "fixture.go: other" {
+		t.Fatalf("beginCallersOutside(fixture) = %v, want exactly [\"fixture.go: other\"] — "+
+			"a transaction opener called through a parenthesized alias must be reported "+
+			"the same as one reached through pool.Begin(ctx) directly", offenders)
+	}
+}
+
 // beginCallersOutside names every function in file that calls a .Begin( other
 // than transactionOpener itself.
 func beginCallersOutside(file *ast.File, filename string) []string {
@@ -155,7 +214,7 @@ func beginCallersOutside(file *ast.File, filename string) []string {
 			if !ok {
 				return true
 			}
-			switch fun := call.Fun.(type) {
+			switch fun := unwrapParen(call.Fun).(type) {
 			case *ast.SelectorExpr:
 				// Every spelling pgx offers, not the one this package happens
 				// to use today: BeginTx and BeginFunc open exactly the same
@@ -218,17 +277,26 @@ func beginAliases(body *ast.BlockStmt) map[string]bool {
 	return aliases
 }
 
+// unwrapParen strips every enclosing parenthesization from expr —
+// `(pool.Begin)` and `((begin))` name the same expression `pool.Begin` and
+// `begin` do. A call target normalized through this before the walk matches
+// it is what keeps `(pool.Begin)(ctx)` and `(begin)(ctx)` recognized the same
+// as their unparenthesized spellings, rather than surviving as *ast.ParenExpr
+// and slipping past both the *ast.SelectorExpr and *ast.Ident cases.
+func unwrapParen(expr ast.Expr) ast.Expr {
+	for {
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			return expr
+		}
+		expr = paren.X
+	}
+}
+
 // isBeginSelector reports whether expr is a Begin* method value, looking
 // through any parenthesization — `(pool.Begin)` is the same alias source as
 // `pool.Begin` and must be recognized the same way.
 func isBeginSelector(expr ast.Expr) bool {
-	for {
-		paren, ok := expr.(*ast.ParenExpr)
-		if !ok {
-			break
-		}
-		expr = paren.X
-	}
-	sel, ok := expr.(*ast.SelectorExpr)
+	sel, ok := unwrapParen(expr).(*ast.SelectorExpr)
 	return ok && strings.HasPrefix(sel.Sel.Name, "Begin")
 }

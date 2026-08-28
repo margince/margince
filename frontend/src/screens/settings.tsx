@@ -94,6 +94,7 @@ import {
   LoadMoreButton,
   problemMessageOf,
   QueryGate,
+  resetToSignedOut,
   throwProblem,
   useLogout,
   useMe,
@@ -1316,10 +1317,7 @@ function PassportCard() {
         // BEFORE resetting the probe. AuthGate restores this route after the
         // next sign-in, and whoever signs in then must not be shown the
         // previous session's passport list out of cache.
-        queryClient.removeQueries({
-          predicate: (query) => query.queryKey[0] !== "me",
-        });
-        await queryClient.resetQueries({ queryKey: ["me"] });
+        await resetToSignedOut(queryClient);
       }
       if (error) {
         throwProblem(error);

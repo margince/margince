@@ -14,6 +14,7 @@
   "extOpenchannel.endpoint.title": "Điểm nhận của bạn",
   "extOpenchannel.error.capture_not_declared": "Bản cài đặt này không cho phép bộ kết nối ghi nhận dữ liệu. Màn hình này không sửa được — hãy báo cho người vận hành bản cài đặt.",
   "extOpenchannel.error.capture_unavailable": "Không tiếp cận được đường ghi nhận của CRM. Không mất gì cả và lượt sau sẽ thử lại.",
+  "extOpenchannel.error.capture_record_gone": "Bản ghi CRM mà tin này lẽ ra ghi vào không còn tồn tại, hoặc đã thay đổi trong lúc yêu cầu chờ. Chưa sửa thì chưa ghi được.",
   "extOpenchannel.error.delivery_blocked": "Không có gì được gửi: địa chỉ bạn đã đăng ký trỏ đến nơi mà cài đặt này sẽ không gửi tới. Hãy đăng ký một địa chỉ phân giải công khai.",
   "extOpenchannel.error.delivery_refused": "Địa chỉ bạn đã đăng ký đã trả lời và từ chối tin nhắn.",
   "extOpenchannel.error.delivery_unanswered": "Tin nhắn đã rời đi và không bao giờ có hồi đáp. Nó không được gửi lại, vì gửi lại có thể giao hai lần.",

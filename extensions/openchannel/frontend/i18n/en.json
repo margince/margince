@@ -14,6 +14,7 @@
   "extOpenchannel.endpoint.title": "Your endpoint",
   "extOpenchannel.error.capture_not_declared": "This installation does not admit this connector's capture. Nothing on this screen will fix it — report it to whoever runs this installation.",
   "extOpenchannel.error.capture_unavailable": "The CRM's capture pipeline could not be reached. Nothing was lost and the next pass tries again.",
+  "extOpenchannel.error.capture_record_gone": "The CRM record this would have landed on no longer exists, or changed while the request waited. Nothing lands until it is put right.",
   "extOpenchannel.error.delivery_blocked": "Nothing was sent: your registered address resolves to somewhere this installation will not post to. Register an address that resolves publicly.",
   "extOpenchannel.error.delivery_refused": "Your registered address answered and declined the message.",
   "extOpenchannel.error.delivery_unanswered": "The message left and no answer ever came back. It is not sent again, because a repeat could deliver it twice.",

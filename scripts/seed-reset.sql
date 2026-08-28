@@ -107,13 +107,17 @@ BEGIN
    WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = are.activity_id);
 
   -- event_outbox is preserved the same way: "not a target" of the generic
-  -- sweep, never "kept" outright. The in-product reset clears it with a
-  -- dedicated DELETE of its own (clearWorkspaceOutbox) before it touches
-  -- anything else, precisely so a staged row cannot survive to be relayed
-  -- later against a record this reset just removed. This script deletes
-  -- everything else first and this table last for the opposite reason: any
-  -- row a table's own DELETE staged during the loop above is included in this
-  -- one clear rather than left behind it.
+  -- sweep, never "kept" outright. Clearing it here removes only the DATABASE
+  -- rows — it is not the guarantee the in-product reset gives. The relay
+  -- (platform/events.Relay) polls and publishes independently of this script
+  -- and this transaction: it can claim and XADD a row between this script's
+  -- start and this DELETE, and by the time the row is gone from Postgres the
+  -- event is already on the stream, naming a record this same transaction is
+  -- deleting. A subscriber then works an event against a row that no longer
+  -- exists. This script has no way to quiesce the relay first, so against a
+  -- LIVE compose stack it cannot promise a clean reset of in-flight events —
+  -- only stop the worker/relay before running this if that residue matters,
+  -- or expect a consumer to see a handful of not-found records after a reset.
   DELETE FROM event_outbox;
 
   RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its people and its configuration are untouched — run make seed-dev to fill it', targets;

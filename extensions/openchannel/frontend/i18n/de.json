@@ -14,6 +14,7 @@
   "extOpenchannel.endpoint.title": "Ihr Endpunkt",
   "extOpenchannel.error.capture_not_declared": "Diese Installation lässt die Erfassung dieses Konnektors nicht zu. Auf diesem Bildschirm lässt sich das nicht beheben — melden Sie es dem Betreiber dieser Installation.",
   "extOpenchannel.error.capture_unavailable": "Die Erfassungsstrecke des CRM war nicht erreichbar. Nichts ging verloren, der nächste Durchlauf versucht es erneut.",
+  "extOpenchannel.error.capture_record_gone": "Der CRM-Datensatz, auf dem dies gelandet wäre, existiert nicht mehr oder hat sich geändert, während die Anfrage wartete. Bis das behoben ist, landet nichts.",
   "extOpenchannel.error.delivery_blocked": "Es wurde nichts gesendet: Ihre registrierte Adresse verweist auf ein Ziel, das diese Installation nicht anspricht. Registrieren Sie eine öffentlich auflösbare Adresse.",
   "extOpenchannel.error.delivery_refused": "Ihre registrierte Adresse hat geantwortet und die Nachricht abgelehnt.",
   "extOpenchannel.error.delivery_unanswered": "Die Nachricht ging hinaus, und es kam nie eine Antwort zurück. Sie wird nicht erneut gesendet, weil eine Wiederholung sie doppelt zustellen könnte.",

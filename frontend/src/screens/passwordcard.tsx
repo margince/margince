@@ -7,7 +7,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, resetToSignedOut, throwProblem } from "./common";
 import { isTooShort } from "./passwordrule";
 
 // Changing your own password, from the account settings page.
@@ -90,10 +90,7 @@ export function PasswordSettingRow({
       // no longer exists, and every later request would 401 — a success message
       // followed by unexplained failures, which is exactly what the warning
       // above this button exists to prevent.
-      queryClient.removeQueries({
-        predicate: (query) => query.queryKey[0] !== "me",
-      });
-      await queryClient.resetQueries({ queryKey: ["me"] });
+      await resetToSignedOut(queryClient);
       onChanged?.();
     },
   });

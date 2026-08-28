@@ -1,4 +1,9 @@
-import { api, QueryStates, throwProblem } from "@margince/frontend/api";
+import {
+  api,
+  QueryStates,
+  resetToSignedOut,
+  throwProblem,
+} from "@margince/frontend/api";
 import { useCan, useT } from "@margince/frontend/app";
 import { Card, SectionHeader } from "@margince/frontend/design-system";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -69,10 +74,7 @@ function useEndpoint(enabled: boolean) {
         // read. Once this fetch has settled there is no in-flight fetch left
         // to cancel, and the stale entry is safe to drop like every other one.
         setTimeout(() => {
-          queryClient.removeQueries({
-            predicate: (query) => query.queryKey[0] !== "me",
-          });
-          queryClient.resetQueries({ queryKey: ["me"] });
+          void resetToSignedOut(queryClient);
         }, 0);
       }
       if (error || !response.ok) {

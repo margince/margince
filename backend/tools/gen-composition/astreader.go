@@ -68,6 +68,7 @@ func readUnitManifest(u extensionUnit, vocab map[string]string, verbs []declared
 		jobs:            jobDecls,
 		hasMigrations:   u.HasMigrations,
 		migrationEmbeds: migrationEmbedVars(pkgs),
+		handlerAliases:  collectHandlerAliases(pkgs, extensionPkgPath),
 	}
 	newFn, newFile, count := findNew(pkgs)
 	if count == 0 {
@@ -142,6 +143,14 @@ type unitReader struct {
 	// sawMigrations records that the literal set Migrations at all, so an
 	// absent field on a unit that ships SQL is caught after the walk.
 	sawMigrations bool
+	// handlerAliases names, per published handler type ("ToolHandler",
+	// "JobHandler", "InboundHandler"), every package-local type alias of it —
+	// `type Handler = extension.InboundHandler` binds "Handler" under
+	// "InboundHandler". isStaticallyNilHandler consults this so a nil
+	// conversion spelled through the local alias (`Handler(nil)`) is
+	// recognized exactly as one spelled through the published type
+	// (`extension.InboundHandler(nil)`) is.
+	handlerAliases map[string]map[string]bool
 }
 
 // migrationEmbedVars collects the package-level vars whose //go:embed

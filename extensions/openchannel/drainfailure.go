@@ -91,18 +91,25 @@ func drainFailure(cause error) (extension.FailureClass, bool) {
 		// request in the batch meets the same wall, which is why it is not
 		// terminal for the row: the rows are fine and the installation is not.
 		return classCaptureNotDeclared, false
+	case errors.Is(cause, extension.ErrNotFound),
+		errors.Is(cause, extension.ErrConflict):
+		// THIS REQUEST'S own fault, and named separately from the catch-all
+		// below for a reason that costs something: the shared class is exempt
+		// from the attempt budget, because an outage is nobody's row's fault. A
+		// permanent per-request fault answered as shared would therefore be
+		// retried on every cadence forever, and the cap would stop bounding the
+		// one thing it exists to bound.
+		return classRecordGone, true
 	default:
-		// NOT a claim that this IS the pipeline failing to answer — an unwired
-		// role's capture sink, a record the core could no longer find or land on
-		// a conflicting version, and a plain connectivity failure all reach here
-		// the same way: none of them is one of the sentinels above, and none of
-		// them carries anything more specific than that once it crosses this
-		// unit's own boundary. The choice to answer classCaptureUnavailable
-		// anyway is deliberate and asymmetric, not a certainty: an outage that is
-		// failed instead manufactures dead work every cadence for as long as it
-		// lasts, while a genuine deployment fault answered this way instead costs
-		// only a saved pass. TestAnUnreachableCapturePipelinePostponesTheTick
-		// holds that trade; it does not make the guess correct.
+		// The catch-all answers the SHARED class, which is a guess and is
+		// deliberately biased. What reaches here is an unwired role's capture
+		// sink or a plain connectivity failure: nothing that crossed this unit's
+		// boundary carries more than "none of the sentinels above". Biased
+		// because the two mistakes cost differently — an outage answered as a
+		// per-request fault manufactures dead work every cadence for as long as
+		// it lasts, while a deployment fault answered as an outage costs one
+		// saved pass. The bias is held by the tests either side of it rather
+		// than by this paragraph.
 		return classCaptureUnavailable, false
 	}
 }

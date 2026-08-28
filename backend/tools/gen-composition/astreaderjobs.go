@@ -106,29 +106,13 @@ func (r *unitReader) readJob(elt ast.Expr, ext string) (declaredTool, error) {
 // not extension.ToolHandler — and accepting either on both fields would let a
 // Tools entry spell its inertness with the job type and vice versa.
 func (r *unitReader) readJobHandle(expr ast.Expr, ext string) (bool, error) {
-	if isStaticallyNilJob(expr, ext) {
+	if r.isStaticallyNilHandler(expr, ext, "JobHandler") {
 		return false, nil
 	}
 	if _, ok := expr.(*ast.Ident); ok {
 		return true, nil
 	}
 	return false, r.errAt(expr, "Job.Handle must be a plain identifier naming the handler function, or one of the documented inert nil spellings (nil, extension.JobHandler(nil), (nil))")
-}
-
-// isStaticallyNilJob is isStaticallyNil over extension.JobHandler. The callee
-// check on the CallExpr arm is load-bearing for the reason stated there: a
-// syntactic conversion and an ordinary one-argument call parse identically, so
-// accepting any one-argument nil call would read `mustDial(nil)` as inert.
-func isStaticallyNilJob(expr ast.Expr, ext string) bool {
-	switch e := expr.(type) {
-	case *ast.Ident:
-		return e.Name == "nil"
-	case *ast.CallExpr:
-		return len(e.Args) == 1 && isSelector(e.Fun, ext, "JobHandler") && isStaticallyNilJob(e.Args[0], ext)
-	case *ast.ParenExpr:
-		return isStaticallyNilJob(e.X, ext)
-	}
-	return false
 }
 
 // joinJobsToContract refuses behavior for a job no kind declares.
