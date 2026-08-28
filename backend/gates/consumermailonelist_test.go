@@ -40,12 +40,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The subject set comes from the OWNER, not from a sample.
@@ -337,7 +337,7 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 				if _, known := constants[name.Name]; known {
 					continue
 				}
-				if value, ok := stringValue(spec.Values[i], constants); ok {
+				if value, ok := gatekit.StringExpr(spec.Values[i], constants, gatekit.FoldStrict); ok {
 					constants[name.Name] = value
 					learned = true
 				}
@@ -361,7 +361,7 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 		distinct := map[string]bool{}
 		for _, element := range lit.Elts {
 			ast.Inspect(element, func(inner ast.Node) bool {
-				value, ok := stringValue(inner, constants)
+				value, ok := gatekit.StringExpr(inner, constants, gatekit.FoldStrict)
 				if ok && looksLikeADomain(value) {
 					distinct[strings.ToLower(value)] = true
 				}
@@ -375,50 +375,4 @@ func consumerMailListsInSource(t *testing.T, name, code string) []string {
 		return true
 	})
 	return found
-}
-
-// stringValue reads a node's string value: a literal directly, a named constant
-// through the file's own declarations, and a CONSTANT EXPRESSION built from
-// either.
-//
-// `const gmail = "gmail" + ".com"` is a legal spelling of the same domain, and
-// a reader of BasicLit alone sees two fragments and no provider. Parentheses
-// and `+` are the whole of what a string constant expression can be in Go, so
-// handling both is complete rather than a sample of the shapes.
-func stringValue(node ast.Node, constants map[string]string) (string, bool) {
-	switch n := node.(type) {
-	case *ast.BasicLit:
-		if n.Kind != token.STRING {
-			return "", false
-		}
-		value, err := strconv.Unquote(n.Value)
-		return value, err == nil
-	case *ast.Ident:
-		value, known := constants[n.Name]
-		return value, known
-	case *ast.ParenExpr:
-		return stringValue(n.X, constants)
-	case *ast.CallExpr:
-		// `string("gmail.com")` is a constant conversion, not a function call
-		// this gate has to run — it is the identity on a string constant. Only
-		// the builtin spelled `string` with exactly one argument qualifies; a
-		// package-qualified or shadowed name is a different thing and is not
-		// followed.
-		name, ok := n.Fun.(*ast.Ident)
-		if !ok || name.Name != "string" || len(n.Args) != 1 {
-			return "", false
-		}
-		return stringValue(n.Args[0], constants)
-	case *ast.BinaryExpr:
-		if n.Op != token.ADD {
-			return "", false
-		}
-		left, okL := stringValue(n.X, constants)
-		right, okR := stringValue(n.Y, constants)
-		if !okL || !okR {
-			return "", false
-		}
-		return left + right, true
-	}
-	return "", false
 }
