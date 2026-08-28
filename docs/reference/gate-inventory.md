@@ -61,7 +61,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (66)
+## Census (67)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -89,6 +89,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
+| `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
