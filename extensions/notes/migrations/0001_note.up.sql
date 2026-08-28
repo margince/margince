@@ -77,13 +77,11 @@ CREATE TABLE ext.ext_notes_note (
 -- NO ROW-LEVEL SECURITY, and for a unit table that is the rule rather than an
 -- omission — state it, because this file is the template.
 --
--- The policy this table used to carry compared a workspace_id column against
--- app.workspace_id. An installation holds exactly one active workspace
--- (identity.InstallationWorkspace refuses a second), so that predicate admitted
--- every row it could see: it named an isolation there was nothing left to
--- isolate. It was never a wall against a UNIT either — a unit can rebind the
--- GUC through the seam's own verbs, which pkg/extension/runtime.go records as
--- verified against the shipped schema rather than assumed.
+-- An installation holds exactly one active workspace
+-- (identity.InstallationWorkspace refuses a second), so a tenant predicate
+-- would name an isolation there is nothing left to isolate — and it would not
+-- be a wall against a UNIT in any case, since a unit issues its own SQL through
+-- the seam.
 --
 -- What bounds a unit is the grant below and the schema it owns. A row-level
 -- rule can mean something here again once it keys on something a unit cannot

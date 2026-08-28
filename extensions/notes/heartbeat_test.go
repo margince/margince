@@ -25,9 +25,8 @@ func TestHeartbeatWritesOneRowNamingItsWorkspace(t *testing.T) {
 		t.Errorf("the tick does not write the unit's own table:\n%s", insert)
 	}
 	// It names NO workspace, and that is an assertion rather than the absence
-	// of one. A unit table carries no tenant column and no policy keyed on one,
-	// so a statement reaching for app.workspace_id would be reading a GUC that
-	// fences nothing and writing a column that is not there.
+	// of one. A unit table carries no tenant column — extmigrategate refuses
+	// one — so a statement naming a workspace writes a column that is not there.
 	if strings.Contains(insert, "workspace") {
 		t.Errorf("the tick still names a workspace:\n%s", insert)
 	}

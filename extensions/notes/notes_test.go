@@ -161,9 +161,9 @@ func TestMigrationsAreEmbedded(t *testing.T) {
 	// fails when the gate applies the file, for this unit and for every unit
 	// that copies it as a template.
 	//
-	// The RLS pair is asserted absent for the opposite reason: it was present
-	// until the tier stopped carrying a workspace, and a policy re-added here
-	// would key on a column that is gone and read a GUC that fences nothing.
+	// The RLS pair is asserted absent for the opposite reason: extmigrategate
+	// refuses row-level security on a unit table outright, so a policy added
+	// here would fail the tier's own gate rather than this one.
 	for _, absent := range []string{
 		"REFERENCES app_user",
 		"REFERENCES workspace",
