@@ -1,5 +1,10 @@
 # `extensions/notes` — scope
 
+> **Historical record, 2026-08-28.** `extensions/notes` was removed when
+> `openchannel` replaced it as the tier's one reference unit. This page describes
+> a unit that is no longer in the tree; see the sibling README for why the
+> evidence is kept.
+
 The demo unit for PR1. Its job is to make every capability the tier gains **visible and clickable**,
 so PR1's acceptance is a human driving the SPA, not a green test suite.
 

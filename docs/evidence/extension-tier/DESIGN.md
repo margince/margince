@@ -1,5 +1,13 @@
 # Extension tier — capability expansion
 
+> **Historical record, 2026-08-28.** The `notes` unit this evidence shows was
+> REMOVED, together with `yogi` and `relay-probe`, when `openchannel` replaced the
+> three as the tier's one reference unit. Nothing below describes code that is in
+> the tree. It is kept because it is the acceptance evidence for the capabilities
+> the tier still has — screens, secrets, jobs, migrations, a governed surface —
+> and deleting a review's evidence to tidy up destroys the record of what was
+> actually checked. Read it as "how the tier was proved", never as "what ships".
+
 The tier today composes Go registrations only: two capability kinds (jurisdiction packs, agent tools),
 with the `api/`, `frontend/` and `migrations/` slices refused at generation. This design lands those
 slices plus secrets and background jobs, proves them with a demo unit a human drives from the SPA, and
