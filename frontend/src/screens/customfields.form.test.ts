@@ -284,6 +284,44 @@ describe("customFieldsToPatch", () => {
     expect(body.cf_priority).toBeNull();
   });
 
+  // The prefill converts a currency column's minor units to major; the diff has
+  // to read the stored value the same way or it reports every currency field as
+  // edited on every save, and rewrites a figure nobody touched.
+  it("reads a currency field in the major units the control shows", () => {
+    const budget = cf({
+      id: "cf-4",
+      column_name: "cf_budget",
+      type: "currency",
+      currency: "EUR",
+    });
+
+    expect(
+      customFieldsToPatch({ cf_budget: "12.5" }, { cf_budget: 1250 }, [budget]),
+    ).toEqual({});
+    // And a real edit still travels, back in minor units.
+    expect(
+      customFieldsToPatch({ cf_budget: "20" }, { cf_budget: 1250 }, [budget]),
+    ).toEqual({ cf_budget: 2000 });
+  });
+
+  // A currency whose scale is not two digits: a dong has none, so 1250 VND is
+  // 1250 major, not 12.5. A hard-coded hundred here reports it as edited and
+  // then writes a hundredfold figure on the next real save.
+  it("reads a currency field at its own scale", () => {
+    const dong = cf({
+      id: "cf-5",
+      column_name: "cf_budget_vnd",
+      type: "currency",
+      currency: "VND",
+    });
+
+    expect(
+      customFieldsToPatch({ cf_budget_vnd: "1250" }, { cf_budget_vnd: 1250 }, [
+        dong,
+      ]),
+    ).toEqual({});
+  });
+
   // A record read carries a number or a boolean where the form holds a string.
   // Comparing the two spellings directly reports every such field as moved on
   // every save, which is the defect again with an extra step.

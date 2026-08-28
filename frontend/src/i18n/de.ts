@@ -532,9 +532,9 @@ export const de = {
   "partner.stage.noFit": "Keine Passung",
 
   "rel.add": "Beziehung hinzufügen",
-  "rel.addStakeholder": "Stakeholder hinzufügen",
-  "rel.dealStakeholders": "Stakeholder",
-  "rel.dealStakeholdersEmpty": "Für diesen Deal ist kein Stakeholder erfasst",
+  "rel.addStakeholder": "Beteiligten hinzufügen",
+  "rel.dealStakeholders": "Beteiligte",
+  "rel.dealStakeholdersEmpty": "Für diesen Deal ist niemand erfasst",
   "rel.kind": "Art",
   "rel.saveDone": "Beziehung gespeichert",
   "rel.role": "Rolle",

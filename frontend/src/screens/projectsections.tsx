@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -259,13 +259,22 @@ export function StakeholdersCard({
     seats.length,
   );
   const writable = !readOnly && (state === "ready" || state === "empty");
+  // Where focus goes after a removal. The row holding the Remove button is gone
+  // by then, and focus restored to a node that has unmounted leaves a keyboard
+  // reader on document.body — so it lands on the panel's own Add control, which
+  // survives every removal and is rendered exactly when a Remove button is.
+  const addVerb = useRef<HTMLDivElement>(null);
   return (
     <SectionPanel
       title={t("project.stakeholders.title")}
       state={state}
       emptyLabel={t("project.stakeholders.empty")}
       titleAction={
-        writable ? <AddProjectStakeholder projectId={projectId} /> : undefined
+        writable ? (
+          <div ref={addVerb}>
+            <AddProjectStakeholder projectId={projectId} />
+          </div>
+        ) : undefined
       }
     >
       {seats.map((seat) => (
@@ -274,6 +283,9 @@ export function StakeholdersCard({
           seat={seat}
           projectId={projectId}
           writable={writable}
+          returnFocusTo={() =>
+            addVerb.current?.querySelector<HTMLElement>("button") ?? null
+          }
         />
       ))}
     </SectionPanel>
@@ -284,7 +296,13 @@ function StakeholderRow({
   seat,
   projectId,
   writable,
-}: Readonly<{ seat: Stakeholder; projectId: string; writable: boolean }>) {
+  returnFocusTo,
+}: Readonly<{
+  seat: Stakeholder;
+  projectId: string;
+  writable: boolean;
+  returnFocusTo: () => HTMLElement | null;
+}>) {
   const t = useT();
   return (
     <PanelRow className="project-row">
@@ -296,6 +314,7 @@ function StakeholderRow({
             projectId={projectId}
             personId={seat.person_id}
             personName={seat.person_name}
+            returnFocusTo={returnFocusTo}
           />
         )}
       </span>

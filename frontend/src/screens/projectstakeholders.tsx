@@ -202,6 +202,7 @@ export function RemoveProjectStakeholder({
   projectId,
   personId,
   personName,
+  returnFocusTo,
 }: Readonly<{
   projectId: string;
   personId: string;
@@ -209,6 +210,12 @@ export function RemoveProjectStakeholder({
   // reported, and still removable, so the dialog names the seat rather than
   // pretending to a name it was not given.
   personName: string | null | undefined;
+  // Where focus lands once the dialog closes. A successful removal unmounts the
+  // row this button sits in, so restoring focus to the trigger would hand a
+  // keyboard reader a detached node and drop them on document.body. The card
+  // names a surviving element — the same rule ProjectLinks keeps for its own
+  // detach, one card up the page.
+  returnFocusTo?: () => HTMLElement | null;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -252,6 +259,7 @@ export function RemoveProjectStakeholder({
         title={t("project.stakeholders.removeTitle")}
         confirmLabel={t("rel.remove")}
         confirmVariant="danger"
+        returnFocusTo={returnFocusTo}
         onConfirm={() => detach.mutate(personId)}
         pending={detach.isPending}
         error={detach.isError ? problemMessageOf(detach.error, t) : null}

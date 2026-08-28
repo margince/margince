@@ -535,10 +535,10 @@ export const vi = {
   "partner.stage.noFit": "Không phù hợp",
 
   "rel.add": "Thêm quan hệ",
-  "rel.addStakeholder": "Thêm người liên quan",
-  "rel.dealStakeholders": "Người liên quan",
+  "rel.addStakeholder": "Thêm bên liên quan",
+  "rel.dealStakeholders": "Các bên liên quan",
   "rel.dealStakeholdersEmpty":
-    "Chưa ghi nhận người liên quan nào cho giao dịch này",
+    "Chưa ghi nhận bên liên quan nào cho giao dịch này",
   "rel.kind": "Loại",
   "rel.saveDone": "Đã lưu mối quan hệ",
   "rel.role": "Vai trò",

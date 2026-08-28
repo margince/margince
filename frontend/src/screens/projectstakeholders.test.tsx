@@ -185,6 +185,24 @@ describe("the stakeholders on a project", () => {
     expect(writes[0].url).toContain(`/projects/${PROJECT}/stakeholders/${MAI}`);
   });
 
+  // A successful removal unmounts the row the Remove button sits in, so focus
+  // restored to the trigger lands on a detached node and drops a keyboard reader
+  // on document.body. It goes to the panel's Add control, which survives every
+  // removal and is on screen exactly when a Remove button is.
+  it("leaves focus on a control that survives the removal", async () => {
+    const user = setup();
+    stubFetch(() => {});
+    renderCard();
+
+    await user.click(screen.getByTestId("remove-project-stakeholder"));
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByTestId("add-project-stakeholder"),
+    );
+  });
+
   // WITHHELD IS NOT EMPTY. A reader whose grant refused the seats is told so,
   // and offering them a verb over a list they were not allowed to read invites
   // a write against records they cannot see.

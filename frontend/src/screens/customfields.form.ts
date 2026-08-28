@@ -34,18 +34,10 @@ export function customFieldToFormField(
     case "date":
       return { ...base, type: "date" };
     case "currency":
-      // Stored as bigint minor units; the form edits major units, at the scale
-      // THIS field's own currency carries. The catalog holds that code
-      // (CF-T06) — the same one the renderer below formats with — so a
-      // hard-coded hundred here made the form and the display disagree for
-      // every currency that is not two-decimal.
       return {
         ...base,
         type: "number",
-        toInput: (raw) =>
-          raw == null || raw === ""
-            ? ""
-            : String(toMajorUnits(Number(raw), field.currency ?? "")),
+        toInput: (raw) => customFieldFormValue(field, raw),
       };
     case "picklist":
       return {
@@ -72,6 +64,35 @@ export function customFieldToFormField(
 
 // Coerce one field's form string to its stored value. Empty → null so a cleared
 // field actually clears the column.
+/**
+ * One stored value in the FORM's spelling — the string the control is prefilled
+ * with, and therefore the string an unchanged control still holds.
+ *
+ * The currency case is the reason this is a function rather than a
+ * `String(...)`: the column is bigint MINOR units and the form edits MAJOR
+ * units, at the scale this field's own currency carries. The catalog holds that
+ * code (CF-T06) — the same one the renderer formats with — so a hard-coded
+ * hundred here made the form and the display disagree for every currency that
+ * is not two-decimal.
+ *
+ * The prefill (`toInput`) and the diff (`customFieldsToPatch`) both read it, so
+ * they cannot disagree about what a value looks like on screen. They did: the
+ * diff compared a submitted "12.5" against a stored 1250 and reported every
+ * currency field as edited on every save.
+ */
+export function customFieldFormValue(
+  field: CustomField,
+  stored: unknown,
+): string {
+  if (stored == null || stored === "") {
+    return "";
+  }
+  if (field.type === "currency") {
+    return String(toMajorUnits(Number(stored), field.currency ?? ""));
+  }
+  return String(stored).trim();
+}
+
 function coerceWrite(field: CustomField, raw: string): unknown {
   const value = raw.trim();
   if (value === "") {
@@ -149,17 +170,17 @@ export function customFieldsToPatch(
   seeded: Record<string, unknown>,
   fields: CustomField[],
 ): Record<string, unknown> {
-  const spelled = (source: Record<string, unknown>, key: string) => {
-    const raw = source[key];
-    return raw == null ? "" : String(raw).trim();
-  };
   const body: Record<string, unknown> = {};
   for (const field of fields) {
     const column = field.column_name;
-    if (spelled(values, column) === spelled(seeded, column)) {
+    // The submitted value is already a form string; the stored one is put into
+    // the same spelling first, which is what the control was prefilled with.
+    const submitted =
+      values[column] == null ? "" : String(values[column]).trim();
+    if (submitted === customFieldFormValue(field, seeded[column])) {
       continue;
     }
-    body[column] = coerceWrite(field, spelled(values, column));
+    body[column] = coerceWrite(field, submitted);
   }
   return body;
 }
