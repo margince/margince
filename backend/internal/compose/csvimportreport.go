@@ -34,7 +34,7 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		report.Objects[i].Unchanged = p.unchanged
 		report.Objects[i].Skipped = append(report.Objects[i].Skipped, p.skipped...)
 		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
-		report.Objects[i].Duplicates += p.duplicates
+		report.Objects[i].WillDuplicate += p.duplicates
 	}
 	return withPredictedLinks(ctx, source, writers, report, p.absent)
 }
