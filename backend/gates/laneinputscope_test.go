@@ -70,6 +70,9 @@ var scriptReference = regexp.MustCompile(`(?:frontend/)?scripts/[\w.-]+\.(?:sh|m
 // `make check-fe`, `make db-up && make migrate`.
 var makeInvocation = regexp.MustCompile(`\bmake\s+([a-z][a-z0-9-]*)`)
 
+// A `NAME=value` word set for the duration of one recipe command.
+var environmentAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*=\S*$`)
+
 // A variable reference in either spelling make accepts.
 var makeReference = regexp.MustCompile(`\$[({]([A-Z][A-Z0-9_]*)[)}]`)
 
@@ -253,9 +256,14 @@ func scriptsUnder(targets map[string]*recipeTarget, vars map[string]string, root
 // delegatedTargets reads the targets a `$(MAKE) a b` line pulls in. A `-C` line
 // is a sub-make into another directory: it runs a different Makefile, so it adds
 // no edge to this graph and its scripts are that directory's own.
+//
+// The environment prefix is stripped first, because `make check` is spelled
+// `@PHASE_TIMER_OWNED=1 $(MAKE) check-backend` — a reader that required the
+// line to OPEN with $(MAKE) followed neither half of the merge gate and judged
+// it against one timer script.
 func delegatedTargets(command string) []string {
 	body, isSubMake := strings.CutPrefix(
-		strings.TrimLeft(strings.TrimPrefix(command, "\t"), " \t@+-"), "$(MAKE)")
+		stripEnvironment(strings.TrimLeft(strings.TrimPrefix(command, "\t"), " \t@+-")), "$(MAKE)")
 	if !isSubMake || strings.Contains(body, " -C ") {
 		return nil
 	}
@@ -267,6 +275,18 @@ func delegatedTargets(command string) []string {
 		targets = append(targets, token)
 	}
 	return targets
+}
+
+// stripEnvironment drops the `NAME=value ` words a recipe sets for the command
+// that follows, which is where a recursive make often begins.
+func stripEnvironment(body string) string {
+	for {
+		first, rest, found := strings.Cut(body, " ")
+		if !found || !environmentAssignment.MatchString(first) {
+			return body
+		}
+		body = strings.TrimLeft(rest, " \t")
+	}
 }
 
 func sorted(set map[string]bool) []string {
@@ -471,6 +491,26 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 		if missing := unscoped(lane, narrowed); len(missing) == 0 {
 			t.Errorf("%s: %d root script(s) this lane runs stayed claimed after every 'scripts/…' pattern was removed from its scope %v — the matcher claims paths no pattern covers, so the census cannot fail",
 				lane.name, scripts, lane.scopes)
+		}
+	}
+}
+
+func TestARecursiveMakeBehindAnEnvironmentPrefixIsStillAnEdge(t *testing.T) {
+	t.Parallel()
+
+	// `make check` is spelled `@PHASE_TIMER_OWNED=1 $(MAKE) check-backend`, and a
+	// reader that required the line to open with $(MAKE) followed neither half of
+	// the merge gate — it saw one timer script where two whole trees of gates
+	// hang. The census shape that fails short is the one this file exists to
+	// refuse, so the spelling is a case rather than a comment.
+	for command, want := range map[string][]string{
+		"\t@PHASE_TIMER_OWNED=1 $(MAKE) check-backend":   {"check-backend"},
+		"\tPHASE_TIMER_OWNED=1 $(MAKE) -C backend check": nil,
+		"\t$(MAKE) fe-drift":                             {"fe-drift"},
+		"\t@bash scripts/phase-timer.sh reset":           nil,
+	} {
+		if got := delegatedTargets(command); !slices.Equal(got, want) {
+			t.Errorf("delegatedTargets(%q) = %v, want %v", command, got, want)
 		}
 	}
 }

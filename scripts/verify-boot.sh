@@ -62,6 +62,12 @@ session="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 
 echo "== verify-boot 2/4: seeded people are visible =="
+# The rule the product reads an employment by, spelled the same way
+# scripts/seed-dev.sh writes it: primary, and not ended. `ended_at` is a date and
+# ISO dates compare as strings, so a future end is still current — the reading
+# the server's own predicate takes.
+CURRENT_PRIMARY_JQ='.is_current_primary and (.ended_at == null or (.ended_at | tostring) >= $today)'
+TODAY="$(date -u +%F)"
 # Looked up by NAME rather than scanned off the first page of /v1/people. The
 # page held 100 rows and the seeded three were on it as long as the dev seed was
 # all that had run — on a stack that also carries the demo dataset they are not,
@@ -97,10 +103,17 @@ while IFS= read -r name; do
     cat "$workdir/people.json" >&2
     fail "seeded person '$name' missing from GET /v1/people — seed absent or stale (make seed-dev)"
   fi
-  # And employed somewhere. A person who works nowhere shows on no company page,
-  # which is the demo dataset's own verify rule ("people work somewhere") — and
-  # the rule these records used to break, so `make verify-demo` could not pass
-  # after `make seed-dev` in the order the runbook prescribes.
+  # And employed somewhere, on the edge the PRODUCT reads. A person who works
+  # nowhere shows on no company page, which is the demo dataset's own verify rule
+  # ("people work somewhere") — and the rule these records used to break, so
+  # `make verify-demo` could not pass after `make seed-dev` in the order the
+  # runbook prescribes.
+  #
+  # The current-primary rule rather than mere existence, and this is STRICTER
+  # than the demo verifier, which counts any employment row: an ended or
+  # secondary edge satisfies that census and still leaves the contact off the
+  # company page, so a boot proof that accepted one would be proving something
+  # nobody can see.
   person_id="$(printf '%s' "$person" | jq -r '.id')"
   rel_status="$(curl -sS --max-time 15 -o "$workdir/employment.json" -w '%{http_code}' \
     "$API_BASE/v1/relationships?kind=employment&person_id=$person_id&limit=50" \
@@ -110,10 +123,12 @@ while IFS= read -r name; do
     cat "$workdir/employment.json" >&2
     fail "GET /v1/relationships returned HTTP $rel_status (expected 200)"
   fi
-  if ! jq -e '.data | length > 0' "$workdir/employment.json" >/dev/null; then
-    fail "seeded person '$name' is employed nowhere — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
+  if ! jq -e --arg today "$TODAY" "any(.data[]; $CURRENT_PRIMARY_JQ)" "$workdir/employment.json" >/dev/null; then
+    echo "  employment rows:" >&2
+    cat "$workdir/employment.json" >&2
+    fail "seeded person '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
   fi
-  echo "  OK: found '$name', employed"
+  echo "  OK: found '$name', currently employed"
 done <<< "$seeded_people"
 
 # The other rule the seeded records used to break: an account left on the

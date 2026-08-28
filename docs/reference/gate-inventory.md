@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (40)
+## Parity (41)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -57,6 +57,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is DECLARED in the contract and restated in Go, and the two must not drift. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be TOTAL over the column it reads. |
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
+| `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this person currently employed?" the way the PRODUCT asks it, and they ask it in the same words. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 

@@ -258,6 +258,13 @@ ensure "organization Demo GmbH" /organizations \
 # its job on every run after the first.
 echo "== seed-dev: demo employment =="
 
+# The current-primary rule, spelled once here and once in verify-boot.sh because
+# each script is a client of the same API and neither can call the other's shell.
+# `ended_at` is a date and ISO dates compare as strings, so a future end is still
+# current — the same reading the server's own predicate takes.
+CURRENT_PRIMARY_JQ='.is_current_primary and (.ended_at == null or (.ended_at | tostring) >= $today)'
+TODAY="$(date -u +%F)"
+
 person_id() { # person_id <full-name> — prints the id, empty when absent
   local name="$1" status
   status="$(api GET "/people?q=$(url_encode "$name")&limit=50")"
@@ -274,14 +281,45 @@ org_id="$(jq -r 'first(.data[] | select(.display_name == "Demo GmbH") | .id) // 
 
 # The roles are the demo's own: a company page whose three contacts have no
 # titles reads as a page that failed to load them.
+#
+# What counts as employed is the CURRENT PRIMARY edge, which is the one the
+# product reads: a company page, a person card and the enrichment path all ask
+# `is_current_primary AND not ended`, so an ended or secondary row leaves the
+# contact off the very page this seed exists to draw, and an existence probe
+# would call that state seeded and repair nothing.
+#
+# Two repairs, because the two states are not the same fact. A standing edge that
+# merely lost the flag is promoted. An ENDED edge is history, and the API offers
+# no way to un-end one on purpose — a former employment keeps its row — so the
+# person is re-hired with a new edge instead, which is also what happened in the
+# story the demo tells.
 employ() { # employ <full-name> <role>
-  local name="$1" role="$2" id status
+  local name="$1" role="$2" id status standing rel_id rel_version
   id="$(person_id "$name")"
   [ -n "$id" ] || fail "$name is not in the installation the seed just wrote to"
   status="$(api GET "/relationships?kind=employment&person_id=$id&limit=50")"
   [ "$status" = "200" ] || fail "GET /v1/relationships returned HTTP $status"
-  if jq -e --arg o "$org_id" 'any(.data[]; .organization_id == $o)' "$workdir/body" >/dev/null; then
+  if jq -e --arg o "$org_id" --arg today "$TODAY" \
+    "any(.data[]; .organization_id == \$o and $CURRENT_PRIMARY_JQ)" "$workdir/body" >/dev/null; then
     echo "  OK: $name already employed at Demo GmbH"
+    return
+  fi
+  standing="$(jq -c --arg o "$org_id" --arg today "$TODAY" \
+    "first(.data[] | select(.organization_id == \$o and (.ended_at == null or (.ended_at | tostring) >= \$today))) // empty" \
+    "$workdir/body")"
+  if [ -n "$standing" ]; then
+    rel_id="$(printf '%s' "$standing" | jq -r '.id')"
+    rel_version="$(printf '%s' "$standing" | jq -r '.version // ""')"
+    [ -n "$rel_version" ] || fail "GET /v1/relationships answered $name's employment without a version to write against"
+    status="$(api_if_match PATCH "/relationships/$rel_id" "$rel_version" '{"is_current_primary":true}')"
+    case "$status" in
+      200) echo "  OK: $name's employment at Demo GmbH is their primary one again" ;;
+      *)
+        echo "  response body:" >&2
+        cat "$workdir/body" >&2
+        fail "PATCH /v1/relationships/$rel_id returned HTTP $status"
+        ;;
+    esac
     return
   fi
   # `is_current_primary` is left out on purpose: the server makes an employment
