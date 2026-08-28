@@ -80,7 +80,12 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 	if res.TriagePending {
 		p.triage.domainPending(ctx, res.TriageDomain)
 	}
-	return capture.EnsureOutcome{PersonCreated: res.PersonCreated, CompanyQueued: res.TriagePending}, nil
+	return capture.EnsureOutcome{
+		PersonCreated: res.PersonCreated,
+		PersonID:      res.PersonID.UUID,
+		CompanyQueued: res.TriagePending,
+		QueuedDomain:  res.TriageDomain,
+	}, nil
 }
 
 // EnsureChannelCounterparty is the same adaptation for an inbound channel
@@ -108,7 +113,7 @@ func (p peopleEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture
 	if res.Conflict != nil {
 		p.raiseIdentityConflict(ctx, *res.Conflict, in.Source, in.CapturedBy)
 	}
-	return capture.EnsureOutcome{PersonCreated: res.PersonCreated}, nil
+	return capture.EnsureOutcome{PersonCreated: res.PersonCreated, PersonID: res.PersonID.UUID}, nil
 }
 
 // raiseIdentityConflict is the D8 identity-review half of routing (design

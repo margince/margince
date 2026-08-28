@@ -252,6 +252,7 @@ var tableOwners = map[string]string{
 	"capture_connection":           "internal/modules/capture",
 	"capture_sync_state":           "internal/modules/capture",
 	"capture_backfill":             "internal/modules/capture",
+	"capture_backfill_creation":    "internal/modules/capture",
 	"workspace_email_domain":       "internal/modules/capture",
 	"capture_exclusion":            "internal/modules/capture",
 	"capture_digest":               "internal/modules/capture",

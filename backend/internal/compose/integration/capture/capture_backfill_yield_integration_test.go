@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -457,5 +458,171 @@ func seedBackfillFailuresAtCeiling(t *testing.T, e *integration.SearchEnv, id id
 	})
 	if err != nil {
 		t.Fatalf("seed the failure ladder: %v", err)
+	}
+}
+
+// TestTheReachIsACountRatherThanAnAccumulation holds what the ledger buys.
+//
+// The reported reach used to be `SET col = col + 1` per creation, in a
+// transaction of its own, after the row it counted had already committed
+// elsewhere. Nothing replays a lost one — capture is idempotent, so no retry
+// re-offers the message to the resolver — so the number was a FLOOR, and it
+// divides into the cost estimator's ratios where a floor understates cost.
+//
+// Two properties make it a count, and they are the two asserted here: what the
+// run created is on the ledger row by row, and the reported number is that
+// ledger's size rather than a running total that can drift from it.
+func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	registry.Register(&mailPageConnector{
+		raws: [][]byte{
+			email("alice@gmail.com", "Alice Example", captureOwner, "l1@gmail.com", ""),
+			email(captureOwner, "", "dave@globex.example", "l2@myco.example", ""),
+		},
+		sent: map[string]bool{"l2@myco.example": true},
+	})
+
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 3, enqueueNothing)
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if done, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil || !done {
+		t.Fatalf("the page must finish the run: done=%v err=%v", done, stepErr)
+	}
+
+	people, organizations := readBackfillYieldColumns(t, e, run.ID)
+	ledgeredPeople, ledgeredOrgs := readCreationLedger(t, e, run.ID)
+	if ledgeredPeople == 0 {
+		t.Fatal("the run ledgered no creation at all, so this test is measuring an import that made nothing")
+	}
+	if people != ledgeredPeople || organizations != ledgeredOrgs {
+		t.Errorf("the run reports %d people and %d company questions; the ledger holds %d and %d — the "+
+			"reported numbers are a projection of the ledger, so the two cannot disagree",
+			people, organizations, ledgeredPeople, ledgeredOrgs)
+	}
+
+	// The write is idempotent, which is what lets it be retried. Replaying the
+	// whole ledger must leave both the rows and the reported numbers where they
+	// are: a retry that double-counted would be the old accumulation with more
+	// steps.
+	replayCreationLedger(t, e, run.ID)
+	afterPeople, afterOrgs := readBackfillYieldColumns(t, e, run.ID)
+	nowPeople, nowOrgs := readCreationLedger(t, e, run.ID)
+	if afterPeople != people || afterOrgs != organizations || nowPeople != ledgeredPeople || nowOrgs != ledgeredOrgs {
+		t.Errorf("replaying the ledger moved the reach from %d/%d to %d/%d — writing the same creation "+
+			"twice must write it once, or the retry is not safe to take",
+			people, organizations, afterPeople, afterOrgs)
+	}
+}
+
+// TestALostCountIsRecoveredByTheNextCreation is the ticket's own defect,
+// inverted.
+//
+// A count used to be lost permanently: the row was created in one transaction
+// and counted in another, nothing replayed the second, and capture's
+// idempotency means no later attempt ever re-offers that message. So a fault
+// between the two lowered the run's reported reach for good.
+//
+// With the columns a PROJECTION of the ledger, the next creation recomputes
+// them from every row the ledger holds — so a creation that reached the ledger
+// and lost its column update heals itself. Under an accumulation it cannot: an
+// increment missed is an increment gone.
+func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	conn := &mailPageConnector{
+		raws: [][]byte{
+			email("erin@gmail.com", "Erin Example", captureOwner, "h1@gmail.com", ""),
+			email("frank@gmail.com", "Frank Example", captureOwner, "h2@gmail.com", ""),
+		},
+		sent: map[string]bool{},
+	}
+	// After the first message's counterparty is created and counted, take its
+	// count away without touching the ledger — the state a failed column update
+	// leaves behind. The second message is then the "next creation".
+	var run capture.BackfillRun
+	captured := 0
+	conn.afterMessage = func() {
+		captured++
+		if captured == 1 {
+			loseTheCount(t, e, run.ID)
+		}
+	}
+	registry.Register(conn)
+
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 10, enqueueNothing)
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+	run = started
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if _, _, _, stepErr := registry.RunBackfillStep(wsCtx, run.ID); stepErr != nil {
+		t.Fatalf("RunBackfillStep: %v", stepErr)
+	}
+
+	people, _ := readBackfillYieldColumns(t, e, run.ID)
+	ledgered, _ := readCreationLedger(t, e, run.ID)
+	if ledgered != 2 {
+		t.Fatalf("the fixture created %d people, so there was no lost count to recover", ledgered)
+	}
+	if people != ledgered {
+		t.Errorf("after the next creation the run reports %d people and its ledger holds %d — the reach "+
+			"is recomputed from the ledger, so an update lost between the two heals rather than "+
+			"lowering the run's reported reach for good", people, ledgered)
+	}
+}
+
+// loseTheCount lowers the run's reported people by one and leaves the ledger
+// alone, which is what a creation whose column update failed leaves behind.
+func loseTheCount(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
+	t.Helper()
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE capture_backfill SET people_created = greatest(people_created - 1, 0) WHERE id = $1`,
+		id); err != nil {
+		t.Fatalf("losing a count: %v", err)
+	}
+}
+
+// readCreationLedger returns how many people and how many queued organizations
+// the run's ledger holds — the rows the reported reach is a projection of.
+func readCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) (int, int) {
+	t.Helper()
+	var people, organizations int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `
+			SELECT count(*) FILTER (WHERE kind = 'person'),
+			       count(*) FILTER (WHERE kind = 'organization_queued')
+			  FROM capture_backfill_creation
+			 WHERE backfill_id = $1`, id).Scan(&people, &organizations)
+	}); err != nil {
+		t.Fatalf("reading the creation ledger: %v", err)
+	}
+	return people, organizations
+}
+
+// replayCreationLedger writes every row the ledger already holds a second time,
+// which is what a retried page does.
+func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(), `
+			INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
+			SELECT backfill_id, kind, subject FROM capture_backfill_creation WHERE backfill_id = $1
+			ON CONFLICT (backfill_id, kind, subject) DO NOTHING`, id)
+		return err
+	}); err != nil {
+		t.Fatalf("replaying the creation ledger: %v", err)
 	}
 }

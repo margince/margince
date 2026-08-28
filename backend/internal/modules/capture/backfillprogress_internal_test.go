@@ -3,7 +3,11 @@
 
 package capture
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // A page is a batch of independent messages and nothing promises a connector
 // walks it serially, so two reports can arrive out of order. The tally takes
@@ -50,6 +54,56 @@ func TestPageTallyTakesOnlyForwardReports(t *testing.T) {
 			if tally.scanned != tc.wantScanned || tally.captured != tc.wantCaptured || tally.skipped != tc.wantSkipped {
 				t.Fatalf("tally = scanned %d / captured %d / skipped %d, want %d / %d / %d",
 					tally.scanned, tally.captured, tally.skipped, tc.wantScanned, tc.wantCaptured, tc.wantSkipped)
+			}
+		})
+	}
+}
+
+// TestOnlyACreationIsLedgered holds what earns a ledger row.
+//
+// The count is a count now, so what goes in it is the whole question: a message
+// that resolved onto rows that already existed created nothing, and on a widen
+// re-import that is nearly every message. A run that ledgered those would
+// report the size of the mailbox as its reach.
+func TestOnlyACreationIsLedgered(t *testing.T) {
+	person := ids.NewV7()
+	for what, probe := range map[string]struct {
+		outcome EnsureOutcome
+		want    []createdSubject
+	}{
+		"resolved onto rows that already existed": {EnsureOutcome{}, nil},
+		"a person created": {
+			EnsureOutcome{PersonCreated: true, PersonID: person},
+			[]createdSubject{{kind: "person", subject: person.String()}},
+		},
+		"a domain queued for a verdict": {
+			EnsureOutcome{CompanyQueued: true, QueuedDomain: "acme.test"},
+			[]createdSubject{{kind: "organization_queued", subject: "acme.test"}},
+		},
+		"both, from one message": {
+			EnsureOutcome{PersonCreated: true, PersonID: person, CompanyQueued: true, QueuedDomain: "acme.test"},
+			[]createdSubject{
+				{kind: "person", subject: person.String()},
+				{kind: "organization_queued", subject: "acme.test"},
+			},
+		},
+		// The flag without the subject is a resolver that reported a creation
+		// it cannot name. A ledger keyed on nothing is an accumulator again —
+		// two of them would collide on the empty key and count as one — so it
+		// is not ledgered, and the log line about an uncounted row is the
+		// honest answer.
+		"a person created but not named": {EnsureOutcome{PersonCreated: true}, nil},
+		"a domain queued but not named":  {EnsureOutcome{CompanyQueued: true}, nil},
+	} {
+		t.Run(what, func(t *testing.T) {
+			got := createdSubjects(probe.outcome)
+			if len(got) != len(probe.want) {
+				t.Fatalf("ledgered %v, want %v", got, probe.want)
+			}
+			for i := range got {
+				if got[i] != probe.want[i] {
+					t.Errorf("ledgered %v at %d, want %v", got[i], i, probe.want[i])
+				}
 			}
 		})
 	}

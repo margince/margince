@@ -839,6 +839,15 @@ public.capture_backfill.total_estimate integer gen=- def=-
 public.capture_backfill.trg_capture_backfill_updated CREATE TRIGGER trg_capture_backfill_updated BEFORE UPDATE ON public.capture_backfill FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.capture_backfill.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_backfill.window_months integer NOT NULL gen=- def=-
+public.capture_backfill_creation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_backfill_creation.backfill_id uuid NOT NULL gen=- def=-
+public.capture_backfill_creation.capture_backfill_creation_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE CASCADE
+public.capture_backfill_creation.capture_backfill_creation_kind CHECK ((kind = ANY (ARRAY['person'::text, 'organization_queued'::text])))
+public.capture_backfill_creation.capture_backfill_creation_pkey PRIMARY KEY (backfill_id, kind, subject)
+public.capture_backfill_creation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_backfill_creation.kind text NOT NULL gen=- def=-
+public.capture_backfill_creation.subject text NOT NULL gen=- def=-
+public.capture_backfill_creation_pkey CREATE UNIQUE INDEX capture_backfill_creation_pkey ON public.capture_backfill_creation USING btree (backfill_id, kind, subject)
 public.capture_backfill_pkey CREATE UNIQUE INDEX capture_backfill_pkey ON public.capture_backfill USING btree (id)
 public.capture_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_connection.account_bound_at timestamp with time zone gen=- def=-
