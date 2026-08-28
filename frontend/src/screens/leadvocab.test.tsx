@@ -246,7 +246,11 @@ describe("LeadSourcesCard", () => {
     expect(
       screen.getByText("Only an admin or ops seat changes this list."),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Add a source…" })).toBeNull();
+    // Both verbs the card offers a writer: the one that OPENS the dialog and
+    // the one that submits it. Named as the card actually spells them — a
+    // query for a label no locale carries is null for every reader, which is
+    // a refusal this assertion cannot tell from a granted one.
+    expect(screen.queryByRole("button", { name: "New source" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add source" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
   });
