@@ -316,3 +316,24 @@ func TestAWideFilesRefusalStillNamesEveryColumn(t *testing.T) {
 		}
 	}
 }
+
+// An explicit `"mapping": {}` is the same question as an omitted one.
+//
+// It names no column, so it is not a choice about the columns — it is the
+// absence of one, and what would be used either way is the proposal. Refused in
+// the same words rather than falling through to the thinner `mapping=empty`,
+// which says a run would import nothing without saying what the file held.
+func TestAnEmptyMappingIsTheSameQuestionAsNoMapping(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n","mapping":{}}`))
+	if err == nil {
+		t.Fatal("an empty mapping accepted a proposal that placed one column of two")
+	}
+	if !strings.Contains(err.Error(), `"Company"`) {
+		t.Errorf("the refusal does not name the column it could not place:\n%s", err.Error())
+	}
+}

@@ -228,7 +228,10 @@ func discarding(ctx context.Context, imports Imports, ref string, cause error) e
 // looks whole is worse than no answer, so this is the refusal that says which
 // columns it could not place and what the object can receive.
 //
-// Only when the caller sent NOTHING. A caller who named even one column has
+// Only when the caller named NO column — whether the member was omitted or sent
+// as `{}`, which are the same thing to ask about: a mapping that names nothing
+// is not a choice about the columns, it is the absence of one, and what would
+// be used either way is the proposal. A caller who named even one column HAS
 // made a choice about the rest, and the result's `unmapped` list reports it.
 func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map[string]string) error {
 	unplaced := unmappedColumns(profile, mapping)
