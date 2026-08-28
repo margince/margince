@@ -6355,7 +6355,6 @@ export const de = {
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
   "person.action.research": "Recherche",
-  "person.action.more": "Weitere Aktionen",
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",

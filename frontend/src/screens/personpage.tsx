@@ -640,7 +640,7 @@ function PersonActions({
           in here because a magnifier reads as "search" and this verb is not
           search, and the timeline gets the honest name the product already uses
           for it everywhere else. */}
-      <OverflowMenu label={t("person.action.more")}>
+      <OverflowMenu label={t("record.moreActions")}>
         <Button small onClick={onResearch}>
           <Search size={15} aria-hidden="true" /> {t("person.action.research")}
         </Button>

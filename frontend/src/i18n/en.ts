@@ -6418,7 +6418,6 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
-  "person.action.more": "More actions",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",

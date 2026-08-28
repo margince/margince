@@ -97,18 +97,21 @@ const CORE_SCREENS = [
   // would measure the fallback screen and report it as coverage, so the sweeps
   // follow the surface to where it actually lives.
   "settings/ai",
-  // Settings is TWELVE pages behind one route, and a bare `settings` resolves to
-  // Account — the shortest of them. Sweeping that alone and calling settings
-  // covered is how the widest page in the product went unmeasured: `data-model`
-  // carries two full list surfaces with their own toolbars, `integrations` four
+  // Settings is FIFTEEN pages behind one route (SETTINGS_TABS in
+  // screens/settings.tsx), and a bare `settings` resolves to Account — the
+  // shortest of them. Sweeping that alone and calling settings covered is how
+  // the widest page in the product went unmeasured: `data-model` carries two
+  // full list surfaces with their own toolbars, `integrations` four
   // installation-wide cards, `people` a roster of rows that each end in two
   // buttons. These are where a narrow viewport actually breaks.
   //
-  // ALL twelve, not the five that happened to be listed. The seven added here
-  // were in neither sweep, and they are not the quiet ones: `capture` is where
-  // the switch that shipped without `aria-checked` lives, `connections` carries
-  // the import form whose 13px labels sat at 1.5:1, and `maintenance` was
-  // rendering the app error boundary — a dead page both sweeps passed.
+  // ALL fifteen. The list below is written out rather than derived, and that is
+  // the weakness to know about: it went stale once already, claiming twelve
+  // while three pages — capture-activity, knowledge, license — were in neither
+  // sweep and nothing failed to say so. A census that can fall short reports
+  // PASS on the smaller tree. The fix is to read the ids from SETTINGS_TABS,
+  // which this file cannot import today without pulling the screen's whole
+  // module graph through Playwright's transform.
   "settings/data-model",
   "settings/integrations",
   "settings/people",
@@ -119,6 +122,9 @@ const CORE_SCREENS = [
   "settings/capture",
   "settings/privacy",
   "settings/maintenance",
+  "settings/capture-activity",
+  "settings/knowledge",
+  "settings/license",
 ];
 
 /**

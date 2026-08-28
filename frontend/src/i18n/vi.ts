@@ -6298,7 +6298,6 @@ export const vi = {
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",
   "person.action.research": "Nghiên cứu",
-  "person.action.more": "Thao tác khác",
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",
