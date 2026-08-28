@@ -232,7 +232,7 @@ for dir in "$MIGRATIONS_DIR"/*/; do
       # of a new collision. Without this the gate refuses every repair of the
       # outage it exists to report, and the only way back to a loadable
       # namespace is to bypass the gate.
-      if [ "$(echo "$base_name" | wc -l)" -gt 1 ] && echo "$base_name" | grep -qxF "$name"; then
+      if [ "$(echo "$base_name" | wc -l)" -gt 1 ] && grep -qxF "$name" <<<"$base_name"; then
         echo "note: $ns/$version is claimed twice on $BASE_REF ($(echo "$base_name" | tr '\n' ' ')); this branch keeps '$name' at it — repairing, not colliding"
         continue
       fi

@@ -211,6 +211,14 @@ jobs:
               # lockfile then merely records.
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+              # And the root scripts the lane's own targets execute —
+              # check-contract-frontend-drift.sh is a gate this lane is the only
+              # runner of, and phase-timer.sh brackets every leg of it. The whole
+              # directory rather than the two names, the same cut the backend
+              # scope takes: a scope that lists individual files stops covering
+              # the next one, and running this lane on a root-script edit costs
+              # minutes where missing it ships a gate that never ran.
+              - 'scripts/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -221,6 +229,16 @@ jobs:
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
+              # The lane IS these scripts: live-boot seeds through
+              # scripts/seed-dev.sh and proves the boot through
+              # scripts/verify-boot.sh, both reached as make targets. Without
+              # these two entries a PR that changes what the lane does — and
+              # nothing else — skips the only lane that would have run it, so a
+              # seeder or a boot assertion could ship never once executed. The
+              # same claim the frontend scope makes on the Makefile, and the
+              # reason the backend scope carries 'scripts/**' too.
+              - 'scripts/**'
+              - 'Makefile'
             # Everything that can change WHICH packages are in the tree, and
             # therefore which licenses the gate below judges. `**/pnpm-lock.yaml`
             # is globbed on purpose: a Renovate lockfile-only PR is precisely

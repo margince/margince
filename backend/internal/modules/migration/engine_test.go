@@ -125,8 +125,12 @@ func (f *fakeSource) Associations(context.Context) ([]Assoc, error) { return f.a
 // that crash land the record first, which is the process death this
 // whole seam exists for.
 type fakeWriters struct {
-	landed          map[string]bool // object+"/"+ext — the native row exists
-	mapped          map[string]bool // …and the identity map knows it
+	landed map[string]bool // object+"/"+ext — the native row exists
+	mapped map[string]bool // …and the identity map knows it
+	// duplicates names the external ids the estate ALREADY holds under some
+	// other identity — a company created by hand, or by an earlier run — which
+	// the real writer answers with a dedupe read per row it has not landed.
+	duplicates      map[string]bool
 	ensured         []string
 	assocs          []Assoc
 	calls           int
@@ -137,7 +141,7 @@ type fakeWriters struct {
 
 // newFakeWriters starts with nothing landed and nothing mapped.
 func newFakeWriters() *fakeWriters {
-	return &fakeWriters{landed: map[string]bool{}, mapped: map[string]bool{}}
+	return &fakeWriters{landed: map[string]bool{}, mapped: map[string]bool{}, duplicates: map[string]bool{}}
 }
 
 func (w *fakeWriters) Exists(_ context.Context, object, ext string) (bool, error) {
@@ -174,7 +178,10 @@ func (w *fakeWriters) Ensure(_ context.Context, object string, row Row) (EnsureR
 	w.landed[key] = true
 	w.mapped[key] = true
 	w.ensured = append(w.ensured, key)
-	return EnsureResult{Created: true}, nil
+	// The flag rides the create, as it does in the real writer: a duplicate the
+	// run kept IS a created row, and counting it as an outcome of its own would
+	// break the sum the disposition table rests on.
+	return EnsureResult{Created: true, Duplicate: w.duplicates[row.ExternalID]}, nil
 }
 
 func (w *fakeWriters) Associate(_ context.Context, a Assoc) (AssocResult, error) {
@@ -624,5 +631,60 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		if !checked[name] {
 			t.Errorf("RunStore.%s is an exported entry point with no line in the ungranted-role table", name)
 		}
+	}
+}
+
+// TestAResumedRunCountsEveryDuplicateItMetAndCountsEachOnce holds the arithmetic
+// a resume rests on.
+//
+// A run's stored report is every attempt's folded together, so a count that is
+// written by more than one of them has to be written over DISJOINT rows or it
+// double-reports. The checkpoint guarantees exactly that for what the commit
+// observes — no attempt walks a row a previous one finished — which is why the
+// observed count adds and the PREDICTED one is a separate field: the dry run
+// walks all the rows again, and one field would report a file with two
+// duplicates as having four the moment it was approved.
+func TestAResumedRunCountsEveryDuplicateItMetAndCountsEachOnce(t *testing.T) {
+	src := twoObjectSource()
+	w := newFakeWriters()
+	// One duplicate either side of the crash, so a merge that dropped a leg and
+	// a merge that double-counted one are different answers from the truth.
+	w.duplicates["org-1"] = true
+	w.duplicates["p-3"] = true
+	w.failAt = 3 // crash on person/p-1, after both organizations landed
+	runs := newFakeRuns()
+	// What the dry run predicted, recorded before the commit ever ran. It must
+	// not be added to what the attempts observe.
+	runs.run.Report = &Report{Objects: []ObjectReport{
+		{Object: "organization", WillDuplicate: 1},
+		{Object: "person", WillDuplicate: 1},
+	}}
+	e := &Engine{runs: runs, w: w}
+
+	if _, err := e.Run(context.Background(), RunID{}, src); err == nil {
+		t.Fatal("Run must surface the injected crash")
+	}
+	runs.run.Status = StatusRunning
+	w.failAt = 0
+	if _, err := e.Run(context.Background(), RunID{}, src); err != nil {
+		t.Fatalf("resumed Run: %v", err)
+	}
+
+	stored := runs.run.Report
+	if stored == nil {
+		t.Fatal("a completed run must record a report")
+	}
+	observed, predicted := 0, 0
+	for _, or := range stored.Objects {
+		observed += or.Duplicated
+		predicted += or.WillDuplicate
+	}
+	if observed != 2 {
+		t.Errorf("the resumed run recorded %d duplicate(s) met; it met two — one before the crash and one "+
+			"after — and a report that lost either describes a leg that did not happen", observed)
+	}
+	if predicted != 2 {
+		t.Errorf("the prediction now reads %d; the dry run predicted two and no attempt may add to it, "+
+			"or an approval turns a file's duplicates into twice as many", predicted)
 	}
 }

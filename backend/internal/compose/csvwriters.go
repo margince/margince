@@ -167,7 +167,19 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
 	// the commit as well as the dry run so the two cannot disagree.
-	if w.onDuplicate == string(crmcontracts.Skip) {
+	//
+	// It runs on BOTH branches of that decision, and it did not always. Asking
+	// only when the run said "skip" made a duplicate that CREATES invisible to
+	// the commit, so a finished report could only ever repeat the prediction —
+	// and the estate moves between the preview and the approval, which is the
+	// whole reason a duplicate count is worth reading. The cost is one
+	// dedupe query per row this importer has not landed before, which is what
+	// the preview already spends on the same rows.
+	collides, err := w.collidesWithExisting(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if collides && w.onDuplicate == string(crmcontracts.Skip) {
 		// discloseOnly, so a collision this caller may not see is answered as no
 		// collision — and the row CREATES.
 		//
@@ -183,15 +195,21 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		// What skipping costs is a disclosure that no merge undoes. It also keeps
 		// the preview and the commit answering alike, since the preview is
 		// disclosure-filtered for the same reason.
-		collides, err := w.collidesWithExisting(ctx, row)
-		if err != nil {
-			return migration.EnsureResult{}, err
-		}
-		if collides {
-			_, skipReason := collisionWordingFor(object)
-			return migration.EnsureResult{Skipped: true, SkipReason: skipReason}, nil
-		}
+		_, skipReason := collisionWordingFor(object)
+		return migration.EnsureResult{Skipped: true, SkipReason: skipReason, Duplicate: true}, nil
 	}
+	created, err := w.create(ctx, object, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	// The flag rides the create rather than replacing it: a duplicate the run
+	// asked to keep IS a created row, and the review queue picks up the pair.
+	created.Duplicate = collides
+	return created, nil
+}
+
+// create lands the row as a new record of its class.
+func (w *csvWriters) create(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
 	switch object {
 	case migration.ObjectLead:
 		return w.createLead(ctx, row)
