@@ -166,3 +166,49 @@ func TestAnAskedForRunCoalescesAndIsNotAFleetPass(t *testing.T) {
 			asked.Queue, asked.MaxAttempts, fleet.Queue, fleet.MaxAttempts)
 	}
 }
+
+// TestTheQueueIsOpenedOncePerPoolRatherThanPerAsk holds the memoisation.
+//
+// A River client is a configured, pool-holding object. Building one per ask
+// costs nothing visible in a test and everything under a member holding down
+// save, which is exactly the case this capability exists for — so the property
+// is asserted rather than left to the reading.
+//
+// It is also the property a rebind must NOT keep: a client memoised against a
+// pool that has since been replaced would insert into the previous one, which
+// is the quiet half of the wiring fault BindExtensionRuntime warns about.
+func TestTheQueueIsOpenedOncePerPoolRatherThanPerAsk(t *testing.T) {
+	extensionJobQueue.mu.Lock()
+	// The two FIELDS, not the struct: it carries the mutex, and copying that
+	// is what the whole guard is not.
+	prevPool, prevInserter := extensionJobQueue.pool, extensionJobQueue.inserter
+	extensionJobQueue.pool, extensionJobQueue.inserter = nil, nil
+	extensionJobQueue.mu.Unlock()
+	t.Cleanup(func() {
+		extensionJobQueue.mu.Lock()
+		extensionJobQueue.pool, extensionJobQueue.inserter = prevPool, prevInserter
+		extensionJobQueue.mu.Unlock()
+	})
+
+	// Two distinct non-nil pools. Nothing is dialled: NewInserter builds a
+	// client over the pool's driver and this test never enqueues through it.
+	first, second := &pgxpool.Pool{}, &pgxpool.Pool{}
+	one, err := extensionJobInserter(first)
+	if err != nil {
+		t.Fatalf("opening the queue: %v", err)
+	}
+	again, err := extensionJobInserter(first)
+	if err != nil {
+		t.Fatalf("opening the queue a second time: %v", err)
+	}
+	if one != again {
+		t.Error("a second ask on the same pool built a second River client: every press of save now rebuilds one")
+	}
+	other, err := extensionJobInserter(second)
+	if err != nil {
+		t.Fatalf("opening the queue for a rebound pool: %v", err)
+	}
+	if other == one {
+		t.Error("a rebound pool was served the client built for the previous one, so asked-for runs insert into the wrong pool")
+	}
+}

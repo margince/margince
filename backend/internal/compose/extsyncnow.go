@@ -29,7 +29,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -74,7 +76,7 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 		// was added to end, in a new place.
 		return extension.ErrNoUnattendedSeat
 	}
-	inserter, err := jobs.NewInserter(pool, slog.Default())
+	inserter, err := extensionJobInserter(pool)
 	if err != nil {
 		return fmt.Errorf("compose: opening the queue to ask for %s: %w", job, err)
 	}
@@ -136,4 +138,44 @@ func attendedChildOpts(childKind string) (*river.InsertOpts, error) {
 		MaxAttempts: spec.MaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}, nil
+}
+
+// extensionJobInserter answers the one insert-only River client this process
+// asks for an extension's own job through, building it on first use.
+//
+// One per POOL rather than one per call. A River client is a configured,
+// pool-holding object, and everywhere else in this tree exactly one is built at
+// boot and injected (cmd/api/boot.go, cmd/worker/jobrunner.go). This seam
+// cannot take that shape: BindExtensionRuntime is called by every role that
+// serves extension work, and threading an inserter through it would make each
+// of them build one whether or not it ever serves a unit that asks.
+//
+// Memoizing against the bound pool gets the same object with the same lifetime,
+// and re-keys itself if the binding moves — which is a wiring fault
+// BindExtensionRuntime already warns about, and which the tests that rebind
+// legitimately do.
+//
+// The error surfaces at the CALL rather than at the boot, which is where it can
+// be answered: a member is told their sync could not be asked for, instead of a
+// role refusing to start over a capability it may never serve.
+func extensionJobInserter(pool *pgxpool.Pool) (*jobs.Runner, error) {
+	extensionJobQueue.mu.Lock()
+	defer extensionJobQueue.mu.Unlock()
+	if extensionJobQueue.inserter != nil && extensionJobQueue.pool == pool {
+		return extensionJobQueue.inserter, nil
+	}
+	inserter, err := jobs.NewInserter(pool, slog.Default())
+	if err != nil {
+		return nil, err
+	}
+	extensionJobQueue.pool, extensionJobQueue.inserter = pool, inserter
+	return inserter, nil
+}
+
+// extensionJobQueue holds that one client, beside the pool it was built for so
+// a rebound pool cannot be served a client pointing at the previous one.
+var extensionJobQueue struct {
+	mu       sync.Mutex
+	pool     *pgxpool.Pool
+	inserter *jobs.Runner
 }

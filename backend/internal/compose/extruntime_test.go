@@ -142,7 +142,7 @@ func TestRuntimeIsScopedToTheInvokingUnit(t *testing.T) {
 	for i := range rt.NumMethod() {
 		m := rt.Method(i)
 		for _, named := range stringParams(m.Type) {
-			if !nameableByAMember.Waived(t, named) {
+			if !nameableOnThisSurface.Waived(t, named) {
 				t.Errorf("extension.Runtime.%s takes a %s — a unit name is a string, so this is a parameter "+
 					"through which a handler could ask to be re-scoped", m.Name, named)
 			}
@@ -151,24 +151,29 @@ func TestRuntimeIsScopedToTheInvokingUnit(t *testing.T) {
 	// An exception nothing on the interface reaches any more is a review nobody
 	// asked for: report it rather than letting it read as ratification of a
 	// parameter that has since been removed.
-	nameableByAMember.AssertAllMatched(t)
+	nameableOnThisSurface.AssertAllMatched(t)
 }
 
-// nameableByAMember is the one reviewed exception to the rule above, and it is
-// narrow on purpose: a parameter naming a MEMBER of this installation, never a
-// unit.
+// nameableOnThisSurface is the reviewed exception list to the rule above, and
+// every entry is narrow for the same reason: what it names is something OTHER
+// than a unit, and naming it buys the caller nothing it could not already do.
 //
-// Ingest takes one because a connector poll acts for the member whose
-// credential produced the record, and that member has to be named. What keeps
-// it from being the re-scoping parameter this test refuses is that the name is
-// not TRUSTED: the core checks the member currently holds one of this unit's
-// user-scoped secrets — depositing a credential is the consent act — and then
-// resolves what they may do right now, so naming a colleague buys a unit
-// nothing it could not already do for the members who asked it to.
+// Two classes so far, and they are different questions:
 //
-// A bare string stays refused. The exception is by TYPE, so a future parameter
-// that means something else cannot arrive under it.
-var nameableByAMember = gatekit.Waive(map[string]string{
+//   - a MEMBER of this installation. Ingest takes one because a connector poll
+//     acts for the member whose credential produced the record, and that member
+//     has to be named. The name is not TRUSTED: the core checks the member
+//     currently holds one of this unit's user-scoped secrets — depositing a
+//     credential is the consent act — and then resolves what they may do right
+//     now, so naming a colleague buys a unit nothing.
+//   - a JOB the calling unit declares. SyncNow takes one because a unit with
+//     two jobs has two answers to "run it now". It is resolved against the
+//     declarations of the unit the Runtime was minted for, so a name belonging
+//     to another unit reads as a name belonging to nobody.
+//
+// A bare string stays refused. The exceptions are by TYPE, so a future
+// parameter that means something else cannot arrive under one of them.
+var nameableOnThisSurface = gatekit.Waive(map[string]string{
 	"extension.UserID": "a connector poll acts for the member whose credential produced the record, and that " +
 		"member has to be named — see the reasoning above for why the name is checked rather than trusted",
 	"extension.JobName": "the job a unit asks to run NOW, resolved against the declarations of the unit the " +
