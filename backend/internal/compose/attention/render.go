@@ -369,20 +369,29 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 
 // receiptItem renders one thing the system did on its own.
 //
-// Its only verb is `open`. A receipt reports a finished act, and offering a
-// decision on it would ask the reader to answer a question that has already
-// been answered.
+// It offers no decision: a receipt reports a finished act, and asking the reader
+// to answer a question already answered is not a verb this lane has.
+//
+// It offers `open` only when the decision named a record. Not every approval is
+// about one, and a card that advertised the verb regardless would send a client
+// that trusts it to a destination the card never carried.
 func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 	kind := receipt.Kind
 	occurred := receipt.OccurredAt
 	summary := receipt.Summary
+	subject := subjectOf(receipt.TargetType, receipt.TargetID)
+	actions := []crmcontracts.AttentionItemActions{}
+	if subject != nil {
+		actions = append(actions, actionOpen)
+	}
 	return crmcontracts.AttentionItem{
 		Id:         receipt.ID.String(),
 		Source:     crmcontracts.AttentionItemSource("approval"),
 		Kind:       &kind,
 		Title:      &summary,
+		Subject:    subject,
 		OccurredAt: &occurred,
-		Actions:    []crmcontracts.AttentionItemActions{actionOpen},
+		Actions:    actions,
 	}
 }
 

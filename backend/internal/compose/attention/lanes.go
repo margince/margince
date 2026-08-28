@@ -111,6 +111,14 @@ type Receipt struct {
 	Kind       string
 	Summary    string
 	OccurredAt time.Time
+	// The record the decision was about, carried from the approval it came
+	// from. A reader told the system sent something on their behalf wants the
+	// account it went to, and the card offers `open` only when this names one.
+	//
+	// Empty TargetType means the decision named no record, which is a real
+	// state: not every approval is about one.
+	TargetType string
+	TargetID   ids.UUID
 }
 
 // Briefing is the overnight brief's queue for the acting rep, best-ranked

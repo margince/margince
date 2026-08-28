@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Each optional lane fills ITS OWN field. The four are wired through
@@ -110,8 +111,16 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		"organization": true, "person": true, "deal": true,
 		"lead": true, "project": true,
 	}
+	// Every lane carries a row, because a lane the fixture leaves empty is a
+	// lane this gate silently does not check.
 	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}},
+		stubDuplicates{}, &stubTasks{},
+		stubReceipts{rows: []Receipt{{
+			ID: ids.NewV7(), Kind: "send_email",
+			Summary: "sent the Weber follow-up", OccurredAt: readInstant,
+		}}},
+		stubBriefing{},
 		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
 		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
 		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
@@ -122,9 +131,16 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
+	// EVERY lane the feed sends, not the optional ones alone. A map naming a
+	// subset is the shape of gate that reports PASS over the defect it was
+	// written for: done_for_you offered `open` with no subject the whole time
+	// this test was green, because the first version of it did not look there.
 	lanes := map[string]*[]crmcontracts.AttentionItem{
 		"meetings": out.Meetings, "at_risk": out.AtRisk,
 		"commitments": out.Commitments, "planned": &out.Planned,
+		"relationship_decay": out.RelationshipDecay,
+		"needs_you":          &out.NeedsYou,
+		"done_for_you":       &out.DoneForYou,
 	}
 	for name, lane := range lanes {
 		if lane == nil {

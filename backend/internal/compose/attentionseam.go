@@ -217,16 +217,12 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 // also names the company it came from, so the lead is what the reader wants to
 // open. A rank absent here is a record kind this surface does not route to.
 var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
-	flipObjectLead:         1,
-	flipObjectDeal:         2,
-	linkObjectProject:      3,
+	flipObjectLead: 1,
+	flipObjectDeal: 2,
+	crmcontracts.ActivityLinkEntityTypeProject: 3,
 	flipObjectPerson:       4,
 	flipObjectOrganization: 5,
 }
-
-// linkObjectProject names the one class the estate's own constants do not,
-// because the mirror does not carry projects and this lane does.
-const linkObjectProject = "project"
 
 // primaryLink picks the one record a task row points at.
 //
@@ -323,12 +319,19 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 		if row.Summary != nil {
 			summary = *row.Summary
 		}
-		out = append(out, attention.Receipt{
+		receipt := attention.Receipt{
 			ID:         ids.UUID(row.Id),
 			Kind:       row.Kind,
 			Summary:    summary,
 			OccurredAt: *row.DecidedAt,
-		})
+		}
+		// Both or neither: a type with no id names nothing, and an id with no
+		// type says where to look without saying at what.
+		if row.TargetEntityType != nil && row.TargetEntityId != nil {
+			receipt.TargetType = *row.TargetEntityType
+			receipt.TargetID = ids.UUID(*row.TargetEntityId)
+		}
+		out = append(out, receipt)
 	}
 	return out
 }

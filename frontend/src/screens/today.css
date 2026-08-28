@@ -55,9 +55,17 @@
 
 /* A verb-less row is one press target filling the row, so the anchor has to be
  * the thing that fills it — inheriting the row's layout rather than sitting as
- * an inline word inside it. */
+ * an inline word inside it.
+ *
+ * It takes the row's own padding back as hit area, because `.panel-row-
+ * interactive` lights the whole row on hover including the gutter. An anchor
+ * that stopped at the content box would highlight ground a press then did
+ * nothing on, which reads as a dead click rather than as a row that is not a
+ * link. The values mirror `.panel-row`'s padding in panel.css. */
 .today-row-whole {
   width: 100%;
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-5));
+  padding: var(--space-3) var(--space-5);
   color: inherit;
   text-decoration: none;
 }
