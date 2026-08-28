@@ -174,8 +174,7 @@ export const en = {
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
   "day.lead.promises": "You promised {count} — those come first.",
   "day.lead.meetings": "{count} on the calendar today.",
-  "day.lead.dsr":
-    "{count} privacy requests are on the clock. Those first.",
+  "day.lead.dsr": "{count} privacy requests are on the clock. Those first.",
   "day.lead.didNotRun":
     "{count} you approved did not run. Look at those first.",
   "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
