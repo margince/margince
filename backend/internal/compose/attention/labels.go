@@ -39,9 +39,18 @@ type Names interface {
 // the contract struct; a new lane must be added here, and the wiring test
 // that asserts every lane's labels is what notices one that was not.
 //
-// The cost is bounded by the lanes' own caps (a few dozen reads worst case,
-// each a single-row gated get). A batched resolver is a named follow-up,
-// not a correctness need.
+// The cost is bounded by the lanes' own caps, and honestly stated: on a
+// feed whose every lane is full it is up to ~200 sequential single-row
+// gated gets — the at-risk lane alone can admit a hundred candidates. The
+// batched resolver (one query per subject TYPE) is the named follow-up
+// that removes that; the cache below already collapses duplicates, and
+// today's real feeds sit far below the ceiling.
+//
+// A non-refusal error PROPAGATES and fails the read, deliberately: the
+// contract says an absent label means "the caller may not read it", and
+// rendering a database failure as absence would tell the reader a record
+// was hidden from their account when nothing of the kind is true — the
+// same lie face() (render.go) refuses for a merge card's sides.
 func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Attention) error {
 	if s.names == nil {
 		return nil

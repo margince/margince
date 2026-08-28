@@ -16,6 +16,7 @@ import (
 	"errors"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // attentionNames resolves each subject type through the store that owns it.
@@ -79,13 +81,13 @@ func (n attentionNames) read(ctx context.Context, entityType string, id ids.UUID
 			return "", err
 		}
 		return leadFace(row).Label, nil
-	case "deal":
+	case string(datasource.RecordDeal):
 		row, err := n.deals.GetDeal(ctx, ids.From[ids.DealKind](id), storekit.LiveOnly)
 		if err != nil {
 			return "", err
 		}
 		return row.Name, nil
-	case "activity":
+	case string(datasource.EntityActivity):
 		row, err := n.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
 		if err != nil {
 			return "", err
@@ -94,7 +96,7 @@ func (n attentionNames) read(ctx context.Context, entityType string, id ids.UUID
 			return "", nil
 		}
 		return *row.Subject, nil
-	case "project":
+	case string(datasource.RecordProject):
 		row, err := n.projects.GetProject(ctx, ids.From[ids.ProjectKind](id), storekit.LiveOnly)
 		if err != nil {
 			return "", err
@@ -103,4 +105,45 @@ func (n attentionNames) read(ctx context.Context, entityType string, id ids.UUID
 	default:
 		return "", nil
 	}
+}
+
+// The three faces a merge decision compares.
+//
+// Each answers the same two questions in that record's own terms: which one is
+// this, and which side carries more. `detail` is the field a reader actually
+// uses to tell two near-identical records apart — a company's domain, a
+// person's address — never an id.
+
+func organizationFace(row crmcontracts.Organization) attention.RecordFace {
+	face := attention.RecordFace{
+		Label:        row.DisplayName,
+		CreatedAt:    &row.CreatedAt,
+		RelatedCount: row.ContactCount,
+	}
+	if row.Domains != nil && len(*row.Domains) > 0 {
+		face.Detail = (*row.Domains)[0].Domain
+	}
+	return face
+}
+
+func personFace(row crmcontracts.Person) attention.RecordFace {
+	face := attention.RecordFace{Label: row.FullName, CreatedAt: &row.CreatedAt}
+	if row.Emails != nil && len(*row.Emails) > 0 {
+		face.Detail = string((*row.Emails)[0].Email)
+	}
+	return face
+}
+
+func leadFace(row crmcontracts.Lead) attention.RecordFace {
+	face := attention.RecordFace{CreatedAt: &row.CreatedAt}
+	if row.FullName != nil {
+		face.Label = *row.FullName
+	}
+	switch {
+	case row.Email != nil:
+		face.Detail = string(*row.Email)
+	case row.CompanyName != nil:
+		face.Detail = *row.CompanyName
+	}
+	return face
 }
