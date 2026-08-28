@@ -102,6 +102,19 @@ func (i importSeam) ProfileSource(
 	return i.door().profileAndStore(ctx, object, []byte(csv))
 }
 
+// DiscardSource removes a stored source no run will reference. Same grant as
+// storing it: a caller who may create an import run may drop the file they just
+// uploaded for one, and nobody else may reach into the store at all.
+func (i importSeam) DiscardSource(ctx context.Context, ref string) error {
+	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+		return err
+	}
+	if err := i.ready(); err != nil {
+		return err
+	}
+	return i.door().discardSource(ctx, ref)
+}
+
 func (i importSeam) StageRun(
 	ctx context.Context, req crmcontracts.CreateImportRunRequest,
 ) (crmcontracts.ImportRun, error) {

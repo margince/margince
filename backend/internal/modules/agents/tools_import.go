@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -47,6 +46,15 @@ type Imports interface {
 	// ProfileSource stores CSV text and reads back what its columns contain,
 	// with a proposed mapping. The agent-shaped half of uploadImportSource.
 	ProfileSource(ctx context.Context, object, csv string) (crmcontracts.ImportSourceProfile, error)
+	// DiscardSource removes a stored source no run will ever reference.
+	//
+	// The tool path stores the file BEFORE it can know whether the call will
+	// succeed, so a refusal after that point leaves an orphan blob — storage a
+	// caller can spend by repeating a call that fails. importSeam.ProfileSource
+	// hoists the authorization check for exactly that reason; this is the same
+	// concern one step later, where the refusal is about the file's own shape
+	// rather than about who is asking.
+	DiscardSource(ctx context.Context, ref string) error
 	// StageRun validates a mapping against the estate and parks the run for a
 	// human. Writes no domain rows.
 	StageRun(ctx context.Context, req crmcontracts.CreateImportRunRequest) (crmcontracts.ImportRun, error)
@@ -169,7 +177,7 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	}
 	if len(args.Mapping) == 0 {
 		if err := proposalCoversTheFile(profile, mapping); err != nil {
-			return nil, err
+			return nil, discarding(ctx, t.imports, profile.SourceRef, err)
 		}
 	}
 
@@ -185,7 +193,7 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	}
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, discarding(ctx, t.imports, profile.SourceRef, err)
 	}
 	return json.Marshal(ImportPreviewResult{
 		Run:      importRunResult(run),
@@ -193,6 +201,19 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		Columns:  columnNames(profile),
 		Unmapped: unmappedColumns(profile, mapping),
 	})
+}
+
+// discarding removes the stored source behind a call that is about to fail, and
+// returns the failure unchanged.
+//
+// The refusal is what the caller needs to read, so a failure to clean up cannot
+// replace it: an orphan blob is a cost, and the wrong error is a wrong answer.
+func discarding(ctx context.Context, imports Imports, ref string, cause error) error {
+	if ref != "" {
+		//craft:ignore swallowed-errors the refusal below is the answer; a store that would not delete is a cost to carry, not a reason to report something else
+		_ = imports.DiscardSource(ctx, ref)
+	}
+	return cause
 }
 
 // proposalCoversTheFile refuses a proposal that places some of the file's
@@ -214,31 +235,23 @@ func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map
 	if len(unplaced) == 0 {
 		return nil
 	}
-	// The vocabulary rides in Guidance, which is NOT bounded. Put in the cause
-	// it is echoed through echoSafe and a long header list cuts the field names
-	// off the end — taking away the one thing the refusal exists to teach,
-	// exactly when the caller most needs it.
+	// Both LISTS ride in Guidance, which is not bounded. The cause is echoed
+	// through echoSafe's 200 bytes, and the fixed prose alone is most of that —
+	// so a list put there is cut off partway through, which on a wide file
+	// means the refusal stops naming the very columns it is about. What is left
+	// in the cause is the sentence that is the same length whatever the file
+	// holds.
 	return &BadArgsError{
 		Cause: fmt.Errorf(
-			"this file's columns %s match no %s field by name, so the proposal would import "+
-				"only %s and leave the rest behind — an import that reports success and "+
-				"changes nothing",
+			"the proposal places %d of this file's %d columns, so importing it would report "+
+				"success and change nothing",
+			len(mapping), len(mapping)+len(unplaced)),
+		Guidance: fmt.Sprintf(
+			"it could not place %s, because they match no %s field by name. Send a mapping "+
+				"that says what each column is. A %s takes: %s",
 			strings.Join(quoted(unplaced), ", "), profile.Object,
-			strings.Join(quoted(mappedColumns(mapping)), ", ")),
-		Guidance: fmt.Sprintf("send a mapping that says what each column is. A %s takes: %s",
 			profile.Object, strings.Join(profile.Targets, ", ")),
 	}
-}
-
-// mappedColumns names the columns a mapping does place, sorted so one file
-// always refuses in the same words.
-func mappedColumns(mapping map[string]string) []string {
-	out := make([]string, 0, len(mapping))
-	for column := range mapping {
-		out = append(out, column)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // quoted puts each name in quotes so a header with a space in it reads as one

@@ -128,6 +128,14 @@ type recordingImports struct {
 	suggested map[string]string
 	columns   []string
 	targets   []string
+	discarded *[]string
+}
+
+func (r recordingImports) DiscardSource(_ context.Context, ref string) error {
+	if r.discarded != nil {
+		*r.discarded = append(*r.discarded, ref)
+	}
+	return nil
 }
 
 func (r recordingImports) ProfileSource(
@@ -137,6 +145,7 @@ func (r recordingImports) ProfileSource(
 		*r.stored = true
 	}
 	profile := crmcontracts.ImportSourceProfile{
+		SourceRef:        "ws/import-source/stored",
 		Object:           crmcontracts.ImportObject(object),
 		SuggestedMapping: r.suggested,
 		Targets:          r.targets,
@@ -219,6 +228,10 @@ func TestAProposalThatPlacesOnlySomeColumnsIsRefused(t *testing.T) {
 		t.Fatal("a proposal that placed one column of five was accepted")
 	}
 	message := err.Error()
+	// Through BadArgsError.Error(), which bounds the CAUSE at 200 bytes and
+	// leaves the guidance alone. Both lists are what a caller has to read, so
+	// both are on the unbounded side — asserted here through the same rendering
+	// a caller sees rather than off the fields.
 	for _, want := range []string{`"Company"`, `"City"`, `"Country"`, `"Band"`, "display_name", "size_band"} {
 		if !strings.Contains(message, want) {
 			t.Errorf("the refusal %q does not name %s — a caller cannot fix what it is not told", message, want)
@@ -250,5 +263,56 @@ func TestACallersOwnMappingIsNotSecondGuessed(t *testing.T) {
 		`{"object":"organization","csv":"Company,City\nAcme,Essen\n","mapping":{"Company":"display_name"}}`))
 	if err != nil {
 		t.Fatalf("a caller's own partial mapping was refused: %v", err)
+	}
+}
+
+// A refusal after the file is already stored takes the file with it.
+//
+// The tool path stores before it can know the call will succeed, so a refusal
+// past that point leaves an orphan blob — storage a caller can spend by
+// repeating a call that fails. importSeam.ProfileSource hoists its
+// authorization check for exactly that reason; this is the same concern one
+// step later.
+func TestARefusedPreviewDoesNotLeaveItsFileBehind(t *testing.T) {
+	var discarded []string
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+		discarded: &discarded,
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`))
+	if err == nil {
+		t.Fatal("a partial proposal was accepted")
+	}
+	if len(discarded) != 1 || discarded[0] != "ws/import-source/stored" {
+		t.Errorf("discarded = %v, want the stored source the refused call left behind", discarded)
+	}
+}
+
+// A refusal that names every unplaced column, on a file wide enough that the
+// bounded half of the message could not have carried them.
+//
+// This is the case that moved both lists out of the cause: BadArgsError echoes
+// the cause through 200 bytes, and a dozen headers is well past it — so a
+// message built there stops naming the columns it is about exactly when there
+// are the most of them to name.
+func TestAWideFilesRefusalStillNamesEveryColumn(t *testing.T) {
+	columns := append([]string{"id"},
+		"Company Legal Name", "Trading As", "Street Address", "City", "Postal Code",
+		"Country", "Employee Band", "Annual Revenue", "Primary Website", "Industry Sector")
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   columns,
+		targets:   []string{"display_name", "id"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id\nx\n"}`))
+	if err == nil {
+		t.Fatal("a proposal that placed one column of eleven was accepted")
+	}
+	for _, want := range columns[1:] {
+		if !strings.Contains(err.Error(), `"`+want+`"`) {
+			t.Errorf("the refusal does not name %q:\n%s", want, err.Error())
+		}
 	}
 }

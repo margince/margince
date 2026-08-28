@@ -471,6 +471,8 @@ func (bothDoorsImports) ProfileSource(context.Context, string, string) (crmcontr
 	return crmcontracts.ImportSourceProfile{}, nil
 }
 
+func (bothDoorsImports) DiscardSource(context.Context, string) error { return nil }
+
 func (bothDoorsImports) StageRun(context.Context, crmcontracts.CreateImportRunRequest) (crmcontracts.ImportRun, error) {
 	return crmcontracts.ImportRun{Status: "awaiting_approval"}, nil
 }

@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -98,6 +99,22 @@ func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// discardSource removes a stored import source. Keyed the same way it was
+// written, so a ref from another workspace names a key this one never wrote.
+func (h importHandlers) discardSource(ctx context.Context, ref string) error {
+	if h.blobs == nil {
+		return fmt.Errorf("this role stores no objects, so it holds no import source: %w", apperrors.ErrConflict)
+	}
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return fmt.Errorf("no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
+	}
+	if !strings.HasPrefix(ref, blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, "")) {
+		return fmt.Errorf("that import source belongs to another workspace: %w", apperrors.ErrPermissionDenied)
+	}
+	return h.blobs.Delete(ctx, ref)
 }
 
 // profileAndStore is everything the upload does once it HAS the bytes: read the
