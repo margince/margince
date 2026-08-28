@@ -144,12 +144,20 @@ export function ComboBox(props: ComboBoxProps) {
     }
     setOpen(true);
     const step = event.key === "ArrowDown" ? 1 : -1;
-    // Deliberately does not wrap, for the reason Select's list does not: a jump
-    // from the last row back to the first hides from the reader that they
-    // reached the end.
-    setActive((current) =>
-      Math.min(Math.max(current + step, 0), matches.length - 1),
-    );
+    setActive((current) => {
+      // Nothing highlighted yet, so the first press reaches for the END the
+      // direction points at — ArrowUp to the last row, the way Select's
+      // `startingActive` does. Clamping both directions to zero put the two
+      // keys on the same row and left the last option reachable only by
+      // walking the whole list.
+      if (current === -1) {
+        return step === 1 ? 0 : matches.length - 1;
+      }
+      // Deliberately does not wrap, for the reason Select's list does not: a
+      // jump from the last row back to the first hides from the reader that
+      // they reached the end.
+      return Math.min(Math.max(current + step, 0), matches.length - 1);
+    });
   };
 
   return (

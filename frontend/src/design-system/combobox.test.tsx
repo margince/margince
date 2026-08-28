@@ -111,7 +111,11 @@ describe("ComboBox", () => {
     await user.type(box, "anything");
 
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // `{ hidden: true }` or this proves nothing: the chevron is aria-hidden, so
+    // a plain query excludes it whether or not the component rendered one.
+    expect(
+      screen.queryByRole("button", { hidden: true }),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("committed")).toHaveTextContent("anything");
   });
 
@@ -132,6 +136,24 @@ describe("ComboBox", () => {
     await user.keyboard("{Enter}");
     expect(screen.getByTestId("committed")).toHaveTextContent(
       "gemini-3.1-flash-lite",
+    );
+  });
+
+  // ArrowUp reaches for the end of the list, the way Select's does. Clamping
+  // both directions to zero put ArrowUp and ArrowDown on the same row, which
+  // leaves a keyboard reader no way to reach the last option but to walk the
+  // whole list.
+  it("walks up from the end when nothing is active yet", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.keyboard("{ArrowUp}");
+
+    const active = box.getAttribute("aria-activedescendant");
+    expect(document.getElementById(active ?? "")).toHaveTextContent(
+      MODELS[MODELS.length - 1].value,
     );
   });
 
