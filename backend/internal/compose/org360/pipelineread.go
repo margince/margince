@@ -167,8 +167,7 @@ func openPipeline(
 	// Longest idle first, which is the order the stalled rows are offered in, and
 	// by id so that order is deterministic between two deals idle since the same
 	// instant.
-	basePos := arg(baseCcy)
-	asOfPos := arg(now.UTC().Format(time.DateOnly))
+
 	// An OPEN deal has no frozen rate. The rate freezes on close
 	// (deals.deal_advance), and this query reads only open deals
 	// (openDealsWhere), so `amount_minor_base` is null on every row it returns
@@ -177,39 +176,34 @@ func openPipeline(
 	// (deal_closed_fx), so a stored date here can outlive the rate beside it.
 	// Neither stored column is read.
 	//
-	// The amount is converted at the latest rate on or before the as-of day,
-	// and its own rate_date comes back with it. They are ONE answer and must
-	// stay one: a date coalesced from somewhere else could name a day whose
-	// rate is not the rate the figure was computed at, which is the unlabelled
-	// cross-currency total in a more convincing disguise (plan §4.2).
+	// The conversion is NOT in this statement. It used to be — a lateral on
+	// fx_rate and a round()::bigint per row — and that was a second
+	// implementation of a decision the hierarchy rollup already made in Go:
+	// the direction, the as-of cutoff, newest-wins, and the multiply-and-round.
+	// The two agreed, and nothing made them keep agreeing; the first divergence
+	// anyone predicted was rounding, half-away-from-zero against Postgres
+	// round(), which is a one-minor-unit disagreement between two pages about
+	// the same account and nobody able to reproduce it on demand.
+	//
+	// So this reads the deal and deals.FXRates does the rest, ONCE PER CURRENCY
+	// rather than once per row. What stays here is this surface's own policy: a
+	// deal with no usable rate is priced at nothing and still counted, which is
+	// what priced_count reports.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, d.wait_until,
 		       (SELECT count(*) FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.from_stage_id IS DISTINCT FROM h.to_stage_id),
 		       d.amount_minor,
-		       round(d.amount_minor * live.rate)::bigint,
-		       -- Cast both DATE columns to timestamps: pgx decodes a bare date
+		       -- Cast the DATE column to a timestamp: pgx decodes a bare date
 		       -- (OID 1082) into its own Date type, not into time.Time, and the
 		       -- scan below fails at runtime rather than at compile time. Only
 		       -- a read against real rows finds that, which is why it is spelled
 		       -- here rather than left to the driver.
 		       d.expected_close_date::timestamptz,
-		       d.currency,
-		       live.rate_date::timestamptz
+		       d.currency
 		FROM deal d
-		LEFT JOIN LATERAL (
-			SELECT r.rate, r.rate_date
-			  FROM fx_rate r
-			 WHERE d.currency IS DISTINCT FROM %s
-			   AND r.from_currency = d.currency
-			   AND r.to_currency = %s
-			   AND r.rate_date <= %s::date
-			 ORDER BY r.rate_date DESC
-			 LIMIT 1
-		) live ON true
 		%s
 		ORDER BY %s, d.id`,
-		fmt.Sprintf("$%d", basePos), fmt.Sprintf("$%d", basePos), fmt.Sprintf("$%d", asOfPos),
 		openDealsWhere(orgPos, dealScope), idlebase.SQL("d")), args...)
 	if err != nil {
 		return pipeline{}, fmt.Errorf("read the account's open pipeline: %w", err)
@@ -220,8 +214,7 @@ func openPipeline(
 		var createdAt time.Time
 		var lastActivityAt, waitUntil *time.Time
 		if err := row.Scan(&r.id, &r.name, &status, &createdAt, &lastActivityAt, &waitUntil,
-			&r.stageMoves, &r.amountMinor, &r.valueBase, &r.closeOn, &r.currency,
-			&r.rateDate); err != nil {
+			&r.stageMoves, &r.amountMinor, &r.closeOn, &r.currency); err != nil {
 			return r, err
 		}
 		r.baseCcy = baseCcy
@@ -234,6 +227,52 @@ func openPipeline(
 	if err != nil {
 		return pipeline{}, err
 	}
+	if err := priceOpenDeals(ctx, tx, open, baseCcy, now); err != nil {
+		return pipeline{}, err
+	}
 
 	return foldPipeline(open), nil
+}
+
+// priceOpenDeals fills each row's converted amount and the day its rate is
+// dated, through the one engine both this read and the hierarchy rollup use.
+//
+// A deal with no amount, or in a currency the estate holds no rate for, is left
+// UNPRICED rather than refused: this surface reports a partial figure with the
+// count of deals that reached it, where the rollup refuses the whole read. That
+// difference is the policy, and it is the only thing the two are allowed to
+// disagree about.
+//
+// The rate and its DATE travel together, because they are one answer: a date
+// coalesced from somewhere else could name a day whose rate is not the rate the
+// figure was computed at, which is the unlabelled cross-currency total in a more
+// convincing disguise (plan §4.2).
+func priceOpenDeals(
+	ctx context.Context, tx pgx.Tx, open []openRow, baseCcy string, now time.Time,
+) error {
+	rates := deals.NewFXRates(baseCcy, now.UTC())
+	for i := range open {
+		row := &open[i]
+		if row.amountMinor == nil || row.currency == nil {
+			continue
+		}
+		rate, found, err := rates.For(ctx, tx, *row.currency)
+		if err != nil {
+			return fmt.Errorf("price the account's open pipeline: %w", err)
+		}
+		if !found {
+			continue
+		}
+		converted, err := deals.ConvertToBase(*row.amountMinor, rate.Rate)
+		if err != nil {
+			// The deal is unpriceable rather than the read unreadable: an
+			// amount whose converted value does not fit is one deal the figure
+			// cannot cover, and priced_count is what says so.
+			continue
+		}
+		row.valueBase = &converted
+		on := rate.On
+		row.rateDate = &on
+	}
+	return nil
 }
