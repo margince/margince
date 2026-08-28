@@ -3,8 +3,10 @@
 
 package compose
 
-// The four OPTIONAL attention lanes, bound to the engines that already own
-// what they read.
+// The four OPTIONAL attention lanes' seams over the engines that already own
+// what they read. Three are bound today; commitments is deliberately not
+// (newAttentionService passes nil until its production writer, issue #849,
+// exists), and its seam stays compiled here for that rebinding.
 //
 // Each is a binding rather than an implementation, which is the point: the
 // promises come from the people module's claim read, the deal risk from the
@@ -44,6 +46,13 @@ import (
 // promises of its own to keep, which is a refusal rather than an empty lane —
 // the feed omits and NAMES the lane instead of reporting a clear day.
 type attentionCommitments struct{ store *people.Store }
+
+// The binding is deliberately not wired today (newAttentionService passes nil
+// — the lane's production writer is issue #849's), so this assertion is the
+// one thing keeping the seam compiled against the interface it will be
+// rebound as. The store read behind it keeps its own integration test; the
+// seam wiring itself is untested exactly because nothing wires it.
+var _ attention.Commitments = attentionCommitments{}
 
 func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int) ([]attention.Commitment, error) {
 	actor, ok := principal.Actor(ctx)
@@ -90,6 +99,10 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 		risky = append(risky, attention.RiskyDeal{
 			DealID:            deal.DealID,
 			Name:              deal.Name,
+			StageID:           deal.StageID,
+			OwnerID:           deal.OwnerID,
+			AmountMinor:       deal.AmountMinor,
+			Currency:          deal.Currency,
 			QuietDays:         idleDaysOf(deal, now),
 			CloseOverdue:      deal.CloseOverdue,
 			ExpectedCloseDate: deal.ExpectedCloseDate,

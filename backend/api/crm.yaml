@@ -30051,6 +30051,18 @@ components:
             proceeds; a briefing item is a suggestion about where to start, and answering
             it is optional. Merging them would put "nothing is waiting on you" and
             "nothing was worth flagging" behind one number.
+        this_morning_state:
+          type: string
+          enum: [no_run_today, all_answered, items_waiting]
+          description: |
+            Why `this_morning` holds what it holds: the night produced no run for this
+            reader; a run exists and nothing in it still needs an answer (every item
+            answered — or the run ranked nothing worth the morning, which is the same
+            message to a reader); or items are waiting (and the lane carries them).
+            Named because the lane's emptiness is ambiguous on
+            its own — "the night found nothing" and "you finished the morning" render
+            identically as zero rows, and only one of them has earned a tick. Absent
+            when the lane itself was withheld (`lanes_omitted` names it).
         needs_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -30200,6 +30212,8 @@ components:
           $ref: '#/components/schemas/AttentionSubject'
         pair:
           $ref: '#/components/schemas/AttentionPair'
+        deal:
+          $ref: '#/components/schemas/AttentionDealFacts'
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
@@ -30240,6 +30254,20 @@ components:
             print: a reader asked to compare `full_name` is being shown the
             database rather than their own records.
           items: { $ref: '#/components/schemas/AttentionPairEvidence' }
+    AttentionDealFacts:
+      type: object
+      description: |
+        The deal behind a `deal_at_risk` item: the facts its card states, so a client
+        draws value and ownership without a second read per row. Sent only for
+        `source: deal_at_risk`. The stage travels as its id rather than a label — the
+        client already holds the pipelines vocabulary and writes the label in the
+        reader's own language; a label composed server-side would not be.
+      properties:
+        stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent." }
+        amount_minor: { type: [integer, 'null'], format: int64 }
+        currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        owner_id: { type: [string, 'null'], format: uuid }
+
     AttentionPairEvidence:
       type: object
       description: 'One field the detector compared across the two records.'

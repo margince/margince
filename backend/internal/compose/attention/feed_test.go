@@ -97,11 +97,15 @@ func (s stubReceipts) Recent(context.Context, time.Time, int) ([]Receipt, error)
 
 type stubBriefing struct {
 	rows []BriefEntry
-	err  error
+	// ran mirrors the seam's own contract: a found run with zero unanswered
+	// entries is ran=true, a night that produced nothing is ran=false. The
+	// zero value is the no-run morning, so a test must opt in to a run.
+	ran bool
+	err error
 }
 
-func (s stubBriefing) Queue(context.Context) ([]BriefEntry, error) {
-	return s.rows, s.err
+func (s stubBriefing) Queue(context.Context) ([]BriefEntry, bool, error) {
+	return s.rows, s.ran || len(s.rows) > 0, s.err
 }
 
 func approval(summary string) crmcontracts.Approval {

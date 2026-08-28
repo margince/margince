@@ -22613,6 +22613,18 @@ export interface components {
              *     "nothing was worth flagging" behind one number.
              */
             this_morning: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Why `this_morning` holds what it holds: the night produced no run for this
+             *     reader; a run exists and nothing in it still needs an answer (every item
+             *     answered — or the run ranked nothing worth the morning, which is the same
+             *     message to a reader); or items are waiting (and the lane carries them).
+             *     Named because the lane's emptiness is ambiguous on
+             *     its own — "the night found nothing" and "you finished the morning" render
+             *     identically as zero rows, and only one of them has earned a tick. Absent
+             *     when the lane itself was withheld (`lanes_omitted` names it).
+             * @enum {string}
+             */
+            this_morning_state?: "no_run_today" | "all_answered" | "items_waiting";
             /** @description Decisions only a person can make, highest-stakes first. */
             needs_you: components["schemas"]["AttentionItem"][];
             /** @description Work already agreed: overdue first, then due today. */
@@ -22729,6 +22741,7 @@ export interface components {
             confidence?: number;
             subject?: components["schemas"]["AttentionSubject"];
             pair?: components["schemas"]["AttentionPair"];
+            deal?: components["schemas"]["AttentionDealFacts"];
             /**
              * Format: date-time
              * @description When this is due (tasks), or when it lapses (approvals).
@@ -22774,6 +22787,25 @@ export interface components {
              *     database rather than their own records.
              */
             evidence: components["schemas"]["AttentionPairEvidence"][];
+        };
+        /**
+         * @description The deal behind a `deal_at_risk` item: the facts its card states, so a client
+         *     draws value and ownership without a second read per row. Sent only for
+         *     `source: deal_at_risk`. The stage travels as its id rather than a label — the
+         *     client already holds the pipelines vocabulary and writes the label in the
+         *     reader's own language; a label composed server-side would not be.
+         */
+        AttentionDealFacts: {
+            /**
+             * Format: uuid
+             * @description The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+             */
+            stage_id?: string | null;
+            /** Format: int64 */
+            amount_minor?: number | null;
+            currency?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {

@@ -282,6 +282,8 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 // and a queue that answered it here would be deciding rather than warning. It
 // does offer `open`, which decides nothing: naming a deal as drifting and then
 // leaving the reader to go and find it by hand is a warning they cannot act on.
+// The `deal` facts ride along so the card states value, stage and ownership
+// without a second read per row.
 func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 	name := deal.Name
 	ground := "quiet"
@@ -295,6 +297,7 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 		Title:   &name,
 		Subject: subjectOf("deal", deal.DealID),
 		Overdue: &deal.CloseOverdue,
+		Deal:    dealFacts(deal),
 		Actions: []crmcontracts.AttentionItemActions{actionOpen},
 	}
 	// The idle count rides as the detail's own number, so the card can say the
@@ -393,6 +396,27 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 		OccurredAt: &occurred,
 		Actions:    actions,
 	}
+}
+
+// dealFacts carries the at-risk deal's card facts onto the wire, or nothing:
+// a facts object with every field empty says less than its absence.
+func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
+	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil && deal.Currency == nil {
+		return nil
+	}
+	facts := &crmcontracts.AttentionDealFacts{
+		AmountMinor: deal.AmountMinor,
+		Currency:    deal.Currency,
+	}
+	if deal.StageID != nil {
+		stage := openapi_types.UUID(*deal.StageID)
+		facts.StageId = &stage
+	}
+	if deal.OwnerID != nil {
+		owner := openapi_types.UUID(*deal.OwnerID)
+		facts.OwnerId = &owner
+	}
+	return facts
 }
 
 // subjectOf names the record an item concerns, when the producer named one.

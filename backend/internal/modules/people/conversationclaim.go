@@ -16,10 +16,15 @@ package people
 // can check against what was actually written is the thing the whole mechanism
 // exists to prevent.
 //
-// The extraction task that will call this is still to come (issue #849). Until
-// then the demo seed is its only caller, which is exactly why the seed goes
-// through THIS writer rather than SQL: a card filled by rows the real writer
-// never produces proves nothing about the real writer.
+// The extraction task that will call this is still to come (issue #849), and
+// the demo seed does not call it either — both arrive with #849. Until then
+// the HTTP endpoint below is the only door, and no product flow feeds it.
+// That is why the attention feed's commitments lane is unbound
+// (compose/attentionseam.go): a lane no production writer can fill would show
+// every real customer an empty promise list dressed as a feature, and
+// rebinding it is a one-line change when #849 ships. The endpoint stays: it
+// is the correction surface extracted claims will need, and it is how a test
+// seeds through the real writer rather than SQL.
 
 import (
 	"context"
