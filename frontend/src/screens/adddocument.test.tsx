@@ -605,6 +605,11 @@ describe("adding a document from the account", () => {
     expect(submit.getAttribute("aria-disabled")).toBe("true");
     expect(submit.hasAttribute("disabled")).toBe(false);
     await user.click(submit);
+    // Measured while the first write is still out, not after it lands: the
+    // refusal is what this test is about, and a count checked only once the
+    // request has returned would pass on a second upload that arrived a tick
+    // late.
+    expect(uploads(calls)).toHaveLength(1);
 
     release?.();
     await waitFor(() => expect(uploads(calls)).toHaveLength(1));

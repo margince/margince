@@ -1573,8 +1573,13 @@ function PassportCard() {
                 // with nothing to offer. The sentence refuses the press on its
                 // own, so there is no `disabled` beside it saying the same
                 // thing in a spelling that carries no explanation.
+                // And only while nobody is minting: `reason` outranks `pending`
+                // in Button, so a scope cleared after the press would take the
+                // spinner and `aria-busy` off a request still in flight — the
+                // reader would be told the press was refused while the write
+                // they made is running.
                 reason={
-                  scopes.size === 0
+                  scopes.size === 0 && !mint.isPending
                     ? t("settings.passportScopesRequired")
                     : undefined
                 }

@@ -1294,12 +1294,16 @@ const REWRITES = [
 // edited the body, a rewrite would throw their work away to answer a question
 // about text that is no longer there — so the row withdraws rather than
 // growing a confirm nobody would read.
+// `disabled` and not `pending`: these buttons do not report a write of their
+// own, they refuse to start a second one. Named for what it does, because named
+// for a state it does not have it read as the draft button's own spinner and a
+// change to that button silently unblocked these.
 function RewriteRow({
   onRewrite,
-  pending,
+  disabled,
 }: Readonly<{
   onRewrite: (instruction: string) => void;
-  pending: boolean;
+  disabled: boolean;
 }>) {
   const t = useT();
   return (
@@ -1310,7 +1314,7 @@ function RewriteRow({
           key={rewrite.key}
           small
           variant="aiQuiet"
-          disabled={pending}
+          disabled={disabled}
           onClick={() => onRewrite(t(rewrite.instruction))}
         >
           <Sparkles aria-hidden="true" />
@@ -2324,7 +2328,11 @@ export function ComposeModal({
             to rewrite — only their work to throw away. */}
           {body !== "" && body === servedBody && (
             <RewriteRow
-              pending={draftControl.disabled}
+              // The draft in flight blocks these too, though it does not block
+              // the button that started it: a rewrite REPLACES the body, so a
+              // second request begun beside the first lands whichever answer
+              // returns last over the reader's editor.
+              disabled={draftControl.pending || draftControl.disabled}
               onRewrite={(instruction) =>
                 draft.mutate({
                   grounding: {

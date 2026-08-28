@@ -1,5 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
+import type { MessageKey } from "../src/i18n/en";
 import { mockApi } from "./seed";
 
 /**
@@ -126,6 +128,34 @@ const CORE_SCREENS = [
   "settings/knowledge",
   "settings/license",
 ];
+
+/**
+ * The settings page the address named is the one on screen.
+ *
+ * `useVisibleSettingsTabs` falls back to the first tab a principal can see, so
+ * an address naming a tab this mock's grants do not cover lands on Account and
+ * renders perfectly — clean axe, no overflow, and the census one page longer
+ * than the tree it actually read. Two of the three pages this list gained were
+ * doing exactly that. The active row in the settings level carries the tab it
+ * points at, which is the cheapest thing on screen that can tell the two apart.
+ */
+async function expectSettingsViewLanded(page: Page, view: string) {
+  if (!view.startsWith("settings/")) {
+    return;
+  }
+  const tab = view.slice("settings/".length);
+  // The trail rather than the settings nav level, because the nav level is not
+  // there at 390px — the rail becomes a phone bar and the tabs go with it, and
+  // an assertion that reads the rail passes vacuously on the one viewport this
+  // sweep exists for. The trail's current crumb names the tab at every width.
+  //
+  // The expected wording comes from the catalog under the SAME key the nav
+  // builds its label from, so this is not a second copy of the tab names.
+  await expect(
+    page.locator(".crumbs-current"),
+    `#/${view} did not land on the ${tab} tab — the address fell back, so this sweep measured a page it never opened`,
+  ).toHaveText(de[`settings.tab.${tab}` as MessageKey]);
+}
 
 /**
  * The page rendered, rather than the app error boundary standing in for it.
@@ -1097,6 +1127,7 @@ test.describe("§3.8: 390px mobile", () => {
       await page.goto(`/#/${screen}`);
       await page.waitForLoadState("networkidle");
       await expectShellRendered(page);
+      await expectSettingsViewLanded(page, screen);
       // The scroller has to be FOUND, or a renamed class would leave this
       // sweep quietly measuring only the document — which is the blindness it
       // was written to end.
@@ -1353,6 +1384,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
       await page.goto(`/#/${screen}`);
       await page.waitForLoadState("networkidle");
       await expectShellRendered(page);
+      await expectSettingsViewLanded(page, screen);
       await settleAnimations(page);
       await expectNoAaViolations(page, `${screen} (dark)`);
     });
@@ -1369,6 +1401,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       // sweep. #/settings/maintenance scored zero violations while showing the
       // app error boundary.
       await expectShellRendered(page);
+      await expectSettingsViewLanded(page, screen);
       await settleAnimations(page);
       await expectNoAaViolations(page, screen);
     });

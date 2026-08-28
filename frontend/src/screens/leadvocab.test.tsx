@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   LeadDisqualifyReasonsCard,
   LeadHandlingCard,
@@ -247,11 +248,17 @@ describe("LeadSourcesCard", () => {
       screen.getByText("Only an admin or ops seat changes this list."),
     ).toBeTruthy();
     // Both verbs the card offers a writer: the one that OPENS the dialog and
-    // the one that submits it. Named as the card actually spells them — a
-    // query for a label no locale carries is null for every reader, which is
-    // a refusal this assertion cannot tell from a granted one.
-    expect(screen.queryByRole("button", { name: "New source" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add source" })).toBeNull();
+    // the one that submits it. Read from the catalog under the keys the card
+    // itself renders, so the wording cannot drift out from under the query — a
+    // name no locale carries is null for every reader, which is a refusal this
+    // assertion cannot tell from a granted one, and both of these had already
+    // been written by hand as a string the product never said.
+    expect(
+      screen.queryByRole("button", { name: en["leadSources.addOpen"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["leadSources.add"] }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
   });
 });

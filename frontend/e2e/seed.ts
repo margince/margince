@@ -40,6 +40,13 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // `list:create`. Without them the sweep would measure a screen whose picker
   // never loaded — a page that renders and says nothing, which both sweeps pass.
   list: ["create", "read", "update", "delete"],
+  // The two admin entries the sweep reached for and did not get. Both are
+  // gated on their own read (settings.tsx's entry visibility), and a tab this
+  // principal cannot see falls back to Account — so `settings/knowledge` and
+  // `settings/license` were sweeping the shortest page in settings twice while
+  // reporting two more pages covered.
+  knowledge_corpus: ["create", "read", "update", "delete"],
+  license: ["read"],
 };
 
 // The coherent seed (mirrors design/seed-fixtures.md entities: Anna Weber,
@@ -742,6 +749,39 @@ function unsupportedBySor(detail: string) {
 // them and the filter has something to narrow. `payload_capture_enabled` is
 // true, because the counterparty and subject columns only exist when it is and
 // a false fixture would sweep a narrower table than the product draws.
+// The knowledge page's document sets. Shaped, because the catch-all's list
+// envelope is `{data, page}` and this screen reads `items` — `sets.map` on
+// `undefined` throws, and a page that threw scores zero axe violations.
+const knowledgeCorpora = {
+  items: [
+    {
+      id: "00000000-0000-4000-8000-0000000000a1",
+      name: "Everything",
+      topic_statement:
+        "What this company sells, who it sells to, and what it has already said.",
+      min_similarity: 0.35,
+      default_ask: true,
+      coverage: {
+        documents_total: 42,
+        chunks_total: 1_180,
+        chunks_embedded: 1_180,
+      },
+      created_at: "2026-08-01T00:00:00Z",
+    },
+  ],
+};
+
+// The installation's licence, inside its grant: the state this reading exists
+// for is the seat count, and an envelope with no `state` renders the card's
+// unlicensed arm with blank figures beside it.
+const installationLicense = {
+  state: "valid",
+  seats_used: 9,
+  seats_granted: 10,
+  over_limit: false,
+  checked_at: "2026-08-20T09:00:00Z",
+};
+
 const captureActivity = {
   funnel: {
     captured: 3,
@@ -2013,6 +2053,12 @@ export async function mockApi(
       path === "/capture/activity/workspace"
     ) {
       return json(captureActivity);
+    }
+    if (path === "/knowledge/corpora" && method === "GET") {
+      return json(knowledgeCorpora);
+    }
+    if (path === "/installation/license") {
+      return json(installationLicense);
     }
     if (path === "/ai/usage") {
       return json(aiUsage);

@@ -460,19 +460,46 @@ function oneLine(node: ts.Node): string {
 
 const GUTTER_CLASS = "wrap";
 
-function classesOn(element: ts.JsxOpeningLikeElement): string[] {
+/**
+ * The classes on an element, but ONLY where one value is the whole answer.
+ *
+ * A computed `className` is unreadable here and says so, rather than being
+ * flattened to the literals inside it. Flattening was under-recognition of the
+ * exact defect this gate is for: `className={folded ? "wrap a" : "b"}` puts the
+ * gutter on one branch, and a gate that pooled the strings found `wrap` and
+ * called the screen inset while the other branch reached the reader flush
+ * against the scroller. Under-recognition is the one way a census must not
+ * break — it reads a smaller tree and reports PASS, with nothing failing to say
+ * so — so an expression this walk cannot resolve to one class list is a
+ * failure, and the screen either spells the root's classes as a literal or
+ * takes a named exemption.
+ */
+function classesOn(element: ts.JsxOpeningLikeElement): string[] | undefined {
   for (const attribute of element.attributes.properties) {
     if (
       ts.isJsxAttribute(attribute) &&
       ts.isIdentifier(attribute.name) &&
       attribute.name.text === "className"
     ) {
-      return stringsIn(attribute.initializer).flatMap((value) =>
-        value.split(/\s+/).filter(Boolean),
-      );
+      const literal = soleLiteral(attribute.initializer);
+      return literal?.split(/\s+/).filter(Boolean);
     }
   }
   return [];
+}
+
+/** The one string an initializer IS, or undefined when it is computed. */
+function soleLiteral(node: ts.Node | undefined): string | undefined {
+  if (!node) {
+    return undefined;
+  }
+  if (ts.isStringLiteralLike(node)) {
+    return node.text;
+  }
+  if (ts.isJsxExpression(node)) {
+    return node.expression ? soleLiteral(node.expression) : undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -570,6 +597,12 @@ function elementVerdict(
   const tag = element.tagName.getText();
   if (/^[a-z]/.test(tag)) {
     const classes = classesOn(element);
+    if (classes === undefined) {
+      return {
+        inset: false,
+        trail: `root <${tag}> computes its className, so which classes it draws cannot be read here`,
+      };
+    }
     if (classes.includes(GUTTER_CLASS)) {
       return { inset: true, trail: `<${tag} class="${classes.join(" ")}">` };
     }
