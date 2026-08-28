@@ -17337,6 +17337,35 @@ export interface components {
              *     would freeze the DST rules of the day it was written (AC-DS-TZ4).
              */
             scheduled_tz?: string | null;
+            /**
+             * @description Records to file this reply under IN ADDITION to the ones it inherits from the
+             *     message it answers. Omit it and a reply is filed exactly as before.
+             *
+             *     ADDED, never substituted, and the name says so: a reply belongs to the same people
+             *     and the same deal as the conversation it continues, and a caller that could replace
+             *     that set could quietly detach a thread from the records it is about.
+             *
+             *     What it exists for is the link the anchor cannot have. A deal whose project was
+             *     attached after the conversation started has an anchor with no project link, so every
+             *     reply in that thread would stay unfiled — the composer says "this will be filed under
+             *     X" and the sent message carries no link to X. A subject tag brings the customer's own
+             *     reply back to the right project, but only once they answer, and the outbound half is
+             *     missing from the project's timeline until then.
+             *
+             *     Each target is row-scope probed exactly as an account-started send's `links` are, so
+             *     an id the caller cannot see is refused 404 rather than filed. A link the anchor
+             *     already carries is collapsed rather than doubled.
+             *
+             *     Bounded at 25 for the reason the account-started list is: each probe is its own
+             *     query, and a message about more records than that is about none of them.
+             *
+             *     The bound is on the MERGED total, not on this list alone. A reply is refused 422
+             *     `too_many_links` when the anchor's own links plus these exceed 25 — so a conversation
+             *     already filed under many records leaves room for fewer additions than the `maxItems`
+             *     here suggests. The refusal arrives at request time, before consent is asked and
+             *     before anything is scheduled, so a caller learns it while they can still shorten it.
+             */
+            also_links?: components["schemas"]["ActivityLinkInput"][];
         };
         /**
          * @description One message waiting for its moment (ADR-0104/A155). It is not an activity and not a

@@ -262,10 +262,7 @@ func (h Handlers) SendAccountEmail(w http.ResponseWriter, r *http.Request, _ crm
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	links := make([]ActivityLinkInput, 0, len(req.Links))
-	for _, l := range req.Links {
-		links = append(links, ActivityLinkInput{EntityType: string(l.EntityType), EntityID: ids.UUID(l.EntityId)})
-	}
+	links := linkInputsOf(&req.Links)
 	if len(links) == 0 {
 		// A message filed under nothing is one nobody finds again, which is
 		// the gap this operation exists to close. The contract says minItems,
@@ -369,7 +366,11 @@ func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontra
 		writeStoreErr(w, r, err)
 		return
 	}
-	out, err := h.store.SendOrSchedule(r.Context(), FromActivity(pathID[ids.ActivityKind](id)), sendInputFrom(
+	// The anchor's own links, plus whatever the caller named beyond them. A
+	// reply with none of its own is unchanged, which is every reply that was
+	// sent before this field existed.
+	origin := FromActivity(pathID[ids.ActivityKind](id)).AlsoFiledUnder(linkInputsOf(req.AlsoLinks))
+	out, err := h.store.SendOrSchedule(r.Context(), origin, sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		req.ConsentPurpose, req.DraftRef,
 	), sched, h.consent, h.delivery, h.timer)
@@ -388,6 +389,24 @@ func addressesOf(list *[]openapi_types.Email) []string {
 	out := make([]string, 0, len(*list))
 	for _, addr := range *list {
 		out = append(out, string(addr))
+	}
+	return out
+}
+
+// linkInputsOf converts the contract's link list to the store's, and answers
+// nothing for a list that was never sent.
+//
+// One converter for both send paths: the account-started list the caller must
+// supply, and the reply's optional additions. They were separate spellings of
+// the same three lines, and a difference between them would be a difference in
+// what a record link MEANS on two operations that write the same column.
+func linkInputsOf(list *[]crmcontracts.ActivityLinkInput) []ActivityLinkInput {
+	if list == nil {
+		return nil
+	}
+	out := make([]ActivityLinkInput, 0, len(*list))
+	for _, l := range *list {
+		out = append(out, ActivityLinkInput{EntityType: string(l.EntityType), EntityID: ids.UUID(l.EntityId)})
 	}
 	return out
 }

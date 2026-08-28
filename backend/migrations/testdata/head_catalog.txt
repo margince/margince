@@ -3800,6 +3800,7 @@ public.scheduled_send.activity_id uuid gen=- def=-
 public.scheduled_send.agent_actor_id text gen=- def=-
 public.scheduled_send.agent_on_behalf_of uuid gen=- def=-
 public.scheduled_send.agent_passport_id uuid gen=- def=-
+public.scheduled_send.also_links jsonb gen=- def=-
 public.scheduled_send.anchor_activity_id uuid gen=- def=-
 public.scheduled_send.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.delivery_id uuid gen=- def=-
@@ -3815,6 +3816,7 @@ public.scheduled_send.scheduled_by uuid NOT NULL gen=- def=-
 public.scheduled_send.scheduled_send_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE RESTRICT
 public.scheduled_send.scheduled_send_agent_on_behalf_of_fkey FOREIGN KEY (agent_on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL
 public.scheduled_send.scheduled_send_agent_provenance_shape CHECK ((((principal_kind = 'agent'::text) AND (agent_actor_id IS NOT NULL)) OR ((agent_actor_id IS NULL) AND (agent_passport_id IS NULL) AND (agent_on_behalf_of IS NULL))))
+public.scheduled_send.scheduled_send_also_links_shape CHECK (((also_links IS NULL) OR ((origin_kind = 'reply'::text) AND (jsonb_typeof(also_links) = 'array'::text))))
 public.scheduled_send.scheduled_send_anchor_activity_id_fkey FOREIGN KEY (anchor_activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.scheduled_send.scheduled_send_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE RESTRICT
 public.scheduled_send.scheduled_send_held_shape CHECK ((((status = 'held'::text) AND (held_reason IS NOT NULL)) OR ((status <> 'held'::text) AND (held_reason IS NULL))))

@@ -818,3 +818,87 @@ func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 		t.Fatalf("two timers produced %d activities, want exactly 1", got-activitiesBefore)
 	}
 }
+
+// TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed holds the two paths
+// against each other.
+//
+// A scheduled send re-derives its origin at fire, and the anchor's links are
+// exactly the thing that SHOULD be re-derived — a record added to the
+// conversation while the message waited belongs on it. What cannot be
+// re-derived is the record the caller named: nothing at fire knows which one
+// they meant. Frozen at composition and replayed, or a scheduled reply files
+// differently from the immediate one written beside it.
+func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	// A record the anchor does not carry — the shape a project attached to the
+	// deal after the conversation began takes.
+	org := p.seedCompany(t, "Zephyr Freight")
+
+	var scheduled struct {
+		ID string `json:"id"`
+	}
+	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
+		"subject": "Monday morning", "body": "Written the night before.",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_tz": "Europe/Berlin",
+		"also_links":   []AnyMap{{"entity_type": "organization", "entity_id": org.String()}},
+	}, nil, &scheduled)
+	if status != http.StatusCreated {
+		t.Fatalf("scheduling a reply with also_links → %d, want 201", status)
+	}
+	id, err := ids.Parse(scheduled.ID)
+	if err != nil {
+		t.Fatalf("scheduling returned no id: %v", err)
+	}
+
+	p.makeDue(t, id)
+	p.fire(t, id)
+	if !p.sent(t, id) {
+		st, reason := p.scheduledStatus(t, id)
+		t.Fatalf("firing did not send: %q/%q", st, reason)
+	}
+
+	if got := p.countLinks(t, id, "organization", org); got != 1 {
+		t.Errorf("the fired reply is filed under the named company %d times, want once — a scheduled reply "+
+			"must file the way the immediate one written beside it does", got)
+	}
+}
+
+// seedCompany creates a company this workspace's rep can read.
+func (p *preflightEnv) seedCompany(t *testing.T, name string) ids.UUID {
+	t.Helper()
+	var created struct {
+		ID string `json:"id"`
+	}
+	if status := p.Call(t, "POST", "/v1/organizations",
+		AnyMap{"display_name": name}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("seeding %s → %d, want 201", name, status)
+	}
+	id, err := ids.Parse(created.ID)
+	if err != nil {
+		t.Fatalf("the created company has no id: %v", err)
+	}
+	return id
+}
+
+// countLinks counts the activity links a fired scheduled send left on one
+// record. It reads the activity the row released rather than the row itself:
+// the filing is a property of the timeline entry, which is what a reader opens.
+func (p *preflightEnv) countLinks(t *testing.T, scheduledID ids.UUID, entityType string, entity ids.UUID) int {
+	t.Helper()
+	var count int
+	if err := p.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*)
+			  FROM activity_link al
+			  JOIN scheduled_send s ON s.activity_id = al.activity_id
+			 WHERE s.id = $1 AND al.entity_type = $2 AND al.organization_id = $3`,
+			scheduledID, entityType, entity).Scan(&count)
+	}); err != nil {
+		t.Fatalf("counting the fired reply's links: %v", err)
+	}
+	return count
+}

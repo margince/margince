@@ -13,14 +13,22 @@
 --
 -- ADD ... NOT VALID then VALIDATE, rather than one validated ADD.
 --
--- Stated honestly, because the usual reason does NOT apply here: the runner
--- wraps each migration file in a single transaction (dbmigrate.go), so the locks
--- this takes are held until the file commits either way, and the two-step buys
--- no concurrency it would buy in a hand-run psql session. What it does buy is a
--- shorter ACCESS EXCLUSIVE hold: NOT VALID takes that lock without scanning, and
--- VALIDATE downgrades to SHARE UPDATE EXCLUSIVE for the scan, so readers and
--- writers of audit_log are blocked for a moment rather than for a full pass over
--- the largest table in the schema.
+-- Stated honestly, because the usual reason does NOT apply here and the
+-- correction is worth more than the tidy version: the runner wraps each
+-- migration file in a single transaction (dbmigrate.go's inTx), so ADD
+-- CONSTRAINT's ACCESS EXCLUSIVE is held until the file commits — THROUGH the
+-- VALIDATE. Postgres does not downgrade a lock it already holds, so the split
+-- shortens nothing here.
+--
+-- (This paragraph used to claim it did, and the claim was copied into a later
+-- migration before a review caught it. A wrong sentence about locking is worse
+-- than none: it is the kind a reader trusts because it sounds careful.)
+--
+-- The split is kept anyway, for a reason that survives: the two statements say
+-- what they each do, and a table where the scan is the expensive part wants the
+-- VALIDATE in a migration of its OWN — a second file, which commits separately
+-- and does get the downgrade. Writing it as a pair here is the shape that
+-- change starts from.
 --
 -- The transaction is also what makes this safe to interrupt: a failure at any
 -- statement rolls the whole file back, so audit_log can never be left with no
