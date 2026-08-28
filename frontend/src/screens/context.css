@@ -4,11 +4,11 @@
 .context-sections {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-3);
   margin-top: 8px;
 }
 .context-section h3 {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1);
 }
 .context-items {
   list-style: none;

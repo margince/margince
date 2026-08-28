@@ -15,7 +15,7 @@
 .colstack {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-5);
 }
 
 /* The quota selector's rows are the panel's own PanelRows — the hairline, the
@@ -64,7 +64,7 @@
 }
 .quota-row-sub {
   display: block;
-  margin-top: 3px;
+  margin-top: var(--space-1);
 }
 
 /* attainment card: ring beside the numbers, wrapping on narrow widths */
@@ -123,13 +123,13 @@
 .computed-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   font-size: 11px;
   font-family: var(--f-mono);
   color: var(--tealText);
   background: var(--tealLight);
   border-radius: var(--r-full);
-  padding: 3px 9px;
+  padding: var(--space-1) var(--space-2);
 }
 .computed-chip svg {
   width: 11px;
@@ -171,9 +171,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 4px 2px;
+  padding: var(--space-3) var(--space-1) var(--space-1);
   border-top: 1px solid var(--borderSubtle);
-  margin-top: 6px;
+  margin-top: var(--space-2);
 }
 .quota-foot .k {
   font-weight: 600;
@@ -190,7 +190,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: var(--space-3);
 }
 /* The rail card's own section seam, drawn as an element because the two halves
    it divides are siblings rather than rows. Its air is a section's interval, on

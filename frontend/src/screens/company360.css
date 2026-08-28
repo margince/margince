@@ -10,7 +10,7 @@
 }
 
 .co-card {
-  padding: 12px 14px;
+  padding: var(--space-3);
 }
 
 /* The left rail: the account's context beside the work (mockup State A).
@@ -140,7 +140,7 @@
 .co-row {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
   font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
@@ -149,13 +149,13 @@
 .co-row-main {
   display: inline-flex;
   align-items: center;
-  gap: 6px; /* ds:ignore matches .co-row-meta below, which the same row aligns to */
+  gap: var(--space-1); /* matches .co-row-meta below, which the same row aligns to */
 }
 
 .co-row-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   flex-wrap: wrap;
   font-size: var(--fs-meta);
   color: var(--textMeta);
@@ -224,7 +224,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px; /* ds:ignore matches .co-row-meta, the same row-end chip rhythm */
+  gap: var(--space-1); /* matches .co-row-meta, the same row-end chip rhythm */
   flex-wrap: wrap;
   flex: 0 0 auto;
   margin-left: auto;
@@ -241,7 +241,7 @@
 }
 
 .co-since {
-  padding: 12px 14px;
+  padding: var(--space-3);
   margin-bottom: 12px;
 }
 
@@ -310,7 +310,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   margin: 0;
   font-size: var(--fs-sm);
   line-height: 1.55;
@@ -520,7 +520,7 @@
   margin: 8px 0 0;
 }
 .co-ask-asked {
-  margin: 10px 0 0;
+  margin: var(--space-2) 0 0;
   font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--textMeta);
