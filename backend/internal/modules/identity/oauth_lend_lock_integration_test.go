@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -185,7 +186,7 @@ func (e *lendEnv) codesAndLendAudits(t *testing.T) (codes, audits int) {
 // real consent waits, which the blocking case below is about.
 func lockWaitBoundedService(t *testing.T, ws ids.WorkspaceID) *Service {
 	t.Helper()
-	pool, err := database.NewPool(context.Background(), lockBoundedDSN(t, 250*time.Millisecond))
+	pool, err := testdb.OwnPool(context.Background(), lockBoundedDSN(t, 250*time.Millisecond))
 	if err != nil {
 		t.Fatalf("opening the lock-bounded pool: %v", err)
 	}

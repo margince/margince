@@ -210,6 +210,107 @@ func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// OwnPool opens a pool the CALLER owns and closes, tuned by the same lane
+// ceiling the shared one takes, and dials nothing until the caller uses it.
+//
+// Most suites want Pool: one pool per DSN per process, memoized, which is the
+// cheapest thing that works. A few genuinely cannot — a suite that asserts what
+// happens when a pool is closed, one that needs a DSN of its own with extra
+// parameters, one that hands a pool to a component that will close it — and
+// before this existed those reached for database.NewPool directly.
+//
+// That is the hole this closes. database.NewPool's fallback is MaxConns=16 with
+// MinConns=2 dialled eagerly, and the lane's budget is sized on the ceiling it
+// hands out in PoolMaxConnsEnv — so one such suite could hold 8 (owner) + 8
+// (app) + 16 (its own) against a declared per-package allowance of 24 while the
+// lane's own arithmetic read green. The budget was a measured high-water mark
+// rather than a ceiling, and this is what makes it the second thing.
+//
+// It is NOT memoized, which is the whole reason a caller asks for it: two calls
+// answer two pools, and closing one does not affect the other. The caller closes
+// it — nothing here will.
+//
+// It does NOT carry the shared pool's ErrSchemaNotReady check, and that is a
+// decision rather than an omission. The check is a proxy for "this process has
+// called EnsureSchema", which for a MEMOIZED pool is the right question: it
+// outlives every test, so one opened beforehand is still open across the
+// migration's DROP SCHEMA and blocks it. An owned pool's lifetime is its
+// test's. And the proxy is wrong here in the direction that matters: a suite
+// running in a package the lane already migrated has never called EnsureSchema
+// itself, so the flag is false while the schema is perfectly ready — refusing
+// there would refuse working suites for a hazard they do not have.
+func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	tuned, err := withTestPoolParams(dsn)
+	if err != nil {
+		return nil, err
+	}
+	// The CONFIG, not the pool: nothing is dialled until a test asks. A suite
+	// that owns its pool rather than sharing one is often owning it precisely
+	// because it asserts what happens when the pool is broken — a DSN pointing
+	// at a closed port, so that Close and the failure modes around it have
+	// something to be true of — and a constructor that pinged would refuse
+	// those suites during setup, before they could assert anything at all.
+	// Everything else a pool of this product is, it still gets: the ID type
+	// registration, the JIT setting, the operational limits.
+	cfg, err := database.PoolConfig(tuned)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := OwnPoolFromConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("opening a caller-owned test pool: %w", err)
+	}
+	return pool, nil
+}
+
+// OwnPoolFromConfig opens a caller-owned pool from a config the caller built,
+// with the lane's ceiling applied to it.
+//
+// For the suites that cannot express what they need in a DSN: a runtime
+// parameter set per connection, an AfterConnect hook, a dial that has to be
+// bounded. Before this they reached for pgxpool.NewWithConfig and got pgxpool's
+// own default — outside the lane's arithmetic exactly like database.NewPool's
+// fallback, and quieter about it.
+//
+// It overrides MaxConns and MinConns and NOTHING else. The rest of the config
+// is the caller's, because the reason they built one is that they needed
+// something this package has no opinion about; the two it takes are the two the
+// lane's budget is stated in.
+//
+// A ceiling the lane did not declare leaves MaxConns as the caller set it,
+// which is the same posture withTestPoolParams takes for a DSN that names one.
+func OwnPoolFromConfig(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
+	params, err := poolParams()
+	if err != nil {
+		return nil, err
+	}
+	if ceiling, declared := params["pool_max_conns"]; declared {
+		// ParseInt with an explicit bit size rather than Atoi: MaxConns is an
+		// int32, and a conversion that could overflow is one the compiler
+		// cannot see and a reader has to reason about.
+		n, convErr := strconv.ParseInt(ceiling, 10, 32)
+		if convErr != nil {
+			return nil, fmt.Errorf("testdb: the lane's ceiling %q is not a connection count: %w", ceiling, convErr)
+		}
+		// The LOWER of the two, never the ceiling flatly. A caller that asked
+		// for one connection is asking for something the budget does not
+		// forbid, and raising it would break the suites most likely to have
+		// asked — the contention tests, whose whole subject is what happens
+		// when the only connection is busy.
+		if cfg.MaxConns <= 0 || int32(n) < cfg.MaxConns {
+			cfg.MaxConns = int32(n)
+		}
+	}
+	// Nothing is dialled until a test asks, which is the cost the shared pool
+	// removed and the one an ad-hoc pool most often reintroduces.
+	cfg.MinConns = 0
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("opening a caller-owned test pool from a config: %w", err)
+	}
+	return pool, nil
+}
+
 // withTestPoolParams adds testPoolParams to dsn without disturbing what is
 // already there — a DSN that names one of them keeps its own value, matching
 // database.NewPool's rule that whoever sized the pool explicitly wins.

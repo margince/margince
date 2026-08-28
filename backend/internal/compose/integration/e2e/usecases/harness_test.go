@@ -26,8 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -114,7 +114,7 @@ func bootWithTranscriptReading(t *testing.T) *scenario {
 	}
 	// A separate pool from the one the harness opens: the inserter needs SOME
 	// pool reaching the same Postgres, not the same object.
-	wirePool, err := database.NewPool(context.Background(), appDSN)
+	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
 	if err != nil {
 		t.Fatalf("opening the insert-only wiring pool: %v", err)
 	}

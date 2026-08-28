@@ -32,6 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -124,7 +125,7 @@ func lockWaitBoundedStore(t *testing.T, ws ids.UUID) *Store {
 		database.RegisterIDTypes(conn)
 		return nil
 	}
-	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	pool, err := testdb.OwnPoolFromConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("opening the lock-bounded pool: %v", err)
 	}

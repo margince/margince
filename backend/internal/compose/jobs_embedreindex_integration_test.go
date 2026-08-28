@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -38,7 +38,7 @@ func unreachableStore(t *testing.T) *search.Store {
 	// The DSN is never dialled — pgxpool connects lazily and this pool is closed
 	// before the first statement — but it must parse, so the failure under test
 	// is the closed pool and not a malformed config.
-	pool, err := pgxpool.New(context.Background(), "postgres://unused:unused@127.0.0.1:1/unused")
+	pool, err := testdb.OwnPool(context.Background(), "postgres://unused:unused@127.0.0.1:1/unused")
 	if err != nil {
 		t.Fatalf("building the pool this test then closes: %v", err)
 	}

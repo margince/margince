@@ -24,7 +24,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
@@ -84,7 +83,7 @@ func migratedAppPool(t *testing.T, register ...func(*river.Workers)) (*jobs.Runn
 	}
 
 	// River schema is applied on the owner pool, exactly as cmd/migrate does.
-	ownerPool, err := database.NewPool(ctx, ownerDSN)
+	ownerPool, err := testdb.OwnPool(ctx, ownerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}
@@ -94,7 +93,7 @@ func migratedAppPool(t *testing.T, register ...func(*river.Workers)) (*jobs.Runn
 	}
 
 	// The runner runs on the app role — the same role the worker uses.
-	appPool, err := database.NewPool(ctx, appDSN)
+	appPool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}

@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -108,7 +109,7 @@ func setupRunner(t *testing.T) *runnerEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := database.NewPool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	pool, err := testdb.OwnPool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
 		t.Fatal(err)
 	}

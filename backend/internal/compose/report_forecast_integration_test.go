@@ -26,7 +26,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -118,7 +117,7 @@ func setupForecast(t *testing.T) *forecastEnv {
 			e.pipeline, fmt.Sprintf("Stage %d", position), position, probability)
 	}
 
-	pool, err := database.NewPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

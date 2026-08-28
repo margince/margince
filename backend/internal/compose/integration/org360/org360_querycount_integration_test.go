@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -80,7 +81,7 @@ func tracedPool(t *testing.T, tracer *countingTracer) *pgxpool.Pool {
 		database.RegisterIDTypes(conn)
 		return nil
 	}
-	traced, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	traced, err := testdb.OwnPoolFromConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

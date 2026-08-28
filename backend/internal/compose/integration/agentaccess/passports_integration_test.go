@@ -20,7 +20,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -71,7 +70,7 @@ func setupPassports(t *testing.T) *passportsEnv {
 	}
 
 	var pool *pgxpool.Pool
-	pool, err = database.NewPool(ctx, appDSN)
+	pool, err = testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

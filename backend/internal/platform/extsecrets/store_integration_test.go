@@ -94,7 +94,7 @@ func setup(t *testing.T) *env {
 	seed(e.ws, e.user, "extsecrets")
 	seed(e.otherWS, e.otherUser, "extsecrets-other")
 
-	pool, err := database.NewPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

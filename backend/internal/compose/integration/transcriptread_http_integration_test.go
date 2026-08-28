@@ -25,8 +25,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // transcriptDoorApp stands the composed application up with the reading
@@ -41,7 +41,7 @@ func transcriptDoorApp(t *testing.T, slug, name, email string) *apptest.AppEnv {
 	}
 	// A separate pool from the one SetupAppWithOptions opens: the inserter
 	// needs SOME pool reaching the same Postgres, not the same object.
-	wirePool, err := database.NewPool(context.Background(), appDSN)
+	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
 	if err != nil {
 		t.Fatalf("opening the insert-only wiring pool: %v", err)
 	}

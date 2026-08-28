@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -127,7 +128,7 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 	ws := ids.NewV7()
 	anchor := seedBenchTier(t, owner, ws, spec)
 
-	pool, err := database.NewPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

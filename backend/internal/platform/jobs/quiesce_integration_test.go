@@ -18,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -123,7 +122,7 @@ func quiesceTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatalf("resetting test data: %v", err)
 	}
 
-	ownerPool, err := database.NewPool(ctx, ownerDSN)
+	ownerPool, err := testdb.OwnPool(ctx, ownerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}
@@ -132,7 +131,7 @@ func quiesceTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 
-	appPool, err := database.NewPool(ctx, appDSN)
+	appPool, err := testdb.OwnPool(ctx, appDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
