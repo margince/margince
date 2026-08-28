@@ -1,25 +1,29 @@
--- seed-reset.sql — wipe the demo installation's workspace so
--- `make seed-dev` can rebuild it from scratch. Run by `make seed-reset`
--- against the compose stack's Postgres.
+-- seed-reset.sql — clear the demo installation's RECORDS so `make seed-dev`
+-- can fill it again. Run by `make seed-reset` against the compose stack's
+-- Postgres.
 --
--- Deletes every row scoped to the demo workspace across all tenant tables
--- (those with a workspace_id column), discovered dynamically so a new
--- table is covered without touching this file.
+-- What it deletes: every base table in `public` except the preserved set below.
+-- What it keeps: the installation itself — its workspace, its people, its roles
+-- and sessions, its configuration and its append-only ledgers — so the stack is
+-- usable the moment this finishes. `make seed-dev` runs straight afterwards with
+-- no restart, because the admin it logs in as is still there.
 --
--- THE DISCOVERY IS ALSO THE GUARD. This script's last statement removes the
--- workspace row itself, and session_replication_role = replica means no FK
--- cascade follows it — so a loop that finds nothing does not merely delete
--- nothing, it leaves every domain row pointing at a workspace that is gone.
--- Silent under-recognition, and destructive. The count is therefore asserted
--- before anything is deleted: an empty target set aborts the transaction and
--- says what has to be decided, rather than half-erasing an installation and
--- reporting success.
+-- IT NO LONGER DELETES THE WORKSPACE. It used to, and the recovery then depended
+-- on the API re-bootstrapping the organization from margince.yaml at its NEXT
+-- boot — so a reset against a running stack left seed-dev with no workspace to
+-- seed into and nothing saying why.
 --
--- session_replication_role = replica disables FK enforcement and triggers
--- for the duration, so the deletes are order-independent. That includes
--- audit_log's append-only guard — correct here, because the reset erases
--- the whole tenant, history included. Requires superuser (the compose
--- stack's margince_owner is one).
+-- THE PRESERVED SET IS THE WHOLE DEFINITION, and it is the same one the
+-- in-product data reset uses: internal/compose/datasweep.go's
+-- preservedResetTables. backend/gates/seedresetparity_test.go holds the two
+-- equal in both directions, because two answers to "what survives a reset" is
+-- how a dev database and a customer's diverge quietly. The reasoning for each
+-- entry lives there, next to the code that acts on it, rather than being
+-- restated here where it would drift.
+--
+-- session_replication_role = replica disables FK enforcement and triggers for
+-- the duration, so the deletes are order-independent. Requires superuser (the
+-- compose stack's margince_owner is one).
 
 BEGIN;
 
@@ -27,49 +31,66 @@ SET LOCAL session_replication_role = replica;
 
 DO $$
 DECLARE
-  ws uuid;
   t       text;
   targets int;
+  -- Mirrored from internal/compose/datasweep.go. Sorted, and held equal to it by
+  -- backend/gates/seedresetparity_test.go — edit neither side alone.
+  preserved text[] := ARRAY[
+    'activity_kind',
+    'activity_retention_evidence',
+    'ai_call_config',
+    'app_user',
+    'audit_log',
+    'auth_token',
+    'channel_provider',
+    'embed_store_binding',
+    'event_outbox',
+    'lead_disqualify_reason',
+    'lead_source',
+    'overlay_mode',
+    'passport',
+    'role',
+    'role_assignment',
+    'session',
+    'setting',
+    'system_log',
+    'team',
+    'team_membership',
+    'vault_secret',
+    'workspace'
+  ];
 BEGIN
-  -- The installation's one workspace (ADR-0061); ADR-0091 retired the slug this
-  -- used to match on. INTO STRICT, not LIMIT 1, and the distinction matters more
-  -- here than anywhere: this block DELETES. Picking whichever workspace happened
-  -- to be oldest would wipe a tenant nobody named.
-  BEGIN
-    SELECT id INTO STRICT ws FROM workspace WHERE archived_at IS NULL;
-  EXCEPTION
-    WHEN no_data_found THEN
-      RAISE NOTICE 'seed-reset: no live workspace — nothing to do';
-      RETURN;
-    WHEN too_many_rows THEN
-      RAISE EXCEPTION 'seed-reset: more than one live workspace — refusing to delete, since there is no such thing as THE demo installation here';
-  END;
-
+  -- The corpus is asserted before anything is deleted. A derivation that
+  -- silently found nothing would report success over an untouched database —
+  -- under-recognition, and indistinguishable from a reset that worked.
   SELECT count(*) INTO targets
-  FROM information_schema.columns c
-  JOIN information_schema.tables tb
-    ON tb.table_schema = c.table_schema AND tb.table_name = c.table_name
-  WHERE c.table_schema = 'public'
-    AND c.column_name = 'workspace_id'
-    AND tb.table_type = 'BASE TABLE';
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relkind = 'r'
+    AND c.relname NOT LIKE 'schema\_migrations%'
+    AND c.relname NOT LIKE 'river\_%'
+    AND NOT (c.relname = ANY(preserved));
 
   IF targets = 0 THEN
-    RAISE EXCEPTION 'seed-reset: no table in public carries workspace_id, so this script would delete the workspace row and nothing else — leaving every domain row orphaned against a workspace that is gone. Deciding what a full reset KEEPS (the migration-seeded reference data an installation cannot re-create: setting, channel_provider, activity_kind, lead_source, lead_disqualify_reason) and what it erases is a decision this script may not guess. Until it is made, wipe the stack instead: make dev-stop && make db-up && make migrate && make seed-dev.';
+    RAISE EXCEPTION 'seed-reset: no table in public is a reset target — every one is either preserved, a migration ledger or River''s. That means the preserved list has grown to cover the whole schema, which is a mistake in the list rather than a database with nothing in it.';
   END IF;
 
   FOR t IN
-    SELECT c.table_name
-    FROM information_schema.columns c
-    JOIN information_schema.tables tb
-      ON tb.table_schema = c.table_schema AND tb.table_name = c.table_name
-    WHERE c.table_schema = 'public'
-      AND c.column_name = 'workspace_id'
-      AND tb.table_type = 'BASE TABLE'
+    SELECT c.relname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind = 'r'
+      AND c.relname NOT LIKE 'schema\_migrations%'
+      AND c.relname NOT LIKE 'river\_%'
+      AND NOT (c.relname = ANY(preserved))
+    ORDER BY c.relname
   LOOP
-    EXECUTE format('DELETE FROM %I WHERE workspace_id = %L', t, ws);
+    EXECUTE format('DELETE FROM %I', t);
   END LOOP;
 
-  DELETE FROM workspace WHERE id = ws;
+  RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its people and its configuration are untouched — run make seed-dev to fill it', targets;
 END $$;
 
 COMMIT;

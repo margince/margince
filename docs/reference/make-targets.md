@@ -139,7 +139,7 @@ deriving it the first time.
 | `migrate-up` / `migrate-down` | Alias for `migrate` / roll back the last migration(s) (`STEPS=n`) |
 | `migrate-create` | `make migrate-create NAME=add_renewal_risk` — scaffold a core `.up.sql`/`.down.sql` pair named for the current unix second. The clock, not the next number in a sequence: two branches open at once pick the same number and `main` stops loading once both merge. The four-digit `0001`–`0292` sequence is closed; ten-digit stamps sort above it |
 | `run` | `go run ./cmd/api` on `:8080` — no db-up/migrate first |
-| `seed-reset` / `seed-dev-db` | Wipe the demo workspace / apply the API-less dev SQL seed |
+| `seed-reset` / `seed-dev-db` | Clear the demo records, keeping the installation / apply the API-less dev SQL seed |
 | `psql` / `redis-cli` | Open a shell on the dev database (owner role) / dev Redis |
 | `test-v` / `test-cover` | Verbose unit tests / unit tests with a coverage summary |
 | `db-wait` / `infra-logs` / `infra-reset` | Block until Postgres answers / tail the dev-stack logs / wipe volumes and restart the stack |
