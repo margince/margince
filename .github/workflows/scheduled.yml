@@ -393,10 +393,18 @@ jobs:
       - name: Install the frontend
         if: steps.funded.outputs.configured == 'yes'
         working-directory: .
-        run: pnpm install --frozen-lockfile
+        # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
+        # install; esbuild ships prebuilt platform binaries as optional deps.
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install the Claude CLI
         if: steps.funded.outputs.configured == 'yes'
-        run: npm install -g @anthropic-ai/claude-code
+        # Pinned (githubactions:S8543): an unpinned -g install resolves to
+        # whatever is newest at run time, so this lane's model would be driven
+        # by a CLI version nobody chose. No --ignore-scripts: the package's own
+        # postinstall (install.cjs) is what places the platform binary the
+        # bin/claude shim execs — skipping it leaves the CLI unable to run,
+        # not merely unverified. sonar-project.properties waives S6505 here.
+        run: npm install -g @anthropic-ai/claude-code@2.1.236
       - name: Start the dev infra stack (compose + app role)
         if: steps.funded.outputs.configured == 'yes'
         working-directory: .
