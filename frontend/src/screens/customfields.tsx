@@ -7,6 +7,7 @@ import {
   type LucideIcon,
   ToggleRight,
   Type,
+  X,
 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
@@ -216,10 +217,11 @@ export function FieldBuilder({
                 />
                 <Button
                   small
+                  iconOnly
                   aria-label={t("cf.removeOption")}
                   onClick={() => removeOption(idx)}
                 >
-                  {"×"}
+                  <X aria-hidden="true" />
                 </Button>
               </div>
             ))}
