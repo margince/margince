@@ -57,19 +57,33 @@ func freezeDealFX(t *testing.T, owner *pgx.Conn, dealID ids.UUID) {
 // for the view's honest "nothing to sum" case (no row at all).
 func directOpenPipelineRead(ctx context.Context, t *testing.T, e *Env, orgID ids.UUID) (minor *int64, count int, found bool) {
 	t.Helper()
+	minor, count, _, found = directOpenPipelineReadPriced(ctx, t, e, orgID)
+	return minor, count, found
+}
+
+// directOpenPipelineReadPriced is the same read plus priced_deal_count, for the
+// tests whose subject is which deals REACHED the sum.
+//
+// Separate rather than a fourth return on every caller, because most of them
+// are about the total and the count of deals; a test that wants to know how
+// many were priced is asking a different question and says so by asking this.
+func directOpenPipelineReadPriced(
+	ctx context.Context, t *testing.T, e *Env, orgID ids.UUID,
+) (minor *int64, count, priced int, found bool) {
+	t.Helper()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT open_pipeline_minor_base, open_deal_count
+			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
 			 FROM organization_open_pipeline_rollup WHERE organization_id = $1`,
-			orgID).Scan(&minor, &count)
+			orgID).Scan(&minor, &count, &priced)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, 0, false
+		return nil, 0, 0, false
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	return minor, count, true
+	return minor, count, priced, true
 }
 
 // computedFieldByKey indexes the assembled rows for the reason/floor
@@ -549,12 +563,20 @@ func TestOrganizationComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *
 			"refuse the figure, never the record", err)
 	}
 
-	minor, count, found := directOpenPipelineRead(e.Admin(), t, e, orgID)
+	minor, count, priced, found := directOpenPipelineReadPriced(e.Admin(), t, e, orgID)
 	if !found {
 		t.Fatal("the view returned no row for an organization with two open deals")
 	}
 	if count != 2 {
 		t.Errorf("open_deal_count = %d, want 2", count)
+	}
+	// BOTH deals reached the sum, which is what makes this a test about the
+	// AGGREGATE. Without it the case passes on a view where neither converted:
+	// a null total and a non-computable field look identical whether the sum
+	// overflowed or nothing was priced at all.
+	if priced != 2 {
+		t.Fatalf("priced_deal_count = %d, want 2 — both deals are in the installation's own currency, so "+
+			"a lower count means this test is measuring something other than the sum's bound", priced)
 	}
 	if minor != nil {
 		t.Errorf("open_pipeline_minor_base = %d, want NULL — a sum that does not fit is not a sum", *minor)
