@@ -2604,6 +2604,19 @@ export const en = {
   // The fast path beside it: reading a profile in another window and typing
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
+  "vcardImport.action": "Import cards",
+  "vcardImport.title": "Import address cards",
+  "vcardImport.fileLabel": "Address card file",
+  "vcardImport.whichFile":
+    "A .vcf file, the format every phone and mail client exports contacts as. A card someone handed you is theirs to give, so these are written straight in rather than queued for approval.",
+  "vcardImport.choose": "Choose a .vcf file",
+  "vcardImport.working": "Reading the cards…",
+  "vcardImport.done": "Close",
+  "vcardImport.noCards": "That file held no cards.",
+  "vcardImport.outcome.created": "Added",
+  "vcardImport.outcome.updated": "Filled in the gaps",
+  "vcardImport.outcome.needsReview": "Looks like someone you already have",
+  "vcardImport.outcome.skipped": "Skipped",
   "create.quickCapture": "Quick capture",
   "create.quickCaptureSaved": "Saved {name}",
   "create.company": "New company",

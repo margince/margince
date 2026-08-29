@@ -203,4 +203,28 @@ describe("choosing a file", () => {
 
     expect(screen.getByText("capture.md, records.md")).toBeTruthy();
   });
+
+  // The zone is used for several kinds of file now, and a caller that narrows
+  // the picker has no other way to tell whether it worked: a wrong or missing
+  // `accept` still opens a dialog, just the wrong one.
+  it("narrows the picker to what the caller asked for", () => {
+    render(
+      <LocaleProvider initial="en">
+        <FileDropzone
+          label="Document"
+          emptyLabel="Choose a .vcf file"
+          accept=".vcf,text/vcard"
+          onPick={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(target().getAttribute("accept")).toBe(".vcf,text/vcard");
+  });
+
+  it("offers every file when the caller narrowed nothing", () => {
+    show(vi.fn());
+
+    expect(target().hasAttribute("accept")).toBe(false);
+  });
 });

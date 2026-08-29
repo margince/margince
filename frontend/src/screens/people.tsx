@@ -75,6 +75,7 @@ import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
+import { VCardImport } from "./vcard-import";
 
 // Contacts list + person 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -438,6 +439,12 @@ export function ContactsScreen() {
               resolveExisting={(_code, id) => ({ screen: "contacts", id })}
               fields={[...contactCreateFields(t), ...cf.formFields]}
             />
+            {/* Last of the three, because it is the one a reader reaches for
+                with a stack of cards already in hand rather than while typing
+                one contact. Beside the others all the same: a handed-over card
+                is a way a contact comes to exist, and every one of those
+                belongs on this list. */}
+            <VCardImport />
           </>
         }
         columns={[
