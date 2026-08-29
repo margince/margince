@@ -124,8 +124,12 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 	}
 }
 
-// outboundSurfaceRoots are the trees that can make an outbound call — the same
-// set the sibling identity gate sweeps.
+// outboundSurfaceRoots are the trees that can make an outbound call: this whole
+// module, and the four the sibling identity gate reaches past it for.
+//
+// Not identical to that gate's set — it names internal, cmd and tools where
+// this walks the module root — and a superset of it, which is the safe
+// direction for a census whose finding is an absence.
 //
 // Past this module on purpose. A request built in an extension, in the CLI or
 // on the desktop leaves the same installation and reaches the same operator,
@@ -151,7 +155,7 @@ func anonymousRequestBuildersIn(file *ast.File) []string {
 		return nil
 	}
 	for _, fn := range requestBuildersIn(file) {
-		if setsUserAgent(fn, requestsBuiltIn(fn.Body, client)) {
+		if everyRequestIsNamed(fn, client) {
 			continue
 		}
 		out = append(out, "func "+fn.Name.Name)
@@ -194,8 +198,53 @@ func buildsARequest(body *ast.BlockStmt, client string) bool {
 	return found
 }
 
-// setsUserAgent reports whether the function writes the caller's name onto the
-// REQUEST IT BUILT.
+// everyRequestIsNamed reports whether EVERY request this function sends carries
+// the caller's name.
+//
+// Every one, not any one. A function that builds two requests and names one
+// sends the other with Go's default agent, and a census satisfied by the first
+// reports a clean tree over the second — which is the same silent absence in a
+// smaller place.
+//
+// A convenience call can never be named: `http.Get` builds and sends inside the
+// call, so there is no request to write a header on. One in a function is
+// therefore final, whatever else that function names.
+func everyRequestIsNamed(fn *ast.FuncDecl, client string) bool {
+	if callsAConvenienceForm(fn.Body, client) {
+		return false
+	}
+	built := requestsBuiltIn(fn.Body, client)
+	if len(built) == 0 {
+		// It sends a request this walk cannot attribute to an identifier — an
+		// inline `http.DefaultClient.Do(mustRequest(…))`, say. Nothing here can
+		// show it named, so it is reported.
+		return false
+	}
+	named := requestsNamedIn(fn.Body, built)
+	for request := range built {
+		if !named[request] {
+			return false
+		}
+	}
+	return true
+}
+
+// callsAConvenienceForm reports whether the function sends through one of the
+// build-and-send helpers, which have nowhere to put a name.
+func callsAConvenienceForm(body *ast.BlockStmt, client string) bool {
+	found := false
+	ast.Inspect(body, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if isCall && isRequestConstructor(call, client) && !buildsAnOwnedRequest(call, client) {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// requestsNamedIn names the built requests this function writes a User-Agent
+// onto.
 //
 // Three things have to line up, and each was a way to read a clean tree over an
 // anonymous call.
@@ -207,13 +256,12 @@ func buildsARequest(body *ast.BlockStmt, client string) bool {
 // A HEADER, not any receiver: a `Set` on a map keyed "User-Agent" writes no
 // header at all.
 //
-// And THIS request's header. A function can build an anonymous `req` and set
-// the agent on something else it holds — a response, an outgoing second
-// request, a header it is composing for a different call — and the request it
-// actually sends still carries Go's default.
-func setsUserAgent(fn *ast.FuncDecl, built map[string]bool) bool {
-	found := false
-	ast.Inspect(fn.Body, func(node ast.Node) bool {
+// And a request this function BUILT. Naming the caller on something else it
+// holds — a response, a request passed in — leaves the one it sends carrying
+// Go's default.
+func requestsNamedIn(body *ast.BlockStmt, built map[string]bool) map[string]bool {
+	named := map[string]bool{}
+	ast.Inspect(body, func(node ast.Node) bool {
 		call, isCall := node.(*ast.CallExpr)
 		if !isCall || len(call.Args) < 2 {
 			return true
@@ -226,17 +274,17 @@ func setsUserAgent(fn *ast.FuncDecl, built map[string]bool) bool {
 		if !onHeader || header.Sel.Name != "Header" {
 			return true
 		}
-		owner, named := header.X.(*ast.Ident)
-		if !named || !built[owner.Name] {
+		owner, isIdent := header.X.(*ast.Ident)
+		if !isIdent || !built[owner.Name] {
 			return true
 		}
 		name, isLit := call.Args[0].(*ast.BasicLit)
 		if isLit && name.Kind == token.STRING && strings.EqualFold(gatekit.TextOf(name), "User-Agent") {
-			found = true
+			named[owner.Name] = true
 		}
-		return !found
+		return true
 	})
-	return found
+	return named
 }
 
 // requestsBuiltIn names the identifiers this function assigns an
@@ -449,6 +497,26 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
 				"\tresp, _ := http.Get(\"https://x.test\")\n" +
 				"\tresp.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n}\n",
+			want: 1,
+		},
+		{
+			// EVERY request, not any one. The second goes out with Go's
+			// default while the first carries a name.
+			name: "one named request does not cover a second in the same function",
+			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
+				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\treq.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n" +
+				"\treq2, _ := http.NewRequest(\"GET\", \"https://y.test\", nil)\n\t_ = req2\n}\n",
+			want: 1,
+		},
+		{
+			// A convenience call can never be named, so one in a function is
+			// final whatever else that function names.
+			name: "a named request does not cover a convenience call beside it",
+			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
+				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\treq.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n" +
+				"\tresp, _ := http.Get(\"https://y.test\")\n\t_ = resp\n}\n",
 			want: 1,
 		},
 		{
