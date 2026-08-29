@@ -559,3 +559,44 @@ func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 		t.Errorf("the same row was reported twice; the dry run's skip and the commit's are one row")
 	}
 }
+
+// A resumed run keeps every refusal it recorded.
+//
+// A finished report can carry more outcomes than the file has rows, from two
+// causes. A stale dry-run skip whose row then committed as a create is one, and
+// dropping the skip is right. A resumed run double-counting after a checkpoint
+// that did not persist is the other, and there the surplus is in
+// created/updated — taking it out of `skipped` erases a row somebody has to go
+// fix.
+//
+// Only a resume can cause the second, so the ATTEMPT count tells them apart.
+// The object count cannot: attempts fold by class, and a CSV import is always
+// exactly one class.
+func TestAResumedRunKeepsItsRefusals(t *testing.T) {
+	skipped := []migration.SkippedRow{{ExternalID: "a@x.test", Line: 2, Reason: "not-a-uuid"}}
+	// Three rows read; a resume counted two of them twice, so the four
+	// dispositions sum to five.
+	report := migration.Report{
+		Attempts: 2,
+		Objects: []migration.ObjectReport{{
+			Object: migration.ObjectLead, MirrorCount: 3, Created: 4, Skipped: skipped,
+		}},
+	}
+	out := toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &report})
+	if out.Disposition.Skipped != 1 {
+		t.Errorf("skipped = %d, want the one refusal the run recorded — a resume's surplus is in "+
+			"created, and taking it out of skipped drops a row somebody has to go fix",
+			out.Disposition.Skipped)
+	}
+	if len(out.Issues) != 1 {
+		t.Errorf("issues = %+v, want the refusal named", out.Issues)
+	}
+
+	// The single-attempt case is unchanged: there the surplus IS a stale skip.
+	single := report
+	single.Attempts = 1
+	out = toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &single})
+	if out.Disposition.Skipped != 0 {
+		t.Errorf("skipped = %d on a single attempt, want the stale skip dropped", out.Disposition.Skipped)
+	}
+}

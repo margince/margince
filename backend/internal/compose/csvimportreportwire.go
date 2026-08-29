@@ -93,10 +93,16 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// skips alone, and everything else is an aggregate. Only the SECOND cause
 	// needs a resume to happen at all, so the attempt count is what tells them
 	// apart — a single-attempt run can only have the first.
-	if committed {
+	//
+	// The OBJECT count cannot stand in for it. Attempts fold by object class, so
+	// a run walked five times still reports one object — and a CSV import is
+	// always exactly one class, so the guard was true on every CSV report and
+	// took a resumed run's surplus out of `skipped`, erasing the refusals this
+	// report exists to name.
+	if committed && run.Report != nil {
 		surplus := out.Disposition.Created + out.Disposition.Updated +
 			out.Disposition.Skipped - out.RowsRead
-		if surplus > 0 && len(run.Report.Objects) == 1 {
+		if surplus > 0 && run.Report.Walks() == 1 {
 			out.Disposition.Skipped = max(out.Disposition.Skipped-surplus, 0)
 		}
 	}
