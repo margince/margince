@@ -27,6 +27,10 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 	// One read for the phase: which source ids already exist. Counting what
 	// this run genuinely created needs the before-state, and asking per
 	// activity was the seeder's worst quadratic.
+	// Who each entry's conversation was with, by dataset position, filled as
+	// the loop below resolves it. The reconciliation reads this rather than
+	// asking again.
+	counterparts := map[int]string{}
 	seenSourceIDs := map[string]seededActivity{}
 	if mode != modeDryRun {
 		loaded, err := loadActivitySourceIDs(c)
@@ -50,10 +54,18 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 		// one account makes that account know everybody.
 		author := seats.as(handlerOf(act, cfg, refs))
 
-		body, err := activityBody(c, refs, act, orgID, i)
+		// The counterpart comes back with the body and is KEPT, rather than
+		// re-derived by the reconciliation below. Who a conversation was with
+		// has to be ONE answer: the repair pass decides by comparing what is on
+		// file against it, and a second derivation that disagreed would relink
+		// activities nothing had changed — on a surface whose retention stamp
+		// the database will not let anyone lift. It is also two paginated reads
+		// per activity that nobody needs twice.
+		body, counterpart, err := activityBody(c, refs, act, orgID, i)
 		if err != nil {
 			return created, err
 		}
+		counterparts[i] = counterpart
 
 		// Idempotent on source_system+source_id, so a re-run replays the same
 		// row and the reply cannot tell a create from a convergence. The
@@ -82,12 +94,15 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 	if err := relinkActivitiesToProjects(c, cfg, refs, seenSourceIDs, mode); err != nil {
 		return created, err
 	}
+	if err := relinkActivitiesToPeople(c, cfg, refs, seenSourceIDs, counterparts, mode); err != nil {
+		return created, err
+	}
 	return created, nil
 }
 
 // activityBody is the write for one dataset entry: which kind it survives as,
 // who and what it links, and the fields that kind is allowed to carry.
-func activityBody(c *client, refs pipelineRefs, act demoActivity, orgID string, i int) (jsonBody, error) {
+func activityBody(c *client, refs pipelineRefs, act demoActivity, orgID string, i int) (jsonBody, string, error) {
 	// One of the two offsets is set: DaysAgo for something that happened,
 	// DaysIn for something still to come.
 	occurred := -act.DaysAgo
@@ -96,13 +111,9 @@ func activityBody(c *client, refs pipelineRefs, act demoActivity, orgID string, 
 	}
 	// Who the activity was with, when it was with anybody — needed both to
 	// pick the kind actually filed and to link that person below.
-	var personID string
-	if act.Kind == "email" || act.Kind == "call" || act.Kind == "meeting" {
-		var err error
-		personID, err = counterpartFor(c, act, orgID)
-		if err != nil {
-			return nil, fmt.Errorf("activity %d on %s: %w", i, act.Company, err)
-		}
+	personID, err := counterpartFor(c, act, orgID)
+	if err != nil {
+		return nil, "", fmt.Errorf("activity %d on %s: %w", i, act.Company, err)
 	}
 	// A meeting or a call the database can reach through nobody there is
 	// filed as a note about the account instead — activity_link_no_company_meeting
@@ -149,7 +160,7 @@ func activityBody(c *client, refs pipelineRefs, act demoActivity, orgID string, 
 			body["due_at"] = refs.timestamp(act.DaysIn)
 		}
 	}
-	return body, nil
+	return body, personID, nil
 }
 
 // handlerOf is the colleague who had this conversation.
@@ -225,6 +236,14 @@ func activityLinks(effectiveKind, personID, orgID string, refs pipelineRefs, act
 // is a heuristic and better than an empty timeline for the ~180 companies the
 // dataset never names.
 func counterpartFor(c *client, act demoActivity, orgID string) (string, error) {
+	// A note or a task is INTERNAL — it is about the account, not with
+	// anybody. The ruling lives here rather than at the call site because
+	// three readers make it: the create, the repair pass, and the post-seed
+	// check. A repair that thought a task had a counterpart would file one
+	// against every note in the demo.
+	if !isConversation(act.Kind) {
+		return "", nil
+	}
 	staff, err := staffBySeniority(c, orgID)
 	if err != nil {
 		return "", err
@@ -310,6 +329,8 @@ func indexSeededActivities(raw json.RawMessage, seen map[string]seededActivity) 
 		SourceSystem string `json:"source_system"`
 		SourceID     string `json:"source_id"`
 		OccurredAt   string `json:"occurred_at"`
+		Subject      string `json:"subject"`
+		Version      int    `json:"version"`
 		Links        []struct {
 			EntityType string `json:"entity_type"`
 			EntityID   string `json:"entity_id"`
@@ -330,13 +351,22 @@ func indexSeededActivities(raw json.RawMessage, seen map[string]seededActivity) 
 		if row.SourceSystem != seedSourceSystem || row.SourceID == "" {
 			continue
 		}
-		found := seededActivity{ID: row.ID, OccurredAt: row.OccurredAt}
+		found := seededActivity{
+			ID: row.ID, OccurredAt: row.OccurredAt,
+			Subject: row.Subject, Version: row.Version,
+		}
 		for _, link := range row.Links {
 			switch link.EntityType {
 			case "project":
 				found.ProjectID = link.EntityID
 			case "organization":
 				found.OrganizationID = link.EntityID
+			case "person":
+				// EVERY one, not the first. This tool writes exactly one
+				// person link, so a second is somebody else's fact — and the
+				// repair has to be able to see there is one before it
+				// replaces anything.
+				found.PersonIDs = append(found.PersonIDs, link.EntityID)
 			}
 		}
 		seen[row.SourceID] = found
@@ -350,6 +380,20 @@ func indexSeededActivities(raw json.RawMessage, seen map[string]seededActivity) 
 type seededActivity struct {
 	ID        string
 	ProjectID string
+	// PersonIDs are the people this activity is already linked to, in the
+	// order the server returned them. A LIST, because the count is the answer
+	// the person repair turns on: this tool writes one, so anything else came
+	// from somewhere it must not overwrite.
+	PersonIDs []string
+	// Subject is what the stored row says it is about, and half of this row's
+	// IDENTITY. Source ids here are positional, so reordering the dataset
+	// renames every row after the insertion — within one company the
+	// organization check cannot see that, and the subject can.
+	Subject string
+	// Version is what the row carried when this snapshot was read. It goes
+	// back to the server as If-Match on any repair, so a row somebody has
+	// touched since is refused rather than overwritten from stale state.
+	Version int
 	// OccurredAt is when the activity says it happened, as the server stored
 	// it. The reconciliation dates against THIS rather than against the
 	// dataset's days_ago offset: the offset is relative to the day the seeder

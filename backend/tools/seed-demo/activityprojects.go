@@ -33,19 +33,12 @@ func relinkActivitiesToProjects(c *client, cfg demoConfig, refs pipelineRefs, se
 		return nil
 	}
 	for i, act := range cfg.Activities {
-		existing, ok := seen[fmt.Sprintf("act-%d", i)]
-		if !ok || existing.ID == "" {
-			// Not on file before this run, so the create above linked it.
-			continue
-		}
-		// The stored row must be the account this entry is about. A source id
-		// here is the entry's POSITION ("act-0", "act-1") and the dataset
-		// gives activities no ref of their own, so inserting an entry in the
-		// middle of the array renames every row after it. Relinking on a
-		// mismatched id would file one company's mail under another company's
-		// project and stamp it with retention nobody can lift, so a
-		// disagreement means leave it alone.
-		if orgID, ok := refs.orgsByDom[strings.ToLower(act.Company)]; !ok || existing.OrganizationID != orgID {
+		// On file before this run, and really the row this entry is about.
+		// Both halves in one place (seededMatch), shared with the person pass:
+		// the question is one question, and getting it wrong costs the same
+		// either way.
+		existing, ok := seededMatch(refs, act, seen, i)
+		if !ok {
 			continue
 		}
 		want, move := projectRelinkFor(refs, act, existing)

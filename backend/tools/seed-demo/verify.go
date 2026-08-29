@@ -39,6 +39,7 @@ func verifySeed(c *client, cfg demoConfig, mode runMode) error {
 		checkEverythingIsOwned,
 		checkPeopleAreEmployed,
 		checkActivitiesReachPeople,
+		checkConversationsNameTheRightPerson,
 		checkDealsHaveStakeholders,
 		checkLifecycleIsSet,
 		checkCoverage,
@@ -196,8 +197,11 @@ func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error
 			return err
 		}
 		for _, act := range rows {
-			// A note or a task is internal — about an account, not with anybody.
-			if act.Kind != "email" && act.Kind != "call" && act.Kind != "meeting" {
+			// A note or a task is internal — about an account, not with
+			// anybody. isConversation, not a third copy of the list: the
+			// create path and the person repair both rule from it, and a
+			// check disagreeing with what it checks is worse than no check.
+			if !isConversation(act.Kind) {
 				continue
 			}
 			conversations++
@@ -219,6 +223,55 @@ func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error
 	return []verifyFinding{{
 		Rule:   "conversations name a person",
 		Detail: fmt.Sprintf("%d mails/calls/meetings link to no person — every contact's timeline is empty", conversations),
+	}}, nil
+}
+
+// checkConversationsNameTheRightPerson catches the installation the person
+// reconciliation exists to repair: the mail is filed against SOMEBODY, so the
+// rule above is satisfied, and it is the wrong human.
+//
+// That is the state an existing database was left in when activities started
+// naming their counterpart per entry (#2767). The create path replays instead
+// of relinking, so the link kept pointing at the account's most senior
+// employee — and a database in that state is indistinguishable from a correct
+// one by every count the seeder prints. Asked who raised a complaint, an
+// assistant reads the sign-off in the body and answers with a name the CRM
+// does not hold.
+//
+// Only entries the dataset NAMES a person for are judged. Everywhere else the
+// senior contact is the honest heuristic and there is no right answer to check
+// against. An activity carrying more than one person link is skipped too, for
+// the reason personRelinkFor leaves it alone: those links did not come from
+// here, and a rule that reported what the repair will never fix is a rule
+// somebody turns off.
+func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFinding, error) {
+	onFile, err := loadActivitySourceIDs(c)
+	if err != nil {
+		return nil, err
+	}
+	var wrong []string
+	for i, act := range cfg.Activities {
+		if act.Person == "" || !isConversation(act.Kind) {
+			continue
+		}
+		existing, ok := onFile[fmt.Sprintf("act-%d", i)]
+		if !ok || len(existing.PersonIDs) != 1 {
+			continue
+		}
+		name, err := personName(c, existing.PersonIDs[0])
+		if err != nil {
+			return nil, err
+		}
+		if !strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(act.Person)) {
+			wrong = append(wrong, fmt.Sprintf("%s signed by %s is filed against %s", act.Company, act.Person, name))
+		}
+	}
+	if len(wrong) == 0 {
+		return nil, nil
+	}
+	return []verifyFinding{{
+		Rule:   "conversations name the right person",
+		Detail: fmt.Sprintf("%d filed against somebody other than who signed them (%s) — re-run the seeder, which repairs this", len(wrong), sample(wrong)),
 	}}, nil
 }
 
