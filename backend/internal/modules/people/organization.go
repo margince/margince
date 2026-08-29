@@ -325,7 +325,11 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 		// every key the request named — and an agent re-sending a human's
 		// description unchanged would otherwise write an agent: row on top of the
 		// human's and hand the column to the next crawl. The display-name stamp
-		// above reads its own key the looser way and is not this change's to move.
+		// above now asks the same question through Patch.Moved. This one cannot:
+		// the description's two images hold different TYPES by construction —
+		// *string as read from the row, string as the request supplied it — and
+		// Moved counts a type change as a move, so it would call every send a
+		// rewrite. describedDifferently compares the values themselves.
 		if describedDifferently(before, after) {
 			// Not the `by` above: stageOrgReplaceSets answers "" unless the edit
 			// also carried a replace-set, and a description edit usually carries
