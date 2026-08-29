@@ -66,6 +66,7 @@ const budgetFixture: Budget = {
   consumed: 120,
   limit: 1000,
   band: "warn",
+  measured: true,
   sources: { force_fresh: 10, poller: 100, capture: 10 },
   headroom: "~unknown",
   search: {
@@ -263,6 +264,30 @@ describe("the overlay card", () => {
     // The server's own `~unknown` sentinel prints verbatim — never a
     // computed substitute.
     expect(screen.getByText(/~unknown/)).toBeTruthy();
+  });
+
+  // An unmeasured snapshot is an accounting outage, not a reading: the
+  // fail-closed shed and its zero consumption must not print as facts, or an
+  // operator debugging our own Redis chases HubSpot quota instead.
+  it("names an accounting outage instead of printing the fail-closed shed as a measured budget", async () => {
+    stubApi({
+      "GET /me": meRoute(OVERLAY_OPERATOR),
+      "GET /overlay/connection": () => jsonResponse(activeConnection),
+      "GET /overlay/sync-status": () => jsonResponse(syncStatusFixture),
+      "GET /overlay/budget": () =>
+        jsonResponse({
+          ...budgetFixture,
+          measured: false,
+          band: "shed",
+          consumed: 0,
+        }),
+    });
+    render(<OverlayCard />);
+    expect(
+      await screen.findByText(/cannot be measured right now/),
+    ).toBeTruthy();
+    expect(screen.queryByText("Shedding load")).toBeNull();
+    expect(screen.queryByText(/0 \/ /)).toBeNull();
   });
 
   it("renders a sync state or budget band this build doesn't recognize as the server's own raw value, not blank or literal 'undefined'", async () => {

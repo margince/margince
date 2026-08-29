@@ -21503,6 +21503,9 @@ type OverlayBudget struct {
 	Headroom *string `json:"headroom,omitempty"`
 	Limit    *int64  `json:"limit,omitempty"`
 
+	// Measured Whether the figures were READ rather than assumed. False on the meter's fail-closed arms — no accounting store reachable, an unconfigured incumbent, a read error — where the bands report the shed a spender must assume, not a measured exhaustion. A surface showing this budget to a human states the difference rather than presenting an accounting outage as quota pressure.
+	Measured *bool `json:"measured,omitempty"`
+
 	// Search The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST.
 	Search *OverlayBudgetSearch `json:"search,omitempty"`
 
