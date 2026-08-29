@@ -126,6 +126,33 @@ type recordingImports struct {
 	stubImports
 	stored    *bool
 	suggested map[string]string
+	columns   []string
+	targets   []string
+	discarded *[]string
+	stageErr  error
+	sawLive   *bool
+}
+
+func (r recordingImports) StageRun(
+	_ context.Context, _ crmcontracts.CreateImportRunRequest,
+) (crmcontracts.ImportRun, error) {
+	if r.stageErr != nil {
+		return crmcontracts.ImportRun{}, r.stageErr
+	}
+	return crmcontracts.ImportRun{}, nil
+}
+
+func (r recordingImports) DiscardSource(ctx context.Context, ref string) error {
+	if r.discarded != nil {
+		*r.discarded = append(*r.discarded, ref)
+	}
+	if r.sawLive != nil {
+		// Read INSIDE the call: the cleanup context is cancelled by its own
+		// defer the moment discarding returns, so a context captured for later
+		// inspection always reads cancelled whatever it was during the call.
+		*r.sawLive = ctx.Err() == nil
+	}
+	return nil
 }
 
 func (r recordingImports) ProfileSource(
@@ -134,10 +161,16 @@ func (r recordingImports) ProfileSource(
 	if r.stored != nil {
 		*r.stored = true
 	}
-	return crmcontracts.ImportSourceProfile{
+	profile := crmcontracts.ImportSourceProfile{
+		SourceRef:        "ws/import-source/stored",
 		Object:           crmcontracts.ImportObject(object),
 		SuggestedMapping: r.suggested,
-	}, nil
+		Targets:          r.targets,
+	}
+	for _, header := range r.columns {
+		profile.Columns = append(profile.Columns, crmcontracts.ImportColumn{Header: header})
+	}
+	return profile, nil
 }
 
 // The approval a person sees says what the import will DO.
@@ -191,4 +224,188 @@ type reportlessImports struct{ stubImports }
 
 func (reportlessImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
 	return crmcontracts.ImportRunReport{}, errors.New("the report is gone")
+}
+
+// TestAProposalThatPlacesOnlySomeColumnsIsRefused is the shape a partial
+// proposal fails in.
+//
+// The proposal matches names and nothing more, so a file spelling its columns
+// the way a human would — "Company", "City", "Band" — reaches only `id`. A
+// screen draws the rest as blanks somebody fills; a tool caller sees a mapping
+// that looks like an answer, validates clean, and commits an update with no
+// changed fields. That is an import reporting success and writing nothing.
+func TestAProposalThatPlacesOnlySomeColumnsIsRefused(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company", "City", "Country", "Band"},
+		targets:   []string{"display_name", "address.city", "address.country", "size_band", "id"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company,City,Country,Band\nx,Acme,Essen,DE,201-500\n"}`))
+	if err == nil {
+		t.Fatal("a proposal that placed one column of five was accepted")
+	}
+	message := err.Error()
+	// Through BadArgsError.Error(), which bounds the CAUSE at 200 bytes and
+	// leaves the guidance alone. Both lists are what a caller has to read, so
+	// both are on the unbounded side — asserted here through the same rendering
+	// a caller sees rather than off the fields.
+	for _, want := range []string{`"Company"`, `"City"`, `"Country"`, `"Band"`, "display_name", "size_band"} {
+		if !strings.Contains(message, want) {
+			t.Errorf("the refusal %q does not name %s — a caller cannot fix what it is not told", message, want)
+		}
+	}
+}
+
+// A proposal that places every column is the one case where accepting the
+// proposal whole is honest, and it still goes through.
+func TestAProposalThatPlacesEveryColumnIsAccepted(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"display_name": "display_name", "size_band": "size_band"},
+		columns:   []string{"display_name", "size_band"},
+		targets:   []string{"display_name", "size_band"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"display_name,size_band\nAcme,201-500\n"}`))
+	if err != nil {
+		t.Fatalf("a complete proposal was refused: %v", err)
+	}
+}
+
+// A caller who named even one column has made a choice about the rest, so the
+// refusal does not fire — the result's `unmapped` list is what reports it.
+func TestACallersOwnMappingIsNotSecondGuessed(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		columns: []string{"Company", "City"},
+		targets: []string{"display_name", "address.city"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"Company,City\nAcme,Essen\n","mapping":{"Company":"display_name"}}`))
+	if err != nil {
+		t.Fatalf("a caller's own partial mapping was refused: %v", err)
+	}
+}
+
+// A refusal after the file is already stored takes the file with it.
+//
+// The tool path stores before it can know the call will succeed, so a refusal
+// past that point leaves an orphan blob — storage a caller can spend by
+// repeating a call that fails. importSeam.ProfileSource hoists its
+// authorization check for exactly that reason; this is the same concern one
+// step later.
+func TestARefusedPreviewDoesNotLeaveItsFileBehind(t *testing.T) {
+	var discarded []string
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+		discarded: &discarded,
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`))
+	if err == nil {
+		t.Fatal("a partial proposal was accepted")
+	}
+	if len(discarded) != 1 || discarded[0] != "ws/import-source/stored" {
+		t.Errorf("discarded = %v, want the stored source the refused call left behind", discarded)
+	}
+}
+
+// A refusal that names every unplaced column, on a file wide enough that the
+// bounded half of the message could not have carried them.
+//
+// This is the case that moved both lists out of the cause: BadArgsError echoes
+// the cause through 200 bytes, and a dozen headers is well past it — so a
+// message built there stops naming the columns it is about exactly when there
+// are the most of them to name.
+func TestAWideFilesRefusalStillNamesEveryColumn(t *testing.T) {
+	columns := append([]string{"id"},
+		"Company Legal Name", "Trading As", "Street Address", "City", "Postal Code",
+		"Country", "Employee Band", "Annual Revenue", "Primary Website", "Industry Sector")
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   columns,
+		targets:   []string{"display_name", "id"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id\nx\n"}`))
+	if err == nil {
+		t.Fatal("a proposal that placed one column of eleven was accepted")
+	}
+	for _, want := range columns[1:] {
+		if !strings.Contains(err.Error(), `"`+want+`"`) {
+			t.Errorf("the refusal does not name %q:\n%s", want, err.Error())
+		}
+	}
+}
+
+// An explicit `"mapping": {}` is the same question as an omitted one.
+//
+// It names no column, so it is not a choice about the columns — it is the
+// absence of one, and what would be used either way is the proposal. Refused in
+// the same words rather than falling through to the thinner `mapping=empty`,
+// which says a run would import nothing without saying what the file held.
+func TestAnEmptyMappingIsTheSameQuestionAsNoMapping(t *testing.T) {
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n","mapping":{}}`))
+	if err == nil {
+		t.Fatal("an empty mapping accepted a proposal that placed one column of two")
+	}
+	if !strings.Contains(err.Error(), `"Company"`) {
+		t.Errorf("the refusal does not name the column it could not place:\n%s", err.Error())
+	}
+}
+
+// A staging failure keeps its file, because a run already references it.
+//
+// stageRun persists its run before it validates, and a run that failed
+// validation is resumable from its SourceRef — so discarding here would turn a
+// run somebody can fix into one nobody can. The refusal BEFORE staging is the
+// only one where the file is provably unreferenced.
+func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
+	var discarded []string
+	_, err := previewImport{imports: recordingImports{
+		suggested: map[string]string{"id": "id", "Company": "display_name"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+		discarded: &discarded,
+		stageErr:  errors.New("the estate refused this mapping"),
+	}}.Handle(context.Background(), json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`))
+	if err == nil {
+		t.Fatal("a staging failure was reported as success")
+	}
+	if len(discarded) != 0 {
+		t.Errorf("discarded = %v, and a failed run is resumable from that source", discarded)
+	}
+}
+
+// The cleanup survives the caller hanging up.
+//
+// A request cancelled between the store and the refusal is exactly when the
+// file is most certainly unwanted, and a discard that took the cancelled
+// context with it would leave the orphan precisely then — a caller could spend
+// storage by cancelling.
+func TestACancelledPreviewStillTakesItsFile(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	live := false
+	discarded := []string{}
+	imports := recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+		discarded: &discarded,
+		sawLive:   &live,
+	}
+	cancel()
+	if _, err := (previewImport{imports: imports}).Handle(ctx, json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`)); err == nil {
+		t.Fatal("a partial proposal was accepted")
+	}
+	if len(discarded) != 1 {
+		t.Fatalf("discarded = %v, and the refused call stored a file", discarded)
+	}
+	if !live {
+		t.Error("the discard ran on a cancelled context, so the store would refuse it and the " +
+			"file would outlive the call that stored it")
+	}
 }

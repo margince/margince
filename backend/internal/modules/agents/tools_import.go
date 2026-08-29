@@ -45,6 +45,15 @@ type Imports interface {
 	// ProfileSource stores CSV text and reads back what its columns contain,
 	// with a proposed mapping. The agent-shaped half of uploadImportSource.
 	ProfileSource(ctx context.Context, object, csv string) (crmcontracts.ImportSourceProfile, error)
+	// DiscardSource removes a stored source no run will ever reference.
+	//
+	// The tool path stores the file BEFORE it can know whether the call will
+	// succeed, so a refusal after that point leaves an orphan blob — storage a
+	// caller can spend by repeating a call that fails. importSeam.ProfileSource
+	// hoists the authorization check for exactly that reason; this is the same
+	// concern one step later, where the refusal is about the file's own shape
+	// rather than about who is asking.
+	DiscardSource(ctx context.Context, ref string) error
 	// StageRun validates a mapping against the estate and parks the run for a
 	// human. Writes no domain rows.
 	StageRun(ctx context.Context, req crmcontracts.CreateImportRunRequest) (crmcontracts.ImportRun, error)
@@ -106,88 +115,6 @@ const (
 // with a person at it.
 const maxImportCSVBytes = 1_000_000
 
-type previewImport struct{ imports Imports }
-
-func (t previewImport) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "preview_import", Title: "Preview an import", Version: toolVersionV1,
-		Description:   previewImportCopy.render(),
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createImportRun",
-		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{
-			"object":{"type":"string","enum":["` + importObjectOrganization + `","` + importObjectLead + `","` + importObjectPerson + `"]},
-			"csv":{"type":"string","description":"The file's contents, header row first."},
-			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a PERSON run, map the company column to \"organization_name\" to link each person to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the person still lands."},
-			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For people an address already held is refused either way — an email is a real key, a company name is not."}},
-			"additionalProperties":false}`),
-		OutputSchema: schemaFor[ImportPreviewResult](),
-	}
-}
-
-func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		Object      string            `json:"object"`
-		CSV         string            `json:"csv"`
-		Mapping     map[string]string `json:"mapping"`
-		OnDuplicate string            `json:"on_duplicate"`
-	}
-	if err := decodeArgs(in, &args); err != nil {
-		return nil, err
-	}
-	if err := refuseUnimportableObject(args.Object); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(args.CSV) == "" {
-		return nil, &BadArgsError{Cause: errors.New(
-			"`csv` is empty; send the file's contents with its header row first")}
-	}
-	if len(args.CSV) > maxImportCSVBytes {
-		return nil, &BadArgsError{Cause: fmt.Errorf(
-			"this file is %d bytes and one pasted import takes at most %d; "+
-				"upload it in the web app instead, or split it",
-			len(args.CSV), maxImportCSVBytes)}
-	}
-
-	profile, err := t.imports.ProfileSource(ctx, args.Object, args.CSV)
-	if err != nil {
-		return nil, err
-	}
-	// The caller's mapping wins where it names a column, and the proposal
-	// fills the rest. A caller that sends none gets the proposal whole —
-	// which is honest rather than convenient, because the report says what
-	// each column became and a person reads it before anything commits.
-	mapping := make(map[string]string, len(profile.SuggestedMapping))
-	for column, field := range profile.SuggestedMapping {
-		mapping[column] = field
-	}
-	for column, field := range args.Mapping {
-		mapping[column] = field
-	}
-
-	req := crmcontracts.CreateImportRunRequest{
-		Connector: crmcontracts.CreateImportRunRequestConnector(importConnectorCSV),
-		Object:    profile.Object,
-		SourceRef: profile.SourceRef,
-		Mapping:   mapping,
-	}
-	if args.OnDuplicate != "" {
-		policy := crmcontracts.ImportOnDuplicate(args.OnDuplicate)
-		req.OnDuplicate = &policy
-	}
-	run, err := t.imports.StageRun(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(ImportPreviewResult{
-		Run:      importRunResult(run),
-		Mapping:  mapping,
-		Columns:  columnNames(profile),
-		Unmapped: unmappedColumns(profile, mapping),
-	})
-}
-
 // importConnectorCSV is the connector a pasted file is: the same one the
 // upload door uses, because it IS the same path — only the way the bytes
 // arrived differs.
@@ -210,32 +137,6 @@ func refuseUnimportableObject(object string) error {
 	}
 	return &BadArgsError{Cause: fmt.Errorf("`object` must be one of %s",
 		strings.Join(importObjectEnum, ", "))}
-}
-
-// columnNames lists what the file actually contains, so a caller that guessed
-// a mapping can see the header it guessed against.
-func columnNames(p crmcontracts.ImportSourceProfile) []string {
-	out := make([]string, 0, len(p.Columns))
-	for _, c := range p.Columns {
-		out = append(out, c.Header)
-	}
-	return out
-}
-
-// unmappedColumns names the columns nothing will read.
-//
-// It is reported rather than refused: a file usually carries columns this
-// product has no field for, and dropping them is the normal outcome. What is
-// not acceptable is dropping them SILENTLY — a caller who mistyped a field
-// name would otherwise see a clean report and a column quietly missing.
-func unmappedColumns(p crmcontracts.ImportSourceProfile, mapping map[string]string) []string {
-	var out []string
-	for _, c := range p.Columns {
-		if field, ok := mapping[c.Header]; !ok || field == "" {
-			out = append(out, c.Header)
-		}
-	}
-	return out
 }
 
 type readImportRun struct{ imports Imports }

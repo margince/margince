@@ -19,6 +19,8 @@ func (stubImports) ProfileSource(context.Context, string, string) (crmcontracts.
 	return crmcontracts.ImportSourceProfile{}, nil
 }
 
+func (stubImports) DiscardSource(context.Context, string) error { return nil }
+
 func (stubImports) StageRun(context.Context, crmcontracts.CreateImportRunRequest) (crmcontracts.ImportRun, error) {
 	return crmcontracts.ImportRun{Status: awaitingApproval}, nil
 }

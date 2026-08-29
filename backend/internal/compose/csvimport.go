@@ -100,6 +100,24 @@ func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Reques
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// discardSource removes a stored import source. Keyed the same way it was
+// written, so a ref from another workspace names a key this one never wrote.
+func (h importHandlers) discardSource(ctx context.Context, ref string) error {
+	if h.blobs == nil {
+		return fmt.Errorf("this role stores no objects, so it holds no import source: %w", apperrors.ErrConflict)
+	}
+	// The SAME check staging makes, not a prefix of it. A prefix admits a key
+	// with extra segments under this workspace's import namespace, and answers
+	// forbidden — which tells a caller that a reference they were never given
+	// belongs to somebody. ownsSource matches the whole minted key and answers
+	// not-found, and a delete is not the place to start disagreeing with the
+	// read about what a source ref is.
+	if err := h.ownsSource(ctx, ref); err != nil {
+		return err
+	}
+	return h.blobs.Delete(ctx, ref)
+}
+
 // profileAndStore is everything the upload does once it HAS the bytes: read the
 // header, propose a mapping, put the file where a run can find it.
 //

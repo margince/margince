@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 59,
-    "tokens": 18721,
+    "tokens": 18776,
     "median_tool_tokens": 275,
-    "mean_tool_tokens": 316
+    "mean_tool_tokens": 317
   },
   "agents": [
     {
@@ -75,7 +75,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 653
+      "tokens": 708
     },
     {
       "name": "update_record",
