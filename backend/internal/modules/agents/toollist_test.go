@@ -73,9 +73,10 @@ func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
 		"no attendee's timeline",
 		"the company sees nothing",
 		// And what doing it in two calls costs instead, including the one
-		// destination that still asks a human.
+		// destination that still waits on a person — said as what it does to
+		// the link, not only that somebody is asked.
 		"a second write",
-		"onto a project it asks a human",
+		"stages an approval a human must decide before it takes effect",
 	} {
 		if !strings.Contains(schema, want) {
 			t.Errorf("the links argument no longer says %q:\n%s", want, schema)

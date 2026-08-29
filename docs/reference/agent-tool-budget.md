@@ -25,8 +25,8 @@ feature is expected to argue with.
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2367 | 9% | 14633 | 15 | 8 |
-| _whole served catalog, for scale_ | 59 | 18813 | 78% | — | — | — |
+| `overnight_at_risk_sweep` | 7 | 2384 | 9% | 14616 | 15 | 8 |
+| _whole served catalog, for scale_ | 59 | 18830 | 78% | — | — | — |
 
 ### `morning_brief`
 
@@ -55,7 +55,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2367 tokens, leaving 14633 of its budget and 21633 tokens of the
+Attaches 7 tools for 2384 tokens, leaving 14616 of its budget and 21616 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -134,7 +134,7 @@ a term in an addition.
 |---|---:|---:|
 | `run_report` | 1213 | 3 scenarios |
 | `preview_import` | 708 | — |
-| `log_activity` | 625 | 1 scenario |
+| `log_activity` | 642 | 1 scenario |
 | `update_record` | 603 | 4 scenarios |
 | `send_account_email` | 545 | — |
 | `resolve_entities` | 513 | — |
