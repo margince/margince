@@ -30297,9 +30297,24 @@ components:
             Absent — not empty — on a workspace that is not running in overlay mode:
             an installation with no incumbent connected does not look here, which is a
             different fact from a healthy sync.
+        capture_health:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            The reader's OWN capture connections needing the reader's hand: a mailbox
+            wanting re-authentication, a connection in error, a sync failing, a history
+            import that ended in error. One card per connection, carrying its worst
+            condition; `kind` names the condition and `detail` carries the mailbox (its
+            account label, or the provider where none was recorded). Fixing the
+            connection lives on the capture settings screen, so the card offers no verbs.
+
+            Capture is per-user, so this lane is each reader's own mailboxes and nobody
+            else's. Withheld — named in `lanes_omitted` — for a caller with no human
+            behind it. Absent — not empty — on an installation whose feed does not read
+            capture connections.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health, capture_health] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30360,6 +30375,12 @@ components:
           description: >-
             How many sync concerns the lane carries — one per condition, so this is
             the full count, never a bounded page of a larger one.
+        capture_health:
+          type: integer
+          minimum: 0
+          description: >-
+            How many capture connections need the reader's hand — one per connection,
+            the full count rather than a bounded page.
 
 
     AttentionItem:
@@ -30374,7 +30395,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

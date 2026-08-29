@@ -1249,6 +1249,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 // Defines values for AttentionLanesOmitted.
 const (
 	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
+	AttentionLanesOmittedCaptureHealth     AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
 	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
@@ -1265,6 +1266,8 @@ const (
 func (e AttentionLanesOmitted) Valid() bool {
 	switch e {
 	case AttentionLanesOmittedAtRisk:
+		return true
+	case AttentionLanesOmittedCaptureHealth:
 		return true
 	case AttentionLanesOmittedCommitments:
 		return true
@@ -1352,6 +1355,7 @@ func (e AttentionItemActions) Valid() bool {
 const (
 	AttentionItemSourceApproval          AttentionItemSource = "approval"
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
+	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
@@ -1369,6 +1373,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceApproval:
 		return true
 	case AttentionItemSourceBriefItem:
+		return true
+	case AttentionItemSourceCaptureHealth:
 		return true
 	case AttentionItemSourceConversationClaim:
 		return true
@@ -13684,6 +13690,19 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read deals.
 	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
 
+	// CaptureHealth The reader's OWN capture connections needing the reader's hand: a mailbox
+	// wanting re-authentication, a connection in error, a sync failing, a history
+	// import that ended in error. One card per connection, carrying its worst
+	// condition; `kind` names the condition and `detail` carries the mailbox (its
+	// account label, or the provider where none was recorded). Fixing the
+	// connection lives on the capture settings screen, so the card offers no verbs.
+	//
+	// Capture is per-user, so this lane is each reader's own mailboxes and nobody
+	// else's. Withheld — named in `lanes_omitted` — for a caller with no human
+	// behind it. Absent — not empty — on an installation whose feed does not read
+	// capture connections.
+	CaptureHealth *[]AttentionItem `json:"capture_health,omitempty"`
+
 	// Commitments Promises this rep made that are coming due, most overdue first — each with the
 	// message it was read from, so the reader can check it against what was written.
 	//
@@ -13824,6 +13843,9 @@ type AttentionThisMorningState string
 type AttentionCounts struct {
 	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
 	AtRisk *int `json:"at_risk,omitempty"`
+
+	// CaptureHealth How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page.
+	CaptureHealth *int `json:"capture_health,omitempty"`
 
 	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`

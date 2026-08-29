@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -178,7 +179,7 @@ type ConnectionView struct {
 func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return nil, errors.New("capture: only a human lists their connections")
+		return nil, fmt.Errorf("capture: only a human lists their connections: %w", apperrors.ErrPermissionDenied)
 	}
 	var out []ConnectionView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -239,7 +240,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return errors.New("capture: only a human disconnects a connector")
+		return fmt.Errorf("capture: only a human disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {

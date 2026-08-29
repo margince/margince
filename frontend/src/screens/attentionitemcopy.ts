@@ -35,6 +35,11 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "sync_health") {
     return t(`day.syncHealth.kind.${syncNoun(item.kind)}` as const);
   }
+  // A capture concern's sentence likewise: the server names the condition,
+  // the card's detail names the mailbox, and the locale writes the line.
+  if (item.source === "capture_health") {
+    return t(`day.captureHealth.kind.${captureNoun(item.kind)}` as const);
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
 }
 
@@ -54,6 +59,27 @@ function syncNoun(
     kind === "budget_degraded" ||
     kind === "objects_stale" ||
     kind === "backfill_incomplete"
+  ) {
+    return kind;
+  }
+  return "generic";
+}
+
+// Which mailbox condition a capture concern names; anything unrecognised
+// takes the generic line rather than guessing at what broke.
+function captureNoun(
+  kind: string | undefined,
+):
+  | "reauth_required"
+  | "connection_error"
+  | "sync_failing"
+  | "backfill_failed"
+  | "generic" {
+  if (
+    kind === "reauth_required" ||
+    kind === "connection_error" ||
+    kind === "sync_failing" ||
+    kind === "backfill_failed"
   ) {
     return kind;
   }

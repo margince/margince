@@ -29,7 +29,7 @@ func (s *stubDSRs) OpenDueSoonest(context.Context, int) ([]DSRCase, error) {
 func dsrLaneService(dsrs DSRs) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, dsrs, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, dsrs, nil, nil, nil, fixedClock)
 }
 
 func TestAnOpenRequestReachesTheAdminWithItsDeadline(t *testing.T) {

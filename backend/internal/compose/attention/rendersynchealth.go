@@ -42,3 +42,26 @@ func syncItem(concern SyncConcern) crmcontracts.AttentionItem {
 	}
 	return item
 }
+
+// captureItem draws one capture concern. Like the sync card it carries no
+// subject and no verbs — fixing a mailbox lives on the capture settings
+// screen. `kind` names the condition; `detail` names the mailbox in the
+// reader's own terms: the account label the connector reported, or the
+// provider where none was.
+func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
+	kind := concern.Kind
+	mailbox := concern.AccountLabel
+	if mailbox == "" {
+		mailbox = concern.Provider
+	}
+	item := crmcontracts.AttentionItem{
+		Id:      concern.ConnectionID.String(),
+		Source:  crmcontracts.AttentionItemSource("capture_health"),
+		Kind:    &kind,
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
+	if mailbox != "" {
+		item.Detail = &mailbox
+	}
+	return item
+}

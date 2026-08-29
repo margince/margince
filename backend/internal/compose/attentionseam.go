@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/overlay"
@@ -468,6 +469,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// that serves the feed. A workspace not in overlay mode answers
 		// ErrModeNotOverlay and the lane stays absent.
 		attentionSyncHealth{svc: overlayReadService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{}), meter)},
+		// The reader's own mailbox connections, through the capture module's
+		// registry over the same rows the settings screen lists. Built bare —
+		// no sink, no authority, no vault — so the lane lives on every role
+		// that serves the feed; HealthConcerns' own doc states the reach this
+		// construction depends on.
+		attentionCaptureHealth{registry: capture.NewRegistry(db, nil, nil, nil)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

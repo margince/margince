@@ -332,3 +332,23 @@ type SyncConcern struct {
 	// Objects are the canonical classes a stale/backfilling concern covers.
 	Objects []string
 }
+
+// CaptureHealth is the reader's own capture connections needing the reader's
+// hand — re-authentication, a connection in error, a failing sync, a history
+// import that ended in error. One concern per connection, its worst condition,
+// derived by the capture module from the same view its settings screen lists.
+//
+// Capture is per-user, so the seam refuses a principal with no human behind
+// it and the lane renders that refusal as withheld.
+type CaptureHealth interface {
+	CaptureConcerns(ctx context.Context) ([]CaptureConcern, error)
+}
+
+// CaptureConcern is one mailbox connection needing its owner.
+type CaptureConcern struct {
+	ConnectionID ids.UUID
+	Kind         string
+	Provider     string
+	// AccountLabel is the display-only mailbox address when one was recorded.
+	AccountLabel string
+}

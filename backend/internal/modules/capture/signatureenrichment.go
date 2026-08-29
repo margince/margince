@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -37,7 +38,7 @@ import (
 func (r *Registry) SetSignatureEnrichment(ctx context.Context, name string, enabled *bool) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return ConnectionView{}, errors.New("capture: only a human sets a mailbox's signature-enrichment answer")
+		return ConnectionView{}, fmt.Errorf("capture: only a human sets a mailbox's signature-enrichment answer: %w", apperrors.ErrPermissionDenied)
 	}
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection
