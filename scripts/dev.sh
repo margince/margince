@@ -527,6 +527,24 @@ wait_ready() { # url timeout_s — only a 2xx counts as ready (a 401/500/503 is 
   return 1
 }
 
+# still_running pid grace_s — the readiness check for a process that serves no
+# port. The api and the FE are probed over HTTP; the worker answers nothing, so
+# the only thing that can be asked about it is whether it is still there.
+#
+# It is asked because the worker's failure mode is exiting DURING boot — a
+# config it refuses, a provider key it needs, a bus it cannot reach — and the
+# grace period is what separates that from a process that is simply slow to
+# settle. A worker that dies later in the session is a different problem and
+# not one a start-up script can watch for.
+still_running() {
+  local pid="$1" grace="$2"
+  for _ in $(seq 1 "$grace"); do
+    kill -0 "$pid" 2>/dev/null || return 1
+    sleep 1
+  done
+  kill -0 "$pid" 2>/dev/null
+}
+
 # A stack that outlives the shell that started it is the worst failure mode this
 # script has: an api from an earlier branch keeps answering while Vite serves the
 # code you just wrote, and the app breaks in ways that look exactly like your bug.
@@ -984,6 +1002,21 @@ up)
     --retention-interval 720h \
     "${ai_flag[@]+"${ai_flag[@]}"}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
   worker_pid=$!
+  # A dead worker is indistinguishable from a broken feature, which is what
+  # makes it expensive: every queue-backed lane still ACCEPTS work, durably and
+  # with no error, and simply never runs it. A record arrives, the row says
+  # waiting, the timeline stays empty, and the obvious readings — a bad
+  # signature, a broken drain, a bug in the pipeline — are all wrong and each
+  # costs an afternoon to rule out. The stack has to say so itself, because the
+  # only visible evidence is a process that is not in the list.
+  if ! still_running "$worker_pid" 3; then
+    echo "FAIL: $label worker exited during boot — no queued job will ever run" >&2
+    echo "  Its own reason is in the log, under the 'worker' role:" >&2
+    echo "    make dev-logs${slug:+ DEV_SLUG=$slug} ROLE=worker" >&2
+    echo "    ${log}" >&2
+    kill "$be_pid" "$fe_pid" 2>/dev/null || true
+    exit 1
+  fi
   if [[ "$gmail_enabled" == "1" ]]; then
     echo "  worker   background relay + Surface-B runner + time-scan + Gmail sync (poll every 30s)"
   else
