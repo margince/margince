@@ -633,6 +633,50 @@ function warnWhenHolding(
   return (items ?? []).length > 0 ? "warn" : undefined;
 }
 
+// The optional lanes and their tones, in one derivation: absent means the
+// installation does not serve the lane, empty means it looked and found
+// nothing — the two draw differently, so they stay apart. A lane whose every
+// row is bad news (a broken promise, a legal clock, a dead pipe, a send into
+// the void) is warn-toned exactly while it HOLDS something: a warn tint over
+// good news would dress it as bad.
+function optionalDay(day: Attention) {
+  const atRisk = day.at_risk;
+  const failed = day.did_not_run;
+  const requests = day.dsr;
+  const syncConcerns = day.sync_health;
+  const mailboxes = day.capture_health;
+  const troubledRuns = day.ai_work_health;
+  const undelivered = day.bounces;
+  return {
+    commitments: day.commitments,
+    atRisk,
+    failed,
+    requests,
+    syncConcerns,
+    syncTone: warnWhenHolding(syncConcerns),
+    mailboxes,
+    mailboxTone: warnWhenHolding(mailboxes),
+    troubledRuns,
+    troubledTone: warnWhenHolding(troubledRuns),
+    undelivered,
+    undeliveredTone: warnWhenHolding(undelivered),
+    requestsTone: warnWhenHolding(requests),
+    failedTone: warnWhenHolding(failed),
+    lapsed: day.relationship_decay,
+    driftingTone: warnWhenHolding(atRisk),
+    meetingsTotal: day.counts.meetings ?? 0,
+    atRiskTotal: day.counts.at_risk ?? 0,
+    requestsTotal: day.counts.dsr ?? 0,
+    failedTotal: day.counts.did_not_run ?? 0,
+    syncTotal: day.counts.sync_health ?? 0,
+    mailboxTotal: day.counts.capture_health ?? 0,
+    troubledTotal: day.counts.ai_work_health ?? 0,
+    undeliveredTotal: day.counts.bounces ?? 0,
+    lapsedTotal: day.counts.relationship_decay ?? 0,
+    commitmentsTotal: day.counts.commitments ?? 0,
+  };
+}
+
 function TodayLanes({
   day,
   complete,
@@ -645,41 +689,37 @@ function TodayLanes({
   const needsYou = day.needs_you ?? [];
   const planned = day.planned ?? [];
   // Absent means this installation serves no commitments lane; empty means the
-  // rep owes nothing today. The two draw differently, so they stay apart.
-  const commitments = day.commitments;
-  // Same absent-versus-empty rule: no lane at all when nothing reads deals.
-  const atRisk = day.at_risk;
-  // Decisions this reader approved whose released work then failed. Warn-toned
-  // whenever it holds anything: every row is a promise the product broke.
-  const failed = day.did_not_run;
-  // Data-subject requests with running legal clocks. Only a DSR admin is
-  // served this lane at all; warn-toned whenever it holds anything, because
-  // every row is a deadline the law set.
-  const requests = day.dsr;
-  // The overlay sync's concerns. Absent on a workspace not running in
-  // overlay mode; warn-toned whenever it holds anything, because every row
-  // is data a rep is reading going stale or a connection not syncing.
-  const syncConcerns = day.sync_health;
-  const syncTone = warnWhenHolding(syncConcerns);
-  // The reader's own mailbox connections needing their hand. Withheld for a
-  // caller with no human behind it; warn-toned whenever it holds anything,
-  // because every row is capture silently not happening.
-  const mailboxes = day.capture_health;
-  const mailboxTone = warnWhenHolding(mailboxes);
-  // The reader's own AI work that went wrong — failed in the window, or
-  // stalled past its lease. Withheld for a caller with no human behind it.
-  const troubledRuns = day.ai_work_health;
-  const troubledTone = warnWhenHolding(troubledRuns);
-  // The reader's own sends that never arrived. Warn-toned whenever it holds
-  // anything: every row is a thread the rep may be following up into a void.
-  const undelivered = day.bounces;
-  const undeliveredTone = warnWhenHolding(undelivered);
-  const requestsTone = warnWhenHolding(requests);
-  const failedTone = warnWhenHolding(failed);
-  const lapsed = day.relationship_decay;
-  // Tinted only when the lane HAS a finding: a warn-toned panel drawn over "no
-  // deal is drifting" would dress good news as bad.
-  const driftingTone = warnWhenHolding(atRisk);
+  // rep owes nothing today. The two draw differently, so they stay apart —
+  // and each warn-only-when-holding lane's tone rides beside it (the comments
+  // on OptionalDay say what each lane is).
+  const {
+    commitments,
+    atRisk,
+    failed,
+    requests,
+    syncConcerns,
+    syncTone,
+    mailboxes,
+    mailboxTone,
+    troubledRuns,
+    troubledTone,
+    undelivered,
+    undeliveredTone,
+    requestsTone,
+    failedTone,
+    lapsed,
+    driftingTone,
+    meetingsTotal,
+    atRiskTotal,
+    requestsTotal,
+    failedTotal,
+    syncTotal,
+    mailboxTotal,
+    troubledTotal,
+    undeliveredTotal,
+    lapsedTotal,
+    commitmentsTotal,
+  } = optionalDay(day);
   const meetings = day.meetings;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
@@ -737,7 +777,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="meetings"
-        total={day.counts.meetings ?? 0}
+        total={meetingsTotal}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}
@@ -774,7 +814,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="at_risk"
-        total={day.counts.at_risk ?? 0}
+        total={atRiskTotal}
         tone={driftingTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -790,7 +830,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="dsr"
-        total={day.counts.dsr ?? 0}
+        total={requestsTotal}
         tone={requestsTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -806,7 +846,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="did_not_run"
-        total={day.counts.did_not_run ?? 0}
+        total={failedTotal}
         tone={failedTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -822,7 +862,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="sync_health"
-        total={day.counts.sync_health ?? 0}
+        total={syncTotal}
         tone={syncTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -838,7 +878,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="capture_health"
-        total={day.counts.capture_health ?? 0}
+        total={mailboxTotal}
         tone={mailboxTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -854,7 +894,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="bounces"
-        total={day.counts.bounces ?? 0}
+        total={undeliveredTotal}
         tone={undeliveredTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -870,7 +910,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="ai_work_health"
-        total={day.counts.ai_work_health ?? 0}
+        total={troubledTotal}
         tone={troubledTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
@@ -886,7 +926,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="relationship_decay"
-        total={day.counts.relationship_decay ?? 0}
+        total={lapsedTotal}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}
@@ -901,7 +941,7 @@ function TodayLanes({
         }}
         omitted={omitted}
         lane="commitments"
-        total={day.counts.commitments ?? 0}
+        total={commitmentsTotal}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

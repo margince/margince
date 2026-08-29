@@ -376,8 +376,8 @@ type TroubledRun struct {
 }
 
 // Bounces is the reader's own sends whose delivery reports came back hard —
-// read from the bounce stamp on the send's row, so the lane and the timeline
-// cannot disagree about whether a message arrived.
+// read from the bounce stamp on the send's row, the same fact the timeline
+// shows, rather than from a second reading of the capture stream.
 //
 // Per-user like the health lanes beside it: the read refuses a principal with
 // no human behind it, and the lane renders that refusal as withheld.
