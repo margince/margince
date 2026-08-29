@@ -87,6 +87,51 @@ func (s *Service) EffectiveAuthority(ctx context.Context, workspaceID, humanID i
 	return rbac, seat, err
 }
 
+// AdmittedAuthority answers the whole admission question in one snapshot: the
+// passport is still live, and this is the granting human's seat and RBAC as of
+// that same instant.
+//
+// The passport is re-asked HERE, inside the transaction the seat read already
+// opens, which is what makes the check cost a predicate rather than a round
+// trip. That matters because it runs on every tool call: a run authenticates
+// once at start and then executes for its whole wall clock, so this asking is
+// the "next token lookup" revocation is documented as binding at.
+//
+// It reuses passportStillLiveQuery rather than restating the rule, so a
+// condition added to authentication reaches admission without anybody
+// remembering to come here.
+func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, passportID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	var (
+		rbac authz.RBAC
+		seat principal.SeatType
+	)
+	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, seatType string) error {
+		// A ZERO passport is a principal holding no credential — the product
+		// acting under a policy, derived from a live human at construction
+		// rather than from a token somebody can revoke. There is nothing to
+		// re-ask about, and asking anyway would refuse every such call.
+		// platform/auth's Admit names the two paths that mint one.
+		if !passportID.IsZero() {
+			var live int
+			err := tx.QueryRow(ctx, passportStillLiveQuery, passportID, humanID).Scan(&live)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			}
+			if err != nil {
+				return err
+			}
+		}
+		_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
+		if err != nil {
+			return err
+		}
+		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams)}
+		seat = principal.SeatType(seatType)
+		return nil
+	})
+	return rbac, seat, err
+}
+
 // SeatType reads the human's current seat — the A62/ADR-0047 licensing
 // ceiling the gate checks before any tier reasoning.
 func (s *Service) SeatType(ctx context.Context, workspaceID, humanID ids.UUID) (principal.SeatType, error) {

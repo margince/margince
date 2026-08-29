@@ -111,13 +111,33 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	if !ok || p.OnBehalfOf.IsZero() {
 		return ctx, fmt.Errorf("gate: %s: agent principal lacks workspace or granting human: %w", spec.Name, apperrors.ErrPermissionDenied)
 	}
-	seat, err := g.authority.SeatType(ctx, wsID, p.OnBehalfOf)
+	// ONE read, answering three questions about one instant.
+	//
+	// The passport's own liveness is asked HERE and not only at authentication,
+	// which is the whole of RT-AR-M11 rather than half of it. A run
+	// authenticates once at start and then executes for its whole wall clock,
+	// so revoking a passport mid-run used to stop nothing: revocation binds "at
+	// the next token lookup", and inside a run there was no next lookup. This
+	// call is that lookup, on every tool.
+	//
+	// A principal carrying NO passport is not waved past that — it holds no
+	// credential for anybody to revoke. Two production paths mint one: an
+	// extension job tick (compose/extjobsrun.go), whose authority is the job
+	// owner's plus the declared scope the manifest asked for, and the
+	// auto-apply actor (compose/autoapply.go), whose authority is the record
+	// owner's plus a write scope. Both are the PRODUCT acting under a policy,
+	// derived from a live human at construction, and neither is a long-lived
+	// token. A third one is a decision rather than an oversight, which is what
+	// gates/passportlessagents_test.go keeps true.
+	//
+	// The seat and the grants come back together for the reason identity's own
+	// EffectiveAuthority gives: read separately they can compose an authority
+	// the member never held, a role change and a seat change crossing between
+	// two transactions leaving permissions from before beside a seat from
+	// after. Both are ceilings on the same act.
+	rbac, seat, err := g.authority.AdmittedAuthority(ctx, wsID, p.OnBehalfOf, p.PassportID)
 	if err != nil {
-		return ctx, deniedIfGone("seat", spec.Name, err)
-	}
-	rbac, err := g.authority.EffectiveRBAC(ctx, wsID, p.OnBehalfOf)
-	if err != nil {
-		return ctx, deniedIfGone("rbac", spec.Name, err)
+		return ctx, deniedIfGone("authority", spec.Name, err)
 	}
 	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
 	ctx = principal.WithActor(ctx, p)

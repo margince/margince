@@ -89,3 +89,15 @@ func TestInvokeGatesBeforeHandle(t *testing.T) {
 		t.Fatalf("unknown tool → %v", err)
 	}
 }
+
+// AdmittedAuthority is the pair above, answered together. This fixture stands
+// for the AUTHORITY seam; a passport's own liveness is the gate suite's subject,
+// so it answers as a live one and lets the two reads decide.
+func (r fullSeatAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, err := r.EffectiveRBAC(ctx, ws, human)
+	if err != nil {
+		return authz.RBAC{}, "", err
+	}
+	seat, err := r.SeatType(ctx, ws, human)
+	return rbac, seat, err
+}

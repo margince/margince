@@ -309,3 +309,15 @@ func readStagedApproval(as context.Context, t *testing.T, e *integration.Env, id
 	}
 	return row
 }
+
+// AdmittedAuthority is the pair above, answered together. This fixture stands
+// for the AUTHORITY seam; a passport's own liveness is the gate suite's subject,
+// so it answers as a live one and lets the two reads decide.
+func (s repSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, err := s.EffectiveRBAC(ctx, ws, human)
+	if err != nil {
+		return authz.RBAC{}, "", err
+	}
+	seat, err := s.SeatType(ctx, ws, human)
+	return rbac, seat, err
+}

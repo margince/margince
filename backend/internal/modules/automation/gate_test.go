@@ -334,3 +334,15 @@ func TestCheckOwnerPermissionSeatTransientErrorSurfacesForRetry(t *testing.T) {
 		t.Errorf("EffectiveRBAC called %d times, want 0 — a transient seat error must surface before RBAC runs", resolver.calls)
 	}
 }
+
+// AdmittedAuthority is the pair above, answered together. This fixture stands
+// for the AUTHORITY seam; a passport's own liveness is the gate suite's subject,
+// so it answers as a live one and lets the two reads decide.
+func (f *fakeAuthzResolver) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, err := f.EffectiveRBAC(ctx, ws, human)
+	if err != nil {
+		return authz.RBAC{}, "", err
+	}
+	seat, err := f.SeatType(ctx, ws, human)
+	return rbac, seat, err
+}
