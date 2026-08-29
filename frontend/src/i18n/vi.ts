@@ -6034,6 +6034,21 @@ export const vi = {
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saved": "Đã lưu định tuyến. Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.adminOnly": "Chỉ admin hoặc ops mới đổi được định tuyến mô hình.",
+  "autonomy.title": "Những gì tự xử lý",
+  "autonomy.sub":
+    "Những chỉnh sửa nhỏ bạn vẫn xác nhận bằng tay. Bật một mục lên và nó sẽ được áp dụng ngay khi xuất hiện, kèm thay đổi và nút Hoàn tác chờ sẵn trong ngày của bạn.",
+  "autonomy.noRecord": "Bạn chưa quyết định mục nào thuộc loại này.",
+  "autonomy.record":
+    "Đến nay: {clean} chấp nhận như đề xuất, {edited} sau khi sửa, {rejected} đã từ chối.",
+  "autonomy.kind.close_date_correction.label": "Ngày chốt",
+  "autonomy.kind.close_date_correction.help":
+    "Ngày chốt của một deal thay đổi theo những gì được nói trong cuộc gọi hoặc viết trong email.",
+  "autonomy.kind.org_name_promotion.label": "Tên công ty",
+  "autonomy.kind.org_name_promotion.help":
+    "Một công ty được ghi theo tên miền sẽ lấy tên mà chính website của họ công bố.",
+  "autonomy.kind.lifecycle_change.label": "Giai đoạn vòng đời",
+  "autonomy.kind.lifecycle_change.help":
+    "Một công ty chuyển giai đoạn dựa trên những gì đã diễn ra. Điều này cũng có thể đổi ai nhìn thấy tài khoản và những automation nào chạy.",
   "captureSettings.title": "Bổ sung thông tin",
   "captureSettings.sub":
     "Cách các công ty và contact đã thu thập được bổ sung thông tin sau khi tạo.",

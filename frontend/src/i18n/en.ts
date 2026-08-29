@@ -6136,6 +6136,21 @@ export const en = {
   "aiRouting.saving": "Saving the binding…",
   "aiRouting.saved": "Routing saved. Every process is now serving it.",
   "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
+  "autonomy.title": "What answers itself",
+  "autonomy.sub":
+    "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
+  "autonomy.noRecord": "You have not decided one of these yet.",
+  "autonomy.record":
+    "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
+  "autonomy.kind.close_date_correction.label": "Close dates",
+  "autonomy.kind.close_date_correction.help":
+    "A deal's close date moved by what was said on a call or written in a mail.",
+  "autonomy.kind.org_name_promotion.label": "Company names",
+  "autonomy.kind.org_name_promotion.help":
+    "A company recorded under its domain takes the name its own website gives.",
+  "autonomy.kind.lifecycle_change.label": "Lifecycle stages",
+  "autonomy.kind.lifecycle_change.help":
+    "A company moves stage on what has happened with it. This one can also change who sees the account and which automations run.",
   "captureSettings.title": "Enrichment",
   "captureSettings.sub":
     "How captured companies and contacts are enriched after they are created.",

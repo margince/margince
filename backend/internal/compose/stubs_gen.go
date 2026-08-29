@@ -283,6 +283,14 @@ func (stubs) ListAutomationRuns(w nethttp.ResponseWriter, r *nethttp.Request, id
 	httperr.NotImplemented(w, r, "ListAutomationRuns")
 }
 
+func (stubs) GetAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAutonomy")
+}
+
+func (stubs) UpdateAutonomy(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateAutonomy")
+}
+
 func (stubs) GetAvailability(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAvailabilityParams) {
 	httperr.NotImplemented(w, r, "GetAvailability")
 }

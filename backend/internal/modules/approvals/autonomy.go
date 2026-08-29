@@ -10,13 +10,12 @@ package approvals
 // unchanged has evidence about close dates and none about outbound mail. So the
 // grain is (rep, kind), and approval_autonomy_policy holds one row per pair.
 //
-// WHAT IS HERE AND WHAT IS NOT. This counts decisions as they are made, so the
-// record exists by the time there is something to weigh it for. It reads
-// nothing back and it decides nothing: the mode column the table carries is
-// written by no code in this package, because auto-apply has no decider —
-// decidingactor.go refuses a system principal outright, approvals are decided
-// by people. A reader and a writer for the mode ahead of that answer would be
-// the surface for a promise the product cannot yet keep.
+// WHAT IS HERE. Decisions are counted as they are made, so the record exists by
+// the time there is something to weigh it for. Beside the counters sit the mode
+// a rep has chosen per kind, read by the auto-applier and written by the rep
+// themselves: an agent principal carrying the owner's authority is the decider
+// approvals were missing, so a mode column that once described a promise the
+// product could not keep now describes one it keeps.
 //
 // The counters are stored rather than counted from the approval table, which
 // was the first design. Approvals expire and are swept, and a retention policy
@@ -28,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/jackc/pgx/v5"
 
@@ -184,6 +184,87 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 		return ModeManual, fmt.Errorf("crmapprovals: reading the autonomy mode: %w", err)
 	}
 	return AutonomyMode(mode), nil
+}
+
+// KindAutonomy is one kind's standing with one rep: whether it applies without
+// asking, and the record that says whether it should.
+type KindAutonomy struct {
+	Kind string
+	Mode AutonomyMode
+	// ApprovedClean, ApprovedEdited and Rejected are what this rep has done with
+	// this kind so far. They travel with the mode because the choice is only
+	// meaningful beside them: "apply these without asking" is a different
+	// question after fourteen clean approvals than after none.
+	ApprovedClean  int
+	ApprovedEdited int
+	Rejected       int
+}
+
+// AutoApplySettings reports every kind a rep may put on automatic, each with the
+// mode it currently stands at and the track record behind it.
+//
+// It returns the whole of AutoApplyKinds rather than the rows the table holds. A
+// rep who has never met a kind has no row, and a settings screen that listed
+// only rows would hide exactly the choices nobody has made yet — the ones a rep
+// opens the screen to make. Absence is 'manual', the same reading AutoApplyMode
+// takes.
+//
+// NO OBJECT GATE, for the reason the single-kind read gives: this reads the rows
+// of the principal on the context and takes no user id, so there is no row a
+// caller could ask for but not be.
+func (s *Service) AutoApplySettings(ctx context.Context) ([]KindAutonomy, error) {
+	rep, ok := principal.Actor(ctx)
+	if !ok || rep.UserID.IsZero() {
+		return nil, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	stored := make(map[string]KindAutonomy, len(AutoApplyKinds))
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx,
+			`SELECT kind, mode, approved_clean, approved_edited, rejected
+			   FROM approval_autonomy_policy WHERE user_id = $1`, rep.UserID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var k KindAutonomy
+			var mode string
+			if err := rows.Scan(&k.Kind, &mode, &k.ApprovedClean, &k.ApprovedEdited,
+				&k.Rejected); err != nil {
+				return err
+			}
+			k.Mode = AutonomyMode(mode)
+			stored[k.Kind] = k
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("crmapprovals: reading the autonomy settings: %w", err)
+	}
+	// Sorted so the screen's order is the same on every read. Map iteration is
+	// the only order available otherwise, and a settings list whose rows move
+	// between visits reads as a bug.
+	kinds := make([]string, 0, len(AutoApplyKinds))
+	for kind := range AutoApplyKinds {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	settings := make([]KindAutonomy, 0, len(kinds))
+	for _, kind := range kinds {
+		row, held := stored[kind]
+		if !held {
+			row = KindAutonomy{Kind: kind, Mode: ModeManual}
+		}
+		// A stored row may name a mode this kind no longer offers, the same way
+		// AutoApplyMode defends against a shrinking set. Report what will
+		// happen, not what the row remembers.
+		if row.Mode != ModeAuto {
+			row.Mode = ModeManual
+		}
+		settings = append(settings, row)
+	}
+	return settings, nil
 }
 
 // SetAutoApply turns automatic application on or off for one rep and one kind.

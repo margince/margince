@@ -86,6 +86,7 @@ import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
 import { ActorTag } from "./audit";
 import { AutomationsAdmin } from "./automations";
+import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
 import { CaptureActivityTab } from "./capture-activity";
 import { CaptureExclusionsCard } from "./capture-exclusions";
@@ -262,7 +263,16 @@ export type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
 export function tabContent(id: SettingsTabId): ReactNode {
   switch (id) {
     case "account":
-      return <AccountCard />;
+      return (
+        <>
+          <AccountCard />
+          {/* Under the identity because it is a statement about this reader
+              rather than about the workspace: which kinds of proposal stop
+              asking them. No admin card belongs on this tab, and this one is
+              not an exception — nobody else sets it. */}
+          <AutonomySettingsCard />
+        </>
+      );
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
