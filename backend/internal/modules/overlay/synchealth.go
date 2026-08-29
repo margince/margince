@@ -104,6 +104,16 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 		}
 	}
 
+	objectConcerns, err := s.objectConcerns(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return append(concerns, objectConcerns...), nil
+}
+
+// objectConcerns derives the per-class concerns: stale mirror classes, and an
+// initial import that has not confirmed convergence.
+func (s *Service) objectConcerns(ctx context.Context) ([]SyncConcern, error) {
 	objects, err := s.SyncStatus(ctx)
 	if err != nil {
 		return nil, err
@@ -119,6 +129,7 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 	}
 	sort.Strings(stale)
 	sort.Strings(backfilling)
+	var concerns []SyncConcern
 	if len(stale) > 0 {
 		concerns = append(concerns, SyncConcern{Kind: ConcernObjectsStale, Objects: stale})
 	}
@@ -137,11 +148,9 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 		if owed {
 			concerns = append(concerns, SyncConcern{Kind: ConcernBackfillIncomplete})
 		}
+		return concerns, nil
 	}
-	if len(backfilling) > 0 {
-		concerns = append(concerns, SyncConcern{Kind: ConcernBackfillIncomplete, Objects: backfilling})
-	}
-	return concerns, nil
+	return append(concerns, SyncConcern{Kind: ConcernBackfillIncomplete, Objects: backfilling}), nil
 }
 
 // backfillStillOwed answers whether the initial import has not confirmed
