@@ -18,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // recentBound caps what settled today. An unbounded per-person history is the
@@ -148,9 +147,9 @@ UNION ALL
 // every AI task reports here, so the server's answer is complete unless a
 // client says which part of it that client draws.
 func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (live, settled []Item, err error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return nil, nil, fmt.Errorf("aiactivity: a personal read needs an authenticated person")
+	person, personErr := personalReader(ctx)
+	if personErr != nil {
+		return nil, nil, personErr
 	}
 	// An EMPTY slice is not an absent one and must not collapse into it: a
 	// caller that asked for no kinds gets no rows, where nil asks for all of
@@ -162,7 +161,7 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, feedSQL,
-			actor.UserID, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
+			person, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
 			SubjectLabelBound)
 		if txErr != nil {
 			return txErr

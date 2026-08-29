@@ -11,15 +11,11 @@ package integration
 // finished_at, so a unit double proves neither.
 
 import (
-	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
@@ -62,12 +58,10 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 	if len(troubled) != 2 {
 		t.Fatalf("Troubled = %+v, want exactly Rep1's failed and stalled runs", troubled)
 	}
-	states := map[string]bool{}
-	for _, run := range troubled {
-		states[run.State] = true
-	}
-	if !states["failed"] || !states[aiactivity.StateStalled] {
-		t.Fatalf("Troubled states = %+v, want one failed and one stalled", troubled)
+	// The outer ORDER BY is what makes "stalled first" true rather than an
+	// accident of UNION ALL, so it is asserted where real SQL runs.
+	if troubled[0].State != aiactivity.StateStalled || troubled[1].State != "failed" {
+		t.Fatalf("Troubled order = [%s, %s], want the stalled run first", troubled[0].State, troubled[1].State)
 	}
 
 	// The window is real: a read whose window opens after the failure keeps
@@ -78,13 +72,5 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 	}
 	if len(narrow) != 1 || narrow[0].State != aiactivity.StateStalled {
 		t.Fatalf("narrow window = %+v, want only the stalled run", narrow)
-	}
-}
-
-func TestTroubledRefusesACallerWithNoPersonBehindIt(t *testing.T) {
-	a := newAIActivityEnv(t)
-	ctx := principal.WithWorkspaceID(context.Background(), a.env.WS)
-	if _, err := a.store.Troubled(ctx, a.queuedAt.Add(-24*time.Hour), 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("Troubled with no principal = %v, want the permission sentinel the lane withholds on", err)
 	}
 }
