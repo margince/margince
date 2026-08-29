@@ -384,3 +384,85 @@ func endpointColumnsInTheExport(t *testing.T) map[string]bool {
 	}
 	return out
 }
+
+// The ROW SCOPE of relationships tests the same endpoints the read and the
+// export do.
+//
+// auth.RelationshipEndpointScope is the conjunction every list and probe of the
+// edge table applies — "every non-null endpoint must be visible" — and it too
+// carries the endpoints as a hand-written list. A column the table has and that
+// list omits is an edge row-scoped on one end only: the far side's record is
+// disclosed to a caller whose scope excludes it, which is precisely the
+// disclosure the conjunction exists to refuse. Three surfaces answering one
+// question; the corpus is derived once and held against all three.
+const (
+	edgeScopeSource = "internal/platform/auth/inheritedscope.go"
+	edgeScopeDecl   = "relationshipEndpointColumns"
+)
+
+func TestTheRelationshipRowScopeTestsEveryEndpointTheTableHas(t *testing.T) {
+	t.Parallel()
+	declared, _ := endpointColumnsFromShapeConstraints(t)
+	if len(declared) < minEdgeEndpointColumns {
+		t.Fatalf("the shape constraints name only %d endpoint column(s) (%v), want at least %d — "+
+			"an empty corpus certifies a clean tree", len(declared), declared, minEdgeEndpointColumns)
+	}
+	scoped := endpointColumnsInScopeVar(t)
+	if len(scoped) == 0 {
+		t.Fatalf("%s declares no %s list the census could read — renamed or moved?",
+			edgeScopeSource, edgeScopeDecl)
+	}
+	for _, column := range declared {
+		if !scoped[column] {
+			t.Errorf("relationship.%s is an endpoint the table's shape constraints declare, and %s's "+
+				"%s does not scope it. An edge whose far side sits in that column is row-scoped on one "+
+				"end only, so the far record is disclosed to a caller whose scope excludes it. "+
+				"Add {%q, <its table>} to the list.",
+				column, edgeScopeSource, edgeScopeDecl, column)
+		}
+	}
+}
+
+// endpointColumnsInScopeVar reads the FIRST string of each element of the
+// package-level relationshipEndpointColumns literal — position is the
+// contract there exactly as it is in the export's list.
+func endpointColumnsInScopeVar(t *testing.T) map[string]bool {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, edgeScopeSource, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", edgeScopeSource, err)
+	}
+	out := map[string]bool{}
+	for _, decl := range file.Decls {
+		gen, isGen := decl.(*ast.GenDecl)
+		if !isGen {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			value, isValue := spec.(*ast.ValueSpec)
+			if !isValue || len(value.Names) == 0 || value.Names[0].Name != edgeScopeDecl {
+				continue
+			}
+			for _, v := range value.Values {
+				ast.Inspect(v, func(node ast.Node) bool {
+					pair, isPair := node.(*ast.CompositeLit)
+					if !isPair || len(pair.Elts) == 0 {
+						return true
+					}
+					first, isLit := pair.Elts[0].(*ast.BasicLit)
+					if !isLit || first.Kind != token.STRING {
+						return true
+					}
+					column, unquoteErr := strconv.Unquote(first.Value)
+					if unquoteErr != nil {
+						t.Fatalf("%s: %s is not a readable string: %v", edgeScopeSource, first.Value, unquoteErr)
+					}
+					out[column] = true
+					return true
+				})
+			}
+		}
+	}
+	return out
+}

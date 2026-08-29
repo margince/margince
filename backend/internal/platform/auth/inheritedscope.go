@@ -383,6 +383,7 @@ func RelationshipEndpointScope(ctx context.Context, alias string, arg func(any) 
 // is a slice and not a map.
 var relationshipEndpointColumns = []struct{ column, table string }{
 	{"person_id", tablePerson},
+	{"counterparty_person_id", tablePerson},
 	{"organization_id", tableOrganization},
 	{"counterparty_org_id", tableOrganization},
 	{"deal_id", tableDeal},

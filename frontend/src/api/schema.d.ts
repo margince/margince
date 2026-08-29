@@ -14967,6 +14967,15 @@ export interface components {
             person_id?: string;
             /** Format: uuid */
             user_id?: string;
+            /**
+             * @description On `peer` nodes only: the pair shares enough recent activities to be
+             *     worth recording (the server applies the evidence floor) and no live
+             *     `works_with` relationship exists between the anchor and this peer yet. A suggestion is a READ — nothing is staged
+             *     or written until a human posts the relationship themselves. Absent
+             *     when the caller lacks the relationship read grant, because saying
+             *     "not yet recorded" would disclose what is.
+             */
+            suggest_edge?: boolean;
         };
         /** @description One corresponding pair, with the evidence the graph is allowed to disclose. */
         PersonGraphEdge: {
@@ -15669,12 +15678,15 @@ export interface components {
          *     (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
          *     (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
          *     org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
+         *     `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
+         *     contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
+         *     and one live edge exists per pair whichever way it was recorded.
          */
         Relationship: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
@@ -15684,6 +15696,11 @@ export interface components {
              * @description The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.
              */
             counterparty_org_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The other person on a works_with edge. Null for every other kind.
+             */
+            counterparty_person_id?: string | null;
             /** Format: uuid */
             deal_id?: string | null;
             /**
@@ -15718,13 +15735,15 @@ export interface components {
         };
         CreateRelationshipRequest: {
             /** @enum {string} */
-            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with";
+            kind: "employment" | "deal_stakeholder" | "project_stakeholder" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
             /** Format: uuid */
             person_id?: string | null;
             /** Format: uuid */
             organization_id?: string | null;
             /** Format: uuid */
             counterparty_org_id?: string | null;
+            /** Format: uuid */
+            counterparty_person_id?: string | null;
             /** Format: uuid */
             deal_id?: string | null;
             /** Format: uuid */
@@ -30744,7 +30763,7 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with";
+                kind?: "employment" | "deal_stakeholder" | "project_stakeholder" | "project_company" | "partner_of" | "referred_by" | "co_sell_with" | "works_with";
                 person_id?: string;
                 organization_id?: string;
                 deal_id?: string;

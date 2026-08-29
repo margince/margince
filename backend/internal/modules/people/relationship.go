@@ -40,7 +40,7 @@ const (
 
 func relationshipAnchor(kind string) (object, column string) {
 	switch kind {
-	case "employment":
+	case employmentKind, worksWithKind:
 		return anchorPerson, "person_id"
 	case "deal_stakeholder":
 		return anchorDeal, "deal_id"
@@ -63,7 +63,14 @@ func relationshipAnchor(kind string) (object, column string) {
 var relationshipKinds = map[string]bool{
 	"employment": true, "deal_stakeholder": true, "project_stakeholder": true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
+	worksWithKind: true,
 }
+
+// worksWithKind is the one person↔person kind: two external contacts a rep
+// asserts work together. Undirected in fact — person_id and
+// counterparty_person_id carry no order, and the unique index keeps one pair
+// one row whichever way it was recorded.
+const worksWithKind = "works_with"
 
 // refuseGenericProjectCompany is the same rule at the WRITE paths, because a
 // kind is only checked on create: an update or an archive names an existing
@@ -75,27 +82,28 @@ func refuseGenericProjectCompany(kind string) error {
 	return &RelationshipKindError{Kind: kind}
 }
 
-const relationshipColumns = `id, kind, person_id, organization_id, counterparty_org_id, deal_id, project_id,
+const relationshipColumns = `id, kind, person_id, organization_id, counterparty_org_id, counterparty_person_id, deal_id, project_id,
 	role, is_current_primary, started_at, ended_at, source, captured_by, version, created_at, updated_at, archived_at`
 
 type relationshipRow struct {
-	ID                ids.UUID // no RelationshipKind in the kernel vocabulary: edges stay untyped
-	Kind              string
-	PersonID          *ids.PersonID
-	OrganizationID    *ids.OrganizationID
-	CounterpartyOrgID *ids.OrganizationID
-	DealID            *ids.DealID
-	ProjectID         *ids.ProjectID
-	Role              *string
-	IsCurrentPrimary  bool
-	StartedAt         *time.Time
-	EndedAt           *time.Time
-	Source            string
-	CapturedBy        string
-	Version           int64
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	ArchivedAt        *time.Time
+	ID                 ids.UUID // no RelationshipKind in the kernel vocabulary: edges stay untyped
+	Kind               string
+	PersonID           *ids.PersonID
+	OrganizationID     *ids.OrganizationID
+	CounterpartyOrgID  *ids.OrganizationID
+	CounterpartyPerson *ids.PersonID
+	DealID             *ids.DealID
+	ProjectID          *ids.ProjectID
+	Role               *string
+	IsCurrentPrimary   bool
+	StartedAt          *time.Time
+	EndedAt            *time.Time
+	Source             string
+	CapturedBy         string
+	Version            int64
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	ArchivedAt         *time.Time
 }
 
 func scanRelationship(r pgx.Row) (relationshipRow, error) {
@@ -114,7 +122,7 @@ func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relat
 	var out relationshipRow
 	targets := []any{
 		&out.ID, &out.Kind, &out.PersonID, &out.OrganizationID, &out.CounterpartyOrgID,
-		&out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
+		&out.CounterpartyPerson, &out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
 		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt,
 	}
 	if prior != nil {

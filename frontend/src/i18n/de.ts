@@ -580,6 +580,7 @@ export const de = {
   "rel.kind.partnerOf": "Partner von",
   "rel.kind.referredBy": "Empfohlen von",
   "rel.kind.coSellWith": "Co-Sell mit",
+  "rel.kind.worksWith": "Arbeitet zusammen mit",
 
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
@@ -6272,6 +6273,7 @@ export const de = {
     "Keine weiteren Kontakte in diesem Unternehmen erfasst.",
   "person.graph.peer": "Mit wem sie im Austausch stehen",
   "person.graph.noPeer": "Noch niemand sonst auf ihren Threads beobachtet.",
+  "person.graph.recordWorksWith": "Festhalten: arbeitet mit {name} zusammen",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
   "person.graph.withContact": "mit diesem Kontakt",

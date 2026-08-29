@@ -2122,6 +2122,8 @@ public.idx_rel_traverse_deal CREATE INDEX idx_rel_traverse_deal ON public.relati
 public.idx_rel_traverse_organization CREATE INDEX idx_rel_traverse_organization ON public.relationship USING btree (organization_id) WHERE (archived_at IS NULL)
 public.idx_rel_traverse_person CREATE INDEX idx_rel_traverse_person ON public.relationship USING btree (person_id) WHERE (archived_at IS NULL)
 public.idx_rel_traverse_project CREATE INDEX idx_rel_traverse_project ON public.relationship USING btree (project_id) WHERE (archived_at IS NULL)
+public.idx_rel_works_with_counterparty CREATE INDEX idx_rel_works_with_counterparty ON public.relationship USING btree (counterparty_person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
+public.idx_rel_works_with_person CREATE INDEX idx_rel_works_with_person ON public.relationship USING btree (person_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
 public.idx_role_assignment_user CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id)
 public.idx_runner_job_due CREATE INDEX idx_runner_job_due ON public.runner_job USING btree (status, due_at)
 public.idx_saved_view_owner CREATE INDEX idx_saved_view_owner ON public.saved_view USING btree (owner_id, resource) WHERE (archived_at IS NULL)
@@ -3716,6 +3718,7 @@ public.relationship acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/
 public.relationship.archived_at timestamp with time zone gen=- def=-
 public.relationship.captured_by text NOT NULL gen=- def=-
 public.relationship.counterparty_org_id uuid gen=- def=-
+public.relationship.counterparty_person_id uuid gen=- def=-
 public.relationship.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.deal_id uuid gen=- def=-
 public.relationship.ended_at date gen=- def=-
@@ -3726,14 +3729,16 @@ public.relationship.organization_id uuid gen=- def=-
 public.relationship.person_id uuid gen=- def=-
 public.relationship.project_id uuid gen=- def=-
 public.relationship.rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
-public.relationship.rel_employment_shape CHECK (((kind <> 'employment'::text) OR ((person_id IS NOT NULL) AND (organization_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL))))
-public.relationship.rel_partner_shape CHECK (((kind <> ALL (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) OR ((organization_id IS NOT NULL) AND (counterparty_org_id IS NOT NULL) AND (organization_id <> counterparty_org_id) AND (person_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL))))
-public.relationship.rel_project_company_shape CHECK (((kind <> 'project_company'::text) OR ((project_id IS NOT NULL) AND (organization_id IS NOT NULL) AND (person_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL))))
-public.relationship.rel_project_stakeholder_shape CHECK (((kind <> 'project_stakeholder'::text) OR ((project_id IS NOT NULL) AND (person_id IS NOT NULL) AND (organization_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL))))
-public.relationship.rel_stakeholder_shape CHECK (((kind <> 'deal_stakeholder'::text) OR ((deal_id IS NOT NULL) AND (person_id IS NOT NULL) AND (organization_id IS NULL) AND (project_id IS NULL))))
+public.relationship.rel_employment_shape CHECK (((kind <> 'employment'::text) OR ((person_id IS NOT NULL) AND (organization_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_person_id IS NULL))))
+public.relationship.rel_partner_shape CHECK (((kind <> ALL (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) OR ((organization_id IS NOT NULL) AND (counterparty_org_id IS NOT NULL) AND (organization_id <> counterparty_org_id) AND (person_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_person_id IS NULL))))
+public.relationship.rel_project_company_shape CHECK (((kind <> 'project_company'::text) OR ((project_id IS NOT NULL) AND (organization_id IS NOT NULL) AND (person_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL) AND (counterparty_person_id IS NULL))))
+public.relationship.rel_project_stakeholder_shape CHECK (((kind <> 'project_stakeholder'::text) OR ((project_id IS NOT NULL) AND (person_id IS NOT NULL) AND (organization_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL) AND (counterparty_person_id IS NULL))))
+public.relationship.rel_stakeholder_shape CHECK (((kind <> 'deal_stakeholder'::text) OR ((deal_id IS NOT NULL) AND (person_id IS NOT NULL) AND (organization_id IS NULL) AND (project_id IS NULL) AND (counterparty_person_id IS NULL))))
+public.relationship.rel_works_with_shape CHECK (((kind <> 'works_with'::text) OR ((person_id IS NOT NULL) AND (counterparty_person_id IS NOT NULL) AND (person_id <> counterparty_person_id) AND (organization_id IS NULL) AND (counterparty_org_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL))))
 public.relationship.relationship_counterparty_org_id_fkey FOREIGN KEY (counterparty_org_id) REFERENCES organization(id) ON DELETE CASCADE
+public.relationship.relationship_counterparty_person_id_fkey FOREIGN KEY (counterparty_person_id) REFERENCES person(id) ON DELETE CASCADE
 public.relationship.relationship_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
-public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text])))
+public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text, 'works_with'::text])))
 public.relationship.relationship_last_activity CREATE TRIGGER relationship_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION trg_relationship_last_activity()
 public.relationship.relationship_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.relationship.relationship_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
@@ -4291,6 +4296,7 @@ public.uq_rel_deal_person_role CREATE UNIQUE INDEX uq_rel_deal_person_role ON pu
 public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (person_id, organization_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
 public.uq_rel_project_company CREATE UNIQUE INDEX uq_rel_project_company ON public.relationship USING btree (project_id, organization_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.uq_rel_project_stakeholder CREATE UNIQUE INDEX uq_rel_project_stakeholder ON public.relationship USING btree (project_id, person_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
+public.uq_rel_works_with CREATE UNIQUE INDEX uq_rel_works_with ON public.relationship USING btree (LEAST(person_id, counterparty_person_id), GREATEST(person_id, counterparty_person_id)) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
 public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))
 public.uq_signal_fingerprint CREATE UNIQUE INDEX uq_signal_fingerprint ON public.signal USING btree (fingerprint) WHERE ((fingerprint IS NOT NULL) AND (archived_at IS NULL))
 public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))

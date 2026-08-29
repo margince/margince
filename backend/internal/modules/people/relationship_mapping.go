@@ -36,12 +36,13 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) CreateR
 		// Passed through as the pointer, not collapsed to a bool: the store
 		// decides the flag only for a caller who omitted it, and an omitted
 		// field and an explicit false are different requests.
-		IsCurrentPrimary:  req.IsCurrentPrimary,
-		PersonID:          idArg[ids.PersonKind](req.PersonId),
-		OrganizationID:    idArg[ids.OrganizationKind](req.OrganizationId),
-		CounterpartyOrgID: idArg[ids.OrganizationKind](req.CounterpartyOrgId),
-		DealID:            idArg[ids.DealKind](req.DealId),
-		ProjectID:         idArg[ids.ProjectKind](req.ProjectId),
+		IsCurrentPrimary:     req.IsCurrentPrimary,
+		PersonID:             idArg[ids.PersonKind](req.PersonId),
+		OrganizationID:       idArg[ids.OrganizationKind](req.OrganizationId),
+		CounterpartyOrgID:    idArg[ids.OrganizationKind](req.CounterpartyOrgId),
+		CounterpartyPersonID: idArg[ids.PersonKind](req.CounterpartyPersonId),
+		DealID:               idArg[ids.DealKind](req.DealId),
+		ProjectID:            idArg[ids.ProjectKind](req.ProjectId),
 	}
 	// The two dates are wire DATES and store timestamps, so each needs its
 	// Time lifted out; a nil date stays nil, which the store reads as "not
@@ -95,6 +96,7 @@ func wireRelationship(rel relationshipRow) crmcontracts.Relationship {
 	out.PersonId = uuidPtr(untypedPtr(rel.PersonID))
 	out.OrganizationId = uuidPtr(untypedPtr(rel.OrganizationID))
 	out.CounterpartyOrgId = uuidPtr(untypedPtr(rel.CounterpartyOrgID))
+	out.CounterpartyPersonId = uuidPtr(untypedPtr(rel.CounterpartyPerson))
 	out.DealId = uuidPtr(untypedPtr(rel.DealID))
 	out.ProjectId = uuidPtr(untypedPtr(rel.ProjectID))
 	if rel.StartedAt != nil {

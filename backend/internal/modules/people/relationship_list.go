@@ -86,7 +86,11 @@ func relationshipListWhere(ctx context.Context, in ListRelationshipsInput, arg f
 		where = append(where, storekit.SQLf("r.kind = $%d", arg(*in.Kind)))
 	}
 	if in.PersonID != nil {
-		where = append(where, storekit.SQLf("r.person_id = $%d", arg(*in.PersonID)))
+		// EITHER end, the same rule the org filter keeps below: a works_with
+		// edge names a person in whichever column, and a tab that read one
+		// column would show the pair on one page and not the other.
+		pos := arg(*in.PersonID)
+		where = append(where, storekit.SQLf("(r.person_id = $%d OR r.counterparty_person_id = $%d)", pos, pos))
 	}
 	if in.OrganizationID != nil {
 		pos := arg(*in.OrganizationID)

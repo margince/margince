@@ -6235,7 +6235,7 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
+          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with, works_with] }
         - name: person_id
           in: query
           schema: { type: string, format: uuid }
@@ -21696,6 +21696,15 @@ components:
           description: Their role or employer, when the record carries one.
         person_id: { type: string, format: uuid }
         user_id: { type: string, format: uuid }
+        suggest_edge:
+          type: boolean
+          description: |
+            On `peer` nodes only: the pair shares enough recent activities to be
+            worth recording (the server applies the evidence floor) and no live
+            `works_with` relationship exists between the anchor and this peer yet. A suggestion is a READ — nothing is staged
+            or written until a human posts the relationship themselves. Absent
+            when the caller lacks the relationship read grant, because saying
+            "not yet recorded" would disclose what is.
 
     PersonGraphEdge:
       type: object
@@ -22520,13 +22529,17 @@ components:
         (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
         (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
         org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
+        `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
+        contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
+        and one live edge exists per pair whichever way it was recorded.
       required: [id, kind, source, captured_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with, works_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
         counterparty_org_id: { type: [string, 'null'], format: uuid, description: 'The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.' }
+        counterparty_person_id: { type: [string, 'null'], format: uuid, description: 'The other person on a works_with edge. Null for every other kind.' }
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder or project_company edge. Null for every other kind.' }
         role:
@@ -22551,10 +22564,11 @@ components:
         # this generic surface cannot — write authority over the project ROW,
         # and the refusal that keeps a project's last company on it. The server
         # refuses the kind here, and the enum says so before a caller tries.
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with, works_with] }
         person_id: { type: [string, 'null'], format: uuid }
         organization_id: { type: [string, 'null'], format: uuid }
         counterparty_org_id: { type: [string, 'null'], format: uuid }
+        counterparty_person_id: { type: [string, 'null'], format: uuid }
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid }
         role: { type: [string, 'null'] }

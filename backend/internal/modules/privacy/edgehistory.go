@@ -55,6 +55,7 @@ const entityTypeOrganization = "organization"
 
 var edgeEndpoints = []edgeEndpoint{
 	{column: "person_id", entityType: "person", labelColumn: "full_name"},
+	{column: "counterparty_person_id", entityType: "person", labelColumn: "full_name"},
 	{column: "organization_id", entityType: entityTypeOrganization, labelColumn: "display_name"},
 	{column: "counterparty_org_id", entityType: entityTypeOrganization, labelColumn: "display_name"},
 	{column: "deal_id", entityType: "deal", labelColumn: "name"},

@@ -130,6 +130,7 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	// this list to it would assert a correspondence that does not hold
 	for _, endpoint := range []struct{ column, table string }{
 		{"person_id", "person"},
+		{"counterparty_person_id", "person"},
 		{"organization_id", "organization"},
 		{"counterparty_org_id", "organization"},
 		{"deal_id", "deal"},

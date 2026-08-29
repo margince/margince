@@ -593,6 +593,7 @@ export const en = {
   "rel.kind.partnerOf": "Partner of",
   "rel.kind.referredBy": "Referred by",
   "rel.kind.coSellWith": "Co-sell with",
+  "rel.kind.worksWith": "Works with",
 
   "common.error": "Couldn't load this view.",
   // What a failure that carries no server problem is allowed to say. A rejected
@@ -6317,6 +6318,7 @@ export const en = {
   "person.graph.noAccount": "No other contacts on record at their company.",
   "person.graph.peer": "Who they talk to",
   "person.graph.noPeer": "Nobody else observed on their threads yet.",
+  "person.graph.recordWorksWith": "Record: works with {name}",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
   "person.graph.withContact": "with this contact",
