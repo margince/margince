@@ -91,6 +91,8 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/notices/store.go:MarkRead": "the recipient settling their notice. An OCCURRENCE and not a replacement: read_at moves from its one legal prior state (NULL — the statement's own guard makes a second settle a no-op that audits nothing), so the before-image is fully implied by the action itself, and the evidence records the one fact that changed (read: true)",
+
 	"internal/modules/people/organization_vat_check.go:RecordVatCheck": "the FIRST consultation of a company's VAT ID. An OCCURRENCE and not a replacement: nothing about the company changed, an answer that did not exist before was recorded, and there is no prior verdict, receipt or register name for an image to name. A RE-check takes the other branch and carries both — which is the case that matters, because a number that was valid and now is not is the finding this lane exists for. The verb is `update` on `organization` because that is the row the caller was authorized against and the row whose standing this changes",
 
 	"internal/modules/comms/bounce.go:RecordBounce": "the receiving mail system refusing a message is an OCCURRENCE on the sent activity, not a field replacement: the bounce columns were NULL on every row this can match (the CAS refuses a second mark), so the prior state is the absence the mark ends, and there is nothing for a before-image to name",

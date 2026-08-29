@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -157,6 +158,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// UTC clock would name the wrong day on a non-UTC installation for the
 		// hours either side of local midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool))),
 		// The accept-write needs no option to wire: it resolves the reading a
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read

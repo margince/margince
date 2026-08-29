@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,12 +70,11 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		// THAT release sends through the fully-wired store the send path builds
 		// (lateApprovalEffects) rather than anything configured here.
 		Comms: newCommsAdapter(db.Pool(), drafter, SendPath{}),
-		// Notifier stays nil: this repo wires no notification transport
-		// (no notification table, the inbox is approvals-only) — a
-		// notify firing surfaces as a visible 'skipped' run instead
-		// (automation.ErrNoNotificationTransport, engine_run.go) until a
-		// real channel lands here.
-		Claims: automation.NewEffectClaims(db),
+		// The notify transport is the durable notice row (noticesseam.go):
+		// recording one is delivering one, so the engine's success record
+		// is finally a true sentence rather than a skipped run.
+		Notifier: noticesNotifier{store: notices.NewStore(db)},
+		Claims:   automation.NewEffectClaims(db),
 	}
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
@@ -87,7 +87,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		engine.RegisterSystemWorkflow(handler)
 	}
 	activityStore := activities.NewStore(db)
-	engine.RegisterSystemWorkflow(leadSLAEscalation{activities: activityStore, now: time.Now})
+	engine.RegisterSystemWorkflow(leadSLAEscalation{activities: activityStore, notices: notices.NewStore(db), now: time.Now})
 	for _, handler := range activities.FollowUpWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}

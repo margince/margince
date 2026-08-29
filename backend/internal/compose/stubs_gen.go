@@ -1027,6 +1027,10 @@ func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyLocale")
 }
 
+func (stubs) MarkNoticeRead(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "MarkNoticeRead")
+}
+
 func (stubs) GetConsentRequest(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetConsentRequestParams) {
 	httperr.NotImplemented(w, r, "GetConsentRequest")
 }

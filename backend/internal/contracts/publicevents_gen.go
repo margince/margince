@@ -177,6 +177,8 @@ const (
 	MirrorConflict                        SubscribableEventType = "mirror.conflict"
 	MirrorDeleted                         SubscribableEventType = "mirror.deleted"
 	MirrorWriteRejected                   SubscribableEventType = "mirror.write_rejected"
+	NoticeCreated                         SubscribableEventType = "notice.created"
+	NoticeRead                            SubscribableEventType = "notice.read"
 	OfferAccepted                         SubscribableEventType = "offer.accepted"
 	OfferCreated                          SubscribableEventType = "offer.created"
 	OfferRejected                         SubscribableEventType = "offer.rejected"
@@ -335,6 +337,10 @@ func (e SubscribableEventType) Valid() bool {
 	case MirrorDeleted:
 		return true
 	case MirrorWriteRejected:
+		return true
+	case NoticeCreated:
+		return true
+	case NoticeRead:
 		return true
 	case OfferAccepted:
 		return true
@@ -1096,6 +1102,19 @@ type PublicEventMirrorDeleted struct {
 
 // PublicEventMirrorWriteRejected Payload for mirror.write_rejected. Never emitted today — reserved for branch 2 (writes to an overlay-mode workspace's incumbent CRM, currently declared unsupported_by_sor); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
 type PublicEventMirrorWriteRejected struct{}
+
+// PublicEventNoticeCreated Payload for notice.created — a durable informational notice was recorded for one person (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
+type PublicEventNoticeCreated struct {
+	// Kind The producing flow's own label (automation, lead_sla).
+	Kind            string             `json:"kind"`
+	NoticeId        openapi_types.UUID `json:"notice_id"`
+	RecipientUserId openapi_types.UUID `json:"recipient_user_id"`
+}
+
+// PublicEventNoticeRead Payload for notice.read — the recipient settled the notice (notices/store.go's MarkRead). Emitted once: a replayed mark is a no-op and announces nothing.
+type PublicEventNoticeRead struct {
+	NoticeId openapi_types.UUID `json:"notice_id"`
+}
 
 // PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
 type PublicEventOfferAccepted struct {
@@ -1950,6 +1969,14 @@ func (PublicEventMirrorWriteRejected) EventType() string { return "mirror.write_
 
 func (PublicEventMirrorWriteRejected) EntityType() string { return "dynamic" }
 
+func (PublicEventNoticeCreated) EventType() string { return "notice.created" }
+
+func (PublicEventNoticeCreated) EntityType() string { return "user" }
+
+func (PublicEventNoticeRead) EventType() string { return "notice.read" }
+
+func (PublicEventNoticeRead) EntityType() string { return "user" }
+
 func (PublicEventOfferAccepted) EventType() string { return "offer.accepted" }
 
 func (PublicEventOfferAccepted) EntityType() string { return "offer" }
@@ -2187,6 +2214,8 @@ var PublicEventVersions = map[string]int{
 	"mirror.conflict":                           1,
 	"mirror.deleted":                            1,
 	"mirror.write_rejected":                     1,
+	"notice.created":                            1,
+	"notice.read":                               1,
 	"offer.accepted":                            1,
 	"offer.created":                             1,
 	"offer.rejected":                            1,

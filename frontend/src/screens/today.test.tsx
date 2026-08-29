@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -756,6 +756,53 @@ describe("what the night left on the worklist", () => {
       screen.getByText("1 automation firings did not do their work."),
     ).toBeTruthy();
     expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
+  // A notice carries its own words and its one verb: pressing "Got it"
+  // settles it through the notice's own endpoint, and the lane refreshes.
+  it("shows a notice and settles it on acknowledge", async () => {
+    let marked = "";
+    const day = {
+      ...emptyDay,
+      notices: [
+        {
+          id: "notice-1",
+          source: "notice" as const,
+          kind: "lead_sla",
+          title: "SLA breach — first response overdue",
+          detail: "A lead's first response is overdue.",
+          occurred_at: "2026-08-27T10:00:00Z",
+          actions: ["acknowledge" as const],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, notices: 1 },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/notices/") && url.endsWith("/read")) {
+          marked = url;
+          return new Response(null, { status: 204 });
+        }
+        if (url.includes("/attention")) {
+          return jsonResponse(day);
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    renderToday();
+
+    await screen.findByText("SLA breach — first response overdue");
+    expect(
+      screen.getByText("A lead's first response is overdue."),
+    ).toBeTruthy();
+    expect(screen.getByText("1 notice is waiting for you.")).toBeTruthy();
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Got it" }));
+    await waitFor(() => {
+      expect(marked).toContain("/notices/notice-1/read");
+    });
   });
   // The same defect, one lane later, and caught the same way: the lead line
   // read "Your day is clear" directly above an OVERDUE promise. It repeats

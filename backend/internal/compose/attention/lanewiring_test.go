@@ -42,6 +42,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
+		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
@@ -72,6 +73,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		{"ai_work_health", out.AiWorkHealth, "ai_work_health", ""},
 		{"bounces", out.Bounces, "bounce", "a bounced send"},
 		{"automation_health", out.AutomationHealth, "automation_run", "a broken rule"},
+		{"notices", out.Notices, "notice", "a notice"},
 	} {
 		if lane.items == nil || len(*lane.items) != 1 {
 			t.Fatalf("%s carries %v, want one item", lane.name, lane.items)
@@ -104,7 +106,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 // existing.
 func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 	performable := map[crmcontracts.AttentionItemActions]bool{
-		"complete": true, "snooze": true, "open": true,
+		"complete": true, "snooze": true, "open": true, "acknowledge": true,
 	}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
@@ -123,6 +125,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
+		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
@@ -186,6 +189,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
+		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())

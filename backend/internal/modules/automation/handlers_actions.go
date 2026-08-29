@@ -34,23 +34,24 @@ func decodeActionArgs[T any](args json.RawMessage) (T, error) {
 	return out, nil
 }
 
-// notifyArgs is what a notify action's Args carries once a real
-// transport is wired: who to notify and the message. No shipped Plan
-// emits ActionNotify yet (ErrNoNotificationTransport, seams.go), so this
-// shape is exercised by this executor's own unit tests today, not by a
-// live handler.
+// notifyArgs is what a notify action's Args carries: who to notify and
+// the message. stageChangeNotify's Plan (handlers_event.go) emits it on
+// the live path, and the lead-SLA escalation writes the same transport
+// from compose — the recipient is always derived from a row the flow
+// itself read (a deal's owner, an escalation target), never from anything
+// a counterparty typed.
 type notifyArgs struct {
 	Recipient ids.UUID `json:"recipient"`
 	Subject   string   `json:"subject"`
 	Body      string   `json:"body"`
 }
 
-// applyNotify is notify's executor: a nil Notifier (this repo wires
-// none) answers ErrNoNotificationTransport so the firing lands as a
-// visible, honestly-reasoned run instead of a silent no-op or a
-// fabricated success. A wired Notifier delivers for real — the args
-// decode only has to succeed on that path, since it is the only path
-// that ever reads them.
+// applyNotify is notify's executor: a nil Notifier answers
+// ErrNoNotificationTransport so a composition that forgot the seam lands
+// as a visible, honestly-reasoned run instead of a silent no-op or a
+// fabricated success. A wired Notifier delivers by recording the durable
+// notice — which is why recording success the moment Notify returns is a
+// true sentence.
 func applyNotify(ctx context.Context, notifier Notifier, action workflow.Action) error {
 	if notifier == nil {
 		return ErrNoNotificationTransport

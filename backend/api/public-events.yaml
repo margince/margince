@@ -90,6 +90,8 @@ components:
         - activity.updated
         - engagement.reply
         - comms.delivery_bounced
+        - notice.created
+        - notice.read
         - consent.changed
         - email_signature.changed
         - user_locale.changed
@@ -1780,6 +1782,50 @@ components:
       properties:
         changed_fields:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
+      additionalProperties: false
+
+    PublicEventNoticeCreated:
+      type: object
+      x-event-type: notice.created
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for notice.created — a durable informational notice was
+        recorded for one person (notices/store.go's Create). Recording the
+        row IS the delivery on this transport; the entity is the recipient.
+        The content stays on the row: an event fan-out of subject and body
+        would put the same prose on two wires to drift.
+      required:
+        - notice_id
+        - recipient_user_id
+        - kind
+      properties:
+        notice_id:
+          type: string
+          format: uuid
+        recipient_user_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          description: The producing flow's own label (automation, lead_sla).
+      additionalProperties: false
+
+    PublicEventNoticeRead:
+      type: object
+      x-event-type: notice.read
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for notice.read — the recipient settled the notice
+        (notices/store.go's MarkRead). Emitted once: a replayed mark is a
+        no-op and announces nothing.
+      required:
+        - notice_id
+      properties:
+        notice_id:
+          type: string
+          format: uuid
       additionalProperties: false
 
     PublicEventCommsDeliveryBounced:

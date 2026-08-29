@@ -286,6 +286,12 @@ var catalog = map[string]struct {
 	// activity stream the send's own events ride.
 	"comms.delivery_bounced": {activityStreamEntity, 1},
 
+	// A notice is addressed to one person, so its lifecycle rides the
+	// identity family's stream: created is the delivery on this transport,
+	// read is the recipient settling it.
+	"notice.created": {identityStreamEntity, 1},
+	"notice.read":    {identityStreamEntity, 1},
+
 	"approval.requested": {approvalStreamEntity, 1},
 	"approval.decided":   {approvalStreamEntity, 1},
 

@@ -28,7 +28,7 @@ func (s *stubSyncHealth) Concerns(context.Context) ([]SyncConcern, error) {
 func syncLaneService(health SyncHealth) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, health, nil, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, health, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 func TestASyncConcernCarriesItsConditionAndItsFacts(t *testing.T) {

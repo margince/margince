@@ -10,10 +10,9 @@ package compose
 // through the activities store, and the scan pass that rides the clock-
 // trigger job.
 //
-// The RC-5 `notify_and_task` default ships as its task half only. This repo
-// wires no notification transport (see the Notifier note in workflows.go),
-// so the notify half would be a claim with nothing behind it; the task is a
-// first-class object every rep already works from.
+// The RC-5 `notify_and_task` default ships both halves: the task every rep
+// already works from, and — now that the durable notice transport exists
+// (noticesseam.go) — the notice on the escalation target's Worklist.
 
 import (
 	"context"
@@ -24,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -46,6 +46,7 @@ const activityKindTask = "task"
 // breach.
 type leadSLAEscalation struct {
 	activities *activities.Store
+	notices    *notices.Store
 	now        func() time.Time
 }
 
@@ -90,6 +91,17 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 	}
 	if _, _, err := w.activities.LogActivity(ctx, in); err != nil {
 		return workflow.RunResult{}, fmt.Errorf("log sla escalation task: %w", err)
+	}
+	// The notify half RC-5 promised, now that a transport exists: the same
+	// person the task escalates to gets the durable line on their Worklist.
+	// A breach with no named target still writes its task; there is nobody
+	// to address the notice to, and inventing one would misdeliver it.
+	if payload.EscalationTarget != nil {
+		target := ids.From[ids.UserKind](ids.UUID(*payload.EscalationTarget))
+		if _, err := w.notices.Create(ctx, target, noticeKindLeadSLA, subject,
+			"A lead's first response is overdue; its escalation task is on your list."); err != nil {
+			return workflow.RunResult{}, fmt.Errorf("record sla escalation notice: %w", err)
+		}
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
