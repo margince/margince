@@ -13,14 +13,18 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -73,12 +77,20 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister
 			admitted[ids.UUID(d.Id)] = true
 		}
 
+		// The INSTALLATION's zone, not the server's. A close date is a calendar
+		// date a human picked, and asking whether it has passed in UTC gives a
+		// different answer from the deal record's own hygiene flag for as long
+		// as the two zones disagree about the day — hours wide, every day, for
+		// any installation not running in UTC.
+		zone, err := installationZone(ctx, pool)
+		if err != nil {
+			return nil, err
+		}
 		now := time.Now().UTC()
-		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 		out := make([]agents.SlippingDeal, 0, len(quiet))
 		seen := map[ids.UUID]bool{}
 		for _, d := range append(quiet, open...) {
-			candidate := slippingCandidate(d, today)
+			candidate := slippingCandidate(d, now, zone)
 			if seen[candidate.DealID] {
 				continue
 			}
@@ -92,10 +104,36 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister
 	}
 }
 
+// installationZone loads the zone the installation's days are counted in.
+func installationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
+	var name string
+	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		name, err = identity.TimezoneOf(ctx, tx)
+		return err
+	}); err != nil {
+		return nil, fmt.Errorf("read the installation's timezone: %w", err)
+	}
+	return zoneNamed(name), nil
+}
+
+// zoneNamed resolves a stored zone name, answering UTC for one Go cannot load.
+//
+// The same fallback the deals module's own date arithmetic makes for a nil
+// zone, so a setting nobody can load cannot make the two surfaces disagree in a
+// NEW way — they are then both wrong about the day in the same direction, which
+// is a different and much smaller problem.
+func zoneNamed(name string) *time.Location {
+	if zone, err := time.LoadLocation(name); err == nil {
+		return zone
+	}
+	return time.UTC
+}
+
 // slippingCandidate carries a deal row across the seam with its risk
 // flags and the fields that evidence them; the tool drops any flag its
 // evidence field cannot ground.
-func slippingCandidate(d crmcontracts.Deal, today time.Time) agents.SlippingDeal {
+func slippingCandidate(d crmcontracts.Deal, now time.Time, zone *time.Location) agents.SlippingDeal {
 	candidate := agents.SlippingDeal{
 		DealID:         ids.UUID(d.Id),
 		Name:           d.Name,
@@ -116,7 +154,10 @@ func slippingCandidate(d crmcontracts.Deal, today time.Time) agents.SlippingDeal
 	if d.ExpectedCloseDate != nil {
 		closeDate := d.ExpectedCloseDate.Time
 		candidate.ExpectedCloseDate = &closeDate
-		candidate.CloseOverdue = closeDate.Before(today)
+		// The deals module's own judgement, not a second one: the flag on the
+		// record and the answer this tool gives are the same question, and two
+		// implementations of it disagree the moment their "today" does.
+		candidate.CloseOverdue = deals.CloseIsOverdue(closeDate, now, zone)
 	}
 	return candidate
 }

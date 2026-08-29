@@ -118,8 +118,7 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 		out.Flags = append(out.Flags, CloseDateMissing)
 	} else {
 		expected := dateOnly(*in.ExpectedClose)
-		// Strict <: a deal legitimately closing today is fine.
-		findings.overdue = expected.Before(today)
+		findings.overdue = CloseIsOverdue(*in.ExpectedClose, now, workspaceTZ)
 		if findings.overdue {
 			out.Flags = append(out.Flags, CloseDateOverdue)
 		}
@@ -195,6 +194,21 @@ func proposedCloseDate(today time.Time, remainingOpenStages int, velocityDays fl
 		stages = 1
 	}
 	return today.AddDate(0, 0, int(float64(stages)*velocityDays))
+}
+
+// CloseIsOverdue answers whether an expected close date has passed, and it is
+// the ONE place that comparison is made.
+//
+// A close date is a calendar date a human picked, so "has it passed" is a
+// question about the day it is where they work — the INSTALLATION's zone, not
+// the server's. Asked in UTC by a caller east of it, a date that is yesterday
+// locally is still today, and the same record then reads overdue on the deal
+// and on time in the tool that re-derived it — for the whole working morning,
+// every day.
+//
+// Strict <: a deal legitimately closing today is not late.
+func CloseIsOverdue(expectedClose time.Time, now time.Time, workspaceTZ *time.Location) bool {
+	return dateOnly(expectedClose).Before(dateAt(now, workspaceTZ))
 }
 
 // dateAt reduces an instant to its calendar date in the given zone,
