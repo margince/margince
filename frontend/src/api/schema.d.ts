@@ -22407,7 +22407,7 @@ export interface components {
              * @description What `revenue_norm_minor` is in — the installation's base currency as it stood when this run was ranked. A proportion is only checkable against a NAMED base, and a bare figure reads as whatever currency the reader assumes.
              *     Stored with the run rather than resolved on read: the base currency can still be changed until deals freeze it, so a norm computed against EUR must not later be captioned with the USD in force by then. Absent on a run assembled before this field existed — a brief is one row per rep per local day, so those age out within a day.
              */
-            readonly revenue_norm_currency?: string;
+            revenue_norm_currency?: string;
             /** @description The ranked queue, best-first, capped at the honest-short target (7). */
             items: components["schemas"]["MorningBriefItem"][];
             /**

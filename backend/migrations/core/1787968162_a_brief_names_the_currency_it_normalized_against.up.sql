@@ -15,9 +15,18 @@
 -- Empty means a run written before this column existed. A brief is one row per
 -- rep per local day, so those age out within a day; the wire omits the field
 -- rather than inventing a currency for them.
+-- NOT VALID, and the pass that validates it is the NEXT migration file rather
+-- than the next statement. The runner wraps each file in one transaction, so a
+-- VALIDATE here would run under the ACCESS EXCLUSIVE this ALTER already holds
+-- and to commit — the weaker lock VALIDATE asks for buys nothing while a
+-- stronger one is held. In its own file it is its own transaction, and the scan
+-- runs under SHARE UPDATE EXCLUSIVE, which brief writes do not queue behind.
+--
+-- Every existing row satisfies it trivially: the column is new, so they all
+-- carry the default. The split is about the LOCK, not about doubt.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE brief_run
     ADD COLUMN revenue_norm_currency text DEFAULT '' NOT NULL,
     ADD CONSTRAINT brief_run_revenue_norm_currency_check
-        CHECK (revenue_norm_currency = '' OR revenue_norm_currency ~ '^[A-Z]{3}$');
+        CHECK (revenue_norm_currency = '' OR revenue_norm_currency ~ '^[A-Z]{3}$') NOT VALID;

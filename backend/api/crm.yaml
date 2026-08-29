@@ -29867,7 +29867,6 @@ components:
         revenue_norm_currency:
           type: string
           pattern: '^[A-Z]{3}$'
-          readOnly: true
           description: >-
             What `revenue_norm_minor` is in — the installation's base currency as it stood
             when this run was ranked. A proportion is only checkable against a NAMED base,
