@@ -132,6 +132,7 @@ function useSearchTargets() {
 // whole.
 export function RelinkModal({
   activityId,
+  activityVersion,
   threadKey,
   entityType,
   entityId,
@@ -139,6 +140,11 @@ export function RelinkModal({
   onClose,
 }: Readonly<{
   activityId: string;
+  // The version the reader's copy of the activity was read at, sent as
+  // If-Match so a relink cannot overwrite a change nobody saw. Absent only
+  // where the caller genuinely has none; the thread door takes no version at
+  // all, since one cannot condition a move across many activities.
+  activityVersion?: number | null;
   threadKey?: string | null;
   entityType: RelinkKind;
   entityId: string;
@@ -179,8 +185,19 @@ export function RelinkModal({
       }
       const { data, error } = await api.POST("/activities/{id}/relink", {
         params: {
+          // The version the reader's copy was read at, so a relink cannot
+          // overwrite a change nobody saw. requireVersion refuses the write
+          // rather than sending it unpinned: unpinned is last-write-wins, and
+          // the mutation's own error path is what tells the reader it did not
+          // go through.
+          //
+          // The idempotency key travels INSIDE the precondition rather than in
+          // a `header:` of its own: they are one slot, and written twice the
+          // later wins.
+          ...ifMatch(requireVersion(activityVersion ?? undefined), {
+            "Idempotency-Key": crypto.randomUUID(),
+          }),
           path: { id: activityId },
-          header: { "Idempotency-Key": crypto.randomUUID() },
         },
         body: {
           entity_type: kind,
@@ -2552,6 +2569,7 @@ export function TimelineActions({
       {relink && (
         <RelinkModal
           activityId={activity.id}
+          activityVersion={activity.version}
           threadKey={activity.thread_key}
           entityType={entityType}
           entityId={entityId}

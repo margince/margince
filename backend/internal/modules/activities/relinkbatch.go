@@ -71,6 +71,18 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
 func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (bool, error) {
+	// THE LOCK COMES FIRST, before the authority check and before the version
+	// compare, because both are answers about the row and both are only true
+	// while it holds still. Checked first and locked after, an ownership change
+	// landing in between leaves a caller writing on a permission they no longer
+	// have, and a version compare passing on a row that has since moved.
+	//
+	// It is taken for every relink rather than only a pinned one: the write
+	// below updates this row, so the lock is acquired either way — this decides
+	// WHEN, and the two checks above are the reason it is now.
+	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		return false, err
+	}
 	if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
 		return false, err
 	}
@@ -132,13 +144,13 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 }
 
 // relinkMeetsItsPin re-checks the version the caller read the activity at,
-// inside the transaction that moves it.
+// inside the transaction that moves it and under the row lock its caller has
+// already taken.
 //
-// UNDER THE ROW LOCK, taken before the read, for the reason every other guarded
-// write in this module takes it first: two relinks reading the same version
-// concurrently would both pass the compare and the loser would silently
-// overwrite the winner. The lock also holds until commit, so the version cannot
-// move between this check and the write below it.
+// The lock is what makes the compare mean anything: two relinks reading the same
+// version would otherwise both pass it and the loser would silently overwrite
+// the winner, and it holds until commit so the version cannot move between this
+// check and the write below it.
 //
 // No pin is the ordinary case and is not an error: a human's relink through the
 // app conditions on nothing, and a static-tier agent call has nothing to
@@ -146,9 +158,6 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
 	if ifVersion == nil {
 		return nil
-	}
-	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
-		return err
 	}
 	current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
 	if err != nil {

@@ -444,10 +444,12 @@ func assertRelinkTierReadsEntityType(t *testing.T, name string, spec mcp.ToolSpe
 // never asked pinForWrite, and the store had no field to put an answer in
 // (#2614). A relink then executed against whatever the record had become.
 //
-// Two pins, one question. An approved relink carries the version the human
-// released against; an auto-executed one carries the version the tier was
-// resolved from. pinForWrite is where they meet, and this asserts the answer
-// reaches the write rather than stopping at the tool.
+// The RELEASED pin is what this asserts, and it is the one this package can
+// stage: the admitted pin an auto-execute carries is put in the context by
+// auth's own unexported writer, so only the gate can produce it. pinForWrite is
+// where the two meet and the tool asks it once — what is proven here is that its
+// answer reaches the write rather than stopping at the tool, which is the half
+// that was missing.
 func TestRelinkActivityHandsTheWriteTheVersionItsGateBound(t *testing.T) {
 	relink := func(ctx context.Context, seam *recordingRelinker) {
 		t.Helper()

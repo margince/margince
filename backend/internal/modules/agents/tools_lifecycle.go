@@ -160,32 +160,26 @@ func (t relinkActivity) ResolverInput(ctx context.Context, in json.RawMessage) (
 	if err := decodeArgs(in, &args); err != nil {
 		return mcp.TierResolverInput{}, err
 	}
-	resolved := mcp.TierResolverInput{Args: in}
-	info, err := StageSubject(ctx, NewRelinkActivityCall(t.p, RelinkActivityCommand{
-		ActivityID: args.ActivityID, EntityType: args.EntityType, EntityID: args.EntityID,
-	}))
-	if err != nil {
-		// The read failed, or the guards refused. Answering NO VERSION rather
-		// than the error is deliberate: the gate then raises, which keeps the
-		// resolver's contract that it may only ever RAISE, and it fails CLOSED —
-		// an otherwise auto-executable destination costs a decision rather than
-		// running on a state this server could not establish.
-		//
-		// It does not follow that a human sees it. stageRefusedCall calls
-		// StageInfo straight after, which repeats this read: a failure that
-		// persists surfaces as that read's own error rather than as a staged
-		// approval. That is the right answer for a bad id or an out-of-scope
-		// target — the caller gets told what is wrong instead of a card nobody
-		// can act on.
-		return resolved, nil //nolint:nilerr // an unreadable record raises to a human, it does not fail the call
-	}
-	// A record with no version is left unreported rather than pinned at zero,
-	// for the reason dealmove.go states: zero is not a version any write can be
-	// conditioned on.
-	if info.TargetVersion != nil && *info.TargetVersion > 0 {
-		resolved.ObservedVersion = info.TargetVersion
-	}
-	return resolved, nil
+	// The same reading the REST door takes (observedVersion), so both pin the
+	// row the resolver judged rather than two readings free to disagree.
+	//
+	// A read that failed, or guards that refused, answer NO VERSION rather than
+	// the error: the gate then raises, which keeps the resolver's contract that
+	// it may only ever RAISE, and it fails CLOSED — an otherwise auto-executable
+	// destination costs a decision rather than running on a state this server
+	// could not establish.
+	//
+	// It does not follow that a human sees it. stageRefusedCall calls StageInfo
+	// straight after, which repeats this read: a failure that persists surfaces
+	// as that read's own error rather than as a staged approval. That is the
+	// right answer for a bad id or an out-of-scope target — the caller gets told
+	// what is wrong instead of a card nobody can act on.
+	return mcp.TierResolverInput{
+		Args: in,
+		ObservedVersion: observedVersion(ctx, NewRelinkActivityCall(t.p, RelinkActivityCommand{
+			ActivityID: args.ActivityID, EntityType: args.EntityType, EntityID: args.EntityID,
+		})),
+	}, nil
 }
 
 func (t relinkActivity) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

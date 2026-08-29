@@ -206,6 +206,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="person"
         entityId="p-1"
         open
@@ -244,6 +245,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="deal"
         entityId="d-1"
         open
@@ -280,6 +282,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         threadKey="thread:abc"
         entityType="person"
         entityId="p-1"
@@ -319,6 +322,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="person"
         entityId="p-1"
         open
@@ -346,6 +350,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="deal"
         entityId="d-1"
         open

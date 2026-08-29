@@ -86,8 +86,10 @@ func TestABatchRelinkRefusesAVersionPinRatherThanIgnoringIt(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/activities/relink-bulk",
 		AnyMap{"activity_ids": []string{taskID}, "entity_type": "person", "entity_id": personID},
-		map[string]string{"If-Match": strconv.FormatInt(read.Version, 10)}, &problem); status != http.StatusUnprocessableEntity {
-		t.Fatalf("a pinned batch relink → %d (%s), want 422 — a version that cannot condition the "+
-			"move must be refused, not ignored", status, problem.Code)
+		map[string]string{"If-Match": strconv.FormatInt(read.Version, 10)}, &problem); status != http.StatusUnprocessableEntity ||
+		problem.Code != "pin_not_supported" {
+		t.Fatalf("a pinned batch relink → %d (%s), want 422 pin_not_supported — a version that cannot "+
+			"condition the move must be refused by NAME, so a client can branch on the reason and an "+
+			"unrelated 422 cannot pass for this one", status, problem.Code)
 	}
 }

@@ -193,16 +193,31 @@ func (c destinationTieredCall) tierInput(ctx context.Context, _ json.RawMessage)
 	if !c.pinnable {
 		return resolved, nil
 	}
-	info, err := StageSubject(ctx, c.GovernedCall)
-	if err != nil {
-		return resolved, nil //nolint:nilerr // an unreadable record raises to a human, it does not fail the call
-	}
-	// Zero is not a version any write can be conditioned on, so it is left
-	// unreported rather than pinned (dealmove.go says the same).
-	if info.TargetVersion != nil && *info.TargetVersion > 0 {
-		resolved.ObservedVersion = info.TargetVersion
-	}
+	resolved.ObservedVersion = observedVersion(ctx, c.GovernedCall)
 	return resolved, nil
+}
+
+// observedVersion is the version a dynamic tier is resolved FROM, read through
+// the call's own staging path so the gate pins the same row the resolver judged.
+//
+// One spelling for both doors. The MCP tool answers the same question in its
+// ResolverInput, and two spellings of "which version did we resolve this from"
+// are free to disagree — which is exactly how the doors came to disagree about
+// this operation in the first place.
+//
+// A record that cannot be described answers NO version rather than an error: the
+// gate then RAISES, which is the safe direction and keeps the resolver's
+// contract that it may only ever raise. Zero is left unreported for the reason
+// dealmove.go gives — it is not a version any write can be conditioned on.
+func observedVersion(ctx context.Context, call GovernedCall) *int64 {
+	info, err := StageSubject(ctx, call)
+	if err != nil {
+		return nil
+	}
+	if info.TargetVersion == nil || *info.TargetVersion <= 0 {
+		return nil
+	}
+	return info.TargetVersion
 }
 
 // relinkTierArgs is the shape relinkActivityTier reads. It carries the
