@@ -23,7 +23,7 @@ const orgArms = `FROM activity_link l
 // that aliases activity as a.
 //
 // A COMPANY IS NOT SOMEBODY YOU CAN MEET. A meeting or a call is refused a
-// direct organization link (migration 1787990100), so a flat
+// direct organization link (migration 1788000100), so a flat
 // `activity_link.organization_id` match — which is what this walk used to be —
 // reads an account's timeline with every meeting missing from it. The same was
 // already true of captured mail, which capture files against the PERSON it was

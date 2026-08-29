@@ -149,7 +149,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 //
 // The estate refuses it either way — a trigger, because activity_link is
 // written by the MCP tool, a REST caller and the web app alike (migration
-// 1787990100). What that refusal alone gives a caller is a check violation with
+// 1788000100). What that refusal alone gives a caller is a check violation with
 // no field on it: the tool surface renders it as "a value in this request is
 // outside what its field accepts", which names neither the link nor what to do
 // instead, so a model retries the same call or abandons the write. Named here,

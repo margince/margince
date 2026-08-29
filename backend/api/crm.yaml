@@ -4284,7 +4284,7 @@ paths:
 
         A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
         the company is reached through that person's employer. The estate refuses it
-        (migration 1787990100).
+        (migration 1788000100).
       x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4329,7 +4329,7 @@ paths:
 
         A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
         the company is reached through that person's employer. The estate refuses it
-        (migration 1787990100).
+        (migration 1788000100).
       x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4365,7 +4365,7 @@ paths:
 
         A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
         the company is reached through that person's employer. The estate refuses it
-        (migration 1787990100).
+        (migration 1788000100).
 
       x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:

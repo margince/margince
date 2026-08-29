@@ -2781,7 +2781,7 @@ export interface paths {
          *
          *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
          *     the company is reached through that person's employer. The estate refuses it
-         *     (migration 1787990100).
+         *     (migration 1788000100).
          */
         post: operations["relinkActivity"];
         delete?: never;
@@ -2813,7 +2813,7 @@ export interface paths {
          *
          *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
          *     the company is reached through that person's employer. The estate refuses it
-         *     (migration 1787990100).
+         *     (migration 1788000100).
          */
         post: operations["relinkThread"];
         delete?: never;
@@ -2843,7 +2843,7 @@ export interface paths {
          *
          *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
          *     the company is reached through that person's employer. The estate refuses it
-         *     (migration 1787990100).
+         *     (migration 1788000100).
          */
         post: operations["relinkActivities"];
         delete?: never;

@@ -58,7 +58,13 @@ WHERE ol.entity_type = 'organization'
           JOIN person p ON p.id = on_event.person_id
           JOIN relationship r ON r.person_id = on_event.person_id
          WHERE p.archived_at IS NULL
-           AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
+           AND r.kind = 'employment' AND r.archived_at IS NULL
+           -- people.EmploymentIsCurrentSQL, spelled out because SQL cannot call
+           -- it. A DATE comparison, not a null check: somebody serving three
+           -- months' notice still works there, and reading the column's
+           -- presence as "gone" would delete the company's link over an
+           -- attendee who is still its employee.
+           AND (r.ended_at IS NULL OR r.ended_at > current_date)
            AND r.organization_id = ol.organization_id);
 
 -- What remains is a meeting whose company nothing else reaches. Dropping the
