@@ -35,15 +35,6 @@ type HardBounce struct {
 	PersonID  ids.UUID
 }
 
-// hardBouncesFilter is the send half of the statement; the person half is
-// assembled per call because its visibility clause is the caller's own.
-const hardBouncesFilter = `
- WHERE o.user_id = $1
-   AND o.bounce_kind = 'hard'
-   AND o.bounced_at >= $2
- ORDER BY o.bounced_at DESC, o.id DESC
- LIMIT $3`
-
 // subjectLineBound caps the send's subject on the way to the wire, as the
 // sibling lanes cap their free text: the column is unbounded and eight
 // multi-megabyte headlines would be a self-inflicted flood.
@@ -60,7 +51,10 @@ const subjectLineBound = 300
 // not reach the wire even as a bare id. LATERAL with
 // LIMIT 1 rather than a plain join: an activity filed under several people
 // must not put the same bounce on the lane twice.
-func hardBouncesSQL(ctx context.Context, args *[]any) (string, error) {
+func hardBouncesSQL(ctx context.Context, userID ids.UUID, since time.Time, limit int, args *[]any) (string, error) {
+	// Every placeholder is derived from the arg slice — the visibility clause
+	// appends its own, and a hand-numbered $N beside a derived one drifts the
+	// day the filter gains an argument.
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
 	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
 	if err != nil {
@@ -69,14 +63,19 @@ func hardBouncesSQL(ctx context.Context, args *[]any) (string, error) {
 	if visible == "" {
 		visible = "TRUE"
 	}
-	return `
-SELECT o.id, left(COALESCE(o.subject, ''), ` + fmt.Sprint(subjectLineBound) + `), COALESCE(o.bounce_reason, ''), o.bounced_at, l.person_id
+	return fmt.Sprintf(`
+SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.bounce_reason, ''), o.bounced_at, l.person_id
   FROM comms_outbound o
   LEFT JOIN LATERAL (
     SELECT al.person_id FROM activity_link al
-     WHERE al.activity_id = o.activity_id AND al.entity_type = 'person' AND ` + visible + `
+     WHERE al.activity_id = o.activity_id AND al.entity_type = 'person' AND `+visible+`
      ORDER BY al.person_id LIMIT 1
-  ) l ON true` + hardBouncesFilter, nil
+  ) l ON true
+ WHERE o.user_id = $%d
+   AND o.bounce_kind = 'hard'
+   AND o.bounced_at >= $%d
+ ORDER BY o.bounced_at DESC, o.id DESC
+ LIMIT $%d`, subjectLineBound, arg(userID), arg(since), arg(limit)), nil
 }
 
 // HardBouncesFor answers the calling person's own hard-bounced sends since
@@ -89,8 +88,15 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 	if !ok || actor.UserID.IsZero() {
 		return nil, fmt.Errorf("comms: reading your bounced sends needs an authenticated person: %w", apperrors.ErrPermissionDenied)
 	}
-	args := []any{actor.UserID, since, limit}
-	statement, err := hardBouncesSQL(ctx, &args)
+	// A send is an activity, and reading one back — subject line included —
+	// carries the activity read grant like every other timeline read. After
+	// the person check, so a caller with nobody behind it gets the sentinel
+	// the lane withholds on rather than a bare unauthenticated error.
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var args []any
+	statement, err := hardBouncesSQL(ctx, actor.UserID, since, limit, &args)
 	if err != nil {
 		return nil, err
 	}

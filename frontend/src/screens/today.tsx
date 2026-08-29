@@ -160,7 +160,9 @@ function quietLead(
   // not — worse news than a drifting deal, because the customer never heard.
   const undelivered = day.counts.bounces ?? 0;
   if (undelivered > 0) {
-    return t("day.lead.bounces", { count: formatNumber(undelivered, locale) });
+    return t(pluralKey(locale, "day.lead.bounces", undelivered), {
+      count: formatNumber(undelivered, locale),
+    });
   }
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {

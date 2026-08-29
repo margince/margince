@@ -12,10 +12,13 @@ package comms
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -72,7 +75,8 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 	}
 
 	since := e.clockValue.Add(-7 * 24 * time.Hour)
-	bounced, err := e.store.HardBouncesFor(e.ctx, since, 8)
+	reader := readerCtx(e.ws, e.user)
+	bounced, err := e.store.HardBouncesFor(reader, since, 8)
 	if err != nil {
 		t.Fatalf("HardBouncesFor: %v", err)
 	}
@@ -94,7 +98,7 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 	}
 
 	// A window opening after the report drops it: the lane ages out.
-	none, err := e.store.HardBouncesFor(e.ctx, e.clockValue.Add(time.Hour), 8)
+	none, err := e.store.HardBouncesFor(reader, e.clockValue.Add(time.Hour), 8)
 	if err != nil {
 		t.Fatalf("HardBouncesFor with a later window: %v", err)
 	}
@@ -109,11 +113,34 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 		stranger, "other-"+stranger.String()+"@comms.test"); err != nil {
 		t.Fatal(err)
 	}
-	othersView, err := e.store.HardBouncesFor(actorCtx(e.ws, stranger), since, 8)
+	othersView, err := e.store.HardBouncesFor(readerCtx(e.ws, stranger), since, 8)
 	if err != nil {
 		t.Fatalf("HardBouncesFor as another person: %v", err)
 	}
 	if len(othersView) != 0 {
 		t.Fatalf("another person reads %+v, want nothing of this caller's", othersView)
+	}
+}
+
+// readerCtx is actorCtx plus the activity read grant the lane requires — the
+// permission every seat that sees the Worklist carries.
+func readerCtx(ws ids.UUID, user ids.UserID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user.UUID,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// A caller whose role lacks the activity read grant is refused like any other
+// timeline read: the subject lines of their sends are activity content.
+func TestHardBouncesForRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
+	e := setupStore(t)
+	if _, err := e.store.HardBouncesFor(e.ctx, e.clockValue.Add(-time.Hour), 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("HardBouncesFor without the activity grant = %v, want the permission sentinel", err)
 	}
 }
