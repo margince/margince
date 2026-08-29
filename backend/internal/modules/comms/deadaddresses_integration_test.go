@@ -74,8 +74,8 @@ func TestADeadAddressIsTheOneTheReportNamedAndAWorkingSendRevivesIt(t *testing.T
 // A row stamped before bounce_recipient existed carries NULL: it may blame
 // its recipient only when it has exactly one, so a legacy multi-recipient row
 // marks nobody. The legacy state is produced by erasing the recorded
-// recipient with the owner connection — the one writer that column had did
-// not exist when those rows were stamped.
+// recipient with the owner connection: RecordBounce, which stamps it, did not
+// exist when those rows were written.
 func TestALegacyBounceRowMarksOnlyASoleRecipient(t *testing.T) {
 	e := setupStore(t)
 
