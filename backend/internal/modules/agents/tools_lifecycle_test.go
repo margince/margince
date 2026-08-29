@@ -111,12 +111,17 @@ func TestConfirmFirstLifecycleToolsRefuseToStageAMirrorHeldRecord(t *testing.T) 
 	}
 }
 
-type recordingRelinker struct{ entityType string }
+type recordingRelinker struct {
+	entityType string
+	// pin is what the tool handed the write, which is the whole question in
+	// #2614: the gate binds a version and nothing consumed it.
+	pin *int64
+}
 
 func (r *recordingRelinker) RelinkActivity(
-	_ context.Context, _ ids.UUID, entityType string, _ ids.UUID, _ bool,
+	_ context.Context, _ ids.UUID, entityType string, _ ids.UUID, _ bool, ifVersion *int64,
 ) (json.RawMessage, error) {
-	r.entityType = entityType
+	r.entityType, r.pin = entityType, ifVersion
 	return nil, nil
 }
 
@@ -428,4 +433,55 @@ func assertRelinkTierReadsEntityType(t *testing.T, name string, spec mcp.ToolSpe
 	if got := spec.TierResolver(mcp.TierResolverInput{Args: json.RawMessage(`not json`)}); got != mcp.TierConfirmationRequired {
 		t.Errorf("an unparseable body resolved tier %v, want confirmation required", got)
 	}
+}
+
+// The relink CONSUMES the version its gate bound, on both of the paths that
+// bind one.
+//
+// A dynamic tier is resolved from a read that commits before the write it
+// admits, and an agent controls both sides of that window — so the gate binds
+// the version and the write is supposed to re-check it. Nothing did: the tool
+// never asked pinForWrite, and the store had no field to put an answer in
+// (#2614). A relink then executed against whatever the record had become.
+//
+// The RELEASED pin is what this asserts, and it is the one this package can
+// stage: the admitted pin an auto-execute carries is put in the context by
+// auth's own unexported writer, so only the gate can produce it. pinForWrite is
+// where the two meet and the tool asks it once — what is proven here is that its
+// answer reaches the write rather than stopping at the tool, which is the half
+// that was missing.
+func TestRelinkActivityHandsTheWriteTheVersionItsGateBound(t *testing.T) {
+	relink := func(ctx context.Context, seam *recordingRelinker) {
+		t.Helper()
+		tool := relinkActivity{relinker: seam}
+		args := json.RawMessage(`{"activity_id":"` + ids.NewV7().String() +
+			`","entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+		if _, err := tool.Handle(ctx, args); err != nil {
+			t.Fatalf("relink: %v", err)
+		}
+	}
+
+	t.Run("the version a human released against", func(t *testing.T) {
+		seam := &recordingRelinker{}
+		released := int64(7)
+		relink(context.WithValue(context.Background(), releasedPinKey{}, released), seam)
+		if seam.pin == nil {
+			t.Fatal("the write was handed no version, so an approval released against one reading of " +
+				"the activity executes against another")
+		}
+		if *seam.pin != released {
+			t.Errorf("the write was pinned at %d, want the released %d", *seam.pin, released)
+		}
+	})
+
+	// And no pin is not an error. A human's relink through the app conditions on
+	// nothing, and a static-tier call has nothing to condition on — a sentinel
+	// here would make the write branch on a case it does not act on.
+	t.Run("no pin at all", func(t *testing.T) {
+		seam := &recordingRelinker{}
+		relink(context.Background(), seam)
+		if seam.pin != nil {
+			t.Errorf("an unpinned relink was conditioned on %d", *seam.pin)
+		}
+	})
 }

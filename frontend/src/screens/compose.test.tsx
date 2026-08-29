@@ -206,6 +206,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="person"
         entityId="p-1"
         open
@@ -229,6 +230,50 @@ describe("RelinkModal", () => {
     });
     // Relink is idempotency-keyed (its no-dup-on-replay contract).
     expect(relink?.headers.get("Idempotency-Key")).toBeTruthy();
+    // AND it carries the version this reader saw. The key and the precondition
+    // are one header slot, so a regression that wrote them separately would
+    // send whichever came last — the key alone, silently unconditioned.
+    expect(relink?.headers.get("If-Match")).toBe("4");
+  });
+
+  // A copy read without a version cannot say what it is changing, so the relink
+  // is refused BY NAME rather than through requireVersion's bare throw — which
+  // reached the reader as the generic "something went wrong", on the very error
+  // path the write leans on to say it did not go through.
+  it("refuses in words when the activity was read without a version", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({
+      "GET /search": () =>
+        jsonResponse({
+          data: [{ type: "deal", id: "d-9", title: "Acme renewal" }],
+          page: { has_more: false },
+        }),
+      "POST /activities/act-1/relink": () => jsonResponse(activity202),
+    });
+    render(
+      <RelinkModal
+        activityId="act-1"
+        activityVersion={null}
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={onClose}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole("searchbox"), "Acme");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Acme renewal" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+
+    expect(await screen.findByText(/read without a version/i)).toBeTruthy();
+    // And nothing was sent: a refusal that still wrote would be the
+    // last-write-wins this whole change is about.
+    expect(sent.find((r) => r.key === "POST /activities/act-1/relink")).toBe(
+      undefined,
+    );
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("sends replace_existing_of_type when the move toggle is on", async () => {
@@ -244,6 +289,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="deal"
         entityId="d-1"
         open
@@ -265,6 +311,7 @@ describe("RelinkModal", () => {
       entity_id: "o-2",
       replace_existing_of_type: true,
     });
+    expect(relink?.headers.get("If-Match")).toBe("4");
   });
 
   it("moves the whole conversation through relinkThread when asked", async () => {
@@ -280,6 +327,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         threadKey="thread:abc"
         entityType="person"
         entityId="p-1"
@@ -308,6 +356,9 @@ describe("RelinkModal", () => {
       replace_existing_of_type: false,
     });
     expect(thread?.headers.get("Idempotency-Key")).toBeTruthy();
+    // And NO precondition: a thread moves many activities, and one version
+    // cannot condition them — the server refuses a pinned batch by name.
+    expect(thread?.headers.get("If-Match")).toBeNull();
     // The single-activity route is not called on the way.
     expect(sent.find((r) => r.key === "POST /activities/act-1/relink")).toBe(
       undefined,
@@ -319,6 +370,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="person"
         entityId="p-1"
         open
@@ -346,6 +398,7 @@ describe("RelinkModal", () => {
     render(
       <RelinkModal
         activityId="act-1"
+        activityVersion={4}
         entityType="deal"
         entityId="d-1"
         open

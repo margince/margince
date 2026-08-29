@@ -71,7 +71,22 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
 func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (bool, error) {
+	// THE LOCK COMES FIRST, before the authority check and before the version
+	// compare, because both are answers about the row and both are only true
+	// while it holds still. Checked first and locked after, an ownership change
+	// landing in between leaves a caller writing on a permission they no longer
+	// have, and a version compare passing on a row that has since moved.
+	//
+	// It is taken for every relink rather than only a pinned one: the write
+	// below updates this row, so the lock is acquired either way — this decides
+	// WHEN, and the two checks above are the reason it is now.
+	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		return false, err
+	}
 	if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+		return false, err
+	}
+	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion); err != nil {
 		return false, err
 	}
 	var displaced []ids.UUID
@@ -128,6 +143,65 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	})
 }
 
+// relinkMeetsItsPin re-checks the version the caller read the activity at,
+// inside the transaction that moves it and under the row lock its caller has
+// already taken.
+//
+// The lock is what makes the compare mean anything: two relinks reading the same
+// version would otherwise both pass it and the loser would silently overwrite
+// the winner, and it holds until commit so the version cannot move between this
+// check and the write below it.
+//
+// No pin is the ordinary case and is not an error: a human's relink through the
+// app conditions on nothing, and a static-tier agent call has nothing to
+// condition on either.
+func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
+	if ifVersion == nil {
+		return nil
+	}
+	current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	if err != nil {
+		return err
+	}
+	if current.Version == nil || int64(*current.Version) != *ifVersion {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
+}
+
+// refuseBatchPin keeps a version pin off the doors it cannot mean.
+//
+// One version cannot speak for a thread or a named set: applied per row it
+// would refuse every activity except the one that happened to match, which
+// reads as a partial move nobody asked for. The doors that take a pin are the
+// single relink's, and a caller that supplies one here is told so rather than
+// having it quietly dropped — a pin silently ignored is the failure this whole
+// change is about.
+func refuseBatchPin(in RelinkActivityInput) error {
+	if in.IfVersion == nil {
+		return nil
+	}
+	return &BatchPinError{}
+}
+
+// BatchPinError refuses a version pin on a door that moves many activities.
+//
+// A MessageFault rather than a field fault: the pin arrives as an If-Match
+// HEADER, so there is no request field to name, and inventing one would point
+// the caller at an input that is not theirs to change.
+type BatchPinError struct{}
+
+func (e *BatchPinError) Error() string {
+	return "a thread or a named set moves many activities, and one version cannot condition them"
+}
+
+// MessageFault maps this to a 422 carrying the code, so a client can branch on
+// the reason rather than parsing prose.
+func (e *BatchPinError) MessageFault() (code, message string) {
+	return "pin_not_supported", e.Error() +
+		" — drop the If-Match and relink them one at a time to pin a version"
+}
+
 // RelinkThread applies one relink to every non-archived activity carrying
 // threadKey that the caller may write. A row the caller cannot see or cannot
 // write is LEFT, not refused: the caller never named it, so there is nothing
@@ -136,6 +210,9 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 	if threadKey == "" {
 		return RelinkBatchResult{}, httperr.Validation("thread_key", "required",
 			"thread_key names the conversation to move; it cannot be blank")
+	}
+	if err := refuseBatchPin(in); err != nil {
+		return RelinkBatchResult{}, err
 	}
 	column, err := admitRelink(ctx, in)
 	if err != nil {
@@ -193,6 +270,9 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 	if len(activityIDs) == 0 || len(activityIDs) > maxBulkRelink {
 		return RelinkBatchResult{}, httperr.Validation("activity_ids", "out_of_range",
 			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, len(activityIDs)))
+	}
+	if err := refuseBatchPin(in); err != nil {
+		return RelinkBatchResult{}, err
 	}
 	column, err := admitRelink(ctx, in)
 	if err != nil {

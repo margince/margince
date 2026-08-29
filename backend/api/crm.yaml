@@ -4288,6 +4288,12 @@ paths:
       x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+        # Conditions the move on the version the caller read the ACTIVITY at.
+        # A stale one answers 409 `version_skew`. It is also how the agent gate
+        # forwards the version a dynamic tier was resolved from, so an agent
+        # relink admitted on one reading of the record cannot execute against
+        # another.
+        - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
         content:
@@ -4309,6 +4315,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/relink-thread:

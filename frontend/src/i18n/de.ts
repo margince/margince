@@ -2930,6 +2930,8 @@ export const de = {
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Person, Organisation, Deal, Lead oder Projekt suchen",
+  "compose.relinkNoVersion":
+    "Diese Aktivität wurde ohne Version gelesen, daher kann eine Neuverknüpfung nicht sagen, was sie ändert. Öffne sie erneut und versuche es noch einmal.",
   "compose.relinkReplace": "Verschieben statt zusätzlich verknüpfen",
   "compose.relinkReplaceHint":
     "Ersetzt die bestehende Verknüpfung desselben Typs, statt eine weitere hinzuzufügen.",
