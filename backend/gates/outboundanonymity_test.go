@@ -115,11 +115,11 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 	anonymousOutbound.AssertAllMatched(t)
 	if len(findings) > 0 {
 		sort.Strings(findings)
-		t.Errorf("%d file(s) build an outbound request that names nobody:\n\t%s\n\n"+
+		t.Errorf("%d function(s) build an outbound request that names nobody:\n\t%s\n\n"+
 			"Go then sends `Go-http-client/1.1`, which names the language and not the caller, and "+
 			"an operator reading it can act on a language or on nothing. Set the User-Agent from "+
-			"an identity in internal/platform/outbound, or register the file above with the "+
-			"reason it needs none.",
+			"an identity in internal/platform/outbound, or register the FUNCTION above — the "+
+			"register keys on `path:func name`, so a file-shaped entry matches nothing.",
 			len(findings), strings.Join(findings, "\n\t"))
 	}
 }
@@ -260,16 +260,33 @@ func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]bool {
 	return built
 }
 
-// isRequestConstructor matches http.NewRequest and http.NewRequestWithContext,
-// under whatever name the file imports net/http by.
+// isRequestConstructor matches the ways net/http starts an outbound request,
+// under whatever name the file imports it by.
 func isRequestConstructor(call *ast.CallExpr, client string) bool {
 	switch fn := call.Fun.(type) {
 	case *ast.SelectorExpr:
 		pkg, isIdent := fn.X.(*ast.Ident)
-		return isIdent && pkg.Name == client && strings.HasPrefix(fn.Sel.Name, "NewRequest")
+		return isIdent && pkg.Name == client && startsARequest(fn.Sel.Name)
 	case *ast.Ident:
 		// A dot import spells it unqualified.
-		return client == "" && strings.HasPrefix(fn.Name, "NewRequest")
+		return client == "" && startsARequest(fn.Name)
+	}
+	return false
+}
+
+// startsARequest names the net/http functions that put a request on the wire.
+//
+// The CONVENIENCE forms are here beside NewRequest, and they are the sharper
+// half: http.Get and its siblings build and send in one call, so there is no
+// request to set a header on and the call is anonymous by construction. A
+// census that only knew NewRequest would report a clean tree over one, and its
+// floor could not catch that — a smaller count still clears it.
+func startsARequest(name string) bool {
+	switch {
+	case strings.HasPrefix(name, "NewRequest"):
+		return true
+	case name == "Get", name == "Post", name == "PostForm", name == "Head":
+		return true
 	}
 	return false
 }
@@ -323,8 +340,7 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 			want: 1,
 		},
 		{
-			// One waived builder does not cover its neighbour, which is why the
-			// register keys on the function.
+			// A map keyed "User-Agent" writes no header at all.
 			name: "a header set on something that is not a request header",
 			source: "package p\nimport \"net/http\"\nfunc call(m map[string]string) {\n" +
 				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
@@ -345,6 +361,15 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 			source: "package p\nimport \"net/http\"\nfunc call(out *http.Request) {\n" +
 				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
 				"\tout.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n\t_ = req\n}\n",
+			want: 1,
+		},
+		{
+			// Built and sent in one call, so there is no request to name the
+			// caller on: anonymous by construction, and the census has to say
+			// so rather than not see it.
+			name: "a convenience call is a request with nowhere to put a name",
+			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
+				"\tresp, _ := http.Get(\"https://x.test\")\n\t_ = resp\n}\n",
 			want: 1,
 		},
 		{
