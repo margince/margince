@@ -6969,20 +6969,20 @@ func (e OrganizationGraphNodeKind) Valid() bool {
 
 // Defines values for OrganizationGraphNodeStrengthBucket.
 const (
-	OrganizationGraphNodeStrengthBucketDormant OrganizationGraphNodeStrengthBucket = "dormant"
-	OrganizationGraphNodeStrengthBucketStrong  OrganizationGraphNodeStrengthBucket = "strong"
-	OrganizationGraphNodeStrengthBucketWarm    OrganizationGraphNodeStrengthBucket = "warm"
-	OrganizationGraphNodeStrengthBucketWeak    OrganizationGraphNodeStrengthBucket = "weak"
+	OrganizationGraphNodeStrengthBucketModerate OrganizationGraphNodeStrengthBucket = "moderate"
+	OrganizationGraphNodeStrengthBucketNone     OrganizationGraphNodeStrengthBucket = "none"
+	OrganizationGraphNodeStrengthBucketStrong   OrganizationGraphNodeStrengthBucket = "strong"
+	OrganizationGraphNodeStrengthBucketWeak     OrganizationGraphNodeStrengthBucket = "weak"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationGraphNodeStrengthBucket enum.
 func (e OrganizationGraphNodeStrengthBucket) Valid() bool {
 	switch e {
-	case OrganizationGraphNodeStrengthBucketDormant:
+	case OrganizationGraphNodeStrengthBucketModerate:
+		return true
+	case OrganizationGraphNodeStrengthBucketNone:
 		return true
 	case OrganizationGraphNodeStrengthBucketStrong:
-		return true
-	case OrganizationGraphNodeStrengthBucketWarm:
 		return true
 	case OrganizationGraphNodeStrengthBucketWeak:
 		return true
@@ -7032,20 +7032,20 @@ func (e OrganizationQuestion) Valid() bool {
 
 // Defines values for OrganizationStrengthBucket.
 const (
-	OrganizationStrengthBucketDormant OrganizationStrengthBucket = "dormant"
-	OrganizationStrengthBucketStrong  OrganizationStrengthBucket = "strong"
-	OrganizationStrengthBucketWarm    OrganizationStrengthBucket = "warm"
-	OrganizationStrengthBucketWeak    OrganizationStrengthBucket = "weak"
+	OrganizationStrengthBucketModerate OrganizationStrengthBucket = "moderate"
+	OrganizationStrengthBucketNone     OrganizationStrengthBucket = "none"
+	OrganizationStrengthBucketStrong   OrganizationStrengthBucket = "strong"
+	OrganizationStrengthBucketWeak     OrganizationStrengthBucket = "weak"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationStrengthBucket enum.
 func (e OrganizationStrengthBucket) Valid() bool {
 	switch e {
-	case OrganizationStrengthBucketDormant:
+	case OrganizationStrengthBucketModerate:
+		return true
+	case OrganizationStrengthBucketNone:
 		return true
 	case OrganizationStrengthBucketStrong:
-		return true
-	case OrganizationStrengthBucketWarm:
 		return true
 	case OrganizationStrengthBucketWeak:
 		return true
@@ -8730,20 +8730,20 @@ func (e RelationshipKind) Valid() bool {
 
 // Defines values for RelationshipStrengthBucket.
 const (
-	RelationshipStrengthBucketDormant RelationshipStrengthBucket = "dormant"
-	RelationshipStrengthBucketStrong  RelationshipStrengthBucket = "strong"
-	RelationshipStrengthBucketWarm    RelationshipStrengthBucket = "warm"
-	RelationshipStrengthBucketWeak    RelationshipStrengthBucket = "weak"
+	RelationshipStrengthBucketModerate RelationshipStrengthBucket = "moderate"
+	RelationshipStrengthBucketNone     RelationshipStrengthBucket = "none"
+	RelationshipStrengthBucketStrong   RelationshipStrengthBucket = "strong"
+	RelationshipStrengthBucketWeak     RelationshipStrengthBucket = "weak"
 )
 
 // Valid indicates whether the value is a known member of the RelationshipStrengthBucket enum.
 func (e RelationshipStrengthBucket) Valid() bool {
 	switch e {
-	case RelationshipStrengthBucketDormant:
+	case RelationshipStrengthBucketModerate:
+		return true
+	case RelationshipStrengthBucketNone:
 		return true
 	case RelationshipStrengthBucketStrong:
-		return true
-	case RelationshipStrengthBucketWarm:
 		return true
 	case RelationshipStrengthBucketWeak:
 		return true
@@ -12015,22 +12015,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -21321,7 +21321,7 @@ type OrganizationQuestion string
 
 // OrganizationStrength defines model for OrganizationStrength.
 type OrganizationStrength struct {
-	// Bucket Coarse band derived from score for display.
+	// Bucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 	Bucket OrganizationStrengthBucket `json:"bucket"`
 
 	// ComputedAt When this value was last recomputed (fixed-clock reproducible).
@@ -21359,7 +21359,7 @@ type OrganizationStrength struct {
 	Score int `json:"score"`
 }
 
-// OrganizationStrengthBucket Coarse band derived from score for display.
+// OrganizationStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 type OrganizationStrengthBucket string
 
 // OverlayBudget The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).
@@ -23675,7 +23675,7 @@ type RelationshipListResponse struct {
 // interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
 // `contributing_activity_ids` are the receipts, so the UI can show its inputs — no mystery number.
 type RelationshipStrength struct {
-	// Bucket Coarse band derived from score for display.
+	// Bucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 	Bucket RelationshipStrengthBucket `json:"bucket"`
 
 	// ComputedAt When this value was last recomputed (fixed-clock reproducible).
@@ -23705,7 +23705,7 @@ type RelationshipStrength struct {
 	Score int `json:"score"`
 }
 
-// RelationshipStrengthBucket Coarse band derived from score for display.
+// RelationshipStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 type RelationshipStrengthBucket string
 
 // RelinkActivitiesRequest The destination for a named set of activities. Every id must be one the caller can see and

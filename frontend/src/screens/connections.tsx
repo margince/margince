@@ -603,7 +603,7 @@ function strengthTone(
   if (bucket === "strong") {
     return "success";
   }
-  if (bucket === "warm") {
+  if (bucket === "moderate") {
     return "accent";
   }
   return undefined;

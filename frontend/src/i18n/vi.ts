@@ -4967,9 +4967,9 @@ export const vi = {
 
   "strength.title": "Độ bền quan hệ",
   "strength.score": "Điểm {score}/100",
-  "strength.bucket.dormant": "Tạm lắng",
+  "strength.bucket.none": "Tạm lắng",
   "strength.bucket.weak": "Yếu",
-  "strength.bucket.warm": "Thân thiết",
+  "strength.bucket.moderate": "Thân thiết",
   "strength.bucket.strong": "Bền chặt",
   "strength.factor.recency": "Độ gần đây",
   "strength.factor.frequency": "Tần suất",

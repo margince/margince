@@ -1989,7 +1989,7 @@ export async function mockApi(
     if (path.endsWith("/strength")) {
       return json({
         score: 0,
-        bucket: "dormant",
+        bucket: "none",
         factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
         inbound_90d: 0,
         outbound_90d: 0,

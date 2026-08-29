@@ -80,7 +80,7 @@ const noWayIn = {
   ...withWayIn,
   strength: {
     score: 0,
-    bucket: "dormant",
+    bucket: "none",
     contact_count: 0,
     contributor_person_id: null,
     factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },

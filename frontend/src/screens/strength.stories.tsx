@@ -33,7 +33,7 @@ const strongStrength = {
 
 const dormantStrength = {
   score: 0,
-  bucket: "dormant",
+  bucket: "none",
   factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
   last_interaction: null,
 };
@@ -52,7 +52,7 @@ export const Strong: Story = {
   },
 };
 
-// A record with no qualifying interactions: bucket:dormant, score:0,
+// A record with no qualifying interactions: bucket:none, score:0,
 // rendered plainly (0% bars, an honest "no interactions yet" caption) —
 // never hidden or dressed up as an error.
 export const Dormant: Story = {

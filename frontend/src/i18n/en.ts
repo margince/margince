@@ -5074,9 +5074,9 @@ export const en = {
 
   "strength.title": "Relationship strength",
   "strength.score": "Score {score}/100",
-  "strength.bucket.dormant": "Dormant",
+  "strength.bucket.none": "Dormant",
   "strength.bucket.weak": "Weak",
-  "strength.bucket.warm": "Warm",
+  "strength.bucket.moderate": "Warm",
   "strength.bucket.strong": "Strong",
   "strength.factor.recency": "Recency",
   "strength.factor.frequency": "Frequency",

@@ -12,7 +12,7 @@ function contact(over: Partial<Contact> = {}): Contact {
   return {
     person_id: "p1",
     full_name: "Christian Hagemeyer",
-    strength: { score: 0, bucket: "dormant", factors: FACTORS },
+    strength: { score: 0, bucket: "none", factors: FACTORS },
     deal_roles: [],
     consent: {},
     ...over,
@@ -23,7 +23,7 @@ const withTraffic = (out: number, back: number, over: Partial<Contact> = {}) =>
   contact({
     strength: {
       score: back > 0 ? 40 : 2,
-      bucket: back > 0 ? "warm" : "weak",
+      bucket: back > 0 ? "moderate" : "weak",
       factors: FACTORS,
       outbound_90d: out,
       inbound_90d: back,

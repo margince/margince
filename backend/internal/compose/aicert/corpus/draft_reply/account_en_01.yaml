@@ -25,7 +25,7 @@ fixture:
     first_name: Priya
     title: Head of Operations
     email: p.raman@example.com
-    relationship: warm
+    relationship: moderate
     last_interaction: 2026-07-18T14:30:00Z
   # No currency, and that is deliberate. A deal's amount does not decode from a
   # fixture (AmountMinor is json:"-"), and a currency with no amount makes the
@@ -62,7 +62,7 @@ expect:
     the July conversation in mind — say what it was about rather than referring
     to it — and must not write "just circling back" or "as discussed".
 
-    No internals. The relationship reading ("warm") is steering for the writer,
+    No internals. The relationship reading ("moderate") is steering for the writer,
     not something to say to her. A draft that mentions a relationship strength,
     a score, or anything about other accounts scores at the floor.
 

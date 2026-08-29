@@ -135,19 +135,21 @@ func StrengthToWire(rs RelationshipStrength, now time.Time) crmcontracts.Relatio
 	return wire
 }
 
-// StrengthBucketToWire maps the domain's display bucket onto the contract
-// vocabulary. The domain emits only the four cases below; anything else
-// reads as dormant rather than as a wire value the enum never declared.
+// StrengthBucketToWire types the domain's display bucket for the contract.
+// The two vocabularies are the same words on purpose — the wire enum was
+// aligned to the §4 kernel's — so this switch renames nothing. The input is
+// still a plain string, so a value the kernel never emits reads as none
+// rather than as a wire value the enum never declared.
 func StrengthBucketToWire(bucket string) crmcontracts.RelationshipStrengthBucket {
 	switch bucket {
-	case "weak":
+	case relstrength.BucketWeak:
 		return crmcontracts.RelationshipStrengthBucketWeak
-	case "moderate":
-		return crmcontracts.RelationshipStrengthBucketWarm
-	case "strong":
+	case relstrength.BucketModerate:
+		return crmcontracts.RelationshipStrengthBucketModerate
+	case relstrength.BucketStrong:
 		return crmcontracts.RelationshipStrengthBucketStrong
-	default: // bucketNone
-		return crmcontracts.RelationshipStrengthBucketDormant
+	default:
+		return crmcontracts.RelationshipStrengthBucketNone
 	}
 }
 

@@ -21,7 +21,7 @@ import {
 // and the full recency/frequency/reciprocity/direction factor breakdown that
 // explains it (spec ai-operational-spec.md), plus the receipts (last
 // interaction, 90d in/out counts, contributing-activity count). A record
-// with no qualifying interactions is bucket:dormant, score:0 — that's
+// with no qualifying interactions is bucket:none, score:0 — that's
 // rendered plainly (0% bars, an honest "no interactions yet" caption), never
 // hidden or dressed up as an error.
 
@@ -32,9 +32,9 @@ const BUCKET_TONE: Record<
   "success" | "accent" | "warn" | undefined
 > = {
   strong: "success",
-  warm: "accent",
+  moderate: "accent",
   weak: "warn",
-  dormant: undefined,
+  none: undefined,
 };
 
 async function fetchStrength(
@@ -118,14 +118,14 @@ function StrengthBody({
   const recordZone = useRecordZone();
   // The contract guarantees factors/bucket/score, but a single data-driven
   // card must never crash the whole 360 if a response arrives malformed —
-  // degrade to the honest zero/dormant reading instead (craft T7).
+  // degrade to the honest zero/none reading instead (craft T7).
   const factors = strength.factors ?? {
     recency: 0,
     frequency: 0,
     reciprocity: 0,
     direction: 0,
   };
-  const bucket = strength.bucket ?? "dormant";
+  const bucket = strength.bucket ?? "none";
   const score = strength.score ?? 0;
   const factorRows: Array<{
     key: "recency" | "frequency" | "reciprocity" | "direction";

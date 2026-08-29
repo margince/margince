@@ -160,7 +160,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
 // catch-all.
 const dormantStrength = {
   score: 0,
-  bucket: "dormant",
+  bucket: "none",
   factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
   last_interaction: null,
 };

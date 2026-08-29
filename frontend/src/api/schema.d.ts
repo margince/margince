@@ -12634,10 +12634,10 @@ export interface components {
             /** @description 0..100 composite. */
             score: number;
             /**
-             * @description Coarse band derived from score for display.
+             * @description Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
              * @enum {string}
              */
-            bucket: "dormant" | "weak" | "warm" | "strong";
+            bucket: "none" | "weak" | "moderate" | "strong";
             /** @description The 0..1 sub-scores the composite was built from (the explanation). */
             factors: {
                 recency: number;
@@ -14401,7 +14401,7 @@ export interface components {
              * @description The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
              * @enum {string|null}
              */
-            strength_bucket?: null | "dormant" | "weak" | "warm" | "strong";
+            strength_bucket?: null | "none" | "weak" | "moderate" | "strong";
             /**
              * @description This contact is the route in the active signal's warm-intro path proposes.
              *     At most one node carries it, and only when `intro_path` at the top level is

@@ -5007,9 +5007,9 @@ export const de = {
 
   "strength.title": "Beziehungsstärke",
   "strength.score": "Score {score}/100",
-  "strength.bucket.dormant": "Ruhend",
+  "strength.bucket.none": "Ruhend",
   "strength.bucket.weak": "Schwach",
-  "strength.bucket.warm": "Warm",
+  "strength.bucket.moderate": "Warm",
   "strength.bucket.strong": "Stark",
   "strength.factor.recency": "Aktualität",
   "strength.factor.frequency": "Häufigkeit",

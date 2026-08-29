@@ -18649,7 +18649,7 @@ components:
       required: [score, bucket, factors]
       properties:
         score: { type: integer, minimum: 0, maximum: 100, description: 0..100 composite. }
-        bucket: { type: string, enum: [dormant, weak, warm, strong], description: Coarse band derived from score for display. }
+        bucket: { type: string, enum: [none, weak, moderate, strong], description: Coarse band derived from score for display — the same vocabulary every strength band on the wire uses. }
         factors:
           type: object
           description: The 0..1 sub-scores the composite was built from (the explanation).
@@ -20915,7 +20915,7 @@ components:
             and for a contact whose strength this caller's person scope did not resolve.
         strength_bucket:
           type: [string, 'null']
-          enum: [null, dormant, weak, warm, strong]
+          enum: [null, none, weak, moderate, strong]
           description: The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
         intro_path:
           type: boolean

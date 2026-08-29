@@ -585,7 +585,7 @@ describe("company view — consent is per purpose", () => {
               },
               strength: {
                 score: 0,
-                bucket: "dormant",
+                bucket: "none",
                 factors: {
                   recency: 0,
                   frequency: 0,
@@ -1046,7 +1046,7 @@ describe("company view — the citations under a finding", () => {
             consent: {},
             strength: {
               score: 0,
-              bucket: "dormant" as const,
+              bucket: "none" as const,
               factors: {
                 recency: 0,
                 frequency: 0,
@@ -1345,7 +1345,7 @@ describe("company view — naming the buying committee", () => {
               consent: {},
               strength: {
                 score: 0,
-                bucket: "dormant",
+                bucket: "none",
                 factors: {
                   recency: 0,
                   frequency: 0,
@@ -1399,7 +1399,7 @@ describe("company view — naming the buying committee", () => {
               consent: {},
               strength: {
                 score: 0,
-                bucket: "dormant",
+                bucket: "none",
                 factors: {
                   recency: 0,
                   frequency: 0,
@@ -1508,7 +1508,7 @@ describe("company view — a recorded role reaches the screen", () => {
     consent: {},
     strength: {
       score: 0,
-      bucket: "dormant",
+      bucket: "none",
       factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
     },
   };
@@ -1598,7 +1598,7 @@ it("does not offer a role the contact already holds on that deal", async () => {
             consent: {},
             strength: {
               score: 0,
-              bucket: "dormant",
+              bucket: "none",
               factors: {
                 recency: 0,
                 frequency: 0,
@@ -2241,7 +2241,7 @@ describe("company view — the account's own tabs", () => {
               title: "Managing director",
               strength: {
                 score: 0,
-                bucket: "dormant",
+                bucket: "none",
                 factors: {
                   recency: 0,
                   frequency: 0,
@@ -2316,7 +2316,7 @@ describe("company view — the way in to one contact", () => {
             },
             strength: {
               score: 0,
-              bucket: "dormant",
+              bucket: "none",
               factors: {
                 recency: 0,
                 frequency: 0,

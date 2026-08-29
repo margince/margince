@@ -40,7 +40,7 @@ function contact(personId: string, roles: Contact["deal_roles"]): Contact {
   return {
     person_id: personId,
     full_name: `Contact ${personId}`,
-    strength: { score: 0, bucket: "dormant", factors: FACTORS },
+    strength: { score: 0, bucket: "none", factors: FACTORS },
     deal_roles: roles,
     consent: {},
   };

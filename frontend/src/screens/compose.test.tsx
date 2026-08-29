@@ -1798,7 +1798,7 @@ describe("ComposeModal started from an account", () => {
                 full_name: "Sarah Cole",
                 strength: {
                   score: 40,
-                  bucket: "warm",
+                  bucket: "moderate",
                   factors: {
                     recency: 0,
                     frequency: 0,
