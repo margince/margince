@@ -4,8 +4,14 @@
 package personresearch
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/persondata"
 )
 
@@ -34,5 +40,25 @@ func TestAClaimLeftWithNoOpenableSourceIsDropped(t *testing.T) {
 	})
 	if len(claims) != 0 {
 		t.Fatalf("kept %d claims, want none", len(claims))
+	}
+}
+
+// Save is human-only whatever it would have written: an agent posting an
+// EMPTY claims list must see the same refusal a non-empty one gets, not the
+// zero-claims no-op a human gets. A zero-value Service is enough to prove
+// it — the refusal has to land before s.people is ever touched, so a nil
+// store that would panic on the write path is the check that the ordering
+// really is what it claims.
+func TestSaveRefusesAnAgentEvenWithNoClaims(t *testing.T) {
+	agentCtx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:test",
+	})
+	s := &Service{}
+	saved, err := s.Save(agentCtx, ids.From[ids.PersonKind](ids.NewV7()), crmcontracts.SavePersonResearchRequest{})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("Save(agent, no claims) err = %v, want ErrPermissionDenied", err)
+	}
+	if saved != 0 {
+		t.Errorf("Save(agent, no claims) saved = %d, want 0", saved)
 	}
 }
