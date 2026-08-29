@@ -639,19 +639,33 @@ func assembledSetTarget(statements []string) string {
 			continue
 		}
 		assignments := strings.TrimSpace(setAssignments(stmt))
-		if assignments == "" || strings.HasSuffix(assignments, ",") || formatVerbRe.MatchString(assignments) {
+		if assignments == "" || strings.HasSuffix(assignments, ",") || formatVerbTargetRe.MatchString(assignments) {
 			return stmt
 		}
 	}
 	return ""
 }
 
-// formatVerbRe is a fmt verb standing where a column or a value should be.
+// formatVerbTargetRe is a fmt verb standing where a COLUMN should be — at the
+// head of the assignment list or just after a comma, and followed by the `=`
+// that makes it a target.
+//
 // `fmt.Sprintf("UPDATE activity SET %s = NULL", column)` reaches the reader as
 // a literal that looks complete and names a column that is not a column, so
 // neither the empty-clause nor the dangling-comma tell fires — and no `+` node
-// exists for assembledSweepTargets to read either. The verb IS the tell.
-var formatVerbRe = regexp.MustCompile(`%[-+# 0-9.*]*[a-zA-Z]`)
+// exists for assembledSweepTargets to read either. The verb is the tell.
+//
+// The POSITION is what makes it a tell rather than a nuisance. A bare `%` is
+// ordinary SQL text: `SET body = 'template %s'`, `SET query = 'foo%bar'`, a
+// LIKE pattern `'100%'`. Matching those would report a statement that is
+// entirely readable, and this gate's report is an instruction to go rewrite it
+// — a tripwire that fires on correct code is one somebody turns off.
+//
+// What it still reads wrongly, stated rather than implied: a comma AND a verb
+// AND an equals inside one quoted value — `SET body = 'a, %s = b'` — puts a
+// target position inside a string. That is over-recognition on a shape nothing
+// writes, which costs a false finding rather than a missed destruction.
+var formatVerbTargetRe = regexp.MustCompile(`(?:^|,)\s*%[-+# 0-9.*]*[a-z]\s*=`)
 
 // unreadableWriteOn answers the swept statement on one table that this gate
 // can only half read, or "" when it can read them all.

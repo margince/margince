@@ -245,11 +245,12 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 			t.Error("a SET clause naming a fmt verb was read as complete — the column arrives at runtime " +
 				"and the KEEPS registration is no longer checked against it")
 		}
-		// A percent that is not a verb must not fire it, or an ordinary LIKE
-		// pattern would be a finding and the tripwire would get turned off.
-		ordinary := collapsedSQL(`UPDATE activity SET body = NULL WHERE subject LIKE '100%'`)
-		if got := assembledSetTarget([]string{ordinary}); got != "" {
-			t.Errorf("an ordinary statement was reported as assembled: %q", got)
+		assertOrdinaryStatementsAreNotReported(t, percentsThatAreNotVerbs...)
+		// And the verb after a static assignment, which is the position an
+		// assembled sweep would really produce.
+		behind := collapsedSQL(`UPDATE activity SET body = NULL, %s = NULL WHERE id = $1`)
+		if assembledSetTarget([]string{behind}) == "" {
+			t.Error("a verb standing where a later column should be was read as complete")
 		}
 	})
 
@@ -364,5 +365,24 @@ func TestDeclaredErasuresMustArriveInOneStatement(t *testing.T) {
 	if oneStatementCarries(apart, declared) {
 		t.Error("two statements each making half the erasure were accepted — a declaration describes one act, and " +
 			"accepting the union lets a dead helper carrying the missing half stand in for the action that stopped making it")
+	}
+}
+
+// percentsThatAreNotVerbs are ordinary SQL texts carrying a `%`. Each is
+// entirely readable, and reporting one would send an author to rewrite a
+// statement that is fine — which is how a tripwire gets turned off.
+var percentsThatAreNotVerbs = []string{
+	`UPDATE activity SET body = 'template %s' WHERE id = $1`,
+	`UPDATE activity SET query = 'foo%bar' WHERE id = $1`,
+	`UPDATE activity SET body = '100% useful' WHERE id = $1`,
+	`UPDATE activity SET body = NULL WHERE subject LIKE '100%'`,
+}
+
+func assertOrdinaryStatementsAreNotReported(t *testing.T, statements ...string) {
+	t.Helper()
+	for _, ordinary := range statements {
+		if got := assembledSetTarget([]string{collapsedSQL(ordinary)}); got != "" {
+			t.Errorf("an ordinary statement was reported as assembled: %q", got)
+		}
 	}
 }
