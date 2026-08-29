@@ -87,7 +87,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		engine.RegisterSystemWorkflow(handler)
 	}
 	activityStore := activities.NewStore(db)
-	engine.RegisterSystemWorkflow(leadSLAEscalation{activities: activityStore, notices: notices.NewStore(db), now: time.Now})
+	engine.RegisterSystemWorkflow(newLeadSLAEscalation(db, time.Now))
 	for _, handler := range activities.FollowUpWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}

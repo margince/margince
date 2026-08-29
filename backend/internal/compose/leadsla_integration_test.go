@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -53,7 +52,11 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 
-	h := leadSLAEscalation{activities: activities.NewStore(e.DB()), now: func() time.Time { return deadline.Add(time.Hour) }}
+	// Built the way production builds it, and that is the point rather than
+	// tidiness: this line used to name the stores it wanted, so when the notify
+	// half was added the handler ran here with a nil notices store and panicked
+	// inside Apply. A constructor both sites call cannot be half-updated.
+	h := newLeadSLAEscalation(e.DB(), func() time.Time { return deadline.Add(time.Hour) })
 	eff, err := h.Plan(ctx, ev)
 	if err != nil {
 		t.Fatal(err)
@@ -78,4 +81,42 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	if assignee == nil || *assignee != e.Rep1 {
 		t.Errorf("task assignee = %v, want the escalation target %s", assignee, e.Rep1)
 	}
+
+	// The notify half, which nothing here asked about until it panicked. A
+	// breach the escalation names a target for writes that person a durable
+	// line, addressed to THEM: a notice on somebody else's Worklist is worse
+	// than none, because the person who has to act never sees it.
+	var recipients []ids.UUID
+	rows, err := owner.Query(context.Background(),
+		`SELECT recipient_user_id FROM notice WHERE kind = $1 ORDER BY id`, noticeKindLeadSLA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var who ids.UUID
+		if err := rows.Scan(&who); err != nil {
+			t.Fatal(err)
+		}
+		recipients = append(recipients, who)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(recipients) == 0 {
+		t.Fatal("the breach wrote its task and no notice — the escalation target is told nothing")
+	}
+	for _, who := range recipients {
+		if who != e.Rep1 {
+			t.Errorf("notice addressed to %s, want the escalation target %s", who, e.Rep1)
+		}
+	}
+	// NOT asserted: how MANY. The task half is idempotent through its
+	// (source_system, source_id) natural key, which is why the loop above
+	// checks for exactly one; the notice half has no such key, so two
+	// deliveries of one breach write two lines. The port's own contract says
+	// Apply is "idempotent on IdempotencyKey(ev)", so that is a defect rather
+	// than a shape to pin here. Asserting the count either way would freeze an
+	// answer nobody has decided; the decision is what the notice register keys
+	// on, and it belongs with the notices store rather than here.
 }
