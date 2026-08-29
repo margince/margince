@@ -163,8 +163,8 @@ backend/internal/modules/quotas/attainment.go core 0217
 backend/internal/modules/quotas/quotas.go core 0228
 backend/internal/modules/search/binding.go migration 0114
 backend/internal/modules/search/graph.go core 0038
-backend/internal/modules/search/graphactivity.go core 0038
-backend/internal/modules/search/graphactivity.go migration 0157
+backend/internal/modules/search/graphactivitysubjects.go core 0038
+backend/internal/modules/search/graphactivitysubjects.go migration 0157
 backend/internal/modules/search/pending.go migration 0114
 backend/internal/modules/search/queryjoins.go core 0007
 backend/internal/modules/search/queryjoins.go core 0008

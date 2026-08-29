@@ -10,16 +10,16 @@
   "totals": {
     "tools": 59,
     "resources": 9,
-    "tool_catalog_bytes": 168034,
+    "tool_catalog_bytes": 168160,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 42886,
+    "approx_wire_tokens_total": 42918,
     "largest_tool_bytes": 6414,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
       "description_bytes": 39998,
-      "input_schema_bytes": 37250,
+      "input_schema_bytes": 37376,
       "output_schema_bytes": 77961,
-      "description_plus_input_schema_bytes": 77248
+      "description_plus_input_schema_bytes": 77374
     }
   },
   "tools": {
@@ -4657,7 +4657,7 @@
               "type": "string"
             },
             "links": {
-              "description": "Every record this was about, ALL OF THEM in this call. A meeting is with a PERSON and reaches their company through them, so a meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+              "description": "Every record this was about, ALL OF THEM in this call. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
               "items": {
                 "additionalProperties": false,
                 "properties": {

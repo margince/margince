@@ -369,12 +369,18 @@ func TestOrganization360NextMeetingSeparatesNoneFromWithheld(t *testing.T) {
 		t.Error("next_meeting was named as omitted while the caller holds the activity grant — that reads as 'hidden from you' for an account that simply has no meeting")
 	}
 
+	// A meeting reaches the account through the person who is in it — it cannot
+	// be filed against the company itself, which is not somebody you can meet.
+	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, org)
+
 	// A meeting in the past is not the next one. Seeded before the future meeting
 	// so an ordering that ignored occurred_at would return this row.
 	past := seedMeeting(t, owner, e.WS, "Kickoff, already held", org360Clock.Add(-48*time.Hour))
-	integration.LinkActivity(t, owner, past, "organization", org)
+	integration.LinkActivity(t, owner, past, "person", contact)
 	future := seedMeeting(t, owner, e.WS, "Renewal review", org360Clock.Add(72*time.Hour))
-	integration.LinkActivity(t, owner, future, "organization", org)
+	integration.LinkActivity(t, owner, future, "person", contact)
 
 	view, err = svc.Assemble(granted, ids.From[ids.OrganizationKind](org))
 	if err != nil {
@@ -479,7 +485,9 @@ func TestOrganization360NextMeetingWithholdsAttendeesWithoutThePersonGrant(t *te
 	e.WsExec(t, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, org)
 	meeting := seedMeeting(t, owner, e.WS, "Renewal review", org360Clock.Add(24*time.Hour))
-	integration.LinkActivity(t, owner, meeting, "organization", org)
+	// Through the contact who works there: the account arm of a meeting is the
+	// employment edge, never a direct link.
+	integration.LinkActivity(t, owner, meeting, "person", contact)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
 		VALUES ($1, $2, 'attendee')`, meeting, contact)
 

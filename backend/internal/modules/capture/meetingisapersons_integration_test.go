@@ -1,0 +1,299 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package capture_test
+
+// A meeting is with a person. A company is not somebody you can meet: it is
+// reached through the person who was in the room.
+//
+// The rule lives in the database rather than in a write path because the write
+// path is not the only writer — the MCP tool, a REST caller and the web app all
+// insert into activity_link. A check that only the Go code enforced would be
+// enforced for one of the three.
+//
+// These tests drive raw SQL for exactly that reason: they assert the estate
+// refuses the shape, not that some particular caller declines to ask.
+
+import (
+	"context"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// seedActivityAndOrg writes one activity of the given kind and one organization,
+// and answers both ids. Nothing links them: each test decides what to attempt.
+// meetingWorkspace binds a workspace the same way the other capture
+// integration tests do, so the triggers are exercised under real RLS binding
+// rather than as a superuser.
+func meetingWorkspace(t *testing.T) (context.Context, *database.DB) {
+	ctx, db, _ := meetingWorkspaceWithOwner(t)
+	return ctx, db
+}
+
+// meetingWorkspaceWithOwner also hands back the OWNER connection, for the one
+// case that has to watch the cluster from outside both of its transactions.
+func meetingWorkspaceWithOwner(t *testing.T) (context.Context, *database.DB, *pgx.Conn) {
+	t.Helper()
+	owner, pool := setupCaptureDB(t)
+	ctx := context.Background()
+	ws := ids.NewV7()
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding workspace: %v", err)
+	}
+	return ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), owner
+}
+
+func seedActivityAndOrg(ctx context.Context, t *testing.T, db *database.DB, kind string) (ids.UUID, ids.UUID) {
+	t.Helper()
+	activityID, orgID := ids.NewV7(), ids.NewV7()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, occurred_at, source, captured_by)
+			VALUES ($1, $2, now(), 'manual', 'test')`, activityID, kind); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO organization (id, display_name, source, captured_by)
+			VALUES ($1, 'Kugellager Test GmbH', 'manual', 'test')`, orgID)
+		return err
+	}); err != nil {
+		t.Fatalf("seed %s: %v", kind, err)
+	}
+	return activityID, orgID
+}
+
+func linkToOrg(ctx context.Context, db *database.DB, activityID, orgID ids.UUID) error {
+	return db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_link (activity_id, entity_type, organization_id)
+			VALUES ($1, 'organization', $2)`, activityID, orgID)
+		return err
+	})
+}
+
+// TestACompanyCannotBeMetOrCalled is the rule itself.
+func TestACompanyCannotBeMetOrCalled(t *testing.T) {
+	ctx, db := meetingWorkspace(t)
+
+	for _, kind := range []string{"meeting", "call"} {
+		t.Run(kind, func(t *testing.T) {
+			activityID, orgID := seedActivityAndOrg(ctx, t, db, kind)
+
+			err := linkToOrg(ctx, db, activityID, orgID)
+			if err == nil {
+				t.Fatalf("a %s was linked straight to a company; the estate must refuse it", kind)
+			}
+			// The refusal has to say what to do instead, because a caller that
+			// only learns "no" retries the same shape.
+			if !strings.Contains(err.Error(), "is with a person") {
+				t.Fatalf("refusal does not name the rule: %v", err)
+			}
+		})
+	}
+}
+
+// TestANoteAboutACompanyIsStillAllowed holds the other half. The rule is about
+// meetings and calls, which are inherently personal; a note or a task is ABOUT
+// a record, and filing one on a company is ordinary.
+func TestANoteAboutACompanyIsStillAllowed(t *testing.T) {
+	ctx, db := meetingWorkspace(t)
+
+	for _, kind := range []string{"note", "task", "email"} {
+		t.Run(kind, func(t *testing.T) {
+			activityID, orgID := seedActivityAndOrg(ctx, t, db, kind)
+			if err := linkToOrg(ctx, db, activityID, orgID); err != nil {
+				t.Fatalf("a %s about a company must still be allowed: %v", kind, err)
+			}
+		})
+	}
+}
+
+// TestARekindCannotSmuggleACompanyMeetingPast closes the back door. Linking a
+// note to a company is legal, so without this the same forbidden state is
+// reachable in two steps: link first, then change the kind.
+func TestARekindCannotSmuggleACompanyMeetingPast(t *testing.T) {
+	ctx, db := meetingWorkspace(t)
+
+	activityID, orgID := seedActivityAndOrg(ctx, t, db, "note")
+	if err := linkToOrg(ctx, db, activityID, orgID); err != nil {
+		t.Fatalf("seed the legal note link: %v", err)
+	}
+
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
+		return err
+	})
+	if err == nil {
+		t.Fatal("a company-linked note became a meeting; the two-step route must be refused too")
+	}
+	if !strings.Contains(err.Error(), "is with a person") {
+		t.Fatalf("refusal does not name the rule: %v", err)
+	}
+}
+
+// TestAMeetingWithAPersonIsUntouched proves the rule forbids only the thing it
+// means to. The ordinary case — a meeting linked to the person who was there —
+// must still write.
+func TestAMeetingWithAPersonIsUntouched(t *testing.T) {
+	ctx, db := meetingWorkspace(t)
+
+	activityID, _ := seedActivityAndOrg(ctx, t, db, "meeting")
+	personID, ownerID := ids.NewV7(), ids.NewV7()
+
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO app_user (id, email, display_name, status)
+			VALUES ($1, $2, 'Owner', 'active')`,
+			ownerID, "owner-"+ownerID.String()+"@example.test"); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+			VALUES ($1, 'Matthias Ortner', $2, 'workspace', 'manual', 'test')`,
+			personID, ownerID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_link (activity_id, entity_type, person_id)
+			VALUES ($1, 'person', $2)`, activityID, personID)
+		return err
+	}); err != nil {
+		t.Fatalf("a meeting with the person who was there must write: %v", err)
+	}
+}
+
+// The two triggers together, under concurrency — which is where a pair of
+// single-row checks stops being a rule.
+//
+// Read unlocked, neither trigger can see what the other transaction is doing:
+// one inserts the organization link while the activity is still a `note`, the
+// other re-kinds that same activity to `meeting` before the link is visible.
+// Both checks pass, both commit, and the row neither was allowed to make exists.
+//
+// The link-side trigger takes FOR SHARE on the activity, so the re-kind's own
+// row lock queues behind it and the second transaction re-reads under READ
+// COMMITTED — seeing whichever half landed first, and refusing.
+func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
+	ctx, db, owner := meetingWorkspaceWithOwner(t)
+	activityID, orgID := seedActivityAndOrg(ctx, t, db, "note")
+
+	linked, rekinded := make(chan error, 1), make(chan error, 1)
+	inserted, release := make(chan struct{}), make(chan struct{})
+	rekindPID := make(chan int32, 1)
+
+	// The link goes in FIRST and holds its transaction open. Both writers are
+	// then inside their window at once, which is the whole premise — started
+	// together, the re-kind can simply win, commit, and be seen by the link's
+	// own check, and the case proves nothing.
+	go func() {
+		linked <- db.Tx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO activity_link (activity_id, entity_type, organization_id)
+				VALUES ($1, 'organization', $2)`, activityID, orgID); err != nil {
+				close(inserted)
+				return err
+			}
+			close(inserted)
+			<-release
+			return nil
+		})
+	}()
+	<-inserted
+	go func() {
+		rekinded <- db.Tx(ctx, func(tx pgx.Tx) error {
+			// Its own backend, named before it writes, so the wait below is
+			// THIS transaction queueing rather than any backend in a shared
+			// test cluster happening to wait on any lock.
+			var pid int32
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				close(rekindPID)
+				return err
+			}
+			rekindPID <- pid
+			_, err := tx.Exec(ctx, `UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
+			return err
+		})
+	}()
+	pid, named := <-rekindPID
+	if !named {
+		t.Fatal("the re-kind never reached its own backend, so nothing can be watched for")
+	}
+
+	// Wait for the re-kind to REACH its lock rather than for a duration: the
+	// cluster is asked who is queued, and unlocked it never queues at all — in
+	// which case the re-kind finishes and says so, and the window closes on
+	// exactly the state this case is about.
+	finished, rekindErr := waitUntilQueuedOrDone(ctx, t, owner, pid, rekinded)
+	close(release)
+
+	linkErr := <-linked
+	if !finished {
+		rekindErr = <-rekinded
+	}
+	// Whichever order they settle in, they cannot BOTH have succeeded.
+	if linkErr == nil && rekindErr == nil {
+		t.Fatal("both halves committed: the activity is a meeting linked to a company, " +
+			"which is the state the two triggers exist to make unreachable")
+	}
+	// And the estate says so too, which is the assertion that does not depend on
+	// which transaction reported the refusal.
+	var forbidden int
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
+			 WHERE a.id = $1 AND a.kind IN ('meeting', 'call') AND l.entity_type = 'organization'`,
+			activityID).Scan(&forbidden)
+	}); err != nil {
+		t.Fatalf("reading back what the two transactions left: %v", err)
+	}
+	if forbidden != 0 {
+		t.Errorf("the estate holds %d company meeting(s) after the race", forbidden)
+	}
+}
+
+// waitUntilQueuedOrDone blocks until the second writer is WAITING ON A LOCK, or
+// until it has finished without ever waiting. `finished` says which happened,
+// and carries that writer's own result when it is the second.
+//
+// The condition, not the clock: a sleep long enough to be reliable is a sleep
+// this suite pays on every run, and one short enough to be cheap is a flake. It
+// asks the cluster instead, on the owner connection so neither of the two
+// transactions under test is disturbed — and about THAT BACKEND, since the pool
+// is shared and any other waiter would otherwise answer this question.
+func waitUntilQueuedOrDone(
+	ctx context.Context, t *testing.T, owner *pgx.Conn, pid int32, done <-chan error,
+) (finished bool, result error) {
+	t.Helper()
+	tick := time.NewTicker(5 * time.Millisecond)
+	defer tick.Stop()
+	giveUp := time.NewTimer(10 * time.Second)
+	defer giveUp.Stop()
+	for {
+		select {
+		case err := <-done:
+			return true, err
+		case <-giveUp.C:
+			t.Fatal("the second writer neither queued behind the first nor finished within ten " +
+				"seconds — this case can say nothing about the window it exists to close")
+			return false, nil
+		case <-tick.C:
+			var queued int
+			if err := owner.QueryRow(ctx, `
+				SELECT count(*) FROM pg_stat_activity
+				 WHERE pid = $1 AND wait_event_type = 'Lock'`, pid).Scan(&queued); err != nil {
+				t.Fatalf("asking the cluster whether backend %d is queued: %v", pid, err)
+			}
+			if queued > 0 {
+				return false, nil
+			}
+		}
+	}
+}

@@ -67,6 +67,11 @@ func OrgLinkedActivityExistsAny(orgsPos int) string {
 // other — while the shapes differ for a reason that will not go away
 // (OrgReachSet says what it is).
 //
+// search/graphorgreach.go spells the SAME arms for the context walk, because a
+// module never imports a sibling (ADR-0054). The two texts are held equal by
+// gates/accountreachcopies_test.go rather than by anybody remembering to change
+// both — an arm added here alone is a failure, not a divergence nobody sees.
+//
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.

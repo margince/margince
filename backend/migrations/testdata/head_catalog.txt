@@ -14,6 +14,7 @@ public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 
 public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval)) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL)))
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
+public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
 public.activity.activity_pkey PRIMARY KEY (id)
 public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at))) EXECUTE FUNCTION trg_activity_project_last_activity()
 public.activity.activity_refuse_restricted_mutation CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()
@@ -85,6 +86,7 @@ public.activity_link.activity_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES
 public.activity_link.activity_link_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.activity_link.activity_link_last_activity CREATE TRIGGER activity_link_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()
 public.activity_link.activity_link_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.activity_link.activity_link_no_company_meeting CREATE TRIGGER activity_link_no_company_meeting BEFORE INSERT OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()
 public.activity_link.activity_link_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.activity_link.activity_link_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.activity_link.activity_link_pkey PRIMARY KEY (id)
@@ -100,6 +102,44 @@ public.activity_link.organization_id uuid gen=- def=-
 public.activity_link.person_id uuid gen=- def=-
 public.activity_link.project_id uuid gen=- def=-
 public.activity_link_pkey CREATE UNIQUE INDEX activity_link_pkey ON public.activity_link USING btree (id)
+public.activity_link_refuses_a_company_meeting() secdef=false cfg=- acl=- 
+DECLARE
+    activity_kind text;
+BEGIN
+    IF NEW.entity_type <> 'organization' THEN
+        RETURN NEW;
+    END IF;
+
+    -- LOCKED BEFORE THE CHECK, and the same row the other trigger locks. Read
+    -- unlocked, one transaction can insert this link while the activity is
+    -- still a `note` (the check below passes) while another re-kinds that same
+    -- activity to `meeting` before the link is visible (the check in
+    -- activity_refuses_becoming_a_company_meeting passes too). Both commit, and
+    -- the row neither of them was allowed to make exists.
+    --
+    -- The ORDER is the whole of it: locked first, checked second, and the same
+    -- row the re-kind trigger locks. A BEFORE ROW trigger runs ahead of the
+    -- UPDATE's own row lock, so a re-kind whose check has already run cannot be
+    -- made to look again by blocking it afterwards — it would wake and write on
+    -- the answer it took before waiting. Locking first is what makes each
+    -- check happen after the other transaction has finished or not started.
+    --
+    -- SHARE here and UPDATE there, which is the pairing that conflicts where it
+    -- should: a link and a re-kind queue, while two links onto one activity do
+    -- not — they are not in conflict and have no reason to wait for each other.
+    PERFORM 1 FROM activity WHERE id = NEW.activity_id FOR SHARE;
+    SELECT kind INTO activity_kind FROM activity WHERE id = NEW.activity_id;
+
+    IF activity_kind IN ('meeting', 'call') THEN
+        RAISE EXCEPTION
+            'a % is with a person, not with a company: link it to the person who was there, and the company sees it through them',
+            activity_kind
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+
 public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval))) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL))
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-
@@ -198,6 +238,30 @@ BEGIN
   END IF;
 
   RETURN NEW;
+END;
+
+public.activity_refuses_becoming_a_company_meeting() secdef=false cfg=- acl=- 
+BEGIN
+    IF NEW.kind NOT IN ('meeting', 'call') OR OLD.kind = NEW.kind THEN
+        RETURN NEW;
+    END IF;
+
+    -- The other half of the pairing, taken BEFORE the check for the same
+    -- reason: this trigger runs ahead of the UPDATE's own row lock, so waiting
+    -- afterwards would leave it writing on an answer it read before a
+    -- concurrent link landed. FOR UPDATE, so it conflicts with the link side's
+    -- SHARE.
+    PERFORM 1 FROM activity WHERE id = NEW.id FOR UPDATE;
+
+    IF EXISTS (SELECT 1 FROM activity_link
+               WHERE activity_id = NEW.id AND entity_type = 'organization') THEN
+        RAISE EXCEPTION
+            'this activity is linked to a company, so it cannot become a %: a % is with a person',
+            NEW.kind, NEW.kind
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
 END;
 
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

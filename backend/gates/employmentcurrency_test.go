@@ -52,26 +52,32 @@ import (
 //
 // EmploymentIsCurrentSQL lives in modules/people, and a module never imports a
 // sibling (ADR-0054 §3). compose may reach it and does; people's own files
-// reach it directly; three sibling modules cannot — FIVE statements across
-// activities, projects and signals, since resolver.go carries two — and the
-// predicate would have to move tier before they could. That is an architecture decision with an
-// owner, so it is an issue rather than a change smuggled into this one — margince/margince#2360.
+// reach it directly; FIVE sibling modules cannot — activities, projects,
+// signals, consent and search — and the predicate would have to move tier
+// before they could. That is an architecture decision with an owner, so it is
+// an issue rather than a change smuggled into this one — margince/margince#2360.
+//
+// EIGHT statements in the seven files below, since resolver.go carries two. The
+// count is stated because it is the debt, and it is the map's own arithmetic
+// rather than a second answer: one per key, plus resolver.go's extra.
 //
 // Each entry is a FILE and not the whole module, so a new statement in one of
 // these packages is still a finding — the ratification covers the sites that
 // exist, not the topic.
 var blockedByTheModuleDAG = gatekit.Waive(map[string]string{
-	"internal/modules/activities/orgscope.go": "activities cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":    "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/signals/resolver.go":    "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/signals/warmroom.go":    "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/consent/confirmcard.go": "consent cannot import people (ADR-0054 §3); the predicate must move tier first. The copy is the helper's own date comparison rather than a null check, so a person serving notice still sees their employer on their own confirm card",
+	"internal/modules/activities/orgscope.go":          "activities cannot import people (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/projects/surface.go":             "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/signals/resolver.go":             "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/signals/warmroom.go":             "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/consent/confirmcard.go":          "consent cannot import people (ADR-0054 §3); the predicate must move tier first. The copy is the helper's own date comparison rather than a null check, so a person serving notice still sees their employer on their own confirm card",
+	"internal/modules/search/graphorgreach.go":         "search cannot import people (ADR-0054 §3); the predicate must move tier first. It is a CHARACTER-FOR-CHARACTER copy of activities/orgscope.go's arms, held so by TestTheAccountReachWalkIsOneAnswer — adopting the helper on one side alone would break that parity before it fixed anything, so the two move together or not at all",
+	"internal/modules/search/graphactivitysubjects.go": "search cannot import people (ADR-0054 §3); the predicate must move tier first. Same shape as the org-reach arm beside it: an attendee serving notice stops carrying their employer into a prep, which is the cost stated on every other entry here",
 })
 
 const (
 	employmentHelper = "EmploymentIsCurrentSQL"
 	primaryHelper    = "CurrentPrimaryEmploymentSQL"
-	employmentIssue  = "five statements in three sibling modules are ratified separately: a module may not import people (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
+	employmentIssue  = "eight statements in five sibling modules are ratified separately: a module may not import people (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
 )
 
 // employmentKind matches a statement that has scoped itself to employments.

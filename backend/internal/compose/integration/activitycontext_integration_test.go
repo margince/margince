@@ -130,6 +130,15 @@ func linkMeeting(t *testing.T, e *SearchEnv, meeting ids.UUID, entityType, colum
 		VALUES ($1, $2, $3, $4)`, meeting, entityType, target)
 }
 
+// employ records the current job that reaches a company through a person. A
+// meeting cannot be filed against a company at all (a company is not somebody
+// you can meet), so this is how an account gets into a meeting's prep.
+func employAt(t *testing.T, e *SearchEnv, person, org ids.UUID) {
+	t.Helper()
+	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, person, org)
+}
+
 func addParty(t *testing.T, e *SearchEnv, meeting ids.UUID, role string, person *ids.UUID, address string) {
 	t.Helper()
 	e.SeedID(t, `INSERT INTO activity_participant (id, activity_id, role, person_id, address)
@@ -143,7 +152,9 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-	linkMeeting(t, e, meeting, "organization", "organization_id", f.rep1Org)
+	// The company is reached through the person who was in the room, which is
+	// the only way it can be: a meeting cannot be filed against a company.
+	employAt(t, e, f.organizer, f.rep1Org)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 	addParty(t, e, meeting, "attendee", nil, "unknown@turbinenbau.example")
 
@@ -276,7 +287,10 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		f := seedMeetingFixture(t, e)
 		meeting := seedMeeting(t, e, "Joint review")
 		linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-		linkMeeting(t, e, meeting, "organization", "organization_id", f.rep3Org)
+		// The other team's account, in the room through the person who works
+		// there — an inferred subject is probed exactly as a linked one is.
+		employAt(t, e, f.otherPerson, f.rep3Org)
+		addParty(t, e, meeting, "attendee", &f.otherPerson, "bernhard@turbinenbau.example")
 
 		assembled, err := prepFor(e.AsTeamRep(e.Rep1, e.Team1), t, e, meeting)
 		if err != nil {
@@ -294,7 +308,7 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		e := SetupSearch(t)
 		f := seedMeetingFixture(t, e)
 		meeting := seedMeeting(t, e, "Joint review")
-		linkMeeting(t, e, meeting, "organization", "organization_id", f.rep3Org)
+		employAt(t, e, f.organizer, f.rep3Org)
 		linkMeeting(t, e, meeting, "person", "person_id", f.organizer)
 
 		// The control: the capture's own owner preps against the account.
@@ -433,15 +447,51 @@ func TestASubjectTypeTheCallerMayNotReadIsNeverNamed(t *testing.T) {
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-	linkMeeting(t, e, meeting, "organization", "organization_id", f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Org)
+	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 
-	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg), t, e, meeting)
+	// The EDGE grant is among them because the company is reached through the
+	// attendee's employment: a prep that named it without one would be handing
+	// over a pair (this person, that company) the edge grant governs. The case
+	// below is the other end of that.
+	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg, objRelationship), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
 	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
 	assertNoTextAnywhere(t, assembled, "Turbinenbau Renewal")
+}
+
+// An EDGE-derived subject needs the edge grant, and a caller without one gets
+// the prep without it rather than a refusal.
+//
+// "This attendee works at that company" is a fact about a PAIR, which is what
+// relationship.read governs — neither endpoint's own grant covers it, so a
+// caller who may read both the person and the company may still not be told
+// they are connected. Without this the employer hop would be a way to learn
+// every edge in the workspace by asking for a meeting prep.
+func TestAnEmployerIsNotNamedToACallerWithNoEdgeGrant(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedMeetingFixture(t, e)
+	meeting := seedMeeting(t, e, "Renewal review")
+	employAt(t, e, f.organizer, f.rep1Org)
+	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
+
+	// The control: the same prep, for a caller who may read edges.
+	granted, err := prepFor(e.readerOf(objActivity, objPerson, objOrg, objRelationship), t, e, meeting)
+	if err != nil {
+		t.Fatalf("preparing for the meeting with the edge grant: %v", err)
+	}
+	assertPreparedFor(t, granted, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+
+	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg), t, e, meeting)
+	if err != nil {
+		t.Fatalf("preparing for the meeting: %v", err)
+	}
+	// The prep still happens, around the attendee they may read.
+	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: f.organizer})
+	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
 }
 
 // assertAbsent holds the whole assembled picture against one ref, not just the
@@ -487,12 +537,15 @@ func assertNoTextAnywhere(t *testing.T, assembled retrieval.Context, forbidden .
 // any other anchor gives, never a leak of who was in someone else's meeting.
 func TestAnEventOutsideTheCallersScopeIsNotFound(t *testing.T) {
 	e := SetupSearch(t)
-	f := seedMeetingFixture(t, e)
+	seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Other team only")
-	// The one link is to a capture-private account: every other record type
-	// is read by every seat (platform/auth tableclass.go), so this is what an
-	// event nobody else may reach looks like now.
-	linkMeeting(t, e, meeting, "organization", "organization_id", f.rep3Org)
+	// The one link is to a capture-private CONTACT of the other team's rep. A
+	// meeting cannot be linked to a company at all, and every record type is
+	// read by every seat (platform/auth tableclass.go), so a capture-private
+	// record is what an event nobody else may reach looks like.
+	theirContact := e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, visibility, source, captured_by)
+		VALUES ($1, $2, 'Dieter Fremd', 'owner', 'manual', 'human:x')`, e.Rep3)
+	linkMeeting(t, e, meeting, "person", "person_id", theirContact)
 
 	if _, err := prepFor(e.teamRepWhoReadsProjects(e.Rep3, e.Team2), t, e, meeting); err != nil {
 		t.Fatalf("preparing for the meeting as the capture's own owner: %v", err)

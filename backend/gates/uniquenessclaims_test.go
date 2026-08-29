@@ -467,7 +467,7 @@ var shapeCensus = map[string]int{
 	"only-noun":      16,
 	"no-second":      10,
 	"never-twice":    6,
-	"is-every":       5,
+	"is-every":       4,
 	"one-truth":      3,
 }
 

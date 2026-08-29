@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,6 +70,18 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	admin := e.Admin()
 	org := e.SeedOrg(t, "Acme", &e.Rep1)
 	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	// Somebody at the account who was in the room. A meeting is with a person
+	// and cannot be filed against a company, so an ATTENDEE WITH A JOB THERE is
+	// how a meeting reaches the account at all — and it has to be a second
+	// contact, because `person` is deliberately unemployed here (the person
+	// page's project routes are proved one at a time, seat before employer).
+	attendee := e.SeedPerson(t, "Ilse Teilnehmer", &e.Rep1)
+	attendeeID, orgID := PersonIDOf(attendee), orgIDOf(org)
+	if _, err := e.People.CreateRelationship(admin, people.CreateRelationshipInput{
+		Kind: "employment", PersonID: &attendeeID, OrganizationID: &orgID,
+	}); err != nil {
+		t.Fatalf("employing the attendee: %v", err)
+	}
 
 	newProject := func(name string) (ids.ProjectID, string) {
 		p, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
@@ -87,13 +100,19 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	bystander := e.SeedPerson(t, "Rack Vendor", &e.Rep1)
 
 	// Three exchanges with the same contact on the same account: one per
-	// engagement, and one ordinary message nobody filed. Each is linked to
-	// the person AND the organization so both record pages read them.
+	// engagement, and one ordinary message nobody filed. Each names the person,
+	// and names the ORGANIZATION too where the kind permits it — a meeting is
+	// with a person and reaches the account through the contact's employer
+	// instead, which is the arm activities.OrgLinkedActivityExists walks.
 	log := func(in activities.LogActivityInput, subject string, within *ids.ProjectID, occurredAt time.Time, others ...ids.UUID) string {
 		in.Subject, in.OccurredAt = &subject, &occurredAt
 		in.Links = []activities.ActivityLinkInput{
 			{EntityType: "person", EntityID: person},
-			{EntityType: "organization", EntityID: org},
+		}
+		if in.Kind == "meeting" || in.Kind == "call" {
+			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "person", EntityID: attendee})
+		} else {
+			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "organization", EntityID: org})
 		}
 		for _, other := range others {
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "person", EntityID: other})

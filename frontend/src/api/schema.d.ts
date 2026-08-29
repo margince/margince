@@ -2778,6 +2778,10 @@ export interface paths {
          *     entity_id)` constraint). The activity's original `source`/`captured_by` provenance is **preserved**
          *     (the relink is a `human:*` or `agent:*` association event, not a re-capture). Writes one `audit_log`
          *     row (`activity_relink`). 🟢 — it is an internal association, not an outbound action.
+         *
+         *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+         *     the company is reached through that person's employer. The estate refuses it
+         *     (migration 1788000100).
          */
         post: operations["relinkActivity"];
         delete?: never;
@@ -2806,6 +2810,10 @@ export interface paths {
          *     caller cannot write is left where it is and is not counted — the response says how many
          *     moved. An activity already carrying the link is not counted either (the single
          *     relink's idempotency, per row). All rows commit together or none do.
+         *
+         *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+         *     the company is reached through that person's employer. The estate refuses it
+         *     (migration 1788000100).
          */
         post: operations["relinkThread"];
         delete?: never;
@@ -2832,6 +2840,10 @@ export interface paths {
          *     sight answers `404` and one they may read but not write answers `403`, and in either case
          *     NOTHING moves — the whole set is one transaction. An activity already carrying the link is
          *     left as it is and not counted.
+         *
+         *     A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+         *     the company is reached through that person's employer. The estate refuses it
+         *     (migration 1788000100).
          */
         post: operations["relinkActivities"];
         delete?: never;
@@ -16688,6 +16700,12 @@ export interface components {
         /**
          * @description One record an activity is filed under, as a caller supplies it. The read shape
          *     (ActivityLink) carries the ids the server assigned; this carries only the target.
+         *
+         *     **A `meeting` or a `call` cannot be filed against an `organization`** — it is with a
+         *     person, and the company is reached through that person's employer. Supplying one
+         *     returns `422 code: company_meeting` against `links`. Every other kind may name a
+         *     company: a `note` or a `task` is ABOUT a record, and an `email` can legitimately be
+         *     addressed to an account alias nobody owns personally.
          */
         ActivityLinkInput: {
             /** @enum {string} */
