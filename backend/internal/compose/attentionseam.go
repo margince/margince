@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/modules/overlay/hubspot"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -468,10 +467,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// vault-gated overlay wiring) keeps the lane alive on every role
 		// that serves the feed. A workspace not in overlay mode answers
 		// ErrModeNotOverlay and the lane stays absent.
-		attentionSyncHealth{svc: overlay.NewService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{})).
-			WithBudgetMeter(meter).
-			WithIncumbentClassesTranslator(hubspot.IncumbentClassesFor).
-			WithProjectionFingerprints(OverlayProjectionFingerprints())},
+		attentionSyncHealth{svc: overlayReadService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{}), meter)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

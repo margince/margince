@@ -130,6 +130,12 @@ type Budget struct {
 	SearchConsumed int
 	SearchLimit    int
 	SearchBand     string
+	// Measured says the numbers above were READ rather than assumed: false on
+	// every fail-closed arm (no Redis, no config, no workspace, a Redis read
+	// error). A spender treats an unmeasured shed exactly like a measured one
+	// — fail closed is the point — but a REPORTER must not present "this role
+	// cannot account" as "the budget is exhausted".
+	Measured bool
 }
 
 // Meter is the OVB consumption meter. The zero value is not usable;

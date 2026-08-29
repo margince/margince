@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -76,5 +77,11 @@ func TestSyncHealthRefusesANativeModeWorkspace(t *testing.T) {
 
 	if _, err := svc.SyncHealth(ctx); !errors.Is(err, apperrors.ErrModeNotOverlay) {
 		t.Fatalf("SyncHealth on a native-mode workspace = %v, want ErrModeNotOverlay", err)
+	}
+	// The sibling arm that makes "the same refusal every /overlay op does" a
+	// held claim rather than a comment: Budget refuses this workspace with
+	// the identical sentinel.
+	if _, err := svc.WithBudgetMeter(overlaybudget.New(nil, nil)).Budget(ctx); !errors.Is(err, apperrors.ErrModeNotOverlay) {
+		t.Fatalf("Budget on the same workspace = %v, want the same ErrModeNotOverlay", err)
 	}
 }

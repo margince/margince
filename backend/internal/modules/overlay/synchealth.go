@@ -88,7 +88,14 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 		concerns = append(concerns, failing)
 	}
 	if s.meter != nil {
-		if band := worstBudgetBand(s.meter.Snapshot(ctx, incumbent)); band != overlaybudget.BandOK {
+		// Only a MEASURED snapshot can raise the concern: the meter's
+		// fail-closed arms (no Redis, no config, a read error) answer shed so
+		// a spender cannot overspend, but reporting that assumption here
+		// would tell a rep the budget is exhausted when the truth is that
+		// this role cannot account — Budget (syncstatus.go) refuses on the
+		// same gap rather than fabricating a number.
+		snapshot := s.meter.Snapshot(ctx, incumbent)
+		if band := worstBudgetBand(snapshot); snapshot.Measured && band != overlaybudget.BandOK {
 			concerns = append(concerns, SyncConcern{Kind: ConcernBudgetDegraded, Band: band})
 		}
 	}
