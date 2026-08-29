@@ -69,8 +69,14 @@ func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
 		"with a PERSON",
 		"reaches their company through them",
 		// What a deal-only link actually costs, which is the mistake this copy
-		// exists to stop.
+		// exists to stop — on both sides, because the person's timeline and the
+		// company's are two facts and losing either leaves the copy half true.
 		"no attendee's timeline",
+		"the company sees nothing",
+		// And what doing it in two calls costs instead, including the one
+		// destination that still asks a human.
+		"a second write",
+		"onto a project it asks a human",
 	} {
 		if !strings.Contains(schema, want) {
 			t.Errorf("the links argument no longer says %q:\n%s", want, schema)
