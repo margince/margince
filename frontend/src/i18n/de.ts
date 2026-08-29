@@ -6345,6 +6345,8 @@ export const de = {
   "person.pulse.arithmetic":
     "Wert {score}/100 = 100 x Aktualitaet {recency} x Haeufigkeit {frequency} x Gegenseitigkeit {reciprocity}. Beim Lesen berechnet, nie gespeichert.",
   "person.identity.title": "Identitaet",
+  "person.identity.emailDead":
+    "Unzustellbar — Mails an diese Adresse kommen nicht an",
   "person.identity.email": "E-Mail",
   "person.identity.phone": "Telefon",
   "person.identity.currentRole": "Aktuelle Rolle",

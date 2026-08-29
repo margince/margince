@@ -1114,6 +1114,7 @@ public.comms_outbound.bcc jsonb gen=- def=-
 public.comms_outbound.body text NOT NULL gen=- def=-
 public.comms_outbound.bounce_kind text gen=- def=-
 public.comms_outbound.bounce_reason text gen=- def=-
+public.comms_outbound.bounce_recipient text gen=- def=-
 public.comms_outbound.bounced_at timestamp with time zone gen=- def=-
 public.comms_outbound.cc jsonb gen=- def='[]'::jsonb
 public.comms_outbound.channel_user_id text gen=- def=-
@@ -1121,6 +1122,7 @@ public.comms_outbound.comms_outbound_activity_id_fkey FOREIGN KEY (activity_id) 
 public.comms_outbound.comms_outbound_attachments_shape CHECK (comms_outbound_attachments_well_formed(attachments))
 public.comms_outbound.comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL)))) NOT VALID
 public.comms_outbound.comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text])))) NOT VALID
+public.comms_outbound.comms_outbound_bounce_recipient_stated CHECK (((bounce_recipient IS NULL) OR (bounced_at IS NOT NULL))) NOT VALID
 public.comms_outbound.comms_outbound_cc_array CHECK ((jsonb_typeof(cc) = 'array'::text))
 public.comms_outbound.comms_outbound_inflight_is_channel CHECK (((inflight_at IS NULL) OR (channel_user_id IS NOT NULL)))
 public.comms_outbound.comms_outbound_message_unique UNIQUE (message_id)

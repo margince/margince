@@ -23,7 +23,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,7 +38,7 @@ func nativeWorkspace(context.Context) (bool, error) { return false, nil }
 func personHandlers(e *Env) person360.Handlers {
 	return person360.NewHandlers(
 		person360.NewService(e.Pool, e.People, e.Deals, e.Projects, consent.NewStore(e.DB()),
-			ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow }),
+			comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow }),
 		nativeWorkspace,
 	)
 }

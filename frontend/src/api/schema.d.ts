@@ -14517,13 +14517,15 @@ export interface components {
              * @description When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_inbound_at?: string | null;
+            /** @description The person's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as person emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`. */
+            dead_addresses?: string[];
             /**
              * Format: date-time
              * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
              */
             last_outbound_at?: string | null;
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile")[];
+            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses")[];
             strength?: components["schemas"]["RelationshipStrength"];
             /** @description The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Organization360Project"][];

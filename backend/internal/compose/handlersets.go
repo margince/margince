@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -92,7 +93,7 @@ type (
 // same overlay refusal. Its own function so the composition root reads as a
 // list of what is wired rather than how each piece is built.
 func (s *Server) wirePerson360(pool *pgxpool.Pool) {
-	s.person360Svc = person360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
+	s.person360Svc = person360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
 	s.person360Handlers = person360.NewHandlers(s.person360Svc, s.sorDispatch.isOverlay)
 	// The relationship brief is assembled from the SAME composite read the page
 	// serves, so the two cannot disagree about what this caller may see. No

@@ -21061,6 +21061,15 @@ components:
             When they last wrote to us. Null means nothing inbound was ever captured — a fact
             about the relationship, not a missing field. Absent entirely when the caller has no
             activity grant, named in `sections_omitted` as `last_touch`.
+        dead_addresses:
+          type: array
+          items: { type: string }
+          description: >-
+            The person's email addresses whose latest delivery hard-bounced with
+            no clean delivery since — derived from the send ledger at read time,
+            never stored, so a later send that arrives clears the mark on its
+            own. Lowercased, as person emails are stored. Absent when the caller
+            has no activity grant, named in `sections_omitted`.
         last_outbound_at:
           type: [string, 'null']
           format: date-time
@@ -21072,12 +21081,12 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile]
+            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses]
             # Pinned for the reason SavedViewResource is: the generator prefixes a
             # constant only to break a collision, so these names move when an
             # UNRELATED schema gains a value. Adding a lane to the attention feed's
             # lanes_omitted has now unprefixed a whole enum twice.
-            x-enum-varnames: [Person360SectionsOmittedEmployments, Person360SectionsOmittedDealRoles, Person360SectionsOmittedProjects, Person360SectionsOmittedStrength, Person360SectionsOmittedNetwork, Person360SectionsOmittedActivities, Person360SectionsOmittedNextSteps, Person360SectionsOmittedConsent, Person360SectionsOmittedProfileFields, Person360SectionsOmittedSinceLastVisit, Person360SectionsOmittedLastTouch, Person360SectionsOmittedRelationshipChanges, Person360SectionsOmittedMoments, Person360SectionsOmittedCommercial, Person360SectionsOmittedNextMeeting, Person360SectionsOmittedClaims, Person360SectionsOmittedConversationMemory, Person360SectionsOmittedProviderProfile]
+            x-enum-varnames: [Person360SectionsOmittedEmployments, Person360SectionsOmittedDealRoles, Person360SectionsOmittedProjects, Person360SectionsOmittedStrength, Person360SectionsOmittedNetwork, Person360SectionsOmittedActivities, Person360SectionsOmittedNextSteps, Person360SectionsOmittedConsent, Person360SectionsOmittedProfileFields, Person360SectionsOmittedSinceLastVisit, Person360SectionsOmittedLastTouch, Person360SectionsOmittedRelationshipChanges, Person360SectionsOmittedMoments, Person360SectionsOmittedCommercial, Person360SectionsOmittedNextMeeting, Person360SectionsOmittedClaims, Person360SectionsOmittedConversationMemory, Person360SectionsOmittedProviderProfile, Person360SectionsOmittedDeadAddresses]
         strength: { $ref: '#/components/schemas/RelationshipStrength' }
         projects:
           type: array

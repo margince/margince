@@ -75,7 +75,8 @@ func (s *Store) RecordBounce(ctx context.Context, report connector.BounceReport)
 		var activityID ids.ActivityID
 		err := tx.QueryRow(ctx, `
 			UPDATE comms_outbound
-			   SET bounced_at = $2, bounce_kind = $3, bounce_reason = nullif($4, '')
+			   SET bounced_at = $2, bounce_kind = $3, bounce_reason = nullif($4, ''),
+			       bounce_recipient = lower($6)
 			 WHERE message_id = $1 AND status IN ('pending', 'sent') AND bounced_at IS NULL
 			   AND user_id = $5
 			   AND EXISTS (

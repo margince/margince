@@ -7400,6 +7400,7 @@ const (
 	Person360SectionsOmittedCommercial          Person360SectionsOmitted = "commercial"
 	Person360SectionsOmittedConsent             Person360SectionsOmitted = "consent"
 	Person360SectionsOmittedConversationMemory  Person360SectionsOmitted = "conversation_memory"
+	Person360SectionsOmittedDeadAddresses       Person360SectionsOmitted = "dead_addresses"
 	Person360SectionsOmittedDealRoles           Person360SectionsOmitted = "deal_roles"
 	Person360SectionsOmittedEmployments         Person360SectionsOmitted = "employments"
 	Person360SectionsOmittedLastTouch           Person360SectionsOmitted = "last_touch"
@@ -7427,6 +7428,8 @@ func (e Person360SectionsOmitted) Valid() bool {
 	case Person360SectionsOmittedConsent:
 		return true
 	case Person360SectionsOmittedConversationMemory:
+		return true
+	case Person360SectionsOmittedDeadAddresses:
 		return true
 	case Person360SectionsOmittedDealRoles:
 		return true
@@ -21920,7 +21923,10 @@ type Person360 struct {
 
 	// ConversationMemory Threads and meetings as ENTITIES, condensed — what the conversation was about, not the transport events it was made of (ADR-0097 D3). The Activity tab remains the complete raw ledger; a summary never replaces it and never leaks a withheld activity.
 	ConversationMemory *[]ConversationMemoryEntry `json:"conversation_memory,omitempty"`
-	DealRoles          *struct {
+
+	// DeadAddresses The person's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as person emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
+	DeadAddresses *[]string `json:"dead_addresses,omitempty"`
+	DealRoles     *struct {
 		Data []Person360DealRole `json:"data"`
 		Page PageInfo            `json:"page"`
 	} `json:"deal_roles,omitempty"`

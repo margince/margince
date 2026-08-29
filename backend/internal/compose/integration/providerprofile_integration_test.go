@@ -26,7 +26,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -125,7 +127,7 @@ func connectProvider(t *testing.T, e *Env) {
 func person360Service(e *Env) *person360.Service {
 	reg, _ := integrations.NewRegistry(integrations.NewOfflineProvider(0, time.Now))
 	return person360.NewService(e.Pool, people.NewStore(e.DB()), e.Deals, e.Projects,
-		consent.NewStore(e.DB()), ai.NewFeedbackStore(e.DB()), time.Now).WithProviders(reg)
+		consent.NewStore(e.DB()), comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), time.Now).WithProviders(reg)
 }
 
 // Everything the offline provider returns reaches the page. Each assertion

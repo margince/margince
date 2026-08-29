@@ -23,7 +23,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -87,7 +89,7 @@ func withoutGrant(perms principal.Permissions, object string) principal.Permissi
 
 func personRoomService(e *Env) *person360.Service {
 	return person360.NewService(e.Pool, e.People, e.Deals, e.Projects, consent.NewStore(e.DB()),
-		ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
+		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
 }
 
 // A contact outside the caller's row scope must be a NOT FOUND, never an empty
