@@ -557,3 +557,32 @@ func TestCaptureOffRecordsNoPayload(t *testing.T) {
 		t.Fatal("capture off must record no payload")
 	}
 }
+
+// A budget READ that breaks is a real failure of work the caller asked for,
+// and it lands on the trace — unlike a budget DEFERRAL, which is pacing and
+// deliberately stays silent (the hard-cap test beside this holds that arm).
+// Before the trace covered this return, an accounting outage killed the call
+// with nothing on the rail: the user saw a failure the rail never recorded.
+func TestABudgetReadFailureIsTracedRatherThanSilent(t *testing.T) {
+	calls := &fakeCallStore{}
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &brokenMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r.calls = calls
+	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+	if err == nil {
+		t.Fatal("a broken budget read served a completion")
+	}
+	if len(calls.recorded) != 1 {
+		t.Fatalf("recorded %d trace rows, want the failed preflight traced", len(calls.recorded))
+	}
+	if calls.recorded[0].ErrorSentinel == "" {
+		t.Fatal("the traced preflight failure carries no error sentinel")
+	}
+}
+
+// brokenMeter is a usage store whose month read fails — the accounting
+// outage the traced-preflight test above exercises.
+type brokenMeter struct{ memMeter }
+
+func (*brokenMeter) MonthTokens(context.Context) (int64, error) {
+	return 0, errors.New("the usage store is unreachable")
+}

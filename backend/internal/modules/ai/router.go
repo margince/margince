@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -180,28 +181,37 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 	wsID := ids.From[ids.WorkspaceKind](rawWS)
 	ladder, degraded, budgetErr := r.applyBudget(ctx, task, wsID, ladder)
-	if budgetErr != nil {
+	if budgetErr != nil && errors.Is(budgetErr, ErrBudgetDeferred) {
+		// A deferral is pacing, not failure: the work re-queues itself for
+		// the boundary the error names, so a rail line per retry would be
+		// noise about work that is still going to happen. Only a budget
+		// READ that broke falls through to the traced return below.
 		return model.Response{}, RouteInfo{}, budgetErr
 	}
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
-
 	key, keyErr := cacheKey(wsID, task, req)
-	if keyErr != nil {
-		return model.Response{}, RouteInfo{}, keyErr
-	}
 
-	// Every ROUTING terminal below is traced: one Call appended to lc for
-	// the served call, the cache hit, or the failure. The earlier
-	// workspace-context and cache-key failures return before this trace is
-	// built and are not traced (no RLS-writable row exists yet, and no
-	// route was attempted).
+	// Every terminal from here on is traced — the budget and cache-key
+	// failures included: one Call appended to lc for the served call, the
+	// cache hit, or the failure. Those two used to return before the trace
+	// was built, and a user who asked for the work saw a failure the rail
+	// never recorded — the settle announce is what ends that silence, and
+	// it does not need the start line to have run. Only the no-workspace
+	// return above stays untraced: with no tenant there is no row to write
+	// and no occurrence to announce.
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
 		r.finalizeAttempt(ctx, b, lc, &trace, req, resp, err, start)
 	}()
+	if budgetErr != nil {
+		return model.Response{}, RouteInfo{}, budgetErr
+	}
+	if keyErr != nil {
+		return model.Response{}, RouteInfo{}, keyErr
+	}
 
 	trace.Degraded = degraded
 	if degraded {
@@ -496,4 +506,20 @@ func withCanonicalFence(req model.Request) model.Request {
 	}
 	req.Messages = messages
 	return req
+}
+
+// AnnounceRequestFailure traces a request that failed BEFORE this router was
+// ever entered — a caller-side preparation step (assembling company context)
+// that died on work a user asked for. Without it the failure is invisible on
+// the AI-activity rail exactly like the pre-trace returns inside serveAttempt
+// used to be: the user saw an error and the rail said nothing ran. It mints
+// its own logical call and flushes the one failed trace through the same
+// detached path every served call uses, so the settle announce and the
+// projection see an ordinary failed occurrence.
+func (r *Router) AnnounceRequestFailure(ctx context.Context, task Task, cause error) {
+	lc := newLogicalCall()
+	trace := r.newAttemptTrace(ctx, task, "", "", model.Request{})
+	trace.ErrorSentinel = classifyError(cause)
+	lc.append(trace)
+	r.flushDetached(ctx, r.binding(), lc)
 }

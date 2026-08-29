@@ -334,6 +334,10 @@ func (b routerBrain) AttachmentMIMEs() []string { return b.router.AttachmentMIME
 func (b routerBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	prepared, err := b.companyContext.Prepare(ctx, b.task, req)
 	if err != nil {
+		// A preparation failure is still a failure of work the user asked
+		// for: announce it, or the rail says nothing ran while the user
+		// holds an error.
+		b.router.AnnounceRequestFailure(ctx, b.task, err)
 		return model.Response{}, err
 	}
 	resp, _, err := b.router.Complete(ctx, b.task, prepared)
@@ -353,6 +357,9 @@ type agentBrain struct {
 func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
 	prepared, err := b.companyContext.Prepare(ctx, ai.TaskAgentLoop, req)
 	if err != nil {
+		// The same rule routerBrain.Complete states: a preparation failure
+		// is announced rather than silent.
+		b.router.AnnounceRequestFailure(ctx, ai.TaskAgentLoop, err)
 		return model.Response{}, runner.Meta{}, err
 	}
 	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
@@ -365,6 +372,8 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 func (b routerBrain) CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error) {
 	prepared, err := b.companyContext.Prepare(ctx, b.task, req)
 	if err != nil {
+		// The rule Complete states: a preparation failure is announced.
+		b.router.AnnounceRequestFailure(ctx, b.task, err)
 		return model.Response{}, err
 	}
 	resp, _, err := b.router.CompleteStructured(ctx, b.task, prepared, validate)
