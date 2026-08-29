@@ -29,21 +29,32 @@ package gates
 // every one of the seven sites, and the next log line inherits it. The rule is
 // that a path becomes a log value only through the redactor.
 //
-// What this cannot see, stated rather than implied. The walk is syntactic, so
-// it catches the shape actually written here and the shape the next author
-// would reach for: the path read inside the argument list of a log call. It
-// does NOT follow a path assigned to a variable first, formatted into a message
-// with fmt.Sprintf, or carried into a helper this walk does not enter. Those
-// launder the value out of the gate's sight, and only a reviewer catches them.
+// Two things are checked, because redacting at every site proves nothing if
+// the list of routes needing redaction is short. The prohibition holds the
+// sites; TestEveryPublicRoutePrefixIsJudgedForCredentials holds the list,
+// reading the public route declarations and requiring each to be redacted or
+// to carry a written reason it is not.
+//
+// What this cannot see, stated rather than implied. The walk is syntactic. It
+// catches a raw path in a log call's arguments, and a helper that returns one
+// (the shape that would otherwise hide a read from the argument walk). It does
+// NOT follow a path assigned to a variable first, concatenated, or formatted
+// through fmt.Sprintf. Those launder the value out of the gate's sight, and
+// only a reviewer catches them.
 
 import (
 	"go/ast"
+	"go/token"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 )
+
+const capabilityPathPkg = "github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 
 // The log doors a path must not reach raw. slog's package-level functions and
 // its *Logger methods share these names, so matching the selector name alone
@@ -62,8 +73,8 @@ var logDoors = map[string]bool{
 // package parses without type information, and `x.URL.Path` is the shape in
 // every one of these call sites. A request named something other than `r` is
 // still caught, because the chain and not the identifier is what is matched.
-func rawPathRead(expr ast.Expr) bool {
-	path, ok := expr.(*ast.SelectorExpr)
+func rawPathRead(node ast.Node) bool {
+	path, ok := node.(*ast.SelectorExpr)
 	if !ok || path.Sel.Name != "Path" {
 		return false
 	}
@@ -73,9 +84,19 @@ func rawPathRead(expr ast.Expr) bool {
 
 // logCallLeakingAPath reports the log doors in this file that are handed a raw
 // request path as an argument.
-func logCallLeakingAPath(file *ast.File) []string {
+//
+// A function in this file that RETURNS a raw path counts as the same leak, and
+// is reported at the function rather than at the call. That is the shape the
+// argument walk cannot see: the whole reason one wrapper is trusted is that it
+// hides the read, so a second wrapper hides one just as well.
+func logCallLeakingAPath(file *ast.File, path string) []string {
 	var leaks []string
 	ast.Inspect(file, func(n ast.Node) bool {
+		if fn, ok := n.(*ast.FuncDecl); ok && returnsARawPath(fn) &&
+			!(fn.Name.Name == trustedPathWrapper && path == trustedPathWrapperFile) {
+			leaks = append(leaks, "the helper "+fn.Name.Name+" returns r.URL.Path unredacted")
+			return true
+		}
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
@@ -86,12 +107,31 @@ func logCallLeakingAPath(file *ast.File) []string {
 		}
 		for _, arg := range call.Args {
 			if rawPathRead(arg) {
-				leaks = append(leaks, door.Sel.Name)
+				leaks = append(leaks, "slog "+door.Sel.Name+" is handed r.URL.Path directly")
 			}
 		}
 		return true
 	})
 	return leaks
+}
+
+// returnsARawPath reports a function whose return statement hands back
+// r.URL.Path with nothing done to it.
+func returnsARawPath(fn *ast.FuncDecl) bool {
+	found := false
+	ast.Inspect(fn, func(n ast.Node) bool {
+		ret, ok := n.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		for _, result := range ret.Results {
+			if rawPathRead(result) {
+				found = true
+			}
+		}
+		return true
+	})
+	return found
 }
 
 func TestNoRequestPathReachesALogLineUnredacted(t *testing.T) {
@@ -115,12 +155,12 @@ func TestNoRequestPathReachesALogLineUnredacted(t *testing.T) {
 			continue
 		}
 		judged++
-		for _, door := range logCallLeakingAPath(parsed.File) {
-			t.Errorf("%s: slog %s is handed r.URL.Path directly\n"+
+		for _, leak := range logCallLeakingAPath(parsed.File, parsed.Path) {
+			t.Errorf("%s: %s\n"+
 				"\tA public route can carry a bearer credential in a path segment, so a raw "+
 				"path in a log line can be a working credential wherever logs are read.\n"+
 				"\tPass it through shared/kernel/capabilitypath.Redact, which knows which "+
-				"prefixes carry one.", parsed.Path, door)
+				"prefixes carry one.", parsed.Path, leak)
 		}
 	}
 	// The count is taken AFTER the exclusion. A walk that found only
@@ -142,7 +182,7 @@ func TestNoRequestPathReachesALogLineUnredacted(t *testing.T) {
 func TestTheOneTrustedPathWrapperStillRedacts(t *testing.T) {
 	t.Parallel()
 
-	const wrapper = "internal/platform/httperr/httperr.go"
+	const wrapper = trustedPathWrapperFile
 	body, err := os.ReadFile(wrapper)
 	if err != nil {
 		t.Fatalf("reading the trusted path wrapper: %v", err)
@@ -160,24 +200,129 @@ func TestTheOneTrustedPathWrapperStillRedacts(t *testing.T) {
 	}
 }
 
+// Redacting correctly at every site proves nothing if the list of routes that
+// need it is short: every call still runs, and Redact hands the credential
+// straight back for a route it does not know. So the public prefixes are read
+// off the route declarations themselves — `const public<Name>Prefix = "…"` in
+// compose — and each is accounted for either as redacted or as a deliberate
+// exclusion carrying its reason.
+//
+// This is the half a syntactic walk cannot reach on its own, and the half that
+// fails silently: a new token-in-path route added tomorrow leaks with the
+// prohibition above still green.
+func TestEveryPublicRoutePrefixIsJudgedForCredentials(t *testing.T) {
+	t.Parallel()
+
+	// The public prefixes whose segment is NOT a credential, each with why.
+	// A prefix leaves this map only by joining capabilitypath's list.
+	notCredentials := map[string]string{
+		"/v1/public/booking/": "a booking slug is a public identifier the host hands out; the log needs it to say which page was hit",
+		"/v1/public/rooms/":   "the segment is an operation name (peek, exchange, link-request); a deal room presents a Bearer, never a path token",
+	}
+
+	redacted := make(map[string]bool)
+	for _, prefix := range capabilitypath.CredentialPrefixes() {
+		redacted[prefix] = true
+	}
+
+	declared := publicRoutePrefixes(t)
+	if len(declared) == 0 {
+		t.Fatal("no public route prefix was found in compose, so this parity check judged " +
+			"nothing — the declaration shape changed and this gate now certifies an empty set")
+	}
+	for prefix, where := range declared {
+		reason, excluded := notCredentials[prefix]
+		switch {
+		case redacted[prefix] && excluded:
+			t.Errorf("%s: %q is both redacted and listed as not-a-credential (%q) — one of the two is wrong",
+				where, prefix, reason)
+		case !redacted[prefix] && !excluded:
+			t.Errorf("%s: the public route %q is neither redacted nor accounted for.\n"+
+				"\tIf its next path segment is a bearer credential, add it to credentialPrefixes in "+
+				"shared/kernel/capabilitypath — every log site already calls Redact, and Redact returns "+
+				"an unknown route's credential unchanged.\n"+
+				"\tIf it is a public identifier, say so in notCredentials here with the reason.",
+				where, prefix)
+		}
+	}
+	for prefix := range notCredentials {
+		if _, ok := declared[prefix]; !ok {
+			t.Errorf("notCredentials names %q, which no compose route declares any more — "+
+				"drop the entry rather than leaving a stale exclusion standing", prefix)
+		}
+	}
+}
+
+// publicRoutePrefixes reads the `const public<Name>Prefix = "/v1/public/…"`
+// declarations out of compose, keyed by prefix, valued by where it was found.
+// Derived from the declarations rather than listed here, so a new public route
+// enters this check the moment it exists.
+func publicRoutePrefixes(t *testing.T) map[string]string {
+	t.Helper()
+
+	found := map[string]string{}
+	for _, parsed := range (gatekit.Scope{
+		Roots:   []string{"internal"},
+		Subject: declaresAPublicRoutePrefix,
+	}).Files(t) {
+		for name, value := range publicPrefixConstants(parsed.File) {
+			found[value] = parsed.Path + ": " + name
+		}
+	}
+	return found
+}
+
+// publicPrefixConstants reads this file's `public<Name>Prefix = "/v1/public/…"`
+// declarations, by constant name.
+func publicPrefixConstants(file *ast.File) map[string]string {
+	out := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, ok := n.(*ast.ValueSpec)
+		if !ok || len(spec.Names) != 1 || len(spec.Values) != 1 {
+			return true
+		}
+		name := spec.Names[0].Name
+		if !strings.HasPrefix(name, "public") || !strings.HasSuffix(name, "Prefix") {
+			return true
+		}
+		lit, ok := spec.Values[0].(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return true
+		}
+		value, err := strconv.Unquote(lit.Value)
+		if err != nil || !strings.HasPrefix(value, "/v1/public/") {
+			return true
+		}
+		out[name] = value
+		return true
+	})
+	return out
+}
+
+func declaresAPublicRoutePrefix(_ string, file *ast.File) bool {
+	return len(publicPrefixConstants(file)) > 0
+}
+
 // fileLogsARequestPath selects the files worth judging: those that both log
 // and read a request path. Selecting on the log door alone would drag in every
 // file that logs anything; selecting on the path alone would drag in every
 // router.
+// A file qualifies on reading a request path ANYWHERE, not only inside a log
+// call's arguments. Requiring the read to sit in the call would let a file drop
+// out of the corpus by moving the read into a helper — which is the shape that
+// hides a leak, so it must select the file IN rather than out.
 func fileLogsARequestPath(_ string, file *ast.File) bool {
 	logs, readsPath := false, false
 	ast.Inspect(file, func(n ast.Node) bool {
+		if rawPathRead(n) {
+			readsPath = true
+		}
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
 		if door, ok := call.Fun.(*ast.SelectorExpr); ok && logDoors[door.Sel.Name] {
 			logs = true
-		}
-		for _, arg := range call.Args {
-			if rawPathRead(arg) || redactedPathRead(arg) {
-				readsPath = true
-			}
 		}
 		return true
 	})
@@ -189,23 +334,42 @@ func fileLogsARequestPath(_ string, file *ast.File) bool {
 // last leaking file would shrink the corpus to nothing and the empty-sweep
 // guard would fire on a clean tree.
 //
-// Two shapes count. `capabilitypath.Redact(r.URL.Path)` at the call is the
-// direct one. A one-argument wrapper taking the request — httperr's
-// loggedPath(r) — is the other: httperr logs six paths and spelling the
-// redaction out six times invites the seventh to forget, but the wrapper hides
-// the .URL.Path read from this walk.
-func redactedPathRead(expr ast.Expr) bool {
+// Two shapes count, and neither is matched by bare name. `Redact` and
+// `loggedPath` are ordinary identifiers, so an unrelated package defining
+// either — a `loggedPath` that returns the path raw is the obvious one — would
+// be read as already-fixed and leak with this gate green.
+//
+// `capabilitypath.Redact(r.URL.Path)` at the call is the direct shape,
+// resolved through the file's own import of the redactor.
+//
+// The wrapper shape is the other: httperr logs six paths, and spelling the
+// redaction out six times invites the seventh to forget, but a wrapper hides
+// the .URL.Path read from this walk. Exactly ONE wrapper is trusted, and only
+// inside the single file that declares it — trusting the name package-wide, or
+// wherever the redactor happens to be imported, is what lets a second
+// same-named helper borrow the trust. TestTheOneTrustedPathWrapperStillRedacts
+// pins what that one wrapper does.
+const (
+	trustedPathWrapper     = "loggedPath"
+	trustedPathWrapperFile = "internal/platform/httperr/httperr.go"
+)
+
+func redactedPathRead(file *ast.File, path string, expr ast.Expr) bool {
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {
 		return false
 	}
 	if fn, ok := call.Fun.(*ast.SelectorExpr); ok && fn.Sel.Name == "Redact" {
-		for _, arg := range call.Args {
-			if rawPathRead(arg) {
-				return true
+		qualifier, _ := gatekit.ImportedAs(file, capabilityPathPkg)
+		pkg, isIdent := fn.X.(*ast.Ident)
+		if isIdent && qualifier != "" && pkg.Name == qualifier {
+			for _, arg := range call.Args {
+				if rawPathRead(arg) {
+					return true
+				}
 			}
 		}
 	}
 	fn, ok := call.Fun.(*ast.Ident)
-	return ok && fn.Name == "loggedPath"
+	return ok && fn.Name == trustedPathWrapper && path == trustedPathWrapperFile
 }
