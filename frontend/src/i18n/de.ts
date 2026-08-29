@@ -199,6 +199,20 @@ export const de = {
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
   "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.captureHealth": "Postfach-Verbindungen",
+  "day.captureHealth.empty": "Alle Ihre Postfächer werden erfasst.",
+  "day.captureHealth.kind.reauth_required":
+    "Ein Postfach braucht eine neue Anmeldung",
+  "day.captureHealth.kind.connection_error":
+    "Eine Postfach-Verbindung schlägt fehl",
+  "day.captureHealth.kind.sync_failing":
+    "Ein Postfach synchronisiert nicht mehr",
+  "day.captureHealth.kind.backfill_failed":
+    "Ein Postfach-Verlaufsimport ist fehlgeschlagen",
+  "day.captureHealth.kind.generic":
+    "Eine Postfach-Verbindung braucht Aufmerksamkeit",
+  "day.lead.captureHealth":
+    "Eine Ihrer Postfach-Verbindungen braucht Aufmerksamkeit.",
   "day.syncHealth": "CRM-Sync",
   "day.syncHealth.empty": "Ihr bestehendes CRM ist synchron.",
   "day.lead.syncHealth":

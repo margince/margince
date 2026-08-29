@@ -38,6 +38,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
+		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
@@ -64,6 +65,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		},
 		{"dsr", out.Dsr, "dsr", ""},
 		{"sync_health", out.SyncHealth, "sync_health", ""},
+		{"capture_health", out.CaptureHealth, "capture_health", ""},
 	} {
 		if lane.items == nil || len(*lane.items) != 1 {
 			t.Fatalf("%s carries %v, want one item", lane.name, lane.items)
@@ -111,6 +113,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
+		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
@@ -170,6 +173,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
+		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())

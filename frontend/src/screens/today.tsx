@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  Inbox,
   RefreshCw,
   Scale,
   ShieldAlert,
@@ -146,6 +147,13 @@ function quietLead(
   const syncConcerns = day.counts.sync_health ?? 0;
   if (syncConcerns > 0) {
     return t("day.lead.syncHealth");
+  }
+  // The same contradiction guard for the reader's own mailboxes: a broken
+  // capture connection means the quiet lanes below may be quiet only
+  // because nothing is being captured.
+  const mailboxes = day.counts.capture_health ?? 0;
+  if (mailboxes > 0) {
+    return t("day.lead.captureHealth");
   }
   // A lapsed relationship is the same shape of news as a drifting deal:
   // nobody is waiting on the reader for it, and it is the thing that goes
@@ -631,6 +639,11 @@ function TodayLanes({
   // is data a rep is reading going stale or a connection not syncing.
   const syncConcerns = day.sync_health;
   const syncTone = warnWhenHolding(syncConcerns);
+  // The reader's own mailbox connections needing their hand. Withheld for a
+  // caller with no human behind it; warn-toned whenever it holds anything,
+  // because every row is capture silently not happening.
+  const mailboxes = day.capture_health;
+  const mailboxTone = warnWhenHolding(mailboxes);
   const requestsTone = warnWhenHolding(requests);
   const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
@@ -781,6 +794,22 @@ function TodayLanes({
         lane="sync_health"
         total={day.counts.sync_health ?? 0}
         tone={syncTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={mailboxes}
+        shape={{
+          title: t("day.captureHealth"),
+          empty: t("day.captureHealth.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: Inbox,
+        }}
+        omitted={omitted}
+        lane="capture_health"
+        total={day.counts.capture_health ?? 0}
+        tone={mailboxTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

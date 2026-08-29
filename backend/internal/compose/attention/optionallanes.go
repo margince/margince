@@ -128,6 +128,14 @@ func (s *Service) optionalLanes(
 			into: &out.SyncHealth, count: &out.Counts.SyncHealth,
 		},
 		{
+			name: "capture_health", bound: s.captureHealth != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				concerns, err := s.captureHealth.CaptureConcerns(ctx)
+				return renderEach(concerns, captureItem), err
+			},
+			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
+		},
+		{
 			name: "relationship_decay", bound: s.decay != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, err := s.decay.Lapsed(ctx)

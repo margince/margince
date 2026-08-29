@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 )
@@ -49,6 +50,28 @@ func (h attentionSyncHealth) Concerns(ctx context.Context) ([]attention.SyncConc
 			NextSweepAt: concern.NextSweepAt,
 			Band:        concern.Band,
 			Objects:     concern.Objects,
+		})
+	}
+	return out, nil
+}
+
+// attentionCaptureHealth binds the capture-health lane to the capture
+// module's own per-user read; the human-only arm lives there.
+type attentionCaptureHealth struct{ registry *capture.Registry }
+
+func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attention.CaptureConcern, error) {
+	concerns, err := c.registry.HealthConcerns(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.CaptureConcern, 0, len(concerns))
+	for _, concern := range concerns {
+		out = append(out, attention.CaptureConcern{
+			ConnectionID: concern.ConnectionID,
+			Kind:         concern.Kind,
+			Provider:     concern.Provider,
+			AccountLabel: concern.AccountLabel,
+			ErrorClass:   concern.ErrorClass,
 		})
 	}
 	return out, nil

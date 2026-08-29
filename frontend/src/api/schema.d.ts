@@ -22803,8 +22803,22 @@ export interface components {
              *     different fact from a healthy sync.
              */
             sync_health?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The reader's OWN capture connections needing the reader's hand: a mailbox
+             *     wanting re-authentication, a connection in error, a sync failing, a history
+             *     import that ended in error. One card per connection, carrying its worst
+             *     condition; `kind` names the condition and `detail` carries the mailbox (its
+             *     account label, or the provider where none was recorded). Fixing the
+             *     connection lives on the capture settings screen, so the card offers no verbs.
+             *
+             *     Capture is per-user, so this lane is each reader's own mailboxes and nobody
+             *     else's. Withheld — named in `lanes_omitted` — for a caller with no human
+             *     behind it. Absent — not empty — on an installation whose feed does not read
+             *     capture connections.
+             */
+            capture_health?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22833,6 +22847,8 @@ export interface components {
             dsr?: number;
             /** @description How many sync concerns the lane carries — one per condition, so this is the full count, never a bounded page of a larger one. */
             sync_health?: number;
+            /** @description How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page. */
+            capture_health?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22847,7 +22863,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
