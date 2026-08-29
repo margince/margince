@@ -1250,6 +1250,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 const (
 	AttentionLanesOmittedAiWorkHealth      AttentionLanesOmitted = "ai_work_health"
 	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
+	AttentionLanesOmittedBounces           AttentionLanesOmitted = "bounces"
 	AttentionLanesOmittedCaptureHealth     AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
@@ -1269,6 +1270,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedAiWorkHealth:
 		return true
 	case AttentionLanesOmittedAtRisk:
+		return true
+	case AttentionLanesOmittedBounces:
 		return true
 	case AttentionLanesOmittedCaptureHealth:
 		return true
@@ -1358,6 +1361,7 @@ func (e AttentionItemActions) Valid() bool {
 const (
 	AttentionItemSourceAiWorkHealth      AttentionItemSource = "ai_work_health"
 	AttentionItemSourceApproval          AttentionItemSource = "approval"
+	AttentionItemSourceBounce            AttentionItemSource = "bounce"
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
@@ -1377,6 +1381,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceAiWorkHealth:
 		return true
 	case AttentionItemSourceApproval:
+		return true
+	case AttentionItemSourceBounce:
 		return true
 	case AttentionItemSourceBriefItem:
 		return true
@@ -13715,6 +13721,24 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read deals.
 	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
 
+	// Bounces The reader's OWN sends whose delivery reports came back hard, newest
+	// report first, inside the recent window — read from the bounce stamp on
+	// the send's own row, so this lane and the timeline cannot disagree about
+	// whether a message arrived. A rep can otherwise follow up for weeks on a
+	// thread that never reached anyone.
+	//
+	// The card carries the send's subject line as `title`, the receiving
+	// side's own reason as `detail`, and `open` on the person the send is
+	// filed under — fixing the address and resending live on that person's
+	// page. A send filed under no person still appears, named by its subject
+	// line, without the verb. Soft bounces stamp the row only: the provider
+	// is still trying.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind
+	// it. Absent — not empty — on an installation whose feed does not read
+	// delivery outcomes.
+	Bounces *[]AttentionItem `json:"bounces,omitempty"`
+
 	// CaptureHealth The reader's OWN capture connections needing the reader's hand: a mailbox
 	// wanting re-authentication, a connection in error, a sync failing, a history
 	// import that ended in error. One card per connection, carrying its worst
@@ -13871,6 +13895,9 @@ type AttentionCounts struct {
 
 	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
 	AtRisk *int `json:"at_risk,omitempty"`
+
+	// Bounces How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports.
+	Bounces *int `json:"bounces,omitempty"`
 
 	// CaptureHealth How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page.
 	CaptureHealth *int `json:"capture_health,omitempty"`

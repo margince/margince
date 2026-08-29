@@ -198,6 +198,13 @@ export const en = {
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",
   "day.didNotRun": "Approved, but did not run",
+  "day.bounces": "Never arrived",
+  "day.bounces.empty": "Every send arrived.",
+  "day.bounces.kind.generic": "An email did not reach its address",
+  "day.lead.bounces_one":
+    "{count} of your emails never arrived — the address is dead.",
+  "day.lead.bounces_other":
+    "{count} of your emails never arrived — the addresses are dead.",
   "day.aiWork": "AI work that went wrong",
   "day.aiWork.empty": "Everything you handed to the AI ran.",
   "day.aiWork.kind.failed": "A task you handed to the AI failed",

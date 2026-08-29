@@ -695,6 +695,35 @@ describe("what the night left on the worklist", () => {
     ).toBeTruthy();
     expect(screen.queryByText("Your day is clear.")).toBeNull();
   });
+  // A send that never arrived leads the quiet half of the day and draws its
+  // card from the send's own facts: the subject line as headline, the
+  // receiving side's words beneath it, and the person to open.
+  it("leads with the undelivered mail and names the send by its subject", async () => {
+    stub({
+      ...emptyDay,
+      bounces: [
+        {
+          id: "send-1",
+          source: "bounce",
+          kind: "hard",
+          title: "Proposal for the pilot",
+          detail: "550 5.1.1 user unknown",
+          occurred_at: "2026-08-27T10:00:00Z",
+          subject: { type: "person", id: "person-9", label: "Anna Weber" },
+          actions: ["open"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, bounces: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Proposal for the pilot");
+    expect(screen.getByText("550 5.1.1 user unknown")).toBeTruthy();
+    expect(
+      screen.getByText("1 of your emails never arrived — the address is dead."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
   // The same defect, one lane later, and caught the same way: the lead line
   // read "Your day is clear" directly above an OVERDUE promise. It repeats
   // because every new lane has to be added to a summary written before it, so

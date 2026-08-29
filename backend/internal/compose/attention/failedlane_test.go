@@ -29,7 +29,7 @@ func (s *stubFailedEffects) Failed(context.Context, int) ([]FailedEffect, error)
 func failedLaneService(failed FailedEffects) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, failed, nil, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, failed, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {

@@ -22868,8 +22868,27 @@ export interface components {
              *     AI-task projection.
              */
             ai_work_health?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The reader's OWN sends whose delivery reports came back hard, newest
+             *     report first, inside the recent window — read from the bounce stamp on
+             *     the send's own row, so this lane and the timeline cannot disagree about
+             *     whether a message arrived. A rep can otherwise follow up for weeks on a
+             *     thread that never reached anyone.
+             *
+             *     The card carries the send's subject line as `title`, the receiving
+             *     side's own reason as `detail`, and `open` on the person the send is
+             *     filed under — fixing the address and resending live on that person's
+             *     page. A send filed under no person still appears, named by its subject
+             *     line, without the verb. Soft bounces stamp the row only: the provider
+             *     is still trying.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human behind
+             *     it. Absent — not empty — on an installation whose feed does not read
+             *     delivery outcomes.
+             */
+            bounces?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22902,6 +22921,8 @@ export interface components {
             capture_health?: number;
             /** @description How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures. */
             ai_work_health?: number;
+            /** @description How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports. */
+            bounces?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22916,7 +22937,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

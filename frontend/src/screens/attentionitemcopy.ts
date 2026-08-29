@@ -46,6 +46,11 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "ai_work_health") {
     return t(`day.aiWork.kind.${aiWorkNoun(item.kind)}` as const);
   }
+  // A bounced send usually names itself by its subject line (the title branch
+  // above); one without a subject gets the locale's generic line.
+  if (item.source === "bounce") {
+    return t("day.bounces.kind.generic");
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
 }
 

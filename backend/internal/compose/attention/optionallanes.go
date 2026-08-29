@@ -74,7 +74,7 @@ func (l optionalLane) collect(
 func (s *Service) optionalLanes(
 	ctx context.Context, asOf time.Time, out *crmcontracts.Attention,
 ) []optionalLane {
-	return []optionalLane{
+	lanes := []optionalLane{
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
@@ -120,6 +120,26 @@ func (s *Service) optionalLanes(
 			into: &out.Dsr, count: &out.Counts.Dsr,
 		},
 		{
+			name: "relationship_decay", bound: s.decay != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				lapsed, err := s.decay.Lapsed(ctx)
+				return renderEach(lapsed, lapsedItem), err
+			},
+			into: &out.RelationshipDecay, count: &out.Counts.RelationshipDecay,
+		},
+	}
+	return append(lanes, s.operationalLanes(ctx, asOf, out)...)
+}
+
+// operationalLanes is the second half of the list: what is broken between
+// this reader and the world — the sync, their mailboxes, their delegated AI
+// work, their sends. Split from optionalLanes on the function-length
+// ceiling; the shared collect loop walks both halves as one list.
+func (s *Service) operationalLanes(
+	ctx context.Context, asOf time.Time, out *crmcontracts.Attention,
+) []optionalLane {
+	return []optionalLane{
+		{
 			name: "sync_health", bound: s.syncHealth != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				concerns, err := s.syncHealth.Concerns(ctx)
@@ -146,12 +166,15 @@ func (s *Service) optionalLanes(
 			into: &out.AiWorkHealth, count: &out.Counts.AiWorkHealth,
 		},
 		{
-			name: "relationship_decay", bound: s.decay != nil,
+			name: "bounces", bound: s.bounces != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				lapsed, err := s.decay.Lapsed(ctx)
-				return renderEach(lapsed, lapsedItem), err
+				// A week, not a day: a dead address needs fixing whenever the
+				// rep next sits down, and a bounce that ages out unseen is
+				// the invisible failure this lane exists to end.
+				undelivered, err := s.bounces.HardBounces(ctx, asOf.Add(-7*24*time.Hour), doneCap)
+				return renderEach(undelivered, bounceItem), err
 			},
-			into: &out.RelationshipDecay, count: &out.Counts.RelationshipDecay,
+			into: &out.Bounces, count: &out.Counts.Bounces,
 		},
 	}
 }

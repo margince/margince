@@ -205,6 +205,13 @@ export const vi = {
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
   "day.didNotRun": "Đã duyệt nhưng chưa chạy",
+  "day.bounces": "Chưa từng đến nơi",
+  "day.bounces.empty": "Mọi email đã đến nơi.",
+  "day.bounces.kind.generic": "Một email không đến được địa chỉ",
+  "day.lead.bounces_one":
+    "{count} email của bạn chưa từng đến nơi — địa chỉ không tồn tại.",
+  "day.lead.bounces_other":
+    "{count} email của bạn chưa từng đến nơi — địa chỉ không tồn tại.",
   "day.aiWork": "Việc AI gặp sự cố",
   "day.aiWork.empty": "Mọi việc bạn giao cho AI đều đã chạy.",
   "day.aiWork.kind.failed": "Một việc bạn giao cho AI đã thất bại",

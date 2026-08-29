@@ -374,3 +374,26 @@ type TroubledRun struct {
 	SubjectLabel string
 	OccurredAt   time.Time
 }
+
+// Bounces is the reader's own sends whose delivery reports came back hard —
+// read from the bounce stamp on the send's row, the same fact the timeline
+// shows, rather than from a second reading of the capture stream.
+//
+// Per-user like the health lanes beside it: the read refuses a principal with
+// no human behind it, and the lane renders that refusal as withheld.
+type Bounces interface {
+	HardBounces(ctx context.Context, since time.Time, limit int) ([]BouncedSend, error)
+}
+
+// BouncedSend is one send that did not arrive.
+type BouncedSend struct {
+	ID ids.UUID
+	// Subject is the send's own subject line — the name the reader knows it by.
+	Subject string
+	// Reason is the receiving side's own words for the refusal.
+	Reason    string
+	BouncedAt time.Time
+	// PersonID is the person the send's activity is filed under, zero when it
+	// is filed under none — the card then offers no open.
+	PersonID ids.UUID
+}

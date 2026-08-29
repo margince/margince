@@ -28,7 +28,7 @@ func (s *stubCaptureHealth) CaptureConcerns(context.Context) ([]CaptureConcern, 
 func captureLaneService(health CaptureHealth) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, nil, fixedClock)
 }
 
 func TestACaptureConcernNamesTheConditionAndTheMailbox(t *testing.T) {

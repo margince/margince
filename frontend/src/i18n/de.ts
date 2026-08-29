@@ -199,6 +199,13 @@ export const de = {
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
   "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.bounces": "Nie angekommen",
+  "day.bounces.empty": "Jede Sendung ist angekommen.",
+  "day.bounces.kind.generic": "Eine E-Mail hat ihre Adresse nicht erreicht",
+  "day.lead.bounces_one":
+    "{count} Ihrer E-Mails ist nie angekommen — die Adresse ist tot.",
+  "day.lead.bounces_other":
+    "{count} Ihrer E-Mails sind nie angekommen — die Adressen sind tot.",
   "day.aiWork": "KI-Arbeit mit Problemen",
   "day.aiWork.empty": "Alles, was Sie der KI übergeben haben, ist gelaufen.",
   "day.aiWork.kind.failed":

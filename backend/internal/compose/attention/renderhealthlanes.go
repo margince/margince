@@ -91,3 +91,32 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 	}
 	return item
 }
+
+// bounceItem draws one hard-bounced send. The subject line is the headline —
+// the name the reader knows the send by — and the receiving side's own reason
+// the supporting line. `open` is offered exactly when the send is filed under
+// a person, because that page is where fixing the address and resending live.
+func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
+	kind := "hard"
+	occurred := send.BouncedAt
+	item := crmcontracts.AttentionItem{
+		Id:         send.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("bounce"),
+		Kind:       &kind,
+		OccurredAt: &occurred,
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if send.Subject != "" {
+		subject := send.Subject
+		item.Title = &subject
+	}
+	if send.Reason != "" {
+		reason := send.Reason
+		item.Detail = &reason
+	}
+	if !send.PersonID.IsZero() {
+		item.Subject = subjectOf("person", send.PersonID)
+		item.Actions = append(item.Actions, actionOpen)
+	}
+	return item
+}

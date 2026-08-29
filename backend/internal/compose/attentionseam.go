@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/overlay"
@@ -479,6 +480,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The reader's own troubled AI runs, from the same projection the
 		// activity rail reads.
 		attentionAIWork{store: aiactivity.NewStore(db)},
+		// The reader's own sends that never arrived, from the bounce stamp
+		// comms records on the row.
+		attentionBounces{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).
