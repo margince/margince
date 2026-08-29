@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -483,6 +484,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The reader's own sends that never arrived, from the bounce stamp
 		// comms records on the row.
 		attentionBounces{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
+		// The rules that stopped doing their work, through the automation
+		// store's own gate.
+		attentionAutomations{store: automation.NewAutomationStore(db)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

@@ -51,6 +51,11 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "bounce") {
     return t("day.bounces.kind.generic");
   }
+  // A troubled automation firing names itself by its rule's name (the title
+  // branch above); one without a name gets the locale's generic line.
+  if (item.source === "automation_run") {
+    return t("day.automation.kind.generic");
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
 }
 

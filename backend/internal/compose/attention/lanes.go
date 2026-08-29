@@ -397,3 +397,25 @@ type BouncedSend struct {
 	// is filed under none — the card then offers no open.
 	PersonID ids.UUID
 }
+
+// AutomationHealth is the automations whose recent firings failed or were
+// blocked — a rule its owner believes is running and is not. One entry per
+// firing, newest first, bounded; only automations, because an engine
+// workflow that is not one has no rule screen to open.
+//
+// Role-withheld like DSRs: the read is refused for everyone the automation
+// screens refuse, and the lane renders that refusal as withheld.
+type AutomationHealth interface {
+	TroubledRuns(ctx context.Context, since time.Time, limit int) ([]TroubledAutomationRun, error)
+}
+
+// TroubledAutomationRun is one firing that did not do its work.
+type TroubledAutomationRun struct {
+	ID   ids.UUID
+	Name string
+	// Outcome is the contract's failed/blocked vocabulary.
+	Outcome string
+	// Reason is the engine's own recorded why, when it left one.
+	Reason     string
+	OccurredAt time.Time
+}

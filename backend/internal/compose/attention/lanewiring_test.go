@@ -41,6 +41,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
@@ -70,6 +71,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		{"capture_health", out.CaptureHealth, "capture_health", ""},
 		{"ai_work_health", out.AiWorkHealth, "ai_work_health", ""},
 		{"bounces", out.Bounces, "bounce", "a bounced send"},
+		{"automation_health", out.AutomationHealth, "automation_run", "a broken rule"},
 	} {
 		if lane.items == nil || len(*lane.items) != 1 {
 			t.Fatalf("%s carries %v, want one item", lane.name, lane.items)
@@ -120,6 +122,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
@@ -182,6 +185,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())

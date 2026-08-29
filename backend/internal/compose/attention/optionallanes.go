@@ -166,6 +166,16 @@ func (s *Service) operationalLanes(
 			into: &out.AiWorkHealth, count: &out.Counts.AiWorkHealth,
 		},
 		{
+			name: "automation_health", bound: s.automations != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// The same week the bounce lane keeps: a broken rule needs
+				// fixing whenever its owner next sits down.
+				troubled, err := s.automations.TroubledRuns(ctx, asOf.Add(-7*24*time.Hour), doneCap)
+				return renderEach(troubled, automationItem), err
+			},
+			into: &out.AutomationHealth, count: &out.Counts.AutomationHealth,
+		},
+		{
 			name: "bounces", bound: s.bounces != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// A week, not a day: a dead address needs fixing whenever the
