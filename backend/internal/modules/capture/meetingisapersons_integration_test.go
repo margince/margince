@@ -187,6 +187,7 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 
 	linked, rekinded := make(chan error, 1), make(chan error, 1)
 	inserted, release := make(chan struct{}), make(chan struct{})
+	rekindPID := make(chan int32, 1)
 
 	// The link goes in FIRST and holds its transaction open. Both writers are
 	// then inside their window at once, which is the whole premise — started
@@ -208,16 +209,29 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 	<-inserted
 	go func() {
 		rekinded <- db.Tx(ctx, func(tx pgx.Tx) error {
+			// Its own backend, named before it writes, so the wait below is
+			// THIS transaction queueing rather than any backend in a shared
+			// test cluster happening to wait on any lock.
+			var pid int32
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				close(rekindPID)
+				return err
+			}
+			rekindPID <- pid
 			_, err := tx.Exec(ctx, `UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
 			return err
 		})
 	}()
+	pid, named := <-rekindPID
+	if !named {
+		t.Fatal("the re-kind never reached its own backend, so nothing can be watched for")
+	}
 
 	// Wait for the re-kind to REACH its lock rather than for a duration: the
 	// cluster is asked who is queued, and unlocked it never queues at all — in
 	// which case the re-kind finishes and says so, and the window closes on
 	// exactly the state this case is about.
-	finished, rekindErr := waitUntilQueuedOrDone(ctx, t, owner, rekinded)
+	finished, rekindErr := waitUntilQueuedOrDone(ctx, t, owner, pid, rekinded)
 	close(release)
 
 	linkErr := <-linked
@@ -252,8 +266,11 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 // The condition, not the clock: a sleep long enough to be reliable is a sleep
 // this suite pays on every run, and one short enough to be cheap is a flake. It
 // asks the cluster instead, on the owner connection so neither of the two
-// transactions under test is disturbed.
-func waitUntilQueuedOrDone(ctx context.Context, t *testing.T, owner *pgx.Conn, done <-chan error) (finished bool, result error) {
+// transactions under test is disturbed — and about THAT BACKEND, since the pool
+// is shared and any other waiter would otherwise answer this question.
+func waitUntilQueuedOrDone(
+	ctx context.Context, t *testing.T, owner *pgx.Conn, pid int32, done <-chan error,
+) (finished bool, result error) {
 	t.Helper()
 	tick := time.NewTicker(5 * time.Millisecond)
 	defer tick.Stop()
@@ -271,8 +288,8 @@ func waitUntilQueuedOrDone(ctx context.Context, t *testing.T, owner *pgx.Conn, d
 			var queued int
 			if err := owner.QueryRow(ctx, `
 				SELECT count(*) FROM pg_stat_activity
-				 WHERE datname = current_database() AND wait_event_type = 'Lock'`).Scan(&queued); err != nil {
-				t.Fatalf("asking the cluster who is queued: %v", err)
+				 WHERE pid = $1 AND wait_event_type = 'Lock'`, pid).Scan(&queued); err != nil {
+				t.Fatalf("asking the cluster whether backend %d is queued: %v", pid, err)
 			}
 			if queued > 0 {
 				return false, nil

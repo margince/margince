@@ -37,7 +37,10 @@
 -- account's only path to the meeting, and the down migration cannot restore it.
 --
 -- Both ways a person is on an event, because the employer hop reads both: the
--- link it was filed against, and the participant capture matched.
+-- link it was filed against, and the participant capture matched. And a LIVE
+-- person, for the same reason employerSubjects skips an archived one: an
+-- archived contact carries their employer into no prep, so their employment
+-- does not make the company link redundant either.
 DELETE FROM activity_link ol
 WHERE ol.entity_type = 'organization'
   AND EXISTS (
@@ -52,8 +55,10 @@ WHERE ol.entity_type = 'organization'
                 SELECT ap.person_id FROM activity_participant ap
                  WHERE ap.activity_id = ol.activity_id AND ap.person_id IS NOT NULL
                ) on_event
+          JOIN person p ON p.id = on_event.person_id
           JOIN relationship r ON r.person_id = on_event.person_id
-         WHERE r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
+         WHERE p.archived_at IS NULL
+           AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
            AND r.organization_id = ol.organization_id);
 
 -- What remains is a meeting whose company nothing else reaches. Dropping the
@@ -92,19 +97,25 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- FOR SHARE, and it is what closes the race between the two triggers. Read
+    -- LOCKED BEFORE THE CHECK, and the same row the other trigger locks. Read
     -- unlocked, one transaction can insert this link while the activity is
     -- still a `note` (the check below passes) while another re-kinds that same
     -- activity to `meeting` before the link is visible (the check in
     -- activity_refuses_becoming_a_company_meeting passes too). Both commit, and
     -- the row neither of them was allowed to make exists.
     --
-    -- SHARE rather than UPDATE: two links onto one activity are not in conflict
-    -- and must not queue behind each other, while `UPDATE activity SET kind`
-    -- takes FOR NO KEY UPDATE, which SHARE does conflict with. The FK's own
-    -- FOR KEY SHARE is not enough — a non-key column change does not conflict
-    -- with it, and `kind` is not a key.
-    SELECT kind INTO activity_kind FROM activity WHERE id = NEW.activity_id FOR SHARE;
+    -- The ORDER is the whole of it: locked first, checked second, and the same
+    -- row the re-kind trigger locks. A BEFORE ROW trigger runs ahead of the
+    -- UPDATE's own row lock, so a re-kind whose check has already run cannot be
+    -- made to look again by blocking it afterwards — it would wake and write on
+    -- the answer it took before waiting. Locking first is what makes each
+    -- check happen after the other transaction has finished or not started.
+    --
+    -- SHARE here and UPDATE there, which is the pairing that conflicts where it
+    -- should: a link and a re-kind queue, while two links onto one activity do
+    -- not — they are not in conflict and have no reason to wait for each other.
+    PERFORM 1 FROM activity WHERE id = NEW.activity_id FOR SHARE;
+    SELECT kind INTO activity_kind FROM activity WHERE id = NEW.activity_id;
 
     IF activity_kind IN ('meeting', 'call') THEN
         RAISE EXCEPTION
@@ -132,6 +143,13 @@ BEGIN
     IF NEW.kind NOT IN ('meeting', 'call') OR OLD.kind = NEW.kind THEN
         RETURN NEW;
     END IF;
+
+    -- The other half of the pairing, taken BEFORE the check for the same
+    -- reason: this trigger runs ahead of the UPDATE's own row lock, so waiting
+    -- afterwards would leave it writing on an answer it read before a
+    -- concurrent link landed. FOR UPDATE, so it conflicts with the link side's
+    -- SHARE.
+    PERFORM 1 FROM activity WHERE id = NEW.id FOR UPDATE;
 
     IF EXISTS (SELECT 1 FROM activity_link
                WHERE activity_id = NEW.id AND entity_type = 'organization') THEN
