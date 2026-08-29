@@ -3,8 +3,9 @@
 
 package compose
 
-// The dedupe card's evidence decoding — split from attentionseam.go on the
-// file-length cap.
+// How the dedupe card reads the detection-time evidence snapshot the queue
+// stored: a table of field comparisons, degraded loudly when a row will not
+// parse.
 
 import (
 	"context"

@@ -26,21 +26,24 @@ import (
 // which way it stopped (the contract's failed/blocked vocabulary), and the
 // engine's own recorded reason where it left one.
 type TroubledAutomationRun struct {
-	ID           ids.UUID
-	AutomationID ids.UUID
-	Name         string
-	Outcome      string
-	Reason       *string
-	CreatedAt    time.Time
+	ID        ids.UUID
+	Name      string
+	Outcome   string
+	Reason    *string
+	CreatedAt time.Time
 }
 
 // troubledRunsSQL joins each failed or blocked run back to its automation the
 // way ListRuns addresses runs forward: the handler is the automation's key
 // and the idempotency key carries "@<automation id>" (a UUID, so the LIKE
-// pattern carries no metacharacters). An archived automation's history stays
+// pattern carries no metacharacters). The two spellings stay separate
+// because the fragment binds differently — ListRuns parameterizes one
+// instance's id, this join correlates the automation column — and runKey's
+// own doc (engine_run.go) names both readers so a key-shape change lands on
+// everyone who decodes it. An archived automation's history stays
 // history — a card for a rule nobody can open would be a dead end.
 const troubledRunsSQL = `
-SELECT r.id, a.id, a.name, r.status, r.detail, r.created_at
+SELECT r.id, a.name, r.status, r.detail, r.created_at
   FROM workflow_run r
   JOIN automation a ON a.archived_at IS NULL
    AND r.handler = a.key
@@ -70,7 +73,7 @@ func (s *AutomationStore) TroubledRuns(ctx context.Context, since time.Time, lim
 			var run TroubledAutomationRun
 			var status string
 			var rawDetail []byte
-			if scanErr := rows.Scan(&run.ID, &run.AutomationID, &run.Name,
+			if scanErr := rows.Scan(&run.ID, &run.Name,
 				&status, &rawDetail, &run.CreatedAt); scanErr != nil {
 				return scanErr
 			}

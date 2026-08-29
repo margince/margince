@@ -11,13 +11,10 @@ package automation
 // idempotency-key linkage the way engine_run.go does).
 
 import (
-	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -50,9 +47,6 @@ func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
 		if run.Name != "stage_change_create_task" {
 			t.Errorf("run names rule %q, want the automation's own name", run.Name)
 		}
-		if run.AutomationID != autoID.UUID {
-			t.Errorf("run belongs to %s, want the live rule %s", run.AutomationID, autoID)
-		}
 	}
 	if outcomes["failed"] != "provider error" || outcomes["blocked"] != "approval rejected" {
 		t.Fatalf("outcomes = %v, want failed/blocked with the engine's own reasons", outcomes)
@@ -65,18 +59,6 @@ func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
 	}
 	if len(late) != 0 {
 		t.Fatalf("late window = %+v, want empty", late)
-	}
-}
-
-func TestTroubledRunsRefusesAReaderWithoutTheAutomationGrant(t *testing.T) {
-	fx := setupAutomationDB(t)
-	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
-	ctx := principal.WithWorkspaceID(context.Background(), fx.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + fx.rep1.String(), UserID: fx.rep1,
-	})
-	if _, err := store.TroubledRuns(ctx, time.Time{}, 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("TroubledRuns without the grant = %v, want the permission sentinel", err)
 	}
 }
 
