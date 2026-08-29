@@ -139,9 +139,11 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		return errors.Join(applyErr, recordErr)
 	}
 	if applyErr != nil && !errors.Is(applyErr, apperrors.ErrRequiresApproval) && !errors.Is(applyErr, ErrNoNotificationTransport) {
-		// A staged 🟡 is a healthy suspension and a no-transport notify is
-		// an honest out-of-scope skip — neither is a dispatch failure; a
-		// real apply failure still surfaces after its record committed.
+		// A staged 🟡 is a healthy suspension, and a no-transport notify is
+		// the wiring-defect guard's honest skip (compose wires the durable
+		// notice transport; only a composition that forgot the seam takes
+		// it) — neither is a dispatch failure; a real apply failure still
+		// surfaces after its record committed.
 		return applyErr
 	}
 	return nil
@@ -193,10 +195,12 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 				h.Spec().Name, runKey(h, ev), detail, appliedJSON)
 			return err
 		case errors.Is(applyErr, ErrNoNotificationTransport):
-			// Matched and would have delivered, but this environment has
-			// nowhere to send it — an honest out-of-scope skip (§3.3),
-			// distinct from both a Match/Plan condition-declined skip
-			// (recordSkip) and a real 'failed' — nothing went wrong here.
+			// Matched and would have delivered, but no Notifier was wired
+			// — the wiring-defect guard's honest skip (§3.3; compose wires
+			// the durable notice transport, so only a composition that
+			// forgot the seam reaches this), distinct from both a
+			// Match/Plan condition-declined skip (recordSkip) and a real
+			// 'failed' — nothing went wrong with the firing itself.
 			detail, err := reasonDetail("no notification transport configured")
 			if err != nil {
 				return err

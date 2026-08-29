@@ -101,13 +101,12 @@ type Comms interface {
 	ReplyAddress(ctx context.Context, anchor ids.UUID) (string, error)
 }
 
-// Notifier is the notify seam onto a real delivery transport. This repo
-// wires none today — no notification table, no channel adapter; the
-// inbox a human works from is approvals-only. ApplyActions' notify case
-// checks for a nil Notifier and answers ErrNoNotificationTransport
-// instead of silently discarding the firing (§3.3, UAT.md) — the day a
-// transport lands, compose wires a real Notifier here and this
-// interface already has a caller waiting for it.
+// Notifier is the notify seam onto the delivery transport — the durable
+// notice row compose wires (a notice with its own read-state on the
+// recipient's Worklist; recording the row is the delivery). ApplyActions'
+// notify case still checks for nil and answers ErrNoNotificationTransport:
+// a composition that forgets the seam surfaces as a visible skipped run,
+// never a silent no-op.
 type Notifier interface {
 	Notify(ctx context.Context, recipient ids.UUID, subject, body string) error
 }
@@ -165,7 +164,7 @@ type Executors struct {
 	Approvals Approvals
 	Lists     Lists
 	Comms     Comms
-	Notifier  Notifier // nil in this repo today — see Notifier's doc
+	Notifier  Notifier // the durable notice transport — see Notifier's doc
 	Claims    EffectClaims
 }
 

@@ -152,7 +152,11 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 		}
 		if alreadyRead {
 			// The reader's goal state already held: a replayed mark writes
-			// no second audit row and announces nothing.
+			// no second audit row and announces nothing. The comparison is
+			// a first-vs-replay test because now() is the TRANSACTION
+			// timestamp: a first settle writes read_at = now() (equal, so
+			// false), and a replay in any later transaction reads an
+			// earlier read_at (strictly less, so true).
 			return nil
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "update", "notice", id,

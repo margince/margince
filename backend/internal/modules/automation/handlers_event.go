@@ -174,6 +174,9 @@ func (routeLeadCreateTask) IdempotencyKey(ev workflow.Event) string {
 // contract-type dependency it has no other use for.
 type dealOwnerFields struct {
 	OwnerID *ids.UUID `json:"owner_id"`
+	// Name is what the notice calls the deal: a notice's reader gets the
+	// record's own name, never an internal id as their only handle.
+	Name string `json:"name"`
 }
 
 // errDealHasNoOwner is stage_change_notify's Plan decline when the moved
@@ -226,10 +229,14 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	if deal.OwnerID == nil {
 		return workflow.Effect{}, errDealHasNoOwner
 	}
+	dealName := deal.Name
+	if dealName == "" {
+		dealName = "A deal you own"
+	}
 	args, err := json.Marshal(notifyArgs{
 		Recipient: *deal.OwnerID,
 		Subject:   "A deal you own changed stage",
-		Body:      fmt.Sprintf("Deal %s moved to a new pipeline stage.", ev.Entity.ID),
+		Body:      fmt.Sprintf("%s moved to a new pipeline stage.", dealName),
 	})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
