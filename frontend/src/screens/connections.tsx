@@ -67,7 +67,10 @@ type RelationKey =
   // interactions with a contact. These name a workspace user, not a record at
   // the account, and read from the user's end rather than the account's.
   | "owns"
-  | "in_contact_with";
+  | "in_contact_with"
+  // Two contacts observed on the same captured threads. Undirected — the
+  // canonical from/to order carries no meaning — so it labels either end.
+  | "corresponds_with";
 
 /** useOrganizationGraph reads the account's one-hop connections. */
 export function useOrganizationGraph(id: string, enabled = true) {
@@ -310,6 +313,10 @@ function relationKey(edge: GraphEdge, nodeId: string): RelationKey | null {
     case "owns":
     case "in_contact_with":
       return pointsAtNode ? null : edge.kind;
+    // Undirected: being observed together describes both ends equally, so the
+    // label holds whichever end the reader is looking at.
+    case "corresponds_with":
+      return edge.kind;
     default:
       return pointsAtNode ? edge.kind : null;
   }

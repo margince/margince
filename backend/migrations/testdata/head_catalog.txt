@@ -1885,6 +1885,16 @@ public.geocode_cache.lon double precision NOT NULL gen=- def=-
 public.geocode_cache.provider text NOT NULL gen=- def=-
 public.geocode_cache.query text NOT NULL gen=- def=-
 public.geocode_cache_pkey CREATE UNIQUE INDEX geocode_cache_pkey ON public.geocode_cache USING btree (query)
+public.graph_contact_edge acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.graph_contact_edge.computed_at timestamp with time zone NOT NULL gen=- def=now()
+public.graph_contact_edge.count_90d integer NOT NULL gen=- def=0
+public.graph_contact_edge.count_total integer NOT NULL gen=- def=0
+public.graph_contact_edge.graph_contact_edge_ordered CHECK ((person_a < person_b))
+public.graph_contact_edge.graph_contact_edge_pkey PRIMARY KEY (person_a, person_b)
+public.graph_contact_edge.last_at timestamp with time zone NOT NULL gen=- def=-
+public.graph_contact_edge.person_a uuid NOT NULL gen=- def=-
+public.graph_contact_edge.person_b uuid NOT NULL gen=- def=-
+public.graph_contact_edge_pkey CREATE UNIQUE INDEX graph_contact_edge_pkey ON public.graph_contact_edge USING btree (person_a, person_b)
 public.graph_interaction_edge acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.graph_interaction_edge.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.graph_interaction_edge.count_90d integer NOT NULL gen=- def=0
@@ -2008,6 +2018,7 @@ public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USI
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
 public.idx_fx_rate_lookup CREATE INDEX idx_fx_rate_lookup ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
+public.idx_graph_contact_edge_b CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (person_b)
 public.idx_graph_edge_person CREATE INDEX idx_graph_edge_person ON public.graph_interaction_edge USING btree (person_id, last_at DESC)
 public.idx_graph_edge_user CREATE INDEX idx_graph_edge_user ON public.graph_interaction_edge USING btree (user_id, last_at DESC)
 public.idx_idempotency_key_created CREATE INDEX idx_idempotency_key_created ON public.idempotency_key USING btree (created_at)

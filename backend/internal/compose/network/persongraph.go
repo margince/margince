@@ -101,6 +101,7 @@ func (h Reads) buildPersonGraph(
 	dropped := struct {
 		Account *int `json:"account,omitempty"`
 		Direct  *int `json:"direct,omitempty"`
+		Peer    *int `json:"peer,omitempty"`
 	}{}
 
 	directDropped, err := h.addDirectGroup(ctx, tx, personID, now, out)
@@ -122,6 +123,16 @@ func (h Reads) buildPersonGraph(
 	default:
 		return err
 	}
+
+	// After the account arm on purpose: a peer already drawn as an account
+	// contact keeps that node, and the peer edge hangs off it. No denial
+	// branch — this arm needs only the person read the anchor already
+	// required, so a caller refused there never reaches it.
+	peerDropped, err := h.addPeerGroup(ctx, tx, personID, now, out)
+	if err != nil {
+		return err
+	}
+	dropped.Peer = &peerDropped
 
 	out.DroppedCount = &dropped
 	out.Route = chooseRoute(out, now)

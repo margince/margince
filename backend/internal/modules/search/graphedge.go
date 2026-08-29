@@ -105,6 +105,16 @@ func RecomputeEdgesForActivities(ctx context.Context, tx pgx.Tx, activityIDs []i
 	if len(activityIDs) == 0 {
 		return nil
 	}
+	// The contact↔contact projection rides the same entry point, so every
+	// consumer that keeps the colleague edges honest keeps these honest too —
+	// a second maintenance path would be a second chance to forget one.
+	contactPairs, err := affectedContactPairs(ctx, tx, activityIDs)
+	if err != nil {
+		return err
+	}
+	if err := recomputeContactPairs(ctx, tx, contactPairs); err != nil {
+		return err
+	}
 	// The pairs the activities touch — BEFORE the recompute, so a pair whose
 	// rows have all gone is still named and can be deleted below.
 	pairs, err := affectedPairs(ctx, tx, activityIDs)
@@ -172,16 +182,27 @@ func RecomputeEdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) 
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	return recomputePairs(ctx, tx, pairs)
+	if err := recomputePairs(ctx, tx, pairs); err != nil {
+		return err
+	}
+	contactPairs, err := contactPairsForPerson(ctx, tx, personID)
+	if err != nil {
+		return err
+	}
+	return recomputeContactPairs(ctx, tx, contactPairs)
 }
 
 // DropEdgesForPerson removes every edge to one contact outright — the erasure
 // and merge-source handler. The projection must not be the one place a
-// deleted person's correspondence pattern survives.
+// deleted person's correspondence pattern survives. Both projections, and for
+// the contact one BOTH endpoint columns: the subject standing on the far end
+// of somebody else's edge is still the subject.
 func DropEdgesForPerson(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM graph_interaction_edge WHERE person_id = $1`, personID)
-	if err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM graph_interaction_edge WHERE person_id = $1`, personID); err != nil {
 		return fmt.Errorf("search: dropping a contact's interaction edges: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM graph_contact_edge WHERE person_a = $1 OR person_b = $1`, personID); err != nil {
+		return fmt.Errorf("search: dropping a contact's observed peer edges: %w", err)
 	}
 	return nil
 }
@@ -441,6 +462,34 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		   AND pp.person_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		 GROUP BY up.user_id, pp.person_id`); err != nil {
 		return fmt.Errorf("search: rebuilding the interaction projection: %w", err)
+	}
+	return rebuildContactEdges(ctx, tx, window)
+}
+
+// rebuildContactEdges is RebuildEdges' contact↔contact half, under the same
+// contract: replace wholesale, same audience rule, same role set. The strict
+// person ordering in the self-join both canonicalizes the pair and counts each
+// shared activity once.
+func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM graph_contact_edge`); err != nil {
+		return fmt.Errorf("search: clearing the contact projection for rebuild: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO graph_contact_edge
+		    (person_a, person_b, last_at, count_90d, count_total, computed_at)
+		SELECT pa.person_id, pb.person_id,
+		       max(a.occurred_at),
+		       count(DISTINCT a.id) FILTER (WHERE a.occurred_at >= `+window+`),
+		       count(DISTINCT a.id),
+		       now()
+		  FROM activity_participant pa
+		  JOIN activity_participant pb
+		    ON pb.activity_id = pa.activity_id AND pb.person_id > pa.person_id
+		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		 WHERE pa.person_id IS NOT NULL AND pa.role IN `+interactionRoles+`
+		   AND pb.role IN `+interactionRoles+`
+		 GROUP BY pa.person_id, pb.person_id`); err != nil {
+		return fmt.Errorf("search: rebuilding the contact projection: %w", err)
 	}
 	return nil
 }

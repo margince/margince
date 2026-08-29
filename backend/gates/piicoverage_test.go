@@ -118,6 +118,11 @@ var piiTables = map[string]piiHandling{
 	// often. Purged, never exported — like the embedding, it is a machine
 	// artifact rather than anything the subject supplied.
 	"graph_interaction_edge": {erasureWrite: true, sarRead: false},
+	// The contact↔contact projection: derived like its sibling above, and it
+	// names the subject on EITHER end of every row — the erasure delete must
+	// cover both endpoint columns, or the subject survives on the far side of
+	// somebody else's edge. Purged, never exported, for the same reason.
+	"graph_contact_edge": {erasureWrite: true, sarRead: false},
 	// The Art. 17 cascade reaches activity, so erasureWrite is what this table
 	// promises. retentionErasures is declared ANYWAY, because the nightly
 	// sweep's activity/erase action is a SECOND eraser of the same content and

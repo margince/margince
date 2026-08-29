@@ -14946,6 +14946,8 @@ export interface components {
             dropped_count?: {
                 direct?: number;
                 account?: number;
+                /** @description Counts from a bounded fetch, like `direct` — an understatement past the fetch width, stated rather than exact because exactness would cost every ordinary read. */
+                peer?: number;
             };
         };
         PersonGraphNode: {
@@ -14954,10 +14956,10 @@ export interface components {
             /** @enum {string} */
             type: "colleague" | "contact";
             /**
-             * @description `anchor` is the contact this graph is about. `direct` knows them. `account` works with them.
+             * @description `anchor` is the contact this graph is about. `direct` knows them. `account` works with them. `peer` is another external contact observed on the same captured activities.
              * @enum {string}
              */
-            group: "anchor" | "direct" | "account";
+            group: "anchor" | "direct" | "account" | "peer";
             label: string;
             /** @description Their role or employer, when the record carries one. */
             sublabel?: string;
@@ -15534,6 +15536,13 @@ export interface components {
             to: string;
             /**
              * @description `employment` — the account employs the person.
+             *     `corresponds_with` — the two CONTACTS at its ends have been observed on the
+             *     same captured activities. Undirected in fact (neither wrote "to" the other
+             *     through us — we only saw them together), so `from`/`to` carry the pair's
+             *     canonical order and mean nothing more. It is what stops the account picture
+             *     being hub-and-spoke through our own team. Never drawn from a limited-audience
+             *     activity, and it carries pooled counts only — no receipts, because the
+             *     correspondence itself is not this caller's to read.
              *     `has_deal` — the deal belongs to the account.
              *     `deal_stakeholder` — the person holds a stakeholder seat on the deal.
              *     `parent_of` — `from` is the parent organization of `to` (the account's parent
@@ -15554,7 +15563,7 @@ export interface components {
              *     recorded interaction is contact.
              * @enum {string}
              */
-            kind: "employment" | "has_deal" | "deal_stakeholder" | "parent_of" | "partner_of" | "referred_by" | "co_sell_with" | "owns" | "in_contact_with";
+            kind: "employment" | "has_deal" | "deal_stakeholder" | "parent_of" | "partner_of" | "referred_by" | "co_sell_with" | "owns" | "in_contact_with" | "corresponds_with";
             /**
              * @description The edge's role where it has one — an employment title, a stakeholder role
              *     (champion, economic_buyer, …). Null on the edges that carry none, which includes
@@ -15563,8 +15572,10 @@ export interface components {
             role?: string | null;
             /**
              * @description How warm this particular colleague's relationship with this contact is, 0–100,
-             *     on `in_contact_with` edges only; null on every other kind, which describes a
-             *     structural fact rather than a relationship.
+             *     on `in_contact_with` and `corresponds_with` edges only; null on every other
+             *     kind, which describes a structural fact rather than a relationship. On
+             *     `corresponds_with` the reciprocity term has nothing to say — no direction was
+             *     observed between two externals — so the score leans on recency and frequency.
              *
              *     It is the per-user relationship strength (PO-F-3b): the same recency ×
              *     frequency × reciprocity arithmetic as the workspace-wide contact score, over

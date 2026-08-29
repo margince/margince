@@ -1523,6 +1523,7 @@ export const vi = {
   "co.connections.rel.co_sell_with": "bán chung",
   "co.connections.rel.owns": "phụ trách tài khoản này",
   "co.connections.rel.in_contact_with": "đang liên hệ",
+  "co.connections.rel.corresponds_with": "trao đổi với nhau",
   "co.connections.noSignal": "chưa có tín hiệu",
   "linkedinImport.title": "Kết nối LinkedIn",
   "linkedinImport.sub":
@@ -6195,6 +6196,8 @@ export const vi = {
   "person.graph.account": "Ở cùng công ty",
   "person.graph.noAccount":
     "Không có contact nào khác được ghi nhận ở công ty họ.",
+  "person.graph.peer": "Họ trao đổi với ai",
+  "person.graph.noPeer": "Chưa thấy ai khác trên các thread của họ.",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",
   "person.graph.withContact": "với contact này",

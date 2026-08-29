@@ -138,7 +138,14 @@ func deleteSubjectLinkedInGhosts(
 // for a `person.erased` event this path has never emitted, so the edges
 // outlived every erasure.
 func deleteSubjectInteractionEdges(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM graph_interaction_edge WHERE person_id = $1`, personID); err != nil {
+		return err
+	}
+	// The contact↔contact projection names the subject on EITHER end, so both
+	// endpoint columns are matched — a person_a-only delete leaves the subject
+	// standing on the far side of everyone else's edges.
 	_, err := tx.Exec(ctx,
-		`DELETE FROM graph_interaction_edge WHERE person_id = $1`, personID)
+		`DELETE FROM graph_contact_edge WHERE person_a = $1 OR person_b = $1`, personID)
 	return err
 }

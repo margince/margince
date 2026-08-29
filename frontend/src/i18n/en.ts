@@ -1563,6 +1563,7 @@ export const en = {
   "co.connections.rel.co_sell_with": "co-selling",
   "co.connections.rel.owns": "owns this account",
   "co.connections.rel.in_contact_with": "in contact",
+  "co.connections.rel.corresponds_with": "corresponds with each other",
   "co.connections.noSignal": "no signal yet",
   "linkedinImport.title": "LinkedIn connections",
   "linkedinImport.sub":
@@ -6293,6 +6294,8 @@ export const en = {
   "person.graph.noDirect": "Nobody here has corresponded with them.",
   "person.graph.account": "At the same company",
   "person.graph.noAccount": "No other contacts on record at their company.",
+  "person.graph.peer": "Who they talk to",
+  "person.graph.noPeer": "Nobody else observed on their threads yet.",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
   "person.graph.withContact": "with this contact",
