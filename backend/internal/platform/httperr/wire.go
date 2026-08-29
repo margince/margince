@@ -98,7 +98,8 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
 		// the operator's half stays in the log.
-		slog.WarnContext(r.Context(), "reading request body", "method", r.Method, "path", r.URL.Path, "err", err)
+		slog.WarnContext(r.Context(), "reading request body",
+			"method", r.Method, "path", loggedPath(r), "err", err)
 		return Validation("body", "malformed_json",
 			"the request body could not be read to the end; resend the request with a complete body")
 	}
@@ -194,14 +195,14 @@ func bodyDecodeRefusal(r *http.Request, raw json.RawMessage, into any, err error
 		detail, withheld := fieldShapeDetail(refusal)
 		if withheld {
 			slog.WarnContext(r.Context(), "unnamed request-body field decode failure",
-				"method", r.Method, "path", r.URL.Path, "field", refusal.Field, "err", err)
+				"method", r.Method, "path", loggedPath(r), "field", refusal.Field, "err", err)
 		}
 		return Validation("body", "malformed_json", detail)
 	}
 	safe, withheld := SafeDecodeError(err)
 	if withheld {
 		slog.WarnContext(r.Context(), "unnamed request-body decode failure",
-			"method", r.Method, "path", r.URL.Path, "err", err)
+			"method", r.Method, "path", loggedPath(r), "err", err)
 	}
 	return Validation("body", "malformed_json", safe.Error())
 }

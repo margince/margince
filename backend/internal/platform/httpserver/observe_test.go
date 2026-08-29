@@ -161,10 +161,10 @@ func TestReadyzDependencyFailureStillReturns503RegardlessOfEmbedState(t *testing
 }
 
 // The preference centre's capability token travels in a path segment, and
-// the access log writes the path on every request. These cases pin the
-// redaction from both sides: the credential never reaches the line, and
-// everything an operator reads the log FOR — method, route, trailing verb,
-// ordinary record ids — still does.
+// the access log writes the path on every request. The redaction's own cases
+// live with it in shared/kernel/capabilitypath; what this pins is that the
+// middleware applies it with NO argument from the mount site, because the
+// argument is what five of six mounts used to leave out.
 func TestAccessLogRedactsCapabilityPathSegments(t *testing.T) {
 	const prefix = "/v1/public/preferences/"
 	// Deliberately a sentence rather than a realistic token: the assertion
@@ -173,28 +173,11 @@ func TestAccessLogRedactsCapabilityPathSegments(t *testing.T) {
 	// about forever after.
 	const token = "this-stands-in-for-a-preference-capability-token"
 
-	for _, tc := range []struct {
-		name, path, want string
-	}{
-		{"the token segment itself", prefix + token, prefix + "[redacted]"},
-		{"a trailing verb survives", prefix + token + "/unsubscribe", prefix + "[redacted]/unsubscribe"},
-		{"an unrelated path is untouched", "/v1/deals/018f2a10-0000-7000-8000-000000000001", "/v1/deals/018f2a10-0000-7000-8000-000000000001"},
-		{"the prefix with nothing after it has nothing to hide", prefix, prefix},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := RedactCapabilitySegment(tc.path, prefix); got != tc.want {
-				t.Errorf("RedactCapabilitySegment(%q) = %q, want %q", tc.path, got, tc.want)
-			}
-		})
-	}
-
-	// End to end through the middleware: the emitted line carries the
-	// redacted path and no trace of the token.
 	var buf strings.Builder
 	log := slog.New(slog.NewTextHandler(&buf, nil))
 	handler := AccessLog(log, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}), prefix)
+	}))
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPut, prefix+token, nil))
 
 	line := buf.String()
