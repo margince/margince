@@ -56,9 +56,12 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// is queued, running or retained — and not a record of anything a person
 	// did. Every domain write a job performs is audited by the module that
 	// performs it, under that module's own row; the queue row is the machinery
-	// that got the worker there. The one statement this tree issues against it
-	// is a workspace purge, and what a purge DID to the estate is audited by
-	// the erasure path that ordered it.
+	// that got the worker there.
+	//
+	// No count of statements here, deliberately: nothing holds one, so a number
+	// would be a claim that rots the first time somebody adds a write. What the
+	// waiver rests on is the KIND of table, which does not change with how many
+	// statements touch it.
 	"internal/platform/jobs": "river_job is the fleet's operational state rather than a record fact — what a job DID is audited by the module that did it, and the purge that deletes these rows is audited by the erasure that ordered it",
 
 	// Per-READER derived state. Every one of these tables carries a user_id and

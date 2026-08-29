@@ -111,11 +111,21 @@ func writesARow(file *ast.File) bool {
 
 // callsAStorekitApplier reports whether the file reaches a storekit call that
 // carries its table — the second way this gate learns a package writes rows.
+//
+// The SAME shape the walker attributes from, argument count included. Matching
+// a bare method name would declare a writer out of any package holding a method
+// that happens to share one, and the walker would then reach a package with no
+// table to read and fail on its own unreadable-argument arm — a gate failing
+// over a file that writes nothing. And a package that does not import storekit
+// cannot be calling it at all.
 func callsAStorekitApplier(file *ast.File) bool {
+	if imported, _ := gatekit.ImportedAs(file, storekitImportPath); imported == "" {
+		return false
+	}
 	found := false
 	ast.Inspect(file, func(node ast.Node) bool {
 		call, isCall := node.(*ast.CallExpr)
-		if !isCall {
+		if !isCall || len(call.Args) < storekitTableArgArity {
 			return true
 		}
 		if method, isMethod := call.Fun.(*ast.SelectorExpr); isMethod && storekitTableArg[method.Sel.Name] {
@@ -125,6 +135,14 @@ func callsAStorekitApplier(file *ast.File) bool {
 	})
 	return found
 }
+
+// storekitImportPath is the package a storekit-shaped call must come from.
+const storekitImportPath = "github.com/margince/margince/backend/internal/platform/database/storekit"
+
+// storekitTableArgArity is how many arguments such a call carries before its
+// table is at Args[2] — the walker's own guard, so discovery cannot count a
+// call the walk would decline to read.
+const storekitTableArgArity = 4
 
 // TestThePlatformWritersAreDiscoveredRatherThanRemembered is the derivation,
 // from the other end.
@@ -164,6 +182,12 @@ func TestThePlatformWritersAreDiscoveredRatherThanRemembered(t *testing.T) {
 	}
 }
 
+// withStorekit puts a probe in a package that imports storekit, which is what
+// makes a storekit-shaped call a storekit call.
+func withStorekit(body string) string {
+	return "package p\n\nimport \"" + storekitImportPath + "\"\n\n" + body
+}
+
 // The second write shape, from the other end.
 //
 // A package whose only row write goes through a storekit applier holds no
@@ -179,19 +203,35 @@ func TestAStorekitOnlyWriterIsDiscovered(t *testing.T) {
 	}{
 		{
 			name: "an applier call with no SQL in the file",
-			source: "package p\nfunc write(p *storekit.Patch, tx pgx.Tx) error {\n" +
-				"\treturn p.ApplyWithVersion(ctx, tx, \"vault_secret\", id, version)\n}\n",
+			source: withStorekit("func write(p *storekit.Patch, tx pgx.Tx) error {\n" +
+				"\treturn p.ApplyWithVersion(ctx, tx, \"vault_secret\", id, version)\n}\n"),
 			want: true,
 		},
 		{
 			name: "a row lock, which is where ApplyLocked's table is legible",
-			source: "package p\nfunc lock(tx pgx.Tx) error {\n" +
-				"\t_, err := storekit.LockRow(ctx, tx, \"vault_secret\", id)\n\treturn err\n}\n",
+			source: withStorekit("func lock(tx pgx.Tx) error {\n" +
+				"\t_, err := storekit.LockRow(ctx, tx, \"vault_secret\", id)\n\treturn err\n}\n"),
 			want: true,
 		},
 		{
 			name:   "a package that reads and writes nothing",
 			source: "package p\nfunc name() string { return \"vault_secret\" }\n",
+			want:   false,
+		},
+		{
+			// A method that merely shares a name. Counted, this package would
+			// join the walk with no table to read, and the walker would fail on
+			// its own unreadable-argument arm over a file that writes nothing.
+			name: "a same-named method on somebody else's type",
+			source: "package p\ntype cache struct{}\nfunc (c cache) LockRow(a, b, d, e int) {}\n" +
+				"func use(c cache) { c.LockRow(1, 2, 3, 4) }\n",
+			want: false,
+		},
+		{
+			// The walker declines to read a call this short, so discovery must
+			// not count one either — the two have to agree on what a write is.
+			name:   "a storekit-shaped call too short to carry a table",
+			source: withStorekit("func short(p *storekit.Patch) { p.LockRow(ctx, tx) }\n"),
 			want:   false,
 		},
 	}
