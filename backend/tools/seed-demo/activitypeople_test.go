@@ -198,3 +198,99 @@ func linkedEntity(links []jsonBody, entityType string) string {
 	}
 	return ""
 }
+
+// TestActivityIdentityMatches — a source id here is the entry's POSITION, so
+// the question "is this the row this entry is about" has to be asked twice.
+//
+// The organization catches a shift across companies. It cannot catch one
+// WITHIN a company, where the dataset holds several entries against the same
+// account and reordering them renames each other's rows — and that is the case
+// that files a mail against the wrong colleague, which is the exact defect the
+// person repair exists to fix.
+func TestActivityIdentityMatches(t *testing.T) {
+	const org = "org-acme"
+	act := demoActivity{Company: "acme.test", Kind: "email", Subject: "Rueckfrage zur Migration"}
+
+	for _, tc := range []struct {
+		name     string
+		subject  string
+		existing seededActivity
+		orgID    string
+		want     bool
+	}{
+		{
+			name:     "the row this entry wrote",
+			existing: seededActivity{OrganizationID: org, Subject: act.Subject},
+			orgID:    org,
+			want:     true,
+		}, {
+			name:     "a row on another company",
+			existing: seededActivity{OrganizationID: "org-other", Subject: act.Subject},
+			orgID:    org,
+			want:     false,
+		}, {
+			// The shift the organization check is blind to: two entries on ONE
+			// account swapped places, so act-3 now names the other one's mail.
+			name:     "another entry's row on the same company",
+			existing: seededActivity{OrganizationID: org, Subject: "Angebot Zweiter Mandant"},
+			orgID:    org,
+			want:     false,
+		}, {
+			// A call or a meeting often carries no subject, and there is no
+			// fingerprint to check. The organization still answers.
+			name:     "an entry with no subject is judged on the company alone",
+			subject:  "-",
+			existing: seededActivity{OrganizationID: org, Subject: "whatever the server holds"},
+			orgID:    org,
+			want:     true,
+		}, {
+			// The post-seed verification runs with no domain map, so it passes
+			// no organization. The subject still answers.
+			name:     "with no company resolved the subject still answers",
+			existing: seededActivity{OrganizationID: "org-other", Subject: act.Subject},
+			want:     true,
+		}, {
+			name:     "with no company resolved a different subject is refused",
+			existing: seededActivity{OrganizationID: org, Subject: "Angebot Zweiter Mandant"},
+			want:     false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			entry := act
+			if tc.subject == "-" {
+				// The dataset names none, so there is no fingerprint to check.
+				entry.Subject = ""
+			}
+			if got := activityIdentityMatches(entry, tc.existing, tc.orgID); got != tc.want {
+				t.Errorf("matches = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestTheIndexReadsWhatARepairNeedsToPinItself — the version and the subject
+// are read off the page or neither guard exists at all.
+//
+// The version goes back as If-Match, so a row somebody moved between the
+// snapshot and the repair is refused rather than overwritten; the subject is
+// half the row's identity. Both are silent if the index drops them: a zero
+// version would be sent as a pin no row can satisfy, and an empty subject
+// would make every entry's identity check pass.
+func TestTheIndexReadsWhatARepairNeedsToPinItself(t *testing.T) {
+	page := json.RawMessage(`[
+	  {"id":"a1","source_system":"seed","source_id":"act-9","occurred_at":"2026-01-22T09:00:00Z",
+	   "subject":"Rueckfrage zur Migration","version":7,
+	   "links":[{"entity_type":"organization","entity_id":"org-1"}]}
+	]`)
+	seen := map[string]seededActivity{}
+	if err := indexSeededActivities(page, seen); err != nil {
+		t.Fatalf("indexing the page: %v", err)
+	}
+	got := seen["act-9"]
+	if got.Version != 7 {
+		t.Errorf("version = %d, want 7 — the repair would pin a version no row carries", got.Version)
+	}
+	if got.Subject != "Rueckfrage zur Migration" {
+		t.Errorf("subject = %q, want the stored one — every identity check would pass without it", got.Subject)
+	}
+}

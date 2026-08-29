@@ -60,7 +60,7 @@ func relinkActivitiesToPeople(
 			"entity_id":                want,
 			"replace_existing_of_type": true,
 		}
-		if err := c.post("/v1/activities/"+existing.ID+"/relink", body, nil); err != nil {
+		if err := relinkPinned(c, existing, body); err != nil {
 			return fmt.Errorf("filing activity %d (%s on %s) against its counterpart: %w", i, act.Kind, act.Company, err)
 		}
 	}
@@ -107,16 +107,63 @@ func personRelinkFor(act demoActivity, existing seededActivity, want string) (pe
 	}
 }
 
+// relinkPinned performs one repair against the version the snapshot was read
+// at, and treats a version conflict as a row to leave alone.
+//
+// The pin is the answer to the window this pass would otherwise carry. The
+// links it decides from were read in one pass at the start; the repair happens
+// later, and `replace_existing_of_type` DELETES what it finds. Somebody adding
+// a participant in between — a capture resolving one, a colleague associating
+// themselves — would lose it to a decision made before their link existed.
+// personRelinkFor refuses an activity carrying more than one person link, but
+// only as the snapshot saw it.
+//
+// If-Match closes that against every writer that goes through the API: a relink
+// touches the activity row so its version moves, and a version this snapshot did
+// not see answers 409 and writes nothing. What it does not close is a link
+// written straight into activity_link without touching the activity — nothing
+// in the product does that today, and a seeding tool an operator runs is not
+// where that would first matter.
+//
+// A conflict is a SKIP rather than a failure. The row moved under a converging
+// tool; the next run reads it fresh and decides again.
+func relinkPinned(c *client, existing seededActivity, body jsonBody) error {
+	err := c.postGuarded("/v1/activities/"+existing.ID+"/relink", existing.Version, body, nil)
+	if isConflict(err) {
+		return nil
+	}
+	return err
+}
+
+// activityIdentityMatches answers whether a stored row really is the row a
+// dataset entry is about.
+//
+// Source ids here are the entry's POSITION ("act-0", "act-1") and the dataset
+// gives activities no ref of their own, so inserting an entry in the middle of
+// the array renames every row after it. Two checks, because each sees what the
+// other cannot: the ORGANIZATION catches a shift across companies, and the
+// SUBJECT catches one within a single company, which is invisible to the
+// organization check.
+//
+// orgID is what the caller could resolve, and "" means it could not — the
+// post-seed verification has no domain map — so that half is skipped rather
+// than failed. A dataset entry with no subject of its own is judged on the
+// organization alone, which is what a call or a meeting usually carries.
+func activityIdentityMatches(act demoActivity, existing seededActivity, orgID string) bool {
+	if orgID != "" && existing.OrganizationID != orgID {
+		return false
+	}
+	return act.Subject == "" || existing.Subject == act.Subject
+}
+
 // seededMatch answers whether a dataset entry's row is on file AND is really
 // the row that entry is about.
 //
 // Shared by both reconciliation passes, because the question is one question
-// and the consequence of getting it wrong is the same either way. A source id
-// here is the entry's POSITION ("act-0", "act-1") and the dataset gives
-// activities no ref of their own, so inserting an entry in the middle of the
-// array renames every row after it. Acting on a mismatched id would file one
-// company's mail against another company's people or projects and stamp it
-// with retention nobody can lift, so a disagreement means leave it alone.
+// and the consequence of getting it wrong is the same either way: acting on a
+// mismatched id files one entry's mail against another entry's people or
+// projects and stamps it with retention nobody can lift, so a disagreement
+// means leave it alone. activityIdentityMatches is what that disagreement is.
 func seededMatch(refs pipelineRefs, act demoActivity, seen map[string]seededActivity, i int) (seededActivity, bool) {
 	existing, ok := seen[fmt.Sprintf("act-%d", i)]
 	if !ok || existing.ID == "" {
@@ -124,7 +171,7 @@ func seededMatch(refs pipelineRefs, act demoActivity, seen map[string]seededActi
 		return seededActivity{}, false
 	}
 	orgID, known := refs.orgsByDom[strings.ToLower(act.Company)]
-	if !known || existing.OrganizationID != orgID {
+	if !known || !activityIdentityMatches(act, existing, orgID) {
 		return seededActivity{}, false
 	}
 	return existing, true

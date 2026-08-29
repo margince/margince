@@ -54,7 +54,10 @@ func relinkActivitiesToProjects(c *client, cfg demoConfig, refs pipelineRefs, se
 			"entity_id":                want,
 			"replace_existing_of_type": true,
 		}
-		if err := c.post("/v1/activities/"+existing.ID+"/relink", body, nil); err != nil {
+		// Pinned to the version this snapshot read, for the reason
+		// relinkPinned gives: the decision and the write are separated by the
+		// rest of the pass, and this one deletes the project link it finds.
+		if err := relinkPinned(c, existing, body); err != nil {
 			return fmt.Errorf("filing activity %d (%s on %s) under its project: %w", i, act.Kind, act.Company, err)
 		}
 	}

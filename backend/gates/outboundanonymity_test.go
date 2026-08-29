@@ -56,6 +56,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"tools/seed-demo/apiclient.go:func patch":                  "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 	"tools/seed-demo/apiclient.go:func patchGuarded":           "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 	"tools/seed-demo/apiclient.go:func post":                   "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/apiclient.go:func postGuarded":            "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 	"tools/seed-demo/apiclient.go:func put":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 	"tools/seed-demo/documents.go:func upload":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 
