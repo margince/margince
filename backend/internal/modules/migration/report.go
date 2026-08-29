@@ -147,9 +147,20 @@ func withPartial(rep Report, or ObjectReport) Report {
 // true one — it was computed against the estate as it stands now — so it wins
 // outright.
 func (r Report) mergedWith(next Report) Report {
+	// The later attempt's edges win — unless it never reached them. A resume
+	// that failed before the association phase reports zero applied and zero
+	// skipped, and taking that as the answer would erase what an earlier
+	// attempt actually linked and report a run that connected nothing. Two
+	// zeroes are indistinguishable from a phase that ran and found no edges, so
+	// keeping the earlier answer is right either way: there the earlier is zero
+	// too.
+	associations, associationsSkipped := next.Associations, next.AssociationsSkipped
+	if next.Associations == 0 && len(next.AssociationsSkipped) == 0 {
+		associations, associationsSkipped = r.Associations, r.AssociationsSkipped
+	}
 	out := Report{
-		Associations:        next.Associations,
-		AssociationsSkipped: append([]SkippedAssoc(nil), next.AssociationsSkipped...),
+		Associations:        associations,
+		AssociationsSkipped: append([]SkippedAssoc(nil), associationsSkipped...),
 		Imported:            r.Imported + next.Imported,
 		Attempts:            r.Walks() + next.Walks(),
 	}

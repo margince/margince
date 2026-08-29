@@ -572,12 +572,15 @@ func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 // Only a resume can cause the second, so the ATTEMPT count tells them apart.
 // The object count cannot: attempts fold by class, and a CSV import is always
 // exactly one class.
+//
+// TWO walks is the ordinary committed run — the dry run and the commit — and
+// that is exactly where the stale skip lives. Three or more is a resume.
 func TestAResumedRunKeepsItsRefusals(t *testing.T) {
 	skipped := []migration.SkippedRow{{ExternalID: "a@x.test", Line: 2, Reason: "not-a-uuid"}}
 	// Three rows read; a resume counted two of them twice, so the four
 	// dispositions sum to five.
 	report := migration.Report{
-		Attempts: 2,
+		Attempts: 3,
 		Objects: []migration.ObjectReport{{
 			Object: migration.ObjectLead, MirrorCount: 3, Created: 4, Skipped: skipped,
 		}},
@@ -592,11 +595,16 @@ func TestAResumedRunKeepsItsRefusals(t *testing.T) {
 		t.Errorf("issues = %+v, want the refusal named", out.Issues)
 	}
 
-	// The single-attempt case is unchanged: there the surplus IS a stale skip.
-	single := report
-	single.Attempts = 1
-	out = toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &single})
-	if out.Disposition.Skipped != 0 {
-		t.Errorf("skipped = %d on a single attempt, want the stale skip dropped", out.Disposition.Skipped)
+	// The ordinary committed run is unchanged: dry run plus commit is two walks,
+	// and there the surplus IS a stale skip — the dry run refused a row the
+	// commit then created.
+	for _, walks := range []int{0, 1, 2} {
+		ordinary := report
+		ordinary.Attempts = walks
+		out = toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &ordinary})
+		if out.Disposition.Skipped != 0 {
+			t.Errorf("skipped = %d on a %d-walk report, want the stale skip dropped",
+				out.Disposition.Skipped, walks)
+		}
 	}
 }

@@ -94,15 +94,20 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// needs a resume to happen at all, so the attempt count is what tells them
 	// apart — a single-attempt run can only have the first.
 	//
-	// The OBJECT count cannot stand in for it. Attempts fold by object class, so
-	// a run walked five times still reports one object — and a CSV import is
-	// always exactly one class, so the guard was true on every CSV report and
-	// took a resumed run's surplus out of `skipped`, erasing the refusals this
-	// report exists to name.
-	if committed && run.Report != nil {
+	// TWO walks is the ordinary committed run — the dry run and the commit,
+	// folded — and that is exactly the report the stale skip lives in: the dry
+	// run wrote it, the commit created the row instead. THREE or more means a
+	// resume, and there the surplus is in created/updated.
+	//
+	// The OBJECT count cannot stand in for the walk count. Attempts fold by
+	// object class, so a run walked five times still reports one object — and a
+	// CSV import is always exactly one class, so a guard reading the object
+	// count was true on every CSV report and took a resumed run's surplus out
+	// of `skipped`, erasing the refusals this report exists to name.
+	if committed {
 		surplus := out.Disposition.Created + out.Disposition.Updated +
 			out.Disposition.Skipped - out.RowsRead
-		if surplus > 0 && run.Report.Walks() == 1 {
+		if surplus > 0 && run.Report.Walks() <= walksWithoutAResume {
 			out.Disposition.Skipped = max(out.Disposition.Skipped-surplus, 0)
 		}
 	}
@@ -124,6 +129,12 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	}
 	return out
 }
+
+// walksWithoutAResume is how many times an ordinary committed run is walked:
+// the dry run, then the commit. A report folding more than these has been
+// resumed, and a resume is the one cause of surplus that must not be taken out
+// of `skipped`.
+const walksWithoutAResume = 2
 
 // linksOf renders the connections a run makes, for the half of the report that
 // is not about rows.
