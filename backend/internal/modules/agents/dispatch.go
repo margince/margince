@@ -310,35 +310,6 @@ func methodNotFound(req rpcRequest) rpcResponse {
 	}
 }
 
-// initialize answers the handshake era's opening call: the revision this
-// server will speak with THIS client, what it can do, and who it is.
-func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpcError) {
-	var params struct {
-		//nolint:tagliatelle // protocolVersion is the MCP wire member, camelCase by the protocol
-		ProtocolVersion string `json:"protocolVersion"`
-	}
-	// Params is optional on the wire; only unmarshal when the client sent
-	// some, so an omitted field (not malformed JSON) falls through to the
-	// negotiator's absent-value default rather than an error.
-	if len(rawParams) > 0 {
-		if err := json.Unmarshal(rawParams, &params); err != nil {
-			// The decoder's own message names Go types, which is server-side
-			// detail an untrusted client has no use for. It is told what to
-			// send instead.
-			s.log.Warn("mcp: initialize params did not decode", "err", err)
-			return nil, &rpcError{
-				Code:    codeInvalidParams,
-				Message: `invalid params: initialize takes an object whose "protocolVersion" is a string`,
-			}
-		}
-	}
-	return map[string]any{
-		"protocolVersion": negotiateLegacyVersion(params.ProtocolVersion),
-		"capabilities":    s.capabilities(false),
-		"serverInfo":      s.identity(),
-	}, nil
-}
-
 // capabilities is what this server claims it can do — initialize reports it to
 // a handshake client and server/discover to a modern one, and the FEATURE
 // entries are identical in both, because two spellings of one claim is how a

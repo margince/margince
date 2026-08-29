@@ -355,14 +355,7 @@ func (s *Dispatcher) discover() map[string]any {
 	return map[string]any{
 		"supportedVersions": supportedProtocolVersions(),
 		"capabilities":      s.capabilities(true),
-		// Guidance for the model on the other side of the client, kept to what
-		// is true of every tool: the per-tool text is DescribeForClient's, and
-		// a second description of the governance here would be a second answer
-		// to the same question.
-		"instructions": "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
-			"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
-			"reach. Tools that a person must approve say so in their own description; calling one " +
-			"stages the effect for review rather than performing it.",
+		"instructions":      surfaceInstructions,
 	}
 }
 

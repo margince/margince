@@ -423,6 +423,48 @@ func TestDiscoverAdvertisesTheWholeWindowAndTheSameCapabilitiesAsInitialize(t *t
 		t.Errorf("discover claims %s and initialize claims %s — one server, one claim",
 			members["capabilities"], fromHandshake)
 	}
+	// And the INSTRUCTIONS, for the same reason and with a sharper edge: they
+	// were on the modern era alone, and the era that carried none is the one
+	// most clients speak. A model reading the handshake was told nothing at all
+	// about what a write can leave behind.
+	fromHandshakeText, err := json.Marshal(handshake["instructions"])
+	if err != nil {
+		t.Fatalf("marshalling the handshake instructions: %v", err)
+	}
+	if string(members["instructions"]) != string(fromHandshakeText) {
+		t.Errorf("discover instructs %s and initialize instructs %s — one server, one guidance",
+			members["instructions"], fromHandshakeText)
+	}
+}
+
+// The reporting rule, held as prose because prose is what it is.
+//
+// An assistant finished a run of correct writes and reported "nothing pending
+// approval this time" while a drafted reply sat in the queue — staged by an
+// automation reacting to what it had just logged, after every one of its calls
+// had returned. No write envelope can carry that row: it did not exist when the
+// write answered. The only thing between the model and the false report is
+// knowing to look, so the surface says it, and this is what keeps it said.
+func TestTheSurfaceTellsAModelToLookBeforeItReportsTheWorkFinished(t *testing.T) {
+	for _, want := range []string{
+		// That a write can leave something behind at all — the premise, and the
+		// one the transcript shows was missing.
+		"leave a question for a human",
+		// And that it can happen AFTER the call answered, which is why reading
+		// the write's own result is not enough.
+		"after your call returned",
+		// The tool that answers it, by name, and that reaching for it costs
+		// nothing — a model that thinks the check needs an approval will skip
+		// it exactly when the queue is not empty.
+		"list_approvals",
+		"needs no approval of its own",
+		// And the moment: before telling anyone the work is done.
+		"Before telling anyone the work is finished",
+	} {
+		if !strings.Contains(surfaceInstructions, want) {
+			t.Errorf("the surface instructions no longer say %q:\n%s", want, surfaceInstructions)
+		}
+	}
 }
 
 // A tool result is not a catalog: it is one caller's answer to one question
