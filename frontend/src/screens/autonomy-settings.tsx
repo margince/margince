@@ -42,6 +42,12 @@ function useUpdateAutonomy() {
   const toast = useToast();
   const t = useT();
   return useMutation({
+    // One scope for every row, so two switches flipped in quick succession run
+    // one after the other rather than racing. Each answer carries the WHOLE set,
+    // so an older reply landing last would put the cache back to before the
+    // newer flip — the screen would show a kind as off while the server has it
+    // on, which for this setting is the lie that matters.
+    scope: { id: "autonomy" },
     // Kind and mode travel together as one variable, never read off a render:
     // the row that carries the switch is the row that names the kind, and a
     // handler reaching back for either could act on the previous render's.

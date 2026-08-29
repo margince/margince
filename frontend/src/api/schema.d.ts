@@ -20670,9 +20670,15 @@ export interface components {
              * @description `manual` asks every time, and is what a kind stands at until the reader
              *     says otherwise. `auto` applies on sight, undoably, under the authority of
              *     whoever owns the record at the time.
+             *
+             *     `veto` is a third rung the policy table admits and nothing writes yet: it
+             *     would apply after a stated delay unless the reader stops it first. It is
+             *     named here because a client that met one and had no case for it would
+             *     render a rep's real setting as something else. The write below cannot
+             *     produce one.
              * @enum {string}
              */
-            mode: "manual" | "auto";
+            mode: "manual" | "veto" | "auto";
             /** @description How many of this kind the reader approved without changing. */
             approved_clean: number;
             /**

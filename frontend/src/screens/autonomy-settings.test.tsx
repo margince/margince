@@ -19,7 +19,7 @@ import { AutonomySettingsCard } from "./autonomy-settings";
 
 type Row = {
   kind: string;
-  mode: "manual" | "auto";
+  mode: "manual" | "veto" | "auto";
   approved_clean: number;
   approved_edited: number;
   rejected: number;
@@ -179,6 +179,75 @@ describe("AutonomySettingsCard", () => {
           .getAttribute("aria-checked"),
       ).toBe("false"),
     );
+  });
+
+  it("says why when the server refuses the change", async () => {
+    // The one arm a seeded screen cannot show. A rep who flips a switch and is
+    // refused must be told; a card that swallowed the problem would leave them
+    // believing a kind applies automatically when it does not.
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({}));
+        }
+        if (req.method === "PATCH") {
+          return jsonResponse(
+            {
+              type: "about:blank",
+              title: "Not Found",
+              status: 404,
+              code: "not_found",
+              detail: "that kind does not apply automatically",
+            },
+            404,
+          );
+        }
+        return jsonResponse({ data: [row("close_date_correction", "manual")] });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AutonomySettingsCard />);
+
+    await user.click(
+      await screen.findByTestId("autonomy-toggle-close_date_correction"),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBeTruthy();
+    // And the switch does not pretend the change landed.
+    expect(
+      screen
+        .getByTestId("autonomy-toggle-close_date_correction")
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("shows a rung it cannot set as not-automatic, without claiming it is off", async () => {
+    // `veto` is legal in the policy table and nothing writes it yet. The card
+    // must not render it as checked — it does not apply on sight — and the
+    // server keeps reporting the rep's real rung rather than this screen
+    // rewriting it to manual.
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        {
+          kind: "close_date_correction",
+          mode: "veto",
+          approved_clean: 4,
+          approved_edited: 0,
+          rejected: 0,
+        },
+      ]).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+
+    const toggle = await screen.findByTestId(
+      "autonomy-toggle-close_date_correction",
+    );
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
   });
 
   it("renders a kind whose copy it does not carry", async () => {

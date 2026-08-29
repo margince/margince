@@ -78,7 +78,7 @@ func TestSwitchingAKindOnIsWhatTheSettingsThenReport(t *testing.T) {
 	svc := approvals.NewService(e.DB())
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
-	if err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
+	if _, err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
 		t.Fatalf("switching the kind on: %v", err)
 	}
 
@@ -101,7 +101,7 @@ func TestSwitchingAKindOnIsWhatTheSettingsThenReport(t *testing.T) {
 	}
 
 	// And back off, because a setting a rep cannot reverse is not a setting.
-	if err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, false); err != nil {
+	if _, err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, false); err != nil {
 		t.Fatalf("switching the kind back off: %v", err)
 	}
 	settings, err = svc.AutoApplySettings(repCtx)
@@ -125,7 +125,7 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	second := e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms)
 
-	if err := svc.SetAutoApply(first, deals.CloseDateCorrectionKind, true); err != nil {
+	if _, err := svc.SetAutoApply(first, deals.CloseDateCorrectionKind, true); err != nil {
 		t.Fatalf("switching the first rep's kind on: %v", err)
 	}
 
@@ -174,13 +174,15 @@ func TestTheTrackRecordUnderASwitchCountsTheRepsOwnDecisions(t *testing.T) {
 	}
 }
 
-// The whole point, end to end: the switch is what makes the sweep apply.
+// The switch is what changes what the sweep does, on ONE proposal.
 //
-// This is the claim the feature exists for, and it is the one that was
-// unprovable while nothing could write the mode — the engine read a setting no
-// rep could reach, so the lane it fills stayed empty no matter how well the
-// sweep worked. Setting it through the same method the endpoint calls is what
-// makes this a test of the product rather than of a fixture.
+// The suite beside this one proves each half against its own fixture: a proposal
+// applies when its owner has the kind on, and waits when nobody opted in. Both
+// arrange the answer before staging, so neither can show that the SAME pending
+// proposal changes fate when the setting moves under it — which is what a rep
+// does when they open the screen and flip a switch on a queue they already have.
+// A regression that made the mode read once and cache it would pass both of
+// those and fail this one.
 func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -203,7 +205,7 @@ func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 
 	// The rep switches the kind on, through the method the endpoint calls.
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
+	if _, err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
 		t.Fatalf("switching the kind on: %v", err)
 	}
 

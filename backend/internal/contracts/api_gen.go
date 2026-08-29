@@ -5447,6 +5447,7 @@ func (e JobFailureState) Valid() bool {
 const (
 	KindAutonomyModeAuto   KindAutonomyMode = "auto"
 	KindAutonomyModeManual KindAutonomyMode = "manual"
+	KindAutonomyModeVeto   KindAutonomyMode = "veto"
 )
 
 // Valid indicates whether the value is a known member of the KindAutonomyMode enum.
@@ -5455,6 +5456,8 @@ func (e KindAutonomyMode) Valid() bool {
 	case KindAutonomyModeAuto:
 		return true
 	case KindAutonomyModeManual:
+		return true
+	case KindAutonomyModeVeto:
 		return true
 	default:
 		return false
@@ -18765,6 +18768,12 @@ type KindAutonomy struct {
 	// Mode `manual` asks every time, and is what a kind stands at until the reader
 	// says otherwise. `auto` applies on sight, undoably, under the authority of
 	// whoever owns the record at the time.
+	//
+	// `veto` is a third rung the policy table admits and nothing writes yet: it
+	// would apply after a stated delay unless the reader stops it first. It is
+	// named here because a client that met one and had no case for it would
+	// render a rep's real setting as something else. The write below cannot
+	// produce one.
 	Mode KindAutonomyMode `json:"mode"`
 
 	// Rejected How many of this kind the reader turned down.
@@ -18774,6 +18783,12 @@ type KindAutonomy struct {
 // KindAutonomyMode `manual` asks every time, and is what a kind stands at until the reader
 // says otherwise. `auto` applies on sight, undoably, under the authority of
 // whoever owns the record at the time.
+//
+// `veto` is a third rung the policy table admits and nothing writes yet: it
+// would apply after a stated delay unless the reader stops it first. It is
+// named here because a client that met one and had no case for it would
+// render a rep's real setting as something else. The write below cannot
+// produce one.
 type KindAutonomyMode string
 
 // KnowledgeAnswer defines model for KnowledgeAnswer.

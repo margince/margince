@@ -39,7 +39,8 @@ func (h Handlers) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 // It returns everything rather than the row it changed so the client has no
 // second read to get wrong: a screen that patched one row and re-rendered from
 // its own optimistic copy would show a stale track record beside the switch the
-// reader just moved.
+// reader just moved. The service reads it back inside the writing transaction,
+// so an answer that arrives at all describes what was committed.
 func (h Handlers) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)
@@ -49,11 +50,7 @@ func (h Handlers) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.svc.SetAutoApply(r.Context(), req.Kind, req.Auto); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	settings, err := h.svc.AutoApplySettings(r.Context())
+	settings, err := h.svc.SetAutoApply(r.Context(), req.Kind, req.Auto)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
