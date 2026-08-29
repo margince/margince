@@ -204,6 +204,9 @@ export const de = {
   "day.automation.way.generic": "Nicht gelaufen",
   "day.lead.automation":
     "{count} Automatisierungsläufe haben ihre Arbeit nicht getan.",
+  "day.notices": "Zur Kenntnis",
+  "day.notices.empty": "Nichts wartet auf Ihre Kenntnisnahme.",
+  "day.acknowledge": "Verstanden",
   "day.automation": "Regeln, die nicht mehr laufen",
   "day.automation.empty": "Jede Regel tut ihre Arbeit.",
   "day.automation.kind.generic": "Eine Automatisierung ist nicht gelaufen",

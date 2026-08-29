@@ -71,6 +71,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"changed": true, "applied": true, "sent": true, "accepted": true,
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,
 		"received": true, "normalized": true, "skipped": true,
+		// The recipient read the notice — the verb is its own past tense.
+		"read":               true,
 		"read_back_proposed": true, "detected": true, "resolved": true,
 		"deactivated": true, "revoked": true, "restricted": true,
 		"invited": true, "reactivated": true,

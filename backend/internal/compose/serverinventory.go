@@ -146,6 +146,9 @@ type Server struct {
 	// because it reads the agents module's run tables without importing a
 	// sibling of its own.
 	aiActivityHandlers
+	// The notices transport: one verb (mark read); the content reaches the
+	// reader on the Worklist's notices lane.
+	noticesHandlers
 
 	// gmailPush is the Pub/Sub push webhook (built on the shared chassis,
 	// webhook.go), injected by WithGmailPush only when a subscription token

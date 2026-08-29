@@ -9082,6 +9082,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notices/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A notice id addressed to the acting person. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane. */
+        post: operations["markNoticeRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/brief/items/{itemId}/dismiss": {
         parameters: {
             query?: never;
@@ -22918,8 +22938,21 @@ export interface components {
              *     installation whose feed does not read the run ledger.
              */
             automation_health?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The acting person's UNREAD notices, newest first — the durable
+             *     informational line a system flow needed them to see (an automation's
+             *     notify firing, a lead-SLA escalation). The card carries the notice's
+             *     own subject as `title`, its body as `detail`, and `acknowledge` — the
+             *     one verb it offers, which marks it read and takes it off this lane.
+             *     Read notices leave the lane and stay on the row.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human
+             *     behind it. Absent — not empty — on an installation whose feed does
+             *     not read notices.
+             */
+            notices?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "automation_health")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "automation_health" | "notices")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22956,6 +22989,8 @@ export interface components {
             bounces?: number;
             /** @description How many troubled automation firings the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
             automation_health?: number;
+            /** @description How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
+            notices?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22970,7 +23005,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -23008,12 +23043,13 @@ export interface components {
              *     the read-only fallback for a receipt.
              *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
-             *     to `/brief/items/{itemId}/…`. `set_aside` rather than reusing `snooze`: a task's
+             *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
+             *     to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
              *     snooze moves a due date the rep agreed to, while a brief item's hides a
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -39217,6 +39253,36 @@ export interface operations {
             };
             /** @description The item was already acted on or dismissed. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    markNoticeRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A notice id addressed to the acting person. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read. Marking an already-read notice again is the same success — the goal state holds. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such notice addressed to the acting person (another person's notice reads as not-found). */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

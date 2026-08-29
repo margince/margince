@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -444,6 +445,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The rules that stopped doing their work, through the automation
 		// store's own gate.
 		attentionAutomations{store: automation.NewAutomationStore(db)},
+		// The reader's own unread notices — the durable informational line.
+		attentionNotices{store: notices.NewStore(db)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

@@ -257,3 +257,27 @@ export function TaskDetailModal({
     </Modal>
   );
 }
+
+// useNoticeRead settles one notice — the acknowledge verb's whole meaning.
+// Its own hook beside useTaskUpdate because the two route to different
+// owners: a task's verbs go to the activity, a notice's one verb goes to
+// the notice's own read endpoint.
+export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await api.POST("/notices/{id}/read", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+    },
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}

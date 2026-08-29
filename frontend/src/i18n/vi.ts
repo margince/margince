@@ -210,6 +210,9 @@ export const vi = {
   "day.automation.way.generic": "Không chạy",
   "day.lead.automation":
     "{count} lượt chạy tự động đã không hoàn thành công việc.",
+  "day.notices": "Cần bạn lưu ý",
+  "day.notices.empty": "Không có gì đang chờ bạn lưu ý.",
+  "day.acknowledge": "Đã hiểu",
   "day.automation": "Quy tắc ngừng hoạt động",
   "day.automation.empty": "Mọi quy tắc đều đang hoạt động.",
   "day.automation.kind.generic": "Một quy tắc tự động đã không chạy",

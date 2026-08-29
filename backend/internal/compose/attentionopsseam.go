@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
@@ -150,6 +151,27 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 			item.Reason = *run.Reason
 		}
 		out = append(out, item)
+	}
+	return out, nil
+}
+
+// attentionNotices binds the notices lane to the store's own per-user read.
+type attentionNotices struct{ store *notices.Store }
+
+func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.UnreadNotice, error) {
+	unread, err := a.store.UnreadFor(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.UnreadNotice, 0, len(unread))
+	for _, notice := range unread {
+		out = append(out, attention.UnreadNotice{
+			ID:        notice.ID,
+			Kind:      notice.Kind,
+			Subject:   notice.Subject,
+			Body:      notice.Body,
+			CreatedAt: notice.CreatedAt,
+		})
 	}
 	return out, nil
 }

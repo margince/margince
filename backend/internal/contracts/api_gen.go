@@ -1259,6 +1259,7 @@ const (
 	AttentionLanesOmittedDsr               AttentionLanesOmitted = "dsr"
 	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
+	AttentionLanesOmittedNotices           AttentionLanesOmitted = "notices"
 	AttentionLanesOmittedPlanned           AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedRelationshipDecay AttentionLanesOmitted = "relationship_decay"
 	AttentionLanesOmittedSyncHealth        AttentionLanesOmitted = "sync_health"
@@ -1289,6 +1290,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedMeetings:
 		return true
 	case AttentionLanesOmittedNeedsYou:
+		return true
+	case AttentionLanesOmittedNotices:
 		return true
 	case AttentionLanesOmittedPlanned:
 		return true
@@ -1326,19 +1329,22 @@ func (e AttentionThisMorningState) Valid() bool {
 
 // Defines values for AttentionItemActions.
 const (
-	AttentionItemActionsAct      AttentionItemActions = "act"
-	AttentionItemActionsComplete AttentionItemActions = "complete"
-	AttentionItemActionsDecide   AttentionItemActions = "decide"
-	AttentionItemActionsDismiss  AttentionItemActions = "dismiss"
-	AttentionItemActionsMerge    AttentionItemActions = "merge"
-	AttentionItemActionsOpen     AttentionItemActions = "open"
-	AttentionItemActionsSetAside AttentionItemActions = "set_aside"
-	AttentionItemActionsSnooze   AttentionItemActions = "snooze"
+	AttentionItemActionsAcknowledge AttentionItemActions = "acknowledge"
+	AttentionItemActionsAct         AttentionItemActions = "act"
+	AttentionItemActionsComplete    AttentionItemActions = "complete"
+	AttentionItemActionsDecide      AttentionItemActions = "decide"
+	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
+	AttentionItemActionsMerge       AttentionItemActions = "merge"
+	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
+	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
 func (e AttentionItemActions) Valid() bool {
 	switch e {
+	case AttentionItemActionsAcknowledge:
+		return true
 	case AttentionItemActionsAct:
 		return true
 	case AttentionItemActionsComplete:
@@ -1374,6 +1380,7 @@ const (
 	AttentionItemSourceDsr               AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
+	AttentionItemSourceNotice            AttentionItemSource = "notice"
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
 	AttentionItemSourceSyncHealth        AttentionItemSource = "sync_health"
 	AttentionItemSourceTask              AttentionItemSource = "task"
@@ -1405,6 +1412,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceFailedApproval:
 		return true
 	case AttentionItemSourceMeeting:
+		return true
+	case AttentionItemSourceNotice:
 		return true
 	case AttentionItemSourceRelationshipDecay:
 		return true
@@ -13841,6 +13850,18 @@ type Attention struct {
 	// NeedsYou Decisions only a person can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
+	// Notices The acting person's UNREAD notices, newest first — the durable
+	// informational line a system flow needed them to see (an automation's
+	// notify firing, a lead-SLA escalation). The card carries the notice's
+	// own subject as `title`, its body as `detail`, and `acknowledge` — the
+	// one verb it offers, which marks it read and takes it off this lane.
+	// Read notices leave the lane and stay on the row.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human
+	// behind it. Absent — not empty — on an installation whose feed does
+	// not read notices.
+	Notices *[]AttentionItem `json:"notices,omitempty"`
+
 	// Planned Work already agreed: overdue first, then due today.
 	Planned []AttentionItem `json:"planned"`
 
@@ -13942,7 +13963,10 @@ type AttentionCounts struct {
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
 	NeedsYou int  `json:"needs_you"`
-	Planned  int  `json:"planned"`
+
+	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
+	Notices *int `json:"notices,omitempty"`
+	Planned int  `json:"planned"`
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
@@ -13978,7 +14002,8 @@ type AttentionItem struct {
 	// the read-only fallback for a receipt.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
-	// to `/brief/items/{itemId}/…`. `set_aside` rather than reusing `snooze`: a task's
+	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
+	// to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
 	// snooze moves a due date the rep agreed to, while a brief item's hides a
 	// suggestion until later in the day. One word for both would make a client that
 	// handles `snooze` generically write the wrong endpoint.
@@ -39564,6 +39589,9 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
+	// (POST /notices/{id}/read)
+	MarkNoticeRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// What the OAuth consent screen renders for one pending authorization.
 	// (GET /oauth/consent-request)
 	GetConsentRequest(w http.ResponseWriter, r *http.Request, params GetConsentRequestParams)
@@ -41829,6 +41857,12 @@ func (_ Unimplemented) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request
 // Choose the language your own interface is in.
 // (PUT /me/locale)
 func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
+// (POST /notices/{id}/read)
+func (_ Unimplemented) MarkNoticeRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53665,6 +53699,40 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyLocale(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkNoticeRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkNoticeRead(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66505,6 +66573,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/notices/{id}/read", wrapper.MarkNoticeRead)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/oauth/consent-request", wrapper.GetConsentRequest)

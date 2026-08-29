@@ -13619,6 +13619,27 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /notices/{id}/read:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: A notice id addressed to the acting person.
+    post:
+      tags: [Notices]
+      operationId: markNoticeRead
+      summary: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
+      x-agent-access: human-only
+      responses:
+        '204':
+          description: Read. Marking an already-read notice again is the same success — the goal state holds.
+        '404':
+          description: No such notice addressed to the acting person (another person's notice reads as not-found).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /brief/items/{itemId}/dismiss:
     parameters:
       - name: itemId
@@ -30416,9 +30437,23 @@ components:
             Withheld — named in `lanes_omitted` — for every reader the
             automation screens themselves refuse. Absent — not empty — on an
             installation whose feed does not read the run ledger.
+        notices:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            The acting person's UNREAD notices, newest first — the durable
+            informational line a system flow needed them to see (an automation's
+            notify firing, a lead-SLA escalation). The card carries the notice's
+            own subject as `title`, its body as `detail`, and `acknowledge` — the
+            one verb it offers, which marks it read and takes it off this lane.
+            Read notices leave the lane and stay on the row.
+
+            Withheld — named in `lanes_omitted` — for a caller with no human
+            behind it. Absent — not empty — on an installation whose feed does
+            not read notices.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health, capture_health, ai_work_health, bounces, automation_health] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health, capture_health, ai_work_health, bounces, automation_health, notices] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30503,6 +30538,12 @@ components:
           description: >-
             How many troubled automation firings the lane is CARRYING — the bounded
             page, as the other lanes report. A reader past the bound sees the newest.
+        notices:
+          type: integer
+          minimum: 0
+          description: >-
+            How many unread notices the lane is CARRYING — the bounded page, as the
+            other lanes report. A reader past the bound sees the newest.
 
 
     AttentionItem:
@@ -30517,7 +30558,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -30546,14 +30587,15 @@ components:
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             person must choose; `complete` and `snooze` are a task's own verbs; `open` is
             the read-only fallback for a receipt.
 
             `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
-            to `/brief/items/{itemId}/…`. `set_aside` rather than reusing `snooze`: a task's
+            to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
+            to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
             snooze moves a due date the rep agreed to, while a brief item's hides a
             suggestion until later in the day. One word for both would make a client that
             handles `snooze` generically write the wrong endpoint.

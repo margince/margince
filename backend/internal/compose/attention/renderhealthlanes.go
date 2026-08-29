@@ -143,3 +143,25 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 	}
 	return item
 }
+
+// noticeItem draws one unread notice: its own subject as the headline, its
+// body as the supporting line, and acknowledge — the one verb it offers,
+// which routes to the notice's read endpoint and takes it off this lane.
+func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
+	kind := notice.Kind
+	subject := notice.Subject
+	occurred := notice.CreatedAt
+	item := crmcontracts.AttentionItem{
+		Id:         notice.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("notice"),
+		Kind:       &kind,
+		Title:      &subject,
+		OccurredAt: &occurred,
+		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
+	}
+	if notice.Body != "" {
+		body := notice.Body
+		item.Detail = &body
+	}
+	return item
+}

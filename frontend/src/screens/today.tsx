@@ -1,4 +1,5 @@
 import {
+  BellRing,
   Bot,
   CalendarClock,
   CheckSquare,
@@ -31,7 +32,7 @@ import {
   useHomeDeals,
   useMorningBrief,
 } from "./home.queries";
-import { snoozedDueAt, useTaskUpdate } from "./taskactions";
+import { snoozedDueAt, useNoticeRead, useTaskUpdate } from "./taskactions";
 import { FocusLane } from "./today.focus";
 import {
   type Attention,
@@ -256,11 +257,13 @@ function AttentionRow({
   item,
   onComplete,
   onSnooze,
+  onAcknowledge,
   completing,
 }: Readonly<{
   item: AttentionItem;
   onComplete: (id: string) => void;
   onSnooze: (id: string, dueAt: string) => void;
+  onAcknowledge?: (id: string) => void;
   completing: boolean;
 }>) {
   const t = useT();
@@ -291,6 +294,18 @@ function AttentionRow({
   const verbs = (
     <div className="today-row-verbs">
       {item.overdue && <Badge tone="danger">{t("day.overdue")}</Badge>}
+      {/* A notice's one verb: the reader has seen it, and it leaves the
+          lane. Rendered only when the wiring can actually perform it, so a
+          surface without the mutation never advertises the button. */}
+      {item.actions.includes("acknowledge") && onAcknowledge && (
+        <Button
+          small
+          onClick={() => onAcknowledge(item.id)}
+          disabled={completing}
+        >
+          {t("day.acknowledge")}
+        </Button>
+      )}
       {actionable && (
         <>
           {/* Not now, rather than not at all: a task pushed a day is still
@@ -353,6 +368,7 @@ function OptionalLane({
   tone,
   onComplete,
   onSnooze,
+  onAcknowledge,
   completing,
 }: Readonly<{
   items: readonly AttentionItem[] | undefined;
@@ -363,6 +379,7 @@ function OptionalLane({
   tone?: "accent" | "warn";
   onComplete: (id: string) => void;
   onSnooze: (id: string, dueAt: string) => void;
+  onAcknowledge?: (id: string) => void;
   completing: boolean;
 }>) {
   const withheld = omitted.includes(lane);
@@ -378,6 +395,7 @@ function OptionalLane({
       tone={tone}
       onComplete={onComplete}
       onSnooze={onSnooze}
+      onAcknowledge={onAcknowledge}
       completing={completing}
     />
   );
@@ -391,6 +409,7 @@ function Lane({
   tone,
   onComplete,
   onSnooze,
+  onAcknowledge,
   completing,
 }: Readonly<{
   shape: LaneShape;
@@ -409,6 +428,7 @@ function Lane({
   tone?: "accent" | "warn";
   onComplete: (id: string) => void;
   onSnooze: (id: string, dueAt: string) => void;
+  onAcknowledge?: (id: string) => void;
   completing: boolean;
 }>) {
   const { locale } = useLocale();
@@ -441,6 +461,7 @@ function Lane({
             item={item}
             onComplete={onComplete}
             onSnooze={onSnooze}
+            onAcknowledge={onAcknowledge}
             completing={completing}
           />
         ))
@@ -625,6 +646,7 @@ export function TodayScreen() {
   // and is easy to miss: without it, completing something here leaves it
   // sitting open on the Tasks screen until that query goes stale by itself.
   const complete = useTaskUpdate([attentionKey, ["tasks"], ["activities"]]);
+  const acknowledge = useNoticeRead([attentionKey]);
   // Read once per render so every lane on the page agrees what "now" is.
   useNow(60_000);
 
@@ -643,7 +665,13 @@ export function TodayScreen() {
         emptyLabel={t("day.lead.clear")}
         loadingLabel={t("day.loading")}
       >
-        {day.data && <TodayLanes day={day.data} complete={complete} />}
+        {day.data && (
+          <TodayLanes
+            day={day.data}
+            complete={complete}
+            acknowledge={acknowledge}
+          />
+        )}
       </SurfaceState>
     </div>
   );
@@ -672,6 +700,7 @@ function optionalDay(day: Attention) {
   const troubledRuns = day.ai_work_health;
   const undelivered = day.bounces;
   const brokenRules = day.automation_health;
+  const unreadNotices = day.notices;
   return {
     commitments: day.commitments,
     atRisk,
@@ -687,6 +716,7 @@ function optionalDay(day: Attention) {
     undeliveredTone: warnWhenHolding(undelivered),
     brokenRules,
     brokenRulesTone: warnWhenHolding(brokenRules),
+    unreadNotices,
     requestsTone: warnWhenHolding(requests),
     failedTone: warnWhenHolding(failed),
     lapsed: day.relationship_decay,
@@ -700,6 +730,7 @@ function optionalDay(day: Attention) {
     troubledTotal: day.counts.ai_work_health ?? 0,
     undeliveredTotal: day.counts.bounces ?? 0,
     brokenRulesTotal: day.counts.automation_health ?? 0,
+    noticesTotal: day.counts.notices ?? 0,
     lapsedTotal: day.counts.relationship_decay ?? 0,
     commitmentsTotal: day.counts.commitments ?? 0,
   };
@@ -708,9 +739,11 @@ function optionalDay(day: Attention) {
 function TodayLanes({
   day,
   complete,
+  acknowledge,
 }: Readonly<{
   day: Attention;
   complete: ReturnType<typeof useTaskUpdate>;
+  acknowledge: ReturnType<typeof useNoticeRead>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -735,6 +768,7 @@ function TodayLanes({
     undeliveredTone,
     brokenRules,
     brokenRulesTone,
+    unreadNotices,
     requestsTone,
     failedTone,
     lapsed,
@@ -748,6 +782,7 @@ function TodayLanes({
     troubledTotal,
     undeliveredTotal,
     brokenRulesTotal,
+    noticesTotal,
     lapsedTotal,
     commitmentsTotal,
   } = optionalDay(day);
@@ -782,6 +817,7 @@ function TodayLanes({
     );
   const onComplete = (id: string) =>
     complete.mutate({ id, body: { is_done: true } });
+  const onAcknowledge = (id: string) => acknowledge.mutate(id);
   // One day later, through the same helper the task queue snoozes with, so the
   // two surfaces cannot come to mean different things by the word.
   const onSnooze = (id: string, dueAt: string) => {
@@ -930,6 +966,22 @@ function TodayLanes({
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}
+      />
+      <OptionalLane
+        items={unreadNotices}
+        shape={{
+          title: t("day.notices"),
+          empty: t("day.notices.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: BellRing,
+        }}
+        omitted={omitted}
+        lane="notices"
+        total={noticesTotal}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        onAcknowledge={onAcknowledge}
+        completing={complete.isPending || acknowledge.isPending}
       />
       <OptionalLane
         items={brokenRules}

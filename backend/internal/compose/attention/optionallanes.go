@@ -166,6 +166,17 @@ func (s *Service) operationalLanes(
 			into: &out.AiWorkHealth, count: &out.Counts.AiWorkHealth,
 		},
 		{
+			name: "notices", bound: s.notices != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window: an unread notice waits until its reader settles
+				// it — aging out unseen would undo the transport's one
+				// promise.
+				unread, err := s.notices.Unread(ctx, doneCap)
+				return renderEach(unread, noticeItem), err
+			},
+			into: &out.Notices, count: &out.Counts.Notices,
+		},
+		{
 			name: "automation_health", bound: s.automations != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// The same week the bounce lane keeps: a broken rule needs

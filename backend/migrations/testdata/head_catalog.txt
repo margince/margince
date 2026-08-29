@@ -2628,6 +2628,20 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 
+public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.notice.body text NOT NULL gen=- def=''::text
+public.notice.captured_by text NOT NULL gen=- def=-
+public.notice.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.notice.id uuid NOT NULL gen=- def=uuidv7()
+public.notice.kind text NOT NULL gen=- def=-
+public.notice.notice_pkey PRIMARY KEY (id)
+public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.notice.notice_subject_present CHECK ((subject <> ''::text))
+public.notice.read_at timestamp with time zone gen=- def=-
+public.notice.recipient_user_id uuid NOT NULL gen=- def=-
+public.notice.subject text NOT NULL gen=- def=-
+public.notice_pkey CREATE UNIQUE INDEX notice_pkey ON public.notice USING btree (id)
+public.notice_unread CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)
 public.oauth_authorization_code acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.oauth_authorization_code.client_id text NOT NULL gen=- def=-
 public.oauth_authorization_code.code_challenge text NOT NULL gen=- def=-

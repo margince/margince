@@ -419,3 +419,20 @@ type TroubledAutomationRun struct {
 	Reason     string
 	OccurredAt time.Time
 }
+
+// Notices is the acting person's own unread notices — the durable
+// informational line a system flow needed them to see. Per-user like the
+// health lanes: the read refuses a principal with no human behind it, and
+// the lane renders that refusal as withheld.
+type Notices interface {
+	Unread(ctx context.Context, limit int) ([]UnreadNotice, error)
+}
+
+// UnreadNotice is one line still waiting to be seen.
+type UnreadNotice struct {
+	ID        ids.UUID
+	Kind      string
+	Subject   string
+	Body      string
+	CreatedAt time.Time
+}

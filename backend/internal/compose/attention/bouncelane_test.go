@@ -31,7 +31,7 @@ func (s *stubBounces) HardBounces(_ context.Context, since time.Time, _ int) ([]
 func bounceLaneService(bounces Bounces) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, bounces, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, bounces, nil, nil, nil, fixedClock)
 }
 
 func TestABouncedSendNamesItselfAndOpensThePerson(t *testing.T) {
