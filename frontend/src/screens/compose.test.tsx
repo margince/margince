@@ -230,6 +230,10 @@ describe("RelinkModal", () => {
     });
     // Relink is idempotency-keyed (its no-dup-on-replay contract).
     expect(relink?.headers.get("Idempotency-Key")).toBeTruthy();
+    // AND it carries the version this reader saw. The key and the precondition
+    // are one header slot, so a regression that wrote them separately would
+    // send whichever came last — the key alone, silently unconditioned.
+    expect(relink?.headers.get("If-Match")).toBe("4");
   });
 
   it("sends replace_existing_of_type when the move toggle is on", async () => {
@@ -267,6 +271,7 @@ describe("RelinkModal", () => {
       entity_id: "o-2",
       replace_existing_of_type: true,
     });
+    expect(relink?.headers.get("If-Match")).toBe("4");
   });
 
   it("moves the whole conversation through relinkThread when asked", async () => {
@@ -311,6 +316,9 @@ describe("RelinkModal", () => {
       replace_existing_of_type: false,
     });
     expect(thread?.headers.get("Idempotency-Key")).toBeTruthy();
+    // And NO precondition: a thread moves many activities, and one version
+    // cannot condition them — the server refuses a pinned batch by name.
+    expect(thread?.headers.get("If-Match")).toBeNull();
     // The single-activity route is not called on the way.
     expect(sent.find((r) => r.key === "POST /activities/act-1/relink")).toBe(
       undefined,

@@ -16,10 +16,16 @@
 // `header:` property beside the spread, because the two would be the same slot
 // written twice and the later one silently wins: a relink that sent its key
 // that way sent no precondition at all.
-export function ifMatch<Also extends Readonly<Record<string, string>> = never>(
-  version: number,
-  also?: Also,
-): { header: Also & { "If-Match": string } } {
+//
+// It cannot carry an `If-Match` of its own, and the TYPE is what says so. The
+// version argument always wins at runtime, so a caller passing one here would
+// compile against a header value the request never sends — the same silent
+// disagreement this parameter exists to remove, one level in.
+export function ifMatch<
+  Also extends Readonly<Record<string, string>> & {
+    "If-Match"?: never;
+  } = never,
+>(version: number, also?: Also): { header: Also & { "If-Match": string } } {
   return {
     header: { ...(also ?? ({} as Also)), "If-Match": String(version) },
   };

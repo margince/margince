@@ -2956,6 +2956,8 @@ export const en = {
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search a person, organization, deal, lead, or project",
+  "compose.relinkNoVersion":
+    "This activity was read without a version, so a relink cannot say what it is changing. Reopen it and try again.",
   "compose.relinkReplace": "Move instead of also-link",
   "compose.relinkReplaceHint":
     "Replaces the existing link of the same type rather than adding another.",

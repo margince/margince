@@ -170,6 +170,14 @@ export function RelinkModal({
       if (!kind) {
         throwProblem({ title: t("compose.relinkTarget") });
       }
+      // A relink of ONE activity conditions on the version this reader saw, and
+      // a copy that arrived without one cannot make that claim. Refused by name
+      // rather than through requireVersion's bare throw: the reader sees the
+      // mutation's error, and "something went wrong" is not a thing anyone can
+      // act on when the answer is "reopen it and try again".
+      if (!wholeThread && activityVersion == null) {
+        throwProblem({ title: t("compose.relinkNoVersion") });
+      }
       if (threadKey && wholeThread) {
         const { data, error } = await api.POST("/activities/relink-thread", {
           params: { header: { "Idempotency-Key": crypto.randomUUID() } },

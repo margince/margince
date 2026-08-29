@@ -2898,6 +2898,8 @@ export const vi = {
     "Mục đích này mang liên kết huỷ đăng ký, nên lượt gửi cho nhiều hơn một người nhận sẽ bị từ chối. Hãy gửi riêng cho từng người, không dùng Cc.",
   "compose.relinkTitle": "Liên kết lại hoạt động này",
   "compose.relinkTarget": "Tìm một người, tổ chức, deal, lead hay dự án",
+  "compose.relinkNoVersion":
+    "Hoạt động này được đọc mà không có phiên bản, nên việc liên kết lại không thể nói rõ nó đang thay đổi gì. Hãy mở lại và thử lần nữa.",
   "compose.relinkReplace": "Chuyển hẳn thay vì liên kết thêm",
   "compose.relinkReplaceHint":
     "Thay liên kết cùng loại đang có thay vì thêm một liên kết nữa.",
