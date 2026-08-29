@@ -179,7 +179,7 @@ func (seamProbeRetriever) AssembleContext(context.Context, datasource.EntityRef,
 // them" — the whole point of the probe.
 type seamProbeLifecycle struct{}
 
-func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
+func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 

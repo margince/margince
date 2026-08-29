@@ -30,12 +30,14 @@ import (
 type activityRelinker struct{ store *activities.Store }
 
 func (a activityRelinker) RelinkActivity(
-	ctx context.Context, activityID ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool,
+	ctx context.Context, activityID ids.UUID, entityType string, entityID ids.UUID,
+	replaceExistingOfType bool, ifVersion *int64,
 ) (json.RawMessage, error) {
 	out, err := a.store.RelinkActivity(ctx, ids.From[ids.ActivityKind](activityID), activities.RelinkActivityInput{
 		EntityType:            entityType,
 		EntityID:              entityID,
 		ReplaceExistingOfType: replaceExistingOfType,
+		IfVersion:             ifVersion,
 	})
 	if err != nil {
 		return nil, err

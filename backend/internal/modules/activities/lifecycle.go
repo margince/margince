@@ -209,6 +209,20 @@ type RelinkActivityInput struct {
 	// against the kind vocabulary below), so the id stays untyped (rule 6).
 	EntityID              ids.UUID
 	ReplaceExistingOfType bool
+	// IfVersion is the version the caller read the ACTIVITY at, re-checked
+	// inside the transaction that moves it.
+	//
+	// It is what closes the window a dynamic tier opens: the resolver reads the
+	// activity to decide whether this destination may auto-execute, that read
+	// commits, and the agent controls both sides of the gap — so the verdict is
+	// only true of the record as it WAS. auth/admit.go binds the version it was
+	// resolved from for exactly this, and until it reached here nothing
+	// re-checked it (#2614).
+	//
+	// Only the SINGLE relink carries one. A thread or a named set moves many
+	// activities and one version cannot speak for them, so the batch doors
+	// refuse a pin rather than applying it to whichever row happens to match.
+	IfVersion *int64
 }
 
 func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in RelinkActivityInput) (crmcontracts.Activity, error) {

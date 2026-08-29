@@ -225,7 +225,7 @@ func fullRegistry(t *testing.T) *Registry {
 // handler, so a seam that answers nothing is the honest stand-in.
 type inertLifecycle struct{}
 
-func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
+func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
 

@@ -137,6 +137,7 @@ func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, cmd Relink
 			activity: anchoredRecord{records: records, entityType: datasource.EntityActivity},
 		}, cmd),
 		entityType: cmd.EntityType,
+		pinnable:   true,
 	}
 }
 
@@ -157,19 +158,51 @@ func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, cmd Relink
 type destinationTieredCall struct {
 	GovernedCall
 	entityType string
+	// pinnable says whether ONE version can condition this move. A single
+	// relink's can; a thread's and a named set's cannot, because they move many
+	// activities and a pin applied per row would refuse every one except
+	// whichever happened to match.
+	pinnable bool
 }
 
-// tierInput shows the gate the destination type. Nothing here reads a record:
-// the risk is a property of the KIND of destination, which the arguments
-// already state, so the tier is answered without a second read and without a
-// version to bind — the classification does not turn on the activity's state.
+// tierInput shows the gate the destination type AND the version the activity
+// was read at.
 //
-// The error is structurally always nil and the signature keeps it anyway: this
-// implements dynamicTierCall, whose other implementation resolves a tier from
-// records it must read. Narrowing it here would put the seam's two sides on
-// different shapes for the sake of one call that happens not to need it.
-func (c destinationTieredCall) tierInput(context.Context, json.RawMessage) (mcp.TierResolverInput, error) { //nolint:unparam // the shape is dynamicTierCall's, not this call's
-	return mcp.TierResolverInput{Args: relinkTierArgsFor(c.entityType)}, nil
+// The destination alone decides the TIER — the risk is a property of the kind of
+// record, not of the activity's state. But a dynamic tier that resolves to
+// auto-execute and can name no version is refused by the gate (auth/admit.go),
+// deliberately, because an unpinned write would run unattended. Answering no
+// version therefore raised every REST relink to approval whatever its
+// destination, while the MCP door auto-executed the same operation — two doors
+// disagreeing about one call.
+//
+// The read is the staging path's own (relinkActivityResolver.Subject), reached
+// through the bound call this wraps, so both doors are pinned by the same
+// reading of the same row.
+//
+// A call that cannot be described answers NO version rather than an error, for
+// the reason the MCP door's ResolverInput gives: the gate then raises, which is
+// the safe direction and keeps the resolver's contract that it may only RAISE.
+// A batch — a thread or a named set — answers none either, and cannot: one
+// version cannot speak for many activities, so those doors keep costing a
+// decision, which is the honest answer for a move nothing can fence.
+//
+//nolint:unparam // the shape is dynamicTierCall's, not this call's: the other implementation resolves a tier from records it must read, and narrowing here would put the seam's two sides on different shapes
+func (c destinationTieredCall) tierInput(ctx context.Context, _ json.RawMessage) (mcp.TierResolverInput, error) {
+	resolved := mcp.TierResolverInput{Args: relinkTierArgsFor(c.entityType)}
+	if !c.pinnable {
+		return resolved, nil
+	}
+	info, err := StageSubject(ctx, c.GovernedCall)
+	if err != nil {
+		return resolved, nil //nolint:nilerr // an unreadable record raises to a human, it does not fail the call
+	}
+	// Zero is not a version any write can be conditioned on, so it is left
+	// unreported rather than pinned (dealmove.go says the same).
+	if info.TargetVersion != nil && *info.TargetVersion > 0 {
+		resolved.ObservedVersion = info.TargetVersion
+	}
+	return resolved, nil
 }
 
 // relinkTierArgs is the shape relinkActivityTier reads. It carries the

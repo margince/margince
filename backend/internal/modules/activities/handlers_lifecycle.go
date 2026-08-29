@@ -53,10 +53,18 @@ func (h Handlers) RelinkActivity(w http.ResponseWriter, r *http.Request, id crmc
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// If-Match is how the REST gate forwards the version an auto-executing
+	// agent call was admitted on (compose/agentgate.go), and how a human's
+	// client states the version it read. Both mean the same thing to the write.
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
 	activity, err := h.store.RelinkActivity(r.Context(), pathID[ids.ActivityKind](id), RelinkActivityInput{
 		EntityType:            req.EntityType,
 		EntityID:              req.EntityID,
 		ReplaceExistingOfType: req.ReplaceExistingOfType,
+		IfVersion:             ifVersion,
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -72,10 +80,18 @@ func (h Handlers) RelinkThread(w http.ResponseWriter, r *http.Request, _ crmcont
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// Forwarded rather than dropped, so the store can say a version cannot
+	// condition a batch. A header silently ignored is the same failure as a pin
+	// silently ignored, which is what #2614 was about.
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
 	out, err := h.store.RelinkThread(r.Context(), req.ThreadKey, RelinkActivityInput{
 		EntityType:            string(req.EntityType),
 		EntityID:              ids.UUID(req.EntityId),
 		ReplaceExistingOfType: req.ReplaceExistingOfType != nil && *req.ReplaceExistingOfType,
+		IfVersion:             ifVersion,
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -91,6 +107,13 @@ func (h Handlers) RelinkActivities(w http.ResponseWriter, r *http.Request, _ crm
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// Forwarded for the reason RelinkThread's is: the refusal belongs to the
+	// store, and a header this door quietly dropped would be a pin nobody
+	// applied and nobody was told about.
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
 	activityIDs := make([]ids.UUID, 0, len(req.ActivityIds))
 	for _, id := range req.ActivityIds {
 		activityIDs = append(activityIDs, ids.UUID(id))
@@ -99,6 +122,7 @@ func (h Handlers) RelinkActivities(w http.ResponseWriter, r *http.Request, _ crm
 		EntityType:            string(req.EntityType),
 		EntityID:              ids.UUID(req.EntityId),
 		ReplaceExistingOfType: req.ReplaceExistingOfType != nil && *req.ReplaceExistingOfType,
+		IfVersion:             ifVersion,
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)

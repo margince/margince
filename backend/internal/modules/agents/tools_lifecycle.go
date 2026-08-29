@@ -46,7 +46,7 @@ func RegisterLifecycleTools(
 // ActivityRelinker moves an activity's typed link onto a record, idempotently
 // on (activity, entity_type, entity_id).
 type ActivityRelinker interface {
-	RelinkActivity(ctx context.Context, activityID ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool) (json.RawMessage, error)
+	RelinkActivity(ctx context.Context, activityID ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool, ifVersion *int64) (json.RawMessage, error)
 	// RelinkThread is the same move over every writable member of one
 	// conversation; RelinkActivities over a named set. Both answer the
 	// count-and-ids shape rather than a record.
@@ -151,13 +151,10 @@ func (t relinkActivity) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 // The version comes from the same read the staging path already performs
 // (relinkActivityResolver.Subject).
 //
-// What it does NOT yet do is condition the write. The gate binds it
-// (auth/admit.go withAutoExecutePin) so a write can re-check it inside the
-// mutating transaction, but no relink consumes that pin: RelinkActivityInput
-// carries no version and relinkbatch.go compares none, on either door. So this
-// restores the tier the resolver always declared, and the version-skew fence
-// the gate's contract describes is still missing — issue #2614, which has to
-// reach the activities write contract rather than this tool.
+// Handle then CONSUMES that pin (pinForWrite), and relinkbatch.go re-checks it
+// under the row lock, which is the fence the gate's contract describes: an
+// activity that moved between the resolve and the execute loses to the version
+// compare rather than to timing.
 func (t relinkActivity) ResolverInput(ctx context.Context, in json.RawMessage) (mcp.TierResolverInput, error) {
 	var args relinkActivityArgs
 	if err := decodeArgs(in, &args); err != nil {
@@ -201,7 +198,16 @@ func (t relinkActivity) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	}
 	noteEvidence(ctx, datasource.EntityActivity, args.ActivityID)
 	noteEvidence(ctx, datasource.EntityType(args.EntityType), args.EntityID)
-	return t.relinker.RelinkActivity(ctx, args.ActivityID, args.EntityType, args.EntityID, args.ReplaceExistingOfType)
+	// The version the gate resolved this call's tier from, re-checked by the
+	// write. Without it the window ResolverInput describes stays open: the
+	// resolver reads the activity, the gate admits on that reading, and the
+	// agent controls both sides of the gap — so an activity that moved in
+	// between is relinked on a verdict about the record as it was.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return t.relinker.RelinkActivity(ctx, args.ActivityID, args.EntityType, args.EntityID, args.ReplaceExistingOfType, pin)
 }
 
 // --- disqualify_lead (🟡 write) ---
