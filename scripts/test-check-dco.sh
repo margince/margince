@@ -227,6 +227,31 @@ git -C "$repo" merge -q --no-ff --no-verify -m "Merge the side branch" merge-sid
 merged="$(git -C "$repo" rev-parse HEAD)"
 case_is "a merge commit needs no sign-off" "$merge_base" "$merged" 0 "are signed off"
 
+# THE RANGE ITSELF. Every case above hands the gate a range with something in
+# it, so none of them can tell "all these commits are signed" from "there were
+# no commits". That distinction is the one a gate must never lose: it reads a
+# smaller history, prints the same clean pass, and nothing fails to say so.
+#
+# Each of these was a green run before the range was checked.
+
+case_is "an empty range is refused, not passed" "$merged" "$merged" 1 "holds no commits"
+
+# A base that RESOLVES and is not behind the head is the dangerous shape, and it
+# is the one `git rev-list` answers silently: not an error, just nothing. The
+# advisory main-health lane asserted this and the required ci.yml job did not,
+# so the protection lived where it could not block a merge.
+git -C "$repo" checkout -q -b sideways "$base"
+sideways="$(commit_with "a commit on a branch of its own
+
+$signed")"
+case_is "a base that is not an ancestor is refused" "$sideways" "$merged" 1 "not an ancestor"
+
+# And the success line carries its own DENOMINATOR, which is what makes a run
+# that read nothing unable to look like one that read everything.
+git -C "$repo" checkout -q merge-case
+case_is "the pass says how many commits it read" "$merge_base" "$merged" 0 "all 1 of 2 commit(s)"
+case_is "and how many of those needed no trailer" "$merge_base" "$merged" 0 "1 merge commit(s) need none"
+
 if [[ "$failures" -ne 0 ]]; then
 	echo "" >&2
 	echo "$failures DCO gate case(s) failed" >&2
