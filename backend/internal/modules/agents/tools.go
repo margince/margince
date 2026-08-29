@@ -371,7 +371,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about — the person, their company, the deal. All of them here, in this call: it writes them together and needs no approval."},
+				"description":"Every record this was about, ALL OF THEM in this call. A meeting is with a PERSON and reaches their company through them, so a meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Linking afterwards is a second write, and onto a project it asks a human."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

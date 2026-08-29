@@ -7,6 +7,7 @@ package agents
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,5 +47,33 @@ func TestAWriteOnlyPassportIsStillOfferedItsOwnIdentity(t *testing.T) {
 	readOnly := offered(principal.ScopeRead)
 	if slices.Contains(readOnly, "log_activity") {
 		t.Errorf("a read-only passport is offered %v — a write tool must not be among them", readOnly)
+	}
+}
+
+// TestTheLinksArgumentSaysWhatAMeetingIsAbout holds the fact that decides
+// whether a logged meeting lands on a timeline anybody reads.
+//
+// Driven from claude.ai, a model logging a meeting after a call linked it to the
+// DEAL only and attached the person and the company afterwards. A meeting is
+// with a person and reaches their company through them, so the transcript sat
+// on no attendee's timeline and the company saw nothing — and the correction was
+// two more writes. The schema is where that is decided, because it is what the
+// caller reads before choosing.
+func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
+	t.Parallel()
+	schema := string(logActivity{}.Spec().InputSchema)
+	for _, want := range []string{
+		// All of them, in this call.
+		"ALL OF THEM in this call",
+		// A meeting is with a PERSON, and the company follows from that.
+		"with a PERSON",
+		"reaches their company through them",
+		// What a deal-only link actually costs, which is the mistake this copy
+		// exists to stop.
+		"no attendee's timeline",
+	} {
+		if !strings.Contains(schema, want) {
+			t.Errorf("the links argument no longer says %q:\n%s", want, schema)
+		}
 	}
 }
