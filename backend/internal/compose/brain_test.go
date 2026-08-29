@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
@@ -69,5 +70,39 @@ func TestModelPathInvalidateCacheForcesAFreshCompletion(t *testing.T) {
 	}
 	if calls := len(fake.Calls()); calls != 2 {
 		t.Fatalf("calls after invalidation = %d, want 2 (the cache must have been dropped)", calls)
+	}
+}
+
+// Both boot loops offer a fallback candidate, and both must offer it for ONE
+// reason only: the binding names a provider this process cannot call. A
+// database fault from the embed marker is not that, and falling back on it
+// would launch a process whose marker is unestablished while telling the
+// operator a credential is missing — sending them to look at the wrong thing
+// while a storage outage stands.
+//
+// A binding whose provider needs a key it does not have is the reachable case
+// here; a nil pool never gets as far as the store, so what this pins is the
+// classification the loops read, not the store failure itself.
+func TestAnUnservableBindingIsTheOnlyFailureAFallbackMayAnswer(t *testing.T) {
+	unkeyed := ai.RoutingConfig{
+		Profile: ai.ProfileEUHosted,
+		Tiers: map[ai.Tier]ai.ProviderConfig{
+			ai.TierPremium: {Provider: "gemini", Model: "gemini-2.5-flash"},
+		},
+	}
+
+	_, err := NewModelPath(context.Background(), unkeyed, nil, false,
+		slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err == nil {
+		t.Fatal("a binding with no credential built a model path, so the fail-closed rule is gone")
+	}
+	var unservable *UnservableBindingError
+	if !errors.As(err, &unservable) {
+		t.Fatalf("a provider that cannot be called is not marked unservable (%v), so a boot loop "+
+			"cannot tell it from a database fault and will either refuse to fall back or fall "+
+			"back on both", err)
+	}
+	if !errors.Is(err, unservable.Cause) {
+		t.Error("the wrapper hides its cause, so the operator loses the sentence naming what is wrong")
 	}
 }

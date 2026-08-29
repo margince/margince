@@ -152,6 +152,21 @@ func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	return m
 }
 
+// UnservableBindingError marks the half of NewModelPath's failures that a
+// DIFFERENT binding could fix: the routing config names a provider this process
+// cannot call, usually because its credential is absent.
+//
+// It exists so a caller offering a fallback can tell the two halves apart. The
+// other half is a database fault from the embed marker, which no fallback
+// repairs — falling back on it launches a process whose marker is unestablished
+// and reports a storage outage as a missing key, sending the operator to look
+// at the wrong thing. Both boot loops (cmd/api, cmd/worker) fall back on this
+// type alone.
+type UnservableBindingError struct{ Cause error }
+
+func (e *UnservableBindingError) Error() string { return e.Cause.Error() }
+func (e *UnservableBindingError) Unwrap() error { return e.Cause }
+
 // NewModelPath builds the production model path from a validated
 // routing config. capturePayloads and log ride straight into the
 // router's ai_call tracing (ai.NewRouter) — the deployment's
@@ -159,7 +174,7 @@ func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
 	router, err := ai.NewRouter(cfg, ai.NewMeter(InstallationDB(pool)), NewSeatBudget(pool), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log), capturePayloads, log)
 	if err != nil {
-		return ModelPath{}, err
+		return ModelPath{}, &UnservableBindingError{Cause: err}
 	}
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {
 		return ModelPath{}, err

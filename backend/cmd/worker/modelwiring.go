@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -55,7 +56,12 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 		// SAME binding: the cost refresh narrows a provider catalog to the
 		// models this deployment actually calls.
 		path, bound, err := modelPathWithBoundModels(ctx, candidate, pool, spec.capturePayloads, log)
-		if err == nil || i == len(candidates)-1 {
+		// Only an unservable BINDING is worth another candidate. A database
+		// fault from the embed marker is not: no fallback repairs it, and
+		// booting past it would launch a worker whose marker is unestablished
+		// while reporting a storage outage as a missing credential.
+		var unservable *compose.UnservableBindingError
+		if err == nil || i == len(candidates)-1 || !errors.As(err, &unservable) {
 			return path, bound, err
 		}
 		// Loud: a bound installation quietly serving canned text would be the

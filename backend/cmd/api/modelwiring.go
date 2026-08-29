@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,7 +118,13 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 	for i, candidate := range candidates {
 		modelPath, err := compose.NewModelPath(ctx, candidate.cfg, pool, spec.capturePayloads, log)
 		if err != nil {
-			if i == len(candidates)-1 {
+			// Only an unservable BINDING is worth another candidate. A
+			// database fault from the embed marker is not: no fallback repairs
+			// it, and booting past it would serve the AI surfaces with an
+			// unestablished marker while reporting a storage outage as a
+			// missing credential.
+			var unservable *compose.UnservableBindingError
+			if i == len(candidates)-1 || !errors.As(err, &unservable) {
 				return nil, "", ai.PublicProfile{}, "", err
 			}
 			// Loud: a bound installation quietly serving canned text would be
