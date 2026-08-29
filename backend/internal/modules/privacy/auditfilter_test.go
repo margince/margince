@@ -340,6 +340,7 @@ func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 // storeFieldSpellings maps a store field onto the contract parameter it takes,
 // where the generator spells the two differently. Declared rather than
 // normalized away, so a SECOND divergence has to be looked at.
+// gatekit:fixture the generator's own spelling of one audit-log parameter
 var storeFieldSpellings = map[string]string{"EntityID": "EntityId"}
 
 // boundFilterFields answers, for each AuditFilter field the handler sets, WHICH
