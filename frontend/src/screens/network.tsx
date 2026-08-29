@@ -16,22 +16,24 @@ import {
   useSorMode,
 } from "./common";
 
-// The two relationship-graph cards (ADR-0078).
+// The relationship-graph card (ADR-0078): "who here knows them", the question a
+// rep asks before they write a cold email. It was server-only until it landed —
+// the endpoint shipped and nothing rendered it, so the interaction projection
+// was a fact the product held and never showed anybody.
 //
-// "Who here knows them" answers the question a rep asks before they write a
-// cold email, and the coverage card answers the one their manager asks before
-// the forecast call. Both were server-only until now: the endpoints shipped and
-// nothing rendered them, so the interaction projection was a fact the product
-// held and never showed anybody.
+// The deal COVERAGE card was the other half and is gone. Its seats moved to the
+// deal rail (deal360/dealseats.tsx) when the readings band started counting
+// them, and its findings became chips (dealsignals.tsx) — leaving a card nothing
+// rendered, still carrying its own overlay handling, its own withheld-before-
+// empty ordering and its own copy. Two spellings of one card, and the dead one
+// had passing tests, which is what made it look maintained.
 //
-// Ordering is the answer on both cards and is NOT re-sorted here. The server
-// ranks colleagues by a strength it computes at read; a client that re-ordered
-// them would be a second implementation of the decay formula, and the two would
-// disagree the moment either changed.
+// Ordering is the answer here and is NOT re-sorted. The server ranks colleagues
+// by a strength it computes at read; a client that re-ordered them would be a
+// second implementation of the decay formula, and the two would disagree the
+// moment either changed.
 
 type PersonNetworkColleague = components["schemas"]["PersonNetworkColleague"];
-type DealCoverage = components["schemas"]["DealCoverage"];
-type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];
 
 // The per-user band vocabulary is PO-F-3b's — none/weak/moderate/strong — and
 // deliberately NOT the workspace-wide card's dormant/weak/warm/strong. The two
@@ -47,32 +49,10 @@ const COLLEAGUE_TONE: Record<
   none: undefined,
 };
 
-// Every risk kind is a warning; only the two that mean somebody is gone are
-// rendered as danger. A card where six chips all shout is a card a rep stops
-// reading.
-const RISK_TONE: Record<DealCoverageRisk["kind"], "danger" | "warn"> = {
-  champion_left: "danger",
-  stakeholder_left: "danger",
-  going_cold: "warn",
-  single_threaded_theirs: "warn",
-  single_threaded_ours: "warn",
-  coverage_gap: "warn",
-};
-
 async function fetchPersonNetwork(
   id: string,
 ): Promise<components["schemas"]["PersonNetwork"]> {
   const { data, error } = await api.GET("/people/{id}/network", {
-    params: { path: { id } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
-}
-
-async function fetchDealCoverage(id: string): Promise<DealCoverage> {
-  const { data, error } = await api.GET("/deals/{id}/coverage", {
     params: { path: { id } },
   });
   if (error) {
@@ -139,71 +119,3 @@ export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
 }
 
 /** What is wrong with how this deal is covered, and why. */
-export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const overlay = useSorMode() === "overlay";
-  const query = useQuery({
-    queryKey: ["deal-coverage", id],
-    queryFn: () => fetchDealCoverage(id),
-    enabled: !overlay,
-  });
-  const risks = query.data?.risks ?? [];
-  // Withheld is checked BEFORE the empty case, and the order is the whole
-  // point: a caller without the relationship grant is served no findings, so
-  // testing the risk list first would render "this deal passes every coverage
-  // check" over a check that never ran. The server says which of the two
-  // happened; the card must not decide for itself.
-  const omitted = query.data?.sections_omitted ?? [];
-  const withheld = omitted.includes("risks");
-
-  return (
-    <Card className="net-card" title={t("coverage.title")}>
-      {overlay && <OverlayUnavailable />}
-      {!overlay && query.isPending && <Skeleton width="60%" />}
-      {!overlay && query.isError && (
-        <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
-      )}
-      {!overlay && query.isSuccess && withheld && (
-        <EmptyState>{t("coverage.withheld")}</EmptyState>
-      )}
-      {/* No findings is a RESULT, not an empty state. A deal that passes every
-          coverage rule has earned a sentence saying so — a blank card reads as
-          a card that failed to load. */}
-      {!overlay && query.isSuccess && !withheld && risks.length === 0 && (
-        <p className="t-caption">{t("coverage.clear")}</p>
-      )}
-      {/* The SEATS are not here any more. They moved to the deal page's rail
-          (deal360/dealseats.tsx) when the readings band started counting them:
-          a reader was meeting the same two facts three times on one screen —
-          once as a figure, once as a chip in Deal360, once as this list. What
-          stays is the FINDINGS, which is what this card was for.
-
-          The seat list still lives in one place, not two: dealseats.tsx moved
-          the markup rather than rewriting it, and both render `.net-seats`
-          from this sheet. */}
-      {!overlay && risks.length > 0 && (
-        <ul className="net-risks">
-          {risks.map((risk) => (
-            <li key={risk.kind}>
-              <Badge tone={RISK_TONE[risk.kind]}>
-                {t(`coverage.risk.${risk.kind}`)}
-              </Badge>
-              {/* The rule's own explanation, not a client re-wording: the
-                  server names the rule and says why, so a flag on this card
-                  reads identically to the same flag in the assistant. */}
-              <span className="net-risk-why">{risk.summary}</span>
-              {risk.days_since_touch != null && (
-                <span className="t-mono net-risk-days">
-                  {t("coverage.daysSinceTouch", {
-                    days: formatNumber(risk.days_since_touch, locale),
-                  })}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}

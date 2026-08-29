@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DealCoverageCard, PersonNetworkCard } from "./network";
+import { PersonNetworkCard } from "./network";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,10 +10,16 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The two relationship-graph cards (ADR-0078). Both fetch their own data, so
-// the shared fetch stub carries the fixtures — chosen to show the readings that
-// are easy to get wrong: a never-spoken colleague, a clean deal, and a deal
-// carrying two findings of different severity.
+// The relationship-graph card (ADR-0078). It fetches its own data, so the
+// shared fetch stub carries the fixture — chosen to show the reading that is
+// easy to get wrong: a colleague on the record nobody has ever spoken to.
+//
+// The deal-coverage frames that used to sit beside these are in
+// deal360/dealcommittee.stories.tsx, on the card that actually ships. Its
+// `Withheld` and `Empty` are the pair to open when changing that surface: they
+// differ only in `sections_omitted`, and a reviewer comparing the two frames is
+// the check that no refactor collapses "we could not look" into "nothing is
+// wrong".
 const meta: Meta = {
   title: "Records/Network",
   parameters: { layout: "padded" },
@@ -79,90 +85,6 @@ export const NobodyKnowsThem: Story = {
     return (
       <StoryProviders>
         <PersonNetworkCard id="p-1" />
-      </StoryProviders>
-    );
-  },
-};
-
-// Two findings of different severity: somebody is gone (danger) and the deal
-// has drifted (warning). Rendering both as alarms is how a card stops being
-// read at all.
-export const DealAtRisk: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute({}),
-      "GET /deals/d-1/coverage": () =>
-        jsonResponse({
-          deal_id: "d-1",
-          stakeholders: [],
-          our_side: [],
-          risks: [
-            {
-              kind: "champion_left",
-              summary:
-                "the champion has left the account — the person arguing for this deal no longer works there",
-              person_ids: ["p-9"],
-            },
-            {
-              kind: "going_cold",
-              summary:
-                "no captured touch for 41 days — the deal is open and nobody is talking",
-              days_since_touch: 41,
-            },
-          ],
-        }),
-    });
-    return (
-      <StoryProviders>
-        <DealCoverageCard id="d-1" />
-      </StoryProviders>
-    );
-  },
-};
-
-// Nothing flagged is a RESULT and says so. A blank card is indistinguishable
-// from one that failed to load.
-export const DealClear: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute({}),
-      "GET /deals/d-1/coverage": () =>
-        jsonResponse({
-          deal_id: "d-1",
-          stakeholders: [],
-          our_side: [],
-          risks: [],
-        }),
-    });
-    return (
-      <StoryProviders>
-        <DealCoverageCard id="d-1" />
-      </StoryProviders>
-    );
-  },
-};
-
-// The withheld view, beside the clear one deliberately: the two payloads differ
-// only in `sections_omitted`, and the card MUST NOT render them alike. This is
-// the story to open when changing the card — a reviewer comparing these two
-// frames is the check that no refactor collapses "we could not look" back into
-// "nothing is wrong".
-export const DealCoverageWithheld: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute({}),
-      "GET /deals/d-1/coverage": () =>
-        jsonResponse({
-          deal_id: "d-1",
-          stakeholders: [],
-          our_side: [],
-          risks: [],
-          sections_omitted: ["stakeholders", "our_side", "risks"],
-        }),
-    });
-    return (
-      <StoryProviders>
-        <DealCoverageCard id="d-1" />
       </StoryProviders>
     );
   },

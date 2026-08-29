@@ -5085,14 +5085,9 @@ export const de = {
   "network.bucket.weak": "Schwach",
   "network.bucket.moderate": "Mittel",
   "network.bucket.strong": "Stark",
-  "coverage.title": "Abdeckung",
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
   "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
-  "coverage.clear":
-    "Nichts markiert — dieser Deal besteht alle Abdeckungsprüfungen.",
-  "coverage.withheld":
-    "Abdeckung zurückgehalten — Sie können die Beziehungen dieses Deals nicht lesen, daher wurde keine Prüfung durchgeführt.",
   "coverage.daysSinceTouch": "{days} Tage",
   "coverage.risk.single_threaded_theirs": "Nur ein Kontakt",
   "coverage.risk.single_threaded_ours": "Von einer Person getragen",

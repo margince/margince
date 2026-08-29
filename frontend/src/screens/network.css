@@ -1,18 +1,18 @@
-/* The two relationship-graph cards (ADR-0078).
+/* The relationship-graph card (ADR-0078), and the deal rail's seat list, which
+   reads as the same kind of thing and imports this file for it.
 
    Both are lists whose rows carry a name, a band and two numbers. Rendered as
    plain rows rather than a table: there are at most ten of them, and a table
    header would cost more vertical space than the rows it labels. */
 
-/* Both cards stack among the other 360 panels, so they carry the same gap
-   those panels leave — as a token, not a raw pixel count. */
+/* The card stacks among the other 360 panels, so it carries the same gap those
+   panels leave — as a token, not a raw pixel count. */
 .net-card {
   margin-bottom: var(--space-4);
 }
 
 .net-colleagues,
-.net-seats,
-.net-risks {
+.net-seats {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -28,8 +28,7 @@
 }
 
 .net-colleagues li,
-.net-seats li,
-.net-risks li {
+.net-seats li {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -52,23 +51,4 @@
   color: var(--textContent);
   font: 500 0.875rem / 1.4 var(--f-body);
   overflow-wrap: anywhere;
-}
-
-/* The reason a flag fired. It wraps onto its own line on a narrow card rather
-   than truncating: a risk a rep cannot read the reason for is a red dot. */
-/* --textMeta, not --textMuted: --textMuted is the placeholder-grade ink and
-   measures 1.54:1 on this ground, while tokens.css names --textMeta the
-   canonical AA small-text role. Every line below is prose a reader is meant to
-   READ. */
-.net-risk-why {
-  flex: 1 1 12rem;
-  min-width: 0;
-  color: var(--textMeta);
-  font: 400 0.8125rem / 1.5 var(--f-body);
-}
-
-.net-risk-days {
-  color: var(--textMeta);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
 }
