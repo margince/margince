@@ -38,38 +38,43 @@ import (
 )
 
 // anonymousOutbound registers the request builders that carry no identity, and
-// why each is right to. Every entry is a FILE, because the reason is about what
-// that file talks to.
+// why each is right to. Every entry is one FUNCTION, keyed `path:func name`,
+// because a file's waived builder must not vouch for an anonymous sibling
+// written beside it later.
 var anonymousOutbound = gatekit.Waive(map[string]string{
-	"internal/modules/agents/apps/fetch.go": "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
+	// This product's own origin, and the harnesses that drive it.
+	"internal/modules/agents/apps/fetch.go:func Fetch":         "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
+	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/compose/integration/apptest/mcp.go:func rpc":     "drives a server the test itself started, in the same process tree, for the length of one test",
+	"tools/seed-demo/apiclient.go:func delete":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/apiclient.go:func get":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/apiclient.go:func patch":                  "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/apiclient.go:func patchGuarded":           "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/apiclient.go:func post":                   "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/apiclient.go:func put":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"tools/seed-demo/documents.go:func upload":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 
 	// The model providers. Each call carries the customer's own API key, which
 	// is the account the provider bills, rate-limits and revokes; an agent
 	// beside it names software the provider has no lever over.
-	"internal/modules/ai/anthropic.go":    "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/gemini.go":       "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/ollama.go":       "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
-	"internal/modules/ai/openai.go":       "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/openaicompat.go": "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/anthropic.go:func sendOnce": "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/gemini.go:func post":        "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/ollama.go:func post":        "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
+	"internal/modules/ai/openai.go:func postRaw":     "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/openaicompat.go:func post":  "carries the customer's own provider key, which is the identity that provider bills and throttles",
 
 	// The capture connectors. Every one of these is an OAuth or token session
 	// the person themselves granted, so the provider knows the grant, the app
 	// it was granted to, and the account it was granted on.
-	"internal/modules/capture/gmail/client.go":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/send.go":            "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/googleconn/googleconn.go": "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/client.go":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/transport.go":       "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/oauthflow/oauthflow.go":   "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",
-	"internal/modules/capture/telegram/api.go":          "calls a bot API under the bot's own token, and the bot IS the identity there",
-	"internal/modules/capture/telegram/sendfiles.go":    "calls a bot API under the bot's own token, and the bot IS the identity there",
-
-	// Test support and tooling. Both call a server this repository started, so
-	// the operator on the other end is the person who ran them.
-	"internal/compose/integration/apptest/appenv.go": "drives a server the test itself started, in the same process tree, for the length of one test",
-	"internal/compose/integration/apptest/mcp.go":    "drives a server the test itself started, in the same process tree, for the length of one test",
-	"tools/seed-demo/apiclient.go":                   "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/documents.go":                   "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
+	"internal/modules/capture/gmail/client.go:func Watch":           "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func get":             "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/send.go:func postJSON":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/oauthflow/oauthflow.go:func token":    "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",
+	"internal/modules/capture/telegram/api.go:func request":         "calls a bot API under the bot's own token, and the bot IS the identity there",
+	"internal/modules/capture/telegram/sendfiles.go:func SendFiles": "calls a bot API under the bot's own token, and the bot IS the identity there",
 })
 
 func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
@@ -86,10 +91,16 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 		if len(anonymous) == 0 {
 			return
 		}
-		if anonymousOutbound.Waived(t, path) {
-			return
+		for _, fn := range anonymous {
+			// Keyed on the FUNCTION, not the file. A file's waived builder must
+			// not vouch for an anonymous sibling written beside it later, which
+			// is the same reason the census judges per function in the first
+			// place.
+			if anonymousOutbound.Waived(t, path+":"+fn) {
+				continue
+			}
+			findings = append(findings, path+": "+fn)
 		}
-		findings = append(findings, path+": "+strings.Join(anonymous, ", "))
 	})
 	if builders < outboundBuilderFloor {
 		t.Fatalf("the walk found only %d outbound request builder(s), and this census is pinned at "+
@@ -131,59 +142,78 @@ func anonymousRequestBuildersIn(file *ast.File) []string {
 // requestBuildersIn names every function in the file that builds an outbound
 // http.Request.
 func requestBuildersIn(file *ast.File) []*ast.FuncDecl {
+	// The file's OWN name for net/http, resolved rather than assumed. Matched
+	// as the literal `http`, a file importing it under an alias had every
+	// builder in it silently left out of the census — and the floor cannot
+	// catch that, because a smaller count still clears it.
+	client, dotImported := gatekit.ImportedAs(file, "net/http")
+	if client == "" && !dotImported {
+		return nil
+	}
 	var out []*ast.FuncDecl
 	for _, decl := range file.Decls {
 		fn, isFunc := decl.(*ast.FuncDecl)
 		if !isFunc || fn.Body == nil {
 			continue
 		}
-		if buildsARequest(fn.Body) {
+		if buildsARequest(fn.Body, client) {
 			out = append(out, fn)
 		}
 	}
 	return out
 }
 
-func buildsARequest(body *ast.BlockStmt) bool {
+func buildsARequest(body *ast.BlockStmt, client string) bool {
 	found := false
 	ast.Inspect(body, func(node ast.Node) bool {
 		call, isCall := node.(*ast.CallExpr)
 		if !isCall {
 			return true
 		}
-		selector, isSelector := call.Fun.(*ast.SelectorExpr)
-		if !isSelector {
-			return true
-		}
-		pkg, isIdent := selector.X.(*ast.Ident)
-		if !isIdent || pkg.Name != "http" {
-			return true
-		}
-		if strings.HasPrefix(selector.Sel.Name, "NewRequest") {
-			found = true
+		switch fn := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			pkg, isIdent := fn.X.(*ast.Ident)
+			if isIdent && pkg.Name == client && strings.HasPrefix(fn.Sel.Name, "NewRequest") {
+				found = true
+			}
+		case *ast.Ident:
+			// A dot import spells it unqualified.
+			if client == "" && strings.HasPrefix(fn.Name, "NewRequest") {
+				found = true
+			}
 		}
 		return !found
 	})
 	return found
 }
 
-// setsUserAgent reports whether the function names the caller on the request it
-// builds — by the header, or by a transport that carries one for it.
+// setsUserAgent reports whether the function WRITES the caller's name onto a
+// header it is building.
+//
+// The write, not the words. Reading any call that mentions "User-Agent" made
+// `log.Printf("User-Agent missing")` enough to mark a request identified — a
+// census reporting a clean tree over an anonymous call because the code
+// complains about anonymity, which is the silent-absence failure this exists to
+// catch. So it matches a `Set` or `Add` on something whose selector is
+// `.Header`, with the header named as the first argument.
 func setsUserAgent(fn *ast.FuncDecl) bool {
 	found := false
 	ast.Inspect(fn.Body, func(node ast.Node) bool {
 		call, isCall := node.(*ast.CallExpr)
-		if !isCall {
+		if !isCall || len(call.Args) < 2 {
 			return true
 		}
-		for _, arg := range call.Args {
-			lit, isLit := arg.(*ast.BasicLit)
-			if !isLit || lit.Kind != token.STRING {
-				continue
-			}
-			if strings.EqualFold(gatekit.TextOf(lit), "User-Agent") {
-				found = true
-			}
+		method, isMethod := call.Fun.(*ast.SelectorExpr)
+		if !isMethod || (method.Sel.Name != "Set" && method.Sel.Name != "Add") {
+			return true
+		}
+		header, onHeader := method.X.(*ast.SelectorExpr)
+		if !onHeader || header.Sel.Name != "Header" {
+			return true
+		}
+		name, isLit := call.Args[0].(*ast.BasicLit)
+		if isLit && name.Kind == token.STRING && strings.EqualFold(gatekit.TextOf(name), "User-Agent") {
+			found = true
 		}
 		return !found
 	})
@@ -227,6 +257,31 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
 				"\treq.Header.Set(\"user-agent\", \"margince-x/1.0\")\n}\n",
 			want: 0,
+		},
+		{
+			// The WORDS are not the write. A builder that complains about
+			// anonymity would otherwise mark itself identified, and the census
+			// would report a clean tree over the very call it exists to find.
+			name: "naming the header without setting it is not naming the caller",
+			source: "package p\nimport (\n\t\"log\"\n\t\"net/http\"\n)\nfunc call() {\n" +
+				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\tlog.Printf(\"User-Agent missing on %v\", req)\n}\n",
+			want: 1,
+		},
+		{
+			// One waived builder does not cover its neighbour, which is why the
+			// register keys on the function.
+			name: "a header set on something that is not a request header",
+			source: "package p\nimport \"net/http\"\nfunc call(m map[string]string) {\n" +
+				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\t_ = req\n\tm[\"User-Agent\"] = \"x\"\n}\n",
+			want: 1,
+		},
+		{
+			name: "an aliased net/http builds the same request",
+			source: "package p\nimport nethttp \"net/http\"\nfunc call() {\n" +
+				"\treq, _ := nethttp.NewRequest(\"GET\", \"https://x.test\", nil)\n\t_ = req\n}\n",
+			want: 1,
 		},
 		{
 			name:   "a function that builds no request",

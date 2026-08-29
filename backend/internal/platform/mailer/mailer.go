@@ -85,8 +85,13 @@ func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
 // and differs per installation, which is the whole point. The product token
 // stands in only when the configured sender carries no domain to announce.
 func (s SMTP) helloName() string {
-	if _, domain, found := strings.Cut(s.FromAddress, "@"); found && domain != "" {
-		return domain
+	// The LAST `@`, because a quoted local part may hold one — `"a@b"@x.test`
+	// is a legal address whose domain is `x.test`, and cutting at the first
+	// would announce `b"@x.test`, which is not a name any relay will take.
+	if at := strings.LastIndex(s.FromAddress, "@"); at >= 0 {
+		if domain := strings.TrimSpace(s.FromAddress[at+1:]); domain != "" {
+			return domain
+		}
 	}
 	return outbound.MailProduct
 }

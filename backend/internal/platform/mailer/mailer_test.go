@@ -201,6 +201,23 @@ func TestTheGreetingNamesTheSenderRatherThanLocalhost(t *testing.T) {
 			want: "acme.example",
 		},
 		{
+			// A quoted local part may hold an `@` of its own, and the domain is
+			// what follows the LAST one.
+			name: "a quoted local part does not move the domain",
+			from: `"bounce@internal"@acme.example`,
+			want: "acme.example",
+		},
+		{
+			name: "a trailing space is not part of the name",
+			from: "notifications@acme.example ",
+			want: "acme.example",
+		},
+		{
+			name: "an address ending at the at-sign announces the product",
+			from: "postmaster@",
+			want: outbound.MailProduct,
+		},
+		{
 			// Nothing to announce from, so the product token stands in — still
 			// not a claim about which machine this is.
 			name: "a sender with no domain falls back to the product",

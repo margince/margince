@@ -117,7 +117,7 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 	//craft:ignore swallowed-errors SetDeadline only errors on a closed conn; we just dialed it, and a failure surfaces as the next read timing out
 	_ = tlsConn.SetDeadline(time.Now().Add(pullDeadline))
 	client := imapclient.New(tlsConn, &imapclient.Options{})
-	announceClient(client)
+	announceClient(client, tlsConn)
 	if err := client.Login(creds.Email, creds.Password).Wait(); err != nil {
 		//craft:ignore swallowed-errors best-effort close of a session whose login already failed — the rejection is the error to report
 		_ = client.Close()
@@ -134,16 +134,29 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 // an introduction is a courtesy the session does not depend on, and declining
 // to read a person's mail because their provider would not take one would be
 // the wrong trade entirely.
-func announceClient(client *imapclient.Client) {
+func announceClient(client *imapclient.Client, conn net.Conn) {
 	if !client.Caps().Has(imapv2.CapID) {
 		return
 	}
+	// Its own deadline, and the session's put back afterwards. The connection
+	// carries ONE deadline for everything after it, so a provider that answers
+	// the introduction slowly would otherwise spend the login's time — and a
+	// courtesy that can fail the login it precedes is worse than no courtesy.
+	//craft:ignore swallowed-errors SetDeadline only errors on a closed conn; we just dialed it, and a failure surfaces as the next read timing out
+	_ = conn.SetDeadline(time.Now().Add(announceDeadline))
 	//craft:ignore swallowed-errors an introduction the provider refused changes nothing about the session; the mail is still there to read
 	_, _ = client.ID(&imapv2.IDData{
 		Name:    outbound.MailboxProduct,
 		Version: outbound.MailboxVersion,
 	}).Wait()
+	//craft:ignore swallowed-errors as above — the login below is what reports a connection that has gone
+	_ = conn.SetDeadline(time.Now().Add(pullDeadline))
 }
+
+// announceDeadline bounds the introduction alone. Short, because nothing waits
+// on it: a provider that will not take an ID in this long is one this session
+// carries on without.
+const announceDeadline = 10 * time.Second
 
 // authenticateStanding probes the credentials end to end (dial, login,
 // close) and returns the normalized bundle as the sealed Auth — the vault
