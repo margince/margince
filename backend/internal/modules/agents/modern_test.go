@@ -401,6 +401,11 @@ func TestDiscoverAnswersEveryCallerIdentically(t *testing.T) {
 // revision this server serves and the same capabilities initialize reports.
 func TestDiscoverAdvertisesTheWholeWindowAndTheSameCapabilitiesAsInitialize(t *testing.T) {
 	s := modernDispatcher(t)
+	// WITH the queue served, because that is where the two eras can differ:
+	// the guidance is composed per surface, so a comparison on a composition
+	// that serves no queue compares two copies of the general text and proves
+	// nothing about the sentence that varies.
+	RegisterApprovalTools(s.registry, stubInbox{})
 
 	members := modernRPC(scopedAgentCtx(principal.ScopeRead), t, s, methodDiscover, modernParams(""))
 

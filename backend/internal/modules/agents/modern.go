@@ -355,7 +355,7 @@ func (s *Dispatcher) discover() map[string]any {
 	return map[string]any{
 		"supportedVersions": supportedProtocolVersions(),
 		"capabilities":      s.capabilities(true),
-		"instructions":      surfaceInstructions,
+		"instructions":      s.instructions(),
 	}
 }
 
