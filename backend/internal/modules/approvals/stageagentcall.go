@@ -52,6 +52,9 @@ func (s *Service) StageAgentCall(ctx context.Context, in StageInput) (ids.Approv
 		return ids.ApprovalID{}, false, errors.New(
 			"crmapprovals: an agent call is identified by its diff hash, so StageAgentCall takes no Identity")
 	}
+	if err := stagerIsAttributable(ctx); err != nil {
+		return ids.ApprovalID{}, false, err
+	}
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return ids.ApprovalID{}, false, errors.New("crmapprovals: no actor bound to context")

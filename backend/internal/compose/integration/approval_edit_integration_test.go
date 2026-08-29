@@ -73,14 +73,17 @@ func TestModifyThenApproveRebindsTheAuthority(t *testing.T) {
 		t.Fatalf("proposed_change must be the human's version: %s", decided.ProposedChange)
 	}
 
-	// The follow-on effect executed the HUMAN-edited change (jsonb
-	// re-renders the stored bytes, so the payload assertion is on content).
-	var effectChange map[string]any
-	if err := json.Unmarshal(effectPayload, &effectChange); err != nil {
-		t.Fatal(err)
-	}
-	if effectChange["note"] != "human version" || effectHash != editedHash {
-		t.Fatalf("effect ran %s under %s, want the edited payload", effectPayload, effectHash)
+	// NO server-side effect, and that is the point of an AGENT-minted staging:
+	// approving it hands the agent an authority object to redeem, which is what
+	// the redemptions below exercise. This case used to assert the effect ran,
+	// and it did — because an agent staging with no passport wrote the NULL a
+	// SERVER proposal writes, and the row was executed as one. It carries its
+	// passport now, so it is what it always was.
+	// TestAgentMintedStagingDoesNotInvokeAServerSideEffect is the same claim
+	// from the other end.
+	if effectPayload != nil || effectHash != "" {
+		t.Fatalf("an agent-minted staging invoked the server-side executor with %s under %s",
+			effectPayload, effectHash)
 	}
 
 	assertEditAuditCarriesBothSides(t, owner, approvalID, originalHash, editedHash)
@@ -183,12 +186,26 @@ func TestModifyThenApproveCannotRetargetTheEffect(t *testing.T) {
 
 	// The positive control: an edit that corrects the CONTENT still works, so
 	// this test cannot pass by modify-then-approve being broken outright.
+	//
+	// The control is the DECISION rather than the effect. An agent-minted
+	// staging invokes no server-side executor — approving it hands the agent
+	// something to redeem — and this case only ever saw one because a passport-
+	// less agent staging wrote the NULL a server proposal writes.
 	corrected := json.RawMessage(`{"deal_id":"` + mine.String() + `","note":"human version"}`)
-	if _, err := svc.DecideEdited(rep, approvalID, corrected); err != nil {
+	accepted, err := svc.DecideEdited(rep, approvalID, corrected)
+	if err != nil {
 		t.Fatalf("editing the note → %v, want ok — pinning the record must not freeze the payload", err)
 	}
-	if !effectRan {
-		t.Fatal("the accepted edit never reached the effect")
+	_, correctedHash, err := diffhash.Canonical(corrected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if accepted.Status != "approved" || accepted.DiffHash != correctedHash {
+		t.Fatalf("the corrected edit decided %s/%s, want approved on its own hash",
+			accepted.Status, accepted.DiffHash)
+	}
+	if effectRan {
+		t.Fatal("an agent-minted staging invoked the server-side executor")
 	}
 }
 

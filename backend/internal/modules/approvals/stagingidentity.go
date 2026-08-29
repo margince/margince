@@ -329,6 +329,9 @@ func (s *Service) StageUnlessDeclined(ctx context.Context, in StageInput) (ids.A
 		}
 		in.Identity = canonical
 	}
+	if err := stagerIsAttributable(ctx); err != nil {
+		return ids.ApprovalID{}, false, err
+	}
 	var id ids.ApprovalID
 	staged := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {

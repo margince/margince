@@ -28,6 +28,9 @@ func (s *Service) Stage(ctx context.Context, in StageInput) (ids.ApprovalID, err
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
+	if err := stagerIsAttributable(ctx); err != nil {
+		return ids.ApprovalID{}, err
+	}
 	var id ids.ApprovalID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -48,6 +51,9 @@ func (s *Service) Stage(ctx context.Context, in StageInput) (ids.ApprovalID, err
 func (s *Service) StageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.ApprovalID, error) {
 	in, err := withCanonicalIdentity(in)
 	if err != nil {
+		return ids.ApprovalID{}, err
+	}
+	if err := stagerIsAttributable(ctx); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.stageOrJoinPendingInTx(ctx, tx, in)
@@ -360,6 +366,9 @@ func (s *Service) StageInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.
 	if len(in.Identity) > 0 || in.JoinPending {
 		return ids.ApprovalID{}, errors.New(
 			"crmapprovals: StageInTx always creates a row — use StageOrJoinPendingInTx to join or supersede")
+	}
+	if err := stagerIsAttributable(ctx); err != nil {
+		return ids.ApprovalID{}, err
 	}
 	return s.insertProposalInTx(ctx, tx, in)
 }
