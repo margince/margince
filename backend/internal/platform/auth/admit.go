@@ -247,15 +247,14 @@ func AutoExecutePin(ctx context.Context) (version int64, ok bool) {
 	return version, ok
 }
 
-// deniedIfGone maps a vanished granting human (revoked, archived,
-// suspended) to a denial; infrastructure failures pass through so an
-// outage reads as an error, never as an authorization answer.
-// deniedIfGone turns the seam's absence answer into a refusal.
+// deniedIfGone turns the seam's ABSENCE answer into a denial, and lets
+// infrastructure failures pass through — so an outage reads as an error and
+// never as an authorization answer.
 //
 // WHAT is the caller's word for the thing that could not be resolved, and the
-// message no longer supplies "granting human" itself. The admission read folds
-// four ways to answer not-found into one call — a revoked passport, an expired
-// one, one re-granted to somebody else, and a human who is gone — and blaming
+// message takes it rather than supplying one. The admission read folds four
+// ways to answer not-found into a single call — a revoked passport, an expired
+// one, one re-granted to somebody else, and a human who is gone — so naming
 // the human for all four sends an operator to look at the account when they
 // killed the credential a moment ago.
 func deniedIfGone(what, tool string, err error) error {

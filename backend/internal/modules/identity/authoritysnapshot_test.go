@@ -12,20 +12,22 @@ package identity
 // three ARE the admission decision, so the composed answer is what a caller is
 // admitted on.
 //
-// The pin is what makes sharing the transaction mean something, and Postgres
-// enforces the rest for us: SET TRANSACTION ISOLATION LEVEL is refused once a
-// query has taken a snapshot, so a statement that arrives before it does not
-// weaken the guarantee quietly — every admission read fails loudly instead.
-// What that leaves to check here is that the pin is FIRST.
+// The pin is what makes sharing the transaction mean something, and it belongs
+// at BEGIN rather than as a statement inside the closure: Postgres refuses the
+// level once any query has taken a snapshot, and DB.Tx runs one of its own on a
+// BOUNDED handle (the statement-timeout set_config). A pin spelled inside would
+// therefore work on the handle identity has today and fail on the one compose
+// could give it tomorrow — the same code, correct or broken depending on how it
+// was wired.
+//
+// So what is checked is that the authority read OPENS at that level, which is
+// where the guarantee now lives.
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheAuthorityReadPinsItsSnapshotBeforeReadingAnything(t *testing.T) {
@@ -39,55 +41,28 @@ func TestTheAuthorityReadPinsItsSnapshotBeforeReadingAnything(t *testing.T) {
 	if body == nil {
 		t.Fatalf("%s has no liveUserTx — every authority read went through it, so this test is reading for something that has moved", source)
 	}
-
-	statements := transactionBody(body)
-	if len(statements) == 0 {
-		t.Fatal("liveUserTx opens no transaction body this test can read")
-	}
-	if !mentions(statements[0], "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ") {
-		t.Errorf("the first statement of the authority transaction is not the isolation pin — at READ COMMITTED the seat, the passport and the grants each answer from their own instant, and the admission decision is composed from values that never existed together")
+	if !opensAt(body, "TxIsolated", "RepeatableRead") {
+		t.Error("the authority read no longer opens its transaction at REPEATABLE READ — at READ COMMITTED the seat, the passport and the grants each answer from their own instant, and the admission decision is composed from values that never existed together")
 	}
 }
 
-// transactionBody returns the statements of the closure handed to s.db.Tx.
-func transactionBody(body *ast.BlockStmt) []ast.Stmt {
-	var out []ast.Stmt
+// opensAt reports whether a body calls the named transaction opener with the
+// named isolation level.
+func opensAt(body *ast.BlockStmt, opener, level string) bool {
+	found := false
 	ast.Inspect(body, func(n ast.Node) bool {
 		call, isCall := n.(*ast.CallExpr)
 		if !isCall {
 			return true
 		}
 		sel, isSel := call.Fun.(*ast.SelectorExpr)
-		if !isSel || sel.Sel.Name != "Tx" {
+		if !isSel || sel.Sel.Name != opener {
 			return true
 		}
 		for _, arg := range call.Args {
-			fn, isFunc := arg.(*ast.FuncLit)
-			if isFunc && fn.Body != nil {
-				out = fn.Body.List
-				return false
+			if named, isSel := arg.(*ast.SelectorExpr); isSel && named.Sel.Name == level {
+				found = true
 			}
-		}
-		return true
-	})
-	return out
-}
-
-// mentions reports whether a statement carries a string LITERAL saying want.
-//
-// The literal's decoded text, never its source form: a statement written in
-// double quotes reaches the source as its escapes, so a reader matching on
-// lit.Value answers about a spelling rather than about what Postgres receives.
-// gatekit.LiteralText is the one decoding in this tree.
-func mentions(stmt ast.Stmt, want string) bool {
-	found := false
-	ast.Inspect(stmt, func(n ast.Node) bool {
-		lit, isLit := n.(*ast.BasicLit)
-		if !isLit {
-			return !found
-		}
-		if text, isString := gatekit.LiteralText(lit); isString && strings.Contains(text, want) {
-			found = true
 		}
 		return !found
 	})

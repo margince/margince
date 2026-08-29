@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -178,5 +179,5 @@ func pinRaceAgent(e *integration.Env) context.Context {
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // admittedFromPair for why the body is not written out here.
 func (r adminSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return admittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

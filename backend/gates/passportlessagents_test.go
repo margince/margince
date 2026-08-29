@@ -143,8 +143,12 @@ func agentPrincipalMints(fn *ast.FuncDecl, qualifier string, dotImported bool) [
 			case "PassportID":
 				// The VALUE, not the key. `PassportID: ids.UUID{}` names the
 				// field and no credential — which is exactly the principal
-				// nobody can revoke, wearing the shape of one that can.
-				passport = passport || namesSomePassport(pair.Value)
+				// nobody can revoke, wearing the shape of one that can — and a
+				// value this reader cannot judge is not a pass either, for the
+				// same reason a computed Type is not.
+				named, readable := namesSomePassport(pair.Value)
+				passport = passport || named
+				unreadable = unreadable || !readable
 			}
 		}
 		if agent || unreadable {
@@ -193,21 +197,39 @@ func namesAgentPrincipal(expr ast.Expr, qualifier string, dotImported bool) bool
 // it.
 func isPlainSelector(expr ast.Expr, dotImported bool) bool {
 	if dotImported {
-		_, isIdent := expr.(*ast.Ident)
-		return isIdent
+		// Under a dot import the readable form is the CONSTANT'S OWN NAME and
+		// nothing else. Accepting any bare identifier would make a computed
+		// `Type: agentKind` readable here while the qualified path refuses
+		// exactly that shape — the two sides disagreeing about the same
+		// question, with the dot-import side the permissive one.
+		ident, isIdent := expr.(*ast.Ident)
+		return isIdent && ident.Name == "PrincipalAgent"
 	}
 	_, isSelector := expr.(*ast.SelectorExpr)
 	return isSelector
 }
 
-// namesSomePassport reports whether a PassportID value could be a credential.
+// namesSomePassport answers two things about a PassportID value: whether it
+// names a credential, and whether this reader could tell.
 //
-// A composite literal of the id type — `ids.UUID{}` — is the ZERO value, which
-// names no credential at all: the field is set, the census's question is not
-// answered, and the site is the very one it exists to find. Anything else is
-// taken as naming one, because a reader that had to evaluate the expression
-// would be a reader that could be fooled by a helper call either way.
-func namesSomePassport(expr ast.Expr) bool {
-	lit, isLit := expr.(*ast.CompositeLit)
-	return !isLit || len(lit.Elts) > 0
+// `ids.UUID{}` is the ZERO value and names none — the field is set, the
+// census's question is unanswered, and the site is the very one it exists to
+// find. A FIELD READ (`a.PassportID.UUID`) is taken as naming one, because that
+// is how an authenticated identity hands its own credential on.
+//
+// Everything else is UNREADABLE rather than assumed: a bare identifier or a
+// call can hold a zero id just as easily as a real one, which is the same
+// indirection the Type side already refuses to guess at. Assuming a passport
+// there is the under-recognition this census may not have — the site passes and
+// nothing says it was never judged.
+func namesSomePassport(expr ast.Expr) (names, readable bool) {
+	switch value := expr.(type) {
+	case *ast.CompositeLit:
+		return len(value.Elts) > 0, true
+	case *ast.SelectorExpr:
+		return true, true
+	case *ast.UnaryExpr:
+		return namesSomePassport(value.X)
+	}
+	return false, false
 }

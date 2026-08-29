@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -423,5 +424,5 @@ func TestComposedReadToolRequiresTheScope(t *testing.T) {
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // admittedFromPair for why the body is not written out here.
 func (r fullSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return admittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

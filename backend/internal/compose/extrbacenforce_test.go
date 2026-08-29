@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -236,5 +237,5 @@ func TestTheObjectBindsAHumanPrincipalToo(t *testing.T) {
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // admittedFromPair for why the body is not written out here.
 func (s grantingSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return admittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
 }

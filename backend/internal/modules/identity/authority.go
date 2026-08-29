@@ -155,25 +155,25 @@ func (s *Service) liveUserTx(ctx context.Context, workspaceID, humanID ids.UUID,
 	if !ok || ctxWs != workspaceID {
 		return fmt.Errorf("crmauth: authority resolution outside the bound workspace")
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// ONE SNAPSHOT, and it has to be asked for. The pool begins at READ
-		// COMMITTED, where every statement sees its own committed view — so a
-		// seat read, a passport read and a grant read in one transaction can
-		// return values that never existed together: permissions from before a
-		// role change beside a seat from after it, or a live passport beside
-		// grants the human no longer holds.
-		//
-		// That is not an abstract race. These reads ARE the admission
-		// decision, and the composed answer is what the caller is admitted on;
-		// EffectiveAuthority's own comment says the pair must be read together
-		// and this is what makes that true rather than intended.
-		//
-		// First statement in the transaction, because Postgres refuses the
-		// level after a query has taken a snapshot. Read-only work at
-		// REPEATABLE READ takes its snapshot here and cannot serialize-fail.
-		if _, err := tx.Exec(ctx, `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`); err != nil {
-			return fmt.Errorf("crmauth: pinning the authority snapshot: %w", err)
-		}
+	// ONE SNAPSHOT, and it has to be asked for. The pool begins at READ
+	// COMMITTED, where every statement sees its own committed view — so a seat
+	// read, a passport read and a grant read in one transaction can return
+	// values that never existed together: permissions from before a role change
+	// beside a seat from after it, or a live passport beside grants the human no
+	// longer holds.
+	//
+	// That is not an abstract race. These reads ARE the admission decision, and
+	// the composed answer is what the caller is admitted on; EffectiveAuthority's
+	// own comment says the pair must be read together, and this is what makes
+	// that true rather than intended.
+	//
+	// At BEGIN, through TxIsolated, rather than as a statement at the top of
+	// this closure. Postgres refuses the level once any query has taken a
+	// snapshot, and Tx runs one of its own on a BOUNDED handle — so a pin
+	// spelled here would work on the handle identity has today and fail on the
+	// one compose could give it tomorrow. Read-only work at REPEATABLE READ
+	// takes its snapshot at the first statement and cannot serialize-fail.
+	return s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var seatType string
 		err := tx.QueryRow(ctx,
 			`SELECT seat_type FROM app_user

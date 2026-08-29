@@ -131,18 +131,41 @@ func declarationsBuildingOnTheRule(t *testing.T) []string {
 // was never the discriminator — and a reformat of that query would otherwise
 // turn it into a spurious failure here.
 func spellsALivenessCondition(statement string) bool {
-	for _, tell := range []string{
-		"revoked_at IS NULL",
-		"< p.expires_at",
-		"p.expires_at >",
-		"expires_at > now()",
-		"now() < p.expires_at",
-	} {
+	for _, tell := range livenessTells {
 		if strings.Contains(statement, tell) {
 			return true
 		}
 	}
 	return false
+}
+
+// livenessTells are the ways a statement says it is deciding whether a passport
+// is still a credential.
+//
+// EVERY condition the shared rule carries, and the expiry BOUND SPELLED BOTH
+// WAYS. A hand-rolled rule keeping only the still-live half — `expires_at <
+// now()` inverted, or the rotation and grant halves folded into the shared
+// string while the expiry is written out — would otherwise select from passport
+// and evade the check, which is the whole of what "a passport killed by one of
+// two rules is admitted by the other" means.
+//
+// PREDICATE shapes, not column names: the list surface selects revoked_at and
+// expires_at as columns and shows revoked rows on purpose, so naming a column
+// was never the discriminator — and a reformat of that query would otherwise
+// become a spurious failure here.
+var livenessTells = []string{
+	"revoked_at IS NULL",
+	"revoked_at IS NOT NULL",
+	"< p.expires_at",
+	"> p.expires_at",
+	"p.expires_at >",
+	"p.expires_at <",
+	"expires_at > now()",
+	"expires_at < now()",
+	"now() < p.expires_at",
+	"now() > p.expires_at",
+	"must_change_password",
+	"client_id IS NOT NULL",
 }
 
 // declaration is one top-level declaration: its name, its source text, and the

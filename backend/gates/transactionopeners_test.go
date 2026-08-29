@@ -29,9 +29,17 @@ const databasePackage = "internal/platform/database"
 
 // transactionOpener names the function in that package permitted to call
 // pool.Begin. Every seam the package publishes — WithWorkspaceTx, WithInfraTx,
-// DB.Tx — routes through it, which is what makes "a domain row commits with its
-// audit row and its outbox row" a property held in a single place.
-const transactionOpener = "runTx"
+// DB.Tx, DB.TxIsolated — routes through it, which is what makes "a domain row
+// commits with its audit row and its outbox row" a property held in a single
+// place.
+//
+// runTx is NOT a second opener: it supplies the default options and calls this,
+// so the rollback discipline still lives in exactly one function. What made a
+// second name necessary is the isolation LEVEL, which Postgres will only take
+// at BEGIN — a caller cannot set it afterwards, and a read whose answer is
+// composed from several statements has to open at REPEATABLE READ or the
+// statements each answer from their own instant.
+const transactionOpener = "runTxWith"
 
 // TestTheDatabasePackageOpensATransactionInOneFunction is what holds runTx's
 // doc comment: no other function in the package turns a pool into a

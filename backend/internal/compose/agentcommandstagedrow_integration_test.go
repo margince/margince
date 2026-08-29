@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -313,5 +314,5 @@ func readStagedApproval(as context.Context, t *testing.T, e *integration.Env, id
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // admittedFromPair for why the body is not written out here.
 func (s repSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return admittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
+	return authztest.AdmittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
 }

@@ -152,6 +152,37 @@ func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return runTx(ctx, d.pool, fn)
 }
 
+// TxIsolated is Tx at a chosen isolation level, for the reads whose answer is
+// COMPOSED from several statements.
+//
+// The level belongs at BEGIN and not inside the closure, and that is the whole
+// reason this exists rather than a `SET TRANSACTION ISOLATION LEVEL` at the top
+// of a caller: Postgres refuses the statement once a query has taken a
+// snapshot, and Tx already runs one of its own on a bounded handle (the
+// statement-timeout set_config). A caller that pinned itself would work on an
+// unbounded handle and fail on a bounded one — the same code, correct or broken
+// depending on how compose wired it.
+func (d *DB) TxIsolated(ctx context.Context, level pgx.TxIsoLevel, fn func(pgx.Tx) error) error {
+	if d == nil {
+		return fmt.Errorf("%w: no database handle was injected; "+
+			"construct this store through compose, which binds the installation's pool",
+			ErrNoWorkspace)
+	}
+	if _, err := d.workspace(ctx); err != nil {
+		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
+	}
+	if d.budget != 0 {
+		bounded := fn
+		fn = func(tx pgx.Tx) error {
+			if err := BoundStatement(ctx, tx, d.budget); err != nil {
+				return err
+			}
+			return bounded(tx)
+		}
+	}
+	return runTxWith(ctx, d.pool, pgx.TxOptions{IsoLevel: level}, fn)
+}
+
 // ForWorkspace is this handle re-bound to another workspace, for the fleet
 // passes that enumerate every tenant and must read each one in its own bound
 // transaction.
