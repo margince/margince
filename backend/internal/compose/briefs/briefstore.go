@@ -51,6 +51,9 @@ type BriefRun struct {
 	LocalDay         time.Time
 	CandidateCount   int
 	RevenueNormMinor int64
+	// RevenueNormCurrency is what RevenueNormMinor is in. Empty on a run stored
+	// before the column existed, which the wire omits rather than guessing at.
+	RevenueNormCurrency string
 	// Narrative is the overnight agent's sentence about the night, empty when
 	// no pass has written one — which AnnotatedAt is what distinguishes from a
 	// pass that ran and had nothing to say.
@@ -125,12 +128,13 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 	}
 
 	run := BriefRun{
-		ID:               ids.NewV7(),
-		UserID:           userID,
-		GeneratedAt:      now,
-		AsOf:             ranking.AsOf,
-		CandidateCount:   ranking.CandidateCount,
-		RevenueNormMinor: ranking.RevenueNormMinor,
+		ID:                  ids.NewV7(),
+		UserID:              userID,
+		GeneratedAt:         now,
+		AsOf:                ranking.AsOf,
+		CandidateCount:      ranking.CandidateCount,
+		RevenueNormMinor:    ranking.RevenueNormMinor,
+		RevenueNormCurrency: ranking.RevenueNormCurrency,
 	}
 	queueDeals := make([]ids.UUID, 0, len(ranking.Queue))
 	var joinedExisting bool
@@ -163,12 +167,13 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 			queueDeals = append(queueDeals, item.DealID)
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "brief_run", run.ID, nil, map[string]any{
-			"user_id":            run.UserID,
-			"as_of":              run.AsOf,
-			"local_day":          run.LocalDay.Format(time.DateOnly),
-			"candidate_count":    run.CandidateCount,
-			"revenue_norm_minor": run.RevenueNormMinor,
-			"queue_deal_ids":     queueDeals,
+			"user_id":               run.UserID,
+			"as_of":                 run.AsOf,
+			"local_day":             run.LocalDay.Format(time.DateOnly),
+			"candidate_count":       run.CandidateCount,
+			"revenue_norm_minor":    run.RevenueNormMinor,
+			"revenue_norm_currency": run.RevenueNormCurrency,
+			"queue_deal_ids":        queueDeals,
 		})
 		return err
 	})
@@ -264,11 +269,11 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		}
 		err = tx.QueryRow(ctx, `
 			SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor,
-			       coalesce(narrative, ''), annotated_at
+			       revenue_norm_currency, coalesce(narrative, ''), annotated_at
 			FROM brief_run
 			WHERE user_id = $1 AND local_day = $2`, userID, day).
 			Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay, &run.CandidateCount,
-				&run.RevenueNormMinor, &run.Narrative, &run.AnnotatedAt)
+				&run.RevenueNormMinor, &run.RevenueNormCurrency, &run.Narrative, &run.AnnotatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

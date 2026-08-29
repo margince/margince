@@ -60,10 +60,13 @@ func localDay(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error) 
 // is the arbiter, so two writers racing produce one run and no error.
 func insertRunIfDayFree(ctx context.Context, tx pgx.Tx, run BriefRun) (bool, error) {
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO brief_run (id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO brief_run (
+			id, user_id, generated_at, as_of, local_day, candidate_count,
+			revenue_norm_minor, revenue_norm_currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT ON CONSTRAINT uq_brief_run_user_day DO NOTHING`,
-		run.ID, run.UserID, run.GeneratedAt, run.AsOf, run.LocalDay, run.CandidateCount, run.RevenueNormMinor)
+		run.ID, run.UserID, run.GeneratedAt, run.AsOf, run.LocalDay, run.CandidateCount,
+		run.RevenueNormMinor, run.RevenueNormCurrency)
 	if err != nil {
 		return false, err
 	}

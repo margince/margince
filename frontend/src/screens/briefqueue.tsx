@@ -101,11 +101,23 @@ export function BriefQueueItem({
   deals,
   nowMs,
   mark,
+  revenueBasis,
 }: Readonly<{
   item: MorningBriefItem;
   deals: readonly Deal[];
   nowMs: number;
   mark: ReturnType<typeof useBriefItemMark>;
+  /**
+   * The RUN's revenue basis, already formatted as money — every item in one
+   * brief measured against the same figure, so it is the caller's to compose
+   * once rather than each card's to derive.
+   *
+   * Absent when the run does not name a currency, which a run assembled before
+   * the field existed does not. A bare number is not money: it reads as
+   * whatever currency the reader assumes, and the whole point of the note is
+   * that a proportion can be checked.
+   */
+  revenueBasis?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -120,11 +132,11 @@ export function BriefQueueItem({
         item.lineage?.dismissed_on,
         recordZone,
       )}
-      // `revenueBasisNote` is deliberately not passed. The run carries
-      // `revenue_norm_minor` but not the currency it is in, and the base
-      // currency lives on a settings read neither screen makes — a bare figure
-      // with no currency is not a reading, so the card says nothing rather than
-      // something unverifiable.
+      revenueBasisNote={
+        revenueBasis === undefined
+          ? undefined
+          : t("home.brief.revenueBasis", { amount: revenueBasis })
+      }
       dealName={deals.find((deal) => deal.id === item.deal_id)?.name}
       amount={amountOf(item.deal_id, deals, locale)}
       formatPercent={(fraction) =>

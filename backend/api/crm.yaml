@@ -29864,6 +29864,20 @@ components:
         local_day: { type: string, format: date, description: 'The morning this run is for, as a calendar date in the installation reporting timezone. A rep has exactly one run per local day, and the on-open read serves today''s — never an older one dressed as today.' }
         candidate_count: { type: integer, minimum: 0, description: Deals that cleared the §10 honest-short bar (may exceed the queue length). }
         revenue_norm_minor: { type: integer, format: int64, description: The workspace-P90 (or fallback) base value the revenue factor normalized against. }
+        revenue_norm_currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          readOnly: true
+          description: >-
+            What `revenue_norm_minor` is in — the installation's base currency as it stood
+            when this run was ranked. A proportion is only checkable against a NAMED base,
+            and a bare figure reads as whatever currency the reader assumes.
+
+            Stored with the run rather than resolved on read: the base currency can still be
+            changed until deals freeze it, so a norm computed against EUR must not later be
+            captioned with the USD in force by then. Absent on a run assembled before this
+            field existed — a brief is one row per rep per local day, so those age out within
+            a day.
         items:
           type: array
           items: { $ref: '#/components/schemas/MorningBriefItem' }

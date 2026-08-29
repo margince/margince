@@ -6,9 +6,9 @@ import { Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BriefQueueItem } from "./briefqueue";
 import { problemMessageOf } from "./common";
@@ -94,6 +94,31 @@ export function TodaySection({
   );
 }
 
+/**
+ * What the revenue factor measured against, as money.
+ *
+ * `undefined` unless the run names BOTH the figure and its currency. A bare
+ * number is not money — it reads as whatever currency the reader assumes — and
+ * the note exists so a proportion can be checked, which an unnamed base cannot
+ * do. A run assembled before the currency was carried names none.
+ */
+function revenueBasisOf(
+  brief: MorningBrief,
+  locale: Locale,
+): string | undefined {
+  if (
+    brief.revenue_norm_minor === undefined ||
+    brief.revenue_norm_currency === undefined
+  ) {
+    return undefined;
+  }
+  return formatMoney(
+    brief.revenue_norm_minor,
+    brief.revenue_norm_currency,
+    locale,
+  );
+}
+
 /** The queue's four readings: in flight, no run, a quiet run, or the items. */
 function TodayBody({
   brief,
@@ -109,6 +134,7 @@ function TodayBody({
   mark: ReturnType<typeof useBriefItemMark>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Anything but a served read is the state vocabulary's to draw. A failure used
   // to fall through the `ready` guard and render nothing, so a queue nobody
   // could read looked exactly like a morning with nothing in it.
@@ -148,6 +174,7 @@ function TodayBody({
           deals={deals}
           nowMs={nowMs}
           mark={mark}
+          revenueBasis={revenueBasisOf(brief, locale)}
         />
       ))}
     </>

@@ -40,7 +40,13 @@ type BriefRanking struct {
 	Queue            []BriefQueueItem
 	CandidateCount   int
 	RevenueNormMinor int64
-	AsOf             time.Time
+	// RevenueNormCurrency is what that figure is in — the installation's base
+	// currency as it stood when the rank ran. Carried with the figure because a
+	// proportion is only checkable against a NAMED base, and because the base
+	// can still change: a norm computed against EUR must not later be read as
+	// the USD in force by then.
+	RevenueNormCurrency string
+	AsOf                time.Time
 }
 
 // briefStrengthSource is the compose-injected §4 warmth seam —
@@ -114,6 +120,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 	stakeholders := map[ids.UUID][]ids.UUID{}
 	lineage := map[ids.UUID]dealLineage{}
 	revenueNorm := int64(briefRevenueNormFallbackMinor)
+	revenueNormCurrency := ""
 
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		// The rep's last brief view: the previous run's data cutoff. No
@@ -135,6 +142,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 			return err
 		}
 		revenueNorm = norm
+		revenueNormCurrency = base
 
 		if err := briefCandidates(ctx, tx, userID, now, base, facts, &order); err != nil {
 			return err
@@ -192,10 +200,11 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		return BriefRanking{}, err
 	}
 	return BriefRanking{
-		Queue:            queue,
-		CandidateCount:   len(candidates),
-		RevenueNormMinor: revenueNorm,
-		AsOf:             now,
+		Queue:               queue,
+		CandidateCount:      len(candidates),
+		RevenueNormMinor:    revenueNorm,
+		RevenueNormCurrency: revenueNormCurrency,
+		AsOf:                now,
 	}, nil
 }
 
