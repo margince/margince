@@ -124,10 +124,13 @@ func describeActivity(kind, subject, id string) string {
 //
 // Only entries the dataset NAMES a person for are judged. Everywhere else the
 // senior contact is the honest heuristic and there is no right answer to check
-// against. Two states are findings — filed against the wrong human, and filed
-// against nobody at all — because the rule above this one is satisfied by any
-// OTHER conversation having a person link, so a single unfiled mail is
-// invisible to it.
+// against.
+//
+// Two states, and they are reported as TWO findings rather than one count. A
+// mail filed against the wrong colleague is a link pointing somewhere; one
+// filed against nobody is a contact's timeline with nothing on it. They are
+// different problems and a reader fixing one is not fixing the other, so
+// counting them together would print a number whose examples do not match it.
 //
 // An activity carrying more than one person link is the one skip, for the
 // reason personRelinkFor leaves it alone: those links did not come from here,
@@ -149,7 +152,14 @@ func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFi
 		return nil, err
 	}
 	ambiguous := ambiguousEntries(cfg, false)
-	var wrong []string
+	// TWO states, counted apart. They are different repairs and read as
+	// different problems: a mail filed against the wrong colleague is a link
+	// pointing somewhere, and one filed against nobody is a contact's timeline
+	// with nothing on it. Collapsed into one list, the count and the sample
+	// disagree — an operator reads "3 filed against somebody other than who
+	// signed them" and the examples name a person for one of them and nobody
+	// for the rest.
+	var misfiled, unfiled []string
 	for i, act := range cfg.Activities {
 		if act.Person == "" || !isConversation(act.Kind) || ambiguous[i] {
 			continue
@@ -170,7 +180,7 @@ func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFi
 			// The dataset says who signed it and the record says nobody. The
 			// rule above this one is satisfied by any OTHER conversation
 			// having a person, so without this the gap is invisible.
-			wrong = append(wrong, fmt.Sprintf("%s signed by %s is filed against nobody", act.Company, act.Person))
+			unfiled = append(unfiled, fmt.Sprintf("%s signed by %s", act.Company, act.Person))
 		case len(existing.PersonIDs) > 1:
 			// The only skip kept: the repair deliberately leaves these alone,
 			// and a rule reporting what will never be fixed is one somebody
@@ -182,15 +192,22 @@ func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFi
 				return nil, err
 			}
 			if !strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(act.Person)) {
-				wrong = append(wrong, fmt.Sprintf("%s signed by %s is filed against %s", act.Company, act.Person, name))
+				misfiled = append(misfiled, fmt.Sprintf("%s signed by %s is filed against %s", act.Company, act.Person, name))
 			}
 		}
 	}
-	if len(wrong) == 0 {
-		return nil, nil
+	var findings []verifyFinding
+	if len(misfiled) > 0 {
+		findings = append(findings, verifyFinding{
+			Rule:   "conversations name the right person",
+			Detail: fmt.Sprintf("%d filed against somebody other than who signed them (%s) — re-run the seeder, which repairs this", len(misfiled), sample(misfiled)),
+		})
 	}
-	return []verifyFinding{{
-		Rule:   "conversations name the right person",
-		Detail: fmt.Sprintf("%d filed against somebody other than who signed them (%s) — re-run the seeder, which repairs this", len(wrong), sample(wrong)),
-	}}, nil
+	if len(unfiled) > 0 {
+		findings = append(findings, verifyFinding{
+			Rule:   "a named conversation reaches its signer",
+			Detail: fmt.Sprintf("%d name a signer and link to no person at all (%s) — re-run the seeder, which files them", len(unfiled), sample(unfiled)),
+		})
+	}
+	return findings, nil
 }
