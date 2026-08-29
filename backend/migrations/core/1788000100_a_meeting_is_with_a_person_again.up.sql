@@ -28,19 +28,33 @@
 -- same way rather than blocking the constraint.
 
 -- The organization link is redundant only where the company is ACTUALLY
--- reachable without it — that is, where somebody on the event works there
--- today. 1787560001 took any person link as proof of that, on a workspace where
--- it had been verified by hand (39 of 39, no mismatch). It is not proof: a
--- linked contact can have no current employer, or work somewhere else, and the
--- estate has been unconstrained since 1787570000 so nothing about the rows
--- written in between was ever checked. Dropping the link there would delete the
--- account's only path to the meeting, and the down migration cannot restore it.
+-- reachable without it — and "reachable" is not a judgement this migration is
+-- free to make its own. It is whatever activityReachesOrg finds, because that
+-- walk is what has to carry the meeting to the account once the link is gone,
+-- and the delete cannot be undone.
 --
--- Both ways a person is on an event, because the employer hop reads both: the
--- link it was filed against, and the participant capture matched. And a LIVE
--- person, for the same reason employerSubjects skips an archived one: an
--- archived contact carries their employer into no prep, so their employment
--- does not make the company link redundant either.
+-- So the predicate below is that walk's employment arm, exactly:
+--
+--   activity_link.person_id -> relationship(kind='employment',
+--                                           ended_at IS NULL,
+--                                           archived_at IS NULL) -> organization
+--
+-- Deliberately NARROWER than either the truth or the prep. The walk does not
+-- follow activity_participant (#3130) and reads `ended_at IS NULL` rather than
+-- the date comparison people.EmploymentIsCurrentSQL makes (#2360), so a link
+-- deleted on the wider reading would be a company the timeline cannot recover.
+-- Kept where the walk cannot reach it, the activity simply becomes a `note`
+-- below and keeps the link that carries it — the recoverable answer.
+--
+-- 1787560001 took ANY person link as proof of redundancy, which it could: that
+-- workspace had been checked by hand, 39 of 39. This one cannot — the estate
+-- has been unconstrained since 1787570000, and a linked contact may work
+-- somewhere else or nowhere.
+--
+-- The person must also be LIVE, which narrows it further than the walk. That is
+-- the safe direction: an archived contact carries their employer into no prep
+-- (employerSubjects skips them), so treating their employment as redundancy
+-- would be deleting on a reading nothing else makes.
 DELETE FROM activity_link ol
 WHERE ol.entity_type = 'organization'
   AND EXISTS (
@@ -48,23 +62,13 @@ WHERE ol.entity_type = 'organization'
         WHERE a.id = ol.activity_id AND a.kind IN ('meeting', 'call'))
   AND EXISTS (
         SELECT 1
-          FROM (
-                SELECT pl.person_id FROM activity_link pl
-                 WHERE pl.activity_id = ol.activity_id AND pl.person_id IS NOT NULL
-                UNION
-                SELECT ap.person_id FROM activity_participant ap
-                 WHERE ap.activity_id = ol.activity_id AND ap.person_id IS NOT NULL
-               ) on_event
-          JOIN person p ON p.id = on_event.person_id
-          JOIN relationship r ON r.person_id = on_event.person_id
-         WHERE p.archived_at IS NULL
-           AND r.kind = 'employment' AND r.archived_at IS NULL
-           -- people.EmploymentIsCurrentSQL, spelled out because SQL cannot call
-           -- it. A DATE comparison, not a null check: somebody serving three
-           -- months' notice still works there, and reading the column's
-           -- presence as "gone" would delete the company's link over an
-           -- attendee who is still its employee.
-           AND (r.ended_at IS NULL OR r.ended_at > current_date)
+          FROM activity_link pl
+          JOIN person p ON p.id = pl.person_id
+          JOIN relationship r ON r.person_id = pl.person_id
+         WHERE pl.activity_id = ol.activity_id
+           AND pl.person_id IS NOT NULL
+           AND p.archived_at IS NULL
+           AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
            AND r.organization_id = ol.organization_id);
 
 -- What remains is a meeting whose company nothing else reaches. Dropping the
