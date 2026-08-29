@@ -251,6 +251,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// the finder's ScopeClauseFor), never a request body.
 	// Client-supplied edge endpoints — every one probed at the store:
 	"relationship.person_id":                     "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
+	"relationship.counterparty_person_id":        "gated: auth.EnsureLinkTarget in CreateRelationship (H1) — the far end of the one person↔person kind (worksWithKind), the same probe every other client-supplied endpoint on this row takes",
 	"relationship.counterparty_org_id":           "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.counterparty_person_id":        "gated: auth.EnsureLinkTarget in CreateRelationship (H1) — ensureRelationshipEndpoints walks the far end of the person-to-person kind exactly as it walks the near one",
 	"relationship.organization_id":               "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
