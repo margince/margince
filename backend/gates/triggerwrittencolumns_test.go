@@ -138,6 +138,10 @@ func writeSegments(statement string) []writeSegment {
 		rest := statement[loc[1]:]
 		depth, end := 0, len(rest)
 		for pos := 0; pos < len(rest); pos++ {
+			if skip := quotedSpanAt(rest, pos); skip > 0 {
+				pos += skip - 1
+				continue
+			}
 			switch rest[pos] {
 			case '(':
 				depth++
@@ -163,6 +167,43 @@ func isWordByte(b byte) bool {
 	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
 }
 
+// dollarTagRe matches a dollar-quote opener at the current position.
+var dollarTagRe = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$`)
+
+// quotedSpanAt returns the length of the quoted run starting at pos, or 0 when
+// nothing is quoted there.
+//
+// The scans that read a SET clause have to step OVER these rather than through
+// them. `SET body = 'from the report', updated_at = now()` ends the assignment
+// list at the literal's own `from` otherwise — and everything after it, which
+// is where the dead assignment is, becomes invisible. That is under-recognition
+// arriving as a green run, and reordering an assignment list is not something
+// anybody reviews as a schema change.
+//
+// A doubled ” inside a string needs no case of its own: the run ends at the
+// first quote, the next character is the second quote, and the scan opens a new
+// run that closes where the real one does. Dollar-quoting is matched on its
+// OPENING tag and closed on the same tag, which is what makes $tag$…'…$tag$
+// readable at all.
+func quotedSpanAt(text string, pos int) int {
+	if text[pos] == '\'' {
+		for i := pos + 1; i < len(text); i++ {
+			if text[i] == '\'' {
+				return i - pos + 1
+			}
+		}
+		return len(text) - pos
+	}
+	tag := dollarTagRe.FindString(text[pos:])
+	if tag == "" {
+		return 0
+	}
+	if end := strings.Index(text[pos+len(tag):], tag); end >= 0 {
+		return len(tag) + end + len(tag)
+	}
+	return len(text) - pos
+}
+
 // assignedColumns returns the columns an assignment list writes — the targets
 // at paren depth zero, so a column named inside a subquery's own WHERE is not
 // mistaken for one being written.
@@ -170,6 +211,16 @@ func assignedColumns(assignments string) []string {
 	var out []string
 	depth, start := 0, 0
 	for pos := 0; pos <= len(assignments); pos++ {
+		if pos < len(assignments) {
+			// A comma inside a string value is not a separator, for the reason
+			// quotedSpanAt gives: `SET body = 'a, b', updated_at = now()`
+			// otherwise splits into fragments neither of which is an
+			// assignment, and the dead one after it is lost.
+			if skip := quotedSpanAt(assignments, pos); skip > 0 {
+				pos += skip - 1
+				continue
+			}
+		}
 		if pos == len(assignments) || (assignments[pos] == ',' && depth == 0) {
 			if column := assignmentTarget(assignments[start:pos]); column != "" {
 				out = append(out, column)
@@ -187,10 +238,16 @@ func assignedColumns(assignments string) []string {
 	return out
 }
 
-// assignmentTargetRe reads the column an assignment writes. Anchored at both
-// ends of the target so `updated_at_source = $1` is not read as a write of
-// `updated_at`, and a qualified target (`c.status = $2`, which UPDATE … FROM
-// allows) is read as the column it names.
+// assignmentTargetRe reads the column an assignment writes. Anchored at the
+// START of the assignment so `updated_at_source = $1` is not read as a write of
+// `updated_at`.
+//
+// The optional qualifier is TOLERANCE, not a shape this tree writes: Postgres
+// requires an unqualified column on the left of a SET, in `UPDATE … FROM` as
+// much as anywhere else. Accepting `c.updated_at = now()` costs nothing and
+// means a statement somebody writes that way is read as the write it was meant
+// to be rather than skipped — and skipping is the failure direction that goes
+// quiet.
 var assignmentTargetRe = regexp.MustCompile(`(?is)^\s*(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)\s*=`)
 
 func assignmentTarget(assignment string) string {
@@ -370,6 +427,54 @@ func TestTheTouchTriggerFunctionsStillWriteWhatThisGateSays(t *testing.T) {
 					boolWord(declared, "does", "does not"))
 			}
 		}
+	}
+}
+
+// TestNothingInGoTurnsOffTheTouchTrigger holds the OTHER half of every ruling
+// here: that the trigger actually fires when a swept statement runs.
+//
+// set_updated_at_bump_version has an early return — it writes nothing while
+// margince.last_activity_move is 'on' — so a statement executing under that
+// setting keeps its own assignment, and calling it dead would delete a live
+// write. The setting is turned on and off inside the last-activity trigger
+// functions themselves, around the UPDATE they make, and nothing in Go touches
+// it. That is the proof the rulings rest on, and this is what fails the day it
+// stops being true.
+func TestNothingInGoTurnsOffTheTouchTrigger(t *testing.T) {
+	t.Parallel()
+	const guc = "margince.last_activity_move"
+	found := 0
+	for _, root := range []string{"internal", "cmd", "tools"} {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
+				return err
+			}
+			raw, err := os.ReadFile(path) // #nosec G304 -- a *.go path from walking this repository's own tree
+			if err != nil {
+				return err
+			}
+			if strings.Contains(string(raw), guc) {
+				found++
+				t.Errorf("%s names %s, which suppresses the touch trigger — every assignment this gate ruled dead is live inside that scope. Either the statement keeps its own updated_at/version and is waived here, or the GUC goes back to being the trigger functions' own",
+					filepath.ToSlash(path), guc)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	// And the setting still exists where it is supposed to, or this test is
+	// reading for a string nothing uses and passing for the wrong reason.
+	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	if err != nil {
+		t.Fatalf("reading the head catalog: %v", err)
+	}
+	if !strings.Contains(string(raw), guc) {
+		t.Fatalf("the head catalog no longer names %s at all — the early return this test is about has moved or gone, and the reasoning above has to be redone rather than assumed", guc)
+	}
+	if found > 0 {
+		t.Logf("%d Go source(s) name the setting", found)
 	}
 }
 

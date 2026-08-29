@@ -56,10 +56,49 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			writes:    map[string][]string{"organization": {"display_name", "version"}},
 		}, {
 			// The shape execute.go writes: UPDATE … FROM with the target
-			// aliased, so every assignment target is qualified.
-			name:      "an aliased target with qualified assignments",
-			statement: `UPDATE provider_connection c SET status = $2, c.updated_at = now() FROM provider_connection was WHERE was.id = c.id`,
+			// aliased. Its assignments are UNQUALIFIED, because Postgres
+			// requires that on the left of a SET — here and everywhere.
+			name:      "an aliased target",
+			statement: `UPDATE provider_connection c SET status = $2, updated_at = now() FROM provider_connection was WHERE was.id = c.id`,
 			writes:    map[string][]string{"provider_connection": {"status", "updated_at"}},
+		}, {
+			// Tolerance rather than a shape this tree writes: a qualified
+			// target is not legal SQL, and reading it as the column it names
+			// costs nothing while SKIPPING it would go quiet.
+			name:      "a qualified target is read as the column it names",
+			statement: `UPDATE provider_connection c SET c.status = $2, c.updated_at = now() WHERE c.id = $1`,
+			writes:    map[string][]string{"provider_connection": {"status", "updated_at"}},
+		}, {
+			// A clause word inside a VALUE. The assignment list ends at the
+			// literal's own `from` to a scan that does not track quotes, and
+			// everything after it — which is where the dead assignment is —
+			// becomes invisible. Reordering an assignment list is not
+			// something anybody reviews as a schema change.
+			name:      "a clause word inside a quoted value",
+			statement: `UPDATE activity SET subject = 'a note from the report where it began', updated_at = now() WHERE id = $1`,
+			writes:    map[string][]string{"activity": {"subject", "updated_at"}},
+		}, {
+			// The same trap on the comma, and this one fails in the direction
+			// that costs most. A separator inside a string value is not a
+			// separator; split there, the text after it reads as an assignment
+			// of its own — so a trigger column MENTIONED in a sentence becomes
+			// a trigger column WRITTEN, and this gate's finding is an
+			// instruction to delete something that was never there.
+			name:      "a comma and a trigger column named inside a quoted value",
+			statement: `UPDATE activity SET subject = 'we moved it, updated_at = the field they meant', body = NULL WHERE id = $1`,
+			writes:    map[string][]string{"activity": {"subject", "body"}},
+		}, {
+			// A doubled quote is how SQL escapes one. Parity carries it: the
+			// run ends at the first, a new run opens at the second, and it
+			// closes where the real one does.
+			name:      "a doubled quote inside a quoted value",
+			statement: `UPDATE activity SET subject = 'it''s from here', updated_at = now() WHERE id = $1`,
+			writes:    map[string][]string{"activity": {"subject", "updated_at"}},
+		}, {
+			// Dollar-quoting, where a quote character has no meaning at all.
+			name:      "a dollar-quoted value carrying a clause word",
+			statement: `UPDATE activity SET subject = $tag$ where it's from $tag$, updated_at = now() WHERE id = $1`,
+			writes:    map[string][]string{"activity": {"subject", "updated_at"}},
 		}, {
 			name:      "the alias spelled with AS",
 			statement: `UPDATE organization AS o SET display_name = $2, updated_at = now() WHERE o.id = $1`,
