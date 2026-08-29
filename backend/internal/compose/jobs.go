@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/platform/vatcheck"
 )
 
 // activeSweepStates is the uniqueness window for the periodic passes: a new
@@ -189,6 +190,11 @@ type JobRunnerConfig struct {
 	// companies whose address was written before this installation had a
 	// geocoder, and which no write will ever touch again.
 	Geocoding GeocodingConfig
+	// VatChecker asks the EU register whether a company's stated VAT ID is
+	// real. Nil in a deployment that checks nothing — an offline demo, or one
+	// that has not been given a provider — and the worker records nothing
+	// rather than retrying, because an absent check is not a failed one.
+	VatChecker vatcheck.Checker
 	// TechnicalEnricher reads what a company publicly runs, from its DNS
 	// records, its certificate history and its own homepage. Nil in a
 	// deployment that reads none of that — an offline demo, or one whose
@@ -421,6 +427,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 		deepReadTimeout(cfg.DeepReadCaps))
 	addDeclaredWorker[TranscriptProposeArgs](reg, newTranscriptProposeWorker(pool, cfg.TranscriptProposeBrain, log))
 	addDeclaredWorker[GeocodeOrganizationArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
+	addDeclaredWorker[CheckOrganizationVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))
 	addDeclaredWorker[DocumentExtractArgs](reg, newDocumentExtractWorker(pool, cfg.DocumentExtractBrain, cfg.SendBlob, log))
 	addDeclaredWorker[VoiceBuildArgs](reg, newVoiceBuildWorker(pool, cfg.VoiceBrain, log))
 	// The weekly retrospective moved here when it grew a lane. It is

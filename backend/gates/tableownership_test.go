@@ -125,6 +125,7 @@ var tableOwners = map[string]string{
 	"lead_source":                    "internal/modules/people",
 	"lead_disqualify_reason":         "internal/modules/people",
 	"organization_profile_field":     "internal/modules/people",
+	"organization_vat_check":         "internal/modules/people",
 	"person_profile_field":           "internal/modules/people",
 	// The signature pass's per-person read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read

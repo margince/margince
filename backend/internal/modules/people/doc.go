@@ -11,7 +11,10 @@
 // organization, organization_domain, relationship, partner, lead,
 // lead_score_history, lead_manual_signal, lead_source,
 // lead_disqualify_reason, person_signature_enrich_state,
-// person_provider_claim.
+// person_provider_claim, organization_vat_check.
+// organization_vat_check is what the EU register answered about a company's
+// VAT ID and the consultation number proving we asked: the profile field
+// holds the number a page stated, this holds whether it is real.
 // lead_source and lead_disqualify_reason are the two administered lead
 // vocabularies: the pick lists behind "where did this come from" and "why
 // was it dropped", and the weighting the scorer reads.

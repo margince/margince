@@ -58,6 +58,8 @@ type workerConfig struct {
 	sendMaxAge           time.Duration
 	webhookKey           string
 	geocodeBaseURL       string
+	vatCheckBaseURL      string
+	vatCheckRequester    string
 	geocodeBackfill      time.Duration
 	certLogBaseURL       string
 	technicalBackfill    time.Duration
@@ -149,6 +151,15 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 			"within_radius answers from. Empty leaves it off and every radius query unavailable. "+
 			"Use 'public' for OpenStreetMap's own service — POC only: its terms hold a recurring "+
 			"client to 4 requests a minute, so any real volume wants a self-hosted instance.")
+	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "",
+		"VIES base URL; enables checking a company's stated VAT ID against the EU register. "+
+			"Empty leaves it off and a VAT number is stored as the page stated it, unverified. "+
+			"Use 'public' for the Commission's own service.")
+	env.String(fs, &cfg.vatCheckRequester, "vat-check-requester", "MARGINCE_VAT_CHECK_REQUESTER", "",
+		"This installation's OWN VAT ID (e.g. DE123456789). VIES issues a consultation number — "+
+			"the receipt a business shows to say it verified a counterpart — only for a check made "+
+			"under a requester's number. Without it the check still runs and still answers; it just "+
+			"comes back with no proof attached.")
 	env.String(fs, &cfg.certLogBaseURL, "certlog-base-url", "MARGINCE_CERTLOG_BASE_URL", "",
 		"certificate-transparency base URL; enables reading what a company publicly runs — its DNS "+
 			"records, its certificate history and one polite fetch of its own homepage. Empty "+
