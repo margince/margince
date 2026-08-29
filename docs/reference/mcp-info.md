@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 163.9 KB |
+| Tool catalog | 164.1 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 42833 |
+| Approx. wire tokens | 42886 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 76.1 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
-| Input schemas | 36.2 KB | 22% | Yes, every step |
+| Input schemas | 36.4 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
-| **Description + input schema** | **75.2 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **75.4 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -89,7 +89,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.1 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.4 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 3.7 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
@@ -5212,7 +5212,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "Every record this was about — the person, their company, the deal. All of them here, in this call: it writes them together and needs no approval.",
+      "description": "Every record this was about, ALL OF THEM in this call. A meeting is with a PERSON and reaches their company through them, so a meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
