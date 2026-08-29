@@ -377,17 +377,33 @@ export function DecisionsSection({
         // it is, which tool produced it, and how long it has left. The chips are
         // the design system's, so the deck and the Decisions row cannot disagree
         // about a deadline.
-        chips={(approval) => ({
+        //
+        // Every one of them is read off `shared` — what the item's members
+        // AGREE on — rather than off the card's drawn approval, so a bundle
+        // states one member's kind, tier, tool or provenance as the act's only
+        // when it is every member's. The deadline is the exception and stays on
+        // the drawn approval, because that is the member the deck's Accept
+        // guard answers for.
+        //
+        // The body below is the drawn member's too, and honestly so: it is that
+        // member's own summary and payload, standing beside a count and a list
+        // of the siblings it was staged with. A chip makes a claim about the
+        // ACT; the body shows one proposal in the set.
+        chips={(approval, shared) => ({
           meta: (
             <>
-              <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
-              <span className="t-small">
-                {approvalKindLabel(approval.kind, t)}
-              </span>
-              <DecisionToolChip
-                verb={KIND_TO_VERB[approval.kind]}
-                label={(verb) => t("decision.viaTool", { verb })}
-              />
+              {shared.kind !== undefined && (
+                <>
+                  <AutonomyDot tier={approvalDotTier(shared.kind, tierMap)} />
+                  <span className="t-small">
+                    {approvalKindLabel(shared.kind, t)}
+                  </span>
+                  <DecisionToolChip
+                    verb={KIND_TO_VERB[shared.kind]}
+                    label={(verb) => t("decision.viaTool", { verb })}
+                  />
+                </>
+              )}
               <DecisionStatusChip
                 approval={approval}
                 decided={false}
@@ -396,8 +412,14 @@ export function DecisionsSection({
               />
             </>
           ),
-          provenance: provenanceOf(approval.proposed_by, viewerId),
-          confidence: confidenceLevel(approval.confidence) ?? undefined,
+          // Not `provenanceOf(undefined)`: that answers "nobody recorded a
+          // source", which is a claim of its own and a false one here — the
+          // members each recorded one and they differ.
+          provenance:
+            shared.proposedBy === undefined
+              ? undefined
+              : provenanceOf(shared.proposedBy, viewerId),
+          confidence: confidenceLevel(shared.confidence) ?? undefined,
           display: resolveDisplay(
             approval.kind,
             (approval.proposed_change ?? {}) as Record<string, unknown>,

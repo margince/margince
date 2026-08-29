@@ -11,8 +11,10 @@ import { Callout } from "./callout";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
 import {
   DecisionDeck,
+  type DecisionDeckChips,
   type DecisionDeckItem,
   type DecisionDeckLabels,
+  type DecisionSharedFacts,
   type StagedDecision,
 } from "./decisiondeck";
 import { AutonomyDot } from "./trust";
@@ -146,19 +148,33 @@ const MANY: readonly DecisionDeckItem[] = [
   single(5),
 ];
 
-const CHIPS = (held: DecisionApproval) => ({
+// Every chip a caller draws about the ACT comes from `shared` — the facts every
+// member of the item carries — and never from the member the card is drawn
+// from. A fact the members disagree on is simply not in there, which is what
+// `DivergentBundle` below shows.
+const CHIPS = (
+  _held: DecisionApproval,
+  shared: DecisionSharedFacts,
+): DecisionDeckChips => ({
   meta: (
     <>
-      <AutonomyDot tier="confirm" />
-      <span className="t-small">
-        {held.kind === "site_lead"
-          ? "Add a person found on the site"
-          : "Send an email"}
-      </span>
+      {shared.kind !== undefined && (
+        <>
+          <AutonomyDot tier="confirm" />
+          <span className="t-small">
+            {shared.kind === "site_lead"
+              ? "Add a person found on the site"
+              : "Send an email"}
+          </span>
+        </>
+      )}
     </>
   ),
-  provenance: { kind: "agent" as const, agent: "mailroom" },
-  confidence: "high" as const,
+  provenance:
+    shared.proposedBy === undefined
+      ? undefined
+      : { kind: "agent" as const, agent: "mailroom" },
+  confidence: shared.confidence === undefined ? undefined : ("high" as const),
   aside: (
     <button type="button" className="link-button">
       Approval detail
@@ -212,6 +228,39 @@ export const ExpiredAtTheFront: Story = {
 // times something they decided once — the members stay reachable underneath.
 export const BundleCollapsed: Story = {
   args: { ...BASE, items: [BUNDLE, single(1)] },
+};
+
+// A bundle whose members do not agree. Two site reads of the same company stage
+// under one bundle, so its members can name two different agents and carry two
+// different readings — and the card drawn from one of them would state that
+// one's kind, tier, provenance and confidence as the whole act's.
+//
+// What to look at: the chips that are NOT there. The count and the member list
+// still are, and they are the honest answer to what this act proposed.
+export const DivergentBundle: Story = {
+  args: {
+    ...BASE,
+    items: [
+      {
+        kind: "bundle",
+        id: "bundle-0198c3bb",
+        bundleId: "0198c3aa-7f10-7bbb-9999-000000000002",
+        members: [
+          approval(60, {
+            kind: "site_lead",
+            summary: "Introduce ourselves to the head of operations.",
+            proposed_by: "agent:deepread",
+          }),
+          approval(61, {
+            kind: "site_lead",
+            summary: "Introduce ourselves to the finance lead.",
+            proposed_by: "agent:site-read",
+            confidence: 0.42,
+          }),
+        ],
+      },
+    ],
+  },
 };
 
 // The tray, mid-flight: three verdicts staged and nothing sent. This is the
