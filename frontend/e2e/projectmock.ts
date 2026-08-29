@@ -28,6 +28,11 @@ export type MockProject = {
   key: string | null;
   organization_id: string;
   owner_id: string | null;
+  // What the server's write gate would answer for the signed-in caller. The
+  // real API sends it on every project; a mock that leaves it out models a
+  // reader who may not write, and the page then correctly withholds every
+  // write control the specs drive.
+  writable: boolean;
   phase: "initiative" | "pursuing" | "delivering" | "closed";
   closed_reason: string | null;
   description: string | null;

@@ -202,6 +202,10 @@ export const seededProject: MockProject = {
   key: "BRANDT-FLEET",
   organization_id: "o-brandt",
   owner_id: "u1",
+  // The signed-in seat owns this project, so the server sends writable: true
+  // and the page draws its write controls. Left out, it would read as NOT
+  // writable and the specs would drive controls the page correctly withholds.
+  writable: true,
   phase: "initiative",
   closed_reason: null,
   description: null,

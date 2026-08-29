@@ -241,4 +241,82 @@ describe("ProjectScreen", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({ to_phase: "pursuing", reason: null });
   });
+
+  // `writable` is what the server's write gate would answer on a mutation. A
+  // reader who may open a project but not change it was offered Edit, Archive,
+  // Assign and the phase stepper, and learned otherwise from a 403 after
+  // filling the form in.
+  it("withholds the write controls on a project this caller may not change", async () => {
+    const user = userEvent.setup();
+    let posted = false;
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: "u-someone-else", writable: false }),
+      }),
+      respond: async (url, method) => {
+        if (method === "POST" && url.endsWith("/advance")) {
+          posted = true;
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    // The page says why once, rather than each control failing on its own.
+    expect(
+      screen.getByText(/This project belongs to someone else/),
+    ).toBeTruthy();
+
+    // The stepper is the one write control on the page that takes a single
+    // click, so it is the one that would have posted before any dialog.
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(posted).toBe(false);
+  });
+
+  // An unowned project is nobody's yet, not somebody else's, and the door that
+  // lets a reader take it on has to stay open. Withholding here would be the
+  // fix overshooting into a lock-out.
+  it("keeps the write controls on a project nobody owns", async () => {
+    const user = userEvent.setup();
+    let posted: unknown = null;
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: null, writable: true }),
+      }),
+      respond: async (url, method, request) => {
+        if (method === "POST" && url.endsWith("/advance")) {
+          posted = JSON.parse(await request.text());
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Move" }));
+    await waitFor(() => expect(posted).toBeTruthy());
+  });
+
+  // Absent is not "unknown", it is "no": a response from a server too old to
+  // send the field must fail closed, or the fix is only as good as the oldest
+  // server a client talks to.
+  it("treats a project with no writable field as one it may not change", async () => {
+    const withoutWritable = project({ owner_id: "u-someone-else" });
+    delete (withoutWritable as { writable?: boolean }).writable;
+    projectsBackend({
+      view: project360({ project: withoutWritable }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    expect(
+      screen.getByText(/This project belongs to someone else/),
+    ).toBeTruthy();
+  });
 });
