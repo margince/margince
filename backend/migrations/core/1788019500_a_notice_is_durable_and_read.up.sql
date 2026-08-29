@@ -13,7 +13,10 @@ CREATE TABLE notice (
   captured_by text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   read_at timestamptz,
-  CONSTRAINT notice_subject_present CHECK (subject <> '')
+  CONSTRAINT notice_subject_present CHECK (subject <> ''),
+  -- The bounds the one writer truncates to, held by the table so a second
+  -- writer cannot silently exceed what every open tab receives.
+  CONSTRAINT notice_content_bounded CHECK (length(subject) <= 200 AND length(body) <= 2000)
 );
 -- The lane's read: one recipient's unread notices, newest first.
 CREATE INDEX notice_unread ON notice (recipient_user_id, created_at DESC) WHERE read_at IS NULL;

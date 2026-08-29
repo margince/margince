@@ -138,25 +138,32 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 		return fmt.Errorf("notices: marking a notice read needs an authenticated person: %w", apperrors.ErrPermissionDenied)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var alreadyRead bool
-		err := tx.QueryRow(ctx, `
-			UPDATE notice SET read_at = coalesce(read_at, now())
-			 WHERE id = $1 AND recipient_user_id = $2
-			RETURNING (read_at < now())`,
-			id, actor.UserID).Scan(&alreadyRead)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		// The write claims the unread row alone, so two concurrent settles
+		// race for one row lock and exactly one announces; the loser's
+		// existence probe below turns "no unread row" into either the
+		// idempotent success or the stranger's 404.
+		tag, err := tx.Exec(ctx, `
+			UPDATE notice SET read_at = now()
+			 WHERE id = $1 AND recipient_user_id = $2 AND read_at IS NULL`,
+			id, actor.UserID)
 		if err != nil {
 			return fmt.Errorf("notices: marking the notice read: %w", err)
 		}
-		if alreadyRead {
-			// The reader's goal state already held: a replayed mark writes
-			// no second audit row and announces nothing. The comparison is
-			// a first-vs-replay test because now() is the TRANSACTION
-			// timestamp: a first settle writes read_at = now() (equal, so
-			// false), and a replay in any later transaction reads an
-			// earlier read_at (strictly less, so true).
+		if tag.RowsAffected() == 0 {
+			// An unclaimed row means either the stranger's absent notice or
+			// a settle that already happened — and a row that exists here
+			// necessarily carries read_at, so its existence alone decides.
+			var one int
+			if err := tx.QueryRow(ctx,
+				`SELECT 1 FROM notice WHERE id = $1 AND recipient_user_id = $2`,
+				id, actor.UserID).Scan(&one); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return apperrors.ErrNotFound
+				}
+				return fmt.Errorf("notices: probing the notice: %w", err)
+			}
+			// The reader's goal state already holds: a replayed mark writes
+			// no second audit row and announces nothing.
 			return nil
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "update", "notice", id,

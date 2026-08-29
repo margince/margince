@@ -2634,6 +2634,7 @@ public.notice.captured_by text NOT NULL gen=- def=-
 public.notice.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.notice.id uuid NOT NULL gen=- def=uuidv7()
 public.notice.kind text NOT NULL gen=- def=-
+public.notice.notice_content_bounded CHECK (((length(subject) <= 200) AND (length(body) <= 2000)))
 public.notice.notice_pkey PRIMARY KEY (id)
 public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notice.notice_subject_present CHECK ((subject <> ''::text))
