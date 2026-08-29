@@ -78,7 +78,7 @@ func (s *Service) SaveMyLocale(ctx context.Context, locale string) (Seat, error)
 			return nil
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE app_user SET locale = $2, updated_at = now()
+			`UPDATE app_user SET locale = $2
 			  WHERE id = $1 AND archived_at IS NULL`, human, locale); err != nil {
 			return err
 		}

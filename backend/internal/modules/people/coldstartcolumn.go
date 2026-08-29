@@ -23,13 +23,13 @@ func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, co
 		return applyUnclaimedOrgColumn(ctx, tx, orgID, column, value)
 	}
 	queries := map[string]string{
-		columnLegalName: `UPDATE organization SET legal_name = $2, updated_at = now()
+		columnLegalName: `UPDATE organization SET legal_name = $2
 			WHERE id = $1 AND legal_name IS DISTINCT FROM $2`,
-		columnIndustry: `UPDATE organization SET industry = $2, updated_at = now()
+		columnIndustry: `UPDATE organization SET industry = $2
 			WHERE id = $1 AND industry IS DISTINCT FROM $2`,
-		columnAddress: `UPDATE organization SET address_line1 = $2, updated_at = now()
+		columnAddress: `UPDATE organization SET address_line1 = $2
 			WHERE id = $1 AND address_line1 IS DISTINCT FROM $2`,
-		columnDescription: `UPDATE organization SET description = $2, updated_at = now()
+		columnDescription: `UPDATE organization SET description = $2
 			WHERE id = $1 AND description IS DISTINCT FROM $2
 			AND ($2::text IS NULL OR length($2) <= 500)`,
 	}

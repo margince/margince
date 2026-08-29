@@ -65,7 +65,7 @@ func (s *Store) expireDeadInflight(ctx context.Context) error {
 		if _, err := tx.Exec(ctx, `
 			UPDATE provider_run
 			   SET state = 'submission_unknown', completed_at = now(),
-			       last_safe_status_code = 'submission_expired', updated_at = now()
+			       last_safe_status_code = 'submission_expired'
 			 WHERE state = 'submitting' AND inflight_at < now() - $1::interval`,
 			inflightExpiry.String()); err != nil {
 			return fmt.Errorf("integrations: expiring dead in-flight submissions: %w", err)
@@ -76,7 +76,7 @@ func (s *Store) expireDeadInflight(ctx context.Context) error {
 		if _, err := tx.Exec(ctx, `
 			UPDATE provider_run
 			   SET state = 'submission_unknown', completed_at = now(),
-			       last_safe_status_code = 'poll_expired', updated_at = now()
+			       last_safe_status_code = 'poll_expired'
 			 WHERE state = 'in_progress' AND submitted_at < now() - $1::interval`,
 			pollExpiry.String()); err != nil {
 			return fmt.Errorf("integrations: expiring unresolvable in-progress runs: %w", err)
@@ -261,7 +261,7 @@ func (s *Store) terminalize(ctx context.Context, tx pgx.Tx, desc provider.Descri
 	case provider.OutcomeCompleted:
 		if _, err := tx.Exec(ctx, `
 			UPDATE provider_run SET state = 'completed', completed_at = now(),
-			       next_attempt_at = now(), inflight_at = NULL, updated_at = now()
+			       next_attempt_at = now(), inflight_at = NULL
 			 WHERE id = $1`, runID); err != nil {
 			return fmt.Errorf("integrations: recording the completed run: %w", err)
 		}
@@ -275,7 +275,7 @@ func (s *Store) terminalize(ctx context.Context, tx pgx.Tx, desc provider.Descri
 	case provider.OutcomeNoMatch:
 		if _, err := tx.Exec(ctx, `
 			UPDATE provider_run SET state = 'no_match', completed_at = now(),
-			       last_safe_status_code = $2, inflight_at = NULL, updated_at = now()
+			       last_safe_status_code = $2, inflight_at = NULL
 			 WHERE id = $1`, runID, status.SafeStatusCode); err != nil {
 			return fmt.Errorf("integrations: recording the no-match run: %w", err)
 		}
@@ -293,7 +293,7 @@ func (s *Store) terminalize(ctx context.Context, tx pgx.Tx, desc provider.Descri
 		return s.recordRefusal(ctx, tx, desc, name, runID, status.Outcome, status.SafeStatusCode)
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_connection SET last_used_at = now(), updated_at = now()
+		UPDATE provider_connection SET last_used_at = now()
 		 WHERE provider = $1`, name); err != nil {
 		return fmt.Errorf("integrations: stamping the connection's last use: %w", err)
 	}

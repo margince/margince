@@ -253,7 +253,7 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID) (bool, err
 	// left 'open' behind, the update matches nothing, and the false below says
 	// their judgement stands.
 	tag, err := tx.Exec(ctx, `
-		UPDATE signal SET status = 'acknowledged', version = version + 1, updated_at = now()
+		UPDATE signal SET status = 'acknowledged'
 		 WHERE id = $1 AND status = 'open' AND archived_at IS NULL`, signalID)
 	if err != nil {
 		return false, fmt.Errorf("acknowledge the signal: %w", err)

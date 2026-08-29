@@ -184,7 +184,7 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE provider_run SET state = 'submitting', inflight_at = now(),
-		       submitted_at = now(), updated_at = now()
+		       submitted_at = now()
 		 WHERE id = $1`, runID); err != nil {
 		return none, false, fmt.Errorf("integrations: marking the run in flight: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *Store) frozenRequest(ctx context.Context, tx pgx.Tx, name, person, corr
 // nothing anyone paid for is being released.
 func (s *Store) cancelWithdrawn(ctx context.Context, tx pgx.Tx, runID string) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run SET state = 'cancelled', completed_at = now(), updated_at = now()
+		UPDATE provider_run SET state = 'cancelled', completed_at = now()
 		 WHERE id = $1`, runID); err != nil {
 		return fmt.Errorf("integrations: cancelling the withdrawn run: %w", err)
 	}
@@ -333,7 +333,7 @@ func (s *Store) recordSubmission(ctx context.Context, tx pgx.Tx, desc provider.D
 	switch sub.Outcome {
 	case provider.OutcomeAccepted:
 		if _, err := tx.Exec(ctx, `
-			UPDATE provider_run SET state = 'in_progress', provider_job_id = $2, updated_at = now()
+			UPDATE provider_run SET state = 'in_progress', provider_job_id = $2
 			 WHERE id = $1`, runID, sub.ProviderJobID); err != nil {
 			return fmt.Errorf("integrations: recording the accepted submission: %w", err)
 		}
@@ -376,7 +376,7 @@ func (s *Store) lockRunState(ctx context.Context, tx pgx.Tx, runID string) (stri
 func (s *Store) parkUnknown(ctx context.Context, tx pgx.Tx, runID, safeCode string) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE provider_run SET state = 'submission_unknown', completed_at = now(),
-		       last_safe_status_code = $2, updated_at = now()
+		       last_safe_status_code = $2
 		 WHERE id = $1`, runID, safeCode); err != nil {
 		return fmt.Errorf("integrations: parking the unknown submission: %w", err)
 	}
@@ -408,7 +408,7 @@ func (s *Store) recordRefusal(ctx context.Context, tx pgx.Tx, desc provider.Desc
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE provider_run SET state = 'failed', completed_at = now(), inflight_at = NULL,
-		       last_safe_status_code = $2, updated_at = now()
+		       last_safe_status_code = $2
 		 WHERE id = $1`, runID, safeCode); err != nil {
 		return fmt.Errorf("integrations: recording the refusal: %w", err)
 	}
@@ -433,7 +433,7 @@ func (s *Store) writeStatusThrough(ctx context.Context, tx pgx.Tx, name, status,
 	// image is the only way to read what the two columns held — and what they
 	// held is the whole question an operator brings to this row.
 	err := tx.QueryRow(ctx, `
-		UPDATE provider_connection c SET status = $2, last_safe_status_code = $3, updated_at = now()
+		UPDATE provider_connection c SET status = $2, last_safe_status_code = $3
 		  FROM provider_connection was
 		 WHERE was.id = c.id AND c.provider = $1 AND c.status <> $2
 		 RETURNING c.id::text, was.status, was.last_safe_status_code`,

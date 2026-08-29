@@ -58,7 +58,7 @@ func (s *Store) HideCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs 
 		return 0, nil
 	}
 	rows, err := tx.Query(ctx, `
-		UPDATE activity SET archived_at = now(), updated_at = now()
+		UPDATE activity SET archived_at = now()
 		 WHERE id = ANY($1) AND archived_at IS NULL
 		RETURNING id`, activityIDs)
 	if err != nil {
@@ -128,7 +128,7 @@ func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityID
 		   FOR UPDATE
 		), stripped AS (
 		  UPDATE activity a
-		     SET subject = NULL, body = NULL, raw = NULL, updated_at = now()
+		     SET subject = NULL, body = NULL, raw = NULL
 		    FROM target t
 		   WHERE a.id = t.id AND t.had_content
 		)

@@ -110,7 +110,7 @@ func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personI
 	// Cleared with the write: a crash after the claims commit but before a
 	// separate clear would merely re-run an idempotent upsert.
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run SET next_attempt_at = NULL, updated_at = now()
+		UPDATE provider_run SET next_attempt_at = NULL
 		 WHERE id = $1`, runID); err != nil {
 		return fmt.Errorf("integrations: clearing the claims-pending marker: %w", err)
 	}
@@ -122,7 +122,7 @@ func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personI
 // reached the subject.
 func (s *Store) discardClaims(ctx context.Context, tx pgx.Tx, runID string) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run SET claims_unwritten = true, next_attempt_at = NULL, updated_at = now()
+		UPDATE provider_run SET claims_unwritten = true, next_attempt_at = NULL
 		 WHERE id = $1`, runID); err != nil {
 		return fmt.Errorf("integrations: recording the discarded claims: %w", err)
 	}
@@ -185,7 +185,7 @@ func (s *Store) recoverClaims(ctx context.Context, runID string) error {
 func (s *Store) bumpClaimAttempt(ctx context.Context, tx pgx.Tx, runID string) (bool, error) {
 	var attempts int
 	if err := tx.QueryRow(ctx, `
-		UPDATE provider_run SET attempt_count = attempt_count + 1, updated_at = now()
+		UPDATE provider_run SET attempt_count = attempt_count + 1
 		 WHERE id = $1 RETURNING attempt_count`, runID).Scan(&attempts); err != nil {
 		return false, fmt.Errorf("integrations: advancing the hand-off ladder: %w", err)
 	}

@@ -456,8 +456,7 @@ func archiveAbsorbedEcho(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.
 		UPDATE activity
 		   SET source_system = NULL,
 		       source_id     = NULL,
-		       archived_at   = coalesce(archived_at, now()),
-		       updated_at    = now()
+		       archived_at   = coalesce(archived_at, now())
 		 WHERE id = $1 AND source_id = $2`, echoID, stamped)
 	if err != nil {
 		return fmt.Errorf("activities: archiving the absorbed echo: %w", err)
