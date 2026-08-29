@@ -6875,6 +6875,8 @@ export const de = {
     "Durch das Archivieren verschwindet dieses Projekt aus der aktiven Liste und sein Kürzel wird frei. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und nimmt keine Änderungen an.",
+  "project.notYoursToChange":
+    "Sie können dieses Projekt nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "Alle Phasen",
   "project.viewDelivering": "In Umsetzung",

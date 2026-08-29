@@ -241,4 +241,101 @@ describe("ProjectScreen", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({ to_phase: "pursuing", reason: null });
   });
+
+  // `writable` is what the server's write gate would answer on a mutation. A
+  // reader who may open a project but not change it was offered Edit, Archive,
+  // Assign and the phase stepper, and learned otherwise from a 403 after
+  // filling the form in.
+  it("withholds the write controls on a project this caller may not change", async () => {
+    const user = userEvent.setup();
+    let posted = false;
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: "u-someone-else", writable: false }),
+      }),
+      respond: async (url, method) => {
+        if (method === "POST" && url.endsWith("/advance")) {
+          posted = true;
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    // The page says why once, rather than each control failing on its own.
+    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+
+    // Every verb, not a sample of them: asserting one control would leave the
+    // others free to regress one at a time. New Deal is here because binding a
+    // deal to a project needs write authority OVER the project.
+    for (const label of ["New deal"]) {
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+    }
+    // Edit is refused in place, and the id it describes itself by must resolve
+    // to the sentence in the band from the FIRST render — a reason minted
+    // inside a menu would name no element until the menu was opened.
+    const edit = screen.getByRole("button", { name: "Edit project" });
+    expect(edit.hasAttribute("disabled")).toBe(true);
+    const reasonId = edit.getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(reasonId)?.textContent).toMatch(
+      /You cannot change this project/,
+    );
+    // Inside the overflow menu the verbs are refused rather than dropped, so a
+    // reader learns the verb exists and why it is shut. What must NOT happen is
+    // a pressable one: clicking it opens the flow and the save 403s.
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    // Barred is the NATIVE disabled attribute — the design system reserves
+    // aria-disabled for "busy" — and each carries aria-describedby pointing at
+    // the one sentence in the band, so a reader is told why rather than left
+    // with a dead control.
+    for (const label of [/^Archive/, /^Assign/, /^Share/]) {
+      for (const verb of screen.queryAllByRole("button", { name: label })) {
+        expect(
+          `${verb.textContent} disabled=${verb.hasAttribute("disabled")}`,
+        ).toBe(`${verb.textContent} disabled=true`);
+        expect(verb.getAttribute("aria-describedby")).toBeTruthy();
+      }
+    }
+
+    // The stepper is the one write control on the page that takes a single
+    // click, so it is the one that would have posted before any dialog.
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(posted).toBe(false);
+  });
+
+  // A company keeps its controls on an ownerless record because the claim door
+  // is what makes it writable. A project has no such door — ClaimRecord refuses
+  // the type — and the server treats an ownerless row as nobody's to change. So
+  // `writable` is the whole answer here, and an ownerless project the server
+  // says is unwritable is drawn read-only like any other.
+  it("refuses an unowned project the server says this caller cannot write", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: null, writable: false }),
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  // Absent is not "unknown", it is "no": a response from a server too old to
+  // send the field must fail closed, or the fix is only as good as the oldest
+  // server a client talks to.
+  it("treats a project with no writable field as one it may not change", async () => {
+    const withoutWritable = project({ owner_id: "u-someone-else" });
+    delete (withoutWritable as { writable?: boolean }).writable;
+    projectsBackend({
+      view: project360({ project: withoutWritable }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+  });
 });

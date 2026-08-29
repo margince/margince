@@ -19,6 +19,12 @@ export function project(overrides: Partial<Project> = {}): Project {
     key: "ACME-CRM",
     organization_id: ORG.id,
     owner_id: "u-me",
+    // The caller owns this project, so the server sends writable: true. Stated
+    // rather than left out: absent means NOT writable per the contract, so a
+    // fixture that omits it models a reader who may not write — which is a
+    // different record from the one `owner_id: "u-me"` describes, and the
+    // screen would rightly withhold every write control on it.
+    writable: true,
     phase: "initiative",
     description: null,
     started_at: null,
