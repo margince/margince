@@ -54,10 +54,10 @@ const subjectLineBound = 300
 // directly rather than through a port for the same reason consent's verdict
 // read and deals' health read do — the link row is shared metadata every
 // module's row-level reads resolve in their own statement. The join carries
-// auth.LinkTargetVisibleClause, the one spelling of the rule every
-// activity_link projection asks: owning the send says nothing about the
-// visibility of the people its activity touches, and a person this caller
-// may not read must not reach the wire even as a bare id. LATERAL with
+// auth.LinkTargetVisibleClause, the clause the activities module's own link
+// projections ask: owning the send says nothing about the visibility of the
+// people its activity touches, and a person this caller may not read must
+// not reach the wire even as a bare id. LATERAL with
 // LIMIT 1 rather than a plain join: an activity filed under several people
 // must not put the same bounce on the lane twice.
 func hardBouncesSQL(ctx context.Context, args *[]any) (string, error) {
