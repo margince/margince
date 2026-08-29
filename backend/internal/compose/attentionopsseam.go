@@ -71,7 +71,6 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Kind:         concern.Kind,
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
-			ErrorClass:   concern.ErrorClass,
 		})
 	}
 	return out, nil

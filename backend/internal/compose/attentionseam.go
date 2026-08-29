@@ -471,9 +471,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		attentionSyncHealth{svc: overlayReadService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{}), meter)},
 		// The reader's own mailbox connections, through the capture module's
 		// registry over the same rows the settings screen lists. Built bare —
-		// no sink, no authority, no vault — because the health read touches
-		// only the connection tables; the write paths that need those live on
-		// the vault-gated registry the connector surface composes.
+		// no sink, no authority, no vault — so the lane lives on every role
+		// that serves the feed; HealthConcerns' own doc states the reach this
+		// construction depends on.
 		attentionCaptureHealth{registry: capture.NewRegistry(db, nil, nil, nil)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get

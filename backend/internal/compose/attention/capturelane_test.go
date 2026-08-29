@@ -36,7 +36,7 @@ func TestACaptureConcernNamesTheConditionAndTheMailbox(t *testing.T) {
 	unlabelled := ids.NewV7()
 	svc := captureLaneService(&stubCaptureHealth{rows: []CaptureConcern{
 		{ConnectionID: labelled, Kind: "reauth_required", Provider: "gmail", AccountLabel: "rep@example.com"},
-		{ConnectionID: unlabelled, Kind: "sync_failing", Provider: "imap", ErrorClass: "auth"},
+		{ConnectionID: unlabelled, Kind: "sync_failing", Provider: "imap"},
 	}})
 	out, err := svc.Assemble(context.Background())
 	if err != nil {

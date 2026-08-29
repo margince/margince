@@ -351,6 +351,4 @@ type CaptureConcern struct {
 	Provider     string
 	// AccountLabel is the display-only mailbox address when one was recorded.
 	AccountLabel string
-	// ErrorClass is the sync sidecar's failure class where one was recorded.
-	ErrorClass string
 }

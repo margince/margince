@@ -43,7 +43,7 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return ids.Nil, errors.New("capture: only a human grants a connector")
+		return ids.Nil, fmt.Errorf("capture: only a human grants a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	scopes, err := grantedScopes(c, actor, name)
 	if err != nil {

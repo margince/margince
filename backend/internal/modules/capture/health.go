@@ -14,9 +14,7 @@ package capture
 import (
 	"context"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The capture-concern vocabulary, worst first: a connection carries the first
@@ -52,27 +50,26 @@ type Concern struct {
 	// AccountLabel is the display-only mailbox address when the connector
 	// reported one; empty otherwise. Display, never routing.
 	AccountLabel string
-	// ErrorClass is the sync sidecar's failure class where one was recorded.
-	ErrorClass string
 }
 
 // HealthConcerns answers the CALLING human's unhealthy connections, in the
 // order Connections lists them. Capture is per-user (RC-8), so there is no
 // admin view here: each user is shown their own mailboxes and nobody else's.
-// A principal with no human behind it has no mailboxes of its own, which is a
-// refusal rather than an empty answer — the caller renders it as withheld.
+// The human-only arm lives in Connections, whose refusal is the permission
+// sentinel the attention feed renders as a withheld lane.
+//
+// This read must stay within what Connections itself reads: the attention
+// seam composes the registry with no sink, no authority and no vault, so a
+// concern derived from anything beyond the connection tables would be a nil
+// dereference on the feed's request path.
 func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return nil, apperrors.ErrPermissionDenied
-	}
 	views, err := r.Connections(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var concerns []Concern
 	for _, view := range views {
-		kind, errorClass := connectionConcern(view)
+		kind := connectionConcern(view)
 		if kind == "" {
 			continue
 		}
@@ -80,7 +77,6 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 			ConnectionID: view.ID,
 			Kind:         kind,
 			Provider:     view.Provider,
-			ErrorClass:   errorClass,
 		}
 		if view.AccountLabel != nil {
 			concern.AccountLabel = *view.AccountLabel
@@ -93,26 +89,24 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 // connectionConcern classifies one connection: the worst condition on it, or
 // "" for a healthy one. A deliberately disconnected connection raises nothing
 // — the user chose that state, and a card would nag them about their own
-// decision.
-func connectionConcern(view ConnectionView) (kind, errorClass string) {
+// decision. The condition alone travels: the sidecar's failure class stays
+// server-side, where an operator reads it, rather than in front of a rep.
+func connectionConcern(view ConnectionView) string {
 	switch view.Status {
 	case statusDisconnected:
 		// A parked connection keeps its last sidecar facts; nagging about a
 		// mailbox the user turned off would be reporting their own decision.
-		return "", ""
+		return ""
 	case statusReauthRequired:
-		return ConcernReauthRequired, ""
+		return ConcernReauthRequired
 	case statusError:
-		if view.LastErrorClass != nil {
-			return ConcernConnectionError, *view.LastErrorClass
-		}
-		return ConcernConnectionError, ""
+		return ConcernConnectionError
 	}
 	if view.LastErrorClass != nil {
-		return ConcernSyncFailing, *view.LastErrorClass
+		return ConcernSyncFailing
 	}
 	if view.Backfill != nil && view.Backfill.Status == backfillStatusError {
-		return ConcernBackfillFailed, ""
+		return ConcernBackfillFailed
 	}
-	return "", ""
+	return ""
 }
