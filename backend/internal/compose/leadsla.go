@@ -50,6 +50,22 @@ type leadSLAEscalation struct {
 	now        func() time.Time
 }
 
+// newLeadSLAEscalation builds it with every store it needs.
+//
+// A CONSTRUCTOR rather than a struct literal at each site, because the struct
+// grew a dependency and only one of its two sites grew with it: the notify half
+// landed wired in production and nil in the test, which panicked in Apply — a
+// nil store is not a compile error and a partial literal reads exactly like a
+// complete one. Taking the database rather than the stores means the next
+// dependency reaches both callers without either being edited.
+func newLeadSLAEscalation(db *database.DB, now func() time.Time) leadSLAEscalation {
+	return leadSLAEscalation{
+		activities: activities.NewStore(db),
+		notices:    notices.NewStore(db),
+		now:        now,
+	}
+}
+
 func (leadSLAEscalation) Spec() workflow.Spec {
 	return workflow.Spec{
 		Name:    "lead_sla_escalation",
