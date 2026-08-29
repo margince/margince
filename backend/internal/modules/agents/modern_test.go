@@ -401,6 +401,11 @@ func TestDiscoverAnswersEveryCallerIdentically(t *testing.T) {
 // revision this server serves and the same capabilities initialize reports.
 func TestDiscoverAdvertisesTheWholeWindowAndTheSameCapabilitiesAsInitialize(t *testing.T) {
 	s := modernDispatcher(t)
+	// WITH the queue served, because that is where the two eras can differ:
+	// the guidance is composed per surface, so a comparison on a composition
+	// that serves no queue compares two copies of the general text and proves
+	// nothing about the sentence that varies.
+	RegisterApprovalTools(s.registry, stubInbox{})
 
 	members := modernRPC(scopedAgentCtx(principal.ScopeRead), t, s, methodDiscover, modernParams(""))
 
@@ -423,6 +428,94 @@ func TestDiscoverAdvertisesTheWholeWindowAndTheSameCapabilitiesAsInitialize(t *t
 		t.Errorf("discover claims %s and initialize claims %s — one server, one claim",
 			members["capabilities"], fromHandshake)
 	}
+	// And the INSTRUCTIONS, for the same reason and with a sharper edge: they
+	// were on the modern era alone, and the era that carried none is the one
+	// most clients speak. A model reading the handshake was told nothing at all
+	// about what a write can leave behind.
+	fromHandshakeText, err := json.Marshal(handshake["instructions"])
+	if err != nil {
+		t.Fatalf("marshalling the handshake instructions: %v", err)
+	}
+	if string(members["instructions"]) != string(fromHandshakeText) {
+		t.Errorf("discover instructs %s and initialize instructs %s — one server, one guidance",
+			members["instructions"], fromHandshakeText)
+	}
+}
+
+// The reporting rule, held as prose because prose is what it is — and held
+// against the composition, because it names a tool that is not always served.
+//
+// An assistant finished a run of correct writes and reported "nothing pending
+// approval this time" while a drafted reply sat in the queue — staged by an
+// automation reacting to what it had just logged, after every one of its calls
+// had returned. No write envelope can carry that row: it did not exist when the
+// write answered. The only thing between the model and the false report is
+// knowing to look, so the surface says it, and this is what keeps it said.
+func TestTheSurfaceTellsAModelToLookBeforeItReportsTheWorkFinished(t *testing.T) {
+	for _, want := range []string{
+		// That a write can leave something behind at all — the premise, and the
+		// one the transcript shows was missing.
+		"leave a question for a human",
+		// And that it can happen AFTER the call answered, which is why reading
+		// the write's own result is not enough.
+		"after your call returned",
+		// The tool that answers it, by name, and that reaching for it costs
+		// nothing — a model that thinks the check needs an approval will skip
+		// it exactly when the queue is not empty.
+		"list_approvals",
+		"needs no approval of its own",
+		// And the moment: before telling anyone the work is done.
+		"Before telling anyone the work is finished",
+	} {
+		if !strings.Contains(queueInstruction, want) {
+			t.Errorf("the queue guidance no longer says %q:\n%s", want, queueInstruction)
+		}
+	}
+}
+
+// And it is served only where the queue is. RegisterApprovalTools registers
+// nothing without an inbox — "a role with no approvals engine does not
+// advertise a queue it cannot read" — so a composition without one would be
+// telling a model to call something that answers `method not found`. A model
+// that tried and failed learns the check is broken, which is worse than not
+// being told to check at all.
+func TestTheQueueGuidanceIsServedOnlyWhereTheQueueIs(t *testing.T) {
+	bare := modernDispatcher(t)
+	if strings.Contains(bare.instructions(), queueInstruction) {
+		t.Errorf("a surface with no queue tells a model to call list_approvals:\n%s", bare.instructions())
+	}
+	if !strings.Contains(bare.instructions(), "A governed CRM tool surface") {
+		t.Error("a surface with no queue lost the guidance that is true of every tool")
+	}
+
+	// The same surface with the queue registered the way compose registers it,
+	// so what turns the sentence on is the REGISTRATION rather than a flag this
+	// test set.
+	withQueue := modernDispatcher(t)
+	RegisterApprovalTools(withQueue.registry, stubInbox{})
+	if !strings.Contains(withQueue.instructions(), queueInstruction) {
+		t.Error("a surface serving list_approvals does not tell a model to read it")
+	}
+}
+
+// stubInbox is an ApprovalInbox that is never called: this suite asks what the
+// surface SAYS about the queue, not what the queue answers.
+type stubInbox struct{}
+
+func (stubInbox) ListApprovals(context.Context, ApprovalQuery) (ApprovalPage, error) {
+	return ApprovalPage{}, nil
+}
+
+func (stubInbox) ReadApproval(context.Context, ids.UUID) (StagedApproval, error) {
+	return StagedApproval{}, nil
+}
+
+func (stubInbox) DecideApproval(context.Context, ids.UUID, bool, string) (StagedApproval, error) {
+	return StagedApproval{}, nil
+}
+
+func (stubInbox) DecideApprovalBundle(context.Context, ids.UUID, bool, string) ([]DecidedMember, error) {
+	return nil, nil
 }
 
 // A tool result is not a catalog: it is one caller's answer to one question

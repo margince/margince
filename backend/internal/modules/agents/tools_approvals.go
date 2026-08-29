@@ -127,6 +127,11 @@ func RegisterApprovalTools(r *Registry, inbox ApprovalInbox) {
 
 // --- list_approvals (🟢 read) ---
 
+// listApprovalsToolName is the queue read's name, spelled here and read by the
+// handshake: the surface tells a model to call it, and must not say so where
+// this registration did not happen.
+const listApprovalsToolName = "list_approvals"
+
 type listApprovalsTool struct{ inbox ApprovalInbox }
 
 type listApprovalsArgs struct {
@@ -138,7 +143,7 @@ type listApprovalsArgs struct {
 
 func (t listApprovalsTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "list_approvals", Title: "List what is waiting for a decision", Version: toolVersionV1,
+		Name: listApprovalsToolName, Title: "List what is waiting for a decision", Version: toolVersionV1,
 		Description:   listApprovalsCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listApprovals",
