@@ -146,26 +146,36 @@ function healthLead(day: Attention, t: ReturnType<typeof useT>): string | null {
 // promise due, no meeting. Split from the branches above because those answer
 // "what is being asked of you" and these answer "what is worth knowing anyway",
 // and one function holding both was past the complexity the linter allows.
-function quietLead(
+// The leads for promises the product itself broke, worst first: a decision a
+// rep approved that did not run, and a send the customer never received —
+// both worse news than a drifting deal, because the reader believes the
+// opposite. Null when neither lane holds anything.
+function brokenPromiseLead(
   day: Attention,
   t: ReturnType<typeof useT>,
   locale: Locale,
-): string {
-  // A drifting deal is money leaving on its own — nobody is waiting on the
-  // reader for it, which is exactly why it needs saying.
-  // Above the drifting deals, because it is worse news: a rep already DECIDED
-  // these, was told they worked, and they did not.
+): string | null {
   const failed = day.counts.did_not_run ?? 0;
   if (failed > 0) {
     return t("day.lead.didNotRun", { count: formatNumber(failed, locale) });
   }
-  // A bounced send is a conversation the rep believes is happening and is
-  // not — worse news than a drifting deal, because the customer never heard.
   const undelivered = day.counts.bounces ?? 0;
   if (undelivered > 0) {
     return t(pluralKey(locale, "day.lead.bounces", undelivered), {
       count: formatNumber(undelivered, locale),
     });
+  }
+  return null;
+}
+
+function quietLead(
+  day: Attention,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  const broken = brokenPromiseLead(day, t, locale);
+  if (broken) {
+    return broken;
   }
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {
