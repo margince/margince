@@ -32,7 +32,14 @@ import (
 // of them would silently fall back to the shipped baseline and ignore the
 // workspace's own corrections.
 func newCounterpartyStore(pool *pgxpool.Pool) *people.Store {
-	return people.NewStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx)
+	// The VAT-check enqueue rides here rather than being passed in, because
+	// every caller of this constructor is several layers below the composition
+	// that holds a job runner. A site read's accepted fields land through the
+	// approval effect's store, so without it the lane's main trigger queued
+	// nothing — see BindVatChecking.
+	return people.NewStore(InstallationDB(pool)).
+		WithConsumerMail(capture.MatcherTx).
+		WithVatCheckEnqueue(boundVatCheckEnqueue())
 }
 
 // peopleEnsurer adapts the people module's auto-create engine onto

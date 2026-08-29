@@ -191,6 +191,58 @@ func TestARefusalIsDistinctAndCarriesItsSchedule(t *testing.T) {
 	}
 }
 
+// A 4xx is OUR request being wrong, not the register being down. Recorded as
+// unavailable it would file our own mistake as the service's, and — because a
+// recorded answer stops the number being re-asked — hide it for good.
+func TestARefusedRequestIsNotAnUnavailableRegister(t *testing.T) {
+	client, _ := serveVIES(t, http.StatusBadRequest, nil)
+
+	got, err := client.Check(context.Background(), someVAT)
+	if err == nil {
+		t.Fatalf("a 400 answered %q with no error, want an error: a malformed request is not a register that declined", got.Status)
+	}
+	if got.Status == StatusUnavailable {
+		t.Error("a 400 was recorded as an unavailable register, which files our own bad request as the service's outage")
+	}
+}
+
+// The receipt's date is the REGISTER's. A worker clock skewed across midnight
+// would file the proof under a day the consultation did not happen on.
+func TestTheConsultationDateComesFromTheRegister(t *testing.T) {
+	client, _ := serveVIES(t, http.StatusOK, map[string]any{
+		"valid": true, "requestIdentifier": "WAPIAAAAXk6-stand-in",
+		"requestDate": "2026-08-20+01:00",
+	})
+
+	got, err := client.Check(context.Background(), someVAT)
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if got.RequestDate.IsZero() {
+		t.Fatal("the service's own consultation date was dropped, so the receipt is dated by our clock instead")
+	}
+	if y, m, d := got.RequestDate.Date(); y != 2026 || m != time.August || d != 20 {
+		t.Errorf("request date = %v, want 2026-08-20", got.RequestDate)
+	}
+}
+
+// A service that sent no date is not an error: the answer stands, and the
+// caller falls back to its own clock rather than storing nothing.
+func TestAnAbsentConsultationDateIsNotAFailure(t *testing.T) {
+	client, _ := serveVIES(t, http.StatusOK, map[string]any{"valid": true})
+
+	got, err := client.Check(context.Background(), someVAT)
+	if err != nil {
+		t.Fatalf("Check without a request date: %v", err)
+	}
+	if got.Status != StatusValid {
+		t.Errorf("status = %q, want valid — a missing date is not a missing answer", got.Status)
+	}
+	if !got.RequestDate.IsZero() {
+		t.Errorf("request date = %v, want the zero time so the caller knows to use its own clock", got.RequestDate)
+	}
+}
+
 // A number that is not VAT-shaped is answerable here, and asking somebody
 // else's service about it would spend a request to be told what we knew.
 func TestAMalformedNumberIsRefusedWithoutAsking(t *testing.T) {

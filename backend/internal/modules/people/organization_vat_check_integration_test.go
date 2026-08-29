@@ -203,3 +203,77 @@ func TestOnlyAnUncheckedNumberIsWorthConsulting(t *testing.T) {
 			number, worth, corrected)
 	}
 }
+
+// A register that declined is not a verdict, so it must not silence the number
+// for good. Recording `unavailable` and then treating it like an answer is how
+// one transient 502 costs a company its VAT check forever.
+func TestAnUnansweredConsultationIsAskedAgain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	const stated = "DE123456789"
+	orgID, err := e.store.ApplyColdStartProfile(ctx, ApplyColdStartProfileInput{
+		SourceURL: "https://transient.example/impressum",
+		Fields: []ColdStartFieldInput{{
+			Field: fieldRegisterVat, Value: stated,
+			EvidenceSnippet: "USt-IdNr: " + stated,
+			SourceURL:       "https://transient.example/impressum",
+			Confidence:      0.9,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("applying the read-back VAT number: %v", err)
+	}
+
+	if err := e.store.RecordVatCheck(ctx, VatCheck{
+		OrganizationID: orgID, Number: stated,
+		Status: VatCheckUnavailable, CheckedAt: consultedAt,
+	}); err != nil {
+		t.Fatalf("recording an unavailable register: %v", err)
+	}
+
+	number, worth, err := e.store.VatNumberForCheck(ctx, orgID)
+	if err != nil {
+		t.Fatalf("VatNumberForCheck after an unavailable register: %v", err)
+	}
+	if !worth || number != stated {
+		t.Errorf("after an unanswered consultation the number answered %q/%v, want %q/true — a register that declined said nothing about this company",
+			number, worth, stated)
+	}
+}
+
+// The same number printed two ways is one number. An extracted field carrying
+// surrounding whitespace must not consult as a different company from the one
+// already checked, or every enqueue spends another consultation forever.
+func TestWhitespaceDoesNotMakeANumberLookUnchecked(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	const spaced = " DE123456789 "
+	orgID, err := e.store.ApplyColdStartProfile(ctx, ApplyColdStartProfileInput{
+		SourceURL: "https://spaced.example/impressum",
+		Fields: []ColdStartFieldInput{{
+			Field: fieldRegisterVat, Value: spaced,
+			EvidenceSnippet: "USt-IdNr:" + spaced,
+			SourceURL:       "https://spaced.example/impressum",
+			Confidence:      0.9,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("applying the read-back VAT number: %v", err)
+	}
+
+	// The store consults, and stores, the trimmed number — which is what the
+	// register was actually asked about.
+	if err := e.store.RecordVatCheck(ctx, VatCheck{
+		OrganizationID: orgID, Number: spaced,
+		Status: VatCheckValid, CheckedAt: consultedAt,
+	}); err != nil {
+		t.Fatalf("recording the consultation: %v", err)
+	}
+	if _, worth, err := e.store.VatNumberForCheck(ctx, orgID); err != nil {
+		t.Fatalf("VatNumberForCheck on a spaced number: %v", err)
+	} else if worth {
+		t.Error("a spaced field reads as unchecked against the trimmed number it was consulted under, so every enqueue would consult again")
+	}
+}

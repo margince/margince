@@ -59,6 +59,12 @@ type Result struct {
 	// discloses them. Several disclose neither, which is not an error.
 	Name    string
 	Address string
+	// RequestDate is the date VIES stamped the consultation with. It is the
+	// service's, not ours: a receipt names the day the register was asked, and
+	// a worker's clock skewed across midnight would file the proof under the
+	// wrong date. Zero when the service sent none, and the caller then falls
+	// back to its own clock rather than storing no date at all.
+	RequestDate time.Time
 }
 
 // PublicBaseURL is the Commission's own REST service.
@@ -160,6 +166,7 @@ type checkResponse struct {
 	Name               string `json:"name"`
 	Address            string `json:"address"`
 	RequestIdentifier  string `json:"requestIdentifier"`
+	RequestDate        string `json:"requestDate"`
 	UserError          string `json:"userError"`
 	TraderNameMatch    string `json:"traderNameMatch"`
 	TraderAddressMatch string `json:"traderAddressMatch"`
@@ -213,10 +220,17 @@ func (v *VIES) Check(ctx context.Context, vatNumber string) (Result, error) {
 			RetryAfter: retryafter.Of(resp),
 		}
 	}
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		// A 4xx is OUR request being wrong — a malformed number, or a requester
+		// this installation configured badly. Recording it as "the register was
+		// unavailable" would file our own mistake as the service's, and the
+		// equality predicate would then never ask about that number again.
+		return Result{}, fmt.Errorf("vatcheck: the service refused the request as malformed (status %d)", resp.StatusCode)
+	}
 	if resp.StatusCode != http.StatusOK {
-		// A 5xx from VIES is the service being unwell, which is the same fact
-		// as a member state's register being down: not an answer, and not
-		// something a retry loop should chase indefinitely.
+		// A 5xx is the service being unwell, which is the same fact as a member
+		// state's register being down: not an answer, and not something a retry
+		// loop should chase indefinitely.
 		return Result{Status: StatusUnavailable}, nil
 	}
 
@@ -234,6 +248,7 @@ func (v *VIES) Check(ctx context.Context, vatNumber string) (Result, error) {
 		ConsultationNumber: strings.TrimSpace(answer.RequestIdentifier),
 		Name:               cleanRegisterField(answer.Name),
 		Address:            cleanRegisterField(answer.Address),
+		RequestDate:        parseRequestDate(answer.RequestDate),
 	}
 	if answer.Valid {
 		result.Status = StatusValid
@@ -255,6 +270,19 @@ var serviceUnavailableErrors = map[string]bool{
 
 func unavailable(userError string) bool {
 	return serviceUnavailableErrors[strings.ToUpper(strings.TrimSpace(userError))]
+}
+
+// parseRequestDate reads the date VIES stamped the consultation with. The
+// service has sent it in more than one shape over the years, so each is tried
+// and an unparseable one is an absence rather than an error: the answer is
+// still an answer, and the caller falls back to its own clock.
+func parseRequestDate(raw string) time.Time {
+	for _, layout := range []string{time.RFC3339, "2006-01-02-07:00", time.DateOnly} {
+		if at, err := time.Parse(layout, strings.TrimSpace(raw)); err == nil {
+			return at
+		}
+	}
+	return time.Time{}
 }
 
 // cleanRegisterField normalises what a register returned. Several answer "---"

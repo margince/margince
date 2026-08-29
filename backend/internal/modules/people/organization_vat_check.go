@@ -52,6 +52,12 @@ const (
 	auditKeyVatStatus          = "vat_status"
 	auditKeyVatConsultationNum = "vat_consultation_number"
 	auditKeyVatRegisteredName  = "vat_registered_name"
+	// The address and the date belong in the image for the same reason the
+	// receipt does: the row keeps only the CURRENT consultation, so what a
+	// re-check overwrote is reconstructable from the audit trail or from
+	// nowhere. A receipt without the date it was issued proves nothing.
+	auditKeyVatRegisteredAddr = "vat_registered_address"
+	auditKeyVatCheckedAt      = "vat_checked_at"
 )
 
 // VatCheck is one company's current VAT standing.
@@ -121,8 +127,24 @@ func (s *Store) VatNumberForCheck(ctx context.Context, org ids.OrganizationID) (
 		if err := auth.EnsureVisible(ctx, tx, entityOrganization, org.UUID); err != nil {
 			return err
 		}
+		// Worth asking when the number has never been consulted, when it has
+		// CHANGED since it was, or when the last consultation got no answer.
+		//
+		// The comparison is on the trimmed value, because that is what was
+		// consulted: an extracted field holding " DE123456789 " is the same
+		// number as the stored one, and treating it as different would spend
+		// another consultation on every enqueue forever.
+		//
+		// An `unavailable` row is a register that declined, not a verdict, so
+		// it must not silence the number for good — a later read asks again.
+		// A verdict that has gone stale is a different question, and one this
+		// lane deliberately does not answer: nothing re-reads a website on a
+		// schedule either.
 		const read = `
-			SELECT f.value, c.vat_number IS DISTINCT FROM f.value
+			SELECT f.value,
+			       c.organization_id IS NULL
+			       OR btrim(c.vat_number) IS DISTINCT FROM btrim(f.value)
+			       OR c.status = 'unavailable'
 			  FROM organization_profile_field f
 			  LEFT JOIN organization_vat_check c ON c.organization_id = f.organization_id
 			 WHERE f.organization_id = $1 AND f.field = 'register_vat'`
@@ -186,6 +208,8 @@ func (s *Store) RecordVatCheck(ctx context.Context, check VatCheck) error {
 			auditKeyVatStatus:          string(check.Status),
 			auditKeyVatConsultationNum: check.ConsultationNumber,
 			auditKeyVatRegisteredName:  check.RegisteredName,
+			auditKeyVatRegisteredAddr:  check.RegisteredAddress,
+			auditKeyVatCheckedAt:       check.CheckedAt,
 		}
 		// A first check REPLACES nothing: there was no answer, no receipt and
 		// no register name. A later one moved all three, and says what they
@@ -241,6 +265,8 @@ func vatCheckPriorImage(before VatCheck, first bool) map[string]any {
 		auditKeyVatStatus:          string(before.Status),
 		auditKeyVatConsultationNum: before.ConsultationNumber,
 		auditKeyVatRegisteredName:  before.RegisteredName,
+		auditKeyVatRegisteredAddr:  before.RegisteredAddress,
+		auditKeyVatCheckedAt:       before.CheckedAt,
 	}
 }
 

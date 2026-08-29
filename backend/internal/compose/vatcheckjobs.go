@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -181,15 +182,22 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 
 	result, err := w.checker.Check(wsCtx, number)
 	if errors.Is(err, vatcheck.ErrMalformedNumber) {
-		// The page stated something that is not a VAT ID. A fact about the
-		// company's page, settled without the service, and recorded so the next
-		// read does not ask again.
+		// The page stated something that is not a VAT ID. No request was made,
+		// so the register said NOTHING — recording `invalid` here would be
+		// indistinguishable from a negative answer it never gave. It is
+		// recorded as unanswered, which is what actually happened.
 		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
 			OrganizationID: orgID,
 			Number:         number,
-			Status:         people.VatCheckInvalid,
+			Status:         people.VatCheckUnavailable,
 			CheckedAt:      w.clock(),
 		}))
+	}
+	var refused *vatcheck.ProviderRefusedError
+	if errors.As(err, &refused) && refused.RetryAfter > 0 {
+		// The service told us when to come back, and coming back sooner is how
+		// an installation gets blocked. River's own schedule would.
+		return river.JobSnooze(refused.RetryAfter)
 	}
 	if err != nil {
 		// A refusal or a transport failure is the consultation not completing.
@@ -198,6 +206,12 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 		return jobs.FaultContext(wsCtx, fmt.Errorf("consulting the VAT register: %w", err))
 	}
 
+	// The date on the receipt is the REGISTER's, because that is what the
+	// receipt attests to. Our clock stands in only when the service sent none.
+	consultedAt := result.RequestDate
+	if consultedAt.IsZero() {
+		consultedAt = w.clock()
+	}
 	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
 		OrganizationID:     orgID,
 		Number:             number,
@@ -205,7 +219,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 		ConsultationNumber: result.ConsultationNumber,
 		RegisteredName:     result.Name,
 		RegisteredAddress:  result.Address,
-		CheckedAt:          w.clock(),
+		CheckedAt:          consultedAt,
 	}))
 }
 
@@ -230,7 +244,45 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 		s.peopleStore = s.peopleStore.WithVatCheckEnqueue(enqueue)
 		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
 		s.peopleHandlers = s.peopleHandlers.WithVatCheckEnqueue(enqueue)
+		// And every store compose builds from a pool — the approval effects,
+		// the capture sink, the verdict engine — which is where a site read's
+		// accepted VAT number actually lands.
+		BindVatChecking(enqueue)
 	}
+}
+
+// vatCheckBinding is the enqueue every people.Store built inside compose picks
+// up, held at package scope for the reason WithVatChecking cannot cover.
+//
+// The Option wires the two stores the SERVER holds. The approval effects — the
+// path a site read's accepted fields actually take — build their own store from
+// a pool (newCounterpartyStore), as do the capture sink and the verdict engine,
+// and none of those can reach the job runner: they are constructed from a pool
+// alone, several layers below the composition that has one. Threading a runner
+// through all of them is a wider change than this lane, and leaving them unwired
+// meant the main path queued nothing at all.
+var vatCheckBinding struct {
+	mu      sync.RWMutex
+	enqueue people.VatCheckEnqueue
+}
+
+// BindVatChecking records the enqueue for every store compose builds from a
+// pool. Called once at boot by the role that queues, after the job runner
+// exists. A nil enqueue is a deployment that checks no VAT numbers, and every
+// such store then writes the number and queues nothing.
+func BindVatChecking(enqueue people.VatCheckEnqueue) {
+	vatCheckBinding.mu.Lock()
+	defer vatCheckBinding.mu.Unlock()
+	vatCheckBinding.enqueue = enqueue
+}
+
+// boundVatCheckEnqueue reads the binding. Read per STORE rather than captured
+// once, so the ordering between binding and building a store cannot matter —
+// only the ordering against the first write, which is after boot either way.
+func boundVatCheckEnqueue() people.VatCheckEnqueue {
+	vatCheckBinding.mu.RLock()
+	defer vatCheckBinding.mu.RUnlock()
+	return vatCheckBinding.enqueue
 }
 
 // vatCheckJobActor is the installation acting for itself: the consultation is

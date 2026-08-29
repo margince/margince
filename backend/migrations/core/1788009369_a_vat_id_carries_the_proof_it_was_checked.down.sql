@@ -11,6 +11,11 @@ SET LOCAL lock_timeout = '3s';
 DO $$
 DECLARE held bigint;
 BEGIN
+    -- Writers are locked OUT before the count, not merely counted around. A
+    -- plain SELECT takes ACCESS SHARE, which a concurrent insert's ROW
+    -- EXCLUSIVE is compatible with: a receipt committed between the count and
+    -- the drop would be discarded by a rollback that reported nothing to lose.
+    LOCK TABLE organization_vat_check IN ACCESS EXCLUSIVE MODE;
     SELECT count(*) INTO held FROM organization_vat_check
      WHERE consultation_number IS NOT NULL;
     IF held > 0 THEN
