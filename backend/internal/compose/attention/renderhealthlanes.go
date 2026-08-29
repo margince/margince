@@ -116,9 +116,7 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	}
 	if !send.PersonID.IsZero() {
 		item.Subject = subjectOf("person", send.PersonID)
-		if openableSubject(item.Subject) {
-			item.Actions = append(item.Actions, actionOpen)
-		}
+		item.Actions = append(item.Actions, actionOpen)
 	}
 	return item
 }

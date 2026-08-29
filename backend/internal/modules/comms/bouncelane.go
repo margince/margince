@@ -35,12 +35,16 @@ type HardBounce struct {
 }
 
 // hardBouncesSQL joins each bounced send to the person its activity is filed
-// under through activity_link, the same table every activity surface resolves
-// links through. LATERAL with LIMIT 1 rather than a plain join: an activity
-// filed under several people must not put the same bounce on the lane twice.
+// under. activity_link belongs to the activities module; this read joins it
+// directly rather than through a port for the same reason consent's verdict
+// read and deals' health read do — the link row is shared metadata every
+// module's row-level reads resolve in their own statement, and the person it
+// names is only ever DISPLAYED through the grant-checked label resolver, never
+// served as a record. LATERAL with LIMIT 1 rather than a plain join: an
+// activity filed under several people must not put the same bounce on the
+// lane twice.
 const hardBouncesSQL = `
-SELECT o.id, COALESCE(o.subject, ''), COALESCE(o.bounce_reason, ''), o.bounced_at,
-       COALESCE(l.person_id, '00000000-0000-0000-0000-000000000000'::uuid)
+SELECT o.id, COALESCE(o.subject, ''), COALESCE(o.bounce_reason, ''), o.bounced_at, l.person_id
   FROM comms_outbound o
   LEFT JOIN LATERAL (
     SELECT person_id FROM activity_link
@@ -73,9 +77,13 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 		bounced = []HardBounce{}
 		for rows.Next() {
 			var bounce HardBounce
+			var person *ids.UUID
 			if scanErr := rows.Scan(&bounce.ID, &bounce.Subject, &bounce.Reason,
-				&bounce.BouncedAt, &bounce.PersonID); scanErr != nil {
+				&bounce.BouncedAt, &person); scanErr != nil {
 				return scanErr
+			}
+			if person != nil {
+				bounce.PersonID = *person
 			}
 			bounced = append(bounced, bounce)
 		}

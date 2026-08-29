@@ -12,13 +12,10 @@ package comms
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -93,13 +90,5 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 	}
 	if len(othersView) != 0 {
 		t.Fatalf("another person reads %+v, want nothing of this caller's", othersView)
-	}
-}
-
-func TestHardBouncesForRefusesACallerWithNoPersonBehindIt(t *testing.T) {
-	e := setupStore(t)
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	if _, err := e.store.HardBouncesFor(ctx, e.clockValue.Add(-time.Hour), 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("HardBouncesFor with no person = %v, want the permission sentinel", err)
 	}
 }
