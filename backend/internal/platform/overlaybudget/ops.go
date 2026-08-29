@@ -231,6 +231,7 @@ func (m *Meter) Snapshot(ctx context.Context, incumbent string) Budget {
 		return shedFn(ic)
 	}
 	return Budget{
+		Measured:       true,
 		Window:         "24h",
 		Consumed:       sum,
 		Limit:          ic.REST.Cap,

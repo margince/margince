@@ -92,15 +92,25 @@ func OverlayBudgetConfig(cfg deployconfig.OverlayBudget) overlaybudget.Config {
 func NewOverlayHandlers(pool *pgxpool.Pool, vault keyvault.Vault, meter *overlaybudget.Meter, log *slog.Logger, backfillLimit int, onModeFlip func(workspaceID ids.UUID)) overlay.Handlers {
 	ms := overlay.NewMirrorStore(InstallationDB(pool), unresolvedOwnerEmails{})
 	incumbent := overlayIncumbentFactory(backfillLimit)
-	svc := overlay.NewService(InstallationDB(pool), vault, ms).
-		WithBudgetMeter(meter).
-		WithIncumbentClassesTranslator(hubspot.IncumbentClassesFor).
-		WithProjectionFingerprints(OverlayProjectionFingerprints()).
+	svc := overlayReadService(InstallationDB(pool), vault, ms, meter).
 		WithIncumbentFactory(incumbent).
 		WithModeFlipObserver(onModeFlip).
 		WithFlipImportProbe(FlipImportProbe).
 		WithLogger(log)
 	return overlay.NewHandlers(svc).WithFlipRunner(newFlipRunner(pool, svc, ms, log))
+}
+
+// overlayReadService binds the options every overlay READ depends on — the
+// meter, the canonical->incumbent translator, and the current projection
+// fingerprints that decide SyncStatus's staleness verdict. The REST surface
+// (NewOverlayHandlers) and the attention sync-health seam both build on it,
+// so those two judge a workspace's staleness by the same declarations. vault
+// may be nil for a read-only caller: no read touches a credential.
+func overlayReadService(db *database.DB, vault keyvault.Vault, ms *overlay.MirrorStore, meter *overlaybudget.Meter) *overlay.Service {
+	return overlay.NewService(db, vault, ms).
+		WithBudgetMeter(meter).
+		WithIncumbentClassesTranslator(hubspot.IncumbentClassesFor).
+		WithProjectionFingerprints(OverlayProjectionFingerprints())
 }
 
 // OverlayProjectionFingerprints answers the current declaration fingerprint of

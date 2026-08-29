@@ -42,7 +42,7 @@ import (
 // which is exactly the gap the feed's stub-driven unit tests leave.
 func assembleFeed(ctx context.Context, t *testing.T, e *integration.Env, now time.Time) crmcontracts.Attention {
 	t.Helper()
-	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), func() time.Time { return now })
 	day, err := feed.Assemble(ctx)
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)

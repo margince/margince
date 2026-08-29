@@ -189,7 +189,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The day's surface reads the SAME approvals engine the inbox decides
 	// through, so a card here and a row there are one queue rather than two
 	// readings of it.
-	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool))
+	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool), srv.overlayMeter)
 	srv.wireCaptureSettingsSurface(pool)
 	srv.wireExportSurface(pool, log)
 	srv.wireOnboardingSurface(pool)

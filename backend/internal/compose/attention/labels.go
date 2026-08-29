@@ -59,7 +59,7 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 		&out.ThisMorning, &out.NeedsYou, &out.Planned, &out.DoneForYou,
 	}
 	for _, optional := range []*[]crmcontracts.AttentionItem{
-		out.Commitments, out.AtRisk, out.Meetings, out.RelationshipDecay, out.DidNotRun, out.Dsr,
+		out.Commitments, out.AtRisk, out.Meetings, out.RelationshipDecay, out.DidNotRun, out.Dsr, out.SyncHealth,
 	} {
 		if optional != nil {
 			lanes = append(lanes, optional)

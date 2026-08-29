@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  RefreshCw,
   Scale,
   ShieldAlert,
   Sparkles,
@@ -138,6 +139,13 @@ function quietLead(
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
+  }
+  // Above the quieter lanes below, because they are read THROUGH the mirror:
+  // while the sync is unhealthy, a calm decay lane may simply be blind, and
+  // "clear" above a warning-toned sync card would contradict the page.
+  const syncConcerns = day.counts.sync_health ?? 0;
+  if (syncConcerns > 0) {
+    return t("day.lead.syncHealth");
   }
   // A lapsed relationship is the same shape of news as a drifting deal:
   // nobody is waiting on the reader for it, and it is the thing that goes
@@ -618,6 +626,11 @@ function TodayLanes({
   // served this lane at all; warn-toned whenever it holds anything, because
   // every row is a deadline the law set.
   const requests = day.dsr;
+  // The overlay sync's concerns. Absent on a workspace not running in
+  // overlay mode; warn-toned whenever it holds anything, because every row
+  // is data a rep is reading going stale or a connection not syncing.
+  const syncConcerns = day.sync_health;
+  const syncTone = warnWhenHolding(syncConcerns);
   const requestsTone = warnWhenHolding(requests);
   const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
@@ -752,6 +765,22 @@ function TodayLanes({
         lane="did_not_run"
         total={day.counts.did_not_run ?? 0}
         tone={failedTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={syncConcerns}
+        shape={{
+          title: t("day.syncHealth"),
+          empty: t("day.syncHealth.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: RefreshCw,
+        }}
+        omitted={omitted}
+        lane="sync_health"
+        total={day.counts.sync_health ?? 0}
+        tone={syncTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

@@ -304,3 +304,31 @@ type Meeting struct {
 	Subject  string
 	StartsAt time.Time
 }
+
+// SyncHealth is the overlay sync's current concerns: the poller backing off,
+// the incumbent budget degraded, mirror classes stale or still backfilling.
+// Aggregated by the owning module (one concern per condition, never one per
+// row), so a broken connector is one card and not a flood.
+//
+// The seam behind it answers apperrors.ErrModeNotOverlay for a workspace that
+// never connected an incumbent, and the feed renders that as an ABSENT lane:
+// an installation not in overlay mode does not look here, which is a
+// different fact from a healthy sync and from a withheld one.
+type SyncHealth interface {
+	Concerns(ctx context.Context) ([]SyncConcern, error)
+}
+
+// SyncConcern is one sync condition worth the reader's glance. Kind names it;
+// the other fields carry that kind's facts and are zero for the rest.
+type SyncConcern struct {
+	Kind string
+	// ErrorClass and Failures describe a failing sweep; NextSweepAt is when
+	// the poller retries.
+	ErrorClass  string
+	Failures    int
+	NextSweepAt *time.Time
+	// Band is the budget band a degraded budget sits in (warn or shed).
+	Band string
+	// Objects are the canonical classes a stale/backfilling concern covers.
+	Objects []string
+}

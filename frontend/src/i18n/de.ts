@@ -199,6 +199,27 @@ export const de = {
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
   "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.syncHealth": "CRM-Sync",
+  "day.syncHealth.empty": "Ihr bestehendes CRM ist synchron.",
+  "day.lead.syncHealth":
+    "Der Abgleich mit Ihrem bestehenden CRM braucht Aufmerksamkeit.",
+  "day.syncHealth.kind.sync_failing":
+    "Die Verbindung zu Ihrem bestehenden CRM schlägt fehl",
+  "day.syncHealth.kind.budget_degraded":
+    "Aufrufe an Ihr bestehendes CRM werden gedrosselt",
+  "day.syncHealth.kind.objects_stale":
+    "Einige Datensätze hängen Ihrem bestehenden CRM hinterher",
+  "day.syncHealth.kind.backfill_incomplete": "Der Erstimport läuft noch",
+  "day.syncHealth.kind.generic": "Ein Sync-Problem",
+  "day.syncHealth.cause.auth":
+    "Die Verbindung wurde abgelehnt — die Zugangsdaten brauchen Aufmerksamkeit.",
+  "day.syncHealth.cause.rate_limited":
+    "Die Gegenseite drosselt uns; der Sync läuft langsamer.",
+  "day.syncHealth.cause.internal":
+    "Die letzten Sync-Versuche schlugen fehl; es wird automatisch erneut versucht.",
+  "day.syncHealth.band.warn": "Nahe am Aufruflimit.",
+  "day.syncHealth.band.shed":
+    "Live-Aufrufe pausieren, um im Aufruflimit zu bleiben.",
   "day.dsr": "Datenschutzanfragen",
   "day.dsr.empty": "Keine offenen Anfragen von Betroffenen.",
   "day.dsr.kind.access": "Jemand möchte wissen, welche Daten wir haben",
