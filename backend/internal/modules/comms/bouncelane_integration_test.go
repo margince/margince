@@ -33,6 +33,31 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 		ids.NewV7(), e.activity, person); err != nil {
 		t.Fatal(err)
 	}
+	// A second, capture-private person on the SAME activity, owned by someone
+	// else, with a UUID sorting below the visible one: the join must never
+	// pick them, because owning the send licenses nothing about who its
+	// activity touches.
+	otherOwner := ids.New[ids.UserKind]()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Owner')`,
+		otherOwner, "owner-"+otherOwner.String()+"@comms.test"); err != nil {
+		t.Fatal(err)
+	}
+	// Minted BEFORE the visible person below would sort first under the
+	// join's ORDER BY, but v7 ids are time-ordered — so pin a literal that
+	// sorts below every fresh id instead, making the private link the one
+	// an unscoped join would pick.
+	hidden := ids.MustParse("00000000-0000-7000-8000-000000000001")
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO person (id, full_name, source, captured_by, visibility, owner_id) VALUES ($1, 'Private Contact', 'test', 'human:x', 'owner', $2)`,
+		hidden, otherOwner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
+		ids.NewV7(), e.activity, hidden); err != nil {
+		t.Fatal(err)
+	}
 	hard := e.sentDelivery(t, "hard@myco.test")
 	if marked, err := e.store.RecordBounce(e.asCapturingConnector(e.user.UUID),
 		bounceFor("hard@myco.test", connector.BounceHard, "550 5.1.1 user unknown")); err != nil || !marked {
@@ -62,7 +87,7 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 		t.Errorf("reason = %q, want the receiving side's own words", got.Reason)
 	}
 	if got.PersonID != person {
-		t.Errorf("person = %s, want the one the activity is filed under (%s)", got.PersonID, person)
+		t.Errorf("person = %s, want the VISIBLE one the activity is filed under (%s), never the private link", got.PersonID, person)
 	}
 	if got.Subject == "" {
 		t.Error("the send's subject line did not travel, so the card cannot name the send")

@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -34,28 +35,49 @@ type HardBounce struct {
 	PersonID  ids.UUID
 }
 
-// hardBouncesSQL joins each bounced send to the person its activity is filed
-// under. activity_link belongs to the activities module; this read joins it
-// directly rather than through a port for the same reason consent's verdict
-// read and deals' health read do — the link row is shared metadata every
-// module's row-level reads resolve in their own statement, and the person it
-// names is only ever DISPLAYED through the grant-checked label resolver, never
-// served as a record. LATERAL with LIMIT 1 rather than a plain join: an
-// activity filed under several people must not put the same bounce on the
-// lane twice.
-const hardBouncesSQL = `
-SELECT o.id, COALESCE(o.subject, ''), COALESCE(o.bounce_reason, ''), o.bounced_at, l.person_id
-  FROM comms_outbound o
-  LEFT JOIN LATERAL (
-    SELECT person_id FROM activity_link
-     WHERE activity_id = o.activity_id AND entity_type = 'person'
-     ORDER BY person_id LIMIT 1
-  ) l ON true
+// hardBouncesFilter is the send half of the statement; the person half is
+// assembled per call because its visibility clause is the caller's own.
+const hardBouncesFilter = `
  WHERE o.user_id = $1
    AND o.bounce_kind = 'hard'
    AND o.bounced_at >= $2
  ORDER BY o.bounced_at DESC, o.id DESC
  LIMIT $3`
+
+// subjectLineBound caps the send's subject on the way to the wire, as the
+// sibling lanes cap their free text: the column is unbounded and eight
+// multi-megabyte headlines would be a self-inflicted flood.
+const subjectLineBound = 300
+
+// hardBouncesSQL joins each bounced send to the person its activity is filed
+// under. activity_link belongs to the activities module; this read joins it
+// directly rather than through a port for the same reason consent's verdict
+// read and deals' health read do — the link row is shared metadata every
+// module's row-level reads resolve in their own statement. The join carries
+// auth.LinkTargetVisibleClause, the one spelling of the rule every
+// activity_link projection asks: owning the send says nothing about the
+// visibility of the people its activity touches, and a person this caller
+// may not read must not reach the wire even as a bare id. LATERAL with
+// LIMIT 1 rather than a plain join: an activity filed under several people
+// must not put the same bounce on the lane twice.
+func hardBouncesSQL(ctx context.Context, args *[]any) (string, error) {
+	arg := func(v any) int { *args = append(*args, v); return len(*args) }
+	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	if err != nil {
+		return "", err
+	}
+	if visible == "" {
+		visible = "TRUE"
+	}
+	return `
+SELECT o.id, left(COALESCE(o.subject, ''), ` + fmt.Sprint(subjectLineBound) + `), COALESCE(o.bounce_reason, ''), o.bounced_at, l.person_id
+  FROM comms_outbound o
+  LEFT JOIN LATERAL (
+    SELECT al.person_id FROM activity_link al
+     WHERE al.activity_id = o.activity_id AND al.entity_type = 'person' AND ` + visible + `
+     ORDER BY al.person_id LIMIT 1
+  ) l ON true` + hardBouncesFilter, nil
+}
 
 // HardBouncesFor answers the calling person's own hard-bounced sends since
 // `since`, newest report first, bounded. The person comes from the bound
@@ -67,9 +89,14 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 	if !ok || actor.UserID.IsZero() {
 		return nil, fmt.Errorf("comms: reading your bounced sends needs an authenticated person: %w", apperrors.ErrPermissionDenied)
 	}
+	args := []any{actor.UserID, since, limit}
+	statement, err := hardBouncesSQL(ctx, &args)
+	if err != nil {
+		return nil, err
+	}
 	var bounced []HardBounce
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, txErr := tx.Query(ctx, hardBouncesSQL, actor.UserID, since, limit)
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, txErr := tx.Query(ctx, statement, args...)
 		if txErr != nil {
 			return txErr
 		}
