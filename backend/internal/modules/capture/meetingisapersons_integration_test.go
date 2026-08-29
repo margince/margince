@@ -34,6 +34,13 @@ import (
 // integration tests do, so the triggers are exercised under real RLS binding
 // rather than as a superuser.
 func meetingWorkspace(t *testing.T) (context.Context, *database.DB) {
+	ctx, db, _ := meetingWorkspaceWithOwner(t)
+	return ctx, db
+}
+
+// meetingWorkspaceWithOwner also hands back the OWNER connection, for the one
+// case that has to watch the cluster from outside both of its transactions.
+func meetingWorkspaceWithOwner(t *testing.T) (context.Context, *database.DB, *pgx.Conn) {
 	t.Helper()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
@@ -41,7 +48,7 @@ func meetingWorkspace(t *testing.T) (context.Context, *database.DB) {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
-	return ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
+	return ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), owner
 }
 
 func seedActivityAndOrg(ctx context.Context, t *testing.T, db *database.DB, kind string) (ids.UUID, ids.UUID) {
@@ -175,7 +182,7 @@ func TestAMeetingWithAPersonIsUntouched(t *testing.T) {
 // row lock queues behind it and the second transaction re-reads under READ
 // COMMITTED — seeing whichever half landed first, and refusing.
 func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
-	ctx, db := meetingWorkspace(t)
+	ctx, db, owner := meetingWorkspaceWithOwner(t)
 	activityID, orgID := seedActivityAndOrg(ctx, t, db, "note")
 
 	linked, rekinded := make(chan error, 1), make(chan error, 1)
@@ -206,12 +213,17 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 		})
 	}()
 
-	// Long enough for the re-kind to reach its lock — or, unlocked, to sail
-	// past it and commit. Then the link's transaction finishes.
-	time.Sleep(250 * time.Millisecond)
+	// Wait for the re-kind to REACH its lock rather than for a duration: the
+	// cluster is asked who is queued, and unlocked it never queues at all — in
+	// which case the re-kind finishes and says so, and the window closes on
+	// exactly the state this case is about.
+	finished, rekindErr := waitUntilQueuedOrDone(ctx, t, owner, rekinded)
 	close(release)
 
-	linkErr, rekindErr := <-linked, <-rekinded
+	linkErr := <-linked
+	if !finished {
+		rekindErr = <-rekinded
+	}
 	// Whichever order they settle in, they cannot BOTH have succeeded.
 	if linkErr == nil && rekindErr == nil {
 		t.Fatal("both halves committed: the activity is a meeting linked to a company, " +
@@ -230,5 +242,41 @@ func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
 	}
 	if forbidden != 0 {
 		t.Errorf("the estate holds %d company meeting(s) after the race", forbidden)
+	}
+}
+
+// waitUntilQueuedOrDone blocks until the second writer is WAITING ON A LOCK, or
+// until it has finished without ever waiting. `finished` says which happened,
+// and carries that writer's own result when it is the second.
+//
+// The condition, not the clock: a sleep long enough to be reliable is a sleep
+// this suite pays on every run, and one short enough to be cheap is a flake. It
+// asks the cluster instead, on the owner connection so neither of the two
+// transactions under test is disturbed.
+func waitUntilQueuedOrDone(ctx context.Context, t *testing.T, owner *pgx.Conn, done <-chan error) (finished bool, result error) {
+	t.Helper()
+	tick := time.NewTicker(5 * time.Millisecond)
+	defer tick.Stop()
+	giveUp := time.NewTimer(10 * time.Second)
+	defer giveUp.Stop()
+	for {
+		select {
+		case err := <-done:
+			return true, err
+		case <-giveUp.C:
+			t.Fatal("the second writer neither queued behind the first nor finished within ten " +
+				"seconds — this case can say nothing about the window it exists to close")
+			return false, nil
+		case <-tick.C:
+			var queued int
+			if err := owner.QueryRow(ctx, `
+				SELECT count(*) FROM pg_stat_activity
+				 WHERE datname = current_database() AND wait_event_type = 'Lock'`).Scan(&queued); err != nil {
+				t.Fatalf("asking the cluster who is queued: %v", err)
+			}
+			if queued > 0 {
+				return false, nil
+			}
+		}
 	}
 }
