@@ -19371,6 +19371,10 @@ type MorningBrief struct {
 	// is what tells those apart, which is why both fields exist.
 	Narrative *string `json:"narrative,omitempty"`
 
+	// RevenueNormCurrency What `revenue_norm_minor` is in — the installation's base currency as it stood when this run was ranked. A proportion is only checkable against a NAMED base, and a bare figure reads as whatever currency the reader assumes.
+	// Stored with the run rather than resolved on read: the base currency can still be changed until deals freeze it, so a norm computed against EUR must not later be captioned with the USD in force by then. Absent on a run assembled before this field existed — a brief is one row per rep per local day, so those age out within a day.
+	RevenueNormCurrency *string `json:"revenue_norm_currency,omitempty"`
+
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }

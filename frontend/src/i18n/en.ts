@@ -2453,6 +2453,7 @@ export const en = {
   // states that rule rather than guessing: it can only ever name an activity.
   "home.brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
   "home.brief.returnedWith": "It came back with activity on",
+  "home.brief.revenueBasis": "Revenue measured against {amount}",
   "home.brief.resurfaces": "Back",
   "home.evidenceNone": "no evidence recorded",
   "home.snooze": "Snooze",

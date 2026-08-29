@@ -20,7 +20,7 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, pluralKey, useLocale, useT } from "../i18n";
 import { itemDetail, itemTitle } from "./attentionitemcopy";
 import { subjectHref } from "./attentionsubject";
-import { BriefQueueItem } from "./briefqueue";
+import { BriefQueueItem, revenueBasisOf } from "./briefqueue";
 import {
   useBriefItemMark,
   useHomeDeals,
@@ -470,6 +470,7 @@ function MorningCards({
   total,
 }: Readonly<{ items: readonly AttentionItem[]; total: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Pinned rather than ticking: nothing this lane DRAWS depends on the clock,
   // and the instant is read only after a click, to work out when a set-aside
   // item comes back. A one-second interval here would re-render every card on
@@ -529,6 +530,12 @@ function MorningCards({
       </MorningPanel>
     );
   }
+  // The SAME note Home draws. One brief item must not say what it was measured
+  // against on one surface and nothing on the other; composed once here for the
+  // same reason it is there.
+  const revenueBasis = brief.data
+    ? revenueBasisOf(brief.data, locale)
+    : undefined;
   return (
     <MorningPanel total={total}>
       <PanelBody className="today-morning-list">
@@ -539,6 +546,7 @@ function MorningCards({
             deals={deals.data?.rows ?? []}
             nowMs={nowMs}
             mark={mark}
+            revenueBasis={revenueBasis}
           />
         ))}
       </PanelBody>

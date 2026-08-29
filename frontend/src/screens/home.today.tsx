@@ -10,7 +10,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { BriefQueueItem } from "./briefqueue";
+import { BriefQueueItem, revenueBasisOf } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import {
   type Deal,
@@ -109,6 +109,7 @@ function TodayBody({
   mark: ReturnType<typeof useBriefItemMark>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Anything but a served read is the state vocabulary's to draw. A failure used
   // to fall through the `ready` guard and render nothing, so a queue nobody
   // could read looked exactly like a morning with nothing in it.
@@ -138,6 +139,9 @@ function TodayBody({
       </>
     );
   }
+  // Composed ONCE for the run: every item in one brief measured against the
+  // same figure, and formatMoney builds an Intl.NumberFormat per call.
+  const revenueBasis = revenueBasisOf(brief, locale);
   return (
     <>
       <TodayNarrative brief={brief} />
@@ -148,6 +152,7 @@ function TodayBody({
           deals={deals}
           nowMs={nowMs}
           mark={mark}
+          revenueBasis={revenueBasis}
         />
       ))}
     </>

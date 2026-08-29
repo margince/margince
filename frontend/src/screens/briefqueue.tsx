@@ -8,14 +8,20 @@ import { BriefItemCard } from "../design-system/briefitem";
 import {
   formatDate,
   formatDateTime,
+  formatMoney,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "./common";
-import type { Deal, MorningBriefItem, useBriefItemMark } from "./home.queries";
+import type {
+  Deal,
+  MorningBrief,
+  MorningBriefItem,
+  useBriefItemMark,
+} from "./home.queries";
 
 // One brief item, drawn and wired — the whole of what a screen needs to show a
 // queue entry and let a reader answer it.
@@ -90,6 +96,31 @@ export function briefLabels(
 }
 
 /**
+ * What the revenue factor measured against, as money.
+ *
+ * `undefined` unless the run names BOTH the figure and its currency. A bare
+ * number is not money — it reads as whatever currency the reader assumes — and
+ * the note exists so a proportion can be checked, which an unnamed base cannot
+ * do. A run assembled before the currency was carried names none.
+ */
+export function revenueBasisOf(
+  brief: MorningBrief,
+  locale: Locale,
+): string | undefined {
+  if (
+    brief.revenue_norm_minor === undefined ||
+    brief.revenue_norm_currency === undefined
+  ) {
+    return undefined;
+  }
+  return formatMoney(
+    brief.revenue_norm_minor,
+    brief.revenue_norm_currency,
+    locale,
+  );
+}
+
+/**
  * One queue entry, drawn and answerable.
  *
  * `mark` is the caller's rather than this component's own, so a screen showing
@@ -101,11 +132,23 @@ export function BriefQueueItem({
   deals,
   nowMs,
   mark,
+  revenueBasis,
 }: Readonly<{
   item: MorningBriefItem;
   deals: readonly Deal[];
   nowMs: number;
   mark: ReturnType<typeof useBriefItemMark>;
+  /**
+   * The RUN's revenue basis, already formatted as money — every item in one
+   * brief measured against the same figure, so it is the caller's to compose
+   * once rather than each card's to derive.
+   *
+   * Absent when the run does not name a currency, which a run assembled before
+   * the field existed does not. A bare number is not money: it reads as
+   * whatever currency the reader assumes, and the whole point of the note is
+   * that a proportion can be checked.
+   */
+  revenueBasis?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -120,11 +163,11 @@ export function BriefQueueItem({
         item.lineage?.dismissed_on,
         recordZone,
       )}
-      // `revenueBasisNote` is deliberately not passed. The run carries
-      // `revenue_norm_minor` but not the currency it is in, and the base
-      // currency lives on a settings read neither screen makes — a bare figure
-      // with no currency is not a reading, so the card says nothing rather than
-      // something unverifiable.
+      revenueBasisNote={
+        revenueBasis === undefined
+          ? undefined
+          : t("home.brief.revenueBasis", { amount: revenueBasis })
+      }
       dealName={deals.find((deal) => deal.id === item.deal_id)?.name}
       amount={amountOf(item.deal_id, deals, locale)}
       formatPercent={(fraction) =>

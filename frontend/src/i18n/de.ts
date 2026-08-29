@@ -2416,6 +2416,7 @@ export const de = {
   "home.brief.previouslyDismissed":
     "Am {day} markiert — du hast es weggeklickt.",
   "home.brief.returnedWith": "Zurück durch Aktivität am",
+  "home.brief.revenueBasis": "Umsatz gemessen an {amount}",
   "home.brief.resurfaces": "Zurück",
   "home.evidenceNone": "keine Belege erfasst",
   "home.snooze": "Zurückstellen",

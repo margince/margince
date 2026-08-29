@@ -152,16 +152,24 @@ func briefRunToWire(run BriefRun) crmcontracts.MorningBrief {
 	}
 	norm := run.RevenueNormMinor
 	day := openapi_types.Date{Time: run.LocalDay}
+	// Omitted rather than empty when the run predates the column: a client
+	// reading "" would caption the figure with nothing, which is the bare
+	// number this field exists to stop.
+	var normCurrency *string
+	if run.RevenueNormCurrency != "" {
+		normCurrency = &run.RevenueNormCurrency
+	}
 	return crmcontracts.MorningBrief{
-		Id:               openapi_types.UUID(run.ID),
-		GeneratedAt:      run.GeneratedAt,
-		AsOf:             run.AsOf,
-		LocalDay:         &day,
-		CandidateCount:   run.CandidateCount,
-		RevenueNormMinor: &norm,
-		Narrative:        nullableText(run.Narrative),
-		AnnotatedAt:      run.AnnotatedAt,
-		Items:            items,
+		Id:                  openapi_types.UUID(run.ID),
+		GeneratedAt:         run.GeneratedAt,
+		AsOf:                run.AsOf,
+		LocalDay:            &day,
+		CandidateCount:      run.CandidateCount,
+		RevenueNormMinor:    &norm,
+		RevenueNormCurrency: normCurrency,
+		Narrative:           nullableText(run.Narrative),
+		AnnotatedAt:         run.AnnotatedAt,
+		Items:               items,
 	}
 }
 

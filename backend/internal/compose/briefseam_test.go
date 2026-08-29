@@ -26,6 +26,8 @@ var withheldFromTheTool = gatekit.Waive(map[string]string{
 
 	"RevenueNormMinor": "the workspace-wide base the revenue FACTOR was divided by; the factor is " +
 		"served already normalized, so the base explains nothing an agent can act on",
+	"RevenueNormCurrency": "what that base is in, withheld with it — a currency qualifying a figure " +
+		"this surface does not serve names nothing",
 
 	"Narrative": "the agent's OWN sentence about the night, withheld from the agent. It is the " +
 		"only field here the tool's caller wrote rather than read, and handing it back is how a " +
@@ -57,7 +59,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	run := briefs.BriefRun{
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
 		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
-		CandidateCount: 17, RevenueNormMinor: 918_273,
+		CandidateCount: 17, RevenueNormMinor: 918_273, RevenueNormCurrency: "CHF",
 		Narrative:   "Two replies overnight, one deal went quiet.",
 		AnnotatedAt: &annotatedAt,
 		Items: []briefs.BriefRunItem{{
@@ -80,10 +82,21 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		t.Fatalf("marshalling the served run: %v", err)
 	}
 
-	// Every probe is a WIRE FRAGMENT — key and value together — not a bare
-	// value. A served brief is full of uuids, and a uuid is 32 hex digits: a
-	// probe of `3` or `17` is found inside one by chance, so an assertion
-	// written that way passes with the field dropped.
+	// A SERVED field's probe is a wire fragment — key and value together — not
+	// a bare value. A served brief is full of uuids, and a uuid is 32 hex
+	// digits: a probe of `3` or `17` is found inside one by chance, so an
+	// assertion written that way passes with the field dropped.
+	//
+	// A WITHHELD field's probe is the bare value instead, and deliberately: it
+	// is what a LEAK would look like, and a leak need not carry the key this
+	// surface would have given it.
+	//
+	// That makes each of them a collision risk, and the two below are not equal
+	// on it. `CHF` is upper case, which no uuid (lower-case hex) or timestamp
+	// can contain, so it cannot collide at all. `918273` is six hex digits and
+	// COULD appear inside a random uuid — improbably, but the guarantee is
+	// probabilistic rather than structural. A future bare-value probe should be
+	// chosen the way CHF was, not the way 918273 was.
 	assertEveryFieldSurvives(t, "BriefRun", reflect.TypeOf(run), map[string]string{
 		"ID": `"brief_id":"` + runID.String(), "UserID": userID.String(),
 		"GeneratedAt":    `"generated_at":"2026-08-08T06:11:00Z"`,
@@ -95,6 +108,10 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		// Withheld — so the probe is what a LEAK would look like: the value
 		// itself, which must appear nowhere in what the tool served.
 		"RevenueNormMinor": "918273",
+		// Upper case, so no uuid or timestamp in the served document can contain
+		// it — the structural version of the guarantee the digits above only
+		// have by probability.
+		"RevenueNormCurrency": "CHF",
 		// The items are covered field by field below; what this row asserts is
 		// that the list itself arrived.
 		"Items": `"deal_id":"` + dealID.String(),

@@ -2403,6 +2403,7 @@ export const vi = {
   "home.brief.composite": "Điểm",
   "home.brief.previouslyDismissed": "Đã đánh dấu {day} — bạn đã bỏ qua.",
   "home.brief.returnedWith": "Quay lại do hoạt động ngày",
+  "home.brief.revenueBasis": "Doanh thu đo theo {amount}",
   "home.brief.resurfaces": "Trở lại",
   "home.evidenceNone": "chưa ghi nhận bằng chứng",
   "home.snooze": "Tạm hoãn",
