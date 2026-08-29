@@ -207,19 +207,7 @@ func checkDealsHaveStakeholders(c *client, _ demoConfig) ([]verifyFinding, error
 		return nil, err
 	}
 
-	hasStaff := map[string]bool{}
-	err = c.getAll("/v1/relationships", url.Values{"kind": {"employment"}}, func(raw json.RawMessage) error {
-		var rows []struct {
-			OrganizationID string `json:"organization_id"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			hasStaff[row.OrganizationID] = true
-		}
-		return nil
-	})
+	hasStaff, err := staffedOrganizations(c)
 	if err != nil {
 		return nil, err
 	}

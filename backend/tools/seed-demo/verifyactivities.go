@@ -90,13 +90,19 @@ func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error
 }
 
 // staffedOrganizations names the companies that employ somebody, from ONE
-// whole-table read rather than a request per activity.
+// whole-table read rather than a request per record.
 //
-// Both rules here need it and for the same reason: a conversation with a
-// company that publishes nobody has no counterpart to be filed against, so
-// reporting it would be reporting something no re-run can repair. It is the
-// exemption checkDealsHaveStakeholders already makes for a deal at such a
-// company, one table over.
+// THREE rules need it and all for the same reason: a conversation with a
+// company that publishes nobody has no counterpart to be filed against, and a
+// deal there has nobody to put on a committee. Reporting either would be
+// reporting something no re-run can repair, and a finding that survives every
+// repair is one a reader learns to ignore — which costs the rule its real
+// findings too.
+//
+// One reader, because "which companies employ somebody" is one question. Spelled
+// per rule, a change to how employments are filtered would reach whichever of
+// them the author had in front of them, and the checks would disagree about the
+// same company while each looked right on its own.
 func staffedOrganizations(c *client) (map[string]bool, error) {
 	staffed := map[string]bool{}
 	err := c.getAll("/v1/relationships", url.Values{"kind": {"employment"}}, func(raw json.RawMessage) error {
