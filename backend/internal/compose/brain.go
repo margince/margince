@@ -340,7 +340,7 @@ func (b routerBrain) Complete(ctx context.Context, req model.Request) (model.Res
 	return resp, err
 }
 
-// prepareOrAnnounce is the one spelling of the seams' preparation step: a
+// prepareOrAnnounce is the seams' shared preparation step: a
 // preparation failure is a failure of work the user asked for, so it reaches
 // the rail before the error reaches the caller — and a seam that prepares
 // through this helper cannot forget the announce.
