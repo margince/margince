@@ -19,7 +19,6 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
-	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -107,12 +106,14 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if h.blobs == nil {
 		return fmt.Errorf("this role stores no objects, so it holds no import source: %w", apperrors.ErrConflict)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return fmt.Errorf("no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
-	}
-	if !strings.HasPrefix(ref, blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, "")) {
-		return fmt.Errorf("that import source belongs to another workspace: %w", apperrors.ErrPermissionDenied)
+	// The SAME check staging makes, not a prefix of it. A prefix admits a key
+	// with extra segments under this workspace's import namespace, and answers
+	// forbidden — which tells a caller that a reference they were never given
+	// belongs to somebody. ownsSource matches the whole minted key and answers
+	// not-found, and a delete is not the place to start disagreeing with the
+	// read about what a source ref is.
+	if err := h.ownsSource(ctx, ref); err != nil {
+		return err
 	}
 	return h.blobs.Delete(ctx, ref)
 }
