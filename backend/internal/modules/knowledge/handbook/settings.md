@@ -81,17 +81,17 @@ last quarter reported.
 **Company context** — what Margince knows about your own company, and where it
 read it from. You can also tell it directly.
 
-## People & access
+## Users & teams
 
-Three cards.
+Two cards.
 
-**Members** — "Everyone who holds a seat here, deactivated accounts included."
-Invite, change role, deactivate, reactivate. Reading the roster is open to
-members; managing it is administrators only.
+**Users** — "Everyone who holds a seat here, deactivated accounts included."
+Invite, change role, deactivate, reactivate. Reading the roster is open to every
+user; managing it is administrators only.
 
-**Teams** — named groups, used mainly as share targets.
-
-**Extensions & access** — what each role may reach.
+**Teams** — named groups you can share records with. Being in a team grants no
+access on its own: no shipped role is team-scoped, so a team matters when a
+record is shared with it.
 
 See [Seats, roles and who can see what](seats-roles-and-access.md).
 
@@ -207,7 +207,7 @@ See [Seats, roles and who can see what](seats-roles-and-access.md#the-licence).
 | Page | Who |
 |---|---|
 | Account, Writing voice, Agents, Connections, Capture activity | every member |
-| General, People & access, Integrations, Capture, Data model, AI, Knowledge, License, Maintenance | Admin or Ops |
+| General, Users & teams, Integrations, Capture, Data model, AI, Knowledge, License, Maintenance | Admin or Ops |
 | Privacy & audit | Admin or Ops; the audit log and privacy inbox inside it are Admin only |
 | Job health, Reset data, member management, extension access | Admin only |
 

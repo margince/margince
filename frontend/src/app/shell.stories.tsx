@@ -396,7 +396,7 @@ const SETTINGS_SECTION: NavSection = {
       headingKey: "settings.group.admin",
       items: [
         { id: "general", labelKey: "settings.tab.general", icon: Building2 },
-        { id: "people", labelKey: "settings.tab.people", icon: UsersRound },
+        { id: "users", labelKey: "settings.tab.users", icon: UsersRound },
         { id: "connections", labelKey: "settings.tab.connections", icon: Plug },
         { id: "capture", labelKey: "settings.tab.capture", icon: Mail },
         {
@@ -410,7 +410,7 @@ const SETTINGS_SECTION: NavSection = {
           labelKey: "settings.tab.privacy",
           icon: ShieldCheck,
           children: [
-            { id: "people", labelKey: "settings.tab.people", icon: UsersRound },
+            { id: "users", labelKey: "settings.tab.users", icon: UsersRound },
             {
               id: "data-model",
               labelKey: "settings.tab.data-model",

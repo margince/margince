@@ -71,7 +71,7 @@ describe("SettingsScreen tab layout", () => {
       "Writing voice",
       "Agents",
       "Connections",
-      "People & access",
+      "Users & teams",
       "Data model",
       "Privacy & audit",
       "Maintenance",
@@ -263,7 +263,7 @@ const SHARED_READ_TABS = EVERY_TAB.filter(
 // vocabulary, but the registry's server gate is not a role either: ListPurposes
 // demands `person:read`, so that is what the entry asks for. Every seeded role
 // holds it; a principal holding nothing does not.
-const OPERATOR_TABS = [...PERSONAL_TABS, "People & access"];
+const OPERATOR_TABS = [...PERSONAL_TABS, "Users & teams"];
 const OPERATOR_TABS_WITH_PRIVACY = [...OPERATOR_TABS, "Privacy & audit"];
 
 // The seat's two entries plus Maintenance, which is what EITHER half of that
@@ -368,7 +368,7 @@ describe("SettingsScreen Admin settings group", () => {
   });
 
   it("gives an operator holding no read at all the one entry that asks for none", async () => {
-    // People & access has no grant to ask for: the member roster answers 200 to
+    // Users & teams has no grant to ask for: the user roster answers 200 to
     // any authenticated principal and no RBAC object describes identity
     // administration. So it is the floor of this group for an operator rather
     // than a case — every gated member is gone here, and that one stays.
@@ -443,7 +443,7 @@ describe("SettingsScreen Admin settings group", () => {
       await waitFor(() =>
         expect(navTabs()).toEqual([
           ...PERSONAL_TABS,
-          "People & access",
+          "Users & teams",
           "Data model",
           "Privacy & audit",
         ]),
@@ -464,7 +464,7 @@ describe("SettingsScreen Admin settings group", () => {
       await waitFor(() =>
         expect(navTabs()).toEqual([
           ...PERSONAL_TABS,
-          "People & access",
+          "Users & teams",
           "Integrations",
           "Privacy & audit",
         ]),
@@ -485,7 +485,7 @@ describe("SettingsScreen Admin settings group", () => {
     await waitFor(() =>
       expect(navTabs()).toEqual([
         ...PERSONAL_TABS,
-        "People & access",
+        "Users & teams",
         "Capture",
         "Privacy & audit",
       ]),
@@ -524,7 +524,7 @@ describe("SettingsScreen Admin settings group", () => {
       expect(navTabs()).toEqual([
         ...PERSONAL_TABS,
         "General",
-        "People & access",
+        "Users & teams",
         "Privacy & audit",
       ]),
     );
@@ -542,7 +542,7 @@ describe("SettingsScreen Admin settings group", () => {
     await waitFor(() =>
       expect(navTabs()).toEqual([
         ...PERSONAL_TABS,
-        "People & access",
+        "Users & teams",
         "AI",
         "Privacy & audit",
       ]),

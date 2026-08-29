@@ -241,9 +241,15 @@ export function TeamsCard() {
                     label={team.name}
                     // The roster's own count copy, which has a singular — this
                     // row said "1 members" for a team of one.
-                    value={plural("users.memberCount", team.member_count ?? 0, {
-                      count: formatNumber(team.member_count ?? 0, locale),
-                    })}
+                    // The TEAM's own count key, not the roster's: this row
+                    // counts members OF a team, while the roster above counts
+                    // users of the installation. One key for both made the
+                    // rename of one of them silently rewrite the other.
+                    value={plural(
+                      "users.teamMemberCount",
+                      team.member_count ?? 0,
+                      { count: formatNumber(team.member_count ?? 0, locale) },
+                    )}
                     control={
                       <Button
                         small

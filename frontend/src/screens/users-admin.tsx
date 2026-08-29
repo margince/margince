@@ -21,6 +21,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
 import { useHoldsAdminRole } from "../app/capability";
@@ -32,7 +33,7 @@ import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
 type User = components["schemas"]["User"];
 type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
-// Wire keys, not product names: `manager` shows as Team Lead, `rep` as Member
+// Wire keys, not product names: `manager` shows as Team Lead, `rep` as User
 // (ADR-0110). The catalog carries the display names.
 const ROLES: readonly Role[] = [
   "admin",
@@ -43,16 +44,31 @@ const ROLES: readonly Role[] = [
   "ops",
 ];
 
+// The catalog key each wire key reads under. `role.*` is the ONE role catalog —
+// this screen used to carry a second, `users.role.*`, whose English was
+// identical and therefore drifted silently the moment either was edited. The
+// map is written out rather than templated because one key is not its wire key:
+// `read_only` reads under `role.readOnly`, and a template would compile to a key
+// the catalog does not answer.
+const ROLE_LABEL_KEY = {
+  admin: "role.admin",
+  management: "role.management",
+  manager: "role.manager",
+  rep: "role.rep",
+  read_only: "role.readOnly",
+  ops: "role.ops",
+} as const satisfies Record<Role, MessageKey>;
+
 // roleLabel names a held role key. The catalog covers the six system roles;
 // a workspace-defined key has no translation, so it reads as itself rather
 // than as a missing-translation marker — the admin still learns what is held.
 const roleLabel = (t: ReturnType<typeof useT>) => (key: string) =>
-  isOption(key, ROLES) ? t(`users.role.${key}`) : key;
+  isOption(key, ROLES) ? t(ROLE_LABEL_KEY[key]) : key;
 
-// The five system roles as pickable options — shared by the invite form and
+// The six system roles as pickable options — shared by the invite form and
 // every roster row so the two lists cannot drift apart.
 const roleOptions = (t: ReturnType<typeof useT>): SelectOption[] =>
-  ROLES.map((role) => ({ value: role, label: t(`users.role.${role}`) }));
+  ROLES.map((role) => ({ value: role, label: t(ROLE_LABEL_KEY[role]) }));
 
 // The member roster (org settings). Every user-management WRITE is admin-only
 // server-side, but the read is not: `GET /users` answers 200 to any authenticated

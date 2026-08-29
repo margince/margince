@@ -42,9 +42,9 @@ const (
 // verb (deactivating vs demoting the last admin), so the handler supplies the
 // wording and these carry only the cause.
 var (
-	errEmailTaken      = fmt.Errorf("%w: a member with this email already exists", apperrors.ErrConflict)
-	errNotDeactivated  = fmt.Errorf("%w: the member is not deactivated", apperrors.ErrConflict)
-	errLastActiveAdmin = fmt.Errorf("%w: the member is the only active administrator", apperrors.ErrConflict)
+	errEmailTaken      = fmt.Errorf("%w: a user with this email already exists", apperrors.ErrConflict)
+	errNotDeactivated  = fmt.Errorf("%w: the user is not deactivated", apperrors.ErrConflict)
+	errLastActiveAdmin = fmt.Errorf("%w: the user is the only active administrator", apperrors.ErrConflict)
 	// The agent seat holds no role, ever. Its authority is the passport granting
 	// it intersected with the human that passport names, so a role on its own
 	// row grants nothing today and is a standing grant nothing bounds tomorrow —
@@ -52,7 +52,7 @@ var (
 	// guard below, letting an operator deactivate the final human administrator
 	// on the strength of an identity that can never sign in.
 	errAgentSeatHoldsNoRole = fmt.Errorf("%w: the agent seat holds no role", apperrors.ErrConflict)
-	// A role key nobody defines is a 404 like a missing member, but it is a
+	// A role key nobody defines is a 404 like a missing user, but it is a
 	// DIFFERENT 404: the admin mistyped a role, not a person. Wrapping keeps
 	// the status while letting the handler say which of the two happened.
 	errUnknownRole = fmt.Errorf("%w: no role with this key is defined", apperrors.ErrNotFound)

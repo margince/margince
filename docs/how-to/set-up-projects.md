@@ -63,8 +63,8 @@ Two consequences:
   the project from the live list and frees its key, and it cannot be undone
   from the UI, so it stays with manager, management, admin and ops.
 
-An admin assigns roles in **Settings → People & access**; the member's card
-there shows, under **What this member sees**, what their role grants on
+An admin assigns roles in **Settings → Users & teams**; the user's card
+there shows, under **What this user sees**, what their role grants on
 **Projects**. The grants themselves are seeded per role and are not editable
 in the app.
 
