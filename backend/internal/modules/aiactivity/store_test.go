@@ -14,10 +14,12 @@ package aiactivity
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -67,5 +69,16 @@ func TestAPersonalReadWithNoPersonIsRefused(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "needs an authenticated person") {
 		t.Fatalf("the refusal must say what is missing, got %v", err)
+	}
+}
+
+// The same guard, on the troubled read, proven ABOVE the query: the store has
+// no pool, so a refusal that did not precede the read would panic rather than
+// pass — and it is the permission sentinel, which is what lets the attention
+// feed render the lane as withheld instead of failing the day.
+func TestTroubledWithNoPersonIsRefusedWithTheSentinel(t *testing.T) {
+	_, err := NewStore(nil).Troubled(context.Background(), time.Time{}, 8)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("Troubled with no person = %v, want ErrPermissionDenied", err)
 	}
 }

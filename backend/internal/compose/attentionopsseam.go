@@ -9,8 +9,10 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/overlay"
@@ -72,6 +74,33 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
 		})
+	}
+	return out, nil
+}
+
+// attentionAIWork binds the AI-work-health lane to the same projection the
+// activity rail reads; the person-only refusal lives in the store's read.
+type attentionAIWork struct{ store *aiactivity.Store }
+
+func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit int) ([]attention.TroubledRun, error) {
+	troubled, err := a.store.Troubled(ctx, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.TroubledRun, 0, len(troubled))
+	for _, run := range troubled {
+		item := attention.TroubledRun{
+			ID:         run.ID,
+			State:      run.State,
+			OccurredAt: run.OccurredAt,
+		}
+		if run.Summary != nil {
+			item.Summary = *run.Summary
+		}
+		if run.SubjectLabel != nil {
+			item.SubjectLabel = *run.SubjectLabel
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }

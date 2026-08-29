@@ -1248,6 +1248,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
+	AttentionLanesOmittedAiWorkHealth      AttentionLanesOmitted = "ai_work_health"
 	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedCaptureHealth     AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
@@ -1265,6 +1266,8 @@ const (
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
 func (e AttentionLanesOmitted) Valid() bool {
 	switch e {
+	case AttentionLanesOmittedAiWorkHealth:
+		return true
 	case AttentionLanesOmittedAtRisk:
 		return true
 	case AttentionLanesOmittedCaptureHealth:
@@ -1353,6 +1356,7 @@ func (e AttentionItemActions) Valid() bool {
 
 // Defines values for AttentionItemSource.
 const (
+	AttentionItemSourceAiWorkHealth      AttentionItemSource = "ai_work_health"
 	AttentionItemSourceApproval          AttentionItemSource = "approval"
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
@@ -1370,6 +1374,8 @@ const (
 // Valid indicates whether the value is a known member of the AttentionItemSource enum.
 func (e AttentionItemSource) Valid() bool {
 	switch e {
+	case AttentionItemSourceAiWorkHealth:
+		return true
 	case AttentionItemSourceApproval:
 		return true
 	case AttentionItemSourceBriefItem:
@@ -13676,6 +13682,19 @@ type AttachmentReadStartedStatus string
 // its lane is scoped: a number a caller cannot page to would report the existence of
 // records they may not read.
 type Attention struct {
+	// AiWorkHealth The reader's OWN AI work that went wrong: runs that failed in the recent
+	// window, and live runs past the lease their source declared (stalled).
+	// Read from the AI-task projection, so it claims ONLY AI work — email
+	// delivery, capture backfills and scheduled sends never reach it and are
+	// reported by their own lanes. `kind` is "failed" or "stalled"; `title`
+	// carries the run's own summary where one was recorded and `detail` what it
+	// was about. Failures age out with the window; there is no ack state.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind
+	// it. Absent — not empty — on an installation whose feed does not read the
+	// AI-task projection.
+	AiWorkHealth *[]AttentionItem `json:"ai_work_health,omitempty"`
+
 	// AsOf The instant every lane below was read at.
 	AsOf time.Time `json:"as_of"`
 
@@ -13841,6 +13860,9 @@ type AttentionThisMorningState string
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
 type AttentionCounts struct {
+	// AiWorkHealth How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures.
+	AiWorkHealth *int `json:"ai_work_health,omitempty"`
+
 	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
 	AtRisk *int `json:"at_risk,omitempty"`
 

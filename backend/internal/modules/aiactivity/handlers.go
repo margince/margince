@@ -53,8 +53,8 @@ func NewHandlers(store Reader, now func() time.Time) Handlers {
 func (h Handlers) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMyAiActivityParams) {
 	// Refused HERE as well as in the store, and the duplication is deliberate:
 	// this one turns an unidentified caller into a 401 the client understands,
-	// where the store's turns it into a 500. The store's is the one that makes
-	// it impossible; this one makes it legible.
+	// where the store's refusal maps to a 403. The store's is the one that
+	// makes it impossible; this one makes it legible.
 	p, ok := principal.Actor(r.Context())
 	if !ok || p.UserID.IsZero() {
 		httperr.Unauthorized(w, r, "reading your AI activity needs an authenticated caller")

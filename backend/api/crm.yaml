@@ -30312,9 +30312,24 @@ components:
             else's. Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does not read
             capture connections.
+        ai_work_health:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            The reader's OWN AI work that went wrong: runs that failed in the recent
+            window, and live runs past the lease their source declared (stalled).
+            Read from the AI-task projection, so it claims ONLY AI work — email
+            delivery, capture backfills and scheduled sends never reach it and are
+            reported by their own lanes. `kind` is "failed" or "stalled"; `title`
+            carries the run's own summary where one was recorded and `detail` what it
+            was about. Failures age out with the window; there is no ack state.
+
+            Withheld — named in `lanes_omitted` — for a caller with no human behind
+            it. Absent — not empty — on an installation whose feed does not read the
+            AI-task projection.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health, capture_health] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, sync_health, capture_health, ai_work_health] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30381,6 +30396,12 @@ components:
           description: >-
             How many capture connections need the reader's hand — one per connection,
             the full count rather than a bounded page.
+        ai_work_health:
+          type: integer
+          minimum: 0
+          description: >-
+            How many troubled AI runs the lane is CARRYING — the bounded page, as the
+            other lanes report. A reader past the bound sees the newest failures.
 
 
     AttentionItem:
@@ -30395,7 +30416,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

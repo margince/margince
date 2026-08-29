@@ -199,6 +199,15 @@ export const de = {
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
   "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.aiWork": "KI-Arbeit mit Problemen",
+  "day.aiWork.empty": "Alles, was Sie der KI übergeben haben, ist gelaufen.",
+  "day.aiWork.kind.failed":
+    "Eine an die KI übergebene Aufgabe ist fehlgeschlagen",
+  "day.aiWork.kind.stalled": "Eine an die KI übergebene Aufgabe hängt fest",
+  "day.aiWork.kind.generic":
+    "Eine an die KI übergebene Aufgabe braucht einen Blick",
+  "day.lead.aiWork":
+    "Etwas, das Sie der KI übergeben haben, ist nicht gelaufen.",
   "day.captureHealth": "Postfach-Verbindungen",
   "day.captureHealth.empty": "Alle Ihre Postfächer werden erfasst.",
   "day.captureHealth.kind.reauth_required":
