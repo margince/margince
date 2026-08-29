@@ -210,8 +210,9 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// concurrent syncs of different mailboxes must not see each other.
 	st := &syncState{owner: creds.Email, contacts: map[string]struct{}{}}
 	if err := netConn.SetDeadline(time.Now().Add(pullDeadline)); err != nil {
-		// Without the deadline a wedged server could hang this pull
-		// forever — refuse rather than sync unbounded.
+		// Armed for the exchanges before v2 takes the deadline over — see
+		// pullDeadline, which says how much of the phase this really bounds.
+		// A connection that will not take a deadline is not one to sync on.
 		return nil, fmt.Errorf("imap: arming the read deadline: %w", errors.Join(ErrUnreachable, err))
 	}
 
