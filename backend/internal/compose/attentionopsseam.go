@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 )
@@ -101,6 +102,28 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 			item.SubjectLabel = *run.SubjectLabel
 		}
 		out = append(out, item)
+	}
+	return out, nil
+}
+
+// attentionBounces binds the bounce lane to the comms store's own per-user
+// read of the stamp RecordBounce leaves; the person-only refusal lives there.
+type attentionBounces struct{ store *comms.Store }
+
+func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limit int) ([]attention.BouncedSend, error) {
+	bounced, err := b.store.HardBouncesFor(ctx, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.BouncedSend, 0, len(bounced))
+	for _, send := range bounced {
+		out = append(out, attention.BouncedSend{
+			ID:        send.ID,
+			Subject:   send.Subject,
+			Reason:    send.Reason,
+			BouncedAt: send.BouncedAt,
+			PersonID:  send.PersonID,
+		})
 	}
 	return out, nil
 }

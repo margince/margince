@@ -5,6 +5,7 @@ import {
   GitMerge,
   Handshake,
   Inbox,
+  MailX,
   RefreshCw,
   Scale,
   ShieldAlert,
@@ -155,6 +156,12 @@ function quietLead(
   if (failed > 0) {
     return t("day.lead.didNotRun", { count: formatNumber(failed, locale) });
   }
+  // A bounced send is a conversation the rep believes is happening and is
+  // not — worse news than a drifting deal, because the customer never heard.
+  const undelivered = day.counts.bounces ?? 0;
+  if (undelivered > 0) {
+    return t("day.lead.bounces", { count: formatNumber(undelivered, locale) });
+  }
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
@@ -202,7 +209,8 @@ function quietLead(
     day.counts.did_not_run === undefined ||
     day.counts.meetings === undefined ||
     day.counts.capture_health === undefined ||
-    day.counts.ai_work_health === undefined
+    day.counts.ai_work_health === undefined ||
+    day.counts.bounces === undefined
   ) {
     return t("day.lead.clearOfWhatWasRead");
   }
@@ -662,6 +670,10 @@ function TodayLanes({
   // stalled past its lease. Withheld for a caller with no human behind it.
   const troubledRuns = day.ai_work_health;
   const troubledTone = warnWhenHolding(troubledRuns);
+  // The reader's own sends that never arrived. Warn-toned whenever it holds
+  // anything: every row is a thread the rep may be following up into a void.
+  const undelivered = day.bounces;
+  const undeliveredTone = warnWhenHolding(undelivered);
   const requestsTone = warnWhenHolding(requests);
   const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
@@ -828,6 +840,22 @@ function TodayLanes({
         lane="capture_health"
         total={day.counts.capture_health ?? 0}
         tone={mailboxTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={undelivered}
+        shape={{
+          title: t("day.bounces"),
+          empty: t("day.bounces.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: MailX,
+        }}
+        omitted={omitted}
+        lane="bounces"
+        total={day.counts.bounces ?? 0}
+        tone={undeliveredTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

@@ -41,7 +41,7 @@ func TestABoundResolverNamesEveryCardOnce(t *testing.T) {
 			{ID: ids.NewV7(), DealID: deal, Rank: 2},
 		}}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
-		nil, nil, nil, nil, nil, nil, nil, names,
+		nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -71,7 +71,7 @@ func TestARefusedLabelCostsTheNameAndNeverTheReference(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, names,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -93,7 +93,7 @@ func TestAnUnboundFeedSendsSubjectsUnnamed(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -117,7 +117,7 @@ func TestEveryLanesSubjectsAreNamed(t *testing.T) {
 		}}},
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
 		&stubDecay{rows: []QuietRelationship{{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: readInstant}}},
-		nil, nil, nil, nil, nil, nil, names,
+		nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {

@@ -146,6 +146,17 @@ func (s *Service) optionalLanes(
 			into: &out.AiWorkHealth, count: &out.Counts.AiWorkHealth,
 		},
 		{
+			name: "bounces", bound: s.bounces != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// A week, not a day: a dead address needs fixing whenever the
+				// rep next sits down, and a bounce that ages out unseen is
+				// the invisible failure this lane exists to end.
+				undelivered, err := s.bounces.HardBounces(ctx, asOf.Add(-7*24*time.Hour), doneCap)
+				return renderEach(undelivered, bounceItem), err
+			},
+			into: &out.Bounces, count: &out.Counts.Bounces,
+		},
+		{
 			name: "relationship_decay", bound: s.decay != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, err := s.decay.Lapsed(ctx)
