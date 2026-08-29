@@ -265,9 +265,39 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     // The page says why once, rather than each control failing on its own.
-    expect(
-      screen.getByText(/This project belongs to someone else/),
-    ).toBeTruthy();
+    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+
+    // Every verb, not a sample of them: asserting one control would leave the
+    // others free to regress one at a time. New Deal is here because binding a
+    // deal to a project needs write authority OVER the project.
+    for (const label of ["New deal"]) {
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+    }
+    // Edit is refused in place, and the id it describes itself by must resolve
+    // to the sentence in the band from the FIRST render — a reason minted
+    // inside a menu would name no element until the menu was opened.
+    const edit = screen.getByRole("button", { name: "Edit project" });
+    expect(edit.hasAttribute("disabled")).toBe(true);
+    const reasonId = edit.getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(reasonId)?.textContent).toMatch(
+      /You cannot change this project/,
+    );
+    // Inside the overflow menu the verbs are refused rather than dropped, so a
+    // reader learns the verb exists and why it is shut. What must NOT happen is
+    // a pressable one: clicking it opens the flow and the save 403s.
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    // Barred is the NATIVE disabled attribute — the design system reserves
+    // aria-disabled for "busy" — and each carries aria-describedby pointing at
+    // the one sentence in the band, so a reader is told why rather than left
+    // with a dead control.
+    for (const label of [/^Archive/, /^Assign/, /^Share/]) {
+      for (const verb of screen.queryAllByRole("button", { name: label })) {
+        expect(
+          `${verb.textContent} disabled=${verb.hasAttribute("disabled")}`,
+        ).toBe(`${verb.textContent} disabled=true`);
+        expect(verb.getAttribute("aria-describedby")).toBeTruthy();
+      }
+    }
 
     // The stepper is the one write control on the page that takes a single
     // click, so it is the one that would have posted before any dialog.
@@ -276,31 +306,22 @@ describe("ProjectScreen", () => {
     expect(posted).toBe(false);
   });
 
-  // An unowned project is nobody's yet, not somebody else's, and the door that
-  // lets a reader take it on has to stay open. Withholding here would be the
-  // fix overshooting into a lock-out.
-  it("keeps the write controls on a project nobody owns", async () => {
-    const user = userEvent.setup();
-    let posted: unknown = null;
+  // A company keeps its controls on an ownerless record because the claim door
+  // is what makes it writable. A project has no such door — ClaimRecord refuses
+  // the type — and the server treats an ownerless row as nobody's to change. So
+  // `writable` is the whole answer here, and an ownerless project the server
+  // says is unwritable is drawn read-only like any other.
+  it("refuses an unowned project the server says this caller cannot write", async () => {
     projectsBackend({
       view: project360({
-        project: project({ owner_id: null, writable: true }),
+        project: project({ owner_id: null, writable: false }),
       }),
-      respond: async (url, method, request) => {
-        if (method === "POST" && url.endsWith("/advance")) {
-          posted = JSON.parse(await request.text());
-          return jsonResponse(project({ phase: "pursuing" }));
-        }
-        return null;
-      },
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
 
-    await user.click(screen.getByTestId("project-step-pursuing"));
-    const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Move" }));
-    await waitFor(() => expect(posted).toBeTruthy());
+    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   });
 
   // Absent is not "unknown", it is "no": a response from a server too old to
@@ -315,8 +336,6 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
 
-    expect(
-      screen.getByText(/This project belongs to someone else/),
-    ).toBeTruthy();
+    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
   });
 });

@@ -95,20 +95,19 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const recordZone = useRecordZone();
   const project = view.project;
-  const archivedReasonId = useId();
+  const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
   const overlay = useSorMode() === "overlay";
   const chronology = useProjectChronology(view, overlay);
-  const refusedByArchive = project.archived_at ? archivedReasonId : undefined;
-  // Every write affordance on this page answers ONE question, so it is asked
-  // once: an archived project takes no changes, and one that belongs to
-  // somebody else takes none from this caller. The stepper and the rail cards
-  // used to ask only the first half, which offered a reader a phase move and a
-  // stakeholder edit the save would refuse.
+  // Every write affordance on this page answers ONE question, asked once: an
+  // archived project takes no changes, and one this caller cannot write takes
+  // none from them. The verbs, the stepper and the rail cards used to ask only
+  // the first half, which offered a reader a phase move and a stakeholder edit
+  // the save would refuse.
   //
-  // Same rule as the verbs, so the page cannot disagree with itself about
-  // whether it is writable — including on an UNOWNED project, where both stay
-  // open because nobody owns it yet.
+  // One answer and one rendered sentence, so the page cannot disagree with
+  // itself about whether the record is writable, and every disabled control
+  // describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
   return (
@@ -126,7 +125,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <>
           <ProjectActions
             project={project}
-            archivedReasonId={refusedByArchive}
+            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
           />
           <PageAsideToggle />
         </>
@@ -142,13 +141,13 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           {/* One sentence for why this record takes no changes, whichever
               reason applies, so the stepper below can point at it. */}
           {readOnlyReason && (
-            <p id={archivedReasonId} className="t-caption">
+            <p id={readOnlyReasonId} className="t-caption">
               {readOnlyReason}
             </p>
           )}
           <PhaseStepper
             phase={project.phase}
-            refusedReasonId={readOnly ? archivedReasonId : undefined}
+            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
             pending={false}
             onMove={setMoveTo}
           />
@@ -188,8 +187,14 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <ProjectDealsCard
           view={view}
           actions={
+            // New Deal from HERE binds the deal to this project, and binding is
+            // held to project WRITE authority rather than deal permission
+            // alone: winning the deal later advances the project's phase
+            // without re-checking, so `EnsureAttachable` proves the authority
+            // at the moment of attaching. A caller who may read this project
+            // but not write it can still work deals — just not born into it.
             !overlay &&
-            !project.archived_at &&
+            !readOnly &&
             project.organization_id && (
               <NewDealAction
                 orgId={project.organization_id}
@@ -265,7 +270,8 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
  * with nothing green beside it the eye went there first.
  */
 // useProjectVerbRefusal answers why this project's own verbs — edit, archive,
-// assign, share — are refused, or undefined when they are not.
+// assign, share, the phase stepper, the rail cards — are refused, or undefined
+// when they are not.
 //
 // `writable` is what the server's write gate would answer on a mutation, and
 // the contract asks a client to draw or withhold affordances by it so a reader
@@ -273,36 +279,39 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
 // a response from a server too old to send the field fails closed.
 //
 // Archived comes first because it is the reason a reader can act on, by
-// restoring the record. An UNOWNED project is not "somebody else's" — nobody
-// owns it yet — so its verbs stay pressable, the same call companies make.
+// restoring the record.
+//
+// Unlike a company, an UNOWNED project is refused rather than left open. The
+// company page keeps its controls on an ownerless record because the claim door
+// is what makes it writable, and shutting the controls would shut the way out.
+// A project has no such door — `ClaimRecord` refuses the type outright — and
+// `writeAuthorityPredicate` treats an ownerless row as nobody's to change. So
+// here `writable` is the whole answer, and second-guessing it would offer
+// controls the save refuses with nothing a reader could do about it.
 function useProjectVerbRefusal(project: Project): string | undefined {
   const t = useT();
   if (project.archived_at) {
     return t("project.archivedReadOnly");
   }
-  if (project.owner_id && !(project.writable ?? false)) {
+  if (!(project.writable ?? false)) {
     return t("project.notYoursToChange");
   }
   return undefined;
 }
 
+// refusedReasonId is the id of the sentence the BAND renders, passed in rather
+// than minted here. The verbs describe themselves by pointing at that one
+// sentence: a second copy inside the OverflowMenu would not exist until the
+// menu was first opened, so the header's Edit control would spend its first
+// render describing itself by an id naming no element at all.
 function ProjectActions({
   project,
-  archivedReasonId,
-}: Readonly<{ project: Project; archivedReasonId?: string }>) {
+  refusedReasonId,
+}: Readonly<{ project: Project; refusedReasonId?: string }>) {
   const t = useT();
   const me = useMe();
   const companies = useCompanyOptions();
   const overlay = useSorMode() === "overlay";
-  // The archived note is already rendered in the band, so an archived project
-  // points its verbs at that sentence rather than printing a second copy. A
-  // project that is simply somebody else's has no such note, so the menu
-  // carries its own.
-  const ownReasonId = useId();
-  const refusedReason = useProjectVerbRefusal(project);
-  const refusedReasonId = refusedReason
-    ? (archivedReasonId ?? ownReasonId)
-    : undefined;
   return (
     <>
       <EditAction<Project>
@@ -333,14 +342,6 @@ function ProjectActions({
         recordKey="project"
       />
       <OverflowMenu label={t("record.moreActions")}>
-        {/* The verbs are refused rather than dropped, so the sentence refusing
-            them travels with them. Only when the band is not already saying it
-            for an archived record. */}
-        {refusedReason && !archivedReasonId && (
-          <p id={ownReasonId} className="t-caption">
-            {refusedReason}
-          </p>
-        )}
         <ArchiveAction
           disabledReasonId={refusedReasonId}
           label={t("project.archive")}

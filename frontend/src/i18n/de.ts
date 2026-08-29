@@ -6873,7 +6873,7 @@ export const de = {
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und nimmt keine Änderungen an.",
   "project.notYoursToChange":
-    "Dieses Projekt gehört jemand anderem. Bitten Sie den Inhaber um Freigabe, wenn Sie etwas ändern möchten.",
+    "Sie können dieses Projekt nicht ändern. Bitten Sie den Inhaber um Freigabe oder Ihre Administration um das Recht zum Bearbeiten.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "Alle Phasen",
   "project.viewDelivering": "In Umsetzung",

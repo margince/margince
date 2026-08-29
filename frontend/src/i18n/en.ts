@@ -6961,7 +6961,7 @@ export const en = {
     "Archiving removes this project from the live list and frees its key. This cannot be undone from the UI.",
   "project.archivedReadOnly": "This project is archived and takes no changes.",
   "project.notYoursToChange":
-    "This project belongs to someone else. Ask its owner to share it with you if you need to make changes.",
+    "You cannot change this project. Ask its owner to share it with you, or your administrator for the right to edit it.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "All phases",
   "project.viewDelivering": "In delivery",

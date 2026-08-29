@@ -6817,7 +6817,7 @@ export const vi = {
     "Lưu trữ sẽ đưa dự án này ra khỏi danh sách đang hoạt động và giải phóng mã của nó. Không thể hoàn tác từ giao diện.",
   "project.archivedReadOnly": "Dự án này đã lưu trữ và không nhận thay đổi.",
   "project.notYoursToChange":
-    "Dự án này thuộc về người khác. Hãy đề nghị chủ sở hữu chia sẻ nếu bạn cần thay đổi.",
+    "Bạn không thể thay đổi dự án này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "project.phaseLabel": "Giai đoạn",
   "project.filterPhaseAll": "Mọi giai đoạn",
   "project.viewDelivering": "Đang triển khai",
