@@ -52,8 +52,19 @@ const (
 
 	// dialTimeout bounds the TLS connect; pullDeadline bounds the whole
 	// select+fetch phase so a wedged or dribbling server cannot hang the
-	// request indefinitely (v2 has no per-command timeout, so we set a
-	// deadline on the underlying connection ourselves).
+	// request indefinitely.
+	//
+	// It is a bound on the PHASE, not on a response. v2 sets its own deadline
+	// before every response read (imapclient's respReadTimeout, 30s in the
+	// pinned beta.8), so no single command can wait longer than that whatever
+	// is set here — what pullDeadline stops is a server that answers every
+	// command just fast enough while the phase never ends.
+	//
+	// And that per-response deadline is the reason nothing else may touch this
+	// connection's deadline: the client reads on ONE goroutine, and a read
+	// deadline firing closes the connection and fails every pending command.
+	// A caller "bounding" one exchange more tightly would be rejecting the
+	// session, not the exchange.
 	dialTimeout  = 15 * time.Second
 	pullDeadline = 90 * time.Second
 

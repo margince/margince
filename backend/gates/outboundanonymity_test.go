@@ -214,6 +214,16 @@ func everyRequestIsNamed(fn *ast.FuncDecl, client string) bool {
 		return false
 	}
 	built := requestsBuiltIn(fn.Body, client)
+	for _, bindings := range built {
+		// One NAME, two requests — a shadow in a nested block, a reassignment
+		// across branches. Naming either would mark the name named and leave
+		// the other unaccounted for, and this walk cannot tell which write
+		// belongs to which binding. Unprovable is reported: a census that
+		// cannot say is not a census that says yes.
+		if bindings > 1 {
+			return false
+		}
+	}
 	if len(built) == 0 {
 		// It sends a request this walk cannot attribute to an identifier — an
 		// inline `http.DefaultClient.Do(mustRequest(…))`, say. Nothing here can
@@ -259,7 +269,7 @@ func callsAConvenienceForm(body *ast.BlockStmt, client string) bool {
 // And a request this function BUILT. Naming the caller on something else it
 // holds — a response, a request passed in — leaves the one it sends carrying
 // Go's default.
-func requestsNamedIn(body *ast.BlockStmt, built map[string]bool) map[string]bool {
+func requestsNamedIn(body *ast.BlockStmt, built map[string]int) map[string]bool {
 	named := map[string]bool{}
 	ast.Inspect(body, func(node ast.Node) bool {
 		call, isCall := node.(*ast.CallExpr)
@@ -275,7 +285,7 @@ func requestsNamedIn(body *ast.BlockStmt, built map[string]bool) map[string]bool
 			return true
 		}
 		owner, isIdent := header.X.(*ast.Ident)
-		if !isIdent || !built[owner.Name] {
+		if !isIdent || built[owner.Name] == 0 {
 			return true
 		}
 		name, isLit := call.Args[0].(*ast.BasicLit)
@@ -287,10 +297,13 @@ func requestsNamedIn(body *ast.BlockStmt, built map[string]bool) map[string]bool
 	return named
 }
 
-// requestsBuiltIn names the identifiers this function assigns an
-// http.NewRequest* result to — the requests whose headers are its own.
-func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]bool {
-	built := map[string]bool{}
+// requestsBuiltIn counts, per identifier, how many requests this function binds
+// to it — the requests whose headers are its own.
+//
+// A COUNT rather than a flag, because one name can hold two requests and only
+// one of them need be named for a set keyed by name to look complete.
+func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]int {
+	built := map[string]int{}
 	ast.Inspect(body, func(node ast.Node) bool {
 		switch typed := node.(type) {
 		case *ast.AssignStmt:
@@ -312,7 +325,7 @@ func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]bool {
 }
 
 // bindRequest records the identifier a request constructor's result lands in.
-func bindRequest(built map[string]bool, lhs, rhs []ast.Expr, client string) {
+func bindRequest(built map[string]int, lhs, rhs []ast.Expr, client string) {
 	if len(rhs) != 1 || len(lhs) == 0 {
 		return
 	}
@@ -327,7 +340,7 @@ func bindRequest(built map[string]bool, lhs, rhs []ast.Expr, client string) {
 		return
 	}
 	if name, isIdent := lhs[0].(*ast.Ident); isIdent {
-		built[name.Name] = true
+		built[name.Name]++
 	}
 }
 
@@ -517,6 +530,16 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
 				"\treq.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n" +
 				"\tresp, _ := http.Get(\"https://y.test\")\n\t_ = resp\n}\n",
+			want: 1,
+		},
+		{
+			// One NAME, two requests. Naming either would mark the name named
+			// and leave the other unaccounted for.
+			name: "a name bound to two requests cannot be shown named",
+			source: "package p\nimport \"net/http\"\nfunc call(second bool) {\n" +
+				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\treq.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n" +
+				"\tif second {\n\t\treq, _ = http.NewRequest(\"GET\", \"https://y.test\", nil)\n\t}\n\t_ = req\n}\n",
 			want: 1,
 		},
 		{
