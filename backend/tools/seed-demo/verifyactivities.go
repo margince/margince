@@ -34,19 +34,7 @@ import (
 // to ignore this check. One whole-table read of the employments answers which
 // companies those are, rather than two requests per activity.
 func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error) {
-	hasStaff := map[string]bool{}
-	err := c.getAll("/v1/relationships", url.Values{"kind": {"employment"}}, func(raw json.RawMessage) error {
-		var rows []struct {
-			OrganizationID string `json:"organization_id"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			hasStaff[row.OrganizationID] = true
-		}
-		return nil
-	})
+	hasStaff, err := staffedOrganizations(c)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +87,34 @@ func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error
 		Rule:   "conversations name a person",
 		Detail: fmt.Sprintf("%d mail(s)/call(s)/meeting(s) at a company that employs somebody link to no person (%s) — those contacts' timelines are empty", len(unfiled), sample(unfiled)),
 	}}, nil
+}
+
+// staffedOrganizations names the companies that employ somebody, from ONE
+// whole-table read rather than a request per activity.
+//
+// Both rules here need it and for the same reason: a conversation with a
+// company that publishes nobody has no counterpart to be filed against, so
+// reporting it would be reporting something no re-run can repair. It is the
+// exemption checkDealsHaveStakeholders already makes for a deal at such a
+// company, one table over.
+func staffedOrganizations(c *client) (map[string]bool, error) {
+	staffed := map[string]bool{}
+	err := c.getAll("/v1/relationships", url.Values{"kind": {"employment"}}, func(raw json.RawMessage) error {
+		var rows []struct {
+			OrganizationID string `json:"organization_id"`
+		}
+		if err := json.Unmarshal(raw, &rows); err != nil {
+			return err
+		}
+		for _, row := range rows {
+			staffed[row.OrganizationID] = true
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return staffed, nil
 }
 
 // describeActivity names one activity for a finding: what it says it is about,
@@ -159,6 +175,10 @@ func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFi
 	// disagree — an operator reads "3 filed against somebody other than who
 	// signed them" and the examples name a person for one of them and nobody
 	// for the rest.
+	hasStaff, err := staffedOrganizations(c)
+	if err != nil {
+		return nil, err
+	}
 	var misfiled, unfiled []string
 	for i, act := range cfg.Activities {
 		if act.Person == "" || !isConversation(act.Kind) || ambiguous[i] {
@@ -180,6 +200,15 @@ func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFi
 			// The dataset says who signed it and the record says nobody. The
 			// rule above this one is satisfied by any OTHER conversation
 			// having a person, so without this the gap is invisible.
+			//
+			// Unless the company employs NOBODY, which is the same exemption
+			// that rule makes and for the same reason: there is no counterpart
+			// to file against, so re-running the seeder cannot fix it and a
+			// finding that survives every repair is one a reader learns to
+			// ignore.
+			if !hasStaff[existing.OrganizationID] {
+				continue
+			}
 			unfiled = append(unfiled, fmt.Sprintf("%s signed by %s", act.Company, act.Person))
 		case len(existing.PersonIDs) > 1:
 			// The only skip kept: the repair deliberately leaves these alone,
