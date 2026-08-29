@@ -33,8 +33,10 @@ func noticesLaneService(n Notices) *Service {
 
 func TestANoticeCarriesItsOwnWordsAndItsOneVerb(t *testing.T) {
 	svc := noticesLaneService(&stubNotices{rows: []UnreadNotice{
-		{ID: ids.NewV7(), Kind: "lead_sla", Subject: "SLA breach — first response overdue",
-			Body: "A lead's first response is overdue.", CreatedAt: readInstant},
+		{
+			ID: ids.NewV7(), Kind: "lead_sla", Subject: "SLA breach — first response overdue",
+			Body: "A lead's first response is overdue.", CreatedAt: readInstant,
+		},
 	}})
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
