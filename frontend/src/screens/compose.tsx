@@ -133,6 +133,8 @@ function useSearchTargets() {
 // What one confirmed relink asks for, read at the moment the reader confirmed
 // it rather than at whichever render the mutation's options were last armed on.
 type RelinkRequest = Readonly<{
+  activityId: string;
+  threadKey?: string | null;
   target: RecordPickerCandidate;
   version?: number | null;
   thread: boolean;
@@ -167,9 +169,13 @@ export function RelinkModal({
   const [replace, setReplace] = useState(false);
   const [wholeThread, setWholeThread] = useState(false);
 
-  // What the confirm decided arrives as the mutation's VARIABLE — the picked
-  // target, the version it was picked against, and whether the whole thread was
-  // asked for. Read through this closure each would be the value from the
+  // What the confirm decided arrives as the mutation's VARIABLE — ALL of it,
+  // including which activity and which conversation, because a mixture is worse
+  // than either: a fresh `thread` read beside a stale `threadKey` falls through
+  // the thread door into the single relink, where the version guard has already
+  // been skipped on the strength of `thread` being true.
+  //
+  // Read through this closure each would be the value from the
   // render before the confirm was enabled, because react-query re-arms a
   // mutation's options in a passive effect: a version that landed just before
   // the click would refuse a relink that is perfectly valid, and a toggle
@@ -178,7 +184,14 @@ export function RelinkModal({
   // target whose remembered kind was lost must be surfaced rather than relinked
   // to nothing.
   const mutation = useMutation({
-    mutationFn: async ({ target, version, thread, replace }: RelinkRequest) => {
+    mutationFn: async ({
+      activityId,
+      threadKey,
+      target,
+      version,
+      thread,
+      replace,
+    }: RelinkRequest) => {
       const kind = kindOf(target.id);
       if (!kind) {
         throwProblem({ title: t("compose.relinkTarget") });
@@ -252,6 +265,8 @@ export function RelinkModal({
       onConfirm={() =>
         target &&
         mutation.mutate({
+          activityId,
+          threadKey,
           target,
           version: activityVersion,
           thread: wholeThread,
