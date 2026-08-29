@@ -143,7 +143,7 @@ func writeSegments(statement string) []writeSegment {
 		rest := statement[loc[1]:]
 		depth, end, unreadable := 0, len(rest), false
 		for pos := 0; pos < len(rest); pos++ {
-			if skip, closed := quotedSpanAt(rest, pos); skip > 0 {
+			if skip, closed := gatekit.SQLSpanAt(rest, pos); skip > 0 {
 				if !closed {
 					unreadable, end = true, pos
 					break
@@ -178,49 +178,28 @@ func isWordByte(b byte) bool {
 	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
 }
 
-// dollarTagRe matches a dollar-quote opener at the current position.
-var dollarTagRe = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$`)
-
-// quotedSpanAt returns the length of the quoted run starting at pos and whether
-// it CLOSED, or 0 when nothing is quoted there.
+// withoutLeadingComments drops the comments an assignment can begin with.
 //
-// The scans that read a SET clause have to step OVER these rather than through
-// them. `SET body = 'from the report', updated_at = now()` ends the assignment
-// list at the literal's own `from` otherwise — and everything after it, which
-// is where the dead assignment is, becomes invisible. That is under-recognition
-// arriving as a green run, and reordering an assignment list is not something
-// anybody reviews as a schema change.
-//
-// A doubled ” inside a string needs no case of its own: the run ends at the
-// first quote, the next character is the second quote, and the scan opens a new
-// run that closes where the real one does. Dollar-quoting is matched on its
-// OPENING tag and closed on the same tag, which is what makes $tag$…'…$tag$
-// readable at all.
-//
-// A run that never CLOSES is reported rather than swallowed, and that matters in
-// the direction this gate must not fail. Reading the remainder as one quoted
-// span steps over every assignment after it, so a dead updated_at behind an
-// unterminated value goes unseen and the gate passes — under-recognition
-// arriving as a green run. It happens on a statement whose closing quote is in
-// a piece the reader does not have: `"UPDATE x SET body = '" + v + "'"`, which
-// is assembly this gate has no detector for.
-func quotedSpanAt(text string, pos int) (length int, closed bool) {
-	if text[pos] == '\'' {
-		for i := pos + 1; i < len(text); i++ {
-			if text[i] == '\'' {
-				return i - pos + 1, true
-			}
+// The target is matched ANCHORED, so `SET a = 1, -- why\n b = 2` leaves the
+// second item starting with the comment and reading as no assignment at all —
+// which loses the assignment after it, silently. The comment is not part of the
+// assignment, so it comes off before the match rather than being allowed for
+// inside the pattern.
+func withoutLeadingComments(assignment string) string {
+	for pos := 0; pos < len(assignment); {
+		if assignment[pos] == ' ' || assignment[pos] == '\t' || assignment[pos] == '\n' || assignment[pos] == '\r' {
+			pos++
+			continue
 		}
-		return len(text) - pos, false
+		skip, _ := gatekit.SQLSpanAt(assignment, pos)
+		// A quoted run is not a comment and not a target either; stopping here
+		// leaves the anchored match to refuse it, which is the right answer.
+		if skip == 0 || assignment[pos] == '\'' || assignment[pos] == '$' {
+			return assignment[pos:]
+		}
+		pos += skip
 	}
-	tag := dollarTagRe.FindString(text[pos:])
-	if tag == "" {
-		return 0, true
-	}
-	if end := strings.Index(text[pos+len(tag):], tag); end >= 0 {
-		return len(tag) + end + len(tag), true
-	}
-	return len(text) - pos, false
+	return ""
 }
 
 // assignedColumns returns the columns an assignment list writes — the targets
@@ -232,10 +211,10 @@ func assignedColumns(assignments string) []string {
 	for pos := 0; pos <= len(assignments); pos++ {
 		if pos < len(assignments) {
 			// A comma inside a string value is not a separator, for the reason
-			// quotedSpanAt gives: `SET body = 'a, b', updated_at = now()`
+			// the shared scan gives: `SET body = 'a, b', updated_at = now()`
 			// otherwise splits into fragments neither of which is an
 			// assignment, and the dead one after it is lost.
-			if skip, _ := quotedSpanAt(assignments, pos); skip > 0 {
+			if skip, _ := gatekit.SQLSpanAt(assignments, pos); skip > 0 {
 				pos += skip - 1
 				continue
 			}
@@ -270,7 +249,7 @@ func assignedColumns(assignments string) []string {
 var assignmentTargetRe = regexp.MustCompile(`(?is)^\s*(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)\s*=`)
 
 func assignmentTarget(assignment string) string {
-	m := assignmentTargetRe.FindStringSubmatch(assignment)
+	m := assignmentTargetRe.FindStringSubmatch(withoutLeadingComments(assignment))
 	if m == nil {
 		return ""
 	}

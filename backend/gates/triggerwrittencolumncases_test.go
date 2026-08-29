@@ -98,6 +98,20 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			statement: `UPDATE activity SET subject = 'it''s from here', updated_at = now() WHERE id = $1`,
 			writes:    map[string][]string{"activity": {"subject", "updated_at"}},
 		}, {
+			// An apostrophe inside a COMMENT. A scan that meets quotes before
+			// comments opens a run that never closes, marks the statement
+			// unreadable, and reports a valid one — the false-failure
+			// direction, which sends an author to rewrite SQL that is fine.
+			name:      "an apostrophe inside a line comment",
+			statement: "UPDATE activity SET body = NULL, -- it's the owner's row\n updated_at = now() WHERE id = $1",
+			writes:    map[string][]string{"activity": {"body", "updated_at"}},
+		}, {
+			// A semicolon or a clause word inside a BLOCK comment, which
+			// Postgres also lets nest.
+			name:      "a clause word inside a nested block comment",
+			statement: `UPDATE activity SET body = NULL /* from /* the */ report */, updated_at = now() WHERE id = $1`,
+			writes:    map[string][]string{"activity": {"body", "updated_at"}},
+		}, {
 			// A run that never CLOSES. Swallowed as one span, every assignment
 			// after the open quote is stepped over — so a dead updated_at
 			// behind it goes unseen and the gate passes, which is the
