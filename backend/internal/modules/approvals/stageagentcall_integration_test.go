@@ -272,3 +272,65 @@ func (e *stagingEnv) stageDuplicateInTx(ctx context.Context, t *testing.T, in St
 	}
 	return id
 }
+
+// The stored provenance, from the database rather than from the caller's word.
+//
+// Everything the confirm-first tier rests on is downstream of one column: an
+// agent's row carries the passport that staged it, and a NULL there means the
+// server proposed it. Both halves are asserted here because both are load
+// bearing and neither is visible from the Go side — the row is what
+// agentMayDecide and serverProposed read, and a staging that wrote NULL for an
+// agent would satisfy every unit test while handing the credential back its own
+// proposal to release.
+func TestAStagedAgentCallCarriesThePassportThatMadeIt(t *testing.T) {
+	e := setupStaging(t)
+	target := e.seedOrg(t)
+	passport := e.seedPassport(t)
+
+	id, _, err := e.svc.StageAgentCall(e.asPassport(passport), e.agentCall(target))
+	if err != nil {
+		t.Fatalf("staging the call: %v", err)
+	}
+	var stored *ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT passport_id FROM approval WHERE id = $1`, id).Scan(&stored); err != nil {
+		t.Fatalf("reading the staged row: %v", err)
+	}
+	if stored == nil {
+		t.Fatal("the staged row carries no passport_id, so it reads as a server proposal — " +
+			"agentMayDecide compares the two passports and would let this credential release its own call")
+	}
+	if *stored != passport {
+		t.Errorf("passport_id = %v, want the credential that staged it (%v)", *stored, passport)
+	}
+}
+
+// And the shape that would have laundered it: an agent principal carrying no
+// passport is refused the staging rather than writing the NULL that reads as
+// somebody else's proposal.
+//
+// No live path builds this principal — every real construction sets the
+// PassportID from the authenticated passport. The point is that it is refused by
+// the ROW's own writer rather than by every caller having been careful.
+func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
+	e := setupStaging(t)
+	target := e.seedOrg(t)
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:no-passport", OnBehalfOf: e.rep,
+	})
+	if _, _, err := e.svc.StageAgentCall(ctx, e.agentCall(target)); err == nil {
+		t.Fatal("staged an agent call with no passport — the row it wrote is indistinguishable " +
+			"from a server proposal, and the credential could then release it")
+	}
+	var staged int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM approval WHERE target_entity_id = $1`, target).Scan(&staged); err != nil {
+		t.Fatalf("counting what the refusal left behind: %v", err)
+	}
+	if staged != 0 {
+		t.Errorf("the refused staging left %d row(s) behind — a refusal that writes is not a refusal", staged)
+	}
+}

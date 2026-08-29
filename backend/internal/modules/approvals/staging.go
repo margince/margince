@@ -364,12 +364,42 @@ func (s *Service) StageInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.
 	return s.insertProposalInTx(ctx, tx, in)
 }
 
+// attributableStager refuses an AGENT staging without its passport.
+//
+// A zero PassportID stores NULL, and a NULL passport_id is what a SERVER
+// proposal looks like — the case agentMayDecide deliberately admits, since a row
+// nobody's credential made has no self-approval to refuse. So an agent row
+// staged without one reads as proposed by nobody: the refusal compares the two
+// passports and never fires, and the credential can release the call it just
+// made. That loop is the whole of what the confirm-first tier exists to stop.
+//
+// Only an agent. A SYSTEM principal legitimately carries no passport — the
+// nightly sweeps and the site reads propose changes on nobody's credential —
+// and the server-proposed case has to stay reachable or this would break the
+// path it is protecting.
+//
+// Refused at the INSERT rather than left to callers. Every staging path lands
+// here, so what a NULL passport_id MEANS becomes a property of the row instead
+// of a property of every writer having been careful — which is a statement about
+// today's callers, not about the column. No live path builds such a principal
+// today, which is why this is a guard rather than a repair.
+func attributableStager(p principal.Principal) error {
+	if p.Type != principal.PrincipalAgent || p.PassportID != ids.Nil {
+		return nil
+	}
+	return errors.New("crmapprovals: an agent stages on its passport — a proposal carrying none is " +
+		"indistinguishable from one the server made, and the credential could then release it")
+}
+
 // insertProposalInTx is the raw insert every staging path lands on, whether it
 // arrived by joining, superseding, or straight creation.
 func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.ApprovalID, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return ids.ApprovalID{}, errors.New("crmapprovals: no actor bound to context")
+	}
+	if err := attributableStager(p); err != nil {
+		return ids.ApprovalID{}, err
 	}
 	// The summary is prose, and several stagers build it out of record text
 	// the agent or an inbound sender could have written. Sanitizing at the
