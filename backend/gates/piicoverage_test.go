@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // piiHandling declares how erasure and SAR must reach a PII table.
@@ -314,7 +316,34 @@ var fromJoinRe = regexp.MustCompile(`(?is)\b(?:from|join)\s+([a-z_][a-z0-9_]*)`)
 var sqlWhitespaceRe = regexp.MustCompile(`\s+`)
 
 func collapsedSQL(literal string) string {
-	return strings.ToLower(strings.TrimSpace(sqlWhitespaceRe.ReplaceAllString(literal, " ")))
+	return strings.ToLower(strings.TrimSpace(sqlWhitespaceRe.ReplaceAllString(withoutComments(literal), " ")))
+}
+
+// withoutComments replaces each comment run with a space, keeping everything
+// else — quoted values included — exactly as written.
+//
+// Before the whitespace collapse, and that ORDER is the whole of it. A line
+// comment ends at its newline; collapsing newlines first turns `SET body =
+// NULL, -- note\n counterparty_email = NULL` into one line where the comment
+// runs to the end of the statement, so every assignment after it disappears and
+// the check reports a clean sweep. The comment is not part of the statement, so
+// it comes out rather than being scanned around later.
+func withoutComments(literal string) string {
+	var out strings.Builder
+	for i := 0; i < len(literal); i++ {
+		skip, _ := gatekit.SQLSpanAt(literal, i)
+		if skip == 0 {
+			out.WriteByte(literal[i])
+			continue
+		}
+		if literal[i] == '-' || literal[i] == '/' {
+			out.WriteByte(' ')
+		} else {
+			out.WriteString(literal[i : i+skip])
+		}
+		i += skip - 1
+	}
+	return out.String()
 }
 
 // sqlLiterals returns every Go string literal in one source file. Both the
@@ -424,28 +453,36 @@ var retentionSweepFiles = []string{
 // escape the split has to understand: a doubled ” inside a string is still
 // inside it, which falls out of the scan without a case of its own.
 //
-// Two Postgres forms it does NOT understand, and does not guess at:
-// dollar-quoting ($$…$$, $tag$…$tag$) and the E” escape, where a backslashed
-// apostrophe leaves the scan believing it has closed a string it has not. Both
-// end with the scan's `quoted` inverted against the truth, and an inverted scan
-// splits INSIDE a string — the exact fragment-with-no-table this function
-// exists to prevent. quotingBeyondTheSplit answers for them at the collection
-// site, so their arrival is a failure naming the literal rather than a green
-// run over a split nobody can trust.
+// The scan is gatekit's, shared with the trigger-written-column census, because
+// "what here is not SQL" is one question: a quoted value, a dollar-quoted body,
+// a line comment and a block comment all carry semicolons that are not
+// separators, and a split landing inside one leaves a fragment naming no table.
+// Comments matter as much as quotes here — `SET body = NULL /* ; */ ,
+// counterparty_email = NULL` splits at the comment's semicolon and the
+// destruction rides out in a fragment sqlWriteTargets drops.
+//
+// ONE form it still does not understand, and does not guess at: the E” escape,
+// where a backslashed apostrophe leaves the scan believing it has closed a
+// string it has not. quotingBeyondTheSplit answers for it at the collection
+// site, so its arrival is a failure naming the literal rather than a green run
+// over a split nobody can trust — and it looks for it OUTSIDE the spans the
+// scan does understand, or an E-string MENTIONED inside a value or a comment
+// would refuse a statement that reads perfectly well.
 func sqlStatements(literal string) []string {
 	var out []string
-	quoted := false
 	start := 0
-	for i, r := range literal {
-		switch {
-		case r == '\'':
-			quoted = !quoted
-		case r == ';' && !quoted:
-			if trimmed := strings.TrimSpace(literal[start:i]); trimmed != "" {
-				out = append(out, collapsedSQL(trimmed))
-			}
-			start = i + 1
+	for i := 0; i < len(literal); i++ {
+		if skip, _ := gatekit.SQLSpanAt(literal, i); skip > 0 {
+			i += skip - 1
+			continue
 		}
+		if literal[i] != ';' {
+			continue
+		}
+		if trimmed := strings.TrimSpace(literal[start:i]); trimmed != "" {
+			out = append(out, collapsedSQL(trimmed))
+		}
+		start = i + 1
 	}
 	if trimmed := strings.TrimSpace(literal[start:]); trimmed != "" {
 		out = append(out, collapsedSQL(trimmed))
@@ -453,25 +490,33 @@ func sqlStatements(literal string) []string {
 	return out
 }
 
-// The two literal forms sqlStatements cannot track. $tag$ is matched on the
-// OPENING form alone: a scan that has met the open has already lost, whether or
-// not the close is in the same Go literal.
-var (
-	dollarQuoteRe  = regexp.MustCompile(`\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$`)
-	escapeStringRe = regexp.MustCompile(`(?i)\bE'`)
-)
+// escapeStringRe is the one form the split cannot track: E'…' takes a
+// BACKSLASH escape, so `E'a\';b'` leaves the scan believing it has closed a
+// string it has not, and an inverted scan splits inside one.
+var escapeStringRe = regexp.MustCompile(`(?i)\bE'`)
 
-// quotingBeyondTheSplit names the quoting form in a literal that sqlStatements
-// would mis-scan, or "" when there is none. Nothing in the swept files uses
-// either today; this is the tripwire for the day one does, and it fails CLOSED
-// — the caller reports the literal — because the alternative is a split landing
-// inside a string and a destructive assignment riding out in a fragment that
-// names no table.
+// quotingBeyondTheSplit names the form in a literal that sqlStatements would
+// mis-scan, or "" when there is none. Nothing in the swept files uses it today;
+// this is the tripwire for the day one does, and it fails CLOSED — the caller
+// reports the literal — because the alternative is a split landing inside a
+// string and a destructive assignment riding out in a fragment that names no
+// table.
+//
+// Looked for OUTSIDE the spans the scan does understand, which is the half a
+// bare regex gets wrong in the expensive direction: `SET body = 'E”s note'` or
+// a comment mentioning one would refuse a statement that is read perfectly
+// well, and a tripwire that fires on correct SQL is one somebody turns off.
 func quotingBeyondTheSplit(literal string) string {
-	if m := dollarQuoteRe.FindString(literal); m != "" {
-		return m
+	for i := 0; i < len(literal); i++ {
+		if skip, _ := gatekit.SQLSpanAt(literal, i); skip > 0 {
+			i += skip - 1
+			continue
+		}
+		if m := escapeStringRe.FindString(literal[i:]); m != "" && strings.HasPrefix(strings.ToLower(literal[i:]), "e'") {
+			return m
+		}
 	}
-	return escapeStringRe.FindString(literal)
+	return ""
 }
 
 // setAssignments returns the assignment list of one UPDATE — what sits between

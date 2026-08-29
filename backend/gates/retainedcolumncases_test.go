@@ -125,6 +125,28 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 			statement: `UPDATE activity SET body = 'it''s; fine', counterparty_email = NULL WHERE id = $1`,
 			destroys:  true,
 		}, {
+			// A dollar-quoted value carrying a semicolon. Understood rather
+			// than refused: the scan knows this form, and refusing what it can
+			// read would cost the sweep its own statements.
+			name:      "a semicolon inside a dollar-quoted value",
+			statement: "UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
+			destroys:  true,
+		}, {
+			name:      "a semicolon inside a tagged dollar quote",
+			statement: "UPDATE activity SET body = $tag$a;b$tag$, counterparty_email = NULL WHERE id = $1",
+			destroys:  true,
+		}, {
+			// A semicolon inside a COMMENT. Split there, the fragment carrying
+			// the destruction names no table and the gate passes over exactly
+			// the write it exists to see.
+			name:      "a semicolon inside a block comment",
+			statement: `UPDATE activity SET body = NULL /* ; */, counterparty_email = NULL WHERE id = $1`,
+			destroys:  true,
+		}, {
+			name:      "a semicolon inside a line comment",
+			statement: "UPDATE activity SET body = NULL, -- one; two\n counterparty_email = NULL WHERE id = $1",
+			destroys:  true,
+		}, {
 			// The other half of the same trap: a REAL second statement still
 			// has to split, so the fix for the case above must not be "stop
 			// splitting".
@@ -246,6 +268,13 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 				"and the KEEPS registration is no longer checked against it")
 		}
 		assertOrdinaryStatementsAreNotReported(t, percentsThatAreNotVerbs...)
+		// A comment mentioning a verb is not one. The collapse strips comments
+		// before anything reads the clause, so this never reaches the tell —
+		// which is what has to be true, or an author explaining a statement in
+		// a comment makes the gate report it.
+		if got := assembledSetTarget([]string{collapsedSQL("UPDATE activity SET body = NULL /* was %s once */ WHERE id = $1")}); got != "" {
+			t.Errorf("a comment mentioning a verb was reported as assembled: %q", got)
+		}
 		// And the verb after a static assignment, which is the position an
 		// assembled sweep would really produce.
 		behind := collapsedSQL(`UPDATE activity SET body = NULL, %s = NULL WHERE id = $1`)
@@ -309,8 +338,6 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 	// gate refuses to read these rather than trusting a scan it has lost.
 	t.Run("quoting the split cannot track is refused, not guessed at", func(t *testing.T) {
 		for _, unreadable := range []string{
-			"UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
-			"UPDATE activity SET body = $tag$a;b$tag$, counterparty_email = NULL WHERE id = $1",
 			`UPDATE activity SET body = E'a\';b', counterparty_email = NULL WHERE id = $1`,
 		} {
 			if quotingBeyondTheSplit(unreadable) == "" {
@@ -322,12 +349,18 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 				t.Errorf("the split read %q correctly by luck; the refusal above is what this case rests on", unreadable)
 			}
 		}
-		// The ordinary quoting it CAN track is not refused, or the sweep's own
-		// statements would stop being read at all.
+		// Everything it CAN track is not refused, or the sweep's own statements
+		// would stop being read at all — and the last two are the expensive
+		// mistake: an E'' MENTIONED inside a value or a comment is not one, and
+		// a tripwire that refuses a statement it reads perfectly well is one
+		// somebody turns off.
 		for _, readable := range []string{
 			`UPDATE activity SET body = 'a;b', counterparty_email = NULL WHERE id = $1`,
 			`UPDATE activity SET body = NULL WHERE id = $1 AND kind = 'note'`,
 			`UPDATE person SET note = 'she said ''no''' WHERE id = $1`,
+			"UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
+			`UPDATE person SET note = 'E''s own note' WHERE id = $1`,
+			"UPDATE person SET note = NULL -- not an E'scape\n WHERE id = $1",
 		} {
 			if form := quotingBeyondTheSplit(readable); form != "" {
 				t.Errorf("ordinary quoting was refused as %q: %s", form, readable)
