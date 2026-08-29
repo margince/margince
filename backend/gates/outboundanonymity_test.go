@@ -42,6 +42,11 @@ import (
 // because a file's waived builder must not vouch for an anonymous sibling
 // written beside it later.
 var anonymousOutbound = gatekit.Waive(map[string]string{
+	// Past this module. Neither can import internal/platform/outbound — they
+	// are separate Go modules — and neither needs to.
+	"../extensions/openchannel/client.go:func post": "posts a document signed with a secret the RECEIVER issued, over a nonce and a timestamp they check; the signature names the sender to them more exactly than an agent could, and to anyone else the request is unverifiable whatever it claims",
+	"../cli/craft/gate/anthropic.go:func Complete":  "carries the developer's own x-api-key, which is the identity that provider bills and throttles — the same ground as the model providers below",
+
 	// This product's own origin, and the harnesses that drive it.
 	"internal/modules/agents/apps/fetch.go:func Fetch":         "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
 	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
@@ -81,7 +86,7 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 	t.Parallel()
 	var findings []string
 	builders := 0
-	eachGoFileInTheModule(t, func(path string, file *ast.File) {
+	eachGoFileUnder(t, outboundSurfaceRoots, func(path string, file *ast.File) {
 		if strings.HasSuffix(path, "_test.go") {
 			// A test's outbound call goes to a server the test started.
 			return
@@ -119,6 +124,17 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 	}
 }
 
+// outboundSurfaceRoots are the trees that can make an outbound call — the same
+// set the sibling identity gate sweeps.
+//
+// Past this module on purpose. A request built in an extension, in the CLI or
+// on the desktop leaves the same installation and reaches the same operator,
+// and a census that stopped at the backend's edge would have claimed "every
+// outbound request" over trees it never read.
+var outboundSurfaceRoots = []string{
+	".", "../extensions", "../cli", "../desktop", "../fixtures",
+}
+
 // outboundBuilderFloor is what the walk found when this census landed.
 const outboundBuilderFloor = 30
 
@@ -130,8 +146,12 @@ const outboundBuilderFloor = 30
 // and judging the file whole would let the first vouch for the second.
 func anonymousRequestBuildersIn(file *ast.File) []string {
 	var out []string
+	client, dotImported := gatekit.ImportedAs(file, "net/http")
+	if client == "" && !dotImported {
+		return nil
+	}
 	for _, fn := range requestBuildersIn(file) {
-		if setsUserAgent(fn) {
+		if setsUserAgent(fn, requestsBuiltIn(fn.Body, client)) {
 			continue
 		}
 		out = append(out, "func "+fn.Name.Name)
@@ -166,37 +186,32 @@ func requestBuildersIn(file *ast.File) []*ast.FuncDecl {
 func buildsARequest(body *ast.BlockStmt, client string) bool {
 	found := false
 	ast.Inspect(body, func(node ast.Node) bool {
-		call, isCall := node.(*ast.CallExpr)
-		if !isCall {
-			return true
-		}
-		switch fn := call.Fun.(type) {
-		case *ast.SelectorExpr:
-			pkg, isIdent := fn.X.(*ast.Ident)
-			if isIdent && pkg.Name == client && strings.HasPrefix(fn.Sel.Name, "NewRequest") {
-				found = true
-			}
-		case *ast.Ident:
-			// A dot import spells it unqualified.
-			if client == "" && strings.HasPrefix(fn.Name, "NewRequest") {
-				found = true
-			}
+		if call, isCall := node.(*ast.CallExpr); isCall && isRequestConstructor(call, client) {
+			found = true
 		}
 		return !found
 	})
 	return found
 }
 
-// setsUserAgent reports whether the function WRITES the caller's name onto a
-// header it is building.
+// setsUserAgent reports whether the function writes the caller's name onto the
+// REQUEST IT BUILT.
 //
-// The write, not the words. Reading any call that mentions "User-Agent" made
-// `log.Printf("User-Agent missing")` enough to mark a request identified — a
-// census reporting a clean tree over an anonymous call because the code
-// complains about anonymity, which is the silent-absence failure this exists to
-// catch. So it matches a `Set` or `Add` on something whose selector is
-// `.Header`, with the header named as the first argument.
-func setsUserAgent(fn *ast.FuncDecl) bool {
+// Three things have to line up, and each was a way to read a clean tree over an
+// anonymous call.
+//
+// The WRITE, not the words: reading any call that mentions "User-Agent" made
+// `log.Printf("User-Agent missing")` enough — a census passing because the code
+// complains about the very thing it is doing.
+//
+// A HEADER, not any receiver: a `Set` on a map keyed "User-Agent" writes no
+// header at all.
+//
+// And THIS request's header. A function can build an anonymous `req` and set
+// the agent on something else it holds — a response, an outgoing second
+// request, a header it is composing for a different call — and the request it
+// actually sends still carries Go's default.
+func setsUserAgent(fn *ast.FuncDecl, built map[string]bool) bool {
 	found := false
 	ast.Inspect(fn.Body, func(node ast.Node) bool {
 		call, isCall := node.(*ast.CallExpr)
@@ -211,6 +226,10 @@ func setsUserAgent(fn *ast.FuncDecl) bool {
 		if !onHeader || header.Sel.Name != "Header" {
 			return true
 		}
+		owner, named := header.X.(*ast.Ident)
+		if !named || !built[owner.Name] {
+			return true
+		}
 		name, isLit := call.Args[0].(*ast.BasicLit)
 		if isLit && name.Kind == token.STRING && strings.EqualFold(gatekit.TextOf(name), "User-Agent") {
 			found = true
@@ -218,6 +237,41 @@ func setsUserAgent(fn *ast.FuncDecl) bool {
 		return !found
 	})
 	return found
+}
+
+// requestsBuiltIn names the identifiers this function assigns an
+// http.NewRequest* result to — the requests whose headers are its own.
+func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]bool {
+	built := map[string]bool{}
+	ast.Inspect(body, func(node ast.Node) bool {
+		assign, isAssign := node.(*ast.AssignStmt)
+		if !isAssign || len(assign.Rhs) != 1 || len(assign.Lhs) == 0 {
+			return true
+		}
+		call, isCall := assign.Rhs[0].(*ast.CallExpr)
+		if !isCall || !isRequestConstructor(call, client) {
+			return true
+		}
+		if name, isIdent := assign.Lhs[0].(*ast.Ident); isIdent {
+			built[name.Name] = true
+		}
+		return true
+	})
+	return built
+}
+
+// isRequestConstructor matches http.NewRequest and http.NewRequestWithContext,
+// under whatever name the file imports net/http by.
+func isRequestConstructor(call *ast.CallExpr, client string) bool {
+	switch fn := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		pkg, isIdent := fn.X.(*ast.Ident)
+		return isIdent && pkg.Name == client && strings.HasPrefix(fn.Sel.Name, "NewRequest")
+	case *ast.Ident:
+		// A dot import spells it unqualified.
+		return client == "" && strings.HasPrefix(fn.Name, "NewRequest")
+	}
+	return false
 }
 
 // The detector, from the other end. A census over an ABSENCE is the easiest
@@ -281,6 +335,16 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 			name: "an aliased net/http builds the same request",
 			source: "package p\nimport nethttp \"net/http\"\nfunc call() {\n" +
 				"\treq, _ := nethttp.NewRequest(\"GET\", \"https://x.test\", nil)\n\t_ = req\n}\n",
+			want: 1,
+		},
+		{
+			// THIS request's header, not any header the function holds. A
+			// builder that names the caller on something else it is composing
+			// still sends the request it built with Go's default agent.
+			name: "the agent set on a different header is not this request's",
+			source: "package p\nimport \"net/http\"\nfunc call(out *http.Request) {\n" +
+				"\treq, _ := http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\tout.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n\t_ = req\n}\n",
 			want: 1,
 		},
 		{

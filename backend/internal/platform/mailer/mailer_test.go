@@ -232,11 +232,11 @@ func TestTheGreetingNamesTheSenderRatherThanLocalhost(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			// The exact value, which is what guards the regression: no `want`
+			// here is "localhost", so pinning the answer pins that too. A
+			// second assertion against the old default could never fire.
 			if got := (SMTP{FromAddress: tc.from}).helloName(); got != tc.want {
 				t.Errorf("helloName() = %q, want %q", got, tc.want)
-			}
-			if got := (SMTP{FromAddress: tc.from}).helloName(); got == "localhost" {
-				t.Errorf("the greeting still claims to be the relay's own machine")
 			}
 		})
 	}
