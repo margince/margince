@@ -358,8 +358,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// (TechnicalDomain, TechnicalLaneState) call auth.EnsureVisible before they
 	// return one. A company the caller cannot see answers ErrNotFound rather
 	// than disclosing that a lookup ever ran on it.
-	// A company's VAT standing (#3158). Client-supplied — it is the company
-	// the reader pressed "check" on — and gated on both sides: RecordVatCheck
+	// A company's VAT standing. Client-supplied — it is the company the
+	// reader pressed "check" on — and gated on both sides: RecordVatCheck
 	// puts it through ensureOrgWritable (auth.EnsureWritableLive) before it
 	// writes, and VatCheckFor through auth.EnsureVisible before it returns one.
 	// A company the caller cannot see answers ErrNotFound rather than
