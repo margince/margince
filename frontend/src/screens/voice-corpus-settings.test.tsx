@@ -2,10 +2,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -17,8 +17,7 @@ import { VoiceCorpusIntake } from "./voice-corpus-settings";
 // Building a Voice DNA from Settings has to reach the same bar the onboarding
 // act reaches: a file can be handed over, and a file that turns out to be a
 // conversation is not counted as the owner's own writing until they say which
-// speaker they are. These tests are the ones that were missing while Settings
-// could only accept pasted text.
+// speaker they are.
 
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 
@@ -129,8 +128,8 @@ function countingFileOf(name: string, text: string, onRead: () => void): File {
   });
 }
 
-// The hidden input the "Choose files" button clicks. userEvent.upload needs
-// the input itself, which carries no accessible name by design.
+// The input stretched over the drop zone: the one control the card has, and
+// the element a drop lands on. userEvent.upload needs the input itself.
 function fileInput(): HTMLInputElement {
   const input = document.querySelector('input[type="file"]');
   if (!(input instanceof HTMLInputElement)) {
@@ -139,11 +138,10 @@ function fileInput(): HTMLInputElement {
   return input;
 }
 
-// The paste box lives in the dialog the row's verb opens, so a test whose
-// subject is that box opens it first and scopes its queries to the dialog.
-async function openPaste(): Promise<HTMLElement> {
-  await userEvent.click(screen.getByRole("button", { name: "Paste writing" }));
-  return screen.getByRole("dialog");
+// A drop on the zone, as the browser delivers it: on the input, carrying the
+// files in its dataTransfer.
+function dropOnZone(files: readonly File[]) {
+  fireEvent.drop(fileInput(), { dataTransfer: { types: ["Files"], files } });
 }
 
 const PROSE: CorpusPreview = {
@@ -171,11 +169,30 @@ afterEach(() => {
 });
 
 describe("handing a file to the Settings voice card", () => {
-  it("offers a file control at all — the thing paste-only Settings never had", async () => {
+  it("offers one file control, named by the row and filtered to what it can read", () => {
     stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    expect(screen.getByRole("button", { name: /Choose files/ })).toBeTruthy();
-    expect(fileInput().accept).toBe(".txt,.md,.vtt,.srt,.json");
+    const input = fileInput();
+    expect(input.accept).toBe(".txt,.md,.vtt,.srt,.json");
+    expect(input.multiple).toBe(true);
+    expect(screen.getByLabelText("Add writing samples")).toBe(input);
+    // The zone says what teaches the voice, beside the control, every time.
+    expect(screen.getByText("What works best")).toBeTruthy();
+    expect(screen.getByText(/Sent emails, saved as/)).toBeTruthy();
+    expect(screen.getByText(/Leave out what others wrote/)).toBeTruthy();
+  });
+
+  // Before a profile exists there is no corpus meter to say how far the floor
+  // is, so the first-sample card states the floor itself.
+  it("states the word floor for the first sample, and not after", () => {
+    stubApi(PROSE);
+    const view = render(
+      <VoiceCorpusIntake first profileId={null} onChanged={() => {}} />,
+    );
+    expect(screen.getByText(/800 words minimum/)).toBeTruthy();
+    view.unmount();
+    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    expect(screen.queryByText(/800 words minimum/)).toBeNull();
   });
 
   // source_ref is persisted, and two earlier spellings are already in
@@ -208,7 +225,9 @@ describe("handing a file to the Settings voice card", () => {
       fileOf("letter.txt", "Short sentences. Concrete nouns."),
     );
 
-    expect(await screen.findByText(/kept 640 of 1,000 words/)).toBeTruthy();
+    expect(
+      await screen.findByText(/letter\.txt: 640 words added/),
+    ).toBeTruthy();
     expect(bodies[0]).toMatchObject({ kind: "document", format: "text" });
     // The manifest on screen is the server's, so an ingest has to invalidate it.
     expect(onChanged).toHaveBeenCalled();
@@ -226,7 +245,7 @@ describe("handing a file to the Settings voice card", () => {
       fileOf("standup.vtt", "Lars: we ship Friday. Sam: agreed."),
     );
 
-    expect(await screen.findByText(/Which speaker are you in/)).toBeTruthy();
+    expect(await screen.findByText(/Which speaker is you/)).toBeTruthy();
     expect(screen.getByText(/Lars · 640 words, 12 turns/)).toBeTruthy();
     expect(bodies).toHaveLength(0);
   });
@@ -239,7 +258,7 @@ describe("handing a file to the Settings voice card", () => {
       fileInput(),
       fileOf("standup.vtt", "Lars: we ship Friday."),
     );
-    await screen.findByText(/Which speaker are you in/);
+    await screen.findByText(/Which speaker is you/);
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
       screen.getByRole("button", { name: "That one is me" }),
@@ -254,32 +273,6 @@ describe("handing a file to the Settings voice card", () => {
     });
   });
 
-  // Pasting used to skip the preview, so the whole speaker protection could be
-  // walked around by pasting a transcript instead of uploading one.
-  //
-  // The paste box is a form behind a verb now, so the claim is unchanged and
-  // the route to it is one click longer: the row opens the dialog, the dialog
-  // holds the box, and the question still has to be asked before anything
-  // reaches the corpus.
-  it("asks who is speaking when a transcript is PASTED, not uploaded", async () => {
-    const bodies = stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-
-    const dialog = await openPaste();
-    await userEvent.type(
-      within(dialog).getByPlaceholderText(
-        "Paste an email, post, or anything you've written…",
-      ),
-      "Lars: we ship Friday. Sam: agreed.",
-    );
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Add sample" }),
-    );
-
-    expect(await screen.findByText(/Which speaker are you in/)).toBeTruthy();
-    expect(bodies).toHaveLength(0);
-  });
-
   // Two conversational files queue two questions. The second must be asked
   // fresh: carrying the first answer over would submit a speaker the reader
   // never chose for that file — silently ingesting the wrong person's words
@@ -292,7 +285,7 @@ describe("handing a file to the Settings voice card", () => {
       fileOf("one.vtt", "Lars: first. Sam: ok."),
       fileOf("two.vtt", "Lars: second. Sam: ok."),
     ]);
-    await screen.findByText(/Which speaker are you in/);
+    await screen.findByText(/Which speaker is you/);
 
     await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
     await userEvent.click(
@@ -316,12 +309,34 @@ describe("handing a file to the Settings voice card", () => {
     expect(bodies).toHaveLength(1);
   });
 
+  // A question waiting on one file must not make the zone go dead: the
+  // reader who dropped six files answers the questions in their own time, and
+  // the files after it join the queue meanwhile.
+  it("still takes a file while a speaker question is waiting", async () => {
+    const bodies = stubApi(CONVERSATION);
+    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
+    await screen.findByText(/Which speaker is you/);
+
+    dropOnZone([fileOf("two.vtt", "Lars: again. Sam: ok.")]);
+
+    // The first question stays the one on screen; the second file waits its
+    // turn behind it instead of being ignored.
+    expect(screen.getByText(/“standup\.vtt”/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "That one is me" }),
+    );
+    expect(await screen.findByText(/“two\.vtt”/)).toBeTruthy();
+    expect(bodies).toHaveLength(1);
+  });
+
   it("drops a conversation the owner declines to claim", async () => {
     const bodies = stubApi(CONVERSATION);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
-    await screen.findByText(/Which speaker are you in/);
+    await screen.findByText(/Which speaker is you/);
     await userEvent.click(
       screen.getByRole("button", { name: "Skip this file" }),
     );
@@ -338,20 +353,8 @@ describe("handing a file to the Settings voice card", () => {
   it("names a dropped file it cannot read instead of uploading it", async () => {
     const bodies = stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    const zone = document.querySelector(".vdna-intake");
-    if (!(zone instanceof HTMLElement)) {
-      throw new Error("no drop zone rendered");
-    }
 
-    const drop = new Event("drop", { bubbles: true, cancelable: true });
-    Object.defineProperty(drop, "dataTransfer", {
-      value: {
-        types: ["Files"],
-        files: [new File(["binary"], "photo.png", { type: "image/png" })],
-      },
-    });
-    Object.defineProperty(drop, "target", { value: zone });
-    window.dispatchEvent(drop);
+    dropOnZone([new File(["binary"], "photo.png", { type: "image/png" })]);
 
     expect(
       await screen.findByText(/photo\.png was skipped — only text files/),
@@ -535,14 +538,14 @@ describe("adding many files at once", () => {
     // brings up the next, five times over. Counting refusals alone would pass
     // just as happily if questions had been dropped instead of queued.
     for (let answered = 0; answered < 5; answered++) {
-      await screen.findByText(/Which speaker are you in/);
+      await screen.findByText(/Which speaker is you/);
       await userEvent.click(screen.getByRole("radio", { name: /^Lars/ }));
       await userEvent.click(
         screen.getByRole("button", { name: "That one is me" }),
       );
     }
     await waitFor(() => {
-      expect(screen.queryByText(/Which speaker are you in/)).toBeNull();
+      expect(screen.queryByText(/Which speaker is you/)).toBeNull();
     });
   });
 });
@@ -551,20 +554,8 @@ describe("dropping a file on the page", () => {
   it("takes a file dropped on the intake area", async () => {
     const bodies = stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    const zone = document.querySelector(".vdna-intake");
-    if (!(zone instanceof HTMLElement)) {
-      throw new Error("no drop zone rendered");
-    }
 
-    const file = fileOf("letter.txt", "Short sentences.");
-    const dataTransfer = {
-      types: ["Files"],
-      files: [file],
-    };
-    const drop = new Event("drop", { bubbles: true, cancelable: true });
-    Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
-    Object.defineProperty(drop, "target", { value: zone });
-    window.dispatchEvent(drop);
+    dropOnZone([fileOf("letter.txt", "Short sentences.")]);
 
     await waitFor(() => expect(bodies).toHaveLength(1));
   });
@@ -574,24 +565,12 @@ describe("dropping a file on the page", () => {
   it("takes every file in a multi-file drop", async () => {
     const bodies = stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    const zone = document.querySelector(".vdna-intake");
-    if (!(zone instanceof HTMLElement)) {
-      throw new Error("no drop zone rendered");
-    }
 
-    const drop = new Event("drop", { bubbles: true, cancelable: true });
-    Object.defineProperty(drop, "dataTransfer", {
-      value: {
-        types: ["Files"],
-        files: [
-          fileOf("one.txt", "First sample."),
-          fileOf("two.txt", "Second sample."),
-          fileOf("three.txt", "Third sample."),
-        ],
-      },
-    });
-    Object.defineProperty(drop, "target", { value: zone });
-    window.dispatchEvent(drop);
+    dropOnZone([
+      fileOf("one.txt", "First sample."),
+      fileOf("two.txt", "Second sample."),
+      fileOf("three.txt", "Third sample."),
+    ]);
 
     await waitFor(() => expect(bodies).toHaveLength(3), { timeout: 4000 });
   });
@@ -604,25 +583,13 @@ describe("dropping a file on the page", () => {
   it("keeps files that share their text but not their name", async () => {
     const bodies = stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    const zone = document.querySelector(".vdna-intake");
-    if (!(zone instanceof HTMLElement)) {
-      throw new Error("no drop zone rendered");
-    }
 
     const same = "The same words in every one of these files.";
-    const drop = new Event("drop", { bubbles: true, cancelable: true });
-    Object.defineProperty(drop, "dataTransfer", {
-      value: {
-        types: ["Files"],
-        files: [
-          fileOf("dup1.txt", same),
-          fileOf("dup2.txt", same),
-          fileOf("dup3.txt", same),
-        ],
-      },
-    });
-    Object.defineProperty(drop, "target", { value: zone });
-    window.dispatchEvent(drop);
+    dropOnZone([
+      fileOf("dup1.txt", same),
+      fileOf("dup2.txt", same),
+      fileOf("dup3.txt", same),
+    ]);
 
     await waitFor(() => expect(bodies).toHaveLength(3), { timeout: 4000 });
     // Three DISTINCT rows, not one row written over three times.

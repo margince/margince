@@ -33,6 +33,16 @@ stays private to you, and only learns from sources you add."
 Three properties in one sentence. It affects your drafts. Nobody else sees it. It
 learns only from what you give it.
 
+Samples arrive as files: drop them on the zone or click it to choose (`.txt`,
+`.md`, `.vtt`, `.srt`, `.json`, several at once). The card says beside the zone
+what teaches the voice (sent emails first, then proposals and posts, then call
+transcripts) and what to leave out (other people's writing, AI drafts). A file
+that is mostly attributed dialogue is a conversation: the card asks "Which
+speaker is you?" and keeps only that speaker's turns. An email that happens to
+open a line with a label and a colon ("Frage: …") is prose and is taken whole.
+A first build needs 800 words; the button reads "Build my Voice DNA" until a
+version exists and "Rebuild Voice DNA" after.
+
 ## Agents
 
 Where you mint and revoke **passports** — the credentials that let an AI agent

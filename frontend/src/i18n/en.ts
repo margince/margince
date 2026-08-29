@@ -5521,9 +5521,8 @@ export const en = {
     "Your personal writing voice. It shapes drafts made for you, stays private to you, and only learns from sources you add.",
   "settings.voice.readOnly":
     "Read-only view — you do not have permission to change your Voice DNA.",
-  "settings.voice.emptyTitle": "No Voice DNA yet",
   "settings.voice.emptyBody":
-    "Add a few writing samples below and build your Voice DNA — or do it during onboarding.",
+    "Add a few things you wrote and build your Voice DNA from them. It takes about a minute.",
   "settings.voice.status.collecting": "Collecting",
   "settings.voice.status.ready": "Ready",
   "settings.voice.status.stale": "Needs a rebuild",
@@ -5599,25 +5598,38 @@ export const en = {
   "settings.voice.corpusEmpty": "No samples yet.",
   "settings.voice.excluded": "excluded",
   "settings.voice.removeSource": "Remove sample",
-  "settings.voice.pastedLabel": "Pasted writing",
-  "settings.voice.addPlaceholder":
-    "Paste an email, post, or anything you've written…",
-  "settings.voice.addSource": "Add sample",
-  "settings.voice.addSourceOpen": "Paste writing",
-  "settings.voice.pasteCancel": "Cancel",
+  "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "Your first writing sample",
-  "settings.voice.addFirstOpen": "Paste your first sample",
-  "settings.voice.addFirstCta": "Add it and start my Voice DNA",
-  "settings.voice.browseFiles": "Choose files",
   "settings.voice.dropHint":
-    "Or drop .txt, .md, .vtt, .srt or .json files here.",
+    "Drop files here or choose them. .txt, .md, .vtt, .srt or .json, several at once is fine.",
+  "settings.voice.dropEmpty":
+    "Drop your writing here, or click to choose files",
+  "settings.voice.whyToggle": "Why this matters",
+  "settings.voice.whyBody":
+    "Margince drafts emails for you in your own words, and nothing sends until you approve it. It learns your tone, rhythm and phrasing from your own writing, and from nobody else's. Your samples stay private to you.",
+  "settings.voice.worksTitle": "What works best",
+  "settings.voice.worksEmails":
+    "Sent emails, saved as .txt or .md. They show how you write when you want something.",
+  "settings.voice.worksDocs":
+    "Proposals, posts and anything else you wrote yourself.",
+  "settings.voice.worksTranscripts":
+    "Call or meeting transcripts (.vtt, .srt, .json or a text export). I ask which speaker is you and keep only your own turns.",
+  "settings.voice.worksNot":
+    "Leave out what others wrote and drafts an AI made for you. They would teach it someone else's voice.",
+  "settings.voice.floorNote":
+    "{min} words minimum for a first build. Below that the model just copies phrasing.",
   "settings.voice.floorLabel": "Progress towards the first build ({min} words)",
   "settings.voice.floorProgress": "{words} of {min} words to a first build",
-  "settings.voice.speakerQuestion": "Which speaker are you in “{name}”?",
+  "settings.voice.speakerQuestion":
+    "“{name}” is a conversation. Which speaker is you?",
+  "settings.voice.speakerWhy":
+    "Only your own turns are kept. Everyone else's words are dropped.",
   "settings.voice.speakerDetail": "{words} words, {turns} turns",
   "settings.voice.speakerConfirm": "That one is me",
   "settings.voice.speakerDismiss": "Skip this file",
-  "settings.voice.noticeKept": "{name}: kept {kept} of {total} words.",
+  "settings.voice.noticeKept":
+    "{name}: kept {kept} of {total} words. Only your turns count.",
+  "settings.voice.noticeAdded": "{name}: {words} words added.",
   "settings.voice.noticeSkippedType":
     "{name} was skipped — only text files can be read.",
   "settings.voice.noticeSkippedEmpty": "{name} was skipped — it has no text.",
@@ -5637,6 +5649,7 @@ export const en = {
   "settings.voice.buildRowLabel": "Build from your samples",
   "settings.voice.building": "Building…",
   "settings.voice.rebuild": "Rebuild Voice DNA",
+  "settings.voice.buildFirst": "Build my Voice DNA",
   "settings.voice.buildNeedsWords":
     "About {n} more words and I can build your first voice. Below that there is not enough of your writing to learn anything honest from.",
   "settings.voice.buildProvisional":

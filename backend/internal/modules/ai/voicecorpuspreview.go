@@ -91,8 +91,29 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 		}
 		preview.Speakers[at].Words += words
 	}
+	if !attributedMajority(preview) {
+		// Prose lines that open with a short label and a colon — "Frage:",
+		// "Vorschlag:", a heading — parse as a few attributed words among many
+		// unattributed ones. Listing those labels as speakers would ask the
+		// owner which of their own headings they are, so a source whose words
+		// mostly belong to nobody is reported as the single-author text it is.
+		if concrete == corpusFormatSRT {
+			return CorpusPreview{DetectedFormat: corpusFormatTxt, TotalWords: WordCount(content)}, nil
+		}
+		preview.IngestibleAsTranscript = false
+		return preview, nil
+	}
 	preview.IngestibleAsTranscript = len(preview.Speakers) > 0
 	return preview, nil
+}
+
+// attributedMajority is what makes a source a conversation rather than prose
+// with labels in it: at least half of its words belong to a named speaker. A
+// meeting export attributes nearly every word; narration between turns stays
+// well under half. An empty preview has no attributed words and is not one.
+func attributedMajority(preview CorpusPreview) bool {
+	attributed := preview.TotalWords - preview.UnattributedWords
+	return attributed > 0 && attributed*2 >= preview.TotalWords
 }
 
 // CorpusIngestStats reports what the §B1.2 speaker filter did to one

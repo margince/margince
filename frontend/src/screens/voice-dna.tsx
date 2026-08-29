@@ -5,13 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
-import {
-  Badge,
-  Button,
-  Disclosure,
-  EmptyState,
-  Textarea,
-} from "../design-system/atoms";
+import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   type SettingControlProps,
@@ -111,19 +105,19 @@ export function VoiceDnaCard() {
         data ? (
           <VoiceDnaBody profile={data} />
         ) : (
-          // The empty state promises samples can be added "below", and a
-          // profile is minted by the first add rather than by a step of its
-          // own — so the add control has to render here too. Without it an
-          // owner who skipped the onboarding voice step could never start a
-          // Voice DNA at all, and everything the profile unlocks (corpus,
-          // builds, sample drafts) stayed unreachable.
+          // A profile is minted by the first add rather than by a step of
+          // its own, so the add control renders here too. Without it an owner
+          // who skipped the onboarding voice step could never start a Voice
+          // DNA at all, and everything the profile unlocks (corpus, builds,
+          // sample drafts) stayed unreachable. There is no empty-state box
+          // above it: the card's one job here is to take the first sample,
+          // and a box saying there is nothing yet only pushes that job down.
           <Panel title={t("settings.voice.title")}>
             <PanelBody>
               <p className="settings-panel-sub">{t("settings.voice.intro")}</p>
-              <EmptyState>
-                <b>{t("settings.voice.emptyTitle")}</b>
-                <p className="t-small">{t("settings.voice.emptyBody")}</p>
-              </EmptyState>
+              <p className="settings-panel-sub">
+                {t("settings.voice.emptyBody")}
+              </p>
               {/* The first sample is what MINTS the profile, so the control
                   that adds it asks for the create grant rather than the update
                   one every later sample rides on. Withheld rather than absent:
@@ -131,13 +125,15 @@ export function VoiceDnaCard() {
                   installation does not have, when the truth is a seat that may
                   not use it. */}
               {canCreate ? (
-                <VoiceCorpusIntake
-                  first
-                  profileId={null}
-                  onChanged={() =>
-                    qc.invalidateQueries({ queryKey: ["voice-profile"] })
-                  }
-                />
+                <SettingList>
+                  <VoiceCorpusIntake
+                    first
+                    profileId={null}
+                    onChanged={() =>
+                      qc.invalidateQueries({ queryKey: ["voice-profile"] })
+                    }
+                  />
+                </SettingList>
               ) : (
                 <p className="t-small">{t("settings.voice.readOnly")}</p>
               )}
@@ -743,7 +739,15 @@ function BuildControls({
               busyLabel={t("settings.voice.building")}
               onClick={() => build.mutate()}
             >
-              <Sparkles aria-hidden /> {t("settings.voice.rebuild")}
+              <Sparkles aria-hidden />{" "}
+              {/* "Rebuild" names a build that has happened. Before the first
+                  one there is nothing to redo, and the verb the reader came
+                  for is the first build itself. */}
+              {t(
+                (profile.profile_version ?? 0) > 0
+                  ? "settings.voice.rebuild"
+                  : "settings.voice.buildFirst",
+              )}
             </Button>
             {/* Mounted whether or not there is an outcome yet. A build runs for
                 about a minute behind a poll, so the reader who started it has

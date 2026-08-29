@@ -35,19 +35,34 @@
   flex-wrap: wrap;
 }
 
-/* The region a dropped file is actually accepted in. It is outlined only while
-   a file is over it, so the card does not carry a dashed box at rest. */
-.vdna-intake {
-  border: 1px dashed transparent;
-  border-radius: var(--r-sm);
-  transition:
-    border-color 0.12s ease,
-    background 0.12s ease;
+/* The zone and what the card says around it: the drop target first, then what
+   happened to each file, then which writing teaches the voice. The list is
+   beside the zone every time because "what should I upload?" is asked at the
+   moment of uploading, not once in onboarding. */
+.vdna-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.vdna-intake-dragover {
-  border-color: var(--accent);
-  background: var(--bgHover);
+.vdna-zone .fdz {
+  min-height: 5.5rem;
+  justify-content: center;
+  text-align: center;
+}
+
+.vdna-works-list {
+  list-style: disc;
+  margin: var(--space-1) 0 var(--space-2);
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.vdna-works-not,
+.vdna-floornote {
+  color: var(--textSecondary);
 }
 
 /* The distance to the first build, shown only below the floor. */

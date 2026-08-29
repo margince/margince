@@ -168,71 +168,52 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The paste box is a form — a whole email typed into one box and then
-// committed — so the settings row keeps the verb and the dialog keeps the form.
-// A test whose subject is that box opens the dialog first and scopes its
-// queries to it; the claims themselves are unchanged.
-async function openFirstSample(): Promise<HTMLElement> {
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Paste your first sample" }),
-  );
-  return screen.getByRole("dialog");
+// The zone's input is the one control the intake has; a file is handed to it
+// the way the browser hands one over.
+function fileInput(): HTMLInputElement {
+  const input = document.querySelector('input[type="file"]');
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error("the card rendered no file input");
+  }
+  return input;
 }
 
 describe("the Settings Voice DNA card with no profile yet", () => {
-  it("offers the add control the empty state points at", async () => {
+  it("offers the first-sample zone and says what it is for", async () => {
     stubApi();
     render(<VoiceDnaCard />);
-    expect(await screen.findByText("No Voice DNA yet")).toBeTruthy();
-    // The row names the sample and carries the verb that asks for one.
-    expect(screen.getByText("Your first writing sample")).toBeTruthy();
-
-    const dialog = await openFirstSample();
-    expect(
-      within(dialog).getByPlaceholderText(
-        "Paste an email, post, or anything you've written…",
-      ),
-    ).toBeTruthy();
-    expect(
-      within(dialog).getByRole("button", {
-        name: "Add it and start my Voice DNA",
-      }),
-    ).toBeTruthy();
+    // The row names the sample; the zone under it is the control.
+    expect(await screen.findByLabelText("Your first writing sample")).toBe(
+      fileInput(),
+    );
+    // What to add, why, and how much: the part onboarding narrates and a bare
+    // row used to leave out.
+    expect(screen.getByText("What works best")).toBeTruthy();
+    expect(screen.getByText("Why this matters")).toBeTruthy();
+    expect(screen.getByText(/800 words minimum/)).toBeTruthy();
+    // No paste box: files are the one way in here.
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 
   it("mints exactly one profile on the first add and then shows the build control", async () => {
     const calls = stubApi();
     render(<VoiceDnaCard />);
-    const dialog = await openFirstSample();
-    await userEvent.type(
-      within(dialog).getByPlaceholderText(
-        "Paste an email, post, or anything you've written…",
-      ),
-      "Short sentences. Concrete nouns.",
-    );
-    await userEvent.click(
-      within(dialog).getByRole("button", {
-        name: "Add it and start my Voice DNA",
+    await screen.findByLabelText("Your first writing sample");
+    await userEvent.upload(
+      fileInput(),
+      new File(["Short sentences. Concrete nouns."], "letter.txt", {
+        type: "text/plain",
       }),
     );
 
     // The build control only exists inside the body that requires a profile,
-    // so its appearance is the proof the card left the dead end.
+    // so its appearance is the proof the card left the dead end. Before any
+    // build it is named for the first build, not a rebuild.
     expect(
-      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
     ).toBeTruthy();
     expect(calls.filter((c) => c === "POST /voice-profiles")).toHaveLength(1);
     expect(calls).toContain("POST /voice-profiles/vp-1/sources");
-  });
-
-  it("keeps the add disabled until there is something to add", async () => {
-    stubApi();
-    render(<VoiceDnaCard />);
-    const dialog = await openFirstSample();
-    const add = within(dialog).getByRole("button", {
-      name: "Add it and start my Voice DNA",
-    });
-    expect(add.hasAttribute("disabled")).toBe(true);
   });
 
   // A seat that may READ a Voice DNA but not change one is not offered a
@@ -242,13 +223,13 @@ describe("the Settings Voice DNA card with no profile yet", () => {
   it("withholds the first-sample control from a seat that cannot create one", async () => {
     stubApi({ voice_profile: ["read"] });
     render(<VoiceDnaCard />);
-    expect(await screen.findByText("No Voice DNA yet")).toBeTruthy();
     expect(
-      screen.getByText(/you do not have permission to change your Voice DNA/i),
+      await screen.findByText(
+        /you do not have permission to change your Voice DNA/i,
+      ),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Add it and start my Voice DNA" }),
-    ).toBeNull();
+    expect(screen.queryByLabelText("Your first writing sample")).toBeNull();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
   // An owner with no voice yet has one thing to do. Splitting the surface into
@@ -257,8 +238,9 @@ describe("the Settings Voice DNA card with no profile yet", () => {
   it("stays one card, naming no subject the owner has nothing in yet", async () => {
     stubApi();
     render(<VoiceDnaCard />);
-    expect(await screen.findByText("No Voice DNA yet")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Voice DNA" })).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "Voice DNA" }),
+    ).toBeTruthy();
     for (const absent of ["Writing samples", "Builds"]) {
       expect(screen.queryByRole("heading", { name: absent })).toBeNull();
     }
@@ -333,12 +315,9 @@ describe("the Settings Voice DNA card with a profile", () => {
       throw new Error("the corpus heading is not inside a card");
     }
     expect(await within(corpus).findByText(/420 of 30,000 words/)).toBeTruthy();
-    expect(
-      within(corpus).getByRole("button", { name: "Paste writing" }),
-    ).toBeTruthy();
-    expect(
-      within(corpus).getByRole("button", { name: /Choose files/ }),
-    ).toBeTruthy();
+    expect(within(corpus).getByLabelText("Add writing samples")).toBe(
+      fileInput(),
+    );
   });
 
   // Every box on this card is a real form control with a real name. A
@@ -353,13 +332,8 @@ describe("the Settings Voice DNA card with a profile", () => {
     expect(
       await screen.findByRole("textbox", { name: "Your preferences" }),
     ).toBeTruthy();
-    // The add box draws its own label inside the dialog, and the label is tied
-    // to the control — and it names the dialog too.
-    await userEvent.click(
-      screen.getByRole("button", { name: "Paste writing" }),
-    );
-    const dialog = screen.getByRole("dialog", { name: "Add sample" });
-    expect(within(dialog).getByLabelText("Add sample")).toBeTruthy();
+    // The file control takes its name from the row above the zone.
+    expect(screen.getByLabelText("Add writing samples")).toBe(fileInput());
   });
 });
 
@@ -398,7 +372,7 @@ describe("a build that fails", () => {
   async function pressRebuild() {
     render(<VoiceDnaCard />);
     await userEvent.click(
-      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
+      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
     );
   }
 
@@ -427,5 +401,49 @@ describe("a build that fails", () => {
     await pressRebuild();
 
     expect(await screen.findByText("The AI budget is spent.")).toBeTruthy();
+  });
+});
+
+// "Rebuild" names a build that has happened. The verb is the first build until
+// a version exists, and a rebuild from then on.
+describe("what the build button is called", () => {
+  function stubWith(profile: VoiceProfile) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [profile], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+  }
+
+  it("asks for the first build while no version exists", async () => {
+    stubWith({ ...PROFILE, maturity: "provisional" });
+    render(<VoiceDnaCard />);
+    expect(
+      await screen.findByRole("button", { name: /Build my Voice DNA/ }),
+    ).toBeTruthy();
+  });
+
+  it("offers a rebuild once a version exists", async () => {
+    stubWith({
+      ...PROFILE,
+      maturity: "provisional",
+      status: "ready",
+      profile_version: 2,
+    });
+    render(<VoiceDnaCard />);
+    expect(
+      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
+    ).toBeTruthy();
   });
 });

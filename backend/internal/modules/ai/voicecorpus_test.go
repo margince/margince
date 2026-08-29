@@ -497,3 +497,44 @@ func TestPreviewRefusesAnUnknownWireFormat(t *testing.T) {
 		t.Fatalf("err = %v, want unsupported_format", err)
 	}
 }
+
+func TestPreviewTakesColonHeadedProseAsProse(t *testing.T) {
+	email := "Moin Stefan,\n\nJoshua und Marcus sind ja schon mit Vollgas dran. Wir gehen mit Vollgas an die ganze AI Sache.\n\n" +
+		"Frage: Ich hatte nicht geplant zu kommen. Was haelst du von der Idee?\n\n" +
+		"Vorschlag: Discovery Workshop, drei bis fuenf Tage, alle Aufgaben grob schaetzen.\n\nGanz liebe Gruesse"
+	preview, err := PreviewCorpusText("transcript", email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.IngestibleAsTranscript || len(preview.Speakers) != 0 {
+		t.Fatalf("an email with \"Frage:\" lines is prose, not a conversation: %+v", preview)
+	}
+	if preview.DetectedFormat != "txt" || preview.TotalWords != WordCount(email) {
+		t.Fatalf("prose is reported whole as txt: format=%q words=%d want %d", preview.DetectedFormat, preview.TotalWords, WordCount(email))
+	}
+}
+
+func TestPreviewKeepsNarratedDialogueAsATranscript(t *testing.T) {
+	// Two thirds of the words are spoken turns; the rest is narration between
+	// them. That is still a conversation, and the counterparty's turns must
+	// not be credited to the owner by treating the file as prose.
+	content := "Lars: one two three four five six\nSam: seven eight nine ten eleven twelve\n[the room laughs and someone opens a window]\nLars: thirteen fourteen fifteen sixteen seventeen eighteen"
+	preview, err := PreviewCorpusText("transcript", content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !preview.IngestibleAsTranscript || len(preview.Speakers) != 2 {
+		t.Fatalf("majority-attributed dialogue is a transcript: %+v", preview)
+	}
+}
+
+func TestPreviewStructuredTranscriptWithoutSpeakersIsNotIngestible(t *testing.T) {
+	content := "WEBVTT\n\n00:00.000 --> 00:04.000\none two three\n\n00:04.000 --> 00:08.000\nfour five six"
+	preview, err := PreviewCorpusText("transcript", content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.DetectedFormat != "vtt" || preview.IngestibleAsTranscript {
+		t.Fatalf("a cue file that names nobody keeps its format and cannot be filtered: %+v", preview)
+	}
+}

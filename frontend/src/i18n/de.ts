@@ -5469,9 +5469,8 @@ export const de = {
     "Deine persönliche Schreibstimme. Sie prägt Entwürfe, die für dich gemacht werden, bleibt privat und lernt nur aus Quellen, die du hinzufügst.",
   "settings.voice.readOnly":
     "Nur-Lese-Ansicht — du hast keine Berechtigung, deine Voice DNA zu ändern.",
-  "settings.voice.emptyTitle": "Noch keine Voice DNA",
   "settings.voice.emptyBody":
-    "Füg unten ein paar Schreibproben hinzu und bau deine Voice DNA — oder mach es beim Onboarding.",
+    "Füge ein paar Texte hinzu, die du geschrieben hast, und baue daraus deine Voice DNA. Das dauert etwa eine Minute.",
   "settings.voice.status.collecting": "Sammelt",
   "settings.voice.status.ready": "Bereit",
   "settings.voice.status.stale": "Neuaufbau nötig",
@@ -5549,27 +5548,40 @@ export const de = {
   "settings.voice.corpusEmpty": "Noch keine Proben.",
   "settings.voice.excluded": "ausgeschlossen",
   "settings.voice.removeSource": "Probe entfernen",
-  "settings.voice.pastedLabel": "Eingefügter Text",
-  "settings.voice.addPlaceholder":
-    "Füg eine E-Mail, einen Post oder etwas Geschriebenes ein…",
-  "settings.voice.addSource": "Probe hinzufügen",
-  "settings.voice.addSourceOpen": "Text einfügen",
-  "settings.voice.pasteCancel": "Abbrechen",
+  "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Deine erste Schreibprobe",
-  "settings.voice.addFirstOpen": "Erste Probe einfügen",
-  "settings.voice.addFirstCta": "Hinzufügen und Voice DNA starten",
-  "settings.voice.browseFiles": "Dateien auswählen",
   "settings.voice.dropHint":
-    "Oder .txt-, .md-, .vtt-, .srt- oder .json-Dateien hier ablegen.",
+    "Dateien hier ablegen oder auswählen. .txt, .md, .vtt, .srt oder .json, gern mehrere auf einmal.",
+  "settings.voice.dropEmpty":
+    "Deine Texte hier ablegen oder klicken, um Dateien auszuwählen",
+  "settings.voice.whyToggle": "Warum das wichtig ist",
+  "settings.voice.whyBody":
+    "Margince entwirft E-Mails für dich in deinen eigenen Worten, und nichts wird gesendet, bevor du es freigibst. Es lernt Ton, Rhythmus und Formulierungen aus deinen eigenen Texten, und von niemandem sonst. Deine Proben bleiben privat.",
+  "settings.voice.worksTitle": "Was am besten funktioniert",
+  "settings.voice.worksEmails":
+    "Gesendete E-Mails, als .txt oder .md gespeichert. Sie zeigen, wie du schreibst, wenn du etwas willst.",
+  "settings.voice.worksDocs":
+    "Angebote, Posts und alles andere, was du selbst geschrieben hast.",
+  "settings.voice.worksTranscripts":
+    "Transkripte von Calls oder Meetings (.vtt, .srt, .json oder ein Textexport). Ich frage, welche Sprecherin oder welcher Sprecher du bist, und behalte nur deine eigenen Beiträge.",
+  "settings.voice.worksNot":
+    "Lass weg, was andere geschrieben haben, und Entwürfe, die eine KI für dich gemacht hat. Sie würden ihr die Stimme von jemand anderem beibringen.",
+  "settings.voice.floorNote":
+    "Mindestens {min} Wörter für einen ersten Build. Darunter kopiert das Modell nur Formulierungen.",
   "settings.voice.floorLabel":
     "Fortschritt bis zum ersten Build ({min} Wörter)",
   "settings.voice.floorProgress":
     "{words} von {min} Wörtern bis zum ersten Build",
-  "settings.voice.speakerQuestion": "Wer bist du in „{name}“?",
+  "settings.voice.speakerQuestion":
+    "„{name}“ ist ein Gespräch. Wer davon bist du?",
+  "settings.voice.speakerWhy":
+    "Nur deine eigenen Beiträge werden behalten. Die Worte aller anderen werden verworfen.",
   "settings.voice.speakerDetail": "{words} Wörter, {turns} Beiträge",
   "settings.voice.speakerConfirm": "Das bin ich",
   "settings.voice.speakerDismiss": "Datei überspringen",
-  "settings.voice.noticeKept": "{name}: {kept} von {total} Wörtern übernommen.",
+  "settings.voice.noticeKept":
+    "{name}: {kept} von {total} Wörtern behalten. Nur deine Beiträge zählen.",
+  "settings.voice.noticeAdded": "{name}: {words} Wörter hinzugefügt.",
   "settings.voice.noticeSkippedType":
     "{name} wurde übersprungen – lesbar sind nur Textdateien.",
   "settings.voice.noticeSkippedEmpty":
@@ -5591,6 +5603,7 @@ export const de = {
   "settings.voice.buildRowLabel": "Aus deinen Proben bauen",
   "settings.voice.building": "Baue…",
   "settings.voice.rebuild": "Voice DNA neu bauen",
+  "settings.voice.buildFirst": "Meine Voice DNA bauen",
   "settings.voice.buildNeedsWords":
     "Noch etwa {n} Wörter, dann kann ich deine erste Voice DNA bauen. Darunter liegt zu wenig von deinem Schreiben vor, um ehrlich etwas daraus zu lernen.",
   "settings.voice.buildProvisional":

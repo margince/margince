@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import type { IntakeOutcome, RefusalReason } from "./voice-intake-core";
 import {
-  intakePaste,
   intakeTranscript,
   intakeUpload,
   isAcceptedCorpusFile,
@@ -43,6 +42,10 @@ export type IntakeNotice = Readonly<{
     | "askQueueFull";
   keptWords?: number;
   inputWords?: number;
+  /** Whether kept-of-total came from a speaker filter: a document keeps every
+   * word, so the notice says so rather than reporting a filter that ran on
+   * nothing. */
+  transcript?: boolean;
   reason?: RefusalReason | null;
   problem?: unknown;
 }>;
@@ -144,6 +147,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
             kind: "kept",
             keptWords: outcome.stats.kept_words,
             inputWords: outcome.stats.input_words,
+            transcript: outcome.transcript,
           });
           onChanged();
           return;
@@ -289,15 +293,6 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
     [knownRefs, note, runIntake],
   );
 
-  const addPaste = useCallback(
-    (text: string, label: string) => {
-      runIntake(label, () =>
-        intakePaste(sourceRef("paste", label, text, knownRefs()), label, text),
-      );
-    },
-    [knownRefs, runIntake],
-  );
-
   const pendingAsk = asks[0] ?? null;
 
   // Settling a question frees one of the capped slots, so the ref moves with
@@ -340,7 +335,6 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
 
   return {
     addFiles,
-    addPaste,
     pendingAsk,
     answerSpeaker,
     dismissAsk,
