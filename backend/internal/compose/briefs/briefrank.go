@@ -102,27 +102,34 @@ func briefBaseValueSQL(asOfPos, basePos int) string {
 	END`, asOfPos, basePos)
 }
 
-// Rank computes the deterministic §10.1 queue for the acting rep at one
-// instant. It is a read: nothing is persisted (SnapshotRun does that),
-// and the candidate set is bounded by the caller's own row scope — a
-// rep's brief only ranks deals they can see.
-func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return BriefRanking{}, err
-	}
-	userID, err := briefUser(ctx)
-	if err != nil {
-		return BriefRanking{}, err
-	}
+// briefFacts is everything ONE transaction gathers for a rank: the candidates
+// and what is known about them, plus the basis every one of them was measured
+// against.
+//
+// One struct rather than six out-parameters, because they are one read: the
+// revenue norm and every candidate's base value have to be measured against the
+// same basis, and two reads of one installation-wide value is two chances to
+// disagree.
+type briefFacts struct {
+	facts        map[ids.UUID]briefDealFacts
+	order        []ids.UUID
+	stakeholders map[ids.UUID][]ids.UUID
+	lineage      map[ids.UUID]dealLineage
+	// revenueNorm is the base value the revenue factor divides by, and
+	// revenueNormCurrency is what that value is in.
+	revenueNorm         int64
+	revenueNormCurrency string
+}
 
-	facts := map[ids.UUID]briefDealFacts{}
-	var order []ids.UUID
-	stakeholders := map[ids.UUID][]ids.UUID{}
-	lineage := map[ids.UUID]dealLineage{}
-	revenueNorm := int64(briefRevenueNormFallbackMinor)
-	revenueNormCurrency := ""
-
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+// gather reads one transaction's worth of ranking facts.
+func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID) (briefFacts, error) {
+	out := briefFacts{
+		facts:        map[ids.UUID]briefDealFacts{},
+		stakeholders: map[ids.UUID][]ids.UUID{},
+		lineage:      map[ids.UUID]dealLineage{},
+		revenueNorm:  int64(briefRevenueNormFallbackMinor),
+	}
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		// The rep's last brief view: the previous run's data cutoff. No
 		// previous run → the overnight window is all-time.
 		lastView, err := briefLastView(ctx, tx, userID)
@@ -141,24 +148,48 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		if err != nil {
 			return err
 		}
-		revenueNorm = norm
-		revenueNormCurrency = base
+		out.revenueNorm = norm
+		out.revenueNormCurrency = base
 
-		if err := briefCandidates(ctx, tx, userID, now, base, facts, &order); err != nil {
+		if err := briefCandidates(ctx, tx, userID, now, base, out.facts, &out.order); err != nil {
 			return err
 		}
-		if err := briefEvidenceRows(ctx, tx, lastView, facts, order, stakeholders); err != nil {
+		if err := briefEvidenceRows(ctx, tx, lastView, out.facts, out.order, out.stakeholders); err != nil {
 			return err
 		}
 		// Why each returning deal is back, for the whole candidate set at once.
 		// It reads AFTER the candidates because it is asked about them: a deal
 		// the suppression rule is still holding out has no lineage to tell.
-		lineage, err = briefLineage(ctx, tx, userID, order, now)
+		out.lineage, err = briefLineage(ctx, tx, userID, out.order, now)
 		return err
 	})
 	if err != nil {
+		return briefFacts{}, err
+	}
+	return out, nil
+}
+
+// Rank computes the deterministic §10.1 queue for the acting rep at one
+// instant. It is a read: nothing is persisted (SnapshotRun does that),
+// and the candidate set is bounded by the caller's own row scope — a
+// rep's brief only ranks deals they can see.
+func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return BriefRanking{}, err
 	}
+	userID, err := briefUser(ctx)
+	if err != nil {
+		return BriefRanking{}, err
+	}
+
+	gathered, err := e.gather(ctx, now, userID)
+	if err != nil {
+		return BriefRanking{}, err
+	}
+	facts, order := gathered.facts, gathered.order
+	revenueNorm := gathered.revenueNorm
+	stakeholders := gathered.stakeholders
+	lineage := gathered.lineage
 
 	if err := e.resolveWarmth(ctx, now, facts, stakeholders); err != nil {
 		return BriefRanking{}, err
@@ -203,7 +234,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		Queue:               queue,
 		CandidateCount:      len(candidates),
 		RevenueNormMinor:    revenueNorm,
-		RevenueNormCurrency: revenueNormCurrency,
+		RevenueNormCurrency: gathered.revenueNormCurrency,
 		AsOf:                now,
 	}, nil
 }
