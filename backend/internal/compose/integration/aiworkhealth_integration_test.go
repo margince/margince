@@ -39,7 +39,9 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 		t.Fatalf("projecting the stalled run: %v", err)
 	}
 
-	// A second person's failed run must never reach Rep1's lane.
+	// A second person's failed AND stalled runs must never reach Rep1's lane
+	// — one negative row per UNION arm, so dropping the principal predicate
+	// from either arm fails here rather than leaking live work.
 	if _, err := a.store.ApplyStateChange(a.env.Admin(), aiactivity.Change{
 		Source: "attachment_extraction", OccurrenceKey: "attachment_extraction:" + ids.NewV7().String(),
 		Kind: "document_extract", AITask: "document_extract", Attempt: 1,
@@ -47,7 +49,16 @@ func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
 		State: "failed", QueuedAt: a.queuedAt, StartedAt: &a.queuedAt, FinishedAt: &a.queuedAt,
 		EventID: ids.NewV7(),
 	}); err != nil {
-		t.Fatalf("projecting the other person's run: %v", err)
+		t.Fatalf("projecting the other person's failed run: %v", err)
+	}
+	if _, err := a.store.ApplyStateChange(a.env.Admin(), aiactivity.Change{
+		Source: "attachment_extraction", OccurrenceKey: "attachment_extraction:" + ids.NewV7().String(),
+		Kind: "document_extract", AITask: "document_extract", Attempt: 1,
+		ActorScope: aiactivity.ScopePersonal, ActorUserID: a.env.Rep2,
+		State: "running", QueuedAt: started, StartedAt: &started, StaleAfter: &stale,
+		EventID: ids.NewV7(),
+	}); err != nil {
+		t.Fatalf("projecting the other person's stalled run: %v", err)
 	}
 
 	rep1 := a.env.As(a.env.Rep1, []ids.UUID{a.env.Team1}, AccountRepPerms)

@@ -52,7 +52,7 @@ SELECT id, state, occurred_at, summary, subject_label FROM (
      WHERE actor_user_id = $1
        AND state IN ('queued','running')
        AND stale_after IS NOT NULL AND stale_after < now()
-     ORDER BY queued_at DESC, id DESC
+     ORDER BY COALESCE(started_at, queued_at) DESC, id DESC
      LIMIT $3
   )
   UNION ALL
