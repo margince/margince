@@ -153,14 +153,26 @@ func isSyntaxNodeType(expr ast.Expr, syntax string) bool {
 	if star, isStar := expr.(*ast.StarExpr); isStar {
 		expr = star.X
 	}
-	selector, isSelector := expr.(*ast.SelectorExpr)
-	if !isSelector {
+	name := ""
+	switch typed := expr.(type) {
+	case *ast.SelectorExpr:
+		pkg, qualified := typed.X.(*ast.Ident)
+		if !qualified || pkg.Name != syntax {
+			return false
+		}
+		name = typed.Sel.Name
+	case *ast.Ident:
+		// A DOT import spells the type unqualified, so `Expr` here is go/ast's.
+		// Read as a selector only, a file importing it that way was skipped
+		// whole — the clean tree this census exists to stop.
+		if syntax != "." {
+			return false
+		}
+		name = typed.Name
+	default:
 		return false
 	}
-	if pkg, qualified := selector.X.(*ast.Ident); !qualified || pkg.Name != syntax {
-		return false
-	}
-	switch selector.Sel.Name {
+	switch name {
 	case "Expr", "Node", "BasicLit":
 		return true
 	}
@@ -178,13 +190,23 @@ func isSyntaxNodeType(expr ast.Expr, syntax string) bool {
 func TestNothingShadowsTheStringConversion(t *testing.T) {
 	t.Parallel()
 	var findings []string
+	walked := 0
 	eachGoFileInTheModule(t, func(path string, file *ast.File) {
+		walked++
 		for _, decl := range file.Decls {
 			if named := declaresString(decl); named != "" {
 				findings = append(findings, path+": "+named)
 			}
 		}
 	})
+	// Pinned for the same reason its sibling is: a census whose finding is an
+	// ABSENCE passes by finding nothing, which is also what it does once it has
+	// stopped looking.
+	if walked < goFileFloor {
+		t.Fatalf("the walk reached only %d Go file(s), and this census is pinned at %d — a walk "+
+			"that stopped reaching them reports a clean tree in the same words as a tree with "+
+			"nothing left to fix", walked, goFileFloor)
+	}
 	if len(findings) > 0 {
 		t.Errorf("%d declaration(s) shadow `string`:\n\t%s\n\n"+
 			"gatekit.StringExpr folds `string(x)` as the identity on its argument, matching the "+
@@ -292,6 +314,12 @@ func TestTheFolderCensusSeesEachShapeASecondReaderIsWrittenIn(t *testing.T) {
 			// matcher that missed it would leave that reader invisible.
 			name: "an aliased import is the same syntax node",
 			source: "package p\nimport goast \"go/ast\"\nfunc fold(e goast.Expr) (string, bool) {\n" +
+				"\treturn fold(e)\n}\n",
+			want: 1,
+		},
+		{
+			name: "a dot import spells the same type unqualified",
+			source: "package p\nimport . \"go/ast\"\nfunc fold(e Expr) (string, bool) {\n" +
 				"\treturn fold(e)\n}\n",
 			want: 1,
 		},
