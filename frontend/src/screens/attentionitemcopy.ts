@@ -92,6 +92,17 @@ function aiWorkNoun(
   return "generic";
 }
 
+// How an automation firing stopped; anything unrecognised takes the generic
+// line rather than guessing.
+function automationWay(
+  kind: string | undefined,
+): "failed" | "blocked" | "generic" {
+  if (kind === "failed" || kind === "blocked") {
+    return kind;
+  }
+  return "generic";
+}
+
 // Which mailbox condition a capture concern names; anything unrecognised
 // takes the generic line rather than guessing at what broke.
 function captureNoun(
@@ -220,6 +231,13 @@ export function itemDetail(
   locale: Locale,
   zone: string,
 ): string | null {
+  // A troubled firing's supporting line leads with HOW it stopped — failed
+  // and blocked need different hands — and keeps the engine's reason after
+  // it where one was recorded.
+  if (item.source === "automation_run") {
+    const way = t(`day.automation.way.${automationWay(item.kind)}` as const);
+    return item.detail ? `${way} — ${item.detail}` : way;
+  }
   if (item.source === "relationship_decay") {
     return decayDetail(item, t, locale, zone);
   }

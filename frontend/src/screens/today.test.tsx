@@ -724,6 +724,39 @@ describe("what the night left on the worklist", () => {
     ).toBeTruthy();
     expect(screen.queryByText("Your day is clear.")).toBeNull();
   });
+  // A broken rule leads the quiet half of the day for the readers who can
+  // see it, and its card says HOW it stopped: failed and blocked need
+  // different hands.
+  it("leads with the broken rule and says how it stopped", async () => {
+    stub({
+      ...emptyDay,
+      automation_health: [
+        {
+          id: "run-1",
+          source: "automation_run",
+          kind: "failed",
+          title: "Route new leads",
+          detail: "the assignee seat is gone",
+          occurred_at: "2026-08-27T10:00:00Z",
+          actions: [],
+        },
+      ],
+      counts: {
+        this_morning: 0,
+        needs_you: 0,
+        planned: 0,
+        automation_health: 1,
+      },
+    });
+    renderToday();
+
+    await screen.findByText("Route new leads");
+    expect(screen.getByText("Failed — the assignee seat is gone")).toBeTruthy();
+    expect(
+      screen.getByText("1 automation firings did not do their work."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
   // The same defect, one lane later, and caught the same way: the lead line
   // read "Your day is clear" directly above an OVERDUE promise. It repeats
   // because every new lane has to be added to a summary written before it, so

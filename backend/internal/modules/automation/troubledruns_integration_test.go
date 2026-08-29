@@ -33,6 +33,13 @@ func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
 		time.Date(2026, 6, 1, 13, 0, 0, 0, time.UTC))
 	fx.exec(t, `UPDATE automation SET archived_at = now() WHERE id = $1`, archivedID)
 
+	// A PAUSED rule's failures raise nothing either: its owner turned it
+	// off, and the card would nag them about their own decision.
+	pausedID := fx.seedAutomation(t, "stage_change_create_task")
+	fx.seedRun(t, pausedID, "stage_change_create_task", "failed", nil,
+		time.Date(2026, 6, 1, 13, 30, 0, 0, time.UTC))
+	fx.exec(t, `UPDATE automation SET enabled = false WHERE id = $1`, pausedID)
+
 	since := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	troubled, err := store.TroubledRuns(ctx, since, 8)
 	if err != nil {

@@ -185,6 +185,15 @@ function quietLead(
   if (lapsed > 0) {
     return t("day.lead.decay", { count: formatNumber(lapsed, locale) });
   }
+  // The rule-health lead reaches only the readers the lane itself reaches
+  // (it is role-withheld like the DSR lane), and like every branch above it
+  // stops "clear" from printing over a warning-toned lane.
+  const brokenRules = day.counts.automation_health ?? 0;
+  if (brokenRules > 0) {
+    return t("day.lead.automation", {
+      count: formatNumber(brokenRules, locale),
+    });
+  }
   // Before "clear", because the briefing lane is on this page: a line reading
   // "your day is clear" above two items the night picked out is the one thing
   // this line exists to prevent. It sits below decisions and planned work,

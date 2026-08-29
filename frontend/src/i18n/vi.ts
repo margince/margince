@@ -205,6 +205,11 @@ export const vi = {
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
   "day.didNotRun": "Đã duyệt nhưng chưa chạy",
+  "day.automation.way.failed": "Thất bại",
+  "day.automation.way.blocked": "Bị chặn",
+  "day.automation.way.generic": "Không chạy",
+  "day.lead.automation":
+    "{count} lượt chạy tự động đã không hoàn thành công việc.",
   "day.automation": "Quy tắc ngừng hoạt động",
   "day.automation.empty": "Mọi quy tắc đều đang hoạt động.",
   "day.automation.kind.generic": "Một quy tắc tự động đã không chạy",

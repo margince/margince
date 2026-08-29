@@ -199,6 +199,11 @@ export const de = {
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
   "day.didNotRun": "Beschlossen, aber nicht passiert",
+  "day.automation.way.failed": "Fehlgeschlagen",
+  "day.automation.way.blocked": "Blockiert",
+  "day.automation.way.generic": "Nicht gelaufen",
+  "day.lead.automation":
+    "{count} Automatisierungsläufe haben ihre Arbeit nicht getan.",
   "day.automation": "Regeln, die nicht mehr laufen",
   "day.automation.empty": "Jede Regel tut ihre Arbeit.",
   "day.automation.kind.generic": "Eine Automatisierung ist nicht gelaufen",

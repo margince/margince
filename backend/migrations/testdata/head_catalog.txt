@@ -4725,6 +4725,7 @@ public.workflow_run.workflow_run_pkey PRIMARY KEY (id)
 public.workflow_run.workflow_run_status_check CHECK ((status = ANY (ARRAY['applied'::text, 'skipped'::text, 'failed'::text, 'requires_approval'::text, 'blocked'::text])))
 public.workflow_run.workflow_run_unique UNIQUE (handler, idempotency_key)
 public.workflow_run_pkey CREATE UNIQUE INDEX workflow_run_pkey ON public.workflow_run USING btree (id)
+public.workflow_run_troubled CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]))
 public.workflow_run_unique CREATE UNIQUE INDEX workflow_run_unique ON public.workflow_run USING btree (handler, idempotency_key)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace.archived_at timestamp with time zone gen=- def=-
