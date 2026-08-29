@@ -236,9 +236,17 @@ func assignedColumns(assignments string) []string {
 	return out
 }
 
-// assignmentTargetRe reads the column an assignment writes. Anchored at the
-// START of the assignment so `updated_at_source = $1` is not read as a write of
-// `updated_at`.
+// assignmentTargetRe reads the column an assignment writes, bare or QUOTED.
+// Anchored at the START of the assignment so `updated_at_source = $1` is not
+// read as a write of `updated_at`.
+//
+// The quoted form is not decoration: `SET "updated_at" = now()` is the same
+// column to Postgres and was the same dead write, and a reader taking only the
+// bare form saw no assignment at all — which is the silent direction. Its case
+// is different, though, and that difference is real: a quoted identifier is
+// case-SENSITIVE, so `"Updated_At"` is a different column and must not match.
+// The inner text is therefore taken verbatim while a bare name is folded, which
+// is exactly how Postgres reads the two.
 //
 // The optional qualifier is TOLERANCE, not a shape this tree writes: Postgres
 // requires an unqualified column on the left of a SET, in `UPDATE … FROM` as
@@ -246,14 +254,22 @@ func assignedColumns(assignments string) []string {
 // means a statement somebody writes that way is read as the write it was meant
 // to be rather than skipped — and skipping is the failure direction that goes
 // quiet.
-var assignmentTargetRe = regexp.MustCompile(`(?is)^\s*(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)\s*=`)
+var assignmentTargetRe = regexp.MustCompile(`(?is)^\s*(?:"?[a-z_][a-z0-9_]*"?\.)?(?:([a-z_][a-z0-9_]*)|"([^"]*)")\s*=`)
 
 func assignmentTarget(assignment string) string {
 	m := assignmentTargetRe.FindStringSubmatch(withoutLeadingComments(assignment))
 	if m == nil {
 		return ""
 	}
-	return strings.ToLower(m[1])
+	if m[1] != "" {
+		// An unquoted identifier is folded to lower case, which is what
+		// Postgres does with it.
+		return strings.ToLower(m[1])
+	}
+	// A quoted one is taken as written: the quotes are what make it
+	// case-sensitive, so folding here would report `"Updated_At"` as a write of
+	// a column that statement does not touch.
+	return m[2]
 }
 
 // touchStatements are the ratified deliberate touches: a statement whose whole

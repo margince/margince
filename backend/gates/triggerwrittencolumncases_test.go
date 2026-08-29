@@ -72,6 +72,21 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			statement: `UPDATE provider_connection c SET c.status = $2, c.updated_at = now() WHERE c.id = $1`,
 			writes:    map[string][]string{"provider_connection": {"status", "updated_at"}},
 		}, {
+			// A QUOTED target. Postgres reads `"updated_at"` as the same column
+			// as `updated_at`, and a reader taking only the bare form saw no
+			// assignment at all — the silent direction, and the dead write
+			// stays.
+			name:      "a quoted target",
+			statement: `UPDATE organization SET "display_name" = $2, "updated_at" = now() WHERE id = $1`,
+			writes:    map[string][]string{"organization": {"display_name", "updated_at"}},
+		}, {
+			// And the difference the quotes make. A quoted identifier is
+			// case-SENSITIVE, so this names a different column and folding it
+			// would report a write the statement does not make.
+			name:      "a quoted target in another case is another column",
+			statement: `UPDATE organization SET display_name = $2, "Updated_At" = now() WHERE id = $1`,
+			writes:    map[string][]string{"organization": {"display_name", "Updated_At"}},
+		}, {
 			// A clause word inside a VALUE. The assignment list ends at the
 			// literal's own `from` to a scan that does not track quotes, and
 			// everything after it — which is where the dead assignment is —
