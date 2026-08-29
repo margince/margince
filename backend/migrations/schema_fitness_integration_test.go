@@ -252,6 +252,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// Client-supplied edge endpoints — every one probed at the store:
 	"relationship.person_id":                     "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.counterparty_org_id":           "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
+	"relationship.counterparty_person_id":        "gated: auth.EnsureLinkTarget in CreateRelationship (H1) — ensureRelationshipEndpoints walks the far end of the person-to-person kind exactly as it walks the near one",
 	"relationship.organization_id":               "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.deal_id":                       "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
 	"relationship.project_id":                    "gated: auth.EnsureLinkTarget on the project anchor in CreateRelationship (H1)",
