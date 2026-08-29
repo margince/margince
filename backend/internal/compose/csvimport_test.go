@@ -453,7 +453,7 @@ func TestSkippedLinesReachTheObjectsReport(t *testing.T) {
 	if len(out.Objects[0].Skipped) != 1 {
 		t.Fatalf("skips = %+v, want the source's own disclosure", out.Objects[0].Skipped)
 	}
-	if got := lineOf(out.Objects[0].Skipped[0].ExternalID); got != 7 {
+	if got := out.Objects[0].Skipped[0].Line; got != 7 {
 		t.Fatalf("line = %d, want 7 — the report must send a human to the right line", got)
 	}
 	// An object the report does not carry cannot silently swallow them either.
@@ -507,5 +507,104 @@ func assertNonFieldTarget(t *testing.T, object, target string, targets []string,
 	}
 	if !slices.Contains(targets, target) {
 		t.Errorf("%s: %q is not an accepted column, so %s", object, target, absenceHarm)
+	}
+}
+
+// A report STORED before the line was carried still reads. Its JSON has no
+// `line` field, so it decodes as zero — and for a skip the source disclosed,
+// the id still spells "line N", which is where the line used to come from.
+func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
+	if got := lineOf(migration.SkippedRow{ExternalID: "line 7"}); got != 7 {
+		t.Errorf("line = %d, want 7 — a report written before the line was carried must still read", got)
+	}
+	// The carried line wins, which is what makes a file with its own key column
+	// answer at all: its ids are real, and the old parse returned 0 for them.
+	if got := lineOf(migration.SkippedRow{ExternalID: "b@x.test", Line: 4}); got != 4 {
+		t.Errorf("line = %d, want the carried 4", got)
+	}
+	// The id is not always one of ours — a mirror source's rows carry the
+	// incumbent's — so the fallback reads the WHOLE id or nothing. Unanchored
+	// it reported "line 7 of the export" as line 7, which is a number the
+	// reader would go looking for and not find.
+	for _, foreign := range []string{"line 7 of the export", "outline 7", "line seven", "line"} {
+		if got := lineOf(migration.SkippedRow{ExternalID: foreign}); got != 0 {
+			t.Errorf("lineOf(%q) = %d, want 0 — that id is not this source's disclosure", foreign, got)
+		}
+	}
+}
+
+// A file whose key column legitimately holds the text a source disclosure uses
+// keeps both rows in the report.
+//
+// The dedup folds one row's dry-run skip onto its commit skip, keyed on the id.
+// A row the SOURCE could not identify is disclosed as `line 7`, so a real row
+// whose key value is that text collided with it and one of the two vanished
+// from a report whose whole job is to say which rows a person must go fix.
+func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
+	var issues []crmcontracts.ImportRowIssue
+	seen := map[string]bool{}
+	added := appendIssues(&issues, seen, []migration.SkippedRow{
+		// What the source writes for a row with no key at all, on line 7.
+		{ExternalID: "line 7", Line: 7, Reason: "no key"},
+		// A row on line 12 whose key column really does hold that text.
+		{ExternalID: "line 7", Line: 12, Reason: "not-a-uuid"},
+	})
+	if added != 2 || len(issues) != 2 {
+		t.Fatalf("issues = %+v (added %d), want both rows — they are two rows a person must go fix",
+			issues, added)
+	}
+	// And the fold that DOES belong still happens: one row skipped twice.
+	added = appendIssues(&issues, seen, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	if added != 0 {
+		t.Errorf("the same row was reported twice; the dry run's skip and the commit's are one row")
+	}
+}
+
+// A resumed run keeps every refusal it recorded.
+//
+// A finished report can carry more outcomes than the file has rows, from two
+// causes. A stale dry-run skip whose row then committed as a create is one, and
+// dropping the skip is right. A resumed run double-counting after a checkpoint
+// that did not persist is the other, and there the surplus is in
+// created/updated — taking it out of `skipped` erases a row somebody has to go
+// fix.
+//
+// Only a resume can cause the second, so the ATTEMPT count tells them apart.
+// The object count cannot: attempts fold by class, and a CSV import is always
+// exactly one class.
+//
+// TWO walks is the ordinary committed run — the dry run and the commit — and
+// that is exactly where the stale skip lives. Three or more is a resume.
+func TestAResumedRunKeepsItsRefusals(t *testing.T) {
+	skipped := []migration.SkippedRow{{ExternalID: "a@x.test", Line: 2, Reason: "not-a-uuid"}}
+	// Three rows read; a resume counted two of them twice, so the four
+	// dispositions sum to five.
+	report := migration.Report{
+		Attempts: 3,
+		Objects: []migration.ObjectReport{{
+			Object: migration.ObjectLead, MirrorCount: 3, Created: 4, Skipped: skipped,
+		}},
+	}
+	out := toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &report})
+	if out.Disposition.Skipped != 1 {
+		t.Errorf("skipped = %d, want the one refusal the run recorded — a resume's surplus is in "+
+			"created, and taking it out of skipped drops a row somebody has to go fix",
+			out.Disposition.Skipped)
+	}
+	if len(out.Issues) != 1 {
+		t.Errorf("issues = %+v, want the refusal named", out.Issues)
+	}
+
+	// The ordinary committed run is unchanged: dry run plus commit is two walks,
+	// and there the surplus IS a stale skip — the dry run refused a row the
+	// commit then created.
+	for _, walks := range []int{0, 1, 2} {
+		ordinary := report
+		ordinary.Attempts = walks
+		out = toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &ordinary})
+		if out.Disposition.Skipped != 0 {
+			t.Errorf("skipped = %d on a %d-walk report, want the stale skip dropped",
+				out.Disposition.Skipped, walks)
+		}
 	}
 }

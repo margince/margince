@@ -219,3 +219,42 @@ func TestCSVSourceRefusesAnUnusableHeader(t *testing.T) {
 		t.Fatalf("err = %v, want ErrHeaderInvalid", err)
 	}
 }
+
+// TestARowCarriesTheFileLineItCameFrom is the number an issue sends a person to.
+//
+// The line used to be recovered from the external id's TEXT — a row the source
+// could not identify is disclosed as "line N", so the id was parsed back. A file
+// with its own key column gives every row a real id, that parse failed, and
+// every issue in such a file reported line 0: on a large file, the wrong place.
+func TestARowCarriesTheFileLineItCameFrom(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	body := "Email,First Name\na@x.test,A\nb@x.test,B\nc@x.test,C\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+
+	rows, err := src.Rows(context.Background(), ObjectLead, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 3 {
+		t.Fatalf("rows = %d, want the file's three", len(rows))
+	}
+	// The header is line 1, so the first record is line 2.
+	for i, row := range rows {
+		if want := i + 2; row.Line != want {
+			t.Errorf("row %q reports line %d, want %d — every row here has a real external id, "+
+				"which is exactly the file whose lines used to come back as zero",
+				row.ExternalID, row.Line, want)
+		}
+	}
+}
+
+// A row's outcome carries the row's line into the report, so a skip the WRITER
+// refused is as findable as one the source disclosed.
+func TestASkipNamesTheLineTheRowCameFrom(t *testing.T) {
+	var report ObjectReport
+	report.record(Row{ExternalID: "b@x.test", Line: 4}, EnsureResult{Skipped: true, SkipReason: "not-a-uuid"})
+
+	if len(report.Skipped) != 1 || report.Skipped[0].Line != 4 {
+		t.Fatalf("skipped = %+v, want the row's own line 4", report.Skipped)
+	}
+}

@@ -185,7 +185,7 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		s.skip(line, fmt.Sprintf("the %q column is empty, so this row cannot be identified for re-import or undo", s.sourceKey))
 		return Row{}, false
 	}
-	return Row{ExternalID: external, Fields: fields, LastSyncedAt: time.Time{}}, true
+	return Row{ExternalID: external, Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
 }
 
 func (s *CSVSource) skip(line int, reason string) {

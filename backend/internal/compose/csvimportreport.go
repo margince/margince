@@ -129,6 +129,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				// before a human approves it.
 				p.skipped = append(p.skipped, migration.SkippedRow{
 					ExternalID: row.ExternalID,
+					Line:       row.Line,
 					Reason:     refusal,
 				})
 			case predictCollidesSkipped:
@@ -139,6 +140,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				p.duplicates++
 				p.skipped = append(p.skipped, migration.SkippedRow{
 					ExternalID: row.ExternalID,
+					Line:       row.Line,
 					Reason:     skipReason,
 				})
 			case predictCollides:
@@ -152,6 +154,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				p.created++
 				p.collisions = append(p.collisions, migration.SkippedRow{
 					ExternalID: row.ExternalID,
+					Line:       row.Line,
 					Reason:     collision,
 				})
 			}
