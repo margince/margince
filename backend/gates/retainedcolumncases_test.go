@@ -259,11 +259,13 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 	// finished statement — assignments present, no dangling comma — and no `+`
 	// node exists for the syntax side either, so the verb is the only tell.
 	t.Run("a format verb in the SET clause is reported", func(t *testing.T) {
-		stmt := collapsedSQL(`UPDATE activity SET body = NULL, %s = NULL WHERE id = $1`)
-		if statementDestroying([]string{stmt}, table, column) != "" {
+		// The HEAD of the list, which is what fmt.Sprintf("UPDATE activity SET
+		// %s = NULL", column) really produces.
+		head := collapsedSQL(`UPDATE activity SET %s = NULL WHERE id = $1`)
+		if statementDestroying([]string{head}, table, column) != "" {
 			t.Error("a statement with no column in it was read as destroying one")
 		}
-		if assembledSetTarget([]string{stmt}) == "" {
+		if assembledSetTarget([]string{head}) == "" {
 			t.Error("a SET clause naming a fmt verb was read as complete — the column arrives at runtime " +
 				"and the KEEPS registration is no longer checked against it")
 		}
@@ -275,9 +277,14 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 		if got := assembledSetTarget([]string{collapsedSQL("UPDATE activity SET body = NULL /* was %s once */ WHERE id = $1")}); got != "" {
 			t.Errorf("a comment mentioning a verb was reported as assembled: %q", got)
 		}
-		// And the verb after a static assignment, which is the position an
-		// assembled sweep would really produce.
+		// And the OTHER position: after a static assignment, where the tell is
+		// the comma before the verb rather than the head of the clause. Two
+		// positions, because the pattern anchors on both and a case for one
+		// leaves the other untested.
 		behind := collapsedSQL(`UPDATE activity SET body = NULL, %s = NULL WHERE id = $1`)
+		if statementDestroying([]string{behind}, table, column) != "" {
+			t.Error("a statement with no column in it was read as destroying one")
+		}
 		if assembledSetTarget([]string{behind}) == "" {
 			t.Error("a verb standing where a later column should be was read as complete")
 		}
