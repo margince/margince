@@ -28,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 const googleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
@@ -246,6 +248,10 @@ func (v *googleOIDCVerifier) fetchJWKS(ctx context.Context) (map[string]*rsa.Pub
 	if err != nil {
 		return nil, time.Time{}, err
 	}
+	// No credential rides on this request — a key set is published for anyone —
+	// so the agent is the only thing the provider's operator can attribute it
+	// by, and it is read on a schedule rather than once.
+	req.Header.Set("User-Agent", outbound.KeySetHeader)
 	resp, err := v.client.Do(req)
 	if err != nil {
 		return nil, time.Time{}, err

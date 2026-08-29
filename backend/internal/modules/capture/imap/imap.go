@@ -50,10 +50,23 @@ const (
 	defaultMaxMessages = 50
 	maxMessagesCap     = 200
 
-	// dialTimeout bounds the TLS connect; pullDeadline bounds the whole
-	// select+fetch phase so a wedged or dribbling server cannot hang the
-	// request indefinitely (v2 has no per-command timeout, so we set a
-	// deadline on the underlying connection ourselves).
+	// dialTimeout bounds the TLS connect. pullDeadline is set on the connection
+	// before the select+fetch phase, and what it actually bounds is NARROWER
+	// than it reads.
+	//
+	// v2 manages this connection's deadlines itself: it sets its own before
+	// every response read (respReadTimeout, 30s in the pinned beta.8) and
+	// CLEARS it afterwards — readResponse defers setReadTimeout(0), which is
+	// SetReadDeadline(time.Time{}). So the read half of what is armed here is
+	// overridden by the first read and gone after it, and the phase as a whole
+	// is bounded by nothing: a server answering every command inside 30s can
+	// keep a pull alive indefinitely. Bounding the phase needs a timer this
+	// package does not have — filed rather than fixed here.
+	//
+	// The client owning these deadlines is also why nothing else may set one:
+	// it reads on ONE goroutine, and a read deadline firing closes the
+	// connection and fails every pending command. A caller "bounding" a single
+	// exchange more tightly is rejecting the session, not the exchange.
 	dialTimeout  = 15 * time.Second
 	pullDeadline = 90 * time.Second
 

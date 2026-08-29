@@ -29,6 +29,7 @@ import (
 	"github.com/emersion/go-imap/v2/imapclient"
 
 	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -116,12 +117,40 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 	//craft:ignore swallowed-errors SetDeadline only errors on a closed conn; we just dialed it, and a failure surfaces as the next read timing out
 	_ = tlsConn.SetDeadline(time.Now().Add(pullDeadline))
 	client := imapclient.New(tlsConn, &imapclient.Options{})
+	announceClient(client)
 	if err := client.Login(creds.Email, creds.Password).Wait(); err != nil {
 		//craft:ignore swallowed-errors best-effort close of a session whose login already failed — the rejection is the error to report
 		_ = client.Close()
 		return nil, nil, ErrLoginRejected
 	}
 	return client, tlsConn, nil
+}
+
+// announceClient sends the RFC 2971 ID, which is how a mailbox provider names
+// this client in their own logs and throttles it by name rather than by guess.
+// Nothing sent it, so every session was anonymous to the provider carrying it.
+//
+// Only when the server advertises the extension, and a refusal is not fatal:
+// an introduction is a courtesy the session does not depend on, and declining
+// to read a person's mail because their provider would not take one would be
+// the wrong trade entirely.
+func announceClient(client *imapclient.Client) {
+	if !client.Caps().Has(imapv2.CapID) {
+		return
+	}
+	// The exchange is bounded by the CLIENT, which sets its own read timeout
+	// per response, and nothing here touches the connection's deadline.
+	//
+	// A shorter deadline set from out here would not make the introduction
+	// safer, it would make it fatal: this client reads on one goroutine, and a
+	// read deadline firing closes the connection and fails every pending
+	// command — so a provider slow to answer an ID would have its LOGIN
+	// rejected, which is the harm bounding it was supposed to avoid.
+	//craft:ignore swallowed-errors an introduction the provider refused changes nothing about the session; the mail is still there to read
+	_, _ = client.ID(&imapv2.IDData{
+		Name:    outbound.MailboxProduct,
+		Version: outbound.MailboxVersion,
+	}).Wait()
 }
 
 // authenticateStanding probes the credentials end to end (dial, login,
@@ -181,8 +210,9 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// concurrent syncs of different mailboxes must not see each other.
 	st := &syncState{owner: creds.Email, contacts: map[string]struct{}{}}
 	if err := netConn.SetDeadline(time.Now().Add(pullDeadline)); err != nil {
-		// Without the deadline a wedged server could hang this pull
-		// forever — refuse rather than sync unbounded.
+		// Armed for the exchanges before v2 takes the deadline over — see
+		// pullDeadline, which says how much of the phase this really bounds.
+		// A connection that will not take a deadline is not one to sync on.
 		return nil, fmt.Errorf("imap: arming the read deadline: %w", errors.Join(ErrUnreachable, err))
 	}
 

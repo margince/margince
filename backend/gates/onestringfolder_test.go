@@ -27,7 +27,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -88,10 +87,18 @@ const goFileFloor = 2000
 // conversion are where the two readers gave different answers, and a helper
 // that never descends into either has no answer of its own to give.
 func stringFoldersIn(file *ast.File) []string {
-	syntax := astAlias(file)
-	if syntax == "" {
+	// The file's OWN name for go/ast, resolved rather than assumed. Matched as
+	// the literal `ast` it missed a file that aliases the import; matched as
+	// ANY identifier it read `yaml.Node` as a syntax node, and a walk over a
+	// YAML document is not a second answer to what string a Go expression
+	// holds. gatekit.ImportedAs is the one reader of an import there is.
+	syntax, dotImported := gatekit.ImportedAs(file, "go/ast")
+	if syntax == "" && !dotImported {
 		// A file that does not import go/ast reads no Go syntax.
 		return nil
+	}
+	if dotImported {
+		syntax = "."
 	}
 	var out []string
 	for _, decl := range file.Decls {
@@ -105,28 +112,6 @@ func stringFoldersIn(file *ast.File) []string {
 		out = append(out, "func "+fn.Name.Name)
 	}
 	return out
-}
-
-// astAlias is the local name this file binds go/ast to, or "" if it does not
-// import it.
-//
-// Resolved rather than assumed. Matching the package identifier as the literal
-// `ast` misses a file that aliases the import; matching ANY identifier reads
-// `yaml.Node` as a syntax node, and a walk over a YAML document is not a second
-// answer to what string a Go expression holds. The import is what tells them
-// apart, and the file already carries it.
-func astAlias(file *ast.File) string {
-	for _, spec := range file.Imports {
-		path, err := strconv.Unquote(spec.Path.Value)
-		if err != nil || path != "go/ast" {
-			continue
-		}
-		if spec.Name != nil {
-			return spec.Name.Name
-		}
-		return "ast"
-	}
-	return ""
 }
 
 func takesASyntaxNode(sig *ast.FuncType, syntax string) bool {

@@ -127,8 +127,25 @@ func TestEveryCensusOfSQLReadsItAsPostgresReceivesIt(t *testing.T) {
 // gates exist to stop.
 func eachGoFileInTheModule(t *testing.T, visit func(path string, file *ast.File)) {
 	t.Helper()
+	eachGoFileUnder(t, []string{"."}, visit)
+}
+
+// eachGoFileUnder is the same walk over a chosen set of roots, for a census
+// whose subject is not one module: the outbound surfaces reach past this one,
+// and a walk that stopped at its edge would certify a tree it never read.
+func eachGoFileUnder(t *testing.T, roots []string, visit func(path string, file *ast.File)) {
+	t.Helper()
 	fset := token.NewFileSet()
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
+	for _, root := range roots {
+		walkGoFilesUnder(t, fset, root, visit)
+	}
+}
+
+func walkGoFilesUnder(
+	t *testing.T, fset *token.FileSet, root string, visit func(path string, file *ast.File),
+) {
+	t.Helper()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -150,7 +167,7 @@ func eachGoFileInTheModule(t *testing.T, visit func(path string, file *ast.File)
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("walking the module: %v", err)
+		t.Fatalf("walking %s: %v", root, err)
 	}
 }
 

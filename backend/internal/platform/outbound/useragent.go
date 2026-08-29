@@ -52,4 +52,49 @@ const (
 	// other end most needs to know who is asking.
 	ClientMetadataProduct = "margince-oauth"
 	ClientMetadataHeader  = ClientMetadataProduct + "/" + version
+
+	// KeySetProduct identifies the fetch of an identity provider's public key
+	// set. The request carries no credential — it is a read of a document
+	// published for anyone — so the agent is the ONLY thing the provider's
+	// operator has to attribute it by, and a key set is read on a schedule
+	// rather than once.
+	//
+	// Named for the DOCUMENT rather than for what it is used for. Spelled
+	// around the word "token" it reads as a secret to a scanner, and a
+	// suppression on a public constant is a worse answer than a better name.
+	KeySetProduct = "margince-keyset"
+	KeySetHeader  = KeySetProduct + "/" + version
+
+	// SearchProduct identifies web-search queries. The key names the ACCOUNT,
+	// which is one customer's contract with the provider; the agent names the
+	// software making the calls under it. An operator diagnosing a spike can
+	// act on the second without cancelling the first.
+	SearchProduct = "margince-search"
+	SearchHeader  = SearchProduct + "/" + version
+
+	// EnrichProduct identifies contact-enrichment lookups, for the same reason
+	// as the search token and separately from it: the two run at different
+	// rates against different vendors, and one being throttled must not be the
+	// other's problem.
+	EnrichProduct = "margince-enrich"
+	EnrichHeader  = EnrichProduct + "/" + version
+
+	// MirrorProduct identifies reads and writes against a customer's own CRM
+	// while this product mirrors it. Their administrator sees the traffic in an
+	// audit log beside their people's own, and "some Go program" is not an
+	// answer to "what is writing to our records".
+	MirrorProduct = "margince-mirror"
+	MirrorHeader  = MirrorProduct + "/" + version
+
+	// MailProduct is what an SMTP session announces when the sender's address
+	// carries no domain to announce instead. A relay operator reads the EHLO
+	// name to attribute mail; the library's default is `localhost`, which is
+	// not merely anonymous but a claim, and a false one.
+	MailProduct = "margince-mail"
+
+	// MailboxProduct identifies this product in an IMAP ID exchange (RFC 2971).
+	// A mailbox provider throttles per client, and a client they cannot name is
+	// one they can only throttle by guessing.
+	MailboxProduct = "margince-mailbox"
+	MailboxVersion = version
 )
