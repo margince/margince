@@ -7395,12 +7395,12 @@ func (e PartnerRelationshipStage) Valid() bool {
 
 // Defines values for Person360SectionsOmitted.
 const (
-	DeadAddresses                               Person360SectionsOmitted = "dead_addresses"
 	Person360SectionsOmittedActivities          Person360SectionsOmitted = "activities"
 	Person360SectionsOmittedClaims              Person360SectionsOmitted = "claims"
 	Person360SectionsOmittedCommercial          Person360SectionsOmitted = "commercial"
 	Person360SectionsOmittedConsent             Person360SectionsOmitted = "consent"
 	Person360SectionsOmittedConversationMemory  Person360SectionsOmitted = "conversation_memory"
+	Person360SectionsOmittedDeadAddresses       Person360SectionsOmitted = "dead_addresses"
 	Person360SectionsOmittedDealRoles           Person360SectionsOmitted = "deal_roles"
 	Person360SectionsOmittedEmployments         Person360SectionsOmitted = "employments"
 	Person360SectionsOmittedLastTouch           Person360SectionsOmitted = "last_touch"
@@ -7419,8 +7419,6 @@ const (
 // Valid indicates whether the value is a known member of the Person360SectionsOmitted enum.
 func (e Person360SectionsOmitted) Valid() bool {
 	switch e {
-	case DeadAddresses:
-		return true
 	case Person360SectionsOmittedActivities:
 		return true
 	case Person360SectionsOmittedClaims:
@@ -7430,6 +7428,8 @@ func (e Person360SectionsOmitted) Valid() bool {
 	case Person360SectionsOmittedConsent:
 		return true
 	case Person360SectionsOmittedConversationMemory:
+		return true
+	case Person360SectionsOmittedDeadAddresses:
 		return true
 	case Person360SectionsOmittedDealRoles:
 		return true

@@ -8,5 +8,7 @@
 -- queueing every writer behind it.
 SET LOCAL lock_timeout = '3s';
 ALTER TABLE comms_outbound
-  ADD COLUMN bounce_recipient text
-  CHECK (bounce_recipient IS NULL OR bounced_at IS NOT NULL);
+  ADD COLUMN bounce_recipient text;
+ALTER TABLE comms_outbound
+  ADD CONSTRAINT comms_outbound_bounce_recipient_stated
+  CHECK (bounce_recipient IS NULL OR bounced_at IS NOT NULL) NOT VALID;

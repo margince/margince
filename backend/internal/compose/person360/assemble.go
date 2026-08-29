@@ -213,7 +213,7 @@ func (s *Service) sections(personID ids.PersonID, now time.Time, opts AssembleOp
 		{name: crmcontracts.Person360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.consentSection(ctx, tx, personID, out)
 		}},
-		{name: crmcontracts.DeadAddresses, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+		{name: crmcontracts.Person360SectionsOmittedDeadAddresses, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.deadAddressesSection(ctx, tx, out)
 		}},
 		{name: crmcontracts.Person360SectionsOmittedProfileFields, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {

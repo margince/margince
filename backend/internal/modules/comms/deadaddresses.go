@@ -7,8 +7,7 @@ package comms
 // delivery. DERIVED, never stored — an address is dead exactly while its
 // latest hard bounce is newer than the latest clean delivery to it, so a
 // later send that arrives clears the mark with no writer, no cascade, and
-// nothing for erasure to reach. The founder's rule for model-derived writes
-// does not even come into play: nothing is written.
+// nothing for erasure to reach.
 
 import (
 	"context"
