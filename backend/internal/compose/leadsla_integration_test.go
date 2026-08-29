@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -53,7 +54,11 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 
-	h := leadSLAEscalation{activities: activities.NewStore(e.DB()), now: func() time.Time { return deadline.Add(time.Hour) }}
+	h := leadSLAEscalation{
+		activities: activities.NewStore(e.DB()),
+		notices:    notices.NewStore(e.DB()),
+		now:        func() time.Time { return deadline.Add(time.Hour) },
+	}
 	eff, err := h.Plan(ctx, ev)
 	if err != nil {
 		t.Fatal(err)
