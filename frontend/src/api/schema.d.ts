@@ -28288,7 +28288,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
