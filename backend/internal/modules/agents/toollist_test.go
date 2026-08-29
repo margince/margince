@@ -53,12 +53,11 @@ func TestAWriteOnlyPassportIsStillOfferedItsOwnIdentity(t *testing.T) {
 // TestTheLinksArgumentSaysWhatAMeetingIsAbout holds the fact that decides
 // whether a logged meeting lands on a timeline anybody reads.
 //
-// Driven from claude.ai, a model logging a meeting after a call linked it to the
-// DEAL only and attached the person and the company afterwards. A meeting is
-// with a person and reaches their company through them, so the transcript sat
-// on no attendee's timeline and the company saw nothing — and the correction was
-// two more writes. The schema is where that is decided, because it is what the
-// caller reads before choosing.
+// A meeting is with a PERSON and reaches their company through them. Linked to
+// the deal alone it sits on no attendee's timeline and the company sees
+// nothing, and putting it right afterwards is a second write. The schema is
+// where that is decided, because it is what the caller reads before choosing —
+// so the copy has to carry the modelling fact, not only the instruction.
 func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
 	t.Parallel()
 	schema := string(logActivity{}.Spec().InputSchema)
