@@ -31,6 +31,18 @@ const TIMEOUT_MS = 15_000;
 const MAX_AGE_MS = 60_000;
 
 /**
+ * What the read asks the device for. Named rather than inline so the one
+ * decision in it can be asserted: `enableHighAccuracy` stays FALSE, because
+ * the question is whether the frame may ask at all and a coarse fix answers
+ * that identically (readPosition says the rest).
+ */
+export const READ_OPTIONS: Readonly<PositionOptions> = {
+  enableHighAccuracy: false,
+  timeout: TIMEOUT_MS,
+  maximumAge: MAX_AGE_MS,
+};
+
+/**
  * Why a position could not be read, distinguished by what a reader can DO about
  * it. The browser's own numeric codes do not separate the two cases that matter
  * most: a host that never allowed the frame to ask, and a person who was asked
@@ -127,6 +139,15 @@ export function classify(err: GeolocationPositionError): GeoRefusal {
  * permission prompt on the first call. That is the user's decision to make and
  * the reason this is never called on load — a view that asks the moment it
  * renders spends the one prompt it gets before anybody wanted the feature.
+ *
+ * AND IT ASKS FOR THE COARSE FIX. The finding this module exists to produce is
+ * WHETHER the frame was allowed to ask, and if not, in whose words — a
+ * yes/no that a network-derived position answers exactly as well as a
+ * satellite one. `enableHighAccuracy: true` would obtain the most precise
+ * coordinates the device can produce, inside a third-party chat host, to
+ * establish a fact that needs no coordinate at all; on a phone it also wakes
+ * the GNSS radio for it. Least privilege is the default until a view needs
+ * otherwise, and this one does not.
  */
 export function readPosition(): Promise<GeoResult> {
   return new Promise<GeoResult>((resolve) => {
@@ -157,7 +178,7 @@ export function readPosition(): Promise<GeoResult> {
           code: err.code,
           message: err.message,
         }),
-      { enableHighAccuracy: true, timeout: TIMEOUT_MS, maximumAge: MAX_AGE_MS },
+      READ_OPTIONS,
     );
   });
 }

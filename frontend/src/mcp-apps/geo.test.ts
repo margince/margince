@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { classify } from "./geo";
+import { classify, READ_OPTIONS } from "./geo";
 
 /** A stand-in for the browser's error object, which cannot be constructed. */
 function err(code: number, message: string): GeolocationPositionError {
@@ -67,5 +67,28 @@ describe("a refused position", () => {
     expect(classify(err(2, "disabled by permissions policy"))).toBe(
       "position-unavailable",
     );
+  });
+});
+
+// The probe collects less than it is allowed to.
+//
+// What this view produces is whether the frame was ALLOWED to ask, and in whose
+// words when it was not — the refusal branch is the whole of the meaning table
+// it feeds. A network-derived fix answers that identically to a satellite one,
+// so asking for the precise one would obtain maximum-precision coordinates
+// inside a third-party chat host to establish a fact that needs no coordinate,
+// and wake a phone's GNSS radio to do it.
+describe("what the read asks for", () => {
+  it("does not ask for a GPS-grade fix to answer a yes/no question", () => {
+    expect(READ_OPTIONS.enableHighAccuracy).toBe(false);
+  });
+
+  // The other two are the reason the read still terminates and still refreshes:
+  // a bound on the wait, and a bound on how stale a cached answer may be. They
+  // are asserted as PRESENT rather than at a value, since neither number is a
+  // claim this case is making.
+  it("still bounds the wait and the staleness", () => {
+    expect(READ_OPTIONS.timeout).toBeGreaterThan(0);
+    expect(READ_OPTIONS.maximumAge).toBeGreaterThan(0);
   });
 });
