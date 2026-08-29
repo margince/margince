@@ -64,6 +64,10 @@ var selfOnlyEvents = map[string]struct{}{
 	"linkedin_account.changed":  {},
 	"linkedin_match.decided":    {},
 	"linkedin_network.imported": {},
+	// A notice is addressed to ONE person; fanning its lifecycle to every
+	// subscription owner would tell colleagues who was notified of what.
+	"notice.created": {},
+	"notice.read":    {},
 }
 
 var workspaceLevelEntities = map[string]struct{}{

@@ -1971,11 +1971,11 @@ func (PublicEventMirrorWriteRejected) EntityType() string { return "dynamic" }
 
 func (PublicEventNoticeCreated) EventType() string { return "notice.created" }
 
-func (PublicEventNoticeCreated) EntityType() string { return "identity" }
+func (PublicEventNoticeCreated) EntityType() string { return "user" }
 
 func (PublicEventNoticeRead) EventType() string { return "notice.read" }
 
-func (PublicEventNoticeRead) EntityType() string { return "identity" }
+func (PublicEventNoticeRead) EntityType() string { return "user" }
 
 func (PublicEventOfferAccepted) EventType() string { return "offer.accepted" }
 

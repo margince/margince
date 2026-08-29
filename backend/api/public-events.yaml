@@ -1787,7 +1787,7 @@ components:
     PublicEventNoticeCreated:
       type: object
       x-event-type: notice.created
-      x-entity-type: identity
+      x-entity-type: user
       x-version: 1
       description: >-
         Payload for notice.created — a durable informational notice was
@@ -1814,7 +1814,7 @@ components:
     PublicEventNoticeRead:
       type: object
       x-event-type: notice.read
-      x-entity-type: identity
+      x-entity-type: user
       x-version: 1
       description: >-
         Payload for notice.read — the recipient settled the notice

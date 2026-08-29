@@ -160,7 +160,10 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventNoticeRead{
+		// The event's subject is the RECIPIENT, like the created event's:
+		// the self-only delivery rule compares the subscription owner to the
+		// entity, and the notice's lifecycle is that one person's to hear.
+		return storekit.EmitEvent(ctx, tx, auditID, actor.UserID, crmcontracts.PublicEventNoticeRead{
 			NoticeId: openapi_types.UUID(id),
 		})
 	})
