@@ -91,7 +91,7 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 		}
 		preview.Speakers[at].Words += words
 	}
-	if !attributedMajority(preview) {
+	if !attributedMajority(turns) {
 		// Prose lines that open with a short label and a colon — "Frage:",
 		// "Vorschlag:", a heading — parse as a few attributed words among many
 		// unattributed ones. Listing those labels as speakers would ask the
@@ -112,10 +112,18 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 // attributedMajority is what makes a source a conversation rather than prose
 // with labels in it: at least half of its words belong to a named speaker. A
 // meeting export attributes nearly every word; narration between turns stays
-// well under half. An empty preview has no attributed words and is not one.
-func attributedMajority(preview CorpusPreview) bool {
-	attributed := preview.TotalWords - preview.UnattributedWords
-	return attributed > 0 && attributed*2 >= preview.TotalWords
+// well under half. Preview and ingest both decide by it, so what the preview
+// calls prose the ingest cannot be talked into filtering as a transcript.
+func attributedMajority(turns []speakerTurn) bool {
+	attributed, total := 0, 0
+	for _, turn := range turns {
+		words := WordCount(turn.Text)
+		total += words
+		if turn.Speaker != "" {
+			attributed += words
+		}
+	}
+	return attributed > 0 && attributed*2 >= total
 }
 
 // CorpusIngestStats reports what the §B1.2 speaker filter did to one

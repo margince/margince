@@ -64,7 +64,7 @@ export function VoiceCorpusIntake({
   }, [busy, onBusyChange]);
 
   return (
-    <div ref={zoneRef} className="vdna-intake">
+    <div ref={zoneRef}>
       <SettingRow
         label={t(
           first ? "settings.voice.addFirstLabel" : "settings.voice.addSource",

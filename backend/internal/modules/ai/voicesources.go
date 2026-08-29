@@ -180,6 +180,13 @@ func prepareSource(in IngestSourceInput) (preparedSource, error) {
 	if err != nil {
 		return preparedSource{}, err
 	}
+	if in.Kind == voiceSourceKindTranscript && !plain && !attributedMajority(turns) {
+		return preparedSource{}, &CorpusIngestError{
+			Field:  voiceKeyContent,
+			Code:   CorpusErrUnattributedTranscript,
+			Reason: "fewer than half of this source's words are attributed to a speaker; it reads as prose, so send it as text rather than as a transcript",
+		}
+	}
 	text := in.Content
 	if !plain {
 		text, err = filterOwnTurns(turns, in.SpeakerLabel, in.Kind == voiceSourceKindTranscript)

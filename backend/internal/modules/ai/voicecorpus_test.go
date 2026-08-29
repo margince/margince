@@ -518,13 +518,27 @@ func TestPreviewKeepsNarratedDialogueAsATranscript(t *testing.T) {
 	// Two thirds of the words are spoken turns; the rest is narration between
 	// them. That is still a conversation, and the counterparty's turns must
 	// not be credited to the owner by treating the file as prose.
-	content := "Lars: one two three four five six\nSam: seven eight nine ten eleven twelve\n[the room laughs and someone opens a window]\nLars: thirteen fourteen fifteen sixteen seventeen eighteen"
+	// Blank lines end a turn, so the narration belongs to nobody rather than
+	// riding on Sam's turn.
+	content := "Lars: one two three four five six\nSam: seven eight nine ten eleven twelve\n\n[the room laughs and someone opens a window]\n\nLars: thirteen fourteen fifteen sixteen seventeen eighteen"
 	preview, err := PreviewCorpusText("transcript", content)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !preview.IngestibleAsTranscript || len(preview.Speakers) != 2 {
+	if !preview.IngestibleAsTranscript || len(preview.Speakers) != 2 || preview.UnattributedWords != 8 {
 		t.Fatalf("majority-attributed dialogue is a transcript: %+v", preview)
+	}
+}
+
+func TestIngestRefusesProseSentAsATranscript(t *testing.T) {
+	// The same rule the preview decides by, on the write path: a source the
+	// preview would call prose cannot be posted as a transcript and filtered
+	// to a heading that happened to look like a speaker.
+	email := "Moin Stefan,\n\nJoshua und Marcus sind ja schon mit Vollgas dran. Wir gehen mit Vollgas an die ganze AI Sache.\n\nFrage: Ich hatte nicht geplant zu kommen.\n\nGanz liebe Gruesse"
+	_, err := prepareSource(IngestSourceInput{Kind: voiceSourceKindTranscript, Format: "transcript", SpeakerLabel: "Frage", Content: email, SourceLabel: "emails.txt"})
+	var refusal *CorpusIngestError
+	if !errors.As(err, &refusal) || refusal.Code != CorpusErrUnattributedTranscript {
+		t.Fatalf("err = %v, want %s", err, CorpusErrUnattributedTranscript)
 	}
 }
 
