@@ -110,7 +110,19 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    SELECT kind INTO activity_kind FROM activity WHERE id = NEW.activity_id;
+    -- FOR SHARE, and it is what closes the race between the two triggers. Read
+    -- unlocked, one transaction can insert this link while the activity is
+    -- still a `note` (the check below passes) while another re-kinds that same
+    -- activity to `meeting` before the link is visible (the check in
+    -- activity_refuses_becoming_a_company_meeting passes too). Both commit, and
+    -- the row neither of them was allowed to make exists.
+    --
+    -- SHARE rather than UPDATE: two links onto one activity are not in conflict
+    -- and must not queue behind each other, while `UPDATE activity SET kind`
+    -- takes FOR NO KEY UPDATE, which SHARE does conflict with. The FK's own
+    -- FOR KEY SHARE is not enough — a non-key column change does not conflict
+    -- with it, and `kind` is not a key.
+    SELECT kind INTO activity_kind FROM activity WHERE id = NEW.activity_id FOR SHARE;
 
     IF activity_kind IN ('meeting', 'call') THEN
         RAISE EXCEPTION

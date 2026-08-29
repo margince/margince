@@ -206,6 +206,10 @@ func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
 // Among the inferred companies, the party who convened the meeting decides
 // which comes first — the same rule the people themselves are ordered by, since
 // the company is only as relevant as the person it was reached through.
+//
+// Which company a meeting is WITH follows from who was in the room, so the role
+// outranks anything the SQL knows about the job itself: is_current_primary is a
+// fact about a person, and it decides only between two jobs of the same party.
 func TestTheOrganizersEmployerComesBeforeAnAttendees(t *testing.T) {
 	got := foldSubjects([]activitySubject{
 		employer(t, "attendee", "1"),

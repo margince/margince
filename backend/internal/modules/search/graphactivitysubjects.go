@@ -292,12 +292,19 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	if edgeBound == "" {
 		edgeBound = "true"
 	}
+	// ROLE first, then the primary-job flag. Which company a meeting is WITH
+	// follows from who was in the room: the organizer's employer is the answer
+	// even when that job is their second, because is_current_primary is a fact
+	// about the person and the role is a fact about the meeting. Ordered the
+	// other way, an attendee's primary employer displaced the organizer's.
+	//
 	// Two orderings, and they are not the same one. The inner ORDER BY is what
 	// DISTINCT ON requires: it leads with the key and decides WHICH row survives
-	// per company — the primary job of the best-placed party. The outer one is
-	// what the LIMIT cuts by, for the reason participantRoleOrder exists: a
-	// bound applied to the inner order would keep the companies whose ids sort
-	// first, which is nobody's idea of the most relevant ones.
+	// per company — the best-placed party, and their primary job where they hold
+	// two at it. The outer one is what the LIMIT cuts by, for the reason
+	// participantRoleOrder exists: a bound applied to the inner order would keep
+	// the companies whose ids sort first, which is nobody's idea of the most
+	// relevant ones.
 	//
 	// A person the event both links and lists sorts at the LINK's rank, since
 	// linkOnlyRole is ahead of every participant role — the same thing the fold
@@ -323,9 +330,9 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			   AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
 			   AND o.archived_at IS NULL
 			   AND %[3]s
-			 ORDER BY o.id, r.is_current_primary DESC, onEvent.role_rank
+			 ORDER BY o.id, onEvent.role_rank, r.is_current_primary DESC
 		) e
-		 ORDER BY e.primary_job DESC, e.role_rank, e.id
+		 ORDER BY e.role_rank, e.primary_job DESC, e.id
 		 LIMIT $%[2]d`, activityPos, limitPos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading the companies an event's people work for: %w", err)

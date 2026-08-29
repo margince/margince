@@ -4281,6 +4281,10 @@ paths:
         entity_id)` constraint). The activity's original `source`/`captured_by` provenance is **preserved**
         (the relink is a `human:*` or `agent:*` association event, not a re-capture). Writes one `audit_log`
         row (`activity_relink`). 🟢 — it is an internal association, not an outbound action.
+
+        A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+        the company is reached through that person's employer. The estate refuses it
+        (migration 1787990100).
       x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4322,6 +4326,10 @@ paths:
         caller cannot write is left where it is and is not counted — the response says how many
         moved. An activity already carrying the link is not counted either (the single
         relink's idempotency, per row). All rows commit together or none do.
+
+        A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+        the company is reached through that person's employer. The estate refuses it
+        (migration 1787990100).
       x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4354,6 +4362,11 @@ paths:
         sight answers `404` and one they may read but not write answers `403`, and in either case
         NOTHING moves — the whole set is one transaction. An activity already carrying the link is
         left as it is and not counted.
+
+        A `meeting` or a `call` cannot be relinked to an `organization` — it is with a person, and
+        the company is reached through that person's employer. The estate refuses it
+        (migration 1787990100).
+
       x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'

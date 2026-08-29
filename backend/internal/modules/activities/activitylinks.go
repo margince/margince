@@ -99,9 +99,6 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
-	if err := refuseACompanyMeeting(kind, links); err != nil {
-		return err
-	}
 	seen := make(map[ActivityLinkInput]struct{}, len(links))
 	for _, link := range links {
 		if _, duplicate := seen[link]; duplicate {
@@ -124,6 +121,13 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			}
 		}
 		if err := auth.EnsureLinkTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+			return err
+		}
+		// AFTER the target probe, not before it. A caller naming a company they
+		// cannot see must get the answer their row scope gives — the same
+		// not-found every other unreachable target gets — rather than a
+		// modelling refusal that tells them the id was real enough to judge.
+		if err := refuseACompanyMeeting(kind, link); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -156,16 +160,11 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 // hand, and a read of `activity` here would be a reader of the restricted table
 // that excludes no held row. The relink path takes the trigger's answer
 // instead — it holds no kind and would need that read to name one.
-func refuseACompanyMeeting(kind string, links []ActivityLinkInput) error {
-	if !personalActivityKinds[kind] {
+func refuseACompanyMeeting(kind string, link ActivityLinkInput) error {
+	if !personalActivityKinds[kind] || link.EntityType != linkEntityOrganization {
 		return nil
 	}
-	for _, link := range links {
-		if link.EntityType == linkEntityOrganization {
-			return &CompanyMeetingError{Kind: kind}
-		}
-	}
-	return nil
+	return &CompanyMeetingError{Kind: kind}
 }
 
 // personalActivityKinds are the kinds that are inherently WITH A HUMAN, and so

@@ -193,9 +193,14 @@ func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 
 // TestCase1TheMeetingLandsOnEveryRecordInOneWrite pins criteria 4 and 5.
 //
-// One write, not one write plus three corrections: the three link rows share a
-// timestamp because they were written together. And no approval is raised —
-// connecting a meeting to the company it was with is not a decision.
+// One write, not one write plus corrections: the link rows share a timestamp
+// because they were written together. And no approval is raised — connecting a
+// meeting to the people and the deal it was about is not a decision.
+//
+// "Every record" is the person and the deal. The company is not among them and
+// cannot be — a meeting is with a person — and it is not lost either: the case
+// below reads it back off the account's own timeline, reached through the
+// employment edge this same act wrote.
 func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
@@ -228,7 +233,7 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 
 	// Written together, IN THE SAME TRANSACTION AS THE ACTIVITY.
 	//
-	// The three links sharing a created_at proves only that they shared a
+	// The links sharing a created_at proves only that they shared a
 	// transaction — Postgres now() is transaction-scoped — and a build that
 	// committed the activity and then relinked in a second transaction would
 	// still show one distinct value among the links. Comparing them against the
@@ -237,7 +242,7 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 	if together := s.countRows(t, `SELECT count(*) FROM activity_link l
 		JOIN activity a ON a.id = l.activity_id
 		WHERE l.activity_id = $1 AND l.created_at = a.created_at`, m.activity); together != 2 {
-		t.Fatalf("case 1 criterion 4: %d of the meeting's 2 links were written in the same "+
+		t.Fatalf("case 1 criterion 4: %d of the meeting's two links were written in the same "+
 			"transaction as the meeting itself — the rest are a relink afterwards, which is what "+
 			"used to stop for three separate approvals", together)
 	}

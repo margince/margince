@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -75,8 +76,12 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	// contact, because `person` is deliberately unemployed here (the person
 	// page's project routes are proved one at a time, seat before employer).
 	attendee := e.SeedPerson(t, "Ilse Teilnehmer", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, attendee, org)
+	attendeeID, orgID := PersonIDOf(attendee), orgIDOf(org)
+	if _, err := e.People.CreateRelationship(admin, people.CreateRelationshipInput{
+		Kind: "employment", PersonID: &attendeeID, OrganizationID: &orgID,
+	}); err != nil {
+		t.Fatalf("employing the attendee: %v", err)
+	}
 
 	newProject := func(name string) (ids.ProjectID, string) {
 		p, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{

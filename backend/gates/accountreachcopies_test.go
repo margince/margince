@@ -95,8 +95,15 @@ func constText(t *testing.T, file, name string) (string, bool) {
 			if !isValue {
 				continue
 			}
+			// A spec whose names and values are not one-to-one is not read by
+			// POSITION — a `const a, b = f()` or an iota run pairs a name with
+			// an expression that is not its own, and reading it by index is how
+			// a refactor quietly hands this gate the wrong text to compare.
+			if len(value.Names) != len(value.Values) {
+				continue
+			}
 			for i, ident := range value.Names {
-				if ident.Name != name || i >= len(value.Values) {
+				if ident.Name != name {
 					continue
 				}
 				lit, isLit := value.Values[i].(*ast.BasicLit)

@@ -20,6 +20,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -159,5 +160,75 @@ func TestAMeetingWithAPersonIsUntouched(t *testing.T) {
 		return err
 	}); err != nil {
 		t.Fatalf("a meeting with the person who was there must write: %v", err)
+	}
+}
+
+// The two triggers together, under concurrency — which is where a pair of
+// single-row checks stops being a rule.
+//
+// Read unlocked, neither trigger can see what the other transaction is doing:
+// one inserts the organization link while the activity is still a `note`, the
+// other re-kinds that same activity to `meeting` before the link is visible.
+// Both checks pass, both commit, and the row neither was allowed to make exists.
+//
+// The link-side trigger takes FOR SHARE on the activity, so the re-kind's own
+// row lock queues behind it and the second transaction re-reads under READ
+// COMMITTED — seeing whichever half landed first, and refusing.
+func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
+	ctx, db := meetingWorkspace(t)
+	activityID, orgID := seedActivityAndOrg(ctx, t, db, "note")
+
+	linked, rekinded := make(chan error, 1), make(chan error, 1)
+	inserted, release := make(chan struct{}), make(chan struct{})
+
+	// The link goes in FIRST and holds its transaction open. Both writers are
+	// then inside their window at once, which is the whole premise — started
+	// together, the re-kind can simply win, commit, and be seen by the link's
+	// own check, and the case proves nothing.
+	go func() {
+		linked <- db.Tx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO activity_link (activity_id, entity_type, organization_id)
+				VALUES ($1, 'organization', $2)`, activityID, orgID); err != nil {
+				close(inserted)
+				return err
+			}
+			close(inserted)
+			<-release
+			return nil
+		})
+	}()
+	<-inserted
+	go func() {
+		rekinded <- db.Tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `UPDATE activity SET kind = 'meeting' WHERE id = $1`, activityID)
+			return err
+		})
+	}()
+
+	// Long enough for the re-kind to reach its lock — or, unlocked, to sail
+	// past it and commit. Then the link's transaction finishes.
+	time.Sleep(250 * time.Millisecond)
+	close(release)
+
+	linkErr, rekindErr := <-linked, <-rekinded
+	// Whichever order they settle in, they cannot BOTH have succeeded.
+	if linkErr == nil && rekindErr == nil {
+		t.Fatal("both halves committed: the activity is a meeting linked to a company, " +
+			"which is the state the two triggers exist to make unreachable")
+	}
+	// And the estate says so too, which is the assertion that does not depend on
+	// which transaction reported the refusal.
+	var forbidden int
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
+			 WHERE a.id = $1 AND a.kind IN ('meeting', 'call') AND l.entity_type = 'organization'`,
+			activityID).Scan(&forbidden)
+	}); err != nil {
+		t.Fatalf("reading back what the two transactions left: %v", err)
+	}
+	if forbidden != 0 {
+		t.Errorf("the estate holds %d company meeting(s) after the race", forbidden)
 	}
 }
