@@ -1759,6 +1759,22 @@ export const de = {
   "co.factField.email_security": "Mail-Authentifizierung",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Dienst",
+  "co.vat.title": "USt-IdNr.",
+  "co.vat.sub":
+    "Was das MIAS-Register der EU zur USt-IdNr. dieser Firma gesagt hat — und der Nachweis, dass gefragt wurde.",
+  "co.vat.verdict": "Antwort des Registers",
+  "co.vat.number": "Abgefragte Nummer",
+  "co.vat.registeredName": "Eingetragen auf",
+  "co.vat.registeredAddress": "Eingetragene Anschrift",
+  "co.vat.checkedAt": "Abgefragt am",
+  "co.vat.receipt": "Abfrage-Nummer",
+  "co.vat.status.valid": "Gültig",
+  "co.vat.status.invalid": "Nicht gültig",
+  "co.vat.status.unavailable": "Register hat nicht geantwortet",
+  "co.vat.noReceipt":
+    "Keine vergeben. Das Register vergibt eine Abfrage-Nummer nur für eine Abfrage unter eurer eigenen USt-IdNr. — trag sie in den Einstellungen ein, dann trägt die nächste Abfrage einen Nachweis, den ein Finanzamt akzeptiert.",
+  "co.vat.never":
+    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird.",
   "co.tech.title": "Technik",
   "co.tech.sub":
     "Was diese Firma öffentlich betreibt — gelesen aus ihren DNS-Einträgen, ihren Zertifikaten und ihrer eigenen Startseite.",

@@ -1833,6 +1833,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/vat-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
+         * @description The verdict is the smaller half. A business treating a sale as intra-EU has to show it
+         *     verified its counterpart, and what a tax authority accepts is the CONSULTATION NUMBER
+         *     the register issues — the receipt, tied to the number consulted and the day it was
+         *     asked. A `valid` flag with no receipt proves nothing, which is why the receipt and the
+         *     date the register itself reported both travel here.
+         *
+         *     The name the register holds is returned beside the verdict because a number that
+         *     validates to a company nobody recognises is the finding: a copied imprint states
+         *     somebody else's VAT ID, and only the registered name exposes it.
+         *
+         *     404 when the number has never been consulted, which is the honest difference between
+         *     "never asked" and "asked and told no".
+         */
+        get: operations["getOrganizationVatCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/site-reads/latest": {
         parameters: {
             query?: never;
@@ -20428,6 +20462,42 @@ export interface components {
             status: "queued";
         };
         /**
+         * @description One company's current VAT standing, and the evidence for it. The row keeps only the
+         *     CURRENT consultation; what a re-check overwrote lives in the audit trail.
+         */
+        OrganizationVatCheck: {
+            /** Format: uuid */
+            organization_id: string;
+            /**
+             * @description The number AS CONSULTED, which is not necessarily the number on the profile today.
+             *     A receipt names the number it was issued for, so an edit made afterwards must not
+             *     silently inherit this proof.
+             */
+            vat_number: string;
+            /**
+             * @description `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
+             *     declining to answer, and is a fact about the lookup rather than about the company.
+             * @enum {string}
+             */
+            status: "valid" | "invalid" | "unavailable";
+            /**
+             * @description The register's receipt. Issued only for a check made under this installation's own
+             *     VAT ID, so it is absent when none is configured — the check still ran, it just
+             *     carries no proof a tax authority would accept.
+             */
+            consultation_number?: string | null;
+            /** @description Who the register says the number belongs to. Absent when it named nobody. */
+            registered_name?: string | null;
+            /** @description The address the register holds, when it returned one. */
+            registered_address?: string | null;
+            /**
+             * Format: date-time
+             * @description The day the REGISTER reported, not the day this installation recorded it. A receipt
+             *     attests to when the register was asked.
+             */
+            checked_at: string;
+        };
+        /**
          * @description What each public source last did for one account. Per lane rather than per run: the
          *     three fail independently, so one verdict would hide which of them is stale.
          */
@@ -26393,6 +26463,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TechnicalEnrichStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getOrganizationVatCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current standing, and the proof it was checked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationVatCheck"];
                 };
             };
             401: components["responses"]["Unauthorized"];

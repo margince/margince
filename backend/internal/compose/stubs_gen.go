@@ -1279,6 +1279,10 @@ func (stubs) GetLatestTechnicalEnrich(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "GetLatestTechnicalEnrich")
 }
 
+func (stubs) GetOrganizationVatCheck(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOrganizationVatCheck")
+}
+
 func (stubs) AcknowledgeOrganizationView(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "AcknowledgeOrganizationView")
 }

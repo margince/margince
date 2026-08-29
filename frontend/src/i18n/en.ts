@@ -1786,6 +1786,22 @@ export const en = {
   "co.factField.email_security": "Mail authentication",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Operated service",
+  "co.vat.title": "VAT registration",
+  "co.vat.sub":
+    "What the EU VAT register answered about this company's VAT ID, and the proof it was asked.",
+  "co.vat.verdict": "Register answer",
+  "co.vat.number": "Number consulted",
+  "co.vat.registeredName": "Registered to",
+  "co.vat.registeredAddress": "Registered address",
+  "co.vat.checkedAt": "Consulted on",
+  "co.vat.receipt": "Consultation number",
+  "co.vat.status.valid": "Valid",
+  "co.vat.status.invalid": "Not valid",
+  "co.vat.status.unavailable": "Register did not answer",
+  "co.vat.noReceipt":
+    "None issued. The register issues a receipt only for a check made under your own VAT ID — add yours in the settings and the next check carries proof a tax authority accepts.",
+  "co.vat.never":
+    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint.",
   "co.tech.title": "Technology",
   "co.tech.sub":
     "What this company publicly runs, read from its DNS records, its certificates and its own homepage.",

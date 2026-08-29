@@ -562,6 +562,24 @@
   margin-bottom: var(--space-2);
 }
 
+/* The VAT consultation. Label above value rather than side by side, because
+   two of the values — the registered name and the receipt — run long enough
+   that a label column would wrap them into ribbons. */
+.co-vat div {
+  margin-bottom: var(--space-3);
+}
+
+.co-vat dt {
+  color: var(--textSecondary);
+  margin-bottom: var(--space-1);
+}
+
+/* The receipt is a reference somebody copies into a tax filing, so it breaks
+   rather than overflowing its card. */
+.co-vat dd code {
+  overflow-wrap: anywhere;
+}
+
 /* Verbs under the section they change: spaced off the content above so they
    read as an action strip rather than another row of the list. */
 .co-card-actions {

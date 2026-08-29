@@ -2808,6 +2808,37 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /organizations/{id}/vat-check:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Organizations]
+      operationId: getOrganizationVatCheck
+      summary: What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
+      description: |
+        The verdict is the smaller half. A business treating a sale as intra-EU has to show it
+        verified its counterpart, and what a tax authority accepts is the CONSULTATION NUMBER
+        the register issues — the receipt, tied to the number consulted and the day it was
+        asked. A `valid` flag with no receipt proves nothing, which is why the receipt and the
+        date the register itself reported both travel here.
+
+        The name the register holds is returned beside the verdict because a number that
+        validates to a company nobody recognises is the finding: a copied imprint states
+        somebody else's VAT ID, and only the registered name exposes it.
+
+        404 when the number has never been consulted, which is the honest difference between
+        "never asked" and "asked and told no".
+      x-mcp-tool: { verb: read_record, record_type: organization, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The current standing, and the proof it was checked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationVatCheck' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /organizations/{id}/site-reads/latest:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -27930,6 +27961,49 @@ components:
           # drops the type prefix from the OTHER one, renaming VoiceBuildStatus's
           # constants to a bare `Queued` that reads as nobody's.
           x-enum-varnames: [TechnicalEnrichStartedStatusQueued]
+
+    OrganizationVatCheck:
+      type: object
+      description: |
+        One company's current VAT standing, and the evidence for it. The row keeps only the
+        CURRENT consultation; what a re-check overwrote lives in the audit trail.
+      required: [organization_id, vat_number, status, checked_at]
+      properties:
+        organization_id: { type: string, format: uuid }
+        vat_number:
+          type: string
+          description: |
+            The number AS CONSULTED, which is not necessarily the number on the profile today.
+            A receipt names the number it was issued for, so an edit made afterwards must not
+            silently inherit this proof.
+        status:
+          type: string
+          enum: [valid, invalid, unavailable]
+          description: |
+            `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
+            declining to answer, and is a fact about the lookup rather than about the company.
+          # Pinned for the reason the lane enum above states: bare `Valid` and
+          # `Invalid` read as nobody's constants and collide with the next enum
+          # to use one of the words.
+          x-enum-varnames: [OrganizationVatCheckStatusValid, OrganizationVatCheckStatusInvalid, OrganizationVatCheckStatusUnavailable]
+        consultation_number:
+          type: [string, 'null']
+          description: |
+            The register's receipt. Issued only for a check made under this installation's own
+            VAT ID, so it is absent when none is configured — the check still ran, it just
+            carries no proof a tax authority would accept.
+        registered_name:
+          type: [string, 'null']
+          description: Who the register says the number belongs to. Absent when it named nobody.
+        registered_address:
+          type: [string, 'null']
+          description: The address the register holds, when it returned one.
+        checked_at:
+          type: string
+          format: date-time
+          description: |
+            The day the REGISTER reported, not the day this installation recorded it. A receipt
+            attests to when the register was asked.
 
     TechnicalEnrichStatus:
       type: object

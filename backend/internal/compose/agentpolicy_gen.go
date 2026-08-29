@@ -249,6 +249,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/organizations/{id}/site-reads/latest":                       {Op: "getLatestSiteRead", Access: "tool", Tool: "read_record", RecordType: "organization", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/organizations/{id}/site-reads/{readId}":                     {Op: "getSiteRead", Access: "tool", Tool: "read_record", RecordType: "organization", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/organizations/{id}/technical-enrich/latest":                 {Op: "getLatestTechnicalEnrich", Access: "tool", Tool: "read_record", RecordType: "organization", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/organizations/{id}/vat-check":                               {Op: "getOrganizationVatCheck", Access: "tool", Tool: "read_record", RecordType: "organization", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/overlay/export":                                             {Op: "downloadOverlayExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/overlay/owners":                                             {Op: "listOverlayOwners", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/overlay/user-map":                                           {Op: "listOverlayUserMap", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

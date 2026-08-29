@@ -1745,6 +1745,22 @@ export const vi = {
   "co.factField.email_security": "Xác thực thư",
   "co.factField.hosting_provider": "Lưu trữ",
   "co.factField.operated_service": "Dịch vụ vận hành",
+  "co.vat.title": "Mã số thuế GTGT",
+  "co.vat.sub":
+    "Câu trả lời của sổ đăng ký thuế GTGT của EU về mã số thuế của công ty này, kèm bằng chứng đã tra cứu.",
+  "co.vat.verdict": "Câu trả lời của sổ đăng ký",
+  "co.vat.number": "Mã số đã tra cứu",
+  "co.vat.registeredName": "Đăng ký cho",
+  "co.vat.registeredAddress": "Địa chỉ đăng ký",
+  "co.vat.checkedAt": "Tra cứu ngày",
+  "co.vat.receipt": "Số tra cứu",
+  "co.vat.status.valid": "Hợp lệ",
+  "co.vat.status.invalid": "Không hợp lệ",
+  "co.vat.status.unavailable": "Sổ đăng ký không trả lời",
+  "co.vat.noReceipt":
+    "Chưa cấp. Sổ đăng ký chỉ cấp số tra cứu cho lần kiểm tra thực hiện dưới mã số thuế của chính bạn — hãy nhập mã số của bạn trong phần cài đặt, lần tra cứu tiếp theo sẽ có bằng chứng mà cơ quan thuế chấp nhận.",
+  "co.vat.never":
+    "Mã số thuế GTGT của công ty này chưa được tra cứu. Việc này diễn ra tự động khi mã số được đọc từ trang thông tin pháp lý của công ty.",
   "co.tech.title": "Công nghệ",
   "co.tech.sub":
     "Những gì công ty này công khai vận hành, đọc từ bản ghi DNS, chứng chỉ và trang chủ của họ.",

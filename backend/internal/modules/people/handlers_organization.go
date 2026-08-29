@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -181,6 +183,45 @@ func (h Handlers) ListOrganizationProfileFields(w http.ResponseWriter, r *http.R
 		fields = []crmcontracts.CompanyProfileField{}
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.OrganizationProfileFieldListResponse{Data: fields})
+}
+
+// GetOrganizationVatCheck serves GET /organizations/{id}/vat-check — what the
+// EU register answered, and the receipt for having asked. A company whose
+// number was never consulted is a 404 rather than an empty body: "never asked"
+// and "asked and told no" are different facts, and only one of them is evidence.
+func (h Handlers) GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	check, err := h.store.VatCheckFor(r.Context(), pathID[ids.OrganizationKind](id))
+	if errors.Is(err, ErrVatCheckNotRecorded) {
+		writeStoreErr(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, vatCheckWire(check))
+}
+
+// vatCheckWire maps the stored standing onto the wire. The three optional
+// fields go out absent rather than empty: the register naming nobody and the
+// register returning an empty name are the same fact, and "" on the wire reads
+// to a client as a name it should render.
+func vatCheckWire(check VatCheck) crmcontracts.OrganizationVatCheck {
+	absentWhenEmpty := func(s string) *string {
+		if s == "" {
+			return nil
+		}
+		return &s
+	}
+	return crmcontracts.OrganizationVatCheck{
+		OrganizationId:     openapi_types.UUID(check.OrganizationID.UUID),
+		VatNumber:          check.Number,
+		Status:             crmcontracts.OrganizationVatCheckStatus(check.Status),
+		ConsultationNumber: absentWhenEmpty(check.ConsultationNumber),
+		RegisteredName:     absentWhenEmpty(check.RegisteredName),
+		RegisteredAddress:  absentWhenEmpty(check.RegisteredAddress),
+		CheckedAt:          check.CheckedAt,
+	}
 }
 
 // ArchiveOrganization retires one company and its cascade, honouring If-Match
