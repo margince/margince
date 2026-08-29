@@ -7,6 +7,16 @@
    unchanged on screen. */
 .crumbs {
   min-width: 0;
+  /* The trail owns its own overflow rather than trusting a caller's wrapper
+     to. Without this, the last label's 2ch floor (below) is still painted in
+     full even when the row has no room for it — the ancestors' `flex: none`
+     never yields, so the floored box is pushed past the trail's own right
+     edge and bleeds, uncropped, into whatever sits beside it (measured: the
+     top bar's centred search box, at 1280px — the label was visible but
+     unreachable, sitting under a control that intercepted every hover and
+     click meant for it). Clipping here keeps the bleed inside the primitive
+     that owns the promise, instead of asking every consumer to remember it. */
+  overflow: hidden;
 }
 .crumbs > ol {
   display: flex;
