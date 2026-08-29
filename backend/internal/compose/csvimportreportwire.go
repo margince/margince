@@ -197,15 +197,22 @@ func lineOf(skip migration.SkippedRow) int {
 // to less than rows_read. The line is carried now and would no longer collide,
 // but the id is still the right key: it is what a row IS, where a line is where
 // it happened to sit.
+//
+// The LINE joins it, because the id alone is not always this source's. A row the
+// source could not identify is disclosed as `line 7`, and a file whose key
+// column legitimately holds the text "line 7" would collide with it and lose a
+// row from the report. The pair separates them, and it folds the dry run's skip
+// onto the commit's exactly as before: one row keeps one line across both.
 func appendIssues(
 	issues *[]crmcontracts.ImportRowIssue, seen map[string]bool, rows []migration.SkippedRow,
 ) int {
 	added := 0
 	for _, row := range rows {
-		if seen[row.ExternalID] {
+		key := row.ExternalID + "\x00" + strconv.Itoa(row.Line)
+		if seen[key] {
 			continue
 		}
-		seen[row.ExternalID] = true
+		seen[key] = true
 		added++
 		*issues = append(*issues, crmcontracts.ImportRowIssue{
 			Line:   lineOf(row),

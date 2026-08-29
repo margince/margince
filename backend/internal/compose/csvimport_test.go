@@ -532,3 +532,30 @@ func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
 		}
 	}
 }
+
+// A file whose key column legitimately holds the text a source disclosure uses
+// keeps both rows in the report.
+//
+// The dedup folds one row's dry-run skip onto its commit skip, keyed on the id.
+// A row the SOURCE could not identify is disclosed as `line 7`, so a real row
+// whose key value is that text collided with it and one of the two vanished
+// from a report whose whole job is to say which rows a person must go fix.
+func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
+	var issues []crmcontracts.ImportRowIssue
+	seen := map[string]bool{}
+	added := appendIssues(&issues, seen, []migration.SkippedRow{
+		// What the source writes for a row with no key at all, on line 7.
+		{ExternalID: "line 7", Line: 7, Reason: "no key"},
+		// A row on line 12 whose key column really does hold that text.
+		{ExternalID: "line 7", Line: 12, Reason: "not-a-uuid"},
+	})
+	if added != 2 || len(issues) != 2 {
+		t.Fatalf("issues = %+v (added %d), want both rows — they are two rows a person must go fix",
+			issues, added)
+	}
+	// And the fold that DOES belong still happens: one row skipped twice.
+	added = appendIssues(&issues, seen, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	if added != 0 {
+		t.Errorf("the same row was reported twice; the dry run's skip and the commit's are one row")
+	}
+}
