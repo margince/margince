@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -94,13 +95,83 @@ func ClaimKey(path string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Verdict is one recorded human decision.
+// Verdict is one recorded human decision, as the ledger holds it.
+//
+// What the human SAID is reached through AsOf and nowhere else, and the fields
+// carrying it are unexported for that reason. A decision is about the value
+// that was in front of the person who made it; a surface that could read it
+// without saying which version of the value it is asking about would serve a
+// correction over an answer the human never saw. That was a live defect on the
+// 360 page, and unexported fields are what stops it being written again.
 type Verdict struct {
-	ClaimKind      string
-	ClaimKey       string
+	ClaimKind string
+	ClaimKey  string
+
+	// recordedAt is ai_feedback.updated_at — when this decision took its
+	// current form, which the upsert moves on every re-decision. NOT
+	// created_at: a human who changes their mind is looking at whatever is
+	// there now, and dating their new decision from their old one would make
+	// it stale the moment they made it.
+	recordedAt     time.Time
+	verdict        string
+	correctedValue *string
+	note           *string
+}
+
+// Decision is what a human decided about one claim, as it applies to a
+// particular version of the value.
+type Decision struct {
 	Verdict        string
-	CorrectedValue *string
 	Note           *string
+	CorrectedValue *string
+}
+
+// AsOf answers what a human decided about a value last written at valueAt, and
+// whether their decision applies to that value at all.
+//
+// A verdict recorded BEFORE the value it is read against is about something
+// else. The human was looking at an earlier answer and something has replaced
+// it since — an accepted research claim, a fresh enrichment, an edit through
+// another door — so their correction describes a value that is no longer
+// stored. Serving it tells the reader the current value is one the record does
+// not hold.
+//
+// The MARKER goes with it, and that is the half worth stating. Keeping
+// "corrected" beside the newer stored value would say the human wrote that
+// value; keeping "confirmed" would say they had seen it. Both are the same lie
+// one field along, and a reader has no way to tell. What a human once decided
+// is still in the ledger and in audit_log for anyone asking that question; what
+// this answers is the narrower one the page asks — does their decision describe
+// what is on the screen.
+//
+// Equal timestamps STAND. A verdict and the value it is about can be written in
+// one transaction, where both carry the same now(), and refusing that case
+// would suppress a decision at the instant it was made.
+//
+// WHAT THIS DOES NOT ANSWER, because it is a different question and needs a
+// contract field to answer at all: whether the human was looking at THIS value
+// when they decided. A page rendered on the old value, a newer value landing,
+// and the correction submitted after it leaves a verdict that is newer than the
+// value and still about the older one. Closing that means the client sending
+// the field version it rendered and the ledger storing it, so the comparison
+// becomes an equality rather than an ordering. What this answers is the case
+// where the verdict is demonstrably older — which is the one that survives
+// forever rather than for the length of one page view.
+func (v Verdict) AsOf(valueAt time.Time) (Decision, bool) {
+	if v.recordedAt.Before(valueAt) {
+		return Decision{}, false
+	}
+	return Decision{Verdict: v.verdict, Note: v.note, CorrectedValue: v.correctedValue}, true
+}
+
+// NewVerdict builds one. It exists because the fields above are unexported: the
+// store that reads the ledger and the tests that drive the ruling need a way to
+// set them, and a constructor is a door the recency question cannot slip past.
+func NewVerdict(claimKind, claimKey, verdict string, correctedValue, note *string, recordedAt time.Time) Verdict {
+	return Verdict{
+		ClaimKind: claimKind, ClaimKey: claimKey, verdict: verdict,
+		correctedValue: correctedValue, note: note, recordedAt: recordedAt,
+	}
 }
 
 // RecordInput is a human's decision about one claim.
@@ -268,7 +339,10 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT claim_kind, claim_key, verdict, corrected_value, note
+		-- updated_at, not created_at: it is when this decision took its
+		-- CURRENT form, and a reader compares it against when the value took
+		-- its own. See Verdict.AsOf.
+		SELECT claim_kind, claim_key, verdict, corrected_value, note, updated_at
 		  FROM ai_feedback
 		 WHERE subject_type = $1 AND subject_id = $2`, subjectType, subjectID)
 	if err != nil {
@@ -278,11 +352,13 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 
 	out := map[string]Verdict{}
 	for rows.Next() {
-		var v Verdict
-		if err := rows.Scan(&v.ClaimKind, &v.ClaimKey, &v.Verdict, &v.CorrectedValue, &v.Note); err != nil {
+		var claimKind, claimKey, verdict string
+		var correctedValue, note *string
+		var recordedAt time.Time
+		if err := rows.Scan(&claimKind, &claimKey, &verdict, &correctedValue, &note, &recordedAt); err != nil {
 			return nil, fmt.Errorf("ai: reading a recorded verdict: %w", err)
 		}
-		out[VerdictLookupKey(v.ClaimKind, v.ClaimKey)] = v
+		out[VerdictLookupKey(claimKind, claimKey)] = NewVerdict(claimKind, claimKey, verdict, correctedValue, note, recordedAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("ai: reading the recorded verdicts: %w", err)
