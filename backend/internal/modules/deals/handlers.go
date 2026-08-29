@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -116,7 +117,7 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	// log gets the name instead.
 	if constraint, ok := storekit.CheckViolation(err); ok {
 		slog.WarnContext(r.Context(), "a schema rule with no message of its own refused a write",
-			"method", r.Method, "path", r.URL.Path, "constraint", constraint)
+			"method", r.Method, "path", capabilitypath.Redact(r.URL.Path), "constraint", constraint)
 		httperr.Write(w, r, httperr.Validation("body", "value_not_allowed",
 			"a value violates a rule on this record; check the picklist options"))
 		return

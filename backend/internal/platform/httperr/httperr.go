@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -315,12 +316,24 @@ func Classify(err error) (Fault, bool) {
 	return Fault{}, false
 }
 
+// loggedPath is the request path as a log line may carry it: any capability
+// segment replaced, because a /v1/public/* route's token IS its authorization
+// and these error paths run on exactly the requests that have one.
+//
+// The pairs stay literal at each call rather than being assembled here into a
+// spread tail — logsecrets_test.go reads these calls syntactically to prove no
+// credential reaches a log, and a spread it cannot follow is a hole in that
+// proof.
+func loggedPath(r *http.Request) string {
+	return capabilitypath.Redact(r.URL.Path)
+}
+
 // Write maps err onto the wire. Unknown errors become an opaque 500 — the
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
 	if !ok {
-		slog.ErrorContext(r.Context(), "unhandled error", "method", r.Method, "path", r.URL.Path, "err", err)
+		slog.ErrorContext(r.Context(), "unhandled error", "method", r.Method, "path", loggedPath(r), "err", err)
 		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: "internal"})
 		return
 	}
@@ -330,13 +343,13 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 		// is true of both: the caller got a sentence we wrote, and the operator
 		// gets the one the infrastructure wrote.
 		slog.ErrorContext(r.Context(), "infrastructure cause withheld from the caller",
-			"method", r.Method, "path", r.URL.Path, "err", fault.InfraCause)
+			"method", r.Method, "path", loggedPath(r), "err", fault.InfraCause)
 	}
 	// A refusal that masked a library's own sentence still owes the operator
 	// that sentence, exactly as the native body decode logs its unnamed shapes.
 	if withheld := withheldFieldDecodeCause(err); withheld != nil {
 		slog.WarnContext(r.Context(), "unnamed field-decode failure",
-			"method", r.Method, "path", r.URL.Path, "err", withheld)
+			"method", r.Method, "path", loggedPath(r), "err", withheld)
 	}
 	// Fields renders INTO details rather than over it: both are public on
 	// DetailedError, so a handler may legitimately carry extra structured

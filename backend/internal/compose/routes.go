@@ -181,22 +181,13 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 			),
 		),
 	)
-	// publicPreferencesPrefix is named here twice on purpose: it is where
-	// the edge reads the capability token OUT of the path, and where the
-	// access log must not write it back.
-	//
-	// publicBookingPrefix is deliberately NOT redacted. Its slug is an
-	// unguessable but PUBLIC identifier — the host hands the URL out, it
-	// resolves to free/busy slots and nothing else, and 0036_booking_page
-	// states the posture outright ("a public identifier, not a credential:
-	// stored plaintext"). Redacting it would cost the access log the one
-	// thing that identifies which booking page was hit, and buy nothing.
-	//
-	// publicConfirmPrefix is redacted for the same reason and more urgently:
-	// its token opens the subject's own record, so a token in a log line is a
-	// readable copy of somebody's personal data sitting in operations.
+	// Which public routes carry a credential in the path — and so must not
+	// have it written to any log — is stated once in
+	// shared/kernel/capabilitypath, not named at each mount. The booking
+	// page's slug is deliberately absent from that list; it is a public
+	// identifier the host hands out, not a credential.
 	mux.Handle("/v1/", httpserver.Correlate(
-		httpserver.AccessLog(log, authH.Middleware(publicEdge), publicPreferencesPrefix, publicConfirmPrefix)))
+		httpserver.AccessLog(log, authH.Middleware(publicEdge))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728
