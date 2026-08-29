@@ -100,13 +100,12 @@ func NewOverlayHandlers(pool *pgxpool.Pool, vault keyvault.Vault, meter *overlay
 	return overlay.NewHandlers(svc).WithFlipRunner(newFlipRunner(pool, svc, ms, log))
 }
 
-// overlayReadService is the one spelling of the options every overlay READ
-// depends on — the meter, the canonical->incumbent translator, and the
-// current projection fingerprints that decide SyncStatus's staleness verdict.
-// Both the REST surface (NewOverlayHandlers) and the attention sync-health
-// seam build on it, so the two can never come to judge the same workspace's
-// staleness by different declarations. vault may be nil for a read-only
-// caller: no read touches a credential.
+// overlayReadService binds the options every overlay READ depends on — the
+// meter, the canonical->incumbent translator, and the current projection
+// fingerprints that decide SyncStatus's staleness verdict. The REST surface
+// (NewOverlayHandlers) and the attention sync-health seam both build on it,
+// so those two judge a workspace's staleness by the same declarations. vault
+// may be nil for a read-only caller: no read touches a credential.
 func overlayReadService(db *database.DB, vault keyvault.Vault, ms *overlay.MirrorStore, meter *overlaybudget.Meter) *overlay.Service {
 	return overlay.NewService(db, vault, ms).
 		WithBudgetMeter(meter).
