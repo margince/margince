@@ -16,9 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )

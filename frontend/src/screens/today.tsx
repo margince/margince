@@ -121,6 +121,23 @@ function leadLine(
   return quietLead(day, t, locale);
 }
 
+// The health lanes' claim on the lead line, worst pipe first: while the sync,
+// a mailbox or delegated AI work is broken, the quiet lanes beneath may be
+// quiet only because nothing is flowing, and "clear" above a warning-toned
+// card would contradict the page. Null when every health lane is calm.
+function healthLead(day: Attention, t: ReturnType<typeof useT>): string | null {
+  if ((day.counts.sync_health ?? 0) > 0) {
+    return t("day.lead.syncHealth");
+  }
+  if ((day.counts.capture_health ?? 0) > 0) {
+    return t("day.lead.captureHealth");
+  }
+  if ((day.counts.ai_work_health ?? 0) > 0) {
+    return t("day.lead.aiWork");
+  }
+  return null;
+}
+
 // What the line says once nothing is WAITING on the reader — no decision, no
 // promise due, no meeting. Split from the branches above because those answer
 // "what is being asked of you" and these answer "what is worth knowing anyway",
@@ -142,25 +159,9 @@ function quietLead(
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
   }
-  // Above the quieter lanes below, because they are read THROUGH the mirror:
-  // while the sync is unhealthy, a calm decay lane may simply be blind, and
-  // "clear" above a warning-toned sync card would contradict the page.
-  const syncConcerns = day.counts.sync_health ?? 0;
-  if (syncConcerns > 0) {
-    return t("day.lead.syncHealth");
-  }
-  // The same contradiction guard for the reader's own mailboxes: a broken
-  // capture connection means the quiet lanes below may be quiet only
-  // because nothing is being captured.
-  const mailboxes = day.counts.capture_health ?? 0;
-  if (mailboxes > 0) {
-    return t("day.lead.captureHealth");
-  }
-  // And for the AI work the reader delegated: a failed run is work they
-  // believe is happening and is not.
-  const troubledRuns = day.counts.ai_work_health ?? 0;
-  if (troubledRuns > 0) {
-    return t("day.lead.aiWork");
+  const health = healthLead(day, t);
+  if (health) {
+    return health;
   }
   // A lapsed relationship is the same shape of news as a drifting deal:
   // nobody is waiting on the reader for it, and it is the thing that goes

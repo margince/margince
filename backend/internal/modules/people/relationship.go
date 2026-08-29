@@ -61,7 +61,7 @@ func relationshipAnchor(kind string) (object, column string) {
 // a side door around them — a caller could attach a company to a project they
 // cannot write, or archive the last one, through POST /v1/relationships.
 var relationshipKinds = map[string]bool{
-	"employment": true, "deal_stakeholder": true, "project_stakeholder": true,
+	employmentKind: true, "deal_stakeholder": true, "project_stakeholder": true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
 	worksWithKind: true,
 }
@@ -169,7 +169,7 @@ func lockPersonForEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 	case personID == nil:
 		return nil
 	}
-	return storekit.LockWriteIdentity(ctx, tx, "employment", personID.String())
+	return storekit.LockWriteIdentity(ctx, tx, employmentKind, personID.String())
 }
 
 func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRelationshipInput) (relationshipRow, error) {
@@ -224,7 +224,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		// notice period: this row keeps the flag, the incumbent keeps it too, and
 		// uq_rel_current_primary_employer 409s a patch the create path honours.
 		if in.IsCurrentPrimary != nil && *in.IsCurrentPrimary &&
-			current.Kind == "employment" && current.PersonID != nil {
+			current.Kind == employmentKind && current.PersonID != nil {
 			if _, err := tx.Exec(ctx, `
 				UPDATE relationship SET is_current_primary = false
 				WHERE person_id = $1 AND id <> $2 AND `+CurrentPrimarySlotSQL("")+`
