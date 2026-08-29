@@ -136,6 +136,16 @@ func (s *Service) optionalLanes(
 			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
 		},
 		{
+			name: "ai_work_health", bound: s.aiWork != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// Failures age out with the window; a day is the widest a
+				// reader still acts on, and the stalled arm ignores it.
+				troubled, err := s.aiWork.Troubled(ctx, asOf.Add(-24*time.Hour), doneCap)
+				return renderEach(troubled, aiWorkItem), err
+			},
+			into: &out.AiWorkHealth, count: &out.Counts.AiWorkHealth,
+		},
+		{
 			name: "relationship_decay", bound: s.decay != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, err := s.decay.Lapsed(ctx)

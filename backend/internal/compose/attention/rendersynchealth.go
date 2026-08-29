@@ -65,3 +65,29 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 	}
 	return item
 }
+
+// aiWorkItem draws one troubled AI run. `kind` is the closed failed/stalled
+// vocabulary the client writes its sentence from; the run's own summary, when
+// it recorded one, is the headline, and the subject label the supporting
+// line. No subject and no verbs: the run's home is the AI activity rail, and
+// re-running is a decision this surface does not own.
+func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
+	state := run.State
+	occurred := run.OccurredAt
+	item := crmcontracts.AttentionItem{
+		Id:         run.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("ai_work_health"),
+		Kind:       &state,
+		OccurredAt: &occurred,
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if run.Summary != "" {
+		summary := run.Summary
+		item.Title = &summary
+	}
+	if run.SubjectLabel != "" {
+		about := run.SubjectLabel
+		item.Detail = &about
+	}
+	return item
+}

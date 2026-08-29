@@ -198,6 +198,12 @@ export const en = {
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",
   "day.didNotRun": "Approved, but did not run",
+  "day.aiWork": "AI work that went wrong",
+  "day.aiWork.empty": "Everything you handed to the AI ran.",
+  "day.aiWork.kind.failed": "A task you handed to the AI failed",
+  "day.aiWork.kind.stalled": "A task you handed to the AI is stuck",
+  "day.aiWork.kind.generic": "A task you handed to the AI needs a look",
+  "day.lead.aiWork": "Something you handed to the AI did not run.",
   "day.captureHealth": "Mailbox connections",
   "day.captureHealth.empty": "All your mailboxes are capturing.",
   "day.captureHealth.kind.reauth_required":

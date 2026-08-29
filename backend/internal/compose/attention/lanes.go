@@ -352,3 +352,25 @@ type CaptureConcern struct {
 	// AccountLabel is the display-only mailbox address when one was recorded.
 	AccountLabel string
 }
+
+// AIWork is the reader's own AI runs that went wrong — failed inside the
+// window the feed asks about, or live past the lease their source declared.
+// Read from the AI-task projection, so it claims only AI work; the other
+// health lanes carry what never reaches that projection.
+//
+// Per-user like CaptureHealth: the read refuses a principal with no human
+// behind it, and the lane renders that refusal as withheld.
+type AIWork interface {
+	Troubled(ctx context.Context, since time.Time, limit int) ([]TroubledRun, error)
+}
+
+// TroubledRun is one AI run that went wrong for this reader.
+type TroubledRun struct {
+	ID    ids.UUID
+	State string
+	// Summary is the run's own recorded sentence, when it has one.
+	Summary string
+	// SubjectLabel is what the run was about, as its source named it.
+	SubjectLabel string
+	OccurredAt   time.Time
+}

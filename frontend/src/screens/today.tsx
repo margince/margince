@@ -1,4 +1,5 @@
 import {
+  Bot,
   CalendarClock,
   CheckSquare,
   GitMerge,
@@ -155,6 +156,12 @@ function quietLead(
   if (mailboxes > 0) {
     return t("day.lead.captureHealth");
   }
+  // And for the AI work the reader delegated: a failed run is work they
+  // believe is happening and is not.
+  const troubledRuns = day.counts.ai_work_health ?? 0;
+  if (troubledRuns > 0) {
+    return t("day.lead.aiWork");
+  }
   // A lapsed relationship is the same shape of news as a drifting deal:
   // nobody is waiting on the reader for it, and it is the thing that goes
   // unnoticed precisely because nobody is. Counted here rather than left to
@@ -193,7 +200,8 @@ function quietLead(
     day.counts.relationship_decay === undefined ||
     day.counts.did_not_run === undefined ||
     day.counts.meetings === undefined ||
-    day.counts.capture_health === undefined
+    day.counts.capture_health === undefined ||
+    day.counts.ai_work_health === undefined
   ) {
     return t("day.lead.clearOfWhatWasRead");
   }
@@ -649,6 +657,10 @@ function TodayLanes({
   // because every row is capture silently not happening.
   const mailboxes = day.capture_health;
   const mailboxTone = warnWhenHolding(mailboxes);
+  // The reader's own AI work that went wrong — failed in the window, or
+  // stalled past its lease. Withheld for a caller with no human behind it.
+  const troubledRuns = day.ai_work_health;
+  const troubledTone = warnWhenHolding(troubledRuns);
   const requestsTone = warnWhenHolding(requests);
   const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
@@ -815,6 +827,22 @@ function TodayLanes({
         lane="capture_health"
         total={day.counts.capture_health ?? 0}
         tone={mailboxTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={troubledRuns}
+        shape={{
+          title: t("day.aiWork"),
+          empty: t("day.aiWork.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: Bot,
+        }}
+        omitted={omitted}
+        lane="ai_work_health"
+        total={day.counts.ai_work_health ?? 0}
+        tone={troubledTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

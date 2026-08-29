@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -475,6 +476,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// that serves the feed; HealthConcerns' own doc states the reach this
 		// construction depends on.
 		attentionCaptureHealth{registry: capture.NewRegistry(db, nil, nil, nil)},
+		// The reader's own troubled AI runs, from the same projection the
+		// activity rail reads.
+		attentionAIWork{store: aiactivity.NewStore(db)},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

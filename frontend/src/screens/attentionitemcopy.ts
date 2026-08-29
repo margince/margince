@@ -40,6 +40,12 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "capture_health") {
     return t(`day.captureHealth.kind.${captureNoun(item.kind)}` as const);
   }
+  // A troubled AI run without its own recorded summary (the title branch at
+  // the top already used one where it exists) gets the locale's line for
+  // failed or stalled.
+  if (item.source === "ai_work_health") {
+    return t(`day.aiWork.kind.${aiWorkNoun(item.kind)}` as const);
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
 }
 
@@ -60,6 +66,17 @@ function syncNoun(
     kind === "objects_stale" ||
     kind === "backfill_incomplete"
   ) {
+    return kind;
+  }
+  return "generic";
+}
+
+// Which trouble an AI run is in; anything unrecognised takes the generic
+// line rather than guessing.
+function aiWorkNoun(
+  kind: string | undefined,
+): "failed" | "stalled" | "generic" {
+  if (kind === "failed" || kind === "stalled") {
     return kind;
   }
   return "generic";
