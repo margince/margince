@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -21,6 +23,14 @@ import (
 // uses, so the settle announce and the projection see an ordinary failed
 // occurrence — labelled request_failed, because no provider was ever tried.
 func (r *Router) AnnounceRequestFailure(ctx context.Context, task Task, cause error) {
+	// The failure gets its OWN correlation scope, which keys its own
+	// occurrence: the rail keys an occurrence on correlation+task, and a
+	// sibling call of the same task still running under the request's
+	// correlation would have its running line overwritten by this failed
+	// settle until its own settle repaired it. The caller already holds the
+	// error under the request's correlation; the rail line's job is only to
+	// exist.
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	lc := newLogicalCall()
 	trace := r.newAttemptTrace(ctx, task, "", "", model.Request{})
 	trace.ErrorSentinel = classifyError(fmt.Errorf("%w: %w", errRequestFailed, cause))
