@@ -33,7 +33,7 @@ func (c *siteCrawler) ReadSeed(ctx context.Context, seedURL string) (crawlPage, 
 	}
 	return crawlPage{
 		URL: answered, Kind: crmcontracts.SiteReadPageKindHome,
-		Text: page.Text, Bytes: page.Bytes,
+		Text: page.Text, Bytes: page.Bytes, Fingerprint: page.Fingerprint,
 	}, nil
 }
 

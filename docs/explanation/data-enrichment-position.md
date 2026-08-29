@@ -247,13 +247,13 @@ When the published person unmistakably matches someone already recorded at that 
 
 Margince also parses the Impressum, whose publication German law *mandates* under Section 5 DDG, and consumes newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
 
-Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion.
+Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion. That rule is about PEOPLE, who are staged because a wrong person on a record is a privacy problem. Company-level facts write directly in both lanes — they are attributed, evidence-backed and reversible, and a company's mail provider is not personal data.
 
-**A3. Technical enrichment.** One click on the company record tells you what the company runs.[^46]
+**A3. Technical enrichment.** Reading a company's website also tells you what that company runs.[^46]
 
 Every company with a website and email leaves public technical traces, because the internet does not work otherwise. Which system receives their mail: Google Workspace, Microsoft 365, or their own server. What their website is built with: shop system, CMS, marketing tools. Which services they operate, visible through their subdomains: a webshop, a customer portal, a careers page. And where they host.
 
-Margince reads those traces and writes them onto the company record. Your rep sees the company's size class, how modern their IT is and what they operate before the first call. And you can filter on it: every account with a webshop, every account on Microsoft 365, every account that just opened a careers page.
+Margince reads those traces and writes them onto the company record. The reading rides the site read rather than sitting behind a button of its own, and a scheduled pass refreshes it, because a company's mail provider changes at the company and no write on our side announces it. Your rep sees the company's size class, how modern their IT is and what they operate before the first call. Filtering a segment on these fields — every account with a webshop, every account on Microsoft 365 — is not built yet.
 
 Two honest limits. You only see what faces the public internet; the ERP behind the firewall stays invisible unless a subdomain betrays it. And the picture goes stale, so it refreshes like every other enrichment.
 

@@ -195,7 +195,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		// what it guessed at; its kind stays open for the next guess.
 		r.probeKindDone[adm.cand.kind] = true
 	}
-	committed := crawlPage{URL: servedURL, Kind: kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur}
+	committed := crawlPage{URL: servedURL, Kind: kind, Text: page.Text, Bytes: page.Bytes, FetchDur: res.dur, Fingerprint: page.Fingerprint}
 	r.crawl.Pages = append(r.crawl.Pages, committed)
 	if r.onPage != nil {
 		r.onPage(committed)

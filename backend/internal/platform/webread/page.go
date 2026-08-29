@@ -36,6 +36,14 @@ type Page struct {
 	OGImage string
 	// Icons are the icons the page's <link rel> declared, in document order.
 	Icons []IconRef
+	// Fingerprint is what this page declared about the software serving it,
+	// read from the same response the text above came from.
+	//
+	// Carried on every crawled page rather than only the homepage: a shop
+	// system, a portal or a careers platform frequently announces itself on
+	// the one page that runs it and nowhere else, and the crawl has already
+	// paid for that page.
+	Fingerprint Fingerprint
 }
 
 // Icon rel kinds a page can declare. Callers rank by kind rather than by
@@ -73,19 +81,42 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	// domain redirecting to its www host is the ordinary case, and resolving
 	// the page's own relative references against the pre-redirect origin would
 	// point every one of them at a host that never served this page.
-	body, _, base, err := f.fetchDoc(ctx, rawURL, acceptHTML)
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" {
+		return Page{}, fmt.Errorf("webread: %q is not a fetchable URL", rawURL)
+	}
+	allowed, err := f.pathAllowed(ctx, parsed)
 	if err != nil {
 		return Page{}, err
 	}
+	if !allowed {
+		return Page{}, fmt.Errorf("%w: %s", ErrRobotsDisallowed, parsed.Path)
+	}
+	// getBytes rather than fetchDoc, because the RESPONSE HEADER is half a
+	// fingerprint and fetchDoc keeps only the media type. Same guard, same
+	// robots gate, same cap — one fetch that keeps what it already received.
+	got, err := f.getBytes(ctx, rawURL, acceptHTML, maxFetchBytes)
+	if err != nil {
+		return Page{}, err
+	}
+	if got.status != http.StatusOK {
+		return Page{}, &StatusError{Status: got.status, URL: rawURL}
+	}
+	base := got.finalURL
+	if base == nil {
+		base = parsed
+	}
+	body := string(got.body)
 	ogImage, icons := extractHeadAssets(body, base)
 	return Page{
-		URL:      rawURL,
-		FinalURL: base.String(),
-		Text:     StripTags(body),
-		Links:    extractLinks(body, base),
-		Bytes:    len(body),
-		OGImage:  ogImage,
-		Icons:    icons,
+		URL:         rawURL,
+		FinalURL:    base.String(),
+		Text:        StripTags(body),
+		Links:       extractLinks(body, base),
+		Bytes:       len(body),
+		OGImage:     ogImage,
+		Icons:       icons,
+		Fingerprint: fingerprintOf(got.header, body, base),
 	}, nil
 }
 
