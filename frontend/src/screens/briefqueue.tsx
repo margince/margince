@@ -8,14 +8,20 @@ import { BriefItemCard } from "../design-system/briefitem";
 import {
   formatDate,
   formatDateTime,
+  formatMoney,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "./common";
-import type { Deal, MorningBriefItem, useBriefItemMark } from "./home.queries";
+import type {
+  Deal,
+  MorningBrief,
+  MorningBriefItem,
+  useBriefItemMark,
+} from "./home.queries";
 
 // One brief item, drawn and wired — the whole of what a screen needs to show a
 // queue entry and let a reader answer it.
@@ -87,6 +93,31 @@ export function briefLabels(
           }),
     returnedWith: t("home.brief.returnedWith"),
   };
+}
+
+/**
+ * What the revenue factor measured against, as money.
+ *
+ * `undefined` unless the run names BOTH the figure and its currency. A bare
+ * number is not money — it reads as whatever currency the reader assumes — and
+ * the note exists so a proportion can be checked, which an unnamed base cannot
+ * do. A run assembled before the currency was carried names none.
+ */
+export function revenueBasisOf(
+  brief: MorningBrief,
+  locale: Locale,
+): string | undefined {
+  if (
+    brief.revenue_norm_minor === undefined ||
+    brief.revenue_norm_currency === undefined
+  ) {
+    return undefined;
+  }
+  return formatMoney(
+    brief.revenue_norm_minor,
+    brief.revenue_norm_currency,
+    locale,
+  );
 }
 
 /**

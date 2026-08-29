@@ -82,10 +82,15 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		t.Fatalf("marshalling the served run: %v", err)
 	}
 
-	// Every probe is a WIRE FRAGMENT — key and value together — not a bare
-	// value. A served brief is full of uuids, and a uuid is 32 hex digits: a
-	// probe of `3` or `17` is found inside one by chance, so an assertion
-	// written that way passes with the field dropped.
+	// A SERVED field's probe is a wire fragment — key and value together — not
+	// a bare value. A served brief is full of uuids, and a uuid is 32 hex
+	// digits: a probe of `3` or `17` is found inside one by chance, so an
+	// assertion written that way passes with the field dropped.
+	//
+	// A WITHHELD field's probe is the bare value instead, and deliberately: it
+	// is what a LEAK would look like, and a leak need not carry the key this
+	// surface would have given it. Each of those is chosen so it cannot be
+	// found by chance in what the tool served — see the two below.
 	assertEveryFieldSurvives(t, "BriefRun", reflect.TypeOf(run), map[string]string{
 		"ID": `"brief_id":"` + runID.String(), "UserID": userID.String(),
 		"GeneratedAt":    `"generated_at":"2026-08-08T06:11:00Z"`,
@@ -97,8 +102,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		// Withheld — so the probe is what a LEAK would look like: the value
 		// itself, which must appear nowhere in what the tool served.
 		"RevenueNormMinor": "918273",
-		// Upper case, so it cannot be found inside a uuid or a timestamp — the
-		// same reason every probe here is a fragment rather than a bare value.
+		// Upper case, so it cannot be found inside a uuid (lower-case hex) or a
+		// timestamp — which is what makes a bare value safe to probe with here.
 		"RevenueNormCurrency": "CHF",
 		// The items are covered field by field below; what this row asserts is
 		// that the list itself arrived.

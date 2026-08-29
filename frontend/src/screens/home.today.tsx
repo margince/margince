@@ -6,11 +6,11 @@ import { Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
-import { formatDateTime, formatMoney, formatNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { BriefQueueItem } from "./briefqueue";
+import { BriefQueueItem, revenueBasisOf } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import {
   type Deal,
@@ -94,31 +94,6 @@ export function TodaySection({
   );
 }
 
-/**
- * What the revenue factor measured against, as money.
- *
- * `undefined` unless the run names BOTH the figure and its currency. A bare
- * number is not money — it reads as whatever currency the reader assumes — and
- * the note exists so a proportion can be checked, which an unnamed base cannot
- * do. A run assembled before the currency was carried names none.
- */
-function revenueBasisOf(
-  brief: MorningBrief,
-  locale: Locale,
-): string | undefined {
-  if (
-    brief.revenue_norm_minor === undefined ||
-    brief.revenue_norm_currency === undefined
-  ) {
-    return undefined;
-  }
-  return formatMoney(
-    brief.revenue_norm_minor,
-    brief.revenue_norm_currency,
-    locale,
-  );
-}
-
 /** The queue's four readings: in flight, no run, a quiet run, or the items. */
 function TodayBody({
   brief,
@@ -164,6 +139,9 @@ function TodayBody({
       </>
     );
   }
+  // Composed ONCE for the run: every item in one brief measured against the
+  // same figure, and formatMoney builds an Intl.NumberFormat per call.
+  const revenueBasis = revenueBasisOf(brief, locale);
   return (
     <>
       <TodayNarrative brief={brief} />
@@ -174,7 +152,7 @@ function TodayBody({
           deals={deals}
           nowMs={nowMs}
           mark={mark}
-          revenueBasis={revenueBasisOf(brief, locale)}
+          revenueBasis={revenueBasis}
         />
       ))}
     </>
