@@ -236,6 +236,46 @@ describe("RelinkModal", () => {
     expect(relink?.headers.get("If-Match")).toBe("4");
   });
 
+  // A copy read without a version cannot say what it is changing, so the relink
+  // is refused BY NAME rather than through requireVersion's bare throw — which
+  // reached the reader as the generic "something went wrong", on the very error
+  // path the write leans on to say it did not go through.
+  it("refuses in words when the activity was read without a version", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({
+      "GET /search": () =>
+        jsonResponse({
+          data: [{ type: "deal", id: "d-9", title: "Acme renewal" }],
+          page: { has_more: false },
+        }),
+      "POST /activities/act-1/relink": () => jsonResponse(activity202),
+    });
+    render(
+      <RelinkModal
+        activityId="act-1"
+        activityVersion={null}
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={onClose}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole("searchbox"), "Acme");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Acme renewal" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+
+    expect(await screen.findByText(/read without a version/i)).toBeTruthy();
+    // And nothing was sent: a refusal that still wrote would be the
+    // last-write-wins this whole change is about.
+    expect(sent.find((r) => r.key === "POST /activities/act-1/relink")).toBe(
+      undefined,
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("sends replace_existing_of_type when the move toggle is on", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({

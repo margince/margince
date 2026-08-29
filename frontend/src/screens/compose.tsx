@@ -130,6 +130,15 @@ function useSearchTargets() {
 // this same association to every message of the conversation the rep may
 // edit, in one transaction — a mis-filed conversation is usually mis-filed
 // whole.
+// What one confirmed relink asks for, read at the moment the reader confirmed
+// it rather than at whichever render the mutation's options were last armed on.
+type RelinkRequest = Readonly<{
+  target: RecordPickerCandidate;
+  version?: number | null;
+  thread: boolean;
+  replace: boolean;
+}>;
+
 export function RelinkModal({
   activityId,
   activityVersion,
@@ -158,14 +167,18 @@ export function RelinkModal({
   const [replace, setReplace] = useState(false);
   const [wholeThread, setWholeThread] = useState(false);
 
-  // The picked target arrives as the mutation's variable: read through this
-  // closure it would be the one from the render before the confirm was
-  // enabled, because react-query re-arms a mutation's options in a passive
-  // effect. The remaining guard is a real path and stays — `kindOf` answers
-  // from the search results, and a target whose remembered kind was lost must
-  // be surfaced rather than relinked to nothing.
+  // What the confirm decided arrives as the mutation's VARIABLE — the picked
+  // target, the version it was picked against, and whether the whole thread was
+  // asked for. Read through this closure each would be the value from the
+  // render before the confirm was enabled, because react-query re-arms a
+  // mutation's options in a passive effect: a version that landed just before
+  // the click would refuse a relink that is perfectly valid, and a toggle
+  // flipped at the same moment would move the wrong set. The remaining guard is
+  // a real path and stays — `kindOf` answers from the search results, and a
+  // target whose remembered kind was lost must be surfaced rather than relinked
+  // to nothing.
   const mutation = useMutation({
-    mutationFn: async (target: RecordPickerCandidate) => {
+    mutationFn: async ({ target, version, thread, replace }: RelinkRequest) => {
       const kind = kindOf(target.id);
       if (!kind) {
         throwProblem({ title: t("compose.relinkTarget") });
@@ -175,10 +188,10 @@ export function RelinkModal({
       // rather than through requireVersion's bare throw: the reader sees the
       // mutation's error, and "something went wrong" is not a thing anyone can
       // act on when the answer is "reopen it and try again".
-      if (!wholeThread && activityVersion == null) {
+      if (!thread && version == null) {
         throwProblem({ title: t("compose.relinkNoVersion") });
       }
-      if (threadKey && wholeThread) {
+      if (threadKey && thread) {
         const { data, error } = await api.POST("/activities/relink-thread", {
           params: { header: { "Idempotency-Key": crypto.randomUUID() } },
           body: {
@@ -202,7 +215,7 @@ export function RelinkModal({
           // The idempotency key travels INSIDE the precondition rather than in
           // a `header:` of its own: they are one slot, and written twice the
           // later wins.
-          ...ifMatch(requireVersion(activityVersion ?? undefined), {
+          ...ifMatch(requireVersion(version ?? undefined), {
             "Idempotency-Key": crypto.randomUUID(),
           }),
           path: { id: activityId },
@@ -236,7 +249,15 @@ export function RelinkModal({
       title={t("compose.relinkTitle")}
       confirmLabel={t("compose.relinkConfirm")}
       confirmDisabled={!target}
-      onConfirm={() => target && mutation.mutate(target)}
+      onConfirm={() =>
+        target &&
+        mutation.mutate({
+          target,
+          version: activityVersion,
+          thread: wholeThread,
+          replace,
+        })
+      }
       pending={mutation.isPending}
       error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
     >
