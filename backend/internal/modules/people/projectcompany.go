@@ -249,7 +249,7 @@ func setCompanyRoleTx(
 		 VALUES ('`+ProjectCompanyKind+`', $1, $2, $3, $4, $5)
 		 ON CONFLICT (project_id, organization_id)
 		   WHERE kind = '`+ProjectCompanyKind+`' AND archived_at IS NULL
-		   DO UPDATE SET role = EXCLUDED.role, version = relationship.version + 1, updated_at = now()
+		   DO UPDATE SET role = EXCLUDED.role
 		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was), xmax = 0`,
 		projectID, organizationID, role, projectCompanySource, by)
 	row, err := scanRelationshipWithPrior(scan, &priorRole, &inserted)
@@ -345,7 +345,7 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 			return &CompanyHasDealsOnProjectError{Deals: stranded}
 		}
 		row, err := scanRelationship(tx.QueryRow(ctx,
-			`UPDATE relationship SET archived_at = now(), version = version + 1, updated_at = now()
+			`UPDATE relationship SET archived_at = now()
 			  WHERE kind = $1 AND project_id = $2 AND organization_id = $3 AND archived_at IS NULL
 			  RETURNING `+relationshipColumns,
 			ProjectCompanyKind, projectID, organizationID))

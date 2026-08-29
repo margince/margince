@@ -77,7 +77,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	if owner != nil {
 		if err := apply("narrowing extraction signals", `
 			UPDATE signal
-			   SET visibility = 'owner', owner_id = $2, updated_at = now(), version = version + 1
+			   SET visibility = 'owner', owner_id = $2
 			 WHERE source = 'signal-scan' AND visibility = 'workspace' AND archived_at IS NULL
 			   AND `+cites+`
 			RETURNING id`,
@@ -90,7 +90,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 		// message: the summary now mixes two people's limited correspondence.
 		if err := apply("archiving cross-owner extraction signals", `
 			UPDATE signal
-			   SET archived_at = now(), updated_at = now(), version = version + 1
+			   SET archived_at = now()
 			 WHERE source = 'signal-scan' AND visibility = 'owner' AND owner_id <> $2 AND archived_at IS NULL
 			   AND `+cites+`
 			RETURNING id`,
@@ -103,7 +103,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	}
 	if err := apply("archiving ownerless extraction signals", `
 		UPDATE signal
-		   SET archived_at = now(), updated_at = now(), version = version + 1
+		   SET archived_at = now()
 		 WHERE source = 'signal-scan' AND archived_at IS NULL
 		   AND `+cites+`
 		RETURNING id`,

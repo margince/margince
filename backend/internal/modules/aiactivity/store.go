@@ -105,8 +105,7 @@ ON CONFLICT (source, occurrence_key) DO UPDATE SET
   quantity = EXCLUDED.quantity, quantity_unit = EXCLUDED.quantity_unit,
   degrade_reason = EXCLUDED.degrade_reason, summary = EXCLUDED.summary,
   last_event_id = EXCLUDED.last_event_id,
-  seq = nextval('ai_task_run_seq'),
-  updated_at = now()
+  seq = nextval('ai_task_run_seq')
 WHERE (EXCLUDED.attempt, ai_task_run_state_rank(EXCLUDED.state))
     > (ai_task_run.attempt, ai_task_run_state_rank(ai_task_run.state))
 RETURNING seq`
@@ -196,8 +195,7 @@ UPDATE ai_task_run
        finished_at = now(),
        stale_after = NULL,
        degrade_reason = $2,
-       seq = nextval('ai_task_run_seq'),
-       updated_at = now()
+       seq = nextval('ai_task_run_seq')
  WHERE source = 'ai_router'
    AND state IN ('queued','running')
    AND stale_after IS NOT NULL

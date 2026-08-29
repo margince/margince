@@ -91,8 +91,7 @@ func anonymizeDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string) ([]
 	rows, err := tx.Query(ctx, `
 		UPDATE deal_room_participant
 		   SET full_name = $1, email = $2,
-		       revoked_at = coalesce(revoked_at, now()),
-		       updated_at = now()
+		       revoked_at = coalesce(revoked_at, now())
 		 WHERE email = ANY($3)
 		RETURNING id`, erasedName, erasedEmail, emails)
 	if err != nil {

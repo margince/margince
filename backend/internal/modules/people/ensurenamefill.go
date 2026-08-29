@@ -80,8 +80,7 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 		   SET first_name = $2,
 		       last_name  = $3,
 		       full_name  = CASE WHEN full_name = $2 OR full_name = $3
-		                         THEN $4 ELSE full_name END,
-		       updated_at = now()
+		                         THEN $4 ELSE full_name END
 		 WHERE id = $1
 		   AND first_name IS NULL AND last_name IS NULL
 		RETURNING full_name`,

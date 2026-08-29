@@ -69,7 +69,7 @@ func (s *Store) SetOrganizationLifecycleTx(
 		return false, nil
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE organization SET lifecycle = $2, updated_at = now(), version = version + 1
+		UPDATE organization SET lifecycle = $2
 		 WHERE id = $1 AND lifecycle = $3`, orgID, to, from)
 	if err != nil {
 		return false, fmt.Errorf("people: moving the account's stage: %w", err)
