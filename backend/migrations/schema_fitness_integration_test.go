@@ -358,6 +358,13 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// (TechnicalDomain, TechnicalLaneState) call auth.EnsureVisible before they
 	// return one. A company the caller cannot see answers ErrNotFound rather
 	// than disclosing that a lookup ever ran on it.
+	// A company's VAT standing. Client-supplied — it is the company the
+	// reader pressed "check" on — and gated on both sides: RecordVatCheck
+	// puts it through ensureOrgWritable (auth.EnsureWritableLive) before it
+	// writes, and VatCheckFor through auth.EnsureVisible before it returns one.
+	// A company the caller cannot see answers ErrNotFound rather than
+	// disclosing that its number was ever checked, or whose it is.
+	"organization_vat_check.organization_id":       "client-supplied and gated: the write goes through auth.EnsureWritableLive and the read through auth.EnsureVisible, so a company the caller cannot see is ErrNotFound rather than a readable VAT receipt",
 	"organization_technical_state.organization_id": "client-supplied and gated: the write goes through auth.EnsureWritableLive and both reads through auth.EnsureVisible, so a company the caller cannot see is ErrNotFound rather than a readable lane ledger",
 	// The retention floor's evidence (A165). Both columns are
 	// SERVER-DERIVED and neither has a writer yet — the table shipped ahead of
