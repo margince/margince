@@ -332,12 +332,17 @@ func repairSuccessorDeal(c *client, cfg demoConfig, contract demoContract, prede
 		return nil
 	}
 	var successor struct {
-		DealID string `json:"deal_id"`
+		DealID     string  `json:"deal_id"`
+		ArchivedAt *string `json:"archived_at"`
 	}
 	if err := c.get("/v1/contracts/"+predecessor.SupersededByID, nil, &successor); err != nil {
 		return fmt.Errorf("reading successor %s: %w", terms.Ref, err)
 	}
-	if successor.DealID != "" {
+	// An ARCHIVED successor is left alone. A read by id still returns it — the
+	// estate is soft-delete — but a write to it is refused, so a repair here
+	// would fail and take every later phase of the seed with it, over a row
+	// somebody deliberately put away.
+	if successor.ArchivedAt != nil || successor.DealID != "" {
 		return nil
 	}
 	dealID, err := successorDealID(c, cfg, refs, terms)
