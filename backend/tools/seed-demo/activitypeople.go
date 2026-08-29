@@ -41,8 +41,9 @@ func relinkActivitiesToPeople(
 	if mode == modeDryRun {
 		return nil
 	}
+	ambiguous := ambiguousEntries(cfg)
 	for i, act := range cfg.Activities {
-		existing, ok := seededMatch(refs, act, seen, i)
+		existing, ok := seededMatch(refs, act, seen, ambiguous, i)
 		if !ok {
 			continue
 		}
@@ -147,13 +148,53 @@ func relinkPinned(c *client, existing seededActivity, body jsonBody) error {
 //
 // orgID is what the caller could resolve, and "" means it could not — the
 // post-seed verification has no domain map — so that half is skipped rather
-// than failed. A dataset entry with no subject of its own is judged on the
-// organization alone, which is what a call or a meeting usually carries.
+// than failed.
+//
+// The subject is compared EXACTLY, empty included. A dataset entry with no
+// subject of its own matching any stored row is how a subjectless call reaches
+// another entry's mail: the entry names nothing, so nothing disagrees. An empty
+// subject is a fact about the row, not a wildcard.
+//
+// That still leaves two entries the dataset cannot tell apart — same company,
+// same subject, two subjectless calls — and no reading of one row separates
+// them. ambiguousEntries answers that from the dataset, and the callers skip
+// what it names.
 func activityIdentityMatches(act demoActivity, existing seededActivity, orgID string) bool {
 	if orgID != "" && existing.OrganizationID != orgID {
 		return false
 	}
-	return act.Subject == "" || existing.Subject == act.Subject
+	return existing.Subject == act.Subject
+}
+
+// ambiguousEntries names the dataset positions whose stored row cannot be
+// told from another entry's.
+//
+// Identity here is (company, subject), and where that pair is not unique the
+// only thing left is the POSITION — which is not durable, because source ids
+// are positional and inserting an entry renames every row after it. Two
+// subjectless calls on one account are the common case: neither entry names
+// anything the other does not.
+//
+// The answer is to leave them alone. A repair that guessed would replace one
+// mail's counterpart with the other's, and a check that guessed would report
+// the wrong company's correspondence as mis-filed. Both are worse than the
+// state they were trying to fix, because both look like an answer.
+func ambiguousEntries(cfg demoConfig) map[int]bool {
+	seen := map[string][]int{}
+	for i, act := range cfg.Activities {
+		key := strings.ToLower(act.Company) + "\x00" + act.Subject
+		seen[key] = append(seen[key], i)
+	}
+	ambiguous := map[int]bool{}
+	for _, positions := range seen {
+		if len(positions) < 2 {
+			continue
+		}
+		for _, i := range positions {
+			ambiguous[i] = true
+		}
+	}
+	return ambiguous
 }
 
 // seededMatch answers whether a dataset entry's row is on file AND is really
@@ -164,7 +205,10 @@ func activityIdentityMatches(act demoActivity, existing seededActivity, orgID st
 // mismatched id files one entry's mail against another entry's people or
 // projects and stamps it with retention nobody can lift, so a disagreement
 // means leave it alone. activityIdentityMatches is what that disagreement is.
-func seededMatch(refs pipelineRefs, act demoActivity, seen map[string]seededActivity, i int) (seededActivity, bool) {
+func seededMatch(refs pipelineRefs, act demoActivity, seen map[string]seededActivity, ambiguous map[int]bool, i int) (seededActivity, bool) {
+	if ambiguous[i] {
+		return seededActivity{}, false
+	}
 	existing, ok := seen[fmt.Sprintf("act-%d", i)]
 	if !ok || existing.ID == "" {
 		// Not on file before this run, so the create linked it.

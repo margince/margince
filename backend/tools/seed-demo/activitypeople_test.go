@@ -236,11 +236,19 @@ func TestActivityIdentityMatches(t *testing.T) {
 			orgID:    org,
 			want:     false,
 		}, {
-			// A call or a meeting often carries no subject, and there is no
-			// fingerprint to check. The organization still answers.
-			name:     "an entry with no subject is judged on the company alone",
+			// A call or a meeting often carries no subject. The empty subject
+			// is a FACT about the entry, not a wildcard: matching any stored
+			// row is how a subjectless call reaches another entry's mail,
+			// because the entry names nothing for anything to disagree with.
+			name:     "an entry with no subject does not match a row that has one",
 			subject:  "-",
 			existing: seededActivity{OrganizationID: org, Subject: "whatever the server holds"},
+			orgID:    org,
+			want:     false,
+		}, {
+			name:     "an entry with no subject matches the row that has none",
+			subject:  "-",
+			existing: seededActivity{OrganizationID: org},
 			orgID:    org,
 			want:     true,
 		}, {
@@ -258,7 +266,7 @@ func TestActivityIdentityMatches(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			entry := act
 			if tc.subject == "-" {
-				// The dataset names none, so there is no fingerprint to check.
+				// The dataset names none, which is itself the fingerprint.
 				entry.Subject = ""
 			}
 			if got := activityIdentityMatches(entry, tc.existing, tc.orgID); got != tc.want {
@@ -292,5 +300,45 @@ func TestTheIndexReadsWhatARepairNeedsToPinItself(t *testing.T) {
 	}
 	if got.Subject != "Rueckfrage zur Migration" {
 		t.Errorf("subject = %q, want the stored one — every identity check would pass without it", got.Subject)
+	}
+}
+
+// TestAmbiguousEntriesAreLeftAlone — two entries the dataset cannot tell apart.
+//
+// Identity is (company, subject), and where that pair is not unique the only
+// thing left is the POSITION, which is not durable: source ids are positional
+// and inserting an entry renames every row after it. Two subjectless calls on
+// one account are the common case — neither entry names anything the other
+// does not — and a repair that guessed would replace one mail's counterpart
+// with the other's.
+func TestAmbiguousEntriesAreLeftAlone(t *testing.T) {
+	cfg := demoConfig{Activities: []demoActivity{
+		{Company: "acme.test", Kind: "call"},
+		{Company: "acme.test", Kind: "call"},
+		{Company: "acme.test", Kind: "email", Subject: "Rueckfrage zur Migration"},
+		{Company: "other.test", Kind: "call"},
+		// The same subject twice on one account is the same trap spelled out.
+		{Company: "other.test", Kind: "email", Subject: "Angebot"},
+		{Company: "other.test", Kind: "email", Subject: "Angebot"},
+	}}
+	ambiguous := ambiguousEntries(cfg)
+	for _, i := range []int{0, 1, 4, 5} {
+		if !ambiguous[i] {
+			t.Errorf("entry %d shares its (company, subject) with another and was not named as ambiguous", i)
+		}
+	}
+	for _, i := range []int{2, 3} {
+		if ambiguous[i] {
+			t.Errorf("entry %d is the only one of its (company, subject) and was named as ambiguous — the repair would stop reaching it", i)
+		}
+	}
+	// A company named with different casing is the SAME company, or the
+	// ambiguity check would miss a pair the org resolution treats as one.
+	mixed := demoConfig{Activities: []demoActivity{
+		{Company: "Acme.Test", Kind: "call"},
+		{Company: "acme.test", Kind: "call"},
+	}}
+	if got := ambiguousEntries(mixed); !got[0] || !got[1] {
+		t.Errorf("two subjectless calls on one account spelled with different casing read as unambiguous: %v", got)
 	}
 }

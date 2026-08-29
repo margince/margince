@@ -14,20 +14,52 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
 // checkActivitiesReachPeople catches correspondence filed against a company
 // and nobody: the company timeline fills, every person's stays empty, and a
 // rep opening a contact sees no history of talking to them.
+//
+// EXACT, not "at least one": a rule satisfied by any other conversation having
+// a person link is one a single unfiled mail walks past, and a mixed state is
+// the state a half-run leaves behind.
+//
+// Exact needs the exemption that makes it honest, and it is the one
+// checkDealsHaveStakeholders already makes for a deal: a conversation with a
+// company that publishes NOBODY has no counterpart to be filed against —
+// awin.com names no staff on its site — so failing on it would train the reader
+// to ignore this check. One whole-table read of the employments answers which
+// companies those are, rather than two requests per activity.
 func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error) {
-	conversations, withPerson := 0, 0
-	err := c.getAll("/v1/activities", nil, func(raw json.RawMessage) error {
+	hasStaff := map[string]bool{}
+	err := c.getAll("/v1/relationships", url.Values{"kind": {"employment"}}, func(raw json.RawMessage) error {
 		var rows []struct {
-			ID    string `json:"id"`
-			Kind  string `json:"kind"`
-			Links []struct {
+			OrganizationID string `json:"organization_id"`
+		}
+		if err := json.Unmarshal(raw, &rows); err != nil {
+			return err
+		}
+		for _, row := range rows {
+			hasStaff[row.OrganizationID] = true
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var unfiled []string
+	err = c.getAll("/v1/activities", nil, func(raw json.RawMessage) error {
+		var rows []struct {
+			ID      string `json:"id"`
+			Kind    string `json:"kind"`
+			Subject string `json:"subject"`
+			Links   []struct {
 				EntityType string `json:"entity_type"`
+				EntityID   string `json:"entity_id"`
 			} `json:"links"`
 		}
 		if err := json.Unmarshal(raw, &rows); err != nil {
@@ -41,26 +73,41 @@ func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error
 			if !isConversation(act.Kind) {
 				continue
 			}
-			conversations++
+			org, withPerson := "", false
 			for _, link := range act.Links {
-				if link.EntityType == "person" {
-					withPerson++
-					break
+				switch link.EntityType {
+				case "person":
+					withPerson = true
+				case "organization":
+					org = link.EntityID
 				}
 			}
+			if withPerson || !hasStaff[org] {
+				continue
+			}
+			unfiled = append(unfiled, describeActivity(act.Kind, act.Subject, act.ID))
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if conversations == 0 || withPerson > 0 {
+	if len(unfiled) == 0 {
 		return nil, nil
 	}
 	return []verifyFinding{{
 		Rule:   "conversations name a person",
-		Detail: fmt.Sprintf("%d mails/calls/meetings link to no person — every contact's timeline is empty", conversations),
+		Detail: fmt.Sprintf("%d mail(s)/call(s)/meeting(s) at a company that employs somebody link to no person (%s) — those contacts' timelines are empty", len(unfiled), sample(unfiled)),
 	}}, nil
+}
+
+// describeActivity names one activity for a finding: what it says it is about,
+// falling back to the id a call or a meeting often has instead of a subject.
+func describeActivity(kind, subject, id string) string {
+	if strings.TrimSpace(subject) != "" {
+		return kind + " " + strconv.Quote(subject)
+	}
+	return kind + " " + id
 }
 
 // checkConversationsNameTheRightPerson catches the installation the person
@@ -85,18 +132,24 @@ func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error
 // An activity carrying more than one person link is the one skip, for the
 // reason personRelinkFor leaves it alone: those links did not come from here,
 // and a rule reporting what the repair will never fix is one somebody turns
-// off. A row whose identity does not match its dataset entry is skipped for
-// the reason the repair skips it — positional source ids mean the entry may
-// name a different row than it did last run, and judging it would report the
-// wrong company's mail.
+// off.
+//
+// Two more are skipped for the reason the REPAIR skips them, and it is the same
+// reason twice: positional source ids mean an entry may name a different row
+// than it did last run. A row whose (company, subject) identity does not match
+// its entry is one of those; an entry the dataset cannot tell from another
+// (ambiguousEntries — two subjectless calls on one account) is the other. This
+// check runs with no domain map, so the subject carries the identity here,
+// which is the half that catches a reorder within one company anyway.
 func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFinding, error) {
 	onFile, err := loadActivitySourceIDs(c)
 	if err != nil {
 		return nil, err
 	}
+	ambiguous := ambiguousEntries(cfg)
 	var wrong []string
 	for i, act := range cfg.Activities {
-		if act.Person == "" || !isConversation(act.Kind) {
+		if act.Person == "" || !isConversation(act.Kind) || ambiguous[i] {
 			continue
 		}
 		existing, ok := onFile[fmt.Sprintf("act-%d", i)]
