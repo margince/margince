@@ -162,7 +162,7 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 				// being matched as source text, and one assembled with `+` is
 				// read whole.
 				if expr, isExpr := node.(ast.Expr); isExpr {
-					if statement, readable := stringValue(expr, nil); readable {
+					if statement, readable := gatekit.StringExpr(expr, nil, gatekit.FoldStrict); readable {
 						entry.statements = append(entry.statements, statement)
 					}
 				}

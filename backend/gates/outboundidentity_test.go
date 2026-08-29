@@ -31,6 +31,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // identitySurfaceRoots are the trees that can make an outbound call.
@@ -90,12 +92,12 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 					if len(written.Args) != 2 || !writesAHeader(written) {
 						return true
 					}
-					name, isString := stringValue(written.Args[0], consts)
+					name, isString := gatekit.StringExpr(written.Args[0], consts, gatekit.FoldStrict)
 					if !isString || !strings.EqualFold(name, "User-Agent") {
 						return true
 					}
 					headerWrites++
-					if _, literal := stringValue(written.Args[1], consts); literal {
+					if _, literal := gatekit.StringExpr(written.Args[1], consts, gatekit.FoldStrict); literal {
 						findings = append(findings, path)
 					}
 				case *ast.CompositeLit:
@@ -106,7 +108,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 						if !isPair {
 							continue
 						}
-						name, isString := stringValue(pair.Key, consts)
+						name, isString := gatekit.StringExpr(pair.Key, consts, gatekit.FoldStrict)
 						if !isString || !strings.EqualFold(name, "User-Agent") {
 							continue
 						}
@@ -123,7 +125,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 						if !isIndex {
 							continue
 						}
-						name, isString := stringValue(index.Index, consts)
+						name, isString := gatekit.StringExpr(index.Index, consts, gatekit.FoldStrict)
 						if !isString || !strings.EqualFold(name, "User-Agent") {
 							continue
 						}
@@ -163,7 +165,7 @@ func writesAHeader(call *ast.CallExpr) bool {
 // holdsALiteral reports whether a value assigned to the header map is written
 // out at the call site, including inside the []string a direct assignment takes.
 func holdsALiteral(value ast.Expr, consts map[string]string) bool {
-	if _, literal := stringValue(value, consts); literal {
+	if _, literal := gatekit.StringExpr(value, consts, gatekit.FoldStrict); literal {
 		return true
 	}
 	composite, ok := value.(*ast.CompositeLit)
@@ -171,7 +173,7 @@ func holdsALiteral(value ast.Expr, consts map[string]string) bool {
 		return false
 	}
 	for _, element := range composite.Elts {
-		if _, literal := stringValue(element, consts); literal {
+		if _, literal := gatekit.StringExpr(element, consts, gatekit.FoldStrict); literal {
 			return true
 		}
 	}

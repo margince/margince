@@ -190,7 +190,7 @@ func declaredPrompts(pkg promptPackage) []string {
 		if !promptConstantName.MatchString(name) {
 			return
 		}
-		if text, ok := stringValue(value, pkg.consts); ok && len(text) >= promptFloor {
+		if text, ok := gatekit.StringExpr(value, pkg.consts, gatekit.FoldStrict); ok && len(text) >= promptFloor {
 			prompts = append(prompts, name)
 		}
 	}, func(string) {})
@@ -210,7 +210,7 @@ func hasHandTypedVersion(pkg promptPackage) bool {
 		if !namesAVersion(name) {
 			return
 		}
-		if _, resolved := stringValue(value, pkg.consts); resolved {
+		if _, resolved := gatekit.StringExpr(value, pkg.consts, gatekit.FoldStrict); resolved {
 			handTyped = true
 		}
 	}, func(string) {})
@@ -468,11 +468,11 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 	// (and parenthesised and `string(...)` spellings); this asserts the census
 	// goes through it, since reading only the first fragment would let a prompt
 	// escape by being split across lines.
-	joined, ok := stringValue(&ast.BinaryExpr{
+	joined, ok := gatekit.StringExpr(&ast.BinaryExpr{
 		Op: token.ADD,
 		X:  &ast.BasicLit{Kind: token.STRING, Value: `"You write "`},
 		Y:  &ast.BasicLit{Kind: token.STRING, Value: `"a brief."`},
-	}, nil)
+	}, nil, gatekit.FoldStrict)
 	if !ok || joined != "You write a brief." {
 		t.Errorf("a prompt assembled with `+` is not read whole: %q", joined)
 	}
@@ -491,7 +491,7 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 			found[name] = true
 		}
 		eachDeclaredString(pkg, isConst, func(name string, value ast.Expr) {
-			if _, isString := stringValue(value, pkg.consts); isString && promptConstantName.MatchString(name) {
+			if _, isString := gatekit.StringExpr(value, pkg.consts, gatekit.FoldStrict); isString && promptConstantName.MatchString(name) {
 				namedLikeAPrompt[name] = true
 			}
 		}, func(string) {})

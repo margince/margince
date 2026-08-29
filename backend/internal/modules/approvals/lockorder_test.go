@@ -32,9 +32,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -122,7 +123,7 @@ func sqlExpressions(t *testing.T, path string) []string {
 		if !ok {
 			return true
 		}
-		text, folded := foldString(expr, consts)
+		text, folded := gatekit.StringExpr(expr, consts, gatekit.FoldStrict)
 		if !folded || !strings.Contains(text, " ") {
 			return true
 		}
@@ -151,7 +152,7 @@ func stringConstants(file *ast.File) map[string]string {
 				continue
 			}
 			for i, name := range vs.Names {
-				if text, folded := foldString(vs.Values[i], consts); folded {
+				if text, folded := gatekit.StringExpr(vs.Values[i], consts, gatekit.FoldStrict); folded {
 					consts[name.Name] = text
 				}
 			}
@@ -159,36 +160,6 @@ func stringConstants(file *ast.File) map[string]string {
 		return true
 	})
 	return consts
-}
-
-// foldString resolves one expression to its string value, following literals,
-// known constants and `+` concatenation. Anything else — a function call, a
-// variable — folds to nothing, and the expression is not judged: a statement
-// this gate cannot read whole is one it must not pass silently either, which is
-// what the subject floor above is for.
-func foldString(expr ast.Expr, consts map[string]string) (string, bool) {
-	switch e := expr.(type) {
-	case *ast.BasicLit:
-		if e.Kind != token.STRING {
-			return "", false
-		}
-		text, err := strconv.Unquote(e.Value)
-		return text, err == nil
-	case *ast.Ident:
-		text, ok := consts[e.Name]
-		return text, ok
-	case *ast.BinaryExpr:
-		if e.Op != token.ADD {
-			return "", false
-		}
-		left, okL := foldString(e.X, consts)
-		right, okR := foldString(e.Y, consts)
-		return left + right, okL && okR
-	case *ast.ParenExpr:
-		return foldString(e.X, consts)
-	default:
-		return "", false
-	}
 }
 
 // packageSourceFiles lists this package's hand-written Go files. Tests are

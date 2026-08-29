@@ -90,6 +90,43 @@ func TestEveryCensusOfSQLReadsItAsPostgresReceivesIt(t *testing.T) {
 	t.Parallel()
 	var findings []string
 	var judged []string
+	eachGoFileInTheModule(t, func(path string, file *ast.File) {
+		if !judgesSQLLiterals(file) {
+			return
+		}
+		judged = append(judged, path)
+		if rawReaderWaivers.Waived(t, path) {
+			return
+		}
+		for _, site := range rawLiteralReadsIn(file) {
+			findings = append(findings, path+": "+site)
+		}
+	})
+	if len(judged) < sqlLiteralReaderFloor {
+		t.Fatalf("only %d file(s) judge SQL literals, and this census is pinned at %d:\n\t%s\n\n"+
+			"A walk that stopped reaching them reports a clean tree in the same words as a tree "+
+			"with nothing left to fix. Lower the floor deliberately, or find what the walk lost.",
+			len(judged), sqlLiteralReaderFloor, strings.Join(judged, "\n\t"))
+	}
+	rawReaderWaivers.AssertAllMatched(t)
+	if len(findings) > 0 {
+		t.Errorf("%d SQL literal read(s) take the source text rather than the string:\n\t%s\n\n"+
+			"A statement written in double quotes reaches these as its escapes, so the census "+
+			"reports a clean tree over the very shape it exists to find. Read it with "+
+			"gatekit.SQLStatementsOf (statements, escapes decoded, `+` chains flattened), "+
+			"gatekit.LiteralText (one literal), or strconv.Unquote.",
+			len(findings), strings.Join(findings, "\n\t"))
+	}
+}
+
+// eachGoFileInTheModule hands every parsed Go file under the module to visit.
+//
+// Shared by the censuses that judge the CENSUSES: their subjects are _test.go
+// files, which gatekit.Scope deliberately does not sweep — a gate's own source
+// is not the tree it is about. Two walks would be the very drift these two
+// gates exist to stop.
+func eachGoFileInTheModule(t *testing.T, visit func(path string, file *ast.File)) {
+	t.Helper()
 	fset := token.NewFileSet()
 	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -109,38 +146,11 @@ func TestEveryCensusOfSQLReadsItAsPostgresReceivesIt(t *testing.T) {
 			t.Errorf("parsing %s: %v", path, parseErr)
 			return nil
 		}
-		if !judgesSQLLiterals(file) {
-			return nil
-		}
-		judged = append(judged, filepath.ToSlash(path))
-		if rawReaderWaivers.Waived(t, filepath.ToSlash(path)) {
-			return nil
-		}
-		for _, site := range rawLiteralReadsIn(file) {
-			findings = append(findings, filepath.ToSlash(path)+": "+site)
-		}
+		visit(filepath.ToSlash(path), file)
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walking the module: %v", err)
-	}
-	// A census that can fail short has already failed: a walk that stopped
-	// finding readers would report a clean tree in the same words as a tree
-	// with none left to fix.
-	if len(judged) < sqlLiteralReaderFloor {
-		t.Fatalf("only %d file(s) judge SQL literals, and this census is pinned at %d:\n\t%s\n\n"+
-			"A walk that stopped reaching them reports a clean tree in the same words as a tree "+
-			"with nothing left to fix. Lower the floor deliberately, or find what the walk lost.",
-			len(judged), sqlLiteralReaderFloor, strings.Join(judged, "\n\t"))
-	}
-	rawReaderWaivers.AssertAllMatched(t)
-	if len(findings) > 0 {
-		t.Errorf("%d SQL literal read(s) take the source text rather than the string:\n\t%s\n\n"+
-			"A statement written in double quotes reaches these as its escapes, so the census "+
-			"reports a clean tree over the very shape it exists to find. Read it with "+
-			"gatekit.SQLStatementsOf (statements, escapes decoded, `+` chains flattened), "+
-			"gatekit.LiteralText (one literal), or strconv.Unquote.",
-			len(findings), strings.Join(findings, "\n\t"))
 	}
 }
 

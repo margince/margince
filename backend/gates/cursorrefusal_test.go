@@ -166,7 +166,7 @@ func cursorFieldVerdict(lit *ast.CompositeLit, consts map[string]string, constNa
 		if !ok || !strings.EqualFold(key.Name, "field") {
 			continue
 		}
-		text, resolved := stringValue(pair.Value, consts)
+		text, resolved := gatekit.StringExpr(pair.Value, consts, gatekit.FoldStrict)
 		switch {
 		case resolved && text == "cursor":
 			return fieldIsACursor

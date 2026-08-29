@@ -76,22 +76,16 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // extSchema is the one schema an extension's tables live in (ADR-0069 §9); the
 // migration gate refuses a unit relation anywhere else.
 const extSchema = "ext"
-
-// computedFragment stands in for a fragment the fold cannot read — a function
-// call, a parameter, a `%s`. It is deliberately not identifier-shaped, so it
-// tokenises on its own and a name it is glued to (`"public." + t`) still reads
-// as the schema-qualified reference it is.
-const computedFragment = "?"
 
 // TestExtensionSQLNamesOnlyTheUnitsOwnTables reads every unit's SQL and refuses
 // a table outside the unit's namespace.
@@ -274,7 +268,7 @@ func stringConstants(files []*ast.File) map[string]string {
 		next := map[string]string{}
 		unreadable := map[string]bool{}
 		for _, binding := range all {
-			text, folded := foldString(binding.expr, consts)
+			text, folded := gatekit.StringExpr(binding.expr, consts, gatekit.FoldTotal)
 			prior, bound := next[binding.name]
 			switch {
 			case !folded, bound && prior != text:
@@ -340,7 +334,12 @@ func sqlStrings(file *ast.File, consts map[string]string) []foldedSQL {
 			return true
 		}
 		switch expr.(type) {
-		case *ast.BasicLit, *ast.BinaryExpr, *ast.ParenExpr:
+		// A CALL is here because `string(sqlConst)` is one. The reader folds
+		// that conversion as the identity on its argument, and a walk that only
+		// offered it the literal shapes descended past the call to the bare name
+		// below and judged nothing — so a statement spelled that way left
+		// through the door the fold exists to close.
+		case *ast.BasicLit, *ast.BinaryExpr, *ast.ParenExpr, *ast.CallExpr:
 		default:
 			// A bare name is not a statement even when it resolves to one. The
 			// fold answers for a name so a concatenation can be read through it;
@@ -350,7 +349,7 @@ func sqlStrings(file *ast.File, consts map[string]string) []foldedSQL {
 			// where the SQL is written.
 			return true
 		}
-		text, folded := foldString(expr, consts)
+		text, folded := gatekit.StringExpr(expr, consts, gatekit.FoldTotal)
 		if !folded {
 			return true
 		}
@@ -363,45 +362,6 @@ func sqlStrings(file *ast.File, consts map[string]string) []foldedSQL {
 		return false
 	})
 	return out
-}
-
-// foldString reads a string expression as the text it produces, standing
-// computedFragment in for every part it cannot resolve. It reports false when
-// the expression is not a string at all, which is what keeps the walk descending
-// into a call's arguments.
-func foldString(expr ast.Expr, consts map[string]string) (string, bool) {
-	switch node := expr.(type) {
-	case *ast.BasicLit:
-		if node.Kind != token.STRING {
-			return "", false
-		}
-		text, err := strconv.Unquote(node.Value)
-		if err != nil {
-			// A STRING literal the parser accepted and strconv cannot decode is
-			// not a shape Go admits; treating it as unreadable keeps the fold
-			// total without inventing text for it.
-			return computedFragment, true
-		}
-		return text, true
-	case *ast.ParenExpr:
-		return foldString(node.X, consts)
-	case *ast.Ident:
-		if text, known := consts[node.Name]; known {
-			return text, true
-		}
-		return computedFragment, false
-	case *ast.BinaryExpr:
-		if node.Op != token.ADD {
-			return "", false
-		}
-		left, leftIsString := foldString(node.X, consts)
-		right, rightIsString := foldString(node.Y, consts)
-		if !leftIsString && !rightIsString {
-			return "", false
-		}
-		return left + right, true
-	}
-	return computedFragment, false
 }
 
 // sqlStatementShapes are the openings a folded string must have to be read as

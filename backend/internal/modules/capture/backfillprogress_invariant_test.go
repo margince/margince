@@ -24,9 +24,10 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -151,10 +152,16 @@ func auditRunWrites(t *testing.T, fset *token.FileSet, file *ast.File, consts ma
 			expr = node
 		case *ast.BinaryExpr:
 			expr = node
+		case *ast.CallExpr:
+			// `string(runUpdate)` is a call, and the reader folds that
+			// conversion as the identity on its argument. Without this arm the
+			// walk descended past the call to the bare name and judged nothing,
+			// so a statement spelled that way was invisible.
+			expr = node
 		default:
 			return true
 		}
-		sql, ok := sqlOf(consts, expr, blankIdents)
+		sql, ok := gatekit.StringExpr(expr, consts, gatekit.FoldTotal)
 		if !ok {
 			return true
 		}
@@ -180,7 +187,7 @@ func auditRunWrites(t *testing.T, fset *token.FileSet, file *ast.File, consts ma
 // collectStringConsts adds one file's string constants to consts, so a
 // statement assembled from a shared fragment resolves to what the database
 // actually receives. A const may be built FROM another const, so it resolves
-// through sqlOf and the caller repeats until the map stops growing — a
+// through gatekit.StringExpr and the caller repeats until the map stops growing — a
 // fragment that resolved to nothing would make every statement using it look
 // like it settles no tally.
 func collectStringConsts(file *ast.File, consts map[string]string) {
@@ -204,56 +211,9 @@ func collectStringConsts(file *ast.File, consts map[string]string) {
 			// loop that exists to resolve exactly this case could never correct
 			// it, and every statement built from that fragment would be judged
 			// as if the fragment said nothing.
-			if text, ok := sqlOf(consts, value.Values[0], strictIdents); ok {
+			if text, ok := gatekit.StringExpr(value.Values[0], consts, gatekit.FoldStrict); ok {
 				consts[name] = text
 			}
 		}
-	}
-}
-
-// identMode says what an unresolvable identifier means to the caller.
-type identMode bool
-
-const (
-	// strictIdents refuses the whole expression — used while collecting consts,
-	// where an unknown name means "not resolvable YET".
-	strictIdents identMode = true
-	// blankIdents substitutes a space — used while judging a statement, where an
-	// unknown name is a local variable holding a CASE arm and it is the
-	// statement's shape that matters.
-	blankIdents identMode = false
-)
-
-// sqlOf reconstructs a string expression's value. ok is false for anything that
-// is not a string expression at all, and — under strictIdents — for anything
-// carrying a name it cannot resolve.
-func sqlOf(consts map[string]string, expr ast.Expr, idents identMode) (string, bool) {
-	switch node := expr.(type) {
-	case *ast.BasicLit:
-		if node.Kind != token.STRING {
-			return "", false
-		}
-		text, err := strconv.Unquote(node.Value)
-		return text, err == nil
-	case *ast.Ident:
-		if text, known := consts[node.Name]; known {
-			return text, true
-		}
-		if idents == strictIdents {
-			return "", false
-		}
-		return " ", true
-	case *ast.BinaryExpr:
-		if node.Op != token.ADD {
-			return "", false
-		}
-		left, leftOK := sqlOf(consts, node.X, idents)
-		right, rightOK := sqlOf(consts, node.Y, idents)
-		if !leftOK || !rightOK {
-			return "", false
-		}
-		return left + right, true
-	default:
-		return "", false
 	}
 }
