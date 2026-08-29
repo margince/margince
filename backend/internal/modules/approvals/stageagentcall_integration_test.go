@@ -136,25 +136,25 @@ func TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds(t *testing.T) {
 		t.Fatal("a second passport was handed the approval granted to the first")
 	}
 
-	// And neither is a caller presenting NO passport — the case the redemption
-	// alone would have admitted, since it checks the binding only against a
-	// caller that presents one. It must not be offered either credential's row:
-	// not the approved one, and not the undecided one the second passport is
-	// waiting on.
-	none, noneApproved, err := e.svc.StageAgentCall(e.agentWithoutPassport(), in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if noneApproved {
-		t.Fatal("a passport-less caller was offered a decision granted to a passport")
-	}
-	if none == staged || none == other {
-		t.Fatalf("a passport-less caller was handed %s, a row staged by a passport", none)
+	// And a caller presenting NO passport is not offered either row — because it
+	// gets no row at all. This used to be the third arm of the same question:
+	// the redemption checks the binding only against a caller that presents a
+	// passport, so a passport-less one had to be kept away from another
+	// credential's approval by the staging probe. It is now refused the staging
+	// outright, which is the stronger answer and the one that also stops the row
+	// it WOULD have written — a NULL passport_id, indistinguishable from a
+	// server proposal, releasable by the credential that made it.
+	if _, _, err := e.svc.StageAgentCall(e.agentWithoutPassport(), in); err == nil {
+		t.Fatal("a passport-less agent staged a call — the row it writes reads as the server's own")
 	}
 }
 
-// agentWithoutPassport is an agent principal carrying no passport — the shape the
-// REST gate's session-authenticated agent path produces.
+// agentWithoutPassport is an agent principal carrying no passport.
+//
+// Production builds no such caller on any agent surface: AgentIdentity.Principal
+// is what the REST bearer, both MCP transports and the Surface-B runner arrive
+// as, and it always carries the authenticated passport. The shape is planted
+// here because the guard that refuses it has to be exercised by something.
 func (e *stagingEnv) agentWithoutPassport() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

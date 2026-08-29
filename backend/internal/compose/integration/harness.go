@@ -52,6 +52,17 @@ type Env struct {
 	// reading as a filter bug.
 	AdminUser    ids.UUID
 	Team1, Team2 ids.UUID
+	// AgentPassport is the credential AgentCtx presents. A real passport row,
+	// because approval.passport_id is a foreign key AND because an agent staging
+	// without one writes the NULL that means "the server proposed this" — the
+	// row a credential is then allowed to release, since there is no passport to
+	// compare its own against. Every live agent principal carries one; a fixture
+	// that did not was modelling a caller production cannot build.
+	//
+	// Lent by Rep1 rather than by a seat of its own: an extra app_user would
+	// move every seat count and seat-derived budget this package asserts, over a
+	// row those cases are not about.
+	AgentPassport ids.UUID
 }
 
 // Setup gives each test a clean, migrated database and seeds the
@@ -100,6 +111,13 @@ func Setup(t *testing.T) *Env {
 			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, $3)`, user, string(rune('a'+i))+"@authz.test", "Rep"); err != nil {
 			t.Fatal(err)
 		}
+	}
+	e.AgentPassport = ids.NewV7()
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO passport (id, on_behalf_of, granted_by, token_hash, scopes, expires_at)
+		VALUES ($1, $2, $2, $3, ARRAY['read', 'write'], now() + interval '30 days')`,
+		e.AgentPassport, e.Rep1, "hash-"+e.AgentPassport.String()); err != nil {
+		t.Fatal(err)
 	}
 	for _, team := range []ids.UUID{e.Team1, e.Team2} {
 		if _, err := owner.Exec(ctx,
@@ -222,11 +240,16 @@ func (e *Env) Admin() context.Context { return e.As(e.AdminUser, nil, AdminPerms
 
 // AgentCtx binds a synthetic agent principal for staging (the staging
 // path itself is not what a suite using this is testing).
+//
+// It presents e.AgentPassport, as every live agent principal does: a staging
+// with none writes a NULL passport_id, which is what a SERVER proposal looks
+// like, and the credential may then release its own proposal.
 func (e *Env) AgentCtx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
+		PassportID: e.AgentPassport,
 	})
 }
 
