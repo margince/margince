@@ -52,6 +52,15 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// storekit.Audit is judged by this gate under its own module.
 	"internal/platform/database/storekit": "storekit IS the audit writer; the four tables it owns are the ledgers themselves",
 
+	// The job fleet's own queue. river_job is River's operational state — what
+	// is queued, running or retained — and not a record of anything a person
+	// did. Every domain write a job performs is audited by the module that
+	// performs it, under that module's own row; the queue row is the machinery
+	// that got the worker there. The one statement this tree issues against it
+	// is a workspace purge, and what a purge DID to the estate is audited by
+	// the erasure path that ordered it.
+	"internal/platform/jobs": "river_job is the fleet's operational state rather than a record fact — what a job DID is audited by the module that did it, and the purge that deletes these rows is audited by the erasure that ordered it",
+
 	// Per-READER derived state. Every one of these tables carries a user_id and
 	// holds an assembly generated FOR one person — a brief, a dossier, a view
 	// cursor, a dismissal. None is a shared record fact, so none has a record

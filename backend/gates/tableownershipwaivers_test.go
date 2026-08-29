@@ -16,6 +16,9 @@ import "github.com/margince/margince/backend/internal/shared/gatekit"
 // entry a sibling earned. Every entry carries its rationale inline so the gate
 // is self-contained on a clean checkout.
 var crossStoreWrites = gatekit.Waive(map[string]string{
+	// The relay marks what it shipped, in the transaction that shipped it.
+	"internal/platform/events:event_outbox:relay.go:Relay.relayBatch": "storekit WRITES the outbox row and the relay RETIRES it, which is the whole point of an outbox: the domain write and the publish are separate transactions, and marking published_at in the same transaction as the XADD is what makes a crash re-ship rather than lose. Moving it into storekit would put the shipping half inside the module seam that exists to know nothing about shipping",
+
 	// people's merge/promotion relink rows across aggregates inside their
 	// single transaction — the primary aggregate owns the single-tx
 	// cross-aggregate write, because a merge that could half-commit its
