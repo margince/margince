@@ -350,16 +350,23 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 		case *ast.AssignStmt:
 			// The id needs converting, so it arrives through a local rather
 			// than straight off params. The origin is still the question, one
-			// hop further: the local has to be assigned from params somewhere
-			// in the same function, which the walk records as it goes.
-			for _, value := range node.Rhs {
-				if readsRequestParams(value) {
-					for _, target := range node.Lhs {
-						if local, ok := target.(*ast.Ident); ok {
-							fromParams[local.Name] = true
-						}
-					}
+			// hop further: the local has to hold a params value, which the walk
+			// records as it goes.
+			//
+			// BY POSITION, and CLEARED when the position does not carry one.
+			// Marking every target because some value on the right read params
+			// credits `id, _ := "FIXED", params.Dir` to `id`; and never
+			// clearing lets `id := params.EntityId; id = fixedID` keep the mark
+			// after the request value has been thrown away. Both end with a
+			// constant reaching the store while this census reports it bound —
+			// the dropped filter it exists to catch, one step along.
+			for i, target := range node.Lhs {
+				local, isLocal := target.(*ast.Ident)
+				if !isLocal || i >= len(node.Rhs) {
+					continue
 				}
+				fromParams[local.Name] = readsRequestParams(node.Rhs[i]) ||
+					readsLocalFromParams(node.Rhs[i], fromParams)
 			}
 			for i, target := range node.Lhs {
 				field, ok := target.(*ast.SelectorExpr)
