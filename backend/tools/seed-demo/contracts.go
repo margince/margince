@@ -175,7 +175,7 @@ func driveContract(c *client, cfg demoConfig, contract demoContract, ids map[str
 	// renewed one.
 	if current == "cancelled" || current == "superseded" || current == "expired" {
 		if current == "superseded" && contract.RenewsInto != "" {
-			return repairSuccessorDeal(c, cfg, contract, refs)
+			return repairSuccessorDeal(c, cfg, contract, id, refs)
 		}
 		return nil
 	}
@@ -307,7 +307,7 @@ func successorDealID(c *client, cfg demoConfig, refs pipelineRefs, terms demoCon
 // The same convergence ensureContract performs for an ordinary contract, on the
 // one row it cannot reach: the successor is written by the renewal, so neither
 // the create loop nor the drive loop ever revisits it.
-func repairSuccessorDeal(c *client, cfg demoConfig, contract demoContract, refs pipelineRefs) error {
+func repairSuccessorDeal(c *client, cfg demoConfig, contract demoContract, predecessorID string, refs pipelineRefs) error {
 	var terms demoContract
 	for _, candidate := range refs.contractsByRef {
 		if candidate.Ref == contract.RenewsInto {
@@ -318,19 +318,33 @@ func repairSuccessorDeal(c *client, cfg demoConfig, contract demoContract, refs 
 	if terms.Ref == "" || terms.Deal == "" {
 		return nil
 	}
-	orgID, ok := refs.orgsByDom[strings.ToLower(contract.Company)]
-	if !ok {
+	// The predecessor NAMES its successor. Looking one up by title on the
+	// account would find whichever contract happens to share the name — two
+	// terms of one agreement legitimately do, and patching the wrong one puts
+	// the deal on a row nobody meant.
+	var predecessor struct {
+		SupersededByID string `json:"superseded_by_id"`
+	}
+	if err := c.get("/v1/contracts/"+predecessorID, nil, &predecessor); err != nil {
+		return fmt.Errorf("reading the superseded contract %s: %w", contract.Ref, err)
+	}
+	if predecessor.SupersededByID == "" {
 		return nil
 	}
-	successorID, hasDeal, err := findContract(c, orgID, terms.Title)
-	if err != nil || successorID == "" || hasDeal {
-		return err
+	var successor struct {
+		DealID string `json:"deal_id"`
+	}
+	if err := c.get("/v1/contracts/"+predecessor.SupersededByID, nil, &successor); err != nil {
+		return fmt.Errorf("reading successor %s: %w", terms.Ref, err)
+	}
+	if successor.DealID != "" {
+		return nil
 	}
 	dealID, err := successorDealID(c, cfg, refs, terms)
 	if err != nil {
 		return err
 	}
-	if err := c.patch("/v1/contracts/"+successorID, jsonBody{"deal_id": dealID}, nil); err != nil {
+	if err := c.patch("/v1/contracts/"+predecessor.SupersededByID, jsonBody{"deal_id": dealID}, nil); err != nil {
 		return fmt.Errorf("attaching successor %s to its deal: %w", terms.Ref, err)
 	}
 	return nil

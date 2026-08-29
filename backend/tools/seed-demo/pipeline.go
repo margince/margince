@@ -441,21 +441,32 @@ func loadLeadsBySource(c *client) (map[string]string, error) {
 	return bySource, nil
 }
 
+// findDeal answers the id of the account's deal with this name, or "" when the
+// account has none.
+//
+// EVERY page, not the first hundred rows. An account with more deals than one
+// page would otherwise report a deal it holds as absent — and a caller that
+// treats "" as "not seeded" then refuses, or attaches nothing, over a record
+// that is right there.
 func findDeal(c *client, name, orgID string) (string, error) {
-	var page struct {
-		Data []struct {
+	found := ""
+	err := c.getAll("/v1/deals", url.Values{"organization_id": {orgID}}, func(raw json.RawMessage) error {
+		var rows []struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
-		} `json:"data"`
-	}
-	query := url.Values{"organization_id": {orgID}, "limit": {"100"}}
-	if err := c.get("/v1/deals", query, &page); err != nil {
+		}
+		if err := json.Unmarshal(raw, &rows); err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if found == "" && strings.EqualFold(row.Name, name) {
+				found = row.ID
+			}
+		}
+		return nil
+	})
+	if err != nil {
 		return "", fmt.Errorf("listing deals for %s: %w", orgID, err)
 	}
-	for _, row := range page.Data {
-		if strings.EqualFold(row.Name, name) {
-			return row.ID, nil
-		}
-	}
-	return "", nil
+	return found, nil
 }
