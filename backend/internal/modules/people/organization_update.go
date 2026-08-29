@@ -159,7 +159,7 @@ func recordOrganizationUpdate(
 	if err := stampEditedDescriptionAuthor(ctx, tx, id, p); err != nil {
 		return err
 	}
-	if err := recheckRenamedOrganization(ctx, tx, id, after); err != nil {
+	if err := recheckRenamedOrganization(ctx, tx, id, p); err != nil {
 		return err
 	}
 	if err := reconcileOrgReplaceSets(ctx, tx, id, by, in, before, after); err != nil {
@@ -174,6 +174,18 @@ func recordOrganizationUpdate(
 		return fmt.Errorf("emit organization.updated: %w", err)
 	}
 	return nil
+}
+
+// renamesInPatch reports whether a staged edit MOVED a name column — the pure
+// half of the question above, so the precedence can be read without a database.
+func renamesInPatch(p *storekit.Patch) bool {
+	moved := p.Moved()
+	for column := range orgNameColumns {
+		if _, changed := moved[column]; changed {
+			return true
+		}
+	}
+	return false
 }
 
 // lockOrgNameWritesForEdit takes the name lock when — and only when — this edit
@@ -206,7 +218,7 @@ func lockOrgNameWritesForEdit(ctx context.Context, tx pgx.Tx, in UpdateOrganizat
 // would otherwise spend a lookup, and every lookup is fifteen seconds of a rate
 // the whole installation shares.
 func (s *Store) relocateIfAddressMoved(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, p *storekit.Patch) error {
-	if !movedAddress(p.After()) {
+	if !movedAddress(p.Moved()) {
 		return nil
 	}
 	if err := s.enqueueGeocode(ctx, tx, id); err != nil {
@@ -317,14 +329,23 @@ func reconcileOrgReplaceSets(ctx context.Context, tx pgx.Tx, id ids.Organization
 // on the same registered name is exactly the shape that doubled a company in a
 // live workspace, and a legal-name-only edit changes no display name at all.
 // The edit stands regardless — this only files a pair for the review queue.
-func recheckRenamedOrganization(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, after map[string]any) error {
-	renamed := false
-	for column := range orgNameColumns {
-		if _, wrote := after[column]; wrote {
-			renamed = true
-		}
-	}
-	if !renamed {
+//
+// MOVED, not merely assigned. storekit.Patch records an assignment for every
+// field the request named, so keyed off the after-image an agent echoing a name
+// it had just read spent a workspace-wide fuzzy scan — under the name lock, for
+// the whole rest of the transaction — and filed a pair over an edit that
+// renamed nothing.
+//
+// The two axes answer that question with different precision, and the weaker
+// one errs the safe way. display_name's images are both plain strings, so a
+// re-send of the same name is not a move. legal_name's are not: the row reads
+// back as *string and the request supplies string, and a type change counts as
+// a move — so an echoed legal name still spends its scan. Over-reporting costs
+// a redundant pair the queue already de-duplicates; under-reporting would lose
+// the rename that doubled a company, which is the failure this detector exists
+// for.
+func recheckRenamedOrganization(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, p *storekit.Patch) error {
+	if !renamesInPatch(p) {
 		return nil
 	}
 	editor, err := storekit.CapturedBy(ctx)
