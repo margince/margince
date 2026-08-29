@@ -6883,6 +6883,7 @@ func (e OrganizationGraphGroupsOmitted) Valid() bool {
 // Defines values for OrganizationGraphEdgeKind.
 const (
 	OrganizationGraphEdgeKindCoSellWith      OrganizationGraphEdgeKind = "co_sell_with"
+	OrganizationGraphEdgeKindCorrespondsWith OrganizationGraphEdgeKind = "corresponds_with"
 	OrganizationGraphEdgeKindDealStakeholder OrganizationGraphEdgeKind = "deal_stakeholder"
 	OrganizationGraphEdgeKindEmployment      OrganizationGraphEdgeKind = "employment"
 	OrganizationGraphEdgeKindHasDeal         OrganizationGraphEdgeKind = "has_deal"
@@ -6897,6 +6898,8 @@ const (
 func (e OrganizationGraphEdgeKind) Valid() bool {
 	switch e {
 	case OrganizationGraphEdgeKindCoSellWith:
+		return true
+	case OrganizationGraphEdgeKindCorrespondsWith:
 		return true
 	case OrganizationGraphEdgeKindDealStakeholder:
 		return true
@@ -7581,6 +7584,7 @@ const (
 	PersonGraphNodeGroupAccount PersonGraphNodeGroup = "account"
 	PersonGraphNodeGroupAnchor  PersonGraphNodeGroup = "anchor"
 	PersonGraphNodeGroupDirect  PersonGraphNodeGroup = "direct"
+	PersonGraphNodeGroupPeer    PersonGraphNodeGroup = "peer"
 )
 
 // Valid indicates whether the value is a known member of the PersonGraphNodeGroup enum.
@@ -7591,6 +7595,8 @@ func (e PersonGraphNodeGroup) Valid() bool {
 	case PersonGraphNodeGroupAnchor:
 		return true
 	case PersonGraphNodeGroupDirect:
+		return true
+	case PersonGraphNodeGroupPeer:
 		return true
 	default:
 		return false
@@ -21044,6 +21050,13 @@ type OrganizationGraphEdge struct {
 	From openapi_types.UUID `json:"from"`
 
 	// Kind `employment` — the account employs the person.
+	// `corresponds_with` — the two CONTACTS at its ends have been observed on the
+	// same captured activities. Undirected in fact (neither wrote "to" the other
+	// through us — we only saw them together), so `from`/`to` carry the pair's
+	// canonical order and mean nothing more. It is what stops the account picture
+	// being hub-and-spoke through our own team. Never drawn from a limited-audience
+	// activity, and it carries pooled counts only — no receipts, because the
+	// correspondence itself is not this caller's to read.
 	// `has_deal` — the deal belongs to the account.
 	// `deal_stakeholder` — the person holds a stakeholder seat on the deal.
 	// `parent_of` — `from` is the parent organization of `to` (the account's parent
@@ -21070,8 +21083,10 @@ type OrganizationGraphEdge struct {
 	Role *string `json:"role,omitempty"`
 
 	// Strength How warm this particular colleague's relationship with this contact is, 0–100,
-	// on `in_contact_with` edges only; null on every other kind, which describes a
-	// structural fact rather than a relationship.
+	// on `in_contact_with` and `corresponds_with` edges only; null on every other
+	// kind, which describes a structural fact rather than a relationship. On
+	// `corresponds_with` the reciprocity term has nothing to say — no direction was
+	// observed between two externals — so the score leans on recency and frequency.
 	//
 	// It is the per-user relationship strength (PO-F-3b): the same recency ×
 	// frequency × reciprocity arithmetic as the workspace-wide contact score, over
@@ -21096,6 +21111,13 @@ type OrganizationGraphEdge struct {
 }
 
 // OrganizationGraphEdgeKind `employment` — the account employs the person.
+// `corresponds_with` — the two CONTACTS at its ends have been observed on the
+// same captured activities. Undirected in fact (neither wrote "to" the other
+// through us — we only saw them together), so `from`/`to` carry the pair's
+// canonical order and mean nothing more. It is what stops the account picture
+// being hub-and-spoke through our own team. Never drawn from a limited-audience
+// activity, and it carries pooled counts only — no receipts, because the
+// correspondence itself is not this caller's to read.
 // `has_deal` — the deal belongs to the account.
 // `deal_stakeholder` — the person holds a stakeholder seat on the deal.
 // `parent_of` — `from` is the parent organization of `to` (the account's parent
@@ -22064,6 +22086,9 @@ type PersonGraph struct {
 	DroppedCount *struct {
 		Account *int `json:"account,omitempty"`
 		Direct  *int `json:"direct,omitempty"`
+
+		// Peer Counts from a bounded fetch, like `direct` — an understatement past the fetch width, stated rather than exact because exactness would cost every ordinary read.
+		Peer *int `json:"peer,omitempty"`
 	} `json:"dropped_count,omitempty"`
 
 	// Edges Who has actually corresponded with whom. An edge exists only where interactions do.
@@ -22107,7 +22132,7 @@ type PersonGraphEdgeStrengthBucket string
 
 // PersonGraphNode defines model for PersonGraphNode.
 type PersonGraphNode struct {
-	// Group `anchor` is the contact this graph is about. `direct` knows them. `account` works with them.
+	// Group `anchor` is the contact this graph is about. `direct` knows them. `account` works with them. `peer` is another external contact observed on the same captured activities.
 	Group PersonGraphNodeGroup `json:"group"`
 
 	// Id Stable within this response, and what an edge refers to. `user:<uuid>` or `person:<uuid>`.
@@ -22121,7 +22146,7 @@ type PersonGraphNode struct {
 	UserId   *openapi_types.UUID `json:"user_id,omitempty"`
 }
 
-// PersonGraphNodeGroup `anchor` is the contact this graph is about. `direct` knows them. `account` works with them.
+// PersonGraphNodeGroup `anchor` is the contact this graph is about. `direct` knows them. `account` works with them. `peer` is another external contact observed on the same captured activities.
 type PersonGraphNodeGroup string
 
 // PersonGraphNodeType defines model for PersonGraphNode.Type.

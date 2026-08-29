@@ -202,6 +202,7 @@ var tableOwners = map[string]string{
 	// search module, and a sibling would have to import its traversal
 	// primitives, which a module may not do.
 	"graph_interaction_edge": "internal/modules/search",
+	"graph_contact_edge":     "internal/modules/search",
 	// CG-DDL-2: LinkedIn ghosts. Owned by people because the work they exist
 	// for is identity matching — the same dedupe rules, the same chokepoint.
 	"email_signature":     "internal/modules/people",

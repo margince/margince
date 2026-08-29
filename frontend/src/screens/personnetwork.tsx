@@ -152,6 +152,7 @@ export function PersonNetworkTab({
   const anchor = nodes.find((n) => n.group === "anchor");
   const direct = nodes.filter((n) => n.group === "direct");
   const account = nodes.filter((n) => n.group === "account");
+  const peers = nodes.filter((n) => n.group === "peer");
   // A selection only means something against the graph on screen. The tab
   // stays mounted as a reader moves between contacts, so a raw id would open
   // the detail region on a node this graph does not have.
@@ -185,6 +186,14 @@ export function PersonNetworkTab({
               onSelect={setSelected}
               emptyLabel={t("person.graph.noAccount")}
               omitted={isOmitted(data, "account")}
+            />
+            <NodeGroup
+              title={t("person.graph.peer")}
+              nodes={peers}
+              selected={selectedNode}
+              onSelect={setSelected}
+              emptyLabel={t("person.graph.noPeer")}
+              omitted={isOmitted(data, "peer")}
             />
           </div>
         </div>
@@ -495,7 +504,9 @@ function DroppedNote({ graph }: Readonly<{ graph: Graph }>) {
   const t = useT();
   const { locale } = useLocale();
   const dropped =
-    (graph.dropped_count?.direct ?? 0) + (graph.dropped_count?.account ?? 0);
+    (graph.dropped_count?.direct ?? 0) +
+    (graph.dropped_count?.account ?? 0) +
+    (graph.dropped_count?.peer ?? 0);
   if (dropped === 0) {
     return null;
   }

@@ -1525,6 +1525,7 @@ export const de = {
   "co.connections.rel.referred_by.owner": "von diesem Account empfohlen",
   "co.connections.rel.owns": "betreut diesen Account",
   "co.connections.rel.in_contact_with": "im Austausch",
+  "co.connections.rel.corresponds_with": "stehen miteinander im Austausch",
   "co.connections.noSignal": "noch kein Signal",
   "linkedinImport.title": "LinkedIn-Kontakte",
   "linkedinImport.sub":
@@ -6248,6 +6249,8 @@ export const de = {
   "person.graph.account": "Im selben Unternehmen",
   "person.graph.noAccount":
     "Keine weiteren Kontakte in diesem Unternehmen erfasst.",
+  "person.graph.peer": "Mit wem sie im Austausch stehen",
+  "person.graph.noPeer": "Noch niemand sonst auf ihren Threads beobachtet.",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
   "person.graph.withContact": "mit diesem Kontakt",

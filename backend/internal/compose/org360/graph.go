@@ -264,6 +264,13 @@ func (g *graphAssembly) build() error {
 		return err
 	}
 	g.placeOurSide()
+	// Peer edges after every node is final, because they are drawn only
+	// between already-shown contacts — an edge is never the reason a node
+	// exists, so the caps above stay the sole deciders of who is in the
+	// picture.
+	if err := g.placePeerEdges(); err != nil {
+		return err
+	}
 	g.markIntroPath()
 	return nil
 }

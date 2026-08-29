@@ -53,6 +53,13 @@ func scrubPersonGraphTraces(ctx context.Context, tx pgx.Tx, id ids.UUID, subject
 			`DELETE FROM graph_interaction_edge WHERE person_id = $1`, id)
 	}
 	if err == nil {
+		// Both endpoint columns: the swept party can stand on either end of a
+		// contact↔contact edge, and the row re-identifies them from the graph
+		// alone whichever side they are on.
+		_, err = tx.Exec(ctx,
+			`DELETE FROM graph_contact_edge WHERE person_a = $1 OR person_b = $1`, id)
+	}
+	if err == nil {
 		// The SAME reach the request-driven eraser uses, by calling it rather
 		// than by restating it. This path used to carry its own copy of the
 		// predicate and the copy had drifted: no profile-URL arm, and an

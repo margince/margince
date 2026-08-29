@@ -67,7 +67,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (72)
+## Census (73)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -129,6 +129,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `precheckwiring_test.go` | H2 | A precheck that exists but is not wired protects nothing. |
 | `profilefieldreaders_test.go` | H2 | person\_profile\_field holds what a machine ASSERTED about a person, and ai\_feedback holds what a human then decided about that assertion. |
+| `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
