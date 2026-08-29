@@ -137,7 +137,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// after. Both are ceilings on the same act.
 	rbac, seat, err := g.authority.AdmittedAuthority(ctx, wsID, p.OnBehalfOf, p.PassportID)
 	if err != nil {
-		return ctx, deniedIfGone("authority", spec.Name, err)
+		return ctx, deniedIfGone("the credential or the human behind it", spec.Name, err)
 	}
 	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
 	ctx = principal.WithActor(ctx, p)
@@ -250,9 +250,17 @@ func AutoExecutePin(ctx context.Context) (version int64, ok bool) {
 // deniedIfGone maps a vanished granting human (revoked, archived,
 // suspended) to a denial; infrastructure failures pass through so an
 // outage reads as an error, never as an authorization answer.
+// deniedIfGone turns the seam's absence answer into a refusal.
+//
+// WHAT is the caller's word for the thing that could not be resolved, and the
+// message no longer supplies "granting human" itself. The admission read folds
+// four ways to answer not-found into one call — a revoked passport, an expired
+// one, one re-granted to somebody else, and a human who is gone — and blaming
+// the human for all four sends an operator to look at the account when they
+// killed the credential a moment ago.
 func deniedIfGone(what, tool string, err error) error {
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return fmt.Errorf("gate: %s: granting human no longer resolvable (%s): %w", tool, what, apperrors.ErrPermissionDenied)
+		return fmt.Errorf("gate: %s: %s no longer resolvable: %w", tool, what, apperrors.ErrPermissionDenied)
 	}
 	return fmt.Errorf("gate: %s: resolving %s: %w", tool, what, err)
 }

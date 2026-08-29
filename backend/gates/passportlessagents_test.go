@@ -66,12 +66,21 @@ func TestEveryPassportlessAgentPrincipalIsRatified(t *testing.T) {
 			if err != nil {
 				return err
 			}
+			// The QUALIFIER this file actually spells, not the package's own
+			// name. A file that aliases the import — or dot-imports it — writes
+			// the same literal under a different word, and a reader looking for
+			// `principal.` alone would answer "no agent principal here" for the
+			// one file where somebody had a reason to spell it differently.
+			qualifier, dotImported := gatekit.ImportedAs(file, principalImportPath)
+			if qualifier == "" && !dotImported {
+				return nil
+			}
 			for _, decl := range file.Decls {
 				fn, isFunc := decl.(*ast.FuncDecl)
 				if !isFunc || fn.Body == nil {
 					continue
 				}
-				for _, mint := range agentPrincipalMints(fn) {
+				for _, mint := range agentPrincipalMints(fn, qualifier, dotImported) {
 					found++
 					if mint {
 						continue
@@ -104,11 +113,14 @@ func TestEveryPassportlessAgentPrincipalIsRatified(t *testing.T) {
 // something else entirely. A literal that computes its Type rather than naming
 // it is not read at all — that shape does not exist in this tree, and reading
 // it would mean evaluating the expression rather than reading it.
-func agentPrincipalMints(fn *ast.FuncDecl) []bool {
+// principalImportPath is the package the type and the kind both come from.
+const principalImportPath = "github.com/margince/margince/backend/internal/shared/kernel/principal"
+
+func agentPrincipalMints(fn *ast.FuncDecl, qualifier string, dotImported bool) []bool {
 	var out []bool
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		lit, isLit := n.(*ast.CompositeLit)
-		if !isLit || !isPrincipalType(lit.Type) {
+		if !isLit || !isPrincipalType(lit.Type, qualifier, dotImported) {
 			return true
 		}
 		agent, passport, unreadable := false, false, false
@@ -123,11 +135,11 @@ func agentPrincipalMints(fn *ast.FuncDecl) []bool {
 			}
 			switch key.Name {
 			case "Type":
-				agent = agent || namesAgentPrincipal(pair.Value)
+				agent = agent || namesAgentPrincipal(pair.Value, qualifier, dotImported)
 				// A Type this reader cannot judge is not a pass. Computed, it
 				// could be the agent kind, and skipping the literal would wave
 				// through the one shape this census exists for.
-				unreadable = unreadable || !isPlainSelector(pair.Value)
+				unreadable = unreadable || !isPlainSelector(pair.Value, dotImported)
 			case "PassportID":
 				// The VALUE, not the key. `PassportID: ids.UUID{}` names the
 				// field and no credential — which is exactly the principal
@@ -143,29 +155,47 @@ func agentPrincipalMints(fn *ast.FuncDecl) []bool {
 	return out
 }
 
-func isPrincipalType(expr ast.Expr) bool {
+func isPrincipalType(expr ast.Expr, qualifier string, dotImported bool) bool {
+	if dotImported {
+		ident, isIdent := expr.(*ast.Ident)
+		return isIdent && ident.Name == "Principal"
+	}
 	sel, isSel := expr.(*ast.SelectorExpr)
 	if !isSel || sel.Sel.Name != "Principal" {
 		return false
 	}
 	pkg, isIdent := sel.X.(*ast.Ident)
-	return isIdent && pkg.Name == "principal"
+	return isIdent && pkg.Name == qualifier
 }
 
-func namesAgentPrincipal(expr ast.Expr) bool {
+func namesAgentPrincipal(expr ast.Expr, qualifier string, dotImported bool) bool {
+	if dotImported {
+		ident, isIdent := expr.(*ast.Ident)
+		return isIdent && ident.Name == "PrincipalAgent"
+	}
 	sel, isSel := expr.(*ast.SelectorExpr)
-	return isSel && sel.Sel.Name == "PrincipalAgent"
+	if !isSel || sel.Sel.Name != "PrincipalAgent" {
+		return false
+	}
+	pkg, isIdent := sel.X.(*ast.Ident)
+	return isIdent && pkg.Name == qualifier
 }
 
 // isPlainSelector reports whether an expression NAMES the kind rather than
 // standing in for it.
 //
-// A qualified selector — `principal.PrincipalAgent` — is the only readable
-// form, and it is what this tree writes everywhere. A bare identifier is not:
-// it can be a package-level var holding the agent kind, which reads as "not an
-// agent" to a matcher looking for the constant, and deciding a site is not an
-// agent is exactly the pass that hides it.
-func isPlainSelector(expr ast.Expr) bool {
+// A selector qualified by the principal import — `principal.PrincipalAgent`,
+// under whatever name this file gave it — is the readable form, and a dot
+// import makes a bare identifier readable too. Anything else is not: a bare
+// identifier under an ordinary import can be a package-level var holding the
+// agent kind, which reads as "not an agent" to a matcher looking for the
+// constant, and deciding a site is not an agent is exactly the pass that hides
+// it.
+func isPlainSelector(expr ast.Expr, dotImported bool) bool {
+	if dotImported {
+		_, isIdent := expr.(*ast.Ident)
+		return isIdent
+	}
 	_, isSelector := expr.(*ast.SelectorExpr)
 	return isSelector
 }
