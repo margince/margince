@@ -163,6 +163,7 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 	stamped := all.Entries[0].OccurredAt
 
 	before, after := stamped.Add(-time.Hour), stamped.Add(time.Hour)
+	stampedRow := all.Entries[0].ID
 	for _, tc := range []struct {
 		name       string
 		from, to   *time.Time
@@ -188,6 +189,13 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 			if got := len(page.Entries) > 0; got != tc.wantIsSome {
 				t.Errorf("%d row(s) in %s, want some=%v — the window bound is compiled the wrong way round",
 					len(page.Entries), tc.name, tc.wantIsSome)
+			}
+			// THE row, not any row. The subject may carry more than one audit
+			// line, so a bound compiled exclusively can drop the one standing
+			// on it and still answer a page — which "nonempty" reads as a pass.
+			if tc.wantIsSome && !carriesRow(page.Entries, stampedRow) {
+				t.Errorf("%s answered %d row(s) and none of them is the one it stands on — the bound excludes the moment itself",
+					tc.name, len(page.Entries))
 			}
 		})
 	}
@@ -220,6 +228,16 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 			t.Error("the actor who wrote the row matches none of it")
 		}
 	})
+}
+
+// carriesRow reports whether a page holds one particular audit line.
+func carriesRow(entries []privacy.AuditEntry, id ids.UUID) bool {
+	for _, entry := range entries {
+		if entry.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // TestAuditLogResolvesTheHumanBehindEveryRow pins PD-002 on the compliance

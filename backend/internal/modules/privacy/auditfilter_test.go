@@ -293,6 +293,13 @@ func TestEveryPublishedAuditFilterReachesTheStore(t *testing.T) {
 // nobody wrote a case for is exactly the field that gets dropped. The handler
 // binds in two shapes — a key in the AuditFilter literal, and an assignment to
 // f.<Field> below it for the id that needs converting — so both count.
+//
+// And the VALUE has to come from the parameters, not merely exist. A field set
+// to a constant is bound by every reading of the syntax and carries nothing the
+// caller sent: `Action: addr("FIXED")` names the field, satisfies both structs,
+// and drops the request exactly as deleting the line would. So the origin is
+// what is checked — somewhere under the assigned expression, the params value
+// this field takes.
 func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 	t.Parallel()
 	file, err := parser.ParseFile(token.NewFileSet(), "handlers.go", nil, 0)
@@ -322,6 +329,9 @@ func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 // something, in either shape it uses.
 func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 	bound := map[string]bool{}
+	// Locals that hold a parameter value, so an assignment routed through one
+	// still counts as having come from the request.
+	fromParams := map[string]bool{}
 	ast.Inspect(handler.Body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CompositeLit:
@@ -333,17 +343,34 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 				if !ok {
 					continue
 				}
-				if key, ok := pair.Key.(*ast.Ident); ok {
+				if key, ok := pair.Key.(*ast.Ident); ok && readsRequestParams(pair.Value) {
 					bound[key.Name] = true
 				}
 			}
 		case *ast.AssignStmt:
-			for _, target := range node.Lhs {
+			// The id needs converting, so it arrives through a local rather
+			// than straight off params. The origin is still the question, one
+			// hop further: the local has to be assigned from params somewhere
+			// in the same function, which the walk records as it goes.
+			for _, value := range node.Rhs {
+				if readsRequestParams(value) {
+					for _, target := range node.Lhs {
+						if local, ok := target.(*ast.Ident); ok {
+							fromParams[local.Name] = true
+						}
+					}
+				}
+			}
+			for i, target := range node.Lhs {
 				field, ok := target.(*ast.SelectorExpr)
 				if !ok {
 					continue
 				}
-				if receiver, ok := field.X.(*ast.Ident); ok && receiver.Name == "f" {
+				receiver, ok := field.X.(*ast.Ident)
+				if !ok || receiver.Name != "f" {
+					continue
+				}
+				if i < len(node.Rhs) && (readsRequestParams(node.Rhs[i]) || readsLocalFromParams(node.Rhs[i], fromParams)) {
 					bound[field.Sel.Name] = true
 				}
 			}
@@ -351,6 +378,41 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 		return true
 	})
 	return bound
+}
+
+// readsRequestParams reports whether an expression takes anything off the
+// generated request parameters.
+//
+// By the RECEIVER's name, which is the handler's own — the parameter is
+// declared `params crmcontracts.ListAuditLogParams`. A value that reaches for
+// something else is a constant, a literal or a local, and none of those is the
+// caller's.
+func readsRequestParams(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		sel, ok := n.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		if receiver, ok := sel.X.(*ast.Ident); ok && receiver.Name == "params" {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// readsLocalFromParams reports whether an expression reads a local this walk
+// has already seen take its value from the parameters.
+func readsLocalFromParams(expr ast.Expr, fromParams map[string]bool) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok && fromParams[ident.Name] {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 // funcNamed finds one top-level function in a parsed file.
