@@ -144,7 +144,8 @@ func (e *RelationshipConflictError) Is(target error) bool { return target == app
 func mapRelationshipConstraint(err error, kind string) error {
 	if constraint, ok := storekit.CheckViolation(err); ok {
 		switch constraint {
-		case "rel_employment_shape", "rel_stakeholder_shape", "rel_partner_shape", "rel_project_stakeholder_shape":
+		case "rel_employment_shape", "rel_stakeholder_shape", "rel_partner_shape", "rel_project_stakeholder_shape",
+			"rel_works_with_shape":
 			return &RelationshipShapeError{Kind: kind}
 		case "rel_dates":
 			return &RelationshipDatesError{}
@@ -152,7 +153,8 @@ func mapRelationshipConstraint(err error, kind string) error {
 	}
 	if constraint, ok := storekit.UniqueViolation(err); ok {
 		switch constraint {
-		case "uq_rel_current_primary_employer", "uq_rel_deal_person_role", employmentUnique, projectStakeholderUnique:
+		case "uq_rel_current_primary_employer", "uq_rel_deal_person_role", employmentUnique, projectStakeholderUnique,
+			"uq_rel_works_with":
 			return &RelationshipConflictError{Constraint: constraint}
 		}
 	}

@@ -96,7 +96,7 @@ func archivePersonRows(ctx context.Context, tx pgx.Tx, id ids.PersonID, now time
 		// resolving inbound messages onto a record that has been
 		// soft-deleted; archived, the next message starts a fresh one.
 		`UPDATE person_channel_identity SET archived_at = $2 WHERE person_id = $1 AND archived_at IS NULL`,
-		`UPDATE relationship SET archived_at = $2 WHERE person_id = $1 AND archived_at IS NULL`,
+		`UPDATE relationship SET archived_at = $2 WHERE (person_id = $1 OR counterparty_person_id = $1) AND archived_at IS NULL`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, id, now); err != nil {
 			return err

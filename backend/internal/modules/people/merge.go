@@ -220,9 +220,16 @@ func buildSurvivorshipPatch(target, source crmcontracts.Person) *storekit.Patch 
 }
 
 func relinkPersonEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID) (int64, error) {
+	moved, err := relinkWorksWithEdges(ctx, tx, sourceID, targetID)
+	if err != nil {
+		return 0, err
+	}
+	// works_with is handled above and excluded here: its duplicate is a PAIR
+	// duplicate, not a (kind, org, deal) one, and this predicate would archive
+	// a source edge because the target pairs with ANYBODY.
 	if _, err := tx.Exec(ctx, `
 		UPDATE relationship a SET archived_at = $3
-		WHERE a.person_id = $1 AND a.archived_at IS NULL AND EXISTS (
+		WHERE a.person_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL AND EXISTS (
 		  SELECT 1 FROM relationship b
 		  WHERE b.person_id = $2 AND b.kind = a.kind AND b.archived_at IS NULL
 		    AND b.organization_id IS NOT DISTINCT FROM a.organization_id
@@ -235,8 +242,42 @@ func relinkPersonEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Pe
 		  is_current_primary = a.is_current_primary AND NOT EXISTS (
 		    SELECT 1 FROM relationship b
 		    WHERE b.person_id = $2 AND `+CurrentPrimarySlotSQL("b")+`)
-		WHERE a.person_id = $1 AND a.archived_at IS NULL`, sourceID, targetID)
-	return tag.RowsAffected(), err
+		WHERE a.person_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL`, sourceID, targetID)
+	return moved + tag.RowsAffected(), err
+}
+
+// relinkWorksWithEdges re-homes the merged person's works_with pairs, on
+// WHICHEVER column the source sits in. A pair whose other end IS the target
+// would relink into a self-pair, and one the target already holds — in either
+// orientation — would double it; both are archived instead, because the
+// surviving record already states the fact.
+func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID) (int64, error) {
+	if _, err := tx.Exec(ctx, `
+		UPDATE relationship a SET archived_at = $3
+		WHERE a.kind = 'works_with' AND a.archived_at IS NULL
+		  AND (a.person_id = $1 OR a.counterparty_person_id = $1)
+		  AND (
+		    a.person_id = $2 OR a.counterparty_person_id = $2
+		    OR EXISTS (
+		      SELECT 1 FROM relationship b
+		      WHERE b.kind = 'works_with' AND b.archived_at IS NULL AND b.id <> a.id
+		        AND LEAST(b.person_id, b.counterparty_person_id) =
+		            LEAST($2::uuid, CASE WHEN a.person_id = $1 THEN a.counterparty_person_id ELSE a.person_id END)
+		        AND GREATEST(b.person_id, b.counterparty_person_id) =
+		            GREATEST($2::uuid, CASE WHEN a.person_id = $1 THEN a.counterparty_person_id ELSE a.person_id END)))`,
+		sourceID, targetID, time.Now().UTC()); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE relationship SET
+		  person_id              = CASE WHEN person_id = $1 THEN $2::uuid ELSE person_id END,
+		  counterparty_person_id = CASE WHEN counterparty_person_id = $1 THEN $2::uuid ELSE counterparty_person_id END
+		WHERE kind = 'works_with' AND archived_at IS NULL
+		  AND (person_id = $1 OR counterparty_person_id = $1)`, sourceID, targetID)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 // relinkLinkRows re-homes the pure link tables (activity_link,

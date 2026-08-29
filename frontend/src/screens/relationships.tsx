@@ -65,6 +65,7 @@ const KIND_LABELS: Record<RelationshipKind, MessageKey> = {
   partner_of: "rel.kind.partnerOf",
   referred_by: "rel.kind.referredBy",
   co_sell_with: "rel.kind.coSellWith",
+  works_with: "rel.kind.worksWith",
 };
 
 // What this FORM may create, which is narrower than what it may show: the
@@ -158,6 +159,15 @@ export function counterpartyRef(
     return rel.person_id ? { kind: "person", id: rel.person_id } : null;
   }
   if ("person_id" in scope) {
+    // works_with names a person on either column, and the person filter now
+    // matches either end — the far person is whichever id is not this
+    // scope's own, the same rule the org↔org branch below keeps.
+    if (rel.kind === "works_with") {
+      const farPerson = [rel.person_id, rel.counterparty_person_id].find(
+        (personId) => personId != null && personId !== scope.person_id,
+      );
+      return farPerson ? { kind: "person", id: farPerson } : null;
+    }
     if (rel.deal_id) {
       return { kind: "deal", id: rel.deal_id };
     }

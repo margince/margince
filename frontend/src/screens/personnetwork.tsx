@@ -10,9 +10,12 @@
 // without that argument, so there is one component rather than two spellings
 // of one question.
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card } from "../design-system/atoms";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -407,6 +410,9 @@ function EdgeDetail({
   }
   return (
     <Card title={node.label} level={3}>
+      {node.suggest_edge && node.person_id && (
+        <RecordWorksWith graph={graph} peer={node} />
+      )}
       {edges.map((edge) => {
         // Whom this edge joins the SELECTED node to. Both ends are read
         // because an account-arm edge need not touch the anchor at all.
@@ -513,6 +519,63 @@ function DroppedNote({ graph }: Readonly<{ graph: Graph }>) {
   return (
     <p className="pn-note">
       {t("person.graph.dropped", { count: formatNumber(dropped, locale) })}
+    </p>
+  );
+}
+
+/**
+ * RecordWorksWith is the one-click acceptance of an observed acquaintance:
+ * the server flagged the pair as strong and unrecorded, and the click is the
+ * rep's OWN attributed write of a works_with relationship — nothing was
+ * staged, nothing happens until they press it. The flag vanishes on the next
+ * read because the edge now exists.
+ */
+function RecordWorksWith({
+  graph,
+  peer,
+}: Readonly<{ graph: Graph; peer: GraphNode }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const mayRecord = useCanWrite("relationship", "create");
+  const record = useMutation({
+    mutationFn: async (pair: { anchor: string; peer: string }) => {
+      const { error } = await api.POST("/relationships", {
+        body: {
+          kind: "works_with",
+          person_id: pair.anchor,
+          counterparty_person_id: pair.peer,
+          source: "manual",
+        },
+      });
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["person-graph", graph.person_id],
+      }),
+  });
+  if (!mayRecord) {
+    return null;
+  }
+  return (
+    <p className="pn-suggest">
+      {record.isError ? (
+        <span role="alert">{problemMessageOf(record.error, t)}</span>
+      ) : (
+        <Button
+          small
+          disabled={record.isPending}
+          onClick={() => {
+            if (peer.person_id) {
+              record.mutate({ anchor: graph.person_id, peer: peer.person_id });
+            }
+          }}
+        >
+          {t("person.graph.recordWorksWith", { name: peer.label })}
+        </Button>
+      )}
     </p>
   );
 }

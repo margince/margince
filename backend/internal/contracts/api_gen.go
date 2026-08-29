@@ -3957,6 +3957,7 @@ const (
 	CreateRelationshipRequestKindPartnerOf          CreateRelationshipRequestKind = "partner_of"
 	CreateRelationshipRequestKindProjectStakeholder CreateRelationshipRequestKind = "project_stakeholder"
 	CreateRelationshipRequestKindReferredBy         CreateRelationshipRequestKind = "referred_by"
+	CreateRelationshipRequestKindWorksWith          CreateRelationshipRequestKind = "works_with"
 )
 
 // Valid indicates whether the value is a known member of the CreateRelationshipRequestKind enum.
@@ -3973,6 +3974,8 @@ func (e CreateRelationshipRequestKind) Valid() bool {
 	case CreateRelationshipRequestKindProjectStakeholder:
 		return true
 	case CreateRelationshipRequestKindReferredBy:
+		return true
+	case CreateRelationshipRequestKindWorksWith:
 		return true
 	default:
 		return false
@@ -8716,6 +8719,7 @@ const (
 	RelationshipKindProjectCompany     RelationshipKind = "project_company"
 	RelationshipKindProjectStakeholder RelationshipKind = "project_stakeholder"
 	RelationshipKindReferredBy         RelationshipKind = "referred_by"
+	RelationshipKindWorksWith          RelationshipKind = "works_with"
 )
 
 // Valid indicates whether the value is a known member of the RelationshipKind enum.
@@ -8734,6 +8738,8 @@ func (e RelationshipKind) Valid() bool {
 	case RelationshipKindProjectStakeholder:
 		return true
 	case RelationshipKindReferredBy:
+		return true
+	case RelationshipKindWorksWith:
 		return true
 	default:
 		return false
@@ -12271,6 +12277,7 @@ const (
 	ListRelationshipsParamsKindProjectCompany     ListRelationshipsParamsKind = "project_company"
 	ListRelationshipsParamsKindProjectStakeholder ListRelationshipsParamsKind = "project_stakeholder"
 	ListRelationshipsParamsKindReferredBy         ListRelationshipsParamsKind = "referred_by"
+	ListRelationshipsParamsKindWorksWith          ListRelationshipsParamsKind = "works_with"
 )
 
 // Valid indicates whether the value is a known member of the ListRelationshipsParamsKind enum.
@@ -12289,6 +12296,8 @@ func (e ListRelationshipsParamsKind) Valid() bool {
 	case ListRelationshipsParamsKindProjectStakeholder:
 		return true
 	case ListRelationshipsParamsKindReferredBy:
+		return true
+	case ListRelationshipsParamsKindWorksWith:
 		return true
 	default:
 		return false
@@ -16485,17 +16494,18 @@ type CreateRecordGrantRequestSubjectType string
 
 // CreateRelationshipRequest defines model for CreateRelationshipRequest.
 type CreateRelationshipRequest struct {
-	CounterpartyOrgId *openapi_types.UUID           `json:"counterparty_org_id,omitempty"`
-	DealId            *openapi_types.UUID           `json:"deal_id,omitempty"`
-	EndedAt           *openapi_types.Date           `json:"ended_at,omitempty"`
-	IsCurrentPrimary  *bool                         `json:"is_current_primary,omitempty"`
-	Kind              CreateRelationshipRequestKind `json:"kind"`
-	OrganizationId    *openapi_types.UUID           `json:"organization_id,omitempty"`
-	PersonId          *openapi_types.UUID           `json:"person_id,omitempty"`
-	ProjectId         *openapi_types.UUID           `json:"project_id,omitempty"`
-	Role              *string                       `json:"role,omitempty"`
-	Source            string                        `json:"source"`
-	StartedAt         *openapi_types.Date           `json:"started_at,omitempty"`
+	CounterpartyOrgId    *openapi_types.UUID           `json:"counterparty_org_id,omitempty"`
+	CounterpartyPersonId *openapi_types.UUID           `json:"counterparty_person_id,omitempty"`
+	DealId               *openapi_types.UUID           `json:"deal_id,omitempty"`
+	EndedAt              *openapi_types.Date           `json:"ended_at,omitempty"`
+	IsCurrentPrimary     *bool                         `json:"is_current_primary,omitempty"`
+	Kind                 CreateRelationshipRequestKind `json:"kind"`
+	OrganizationId       *openapi_types.UUID           `json:"organization_id,omitempty"`
+	PersonId             *openapi_types.UUID           `json:"person_id,omitempty"`
+	ProjectId            *openapi_types.UUID           `json:"project_id,omitempty"`
+	Role                 *string                       `json:"role,omitempty"`
+	Source               string                        `json:"source"`
+	StartedAt            *openapi_types.Date           `json:"started_at,omitempty"`
 }
 
 // CreateRelationshipRequestKind defines model for CreateRelationshipRequest.Kind.
@@ -22163,9 +22173,17 @@ type PersonGraphNode struct {
 	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
 
 	// Sublabel Their role or employer, when the record carries one.
-	Sublabel *string             `json:"sublabel,omitempty"`
-	Type     PersonGraphNodeType `json:"type"`
-	UserId   *openapi_types.UUID `json:"user_id,omitempty"`
+	Sublabel *string `json:"sublabel,omitempty"`
+
+	// SuggestEdge On `peer` nodes only: the pair shares enough recent activities to be
+	// worth recording (the server applies the evidence floor) and no live
+	// `works_with` relationship exists between the anchor and this peer yet. A suggestion is a READ — nothing is staged
+	// or written until a human posts the relationship themselves. Absent
+	// when the caller lacks the relationship read grant, because saying
+	// "not yet recorded" would disclose what is.
+	SuggestEdge *bool               `json:"suggest_edge,omitempty"`
+	Type        PersonGraphNodeType `json:"type"`
+	UserId      *openapi_types.UUID `json:"user_id,omitempty"`
 }
 
 // PersonGraphNodeGroup `anchor` is the contact this graph is about. `direct` knows them. `account` works with them. `peer` is another external contact observed on the same captured activities.
@@ -23670,6 +23688,9 @@ type RejectVoiceDraftRequest struct {
 // (project↔person — the deal-stakeholder shape applied to a body of work), and the partner edges
 // (A41/ADR-0032, org↔org via `counterparty_org_id`): `partner_of` (org served by a partner
 // org), `referred_by` (org referred by a partner org), `co_sell_with` (org co-sold with a partner org).
+// `works_with` is the one person↔person kind (person_id ↔ counterparty_person_id): two external
+// contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
+// and one live edge exists per pair whichever way it was recorded.
 type Relationship struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -23678,8 +23699,11 @@ type Relationship struct {
 
 	// CounterpartyOrgId The other org on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.
 	CounterpartyOrgId *openapi_types.UUID `json:"counterparty_org_id,omitempty"`
-	CreatedAt         time.Time           `json:"created_at"`
-	DealId            *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// CounterpartyPersonId The other person on a works_with edge. Null for every other kind.
+	CounterpartyPersonId *openapi_types.UUID `json:"counterparty_person_id,omitempty"`
+	CreatedAt            time.Time           `json:"created_at"`
+	DealId               *openapi_types.UUID `json:"deal_id,omitempty"`
 
 	// EndedAt Null = current/ongoing.
 	EndedAt *openapi_types.Date `json:"ended_at,omitempty"`

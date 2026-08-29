@@ -584,6 +584,7 @@ export const vi = {
   "rel.kind.partnerOf": "Đối tác của",
   "rel.kind.referredBy": "Được giới thiệu bởi",
   "rel.kind.coSellWith": "Bán chung với",
+  "rel.kind.worksWith": "Làm việc cùng",
 
   "common.error": "Không tải được màn hình này.",
   "common.errorNoCause":
@@ -6219,6 +6220,7 @@ export const vi = {
     "Không có contact nào khác được ghi nhận ở công ty họ.",
   "person.graph.peer": "Họ trao đổi với ai",
   "person.graph.noPeer": "Chưa thấy ai khác trên các thread của họ.",
+  "person.graph.recordWorksWith": "Ghi nhận: làm việc cùng {name}",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",
   "person.graph.withContact": "với contact này",

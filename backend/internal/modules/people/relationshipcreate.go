@@ -29,9 +29,12 @@ type CreateRelationshipInput struct {
 	PersonID          *ids.PersonID
 	OrganizationID    *ids.OrganizationID
 	CounterpartyOrgID *ids.OrganizationID
-	DealID            *ids.DealID
-	ProjectID         *ids.ProjectID
-	Role              *string
+	// CounterpartyPersonID is the far end of the one person↔person kind
+	// (works_with); nil for every other kind, whose shapes refuse it.
+	CounterpartyPersonID *ids.PersonID
+	DealID               *ids.DealID
+	ProjectID            *ids.ProjectID
+	Role                 *string
 	// IsCurrentPrimary is TRI-STATE, and the third state is what makes the rule
 	// in the insert safe: nil means the caller expressed no opinion and the
 	// store decides, false means they said this is NOT the person's current
@@ -127,6 +130,13 @@ func writeRelationshipInTx(
 			return out, err
 		}
 	}
+	// The counterparty person is an attach target exactly like the anchor: an
+	// archive racing this write must either refuse it or sweep the edge.
+	if in.CounterpartyPersonID != nil {
+		if err := lockPersonForAttach(ctx, tx, *in.CounterpartyPersonID); err != nil {
+			return out, err
+		}
+	}
 	if err := ensureRelationshipEndpoints(ctx, tx, in); err != nil {
 		return out, err
 	}
@@ -179,17 +189,17 @@ func writeRelationshipInTx(
 	// somebody works today. That is the same rule the UPDATE below applies,
 	// and both read it off the row rather than off the request.
 	row := tx.QueryRow(ctx, `
-			INSERT INTO relationship (kind, person_id, organization_id, counterparty_org_id,
+			INSERT INTO relationship (kind, person_id, organization_id, counterparty_org_id, counterparty_person_id,
 			                          deal_id, project_id, role, is_current_primary, started_at, ended_at, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7,
-			        coalesce($8, $1 = 'employment' AND NOT EXISTS (
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+			        coalesce($9, $1 = 'employment' AND NOT EXISTS (
 			          SELECT 1 FROM relationship
 			           WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL
 			             AND (`+EmploymentIsCurrentSQL("ended_at")+` OR is_current_primary)))
-			          AND ($1 <> 'employment' OR `+EmploymentIsCurrentSQL("$10::date")+`),
-			        $9, $10, $11, $12)
+			          AND ($1 <> 'employment' OR `+EmploymentIsCurrentSQL("$11::date")+`),
+			        $10, $11, $12, $13)
 			RETURNING `+relationshipColumns,
-		in.Kind, in.PersonID, in.OrganizationID, in.CounterpartyOrgID, in.DealID, in.ProjectID,
+		in.Kind, in.PersonID, in.OrganizationID, in.CounterpartyOrgID, in.CounterpartyPersonID, in.DealID, in.ProjectID,
 		in.Role, in.IsCurrentPrimary, in.StartedAt, in.EndedAt, in.Source, capturedBy)
 	var err error
 	if out, err = scanRelationship(row); err != nil {
@@ -207,6 +217,7 @@ func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelati
 		id    *ids.UUID
 	}{
 		{anchorPerson, untypedPtr(in.PersonID)},
+		{anchorPerson, untypedPtr(in.CounterpartyPersonID)},
 		{"organization", untypedPtr(in.OrganizationID)},
 		{"organization", untypedPtr(in.CounterpartyOrgID)},
 		{anchorDeal, untypedPtr(in.DealID)},
