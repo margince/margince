@@ -219,3 +219,44 @@ func TestCloseDateTodayBucketsInWorkspaceZone(t *testing.T) {
 		t.Errorf("Auckland workspace: flags = %v, want overdue", got.Flags)
 	}
 }
+
+// TestOverdueIsAskedInTheInstallationsZone is the disagreement this seam exists
+// to end.
+//
+// A close date is a calendar date a human picked, so whether it has passed is a
+// question about the day it is where they work. Asked in UTC by a caller east
+// of it, a date that is yesterday locally is still today — and the same record
+// then reads overdue on the deal and on time in whatever re-derived it, for the
+// whole working morning, every day.
+func TestOverdueIsAskedInTheInstallationsZone(t *testing.T) {
+	saigon, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	losAngeles, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	// 22:00 on 23 August UTC is 05:00 on the 24th in Saigon and 15:00 on the
+	// 23rd in Los Angeles: one instant, three different days.
+	now := time.Date(2026, 8, 23, 22, 0, 0, 0, time.UTC)
+	expected := time.Date(2026, 8, 23, 0, 0, 0, 0, time.UTC)
+
+	if !CloseIsOverdue(expected, now, saigon) {
+		t.Error("a deal expected on the 23rd is not overdue at 05:00 on the 24th in Saigon — " +
+			"the working morning is exactly when a rep asks")
+	}
+	if CloseIsOverdue(expected, now, losAngeles) {
+		t.Error("a deal expected on the 23rd is overdue at 15:00 on the 23rd in Los Angeles")
+	}
+	// UTC is the accidental zone, and it is what a caller gets for asking with
+	// no installation zone at all.
+	if CloseIsOverdue(expected, now, nil) {
+		t.Error("a deal expected on the 23rd is overdue at 22:00 on the 23rd UTC")
+	}
+	// Strict: a deal closing today is not late anywhere.
+	tomorrow := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
+	if CloseIsOverdue(tomorrow, now, saigon) {
+		t.Error("a deal expected on the 24th is overdue on the 24th in Saigon")
+	}
+}
