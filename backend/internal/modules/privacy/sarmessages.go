@@ -67,7 +67,8 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		// whole bcc array would hand one subject every other blind recipient's
 		// address, which is the disclosure a blind copy exists to prevent. So
 		// the row is FOUND on any addressee and the blind list is REDUCED to
-		// the asker.
+		// the asker. bounce_recipient follows the same rule: it names ONE
+		// addressee, so it is disclosed only when that addressee is the asker.
 		//
 		// attachments too, and it is not covered by the attachment query
 		// below: that one finds files hanging off the subject or an activity
@@ -79,7 +80,11 @@ func sarMessagingSections(pkg *SARPackage, personID ids.PersonID, emails []strin
 		         FROM jsonb_array_elements_text(coalesce(o.bcc, '[]'::jsonb)) AS addr
 		        WHERE lower(addr) IN (SELECT email FROM person_email WHERE person_id = $1)) AS bcc,
 		      o.consent_purpose,
-		      o.provider, o.channel_user_id, o.status, o.sent_at, o.created_at
+		      o.provider, o.channel_user_id, o.status, o.sent_at, o.created_at,
+		      o.bounced_at, o.bounce_kind,
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
+		             SELECT email FROM person_email WHERE person_id = $1)
+		           THEN o.bounce_recipient END AS bounce_recipient
 		   FROM comms_outbound o
 		   WHERE o.activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)
 		      OR EXISTS (

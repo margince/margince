@@ -80,10 +80,12 @@ func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO comms_outbound (id, activity_id, user_id, provider, message_id,
 			                            recipients, cc, subject, body, consent_purpose,
-			                            list_unsubscribe, status, sent_at, provider_message_id)
+			                            list_unsubscribe, status, sent_at, provider_message_id,
+			                            bounced_at, bounce_kind, bounce_recipient)
 			VALUES ($1, $2, $3, 'gmail', $4, jsonb_build_array('held@example.test'::text), '[]'::jsonb,
 			        'Angebot 2026-0042', 'Our offer, as discussed.', 'transactional',
-			        '<https://app.test/unsubscribe?tok=held>', 'sent', now() - interval '400 days', 'receipt-' || $4)`,
+			        '<https://app.test/unsubscribe?tok=held>', 'sent', now() - interval '400 days', 'receipt-' || $4,
+			        now() - interval '399 days', 'hard', 'held@example.test')`,
 			f.delivery, f.email, e.Rep1, f.delivery.String()+"@margince.test")
 		return err
 	})
@@ -153,15 +155,22 @@ func TestErasureRestrictsAHandelsbriefInsteadOfDestroyingIt(t *testing.T) {
 		var recipients, deliverySubject, deliveryBody string
 		var unsubscribe *string
 		var deliveryRedacted []string
-		if err := tx.QueryRow(ctx, `SELECT recipients::text, subject, body, list_unsubscribe, redacted_fields FROM comms_outbound WHERE id = $1`,
-			f.delivery).Scan(&recipients, &deliverySubject, &deliveryBody, &unsubscribe, &deliveryRedacted); err != nil {
+		var bounceRecipient *string
+		if err := tx.QueryRow(ctx, `SELECT recipients::text, subject, body, list_unsubscribe, bounce_recipient, redacted_fields FROM comms_outbound WHERE id = $1`,
+			f.delivery).Scan(&recipients, &deliverySubject, &deliveryBody, &unsubscribe, &bounceRecipient, &deliveryRedacted); err != nil {
 			return err
 		}
 		if recipients != "[]" || unsubscribe != nil || deliverySubject != "Angebot 2026-0042" || deliveryBody != "Our offer, as discussed." {
 			return fmt.Errorf("delivery not redacted per datum: recipients=%s unsubscribe=%v subject=%q body=%q",
 				recipients, unsubscribe, deliverySubject, deliveryBody)
 		}
-		if fmt.Sprint(deliveryRedacted) != "[recipients list_unsubscribe]" {
+		// The bounce's named recipient is addressing too: the redaction that
+		// removes WHO a held delivery named must not leave the answer behind
+		// on the bounce stamp.
+		if bounceRecipient != nil {
+			return fmt.Errorf("bounce_recipient survived the restriction: %v", *bounceRecipient)
+		}
+		if fmt.Sprint(deliveryRedacted) != "[bounce_recipient recipients list_unsubscribe]" {
 			return fmt.Errorf("delivery redacted_fields = %v", deliveryRedacted)
 		}
 		// The proof and the announcement, in the same transaction.

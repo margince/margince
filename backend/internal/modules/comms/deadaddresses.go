@@ -21,13 +21,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// deadAddressesSQL folds every send that touched one of the asked addresses
-// into two instants per address: the newest hard bounce ATTRIBUTED to it, and
-// the newest clean delivery. Attribution prefers the recorded
-// bounce_recipient; a row stamped before that column existed falls back to
-// blaming its recipients only when it has exactly one distinct address — a
-// multi-recipient row without the record must not mark the bystanders.
-const deadAddressesSQL = `
+// deadAddressesSQL folds every send the CALLER may discover that touched one
+// of the asked addresses into two instants per address: the newest hard
+// bounce attributed to it, and the newest clean delivery. The activity join
+// carries auth.ActivityDiscoverClause — without it this read would be an
+// oracle over the whole installation's send ledger (any address probed
+// through any person page, a colleague's participants-only correspondence
+// included), and a send under a statutory restriction would keep answering
+// with the very address its redaction removed. Attribution prefers the
+// recorded bounce_recipient; a row stamped before that column existed blames
+// its recipients only when it has exactly one — a multi-recipient row
+// without the record must not mark the bystanders.
+func deadAddressesSQL(ctx context.Context, addresses []string, args *[]any) (string, error) {
+	arg := func(v any) int { *args = append(*args, v); return len(*args) }
+	discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	if discover == "" {
+		discover = "TRUE"
+	}
+	return fmt.Sprintf(`
 SELECT went.addr,
        max(o.bounced_at) FILTER (
          WHERE o.bounce_kind = 'hard' AND (
@@ -41,22 +55,24 @@ SELECT went.addr,
        max(o.sent_at) FILTER (
          WHERE o.status = 'sent' AND o.bounced_at IS NULL
        ) AS last_clean
-  FROM comms_outbound o,
-       LATERAL (
+  FROM comms_outbound o
+  JOIN activity a ON a.id = o.activity_id
+  CROSS JOIN LATERAL (
          SELECT DISTINCT lower(each.addr) AS addr FROM jsonb_array_elements_text(
            o.recipients || coalesce(o.cc, '[]'::jsonb) || coalesce(o.bcc, '[]'::jsonb)
          ) AS each(addr)
        ) went
- WHERE went.addr = ANY($1)
- GROUP BY went.addr`
+ WHERE went.addr = ANY($%d) AND (%s)`, arg(addresses), discover) + `
+ GROUP BY went.addr`, nil
+}
 
 // DeadAddressesTx answers, for each of the given addresses, when it last
 // refused a delivery — present only while no clean delivery has landed since.
 // Addresses are matched lowercased, as the rows store them. Gated by the
-// activity read grant: a delivery outcome is timeline content, and the person
-// section this feeds is withheld on the same grant. It borrows the caller's
-// transaction because its one caller (the person page) reads every section
-// under a single snapshot.
+// activity read grant plus the caller's own discover scope: a delivery
+// outcome is timeline content, and the person section this feeds is withheld
+// on the same grant. It borrows the caller's transaction because its one
+// caller (the person page) reads every section under a single snapshot.
 func (s *Store) DeadAddressesTx(ctx context.Context, tx pgx.Tx, addresses []string) (map[string]time.Time, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -68,8 +84,13 @@ func (s *Store) DeadAddressesTx(ctx context.Context, tx pgx.Tx, addresses []stri
 	for _, address := range addresses {
 		asked = append(asked, strings.ToLower(address))
 	}
+	var args []any
+	statement, err := deadAddressesSQL(ctx, asked, &args)
+	if err != nil {
+		return nil, err
+	}
 	dead := map[string]time.Time{}
-	rows, err := tx.Query(ctx, deadAddressesSQL, asked)
+	rows, err := tx.Query(ctx, statement, args...)
 	if err != nil {
 		return nil, fmt.Errorf("comms: deriving dead addresses: %w", err)
 	}

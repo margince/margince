@@ -52,6 +52,14 @@ func TestPerson360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T) 
 		activityID); err != nil {
 		t.Fatalf("seeding the send's activity: %v", err)
 	}
+	// Filed under Anna, the way capture files a send: the link is what the
+	// discover clause scopes on, and a link-less activity is deliberately
+	// discoverable by everyone (the note rule).
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
+		ids.NewV7(), activityID, ids.UUID(person.Id)); err != nil {
+		t.Fatalf("filing the send under the person: %v", err)
+	}
 	commsStore := comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB()))
 	sender := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 	var deliveryID ids.UUID
@@ -107,5 +115,55 @@ func TestPerson360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T) 
 	}
 	if !slices.Contains(blind.SectionsOmitted, crmcontracts.Person360SectionsOmittedDeadAddresses) {
 		t.Fatalf("sections_omitted = %v, want dead_addresses named", blind.SectionsOmitted)
+	}
+
+	// The oracle the discover clause closes: minting a throwaway person with
+	// an address someone ELSE mailed must not read that colleague's failed
+	// correspondence back. A second send to an address no person record
+	// claims bounces on the same activity, the activity's one person link
+	// (Anna) becomes capture-private to Rep1 — the state capture's own
+	// person minting produces — and a third rep then creates their own
+	// person carrying that address.
+	probeDelivery := ids.UUID{}
+	if err := database.WithWorkspaceTx(sender, e.Pool, func(tx pgx.Tx) error {
+		var txErr error
+		probeDelivery, txErr = commsStore.StageTx(sender, tx, comms.StageInput{
+			ActivityID: activityID, Provider: "gmail", MessageID: "probe@myco.test",
+			Recipients: []string{"ceo@probe.test"}, Cc: []string{},
+			Subject: "Intro", Body: "Hello.", ConsentPurpose: "transactional",
+			References: []string{},
+		})
+		return txErr
+	}); err != nil {
+		t.Fatalf("staging the probe send: %v", err)
+	}
+	if err := commsStore.RecordSent(sender, probeDelivery, connector.SendReceipt{ProviderMessageID: "prov-2"}); err != nil {
+		t.Fatalf("recording the probe send: %v", err)
+	}
+	if marked, err := commsStore.RecordBounce(reporter, connector.BounceReport{
+		MessageID: "probe@myco.test", Recipient: "ceo@probe.test",
+		Kind: connector.BounceHard, Reason: "550 5.1.1 user unknown",
+	}); err != nil || !marked {
+		t.Fatalf("recording the probe bounce: marked=%v err=%v", marked, err)
+	}
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE person SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
+		ids.UUID(person.Id), e.Rep1); err != nil {
+		t.Fatalf("making Anna capture-private: %v", err)
+	}
+	prober := e.As(e.Rep3, []ids.UUID{e.Team2}, AccountRepPerms)
+	probe, err := e.People.CreatePerson(prober, people.CreatePersonInput{
+		FullName: "Probe Target", Source: "manual",
+		Emails: []people.PersonEmailInput{{Email: "ceo@probe.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the probe person: %v", err)
+	}
+	probed, err := svc.Assemble(prober, ids.From[ids.PersonKind](ids.UUID(probe.Id)))
+	if err != nil {
+		t.Fatalf("assembling the probe page: %v", err)
+	}
+	if probed.DeadAddresses == nil || len(*probed.DeadAddresses) != 0 {
+		t.Fatalf("dead_addresses = %v on the probe page, want empty — the send's activity is not the prober's to discover", probed.DeadAddresses)
 	}
 }
