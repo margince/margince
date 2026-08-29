@@ -5154,13 +5154,9 @@ export const en = {
   "network.bucket.weak": "Weak",
   "network.bucket.moderate": "Moderate",
   "network.bucket.strong": "Strong",
-  "coverage.title": "Coverage",
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
   "coverage.seatWithheld": "A contact you cannot read",
-  "coverage.clear": "Nothing flagged — this deal passes every coverage check.",
-  "coverage.withheld":
-    "Coverage was withheld — you cannot read this deal’s relationships, so no check was run.",
   "coverage.daysSinceTouch": "{days} days",
   "coverage.risk.single_threaded_theirs": "Single-threaded",
   "coverage.risk.single_threaded_ours": "Carried by one colleague",

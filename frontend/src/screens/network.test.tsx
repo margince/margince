@@ -11,12 +11,11 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { DealCoverageCard, PersonNetworkCard } from "./network";
+import { PersonNetworkCard } from "./network";
 
-// The two relationship-graph cards. What is worth pinning is not that they
-// render a list — it is the handful of readings that would quietly mislead a
-// rep: an unspoken relationship shown as a zero, a clean deal shown as a blank
-// card, and a server ranking a client re-sorted.
+// The relationship-graph card. What is worth pinning is not that it renders a
+// list — it is the two readings that would quietly mislead a rep: an unspoken
+// relationship shown as a zero, and a server ranking a client re-sorted.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -129,94 +128,5 @@ describe("PersonNetworkCard", () => {
     expect(
       await screen.findByText(/nobody here has recorded contact/i),
     ).toBeInTheDocument();
-  });
-});
-
-describe("DealCoverageCard", () => {
-  it("renders each finding with the server's own reason, not a client re-wording", async () => {
-    // The summary explains WHY the rule fired. A card that showed only the kind
-    // would be a red dot nobody can act on, and one that re-worded it would let
-    // this surface and the assistant describe the same flag differently.
-    stubRoutes({
-      "/deals/d-1/coverage": {
-        deal_id: "d-1",
-        stakeholders: [],
-        our_side: [],
-        risks: [
-          {
-            kind: "champion_left",
-            summary: "the champion has left the account",
-            person_ids: ["p-9"],
-          },
-          {
-            kind: "going_cold",
-            summary: "no captured touch for 41 days",
-            days_since_touch: 41,
-          },
-        ],
-      },
-    });
-    render(<DealCoverageCard id="d-1" />);
-    expect(await screen.findByText("Champion has left")).toBeInTheDocument();
-    expect(
-      screen.getByText("the champion has left the account"),
-    ).toBeInTheDocument();
-    // The day count is what the 30/60-day views filter on, so it has to reach
-    // the screen rather than living only in the payload.
-    expect(screen.getByText("41 days")).toBeInTheDocument();
-  });
-
-  it("says a clean deal is clean instead of rendering a blank card", async () => {
-    // No findings is a RESULT. A card that rendered nothing is indistinguishable
-    // from one that failed to load, and a manager reads the blank as "unknown".
-    stubRoutes({
-      "/deals/d-1/coverage": {
-        deal_id: "d-1",
-        stakeholders: [],
-        our_side: [],
-        risks: [],
-      },
-    });
-    render(<DealCoverageCard id="d-1" />);
-    expect(
-      await screen.findByText(/passes every coverage check/i),
-    ).toBeInTheDocument();
-  });
-
-  it("says the coverage was withheld rather than that the deal is clean", async () => {
-    // The payload a caller without the relationship grant receives: three
-    // empty arrays and the reason. Rendering the empty risk list would tell a
-    // manager the deal passes every check when no check ran — the wrong
-    // verdict this channel exists to prevent, and the one a blank or clean
-    // card cannot be distinguished from.
-    stubRoutes({
-      "/deals/d-1/coverage": {
-        deal_id: "d-1",
-        stakeholders: [],
-        our_side: [],
-        risks: [],
-        sections_omitted: ["stakeholders", "our_side", "risks"],
-      },
-    });
-    render(<DealCoverageCard id="d-1" />);
-    expect(
-      await screen.findByText(/coverage was withheld/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/passes every coverage check/i),
-    ).not.toBeInTheDocument();
-  });
-
-  it("surfaces a refused read as an error, never as a clean deal", async () => {
-    // A 403 rendered as "nothing flagged" would tell a manager their deal is
-    // healthy when the server declined to say anything at all.
-    stubRoutes({});
-    render(<DealCoverageCard id="d-1" />);
-    expect(
-      await screen.findByRole("listitem").catch(() => null),
-    ).not.toBeTruthy();
-    expect(
-      screen.queryByText(/passes every coverage check/i),
-    ).not.toBeInTheDocument();
   });
 });
