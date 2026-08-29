@@ -321,7 +321,7 @@ func TestAmbiguousEntriesAreLeftAlone(t *testing.T) {
 		{Company: "other.test", Kind: "email", Subject: "Angebot"},
 		{Company: "other.test", Kind: "email", Subject: "Angebot"},
 	}}
-	ambiguous := ambiguousEntries(cfg)
+	ambiguous := ambiguousEntries(cfg, true)
 	for _, i := range []int{0, 1, 4, 5} {
 		if !ambiguous[i] {
 			t.Errorf("entry %d shares its (company, subject) with another and was not named as ambiguous", i)
@@ -332,13 +332,26 @@ func TestAmbiguousEntriesAreLeftAlone(t *testing.T) {
 			t.Errorf("entry %d is the only one of its (company, subject) and was named as ambiguous — the repair would stop reaching it", i)
 		}
 	}
+	// The post-seed check cannot resolve a stored row's account, so for it the
+	// SUBJECT alone has to be unique. Entry 2 is the only one of its subject
+	// and stays checkable; the two "Angebot" mails are a pair either way; and
+	// the subjectless calls are shared across companies, which the passes can
+	// separate and this cannot.
+	subjectOnly := ambiguousEntries(cfg, false)
+	if !subjectOnly[3] {
+		t.Error("a subjectless call on another company is separable only by the account, which the post-seed check cannot resolve — it must be skipped there")
+	}
+	if subjectOnly[2] {
+		t.Error("the only entry carrying its subject was skipped by the weaker identity too — the check would stop reaching anything")
+	}
+
 	// A company named with different casing is the SAME company, or the
 	// ambiguity check would miss a pair the org resolution treats as one.
 	mixed := demoConfig{Activities: []demoActivity{
 		{Company: "Acme.Test", Kind: "call"},
 		{Company: "acme.test", Kind: "call"},
 	}}
-	if got := ambiguousEntries(mixed); !got[0] || !got[1] {
+	if got := ambiguousEntries(mixed, true); !got[0] || !got[1] {
 		t.Errorf("two subjectless calls on one account spelled with different casing read as unambiguous: %v", got)
 	}
 }

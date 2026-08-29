@@ -32,7 +32,7 @@ func relinkActivitiesToProjects(c *client, cfg demoConfig, refs pipelineRefs, se
 	if mode == modeDryRun {
 		return nil
 	}
-	ambiguous := ambiguousEntries(cfg)
+	ambiguous := ambiguousEntries(cfg, true)
 	for i, act := range cfg.Activities {
 		// On file before this run, and really the row this entry is about.
 		// Both halves in one place (seededMatch), shared with the person pass:

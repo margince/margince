@@ -41,7 +41,7 @@ func relinkActivitiesToPeople(
 	if mode == modeDryRun {
 		return nil
 	}
-	ambiguous := ambiguousEntries(cfg)
+	ambiguous := ambiguousEntries(cfg, true)
 	for i, act := range cfg.Activities {
 		existing, ok := seededMatch(refs, act, seen, ambiguous, i)
 		if !ok {
@@ -169,20 +169,29 @@ func activityIdentityMatches(act demoActivity, existing seededActivity, orgID st
 // ambiguousEntries names the dataset positions whose stored row cannot be
 // told from another entry's.
 //
-// Identity here is (company, subject), and where that pair is not unique the
-// only thing left is the POSITION — which is not durable, because source ids
-// are positional and inserting an entry renames every row after it. Two
-// subjectless calls on one account are the common case: neither entry names
-// anything the other does not.
+// Where an entry's identity is not unique the only thing left is the POSITION,
+// which is not durable: source ids are positional and inserting an entry
+// renames every row after it. Two subjectless calls on one account are the
+// common case — neither entry names anything the other does not.
 //
 // The answer is to leave them alone. A repair that guessed would replace one
 // mail's counterpart with the other's, and a check that guessed would report
 // the wrong company's correspondence as mis-filed. Both are worse than the
 // state they were trying to fix, because both look like an answer.
-func ambiguousEntries(cfg demoConfig) map[int]bool {
+//
+// withCompany says what the CALLER can check, and the two answers differ. The
+// passes hold the domain map, so they can tell two entries apart when only
+// their companies differ and identity is (company, subject). The post-seed
+// check cannot resolve a stored row's account at all, so for it the subject
+// alone has to be unique — one subject on two accounts is a pair it would
+// otherwise compare against the wrong company's mail.
+func ambiguousEntries(cfg demoConfig, withCompany bool) map[int]bool {
 	seen := map[string][]int{}
 	for i, act := range cfg.Activities {
-		key := strings.ToLower(act.Company) + "\x00" + act.Subject
+		key := act.Subject
+		if withCompany {
+			key = strings.ToLower(act.Company) + "\x00" + act.Subject
+		}
 		seen[key] = append(seen[key], i)
 	}
 	ambiguous := map[int]bool{}

@@ -137,16 +137,18 @@ func describeActivity(kind, subject, id string) string {
 // Two more are skipped for the reason the REPAIR skips them, and it is the same
 // reason twice: positional source ids mean an entry may name a different row
 // than it did last run. A row whose (company, subject) identity does not match
-// its entry is one of those; an entry the dataset cannot tell from another
-// (ambiguousEntries — two subjectless calls on one account) is the other. This
-// check runs with no domain map, so the subject carries the identity here,
-// which is the half that catches a reorder within one company anyway.
+// its entry is one of those; an entry the dataset cannot tell from another is
+// the other. This check runs with NO domain map — it is reachable from the
+// verify-only path, which builds no pipeline refs — so a stored row's account
+// cannot be resolved and the subject alone has to carry identity. That is why
+// it asks ambiguousEntries for the weaker answer: one subject on two accounts
+// is a pair the passes can separate and this cannot.
 func checkConversationsNameTheRightPerson(c *client, cfg demoConfig) ([]verifyFinding, error) {
 	onFile, err := loadActivitySourceIDs(c)
 	if err != nil {
 		return nil, err
 	}
-	ambiguous := ambiguousEntries(cfg)
+	ambiguous := ambiguousEntries(cfg, false)
 	var wrong []string
 	for i, act := range cfg.Activities {
 		if act.Person == "" || !isConversation(act.Kind) || ambiguous[i] {
