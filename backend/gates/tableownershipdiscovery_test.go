@@ -92,14 +92,37 @@ func platformStoreDirs(t *testing.T) []string {
 // found when it replaced the hand-kept list.
 const platformWriterFloor = 5
 
-// writesARow reports whether the file holds a SQL statement that writes one.
+// writesARow reports whether the file writes one, in either shape the walker
+// judges.
+//
+// Both shapes, because discovery narrower than the walk is discovery that
+// hides a write: a package whose only row write goes through a storekit
+// applier — no inline SQL anywhere in it — would never be walked, and its
+// write never compared against tableOwners. That is the same hole the
+// hand-kept list had, one level in.
 func writesARow(file *ast.File) bool {
-	found := false
 	for _, statement := range gatekit.SQLStatementsOf(file) {
 		if len(sqlWriteTargets(statement)) > 0 {
-			found = true
+			return true
 		}
 	}
+	return callsAStorekitApplier(file)
+}
+
+// callsAStorekitApplier reports whether the file reaches a storekit call that
+// carries its table — the second way this gate learns a package writes rows.
+func callsAStorekitApplier(file *ast.File) bool {
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		if method, isMethod := call.Fun.(*ast.SelectorExpr); isMethod && storekitTableArg[method.Sel.Name] {
+			found = true
+		}
+		return !found
+	})
 	return found
 }
 
@@ -138,5 +161,50 @@ func TestThePlatformWritersAreDiscoveredRatherThanRemembered(t *testing.T) {
 	// for, which is the other way to get this wrong.
 	if found["internal/platform/blobstore"] {
 		t.Error("internal/platform/blobstore writes no rows and was swept in anyway")
+	}
+}
+
+// The second write shape, from the other end.
+//
+// A package whose only row write goes through a storekit applier holds no
+// inline SQL at all, so a discovery reading literals alone would never walk it
+// — and its write would never be compared against tableOwners. That is the hand
+// -kept list's hole one level in, so the shape is planted rather than assumed.
+func TestAStorekitOnlyWriterIsDiscovered(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		source string
+		want   bool
+	}{
+		{
+			name: "an applier call with no SQL in the file",
+			source: "package p\nfunc write(p *storekit.Patch, tx pgx.Tx) error {\n" +
+				"\treturn p.ApplyWithVersion(ctx, tx, \"vault_secret\", id, version)\n}\n",
+			want: true,
+		},
+		{
+			name: "a row lock, which is where ApplyLocked's table is legible",
+			source: "package p\nfunc lock(tx pgx.Tx) error {\n" +
+				"\t_, err := storekit.LockRow(ctx, tx, \"vault_secret\", id)\n\treturn err\n}\n",
+			want: true,
+		},
+		{
+			name:   "a package that reads and writes nothing",
+			source: "package p\nfunc name() string { return \"vault_secret\" }\n",
+			want:   false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			parsed, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the probe: %v", err)
+			}
+			if got := writesARow(parsed); got != tc.want {
+				t.Errorf("writesARow = %t, want %t", got, tc.want)
+			}
+		})
 	}
 }
