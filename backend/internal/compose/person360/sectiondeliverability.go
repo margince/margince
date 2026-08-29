@@ -20,14 +20,15 @@ import (
 // addresses are simply not dead; the section reports the sorted survivors so
 // the page and the identity card agree on order.
 func (s *Service) deadAddressesSection(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
-	if out.Person.Emails == nil || len(*out.Person.Emails) == 0 {
-		empty := []string{}
-		out.DeadAddresses = &empty
-		return nil
-	}
-	addresses := make([]string, 0, len(*out.Person.Emails))
-	for _, email := range *out.Person.Emails {
-		addresses = append(addresses, string(email.Email))
+	// The store is asked even for a person with no addresses: its grant
+	// check is what makes the withheld arm true, and a fast path around it
+	// would show a grant-less caller an empty section instead of naming it.
+	var addresses []string
+	if out.Person.Emails != nil {
+		addresses = make([]string, 0, len(*out.Person.Emails))
+		for _, email := range *out.Person.Emails {
+			addresses = append(addresses, string(email.Email))
+		}
 	}
 	dead, err := s.comms.DeadAddressesTx(ctx, tx, addresses)
 	if err != nil {

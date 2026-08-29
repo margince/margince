@@ -21,29 +21,33 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// deadAddressesSQL folds every send the CALLER may discover that touched one
-// of the asked addresses into two instants per address: the newest hard
-// bounce attributed to it, and the newest clean delivery. The activity join
-// carries auth.ActivityDiscoverClause — without it this read would be an
-// oracle over the whole installation's send ledger (any address probed
-// through any person page, a colleague's participants-only correspondence
-// included), and a send under a statutory restriction would keep answering
-// with the very address its redaction removed. Attribution prefers the
-// recorded bounce_recipient; a row stamped before that column existed blames
-// its recipients only when it has exactly one — a multi-recipient row
-// without the record must not mark the bystanders.
+// deadAddressesSQL folds every send the CALLER may read that touched one of
+// the asked addresses into two instants per address: the newest hard bounce
+// attributed to it, and the newest delivery that reached it cleanly. Both
+// arms order by the SEND's own instant — a delivery report arrives long
+// after its message, and ordering the bounce arm by report time would let a
+// late report for an old message override a newer working delivery. The
+// activity join carries auth.ActivityContentClause: the derivation reads
+// addressing, which is content — a participants-only send's failed recipient
+// is exactly what its audience limit withholds — and without any clause this
+// read would be an oracle over the whole installation's send ledger, a
+// statutorily restricted send included. Attribution prefers the recorded
+// bounce_recipient; a row stamped before that column existed blames its
+// recipients only when it has exactly one, and clears nobody — a
+// multi-recipient row without the record can neither mark nor revive a
+// bystander.
 func deadAddressesSQL(ctx context.Context, addresses []string, args *[]any) (string, error) {
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
-	discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
-	if discover == "" {
-		discover = "TRUE"
+	if content == "" {
+		content = "TRUE"
 	}
 	return fmt.Sprintf(`
 SELECT went.addr,
-       max(o.bounced_at) FILTER (
+       max(coalesce(o.sent_at, o.bounced_at)) FILTER (
          WHERE o.bounce_kind = 'hard' AND (
            o.bounce_recipient = went.addr
            OR (o.bounce_recipient IS NULL AND o.bounced_at IS NOT NULL AND (
@@ -53,7 +57,10 @@ SELECT went.addr,
          )
        ) AS last_hard,
        max(o.sent_at) FILTER (
-         WHERE o.status = 'sent' AND o.bounced_at IS NULL
+         WHERE o.status = 'sent' AND (
+           o.bounced_at IS NULL
+           OR (o.bounce_recipient IS NOT NULL AND o.bounce_recipient <> went.addr)
+         )
        ) AS last_clean
   FROM comms_outbound o
   JOIN activity a ON a.id = o.activity_id
@@ -62,14 +69,14 @@ SELECT went.addr,
            o.recipients || coalesce(o.cc, '[]'::jsonb) || coalesce(o.bcc, '[]'::jsonb)
          ) AS each(addr)
        ) went
- WHERE went.addr = ANY($%d) AND (%s)`, arg(addresses), discover) + `
+ WHERE went.addr = ANY($%d) AND (%s)`, arg(addresses), content) + `
  GROUP BY went.addr`, nil
 }
 
 // DeadAddressesTx answers, for each of the given addresses, when it last
 // refused a delivery — present only while no clean delivery has landed since.
 // Addresses are matched lowercased, as the rows store them. Gated by the
-// activity read grant plus the caller's own discover scope: a delivery
+// activity read grant plus the caller's own content scope: a delivery
 // outcome is timeline content, and the person section this feeds is withheld
 // on the same grant. It borrows the caller's transaction because its one
 // caller (the person page) reads every section under a single snapshot.
