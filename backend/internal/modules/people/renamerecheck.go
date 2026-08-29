@@ -36,6 +36,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -137,6 +138,39 @@ func recheckOrgNameForDuplicates(ctx context.Context, tx pgx.Tx, orgID ids.Organ
 // the metric it protects is capped (nameScoringMaxRunes) rather than left to
 // run as long as an input allows.
 const orgNameWriteIdentity = "all"
+
+// orgNameColumns are the columns a duplicate re-check keys on. Writing either
+// is a rename as far as this module is concerned, whichever channel wrote it,
+// and both the lock that serializes renames and the re-check that follows one
+// ask this same question rather than each carrying its own list.
+var orgNameColumns = map[string]bool{fieldDisplayName: true, fieldLegalName: true}
+
+// renamesAnOrganization reports whether an edit writes a name column, and so
+// whether it must take the name lock.
+//
+// TWO channels write one, and only the supplied value was ever asked about. A
+// CLEAR naming the field — `Clear: ["legal_name"]` — sets the column to NULL,
+// lands in the patch's after-image and triggers recheckRenamedOrganization
+// exactly as a rename does. Missing it, a clear took the ROW lock through the
+// guarded write and reached for the name lock afterwards: the ordering this
+// file forbids, and without the serialization the re-check depends on.
+func renamesAnOrganization(in UpdateOrganizationInput) bool {
+	if in.DisplayName != nil || in.LegalName != nil {
+		return true
+	}
+	// A cleared WIRE FIELD is resolved onto the column it writes through the one
+	// map that decides what is clearable at all — the two vocabularies agree
+	// today, and a second answer spelled here is how they would stop. The
+	// current values that map carries are the audit image; nothing in this
+	// question reads them, so the zero record is the honest argument.
+	clearable := clearableOrganizationColumns(crmcontracts.Organization{})
+	for _, field := range in.Clear {
+		if orgNameColumns[clearable[field].Column] {
+			return true
+		}
+	}
+	return false
+}
 
 // lockOrgNameWrites serializes every writer that could create or rename an
 // organization into another one's similarity neighbourhood.
