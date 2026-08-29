@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -237,22 +236,6 @@ func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context
 	}), nil
 }
 
-// pendingAutoKinds lists the eligible kinds for the sweep's scan.
-//
-// Derived from the module's own AutoApplyKinds rather than restated, so the
-// scan cannot come to look for a set the applier would then refuse. Sorted so
-// the ARGUMENT is deterministic: the kinds travel as one $1 parameter, so the
-// query text never varies, but a set iterated in map order would send the same
-// list differently on every tick and make two runs incomparable.
-func pendingAutoKinds() []string {
-	kinds := make([]string, 0, len(approvals.AutoApplyKinds))
-	for kind := range approvals.AutoApplyKinds {
-		kinds = append(kinds, kind)
-	}
-	sort.Strings(kinds)
-	return kinds
-}
-
 // duePending lists pending proposals of the eligible kinds, oldest first.
 //
 // Bounded: a sweep that read every pending row would hold a growing result set
@@ -266,13 +249,17 @@ func pendingAutoKinds() []string {
 func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalID, error) {
 	var due []ids.ApprovalID
 	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+		// The kinds come from the module that owns them, in its order: the scan
+		// must not come to look for a set the applier would then refuse, and the
+		// kinds travel as one parameter, so a map-ordered list would send the
+		// same set differently on every tick and make two runs incomparable.
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM approval
 			 WHERE status = 'pending' AND passport_id IS NULL
 			   AND expires_at > now()
 			   AND kind = ANY($1)
 			 ORDER BY created_at
-			 LIMIT $2`, pendingAutoKinds(), limit)
+			 LIMIT $2`, approvals.SortedAutoApplyKinds(), limit)
 		if err != nil {
 			return err
 		}

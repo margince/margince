@@ -6095,6 +6095,21 @@ export const de = {
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",
   "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
+  "autonomy.title": "Was sich von selbst erledigt",
+  "autonomy.sub":
+    "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",
+  "autonomy.noRecord": "Darüber hast du noch nicht entschieden.",
+  "autonomy.record":
+    "Bisher: {clean} wie vorgeschlagen übernommen, {edited} nach einer Änderung, {rejected} abgelehnt.",
+  "autonomy.kind.close_date_correction.label": "Abschlussdaten",
+  "autonomy.kind.close_date_correction.help":
+    "Das Abschlussdatum eines Deals verschiebt sich durch das, was in einem Gespräch gesagt oder in einer Mail geschrieben wurde.",
+  "autonomy.kind.org_name_promotion.label": "Firmennamen",
+  "autonomy.kind.org_name_promotion.help":
+    "Ein unter seiner Domain erfasstes Unternehmen übernimmt den Namen, den seine eigene Website nennt.",
+  "autonomy.kind.lifecycle_change.label": "Lebenszyklus-Phasen",
+  "autonomy.kind.lifecycle_change.help":
+    "Ein Unternehmen wechselt die Phase aufgrund dessen, was mit ihm geschehen ist. Das kann auch ändern, wer das Konto sieht und welche Automationen laufen.",
   "captureSettings.title": "Anreicherung",
   "captureSettings.sub":
     "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",

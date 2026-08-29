@@ -6337,6 +6337,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/autonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which kinds of proposal the caller has put on automatic.
+         * @description One row per kind that CAN apply without asking, whether or not this reader has
+         *     ever met it — a kind nobody has decided yet reads `manual`, which is what will
+         *     happen to it. Listing only stored rows would hide exactly the choices a reader
+         *     opens this page to make.
+         *
+         *     The rows are the reader's own. This takes no user id and reads the policy of
+         *     the authenticated person, so there is no row a caller could ask for but not be;
+         *     that is why it carries no RBAC object. Human session only — deciding how much
+         *     of a person's queue answers itself is theirs, not their agent's.
+         *
+         *     Each row carries the track record behind the choice: how many of this kind the
+         *     reader approved unchanged, approved after editing, and rejected.
+         */
+        get: operations["getAutonomy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Turn automatic application on or off for one kind.
+         * @description Sets the caller's own mode for ONE kind. A kind that cannot apply automatically
+         *     has no setting to write and answers `404` rather than storing a preference the
+         *     product will not honour.
+         *
+         *     Turning a kind on means proposals of that kind stop waiting: they apply when
+         *     raised and appear as a receipt with Undo. Turning it off stops future applies
+         *     and leaves everything already applied where it is — this is a setting, not an
+         *     undo.
+         *
+         *     Human session only, and writes the caller's own row: an agent never widens the
+         *     authority of the person it acts for.
+         */
+        patch: operations["updateAutonomy"];
+        trace?: never;
+    };
     "/approvals": {
         parameters: {
             query?: never;
@@ -20603,6 +20648,61 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
+         * @description What the reader has decided about answering their own queue: one row per kind
+         *     that is eligible to apply automatically, whether or not they have ever met it.
+         */
+        AutonomySettings: {
+            data: components["schemas"]["KindAutonomy"][];
+        };
+        /**
+         * @description One kind's standing with the reader — how it will be handled next time, and the
+         *     record of how they have handled it so far.
+         */
+        KindAutonomy: {
+            /**
+             * @description The proposal kind, as `Approval.kind` spells it. Not an enum: which kinds
+             *     are eligible is a property of what the product can put back, and it moves
+             *     as reversibility does. A client renders the kinds it is sent.
+             * @example close_date_correction
+             */
+            kind: string;
+            /**
+             * @description `manual` asks every time, and is what a kind stands at until the reader
+             *     says otherwise. `auto` applies on sight, undoably, under the authority of
+             *     whoever owns the record at the time.
+             *
+             *     `veto` is a third rung the policy table admits and nothing writes yet: it
+             *     would apply after a stated delay unless the reader stops it first. It is
+             *     named here because a client that met one and had no case for it would
+             *     render a rep's real setting as something else. The write below cannot
+             *     produce one.
+             * @enum {string}
+             */
+            mode: "manual" | "veto" | "auto";
+            /** @description How many of this kind the reader approved without changing. */
+            approved_clean: number;
+            /**
+             * @description How many they approved after rewriting the proposal — agreement with the
+             *     intent, disagreement with the detail. Counted apart from a clean approval
+             *     because a kind the reader always edits is a kind that should keep asking.
+             */
+            approved_edited: number;
+            /** @description How many of this kind the reader turned down. */
+            rejected: number;
+        };
+        UpdateAutonomyRequest: {
+            /**
+             * @description The kind to change. A kind that cannot apply automatically answers `404`.
+             * @example close_date_correction
+             */
+            kind: string;
+            /**
+             * @description True to apply this kind on sight, false to go back to being asked. False
+             *     stops future applies and reverses nothing already applied.
+             */
+            auto: boolean;
+        };
+        /**
          * @description Decide every still-pending member of one bundle. There is no `edited_payload` arm: an edit
          *     is a judgment about ONE proposed change (it re-hashes that diff and re-pins its entity
          *     refs, ADR-0036 §4), and there is no such thing as one edit spanning several. Edit a member
@@ -34057,6 +34157,56 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getAutonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reader's autonomy settings, one row per eligible kind. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomySettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateAutonomy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAutonomyRequest"];
+            };
+        };
+        responses: {
+            /** @description The reader's autonomy settings after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonomySettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listApprovals: {

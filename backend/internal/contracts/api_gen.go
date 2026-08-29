@@ -5443,6 +5443,27 @@ func (e JobFailureState) Valid() bool {
 	}
 }
 
+// Defines values for KindAutonomyMode.
+const (
+	KindAutonomyModeAuto   KindAutonomyMode = "auto"
+	KindAutonomyModeManual KindAutonomyMode = "manual"
+	KindAutonomyModeVeto   KindAutonomyMode = "veto"
+)
+
+// Valid indicates whether the value is a known member of the KindAutonomyMode enum.
+func (e KindAutonomyMode) Valid() bool {
+	switch e {
+	case KindAutonomyModeAuto:
+		return true
+	case KindAutonomyModeManual:
+		return true
+	case KindAutonomyModeVeto:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for KnowledgeAnswerOutcome.
 const (
 	KnowledgeAnswerOutcomeAnswered             KnowledgeAnswerOutcome = "answered"
@@ -12069,22 +12090,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -14431,6 +14452,12 @@ type AutomationRunOutcome string
 
 // AutomationRunTier The tier that fired for this run.
 type AutomationRunTier string
+
+// AutonomySettings What the reader has decided about answering their own queue: one row per kind
+// that is eligible to apply automatically, whether or not they have ever met it.
+type AutonomySettings struct {
+	Data []KindAutonomy `json:"data"`
+}
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
@@ -18721,6 +18748,48 @@ type JobKindHealth struct {
 	// Waiting Available, scheduled or pending: queued and not yet started.
 	Waiting int `json:"waiting"`
 }
+
+// KindAutonomy One kind's standing with the reader — how it will be handled next time, and the
+// record of how they have handled it so far.
+type KindAutonomy struct {
+	// ApprovedClean How many of this kind the reader approved without changing.
+	ApprovedClean int `json:"approved_clean"`
+
+	// ApprovedEdited How many they approved after rewriting the proposal — agreement with the
+	// intent, disagreement with the detail. Counted apart from a clean approval
+	// because a kind the reader always edits is a kind that should keep asking.
+	ApprovedEdited int `json:"approved_edited"`
+
+	// Kind The proposal kind, as `Approval.kind` spells it. Not an enum: which kinds
+	// are eligible is a property of what the product can put back, and it moves
+	// as reversibility does. A client renders the kinds it is sent.
+	Kind string `json:"kind"`
+
+	// Mode `manual` asks every time, and is what a kind stands at until the reader
+	// says otherwise. `auto` applies on sight, undoably, under the authority of
+	// whoever owns the record at the time.
+	//
+	// `veto` is a third rung the policy table admits and nothing writes yet: it
+	// would apply after a stated delay unless the reader stops it first. It is
+	// named here because a client that met one and had no case for it would
+	// render a rep's real setting as something else. The write below cannot
+	// produce one.
+	Mode KindAutonomyMode `json:"mode"`
+
+	// Rejected How many of this kind the reader turned down.
+	Rejected int `json:"rejected"`
+}
+
+// KindAutonomyMode `manual` asks every time, and is what a kind stands at until the reader
+// says otherwise. `auto` applies on sight, undoably, under the authority of
+// whoever owns the record at the time.
+//
+// `veto` is a third rung the policy table admits and nothing writes yet: it
+// would apply after a stated delay unless the reader stops it first. It is
+// named here because a client that met one and had no case for it would
+// render a rep's real setting as something else. The write below cannot
+// produce one.
+type KindAutonomyMode string
 
 // KnowledgeAnswer defines model for KnowledgeAnswer.
 type KnowledgeAnswer struct {
@@ -25276,6 +25345,16 @@ type UpdateAutomationRequest struct {
 // UpdateAutomationRequestStatus defines model for UpdateAutomationRequest.Status.
 type UpdateAutomationRequestStatus string
 
+// UpdateAutonomyRequest defines model for UpdateAutonomyRequest.
+type UpdateAutonomyRequest struct {
+	// Auto True to apply this kind on sight, false to go back to being asked. False
+	// stops future applies and reverses nothing already applied.
+	Auto bool `json:"auto"`
+
+	// Kind The kind to change. A kind that cannot apply automatically answers `404`.
+	Kind string `json:"kind"`
+}
+
 // UpdateCaptureSettingsRequest A sparse capture-settings patch (admin/ops).
 type UpdateCaptureSettingsRequest struct {
 	// AutoEnrich Toggle captured-organization auto-enrichment.
@@ -30652,6 +30731,9 @@ type UpdateAutomationJSONRequestBody = UpdateAutomationRequest
 
 // PreviewAutomationJSONRequestBody defines body for PreviewAutomation for application/json ContentType.
 type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
+
+// UpdateAutonomyJSONRequestBody defines body for UpdateAutonomy for application/json ContentType.
+type UpdateAutonomyJSONRequestBody = UpdateAutonomyRequest
 
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
@@ -39031,6 +39113,12 @@ type ServerInterface interface {
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
 	// (GET /automations/{id}/runs)
 	ListAutomationRuns(w http.ResponseWriter, r *http.Request, id Id, params ListAutomationRunsParams)
+	// Which kinds of proposal the caller has put on automatic.
+	// (GET /autonomy)
+	GetAutonomy(w http.ResponseWriter, r *http.Request)
+	// Turn automatic application on or off for one kind.
+	// (PATCH /autonomy)
+	UpdateAutonomy(w http.ResponseWriter, r *http.Request)
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
@@ -40741,6 +40829,18 @@ func (_ Unimplemented) PreviewAutomation(w http.ResponseWriter, r *http.Request,
 // Read-only run history for one automation — successes AND errored/blocked/skipped runs.
 // (GET /automations/{id}/runs)
 func (_ Unimplemented) ListAutomationRuns(w http.ResponseWriter, r *http.Request, id Id, params ListAutomationRunsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which kinds of proposal the caller has put on automatic.
+// (GET /autonomy)
+func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Turn automatic application on or off for one kind.
+// (PATCH /autonomy)
+func (_ Unimplemented) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46104,6 +46204,46 @@ func (siw *ServerInterfaceWrapper) ListAutomationRuns(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAutomationRuns(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAutonomy operation middleware
+func (siw *ServerInterfaceWrapper) GetAutonomy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAutonomy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAutonomy operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAutonomy(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66015,6 +66155,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/automations/{id}/runs", wrapper.ListAutomationRuns)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/autonomy", wrapper.GetAutonomy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/autonomy", wrapper.UpdateAutonomy)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/availability", wrapper.GetAvailability)

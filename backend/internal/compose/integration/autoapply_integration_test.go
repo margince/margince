@@ -102,7 +102,7 @@ func grantDealRepRole(t *testing.T, e *Env, user ids.UUID) {
 func turnAutoApplyOn(t *testing.T, svc *approvals.Service, e *Env, rep ids.UUID) {
 	t.Helper()
 	repCtx := e.As(rep, []ids.UUID{e.Team1}, RepPerms)
-	if err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
+	if _, err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
 		t.Fatalf("turning auto-apply on: %v", err)
 	}
 }
@@ -242,7 +242,7 @@ func TestAnIneligibleKindNeverApplies(t *testing.T) {
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	svc := approvals.NewService(e.DB())
 
-	if err := svc.SetAutoApply(repCtx, "send_email", true); err == nil {
+	if _, err := svc.SetAutoApply(repCtx, "send_email", true); err == nil {
 		t.Fatal("an ineligible kind was accepted as an auto-apply setting, so the product stored a promise it will not keep")
 	}
 	if mode, err := svc.AutoApplyMode(repCtx, "send_email"); err != nil || mode != approvals.ModeManual {
@@ -296,7 +296,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 		t.Fatalf("staging the proposal: %v", err)
 	}
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if err := svc.SetAutoApply(repCtx, "org_name_promotion", true); err != nil {
+	if _, err := svc.SetAutoApply(repCtx, "org_name_promotion", true); err != nil {
 		t.Fatalf("turning auto-apply on: %v", err)
 	}
 

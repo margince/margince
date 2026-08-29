@@ -9319,6 +9319,68 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
 
   # ---------------------------- /approvals ----------------------------------
+  /autonomy:
+    get:
+      tags: [Approvals]
+      operationId: getAutonomy
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which kinds of proposal the caller has put on automatic.
+      description: |
+        One row per kind that CAN apply without asking, whether or not this reader has
+        ever met it — a kind nobody has decided yet reads `manual`, which is what will
+        happen to it. Listing only stored rows would hide exactly the choices a reader
+        opens this page to make.
+
+        The rows are the reader's own. This takes no user id and reads the policy of
+        the authenticated person, so there is no row a caller could ask for but not be;
+        that is why it carries no RBAC object. Human session only — deciding how much
+        of a person's queue answers itself is theirs, not their agent's.
+
+        Each row carries the track record behind the choice: how many of this kind the
+        reader approved unchanged, approved after editing, and rejected.
+      responses:
+        '200':
+          description: The reader's autonomy settings, one row per eligible kind.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutonomySettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Approvals]
+      operationId: updateAutonomy
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Turn automatic application on or off for one kind.
+      description: |
+        Sets the caller's own mode for ONE kind. A kind that cannot apply automatically
+        has no setting to write and answers `404` rather than storing a preference the
+        product will not honour.
+
+        Turning a kind on means proposals of that kind stop waiting: they apply when
+        raised and appear as a receipt with Undo. Turning it off stops future applies
+        and leaves everything already applied where it is — this is a setting, not an
+        undo.
+
+        Human session only, and writes the caller's own row: an agent never widens the
+        authority of the person it acts for.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAutonomyRequest' }
+      responses:
+        '200':
+          description: The reader's autonomy settings after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutonomySettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /approvals:
     get:
       tags: [Approvals]
@@ -28087,6 +28149,73 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Approval' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    AutonomySettings:
+      type: object
+      description: |
+        What the reader has decided about answering their own queue: one row per kind
+        that is eligible to apply automatically, whether or not they have ever met it.
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
+
+    KindAutonomy:
+      type: object
+      description: |
+        One kind's standing with the reader — how it will be handled next time, and the
+        record of how they have handled it so far.
+      required: [kind, mode, approved_clean, approved_edited, rejected]
+      properties:
+        kind:
+          type: string
+          description: |
+            The proposal kind, as `Approval.kind` spells it. Not an enum: which kinds
+            are eligible is a property of what the product can put back, and it moves
+            as reversibility does. A client renders the kinds it is sent.
+          example: close_date_correction
+        mode:
+          type: string
+          enum: [manual, veto, auto]
+          description: |
+            `manual` asks every time, and is what a kind stands at until the reader
+            says otherwise. `auto` applies on sight, undoably, under the authority of
+            whoever owns the record at the time.
+
+            `veto` is a third rung the policy table admits and nothing writes yet: it
+            would apply after a stated delay unless the reader stops it first. It is
+            named here because a client that met one and had no case for it would
+            render a rep's real setting as something else. The write below cannot
+            produce one.
+        approved_clean:
+          type: integer
+          description: How many of this kind the reader approved without changing.
+        approved_edited:
+          type: integer
+          description: |
+            How many they approved after rewriting the proposal — agreement with the
+            intent, disagreement with the detail. Counted apart from a clean approval
+            because a kind the reader always edits is a kind that should keep asking.
+        rejected:
+          type: integer
+          description: How many of this kind the reader turned down.
+
+    UpdateAutonomyRequest:
+      type: object
+      # Closed: the plausible extra field here is a user id, and accepting one would
+      # read as setting a colleague's policy while writing the caller's own.
+      additionalProperties: false
+      required: [kind, auto]
+      properties:
+        kind:
+          type: string
+          description: |
+            The kind to change. A kind that cannot apply automatically answers `404`.
+          example: close_date_correction
+        auto:
+          type: boolean
+          description: |
+            True to apply this kind on sight, false to go back to being asked. False
+            stops future applies and reverses nothing already applied.
 
     ApprovalBundleDecisionRequest:
       type: object
