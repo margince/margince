@@ -200,6 +200,7 @@ export const en = {
   "day.didNotRun": "Approved, but did not run",
   "day.syncHealth": "CRM sync",
   "day.syncHealth.empty": "Your existing CRM is in sync.",
+  "day.lead.syncHealth": "The sync to your existing CRM needs attention.",
   "day.syncHealth.kind.sync_failing":
     "The connection to your existing CRM is failing",
   "day.syncHealth.kind.budget_degraded":
@@ -215,8 +216,9 @@ export const en = {
     "The other side is rate-limiting us; syncing is paced down.",
   "day.syncHealth.cause.internal":
     "The last sync attempts failed; retrying automatically.",
-  "day.syncHealth.band.warn": "Close to the call limit.",
-  "day.syncHealth.band.shed": "Over the call limit — live reads are on hold.",
+  "day.syncHealth.band.warn": "Approaching the call limit.",
+  "day.syncHealth.band.shed":
+    "Live calls are paused to stay inside the call limit.",
   "day.dsr": "Privacy requests",
   "day.dsr.empty": "No open requests from data subjects.",
   "day.dsr.kind.access": "Someone wants to know what data we hold",

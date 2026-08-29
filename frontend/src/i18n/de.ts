@@ -201,6 +201,8 @@ export const de = {
   "day.didNotRun": "Beschlossen, aber nicht passiert",
   "day.syncHealth": "CRM-Sync",
   "day.syncHealth.empty": "Ihr bestehendes CRM ist synchron.",
+  "day.lead.syncHealth":
+    "Der Abgleich mit Ihrem bestehenden CRM braucht Aufmerksamkeit.",
   "day.syncHealth.kind.sync_failing":
     "Die Verbindung zu Ihrem bestehenden CRM schlägt fehl",
   "day.syncHealth.kind.budget_degraded":
@@ -216,7 +218,8 @@ export const de = {
   "day.syncHealth.cause.internal":
     "Die letzten Sync-Versuche schlugen fehl; es wird automatisch erneut versucht.",
   "day.syncHealth.band.warn": "Nahe am Aufruflimit.",
-  "day.syncHealth.band.shed": "Über dem Aufruflimit — Live-Abfragen pausieren.",
+  "day.syncHealth.band.shed":
+    "Live-Aufrufe pausieren, um im Aufruflimit zu bleiben.",
   "day.dsr": "Datenschutzanfragen",
   "day.dsr.empty": "Keine offenen Anfragen von Betroffenen.",
   "day.dsr.kind.access": "Jemand möchte wissen, welche Daten wir haben",

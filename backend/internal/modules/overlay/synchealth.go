@@ -94,9 +94,13 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 		// would tell a rep the budget is exhausted when the truth is that
 		// this role cannot account — Budget (syncstatus.go) refuses on the
 		// same gap rather than fabricating a number.
+		//
+		// The REST band alone decides: Search consumption is metered but not
+		// gated (ops.go's ConsumeSearch), so a search-window shed holds no
+		// read and warning on it would cry wolf.
 		snapshot := s.meter.Snapshot(ctx, incumbent)
-		if band := worstBudgetBand(snapshot); snapshot.Measured && band != overlaybudget.BandOK {
-			concerns = append(concerns, SyncConcern{Kind: ConcernBudgetDegraded, Band: band})
+		if snapshot.Measured && snapshot.Band != overlaybudget.BandOK {
+			concerns = append(concerns, SyncConcern{Kind: ConcernBudgetDegraded, Band: snapshot.Band})
 		}
 	}
 
@@ -118,10 +122,43 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 	if len(stale) > 0 {
 		concerns = append(concerns, SyncConcern{Kind: ConcernObjectsStale, Objects: stale})
 	}
+	// SyncStatus reports only classes that already HOLD mirror rows, so an
+	// import that has not produced a first page yet — or has not started —
+	// is invisible to the per-class walk above. The cursor ledger is the
+	// writer's own record of convergence: any unconverged cursor, or none at
+	// all in overlay mode, means the initial import is still owed, and the
+	// lane must say so rather than reporting a workspace in sync that has
+	// never finished importing.
+	if len(backfilling) == 0 {
+		owed, err := s.backfillStillOwed(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if owed {
+			concerns = append(concerns, SyncConcern{Kind: ConcernBackfillIncomplete})
+		}
+	}
 	if len(backfilling) > 0 {
 		concerns = append(concerns, SyncConcern{Kind: ConcernBackfillIncomplete, Objects: backfilling})
 	}
 	return concerns, nil
+}
+
+// backfillStillOwed answers whether the initial import has not confirmed
+// convergence: an unconverged cursor row (not done, or done under a cap that
+// truncated the listing), or no cursor rows at all — a backfill that never
+// started is still owed, not complete.
+func (s *Service) backfillStillOwed(ctx context.Context) (bool, error) {
+	var unconverged, total int
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FILTER (WHERE NOT done OR truncated), count(*) FROM overlay_backfill_cursor`,
+		).Scan(&unconverged, &total)
+	})
+	if err != nil {
+		return false, fmt.Errorf("overlay: reading the backfill cursors for sync health: %w", err)
+	}
+	return unconverged > 0 || total == 0, nil
 }
 
 // sweepFailureConcern reads the poller's backoff ladder: a row with failures
@@ -152,16 +189,4 @@ func (s *Service) sweepFailureConcern(ctx context.Context) (concern SyncConcern,
 		concern.ErrorClass = *errorClass
 	}
 	return concern, true, nil
-}
-
-// worstBudgetBand collapses a budget snapshot's two windows to the worse of
-// their bands: a shed on either throttles real reads, whichever window it is.
-func worstBudgetBand(b overlaybudget.Budget) string {
-	if b.Band == overlaybudget.BandShed || b.SearchBand == overlaybudget.BandShed {
-		return overlaybudget.BandShed
-	}
-	if b.Band == overlaybudget.BandWarn || b.SearchBand == overlaybudget.BandWarn {
-		return overlaybudget.BandWarn
-	}
-	return overlaybudget.BandOK
 }

@@ -28,12 +28,15 @@ func TestSyncHealthFollowsTheSweepLadder(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 
+	// A freshly connected workspace has not imported anything yet, and the
+	// read says so: the initial import still owed is the one honest concern,
+	// never a clean bill of health for data that was never brought over.
 	concerns, err := svc.SyncHealth(ctx)
 	if err != nil {
 		t.Fatalf("SyncHealth on a fresh connection: %v", err)
 	}
-	if len(concerns) != 0 {
-		t.Fatalf("a freshly connected workspace reports %v, want no concerns", concerns)
+	if len(concerns) != 1 || concerns[0].Kind != ConcernBackfillIncomplete {
+		t.Fatalf("a freshly connected workspace reports %v, want exactly the still-owed import", concerns)
 	}
 
 	if err := store.RecordSweepFailure(ctx, apperrors.ErrIncumbentBudgetExhausted); err != nil {
@@ -43,10 +46,10 @@ func TestSyncHealthFollowsTheSweepLadder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SyncHealth after a sweep failure: %v", err)
 	}
-	if len(concerns) != 1 || concerns[0].Kind != ConcernSyncFailing {
-		t.Fatalf("after a sweep failure the read reports %v, want one %s concern", concerns, ConcernSyncFailing)
+	failing, laddered := concernOfKind(concerns, ConcernSyncFailing)
+	if !laddered {
+		t.Fatalf("after a sweep failure the read reports %v, want a %s concern", concerns, ConcernSyncFailing)
 	}
-	failing := concerns[0]
 	if failing.ErrorClass != string(classSweepRateLimited) || failing.Failures != 1 {
 		t.Errorf("the concern carries class %q / %d failures, want %q / 1 — the ladder's own facts",
 			failing.ErrorClass, failing.Failures, classSweepRateLimited)
@@ -62,9 +65,20 @@ func TestSyncHealthFollowsTheSweepLadder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SyncHealth after a clean sweep: %v", err)
 	}
-	if len(concerns) != 0 {
-		t.Fatalf("one clean sweep must clear the concern, still reports %v", concerns)
+	if _, still := concernOfKind(concerns, ConcernSyncFailing); still {
+		t.Fatalf("one clean sweep must clear the failing concern, still reports %v", concerns)
 	}
+}
+
+// concernOfKind picks the named concern out of a reading, so an assertion
+// about one condition stays true as other honest conditions come and go.
+func concernOfKind(concerns []SyncConcern, kind string) (SyncConcern, bool) {
+	for _, c := range concerns {
+		if c.Kind == kind {
+			return c, true
+		}
+	}
+	return SyncConcern{}, false
 }
 
 // A workspace that never connected an incumbent has no sync to be healthy

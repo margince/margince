@@ -207,6 +207,7 @@ export const vi = {
   "day.didNotRun": "Đã duyệt nhưng chưa chạy",
   "day.syncHealth": "Đồng bộ CRM",
   "day.syncHealth.empty": "CRM hiện tại của bạn đang đồng bộ.",
+  "day.lead.syncHealth": "Đồng bộ với CRM hiện tại của bạn cần được chú ý.",
   "day.syncHealth.kind.sync_failing":
     "Kết nối tới CRM hiện tại của bạn đang lỗi",
   "day.syncHealth.kind.budget_degraded":
@@ -224,7 +225,7 @@ export const vi = {
     "Những lần đồng bộ gần đây thất bại; hệ thống sẽ tự thử lại.",
   "day.syncHealth.band.warn": "Gần chạm giới hạn lệnh gọi.",
   "day.syncHealth.band.shed":
-    "Vượt giới hạn lệnh gọi — tạm dừng đọc trực tiếp.",
+    "Các lệnh gọi trực tiếp tạm dừng để giữ trong giới hạn.",
   "day.dsr": "Yêu cầu quyền riêng tư",
   "day.dsr.empty": "Không có yêu cầu nào đang mở từ chủ thể dữ liệu.",
   "day.dsr.kind.access": "Có người muốn biết chúng ta giữ dữ liệu gì",

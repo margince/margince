@@ -140,6 +140,13 @@ function quietLead(
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
   }
+  // Above the quieter lanes below, because they are read THROUGH the mirror:
+  // while the sync is unhealthy, a calm decay lane may simply be blind, and
+  // "clear" above a warning-toned sync card would contradict the page.
+  const syncConcerns = day.counts.sync_health ?? 0;
+  if (syncConcerns > 0) {
+    return t("day.lead.syncHealth");
+  }
   // A lapsed relationship is the same shape of news as a drifting deal:
   // nobody is waiting on the reader for it, and it is the thing that goes
   // unnoticed precisely because nobody is. Counted here rather than left to
