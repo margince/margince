@@ -22,17 +22,17 @@ import (
 // The capture-concern vocabulary, worst first: a connection carries the first
 // of these that applies and no other.
 const (
-	// CaptureConcernReauthRequired: the provider revoked or expired the
+	// ConcernReauthRequired: the provider revoked or expired the
 	// grant, and only the user can renew it.
-	CaptureConcernReauthRequired = "reauth_required"
-	// CaptureConcernConnectionError: the connection is in its error state —
+	ConcernReauthRequired = "reauth_required"
+	// ConcernConnectionError: the connection is in its error state —
 	// still selectable for sync, but its last attempts did not deliver.
-	CaptureConcernConnectionError = "connection_error"
-	// CaptureConcernSyncFailing: the connection reads as connected but its
+	ConcernConnectionError = "connection_error"
+	// ConcernSyncFailing: the connection reads as connected but its
 	// sync sidecar recorded a failure class on the last attempt.
-	CaptureConcernSyncFailing = "sync_failing"
-	// CaptureConcernBackfillFailed: the latest history import ended in error.
-	CaptureConcernBackfillFailed = "backfill_failed"
+	ConcernSyncFailing = "sync_failing"
+	// ConcernBackfillFailed: the latest history import ended in error.
+	ConcernBackfillFailed = "backfill_failed"
 )
 
 // Connection statuses and the backfill terminal state this read derives from
@@ -44,8 +44,8 @@ const (
 	backfillStatusError  = "error"
 )
 
-// CaptureConcern is one connection needing its owner's hand.
-type CaptureConcern struct {
+// Concern is one connection needing its owner's hand.
+type Concern struct {
 	ConnectionID ids.UUID
 	Kind         string
 	Provider     string
@@ -61,7 +61,7 @@ type CaptureConcern struct {
 // admin view here: each user is shown their own mailboxes and nobody else's.
 // A principal with no human behind it has no mailboxes of its own, which is a
 // refusal rather than an empty answer — the caller renders it as withheld.
-func (r *Registry) HealthConcerns(ctx context.Context) ([]CaptureConcern, error) {
+func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return nil, apperrors.ErrPermissionDenied
@@ -70,13 +70,13 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]CaptureConcern, error)
 	if err != nil {
 		return nil, err
 	}
-	var concerns []CaptureConcern
+	var concerns []Concern
 	for _, view := range views {
 		kind, errorClass := connectionConcern(view)
 		if kind == "" {
 			continue
 		}
-		concern := CaptureConcern{
+		concern := Concern{
 			ConnectionID: view.ID,
 			Kind:         kind,
 			Provider:     view.Provider,
@@ -101,18 +101,18 @@ func connectionConcern(view ConnectionView) (kind, errorClass string) {
 		// mailbox the user turned off would be reporting their own decision.
 		return "", ""
 	case statusReauthRequired:
-		return CaptureConcernReauthRequired, ""
+		return ConcernReauthRequired, ""
 	case statusError:
 		if view.LastErrorClass != nil {
-			return CaptureConcernConnectionError, *view.LastErrorClass
+			return ConcernConnectionError, *view.LastErrorClass
 		}
-		return CaptureConcernConnectionError, ""
+		return ConcernConnectionError, ""
 	}
 	if view.LastErrorClass != nil {
-		return CaptureConcernSyncFailing, *view.LastErrorClass
+		return ConcernSyncFailing, *view.LastErrorClass
 	}
 	if view.Backfill != nil && view.Backfill.Status == backfillStatusError {
-		return CaptureConcernBackfillFailed, ""
+		return ConcernBackfillFailed, ""
 	}
 	return "", ""
 }

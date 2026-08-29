@@ -18,11 +18,11 @@ func TestConnectionConcernCarriesTheWorstConditionOnly(t *testing.T) {
 		wantClass string
 	}{
 		{"healthy connected", ConnectionView{Status: "connected"}, "", ""},
-		{"reauth outranks everything", ConnectionView{Status: statusReauthRequired, LastErrorClass: &auth, Backfill: failed}, CaptureConcernReauthRequired, ""},
-		{"error carries its class", ConnectionView{Status: statusError, LastErrorClass: &auth}, CaptureConcernConnectionError, "auth"},
-		{"error without a class", ConnectionView{Status: statusError}, CaptureConcernConnectionError, ""},
-		{"connected but failing", ConnectionView{Status: "connected", LastErrorClass: &auth}, CaptureConcernSyncFailing, "auth"},
-		{"failed history import", ConnectionView{Status: "connected", Backfill: failed}, CaptureConcernBackfillFailed, ""},
+		{"reauth outranks everything", ConnectionView{Status: statusReauthRequired, LastErrorClass: &auth, Backfill: failed}, ConcernReauthRequired, ""},
+		{"error carries its class", ConnectionView{Status: statusError, LastErrorClass: &auth}, ConcernConnectionError, "auth"},
+		{"error without a class", ConnectionView{Status: statusError}, ConcernConnectionError, ""},
+		{"connected but failing", ConnectionView{Status: "connected", LastErrorClass: &auth}, ConcernSyncFailing, "auth"},
+		{"failed history import", ConnectionView{Status: "connected", Backfill: failed}, ConcernBackfillFailed, ""},
 		{"running import is not a failure", ConnectionView{Status: "connected", Backfill: &BackfillRun{Status: "running"}}, "", ""},
 		{"parked mailbox stays quiet", ConnectionView{Status: statusDisconnected, LastErrorClass: &auth, Backfill: failed}, "", ""},
 	} {
