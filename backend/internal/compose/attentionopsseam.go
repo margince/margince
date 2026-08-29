@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -124,6 +125,31 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 			BouncedAt: send.BouncedAt,
 			PersonID:  send.PersonID,
 		})
+	}
+	return out, nil
+}
+
+// attentionAutomations binds the rule-health lane to the automation store's
+// own cross-instance read; the automation-read gate lives there.
+type attentionAutomations struct{ store *automation.AutomationStore }
+
+func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time, limit int) ([]attention.TroubledAutomationRun, error) {
+	troubled, err := a.store.TroubledRuns(ctx, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.TroubledAutomationRun, 0, len(troubled))
+	for _, run := range troubled {
+		item := attention.TroubledAutomationRun{
+			ID:         run.ID,
+			Name:       run.Name,
+			Outcome:    run.Outcome,
+			OccurredAt: run.CreatedAt,
+		}
+		if run.Reason != nil {
+			item.Reason = *run.Reason
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }

@@ -22904,8 +22904,22 @@ export interface components {
              *     delivery outcomes.
              */
             bounces?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The automations whose recent firings failed or were blocked, newest
+             *     report first — a rule its owner believes is running and is not. The
+             *     card names the rule (`title`), how it stopped (`kind`: failed or
+             *     blocked) and the engine's own recorded reason (`detail`); fixing the
+             *     rule lives on the automation screens, so the card offers no verbs.
+             *     Only automations: an engine workflow that is not an automation has
+             *     no rule to open and is not carried here.
+             *
+             *     Withheld — named in `lanes_omitted` — for every reader the
+             *     automation screens themselves refuse. Absent — not empty — on an
+             *     installation whose feed does not read the run ledger.
+             */
+            automation_health?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "automation_health")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22940,6 +22954,8 @@ export interface components {
             ai_work_health?: number;
             /** @description How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports. */
             bounces?: number;
+            /** @description How many troubled automation firings the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
+            automation_health?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22954,7 +22970,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

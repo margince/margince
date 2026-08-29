@@ -1250,6 +1250,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 const (
 	AttentionLanesOmittedAiWorkHealth      AttentionLanesOmitted = "ai_work_health"
 	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
+	AttentionLanesOmittedAutomationHealth  AttentionLanesOmitted = "automation_health"
 	AttentionLanesOmittedBounces           AttentionLanesOmitted = "bounces"
 	AttentionLanesOmittedCaptureHealth     AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
@@ -1270,6 +1271,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedAiWorkHealth:
 		return true
 	case AttentionLanesOmittedAtRisk:
+		return true
+	case AttentionLanesOmittedAutomationHealth:
 		return true
 	case AttentionLanesOmittedBounces:
 		return true
@@ -1361,6 +1364,7 @@ func (e AttentionItemActions) Valid() bool {
 const (
 	AttentionItemSourceAiWorkHealth      AttentionItemSource = "ai_work_health"
 	AttentionItemSourceApproval          AttentionItemSource = "approval"
+	AttentionItemSourceAutomationRun     AttentionItemSource = "automation_run"
 	AttentionItemSourceBounce            AttentionItemSource = "bounce"
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
@@ -1381,6 +1385,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceAiWorkHealth:
 		return true
 	case AttentionItemSourceApproval:
+		return true
+	case AttentionItemSourceAutomationRun:
 		return true
 	case AttentionItemSourceBounce:
 		return true
@@ -13724,6 +13730,19 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read deals.
 	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
 
+	// AutomationHealth The automations whose recent firings failed or were blocked, newest
+	// report first — a rule its owner believes is running and is not. The
+	// card names the rule (`title`), how it stopped (`kind`: failed or
+	// blocked) and the engine's own recorded reason (`detail`); fixing the
+	// rule lives on the automation screens, so the card offers no verbs.
+	// Only automations: an engine workflow that is not an automation has
+	// no rule to open and is not carried here.
+	//
+	// Withheld — named in `lanes_omitted` — for every reader the
+	// automation screens themselves refuse. Absent — not empty — on an
+	// installation whose feed does not read the run ledger.
+	AutomationHealth *[]AttentionItem `json:"automation_health,omitempty"`
+
 	// Bounces The reader's OWN sends whose delivery reports came back hard, newest
 	// report first, inside the recent window — read from the bounce stamp on
 	// the send's own row, so this lane and the timeline cannot disagree about
@@ -13898,6 +13917,9 @@ type AttentionCounts struct {
 
 	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
 	AtRisk *int `json:"at_risk,omitempty"`
+
+	// AutomationHealth How many troubled automation firings the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
+	AutomationHealth *int `json:"automation_health,omitempty"`
 
 	// Bounces How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports.
 	Bounces *int `json:"bounces,omitempty"`

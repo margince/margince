@@ -13,6 +13,7 @@ import {
   Sunrise,
   TrendingDown,
   UserMinus,
+  Workflow,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -80,7 +81,9 @@ function leadLine(
   // for every other reader it is not a hidden part of THEIR day, and a
   // banner that said so on every rep's page forever would drown the real
   // warning the line exists to give.
-  const hidden = (day.lanes_omitted ?? []).filter((lane) => lane !== "dsr");
+  const hidden = (day.lanes_omitted ?? []).filter(
+    (lane) => lane !== "dsr" && lane !== "automation_health",
+  );
   if (hidden.length > 0) {
     return t("day.lead.partial");
   }
@@ -181,6 +184,15 @@ function quietLead(
   const lapsed = day.counts.relationship_decay ?? 0;
   if (lapsed > 0) {
     return t("day.lead.decay", { count: formatNumber(lapsed, locale) });
+  }
+  // The rule-health lead reaches only the readers the lane itself reaches
+  // (it is role-withheld like the DSR lane), and like every branch above it
+  // stops "clear" from printing over a warning-toned lane.
+  const brokenRules = day.counts.automation_health ?? 0;
+  if (brokenRules > 0) {
+    return t("day.lead.automation", {
+      count: formatNumber(brokenRules, locale),
+    });
   }
   // Before "clear", because the briefing lane is on this page: a line reading
   // "your day is clear" above two items the night picked out is the one thing
@@ -649,6 +661,7 @@ function optionalDay(day: Attention) {
   const mailboxes = day.capture_health;
   const troubledRuns = day.ai_work_health;
   const undelivered = day.bounces;
+  const brokenRules = day.automation_health;
   return {
     commitments: day.commitments,
     atRisk,
@@ -662,6 +675,8 @@ function optionalDay(day: Attention) {
     troubledTone: warnWhenHolding(troubledRuns),
     undelivered,
     undeliveredTone: warnWhenHolding(undelivered),
+    brokenRules,
+    brokenRulesTone: warnWhenHolding(brokenRules),
     requestsTone: warnWhenHolding(requests),
     failedTone: warnWhenHolding(failed),
     lapsed: day.relationship_decay,
@@ -674,6 +689,7 @@ function optionalDay(day: Attention) {
     mailboxTotal: day.counts.capture_health ?? 0,
     troubledTotal: day.counts.ai_work_health ?? 0,
     undeliveredTotal: day.counts.bounces ?? 0,
+    brokenRulesTotal: day.counts.automation_health ?? 0,
     lapsedTotal: day.counts.relationship_decay ?? 0,
     commitmentsTotal: day.counts.commitments ?? 0,
   };
@@ -707,6 +723,8 @@ function TodayLanes({
     troubledTone,
     undelivered,
     undeliveredTone,
+    brokenRules,
+    brokenRulesTone,
     requestsTone,
     failedTone,
     lapsed,
@@ -719,6 +737,7 @@ function TodayLanes({
     mailboxTotal,
     troubledTotal,
     undeliveredTotal,
+    brokenRulesTotal,
     lapsedTotal,
     commitmentsTotal,
   } = optionalDay(day);
@@ -898,6 +917,22 @@ function TodayLanes({
         lane="bounces"
         total={undeliveredTotal}
         tone={undeliveredTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={brokenRules}
+        shape={{
+          title: t("day.automation"),
+          empty: t("day.automation.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: Workflow,
+        }}
+        omitted={omitted}
+        lane="automation_health"
+        total={brokenRulesTotal}
+        tone={brokenRulesTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

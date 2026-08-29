@@ -51,6 +51,11 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "bounce") {
     return t("day.bounces.kind.generic");
   }
+  // A troubled automation firing names itself by its rule's name (the title
+  // branch above); one without a name gets the locale's generic line.
+  if (item.source === "automation_run") {
+    return t("day.automation.kind.generic");
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
 }
 
@@ -82,6 +87,17 @@ function aiWorkNoun(
   kind: string | undefined,
 ): "failed" | "stalled" | "generic" {
   if (kind === "failed" || kind === "stalled") {
+    return kind;
+  }
+  return "generic";
+}
+
+// How an automation firing stopped; anything unrecognised takes the generic
+// line rather than guessing.
+function automationWay(
+  kind: string | undefined,
+): "failed" | "blocked" | "generic" {
+  if (kind === "failed" || kind === "blocked") {
     return kind;
   }
   return "generic";
@@ -215,6 +231,13 @@ export function itemDetail(
   locale: Locale,
   zone: string,
 ): string | null {
+  // A troubled firing's supporting line leads with HOW it stopped — failed
+  // and blocked need different hands — and keeps the engine's reason after
+  // it where one was recorded.
+  if (item.source === "automation_run") {
+    const way = t(`day.automation.way.${automationWay(item.kind)}` as const);
+    return item.detail ? `${way} — ${item.detail}` : way;
+  }
   if (item.source === "relationship_decay") {
     return decayDetail(item, t, locale, zone);
   }

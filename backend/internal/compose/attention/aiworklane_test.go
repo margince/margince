@@ -31,7 +31,7 @@ func (s *stubAIWork) Troubled(_ context.Context, since time.Time, _ int) ([]Trou
 func aiWorkLaneService(work AIWork) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, work, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, work, nil, nil, nil, fixedClock)
 }
 
 func TestATroubledRunCarriesItsOwnWordsAndItsSubject(t *testing.T) {

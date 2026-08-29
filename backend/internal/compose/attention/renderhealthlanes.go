@@ -120,3 +120,26 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	}
 	return item
 }
+
+// automationItem draws one troubled firing. The rule's own name is the
+// headline and the engine's recorded reason the supporting line; `kind` is
+// the closed failed/blocked vocabulary. No subject and no verbs: fixing the
+// rule lives on the automation screens.
+func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
+	outcome := run.Outcome
+	name := run.Name
+	occurred := run.OccurredAt
+	item := crmcontracts.AttentionItem{
+		Id:         run.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("automation_run"),
+		Kind:       &outcome,
+		Title:      &name,
+		OccurredAt: &occurred,
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if run.Reason != "" {
+		reason := run.Reason
+		item.Detail = &reason
+	}
+	return item
+}

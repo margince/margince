@@ -35,6 +35,7 @@ export const FOCUS_SURFACE = {
   capture_health: "report",
   ai_work_health: "report",
   bounce: "report",
+  automation_run: "report",
 } as const satisfies Record<AttentionItem["source"], FocusSurface>;
 
 export function focusSurfaceOf(source: AttentionItem["source"]): FocusSurface {

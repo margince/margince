@@ -35,6 +35,10 @@ import (
 // which is exactly why an event trigger's non-match is safe to record
 // (recordSkip below) and a clock trigger's is not (runOne's !matched
 // branch).
+// Two readers decode this shape back out of the row: ListRuns
+// (automations_runs.go) for one instance's history, and troubledRunsSQL
+// (troubledruns.go) for the cross-instance health read — a change to the
+// "@<automation id>" suffix lands on both.
 func runKey(h workflow.Handler, ev workflow.Event) string {
 	return h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
 }

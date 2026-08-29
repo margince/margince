@@ -70,6 +70,8 @@ type Service struct {
 	aiWork AIWork
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
+	// automations is OPTIONAL and role-withheld exactly as dsrs is.
+	automations AutomationHealth
 	// names is OPTIONAL like the lanes above it: nil means subjects travel
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
@@ -79,11 +81,11 @@ type Service struct {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, n Names, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, n Names, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
-		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, names: n, now: now,
+		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, names: n, now: now,
 	}
 }
 
