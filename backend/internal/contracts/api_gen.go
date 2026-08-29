@@ -13760,9 +13760,9 @@ type Attention struct {
 	// call budget degraded, mirrored classes stale or still backfilling. One card
 	// per CONDITION, never one per affected row, so a broken connector is a single
 	// card rather than a flood. Each card's `kind` names the condition and
-	// `detail` carries its facts (the affected object classes, or the failure
-	// class and retry time); fixing the connection stays on the sync settings
-	// screen, so the card offers no verbs.
+	// `detail` carries its facts (the affected object classes, the failure
+	// class, or the budget band); fixing the connection stays on the sync
+	// settings screen, so the card offers no verbs.
 	//
 	// Absent — not empty — on a workspace that is not running in overlay mode:
 	// an installation with no incumbent connected does not look here, which is a
