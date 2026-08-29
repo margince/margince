@@ -1819,12 +1819,8 @@ export const en = {
   "co.tech.web": "Website technology",
   "co.tech.services": "Services",
   "co.tech.hosting": "Hosting",
-  "co.tech.read": "Look up",
-  "co.tech.reading": "Looking up…",
   "co.tech.empty":
-    "No technical reading yet. This fills itself in when the company's site is read, and refreshes on its own — the button is only there when you do not want to wait.",
-  "co.tech.unavailable": "This installation makes no technical lookups.",
-  "co.tech.queued": "The lookup is queued. It usually takes under a minute.",
+    "No technical reading yet. This fills itself in when the company's site is read, and refreshes on its own.",
   "co.tech.laneFailed":
     "{lane} did not answer — what it read last time is unchanged.",
   "co.tech.laneRefused": "The site declined to be read.",
