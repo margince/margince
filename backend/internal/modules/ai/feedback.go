@@ -147,6 +147,16 @@ type Decision struct {
 // Equal timestamps STAND. A verdict and the value it is about can be written in
 // one transaction, where both carry the same now(), and refusing that case
 // would suppress a decision at the instant it was made.
+//
+// WHAT THIS DOES NOT ANSWER, because it is a different question and needs a
+// contract field to answer at all: whether the human was looking at THIS value
+// when they decided. A page rendered on the old value, a newer value landing,
+// and the correction submitted after it leaves a verdict that is newer than the
+// value and still about the older one. Closing that means the client sending
+// the field version it rendered and the ledger storing it, so the comparison
+// becomes an equality rather than an ordering. What this answers is the case
+// where the verdict is demonstrably older — which is the one that survives
+// forever rather than for the length of one page view.
 func (v Verdict) AsOf(valueAt time.Time) (Decision, bool) {
 	if v.recordedAt.Before(valueAt) {
 		return Decision{}, false

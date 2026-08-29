@@ -234,6 +234,15 @@ func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProfileFields: %v", err)
 	}
+	// The same guards the sibling case above carries. A regression that drops
+	// the seeded row or its claim key should fail here saying so, not panic on
+	// an index or a nil pointer and send the reader to the wrong file.
+	if len(before) != 1 || before[0].Value != "Business Development Manager" {
+		t.Fatalf("seeded field did not read back: %+v", before)
+	}
+	if before[0].ClaimKey == nil || *before[0].ClaimKey == "" {
+		t.Fatal("the field carries no claim key, so nothing could ever correct it")
+	}
 	corrected := "Head of Business Development"
 	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
 		SubjectType: "person", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
