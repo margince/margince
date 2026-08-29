@@ -45,6 +45,9 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 		statement string
 		// table -> the columns the reader must report as written.
 		writes map[string][]string
+		// wantUnreadable marks a statement the reader must REFUSE to judge
+		// rather than read as clean.
+		wantUnreadable bool
 	}{
 		{
 			name:      "the plain dead assignment",
@@ -94,6 +97,17 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 			name:      "a doubled quote inside a quoted value",
 			statement: `UPDATE activity SET subject = 'it''s from here', updated_at = now() WHERE id = $1`,
 			writes:    map[string][]string{"activity": {"subject", "updated_at"}},
+		}, {
+			// A run that never CLOSES. Swallowed as one span, every assignment
+			// after the open quote is stepped over — so a dead updated_at
+			// behind it goes unseen and the gate passes, which is the
+			// direction this gate must not fail in. It reaches the reader only
+			// as a PIECE of an assembled statement, so it is reported instead:
+			// the write is judged as unreadable rather than as clean.
+			name:           "an unterminated quoted value",
+			statement:      `UPDATE activity SET subject = 'the closing quote is in another literal, updated_at = now()`,
+			writes:         map[string][]string{"activity": {}},
+			wantUnreadable: true,
 		}, {
 			// Dollar-quoting, where a quote character has no meaning at all.
 			name:      "a dollar-quoted value carrying a clause word",
@@ -175,6 +189,15 @@ func TestTheTriggerColumnReaderSeesEveryDeadAssignment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := map[string][]string{}
 			for _, segment := range writeSegments(tc.statement) {
+				if segment.unreadable != tc.wantUnreadable {
+					t.Fatalf("on %s unreadable = %v, want %v", segment.table, segment.unreadable, tc.wantUnreadable)
+				}
+				if segment.unreadable {
+					// Its assignments are not judged: what stands after the
+					// open quote could be anything.
+					got[segment.table] = []string{}
+					continue
+				}
 				got[segment.table] = append(got[segment.table], assignedColumns(segment.assignments)...)
 			}
 			if len(got) != len(tc.writes) {

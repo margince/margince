@@ -87,6 +87,11 @@ var triggerWrites = map[string][]string{
 type writeSegment struct {
 	table       string
 	assignments string
+	// unreadable marks a segment whose text this gate could not scan — an
+	// unterminated quoted run, which means the statement is assembled and the
+	// piece the reader has is not the whole of it. Its assignments are not
+	// judged: what stands after the open quote could be anything.
+	unreadable bool
 }
 
 // segmentOpener matches the head of a write: `UPDATE t [AS] [alias] SET`, or
@@ -136,9 +141,13 @@ func writeSegments(statement string) []writeSegment {
 			continue
 		}
 		rest := statement[loc[1]:]
-		depth, end := 0, len(rest)
+		depth, end, unreadable := 0, len(rest), false
 		for pos := 0; pos < len(rest); pos++ {
-			if skip := quotedSpanAt(rest, pos); skip > 0 {
+			if skip, closed := quotedSpanAt(rest, pos); skip > 0 {
+				if !closed {
+					unreadable, end = true, pos
+					break
+				}
 				pos += skip - 1
 				continue
 			}
@@ -158,7 +167,9 @@ func writeSegments(statement string) []writeSegment {
 				break
 			}
 		}
-		out = append(out, writeSegment{table: table, assignments: strings.TrimSpace(rest[:end])})
+		out = append(out, writeSegment{
+			table: table, assignments: strings.TrimSpace(rest[:end]), unreadable: unreadable,
+		})
 	}
 	return out
 }
@@ -170,8 +181,8 @@ func isWordByte(b byte) bool {
 // dollarTagRe matches a dollar-quote opener at the current position.
 var dollarTagRe = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$`)
 
-// quotedSpanAt returns the length of the quoted run starting at pos, or 0 when
-// nothing is quoted there.
+// quotedSpanAt returns the length of the quoted run starting at pos and whether
+// it CLOSED, or 0 when nothing is quoted there.
 //
 // The scans that read a SET clause have to step OVER these rather than through
 // them. `SET body = 'from the report', updated_at = now()` ends the assignment
@@ -185,23 +196,31 @@ var dollarTagRe = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$`)
 // run that closes where the real one does. Dollar-quoting is matched on its
 // OPENING tag and closed on the same tag, which is what makes $tag$…'…$tag$
 // readable at all.
-func quotedSpanAt(text string, pos int) int {
+//
+// A run that never CLOSES is reported rather than swallowed, and that matters in
+// the direction this gate must not fail. Reading the remainder as one quoted
+// span steps over every assignment after it, so a dead updated_at behind an
+// unterminated value goes unseen and the gate passes — under-recognition
+// arriving as a green run. It happens on a statement whose closing quote is in
+// a piece the reader does not have: `"UPDATE x SET body = '" + v + "'"`, which
+// is assembly this gate has no detector for.
+func quotedSpanAt(text string, pos int) (length int, closed bool) {
 	if text[pos] == '\'' {
 		for i := pos + 1; i < len(text); i++ {
 			if text[i] == '\'' {
-				return i - pos + 1
+				return i - pos + 1, true
 			}
 		}
-		return len(text) - pos
+		return len(text) - pos, false
 	}
 	tag := dollarTagRe.FindString(text[pos:])
 	if tag == "" {
-		return 0
+		return 0, true
 	}
 	if end := strings.Index(text[pos+len(tag):], tag); end >= 0 {
-		return len(tag) + end + len(tag)
+		return len(tag) + end + len(tag), true
 	}
-	return len(text) - pos
+	return len(text) - pos, false
 }
 
 // assignedColumns returns the columns an assignment list writes — the targets
@@ -216,7 +235,7 @@ func assignedColumns(assignments string) []string {
 			// quotedSpanAt gives: `SET body = 'a, b', updated_at = now()`
 			// otherwise splits into fragments neither of which is an
 			// assignment, and the dead one after it is lost.
-			if skip := quotedSpanAt(assignments, pos); skip > 0 {
+			if skip, _ := quotedSpanAt(assignments, pos); skip > 0 {
 				pos += skip - 1
 				continue
 			}
@@ -342,6 +361,11 @@ func TestNoStatementWritesAColumnItsTriggerAlreadyWrites(t *testing.T) {
 							continue
 						}
 						judged++
+						if segment.unreadable {
+							t.Errorf("%s: %s writes %s with a statement carrying an unterminated quoted value (`%s`) — the text this gate has is a PIECE of a statement assembled at runtime, so what it assigns after the open quote cannot be read at all. Name the columns in one literal, or move the write where a reader can see it whole",
+								path, name, segment.table, segment.assignments)
+							continue
+						}
 						written := assignedColumns(segment.assignments)
 						var dead []string
 						for _, column := range written {
