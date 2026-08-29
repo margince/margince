@@ -233,14 +233,8 @@ func TestTheObjectBindsAHumanPrincipalToo(t *testing.T) {
 	}
 }
 
-// AdmittedAuthority is the pair above, answered together. This fixture stands
-// for the AUTHORITY seam; a passport's own liveness is the gate suite's subject,
-// so it answers as a live one and lets the two reads decide.
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// admittedFromPair for why the body is not written out here.
 func (s grantingSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	rbac, err := s.EffectiveRBAC(ctx, ws, human)
-	if err != nil {
-		return authz.RBAC{}, "", err
-	}
-	seat, err := s.SeatType(ctx, ws, human)
-	return rbac, seat, err
+	return admittedFromPair(ctx, ws, human, s.EffectiveRBAC, s.SeatType)
 }

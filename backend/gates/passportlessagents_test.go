@@ -52,7 +52,10 @@ func TestEveryPassportlessAgentPrincipalIsRatified(t *testing.T) {
 	t.Parallel()
 	defer passportlessAgentPrincipals.AssertAllMatched(t)
 	found := 0
-	for _, root := range []string{"internal/compose", "internal/modules", "internal/platform"} {
+	// internal/shared is walked too: the principal TYPE lives there, and a
+	// mint in the package that defines it would be the one place nobody
+	// thought to look.
+	for _, root := range []string{"internal/compose", "internal/modules", "internal/platform", "internal/shared", "cmd"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
@@ -76,7 +79,7 @@ func TestEveryPassportlessAgentPrincipalIsRatified(t *testing.T) {
 					if passportlessAgentPrincipals.Waived(t, path+":"+fn.Name.Name) {
 						continue
 					}
-					t.Errorf("%s: %s builds an agent principal with no PassportID — Admit cannot re-ask a credential nobody named, so revoking whatever authorized this run stops nothing until the run ends on its own. Carry the passport, or ratify it in passportlessAgentPrincipals with what killing this principal would even mean",
+					t.Errorf("%s: %s builds an agent principal naming no passport — a zero value counts as none, and a computed Type counts as unreadable. Admit cannot re-ask a credential nobody named, so revoking whatever authorized this run stops nothing until the run ends on its own. Carry the passport, or ratify it in passportlessAgentPrincipals with what killing this principal would even mean",
 						path, fn.Name.Name)
 				}
 			}
@@ -108,7 +111,7 @@ func agentPrincipalMints(fn *ast.FuncDecl) []bool {
 		if !isLit || !isPrincipalType(lit.Type) {
 			return true
 		}
-		agent, passport := false, false
+		agent, passport, unreadable := false, false, false
 		for _, element := range lit.Elts {
 			pair, isPair := element.(*ast.KeyValueExpr)
 			if !isPair {
@@ -121,12 +124,19 @@ func agentPrincipalMints(fn *ast.FuncDecl) []bool {
 			switch key.Name {
 			case "Type":
 				agent = agent || namesAgentPrincipal(pair.Value)
+				// A Type this reader cannot judge is not a pass. Computed, it
+				// could be the agent kind, and skipping the literal would wave
+				// through the one shape this census exists for.
+				unreadable = unreadable || !isPlainSelector(pair.Value)
 			case "PassportID":
-				passport = true
+				// The VALUE, not the key. `PassportID: ids.UUID{}` names the
+				// field and no credential — which is exactly the principal
+				// nobody can revoke, wearing the shape of one that can.
+				passport = passport || namesSomePassport(pair.Value)
 			}
 		}
-		if agent {
-			out = append(out, passport)
+		if agent || unreadable {
+			out = append(out, passport && !unreadable)
 		}
 		return true
 	})
@@ -145,4 +155,29 @@ func isPrincipalType(expr ast.Expr) bool {
 func namesAgentPrincipal(expr ast.Expr) bool {
 	sel, isSel := expr.(*ast.SelectorExpr)
 	return isSel && sel.Sel.Name == "PrincipalAgent"
+}
+
+// isPlainSelector reports whether an expression NAMES the kind rather than
+// standing in for it.
+//
+// A qualified selector — `principal.PrincipalAgent` — is the only readable
+// form, and it is what this tree writes everywhere. A bare identifier is not:
+// it can be a package-level var holding the agent kind, which reads as "not an
+// agent" to a matcher looking for the constant, and deciding a site is not an
+// agent is exactly the pass that hides it.
+func isPlainSelector(expr ast.Expr) bool {
+	_, isSelector := expr.(*ast.SelectorExpr)
+	return isSelector
+}
+
+// namesSomePassport reports whether a PassportID value could be a credential.
+//
+// A composite literal of the id type — `ids.UUID{}` — is the ZERO value, which
+// names no credential at all: the field is set, the census's question is not
+// answered, and the site is the very one it exists to find. Anything else is
+// taken as naming one, because a reader that had to evaluate the expression
+// would be a reader that could be fooled by a helper call either way.
+func namesSomePassport(expr ast.Expr) bool {
+	lit, isLit := expr.(*ast.CompositeLit)
+	return !isLit || len(lit.Elts) > 0
 }

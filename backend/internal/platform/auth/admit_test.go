@@ -50,11 +50,19 @@ var (
 func fullSeatGate() *Gate { return NewGate(&stubAuthority{seat: principal.SeatFull}) }
 
 func agentCtx(scopes ...principal.Scope) context.Context {
+	return agentCtxWithPassport(ids.UUID{}, scopes...)
+}
+
+// agentCtxWithPassport is agentCtx for a caller riding a CREDENTIAL. A zero
+// passport is a principal holding none — the product acting under a policy —
+// and the two are different subjects, so a case about revocation has to say
+// which one it is driving.
+func agentCtxWithPassport(passport ids.UUID, scopes ...principal.Scope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test",
-		OnBehalfOf: testHuman,
-		Scopes:     principal.NewScopeSet(scopes...),
+		OnBehalfOf: testHuman, PassportID: passport,
+		Scopes: principal.NewScopeSet(scopes...),
 	})
 }
 
@@ -257,7 +265,12 @@ func TestARevokedPassportIsRefusedAtTheNextToolCall(t *testing.T) {
 	authority := &stubAuthority{seat: principal.SeatFull, passportGone: true}
 	spec := mcp.ToolSpec{Name: "list_people", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
 
-	_, err := NewGate(authority).Admit(agentCtx(principal.ScopeRead), spec, noResolve)
+	// Carrying a REAL passport, because that is the scenario: a run that
+	// authenticated once with a credential and had it killed while it was
+	// still executing. With a zero one the principal rides on no credential at
+	// all, and the case would prove only that the gate maps a not-found seam
+	// answer onto a refusal.
+	_, err := NewGate(authority).Admit(agentCtxWithPassport(ids.NewV7(), principal.ScopeRead), spec, noResolve)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a tool call on a revoked passport answered %v, want permission denied — the killed credential is still executing", err)
 	}
@@ -278,13 +291,7 @@ func TestTheGateAsksAboutThePrincipalsOwnPassport(t *testing.T) {
 	spec := mcp.ToolSpec{Name: "list_people", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
 	passport := ids.NewV7()
 
-	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test",
-		OnBehalfOf: testHuman, PassportID: passport,
-		Scopes: principal.NewScopeSet(principal.ScopeRead),
-	})
-	if _, err := NewGate(authority).Admit(ctx, spec, noResolve); err != nil {
+	if _, err := NewGate(authority).Admit(agentCtxWithPassport(passport, principal.ScopeRead), spec, noResolve); err != nil {
 		t.Fatalf("admit: %v", err)
 	}
 	if len(authority.passports) != 1 || authority.passports[0] != passport {

@@ -51,13 +51,19 @@ type Resolver interface {
 	// is the one moment a kill switch is expected to work. Revocation is
 	// documented as binding "at the next token lookup", and inside a run there
 	// was no next lookup. Answering it here makes the next TOOL CALL the next
-	// lookup, and costs no extra round trip: the seat read is already open on a
-	// transaction, and this is one more indexed predicate inside it.
+	// lookup, and costs no extra round trip: it is one more statement on a
+	// connection the seat read already holds. Against what it replaces it is
+	// cheaper — the gate used to open two transactions here, for the seat and
+	// for the grants, and now opens one.
 	//
 	// And the pair. Reading the seat and the grants separately can compose an
 	// authority the member never held — a role change and a seat change that
 	// cross between two transactions leave a caller holding permissions from
 	// before with a seat from after. Both are ceilings on the same act.
+	//
+	// One transaction is not by itself one snapshot: at READ COMMITTED each
+	// statement sees its own committed view, so an implementation has to pin
+	// the isolation level as well as share the transaction.
 	//
 	// A revoked or expired passport, one no longer granted by this human, or a
 	// human who is gone resolves to apperrors.ErrNotFound — never to an

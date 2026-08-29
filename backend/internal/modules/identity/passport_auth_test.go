@@ -4,13 +4,15 @@
 package identity
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestBothAgentAuthenticationPathsExecuteTheOneLivenessQuery is a fitness
@@ -30,30 +32,35 @@ func TestBothAgentAuthenticationPathsExecuteTheOneLivenessQuery(t *testing.T) {
 		t.Fatalf("parsing %s: %v", source, err)
 	}
 
-	// Every statement in the package that FILTERS FOR LIVENESS builds on the
-	// one rule.
+	// Two claims, because they fail differently and one check cannot carry
+	// both.
 	//
-	// This used to count: exactly one `FROM passport p` in passport.go, on the
-	// argument that a second occurrence is a second place to remember the rule.
-	// That was the same claim while there was one moment to ask in. There are
-	// two now — the call arriving with a token, and every tool ADMISSION inside
-	// a run that authenticated once and then executes for its whole wall clock
-	// — and a count cannot tell a second correct asking from a second rule.
+	// A HAND-ROLLED rule: a statement that selects from the passport relation
+	// and spells a liveness condition itself. That is what a new authenticator
+	// written without being told about agentLivenessWhere looks like, and a
+	// passport killed by one of two rules is admitted by the other.
 	//
-	// What separates them is INTENT, not the alias: the list surface selects
-	// `FROM passport p` too and deliberately shows revoked rows, so aliasing
-	// never meant "authenticating". A statement that asks whether a passport is
-	// revoked or expired is one that decides liveness, and that is the one that
-	// has to reach for agentLivenessWhere by name — which still catches what
-	// the count was for, a statement quietly grown conditions of its own.
-	deciders := livenessDecidingStatements(t)
-	if len(deciders) < 2 {
-		t.Errorf("this package holds %d statement(s) deciding a passport's liveness — the rule is asked when a call arrives AND at every admission, so fewer than two means one of those askings is gone", len(deciders))
+	// And an asking GOING MISSING: the rule is built on in two places, because
+	// it is asked at two moments — when a call arrives with a token, and at
+	// every tool admission inside a run that authenticated once and then
+	// executes for its whole wall clock.
+	//
+	// This used to be one count of `FROM passport p` in one file, which was the
+	// same claim while there was one moment to ask in and one file to ask from.
+	for where, declaration := range handRolledLivenessRules(t) {
+		t.Errorf("%s selects from the passport relation and spells a liveness condition of its own instead of building on agentLivenessWhere — a passport killed by one of two rules is admitted by the other:\n%s", where, declaration)
 	}
-	for where, statement := range deciders {
-		if !strings.Contains(statement, "agentLivenessWhere") {
-			t.Errorf("%s decides a passport's liveness without building on agentLivenessWhere — a passport killed by one of two rules is admitted by the other:\n%s", where, statement)
-		}
+	if askings := declarationsBuildingOnTheRule(t); len(askings) < 2 {
+		t.Errorf("agentLivenessWhere is built on by %v — it is asked when a call arrives AND at every admission, so fewer than two means one of those askings is gone", askings)
+	}
+	// And the admission path REACHES the second one. The count above is over
+	// declarations, which stay whether or not anybody executes them; this is
+	// what fails if AdmittedAuthority stops asking. The runtime half is
+	// TestRevocationReachesARunAlreadyInFlight, which revokes and drives it.
+	if body := funcBodyIn(t, "authority.go", "AdmittedAuthority"); body == nil {
+		t.Error("identity has no AdmittedAuthority — the admission read this rule is asked at is gone or renamed")
+	} else if !mentionsIdent(body, "passportStillLiveQuery") {
+		t.Error("AdmittedAuthority no longer reaches passportStillLiveQuery — the rule is still written down and nothing asks it, so a revoked passport runs to the end of its run again")
 	}
 
 	for _, entryPoint := range []string{"AuthenticateAgent", "AuthenticateAgentByID"} {
@@ -67,53 +74,70 @@ func TestBothAgentAuthenticationPathsExecuteTheOneLivenessQuery(t *testing.T) {
 	}
 }
 
-// livenessDecidingStatements returns the source text of every declaration in
-// the PACKAGE that selects from the passport relation AND decides whether the
-// row is still a credential, keyed by where it was found.
+// handRolledLivenessRules returns the declarations in the package that decide a
+// passport's liveness with a condition of their own, keyed by where.
 //
-// The whole package rather than one file, and that is not tidiness. It used to
-// read passport.go alone, which was the same claim while the rule and its two
-// askings lived there; splitting the liveness rule into its own file for the
-// size cap would have left a third file free to grow a statement nobody checks.
-// The claim is about the package, so the reader is.
+// The two filters are applied to ONE STRING LITERAL, which is what makes them
+// mean anything together. RevokePassport reads `SELECT … FROM passport WHERE id
+// = $1` and writes `UPDATE passport SET revoked_at = now() WHERE … AND
+// revoked_at IS NULL` — one declaration carrying both halves and authenticating
+// nothing, so a declaration-wide match reports the writer that performs
+// revocation as a second rule for deciding it.
 //
-// Read as TEXT rather than through the parser, because what is being judged is
-// what the author wrote: a declaration that concatenates agentLivenessWhere
-// says so in the source, and one that spells the conditions out again says that
-// instead. The parsed value would be identical either way, which is exactly the
-// drift this is for.
-func livenessDecidingStatements(t *testing.T) map[string]string {
+// The correct statements are not caught by this and must not be: they carry no
+// condition of their own, only the concatenated agentLivenessWhere. What holds
+// THEM is the count below.
+func handRolledLivenessRules(t *testing.T) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatalf("reading the package directory: %v", err)
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		for i, statement := range statementsIn(readSource(t, name)) {
-			if !decidesLiveness(statement) {
-				continue
+	for _, name := range packageSources(t) {
+		for _, decl := range declarationsIn(t, name) {
+			for _, statement := range gatekit.SQLStatementsOf(decl.node) {
+				if !strings.Contains(statement, "FROM passport") || !spellsALivenessCondition(statement) {
+					continue
+				}
+				if strings.Contains(decl.source, "agentLivenessWhere") {
+					continue
+				}
+				out[name+":"+decl.name] = decl.source
 			}
-			out[fmt.Sprintf("%s statement %d", name, i+1)] = statement
 		}
 	}
 	return out
 }
 
-// decidesLiveness reports whether a statement is deciding whether a passport is
-// still a credential, rather than merely reading one.
+// declarationsBuildingOnTheRule names the declarations that concatenate the
+// shared rule — the two askings, and nothing else.
+func declarationsBuildingOnTheRule(t *testing.T) []string {
+	t.Helper()
+	var out []string
+	for _, name := range packageSources(t) {
+		for _, decl := range declarationsIn(t, name) {
+			if decl.name == "agentLivenessWhere" || !strings.Contains(decl.source, "agentLivenessWhere") {
+				continue
+			}
+			out = append(out, name+":"+decl.name)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// spellsALivenessCondition reports whether a statement decides for itself
+// whether a passport is still a credential.
 //
-// Reaching for the shared rule counts, and so does spelling either of its two
-// own conditions by hand — which is what a new authenticator that has not been
-// told about agentLivenessWhere looks like. The list surface names neither: it
-// shows revoked rows on purpose, which is why the alias was never the
-// discriminator.
-func decidesLiveness(statement string) bool {
-	for _, tell := range []string{"agentLivenessWhere", "revoked_at IS NULL", "expires_at"} {
+// PREDICATE shapes, not column names. The list surface selects revoked_at and
+// expires_at as columns and shows revoked rows on purpose, so naming a column
+// was never the discriminator — and a reformat of that query would otherwise
+// turn it into a spurious failure here.
+func spellsALivenessCondition(statement string) bool {
+	for _, tell := range []string{
+		"revoked_at IS NULL",
+		"< p.expires_at",
+		"p.expires_at >",
+		"expires_at > now()",
+		"now() < p.expires_at",
+	} {
 		if strings.Contains(statement, tell) {
 			return true
 		}
@@ -121,21 +145,78 @@ func decidesLiveness(statement string) bool {
 	return false
 }
 
-// statementsIn pulls the passport statements out of one file's source.
-func statementsIn(source string) []string {
-	var out []string
-	for _, chunk := range strings.Split(source, "FROM passport p")[1:] {
-		// To the end of the DECLARATION, not the end of the raw string: the
-		// rule is concatenated after the closing backtick, so cutting there
-		// would read every statement as carrying no rule at all. Declarations
-		// in this file are separated by a blank line.
-		end := strings.Index(chunk, "\n\n")
-		if end < 0 {
-			end = len(chunk)
+// declaration is one top-level declaration: its name, its source text, and the
+// node itself for the readers that want the syntax rather than the words.
+type declaration struct {
+	name   string
+	source string
+	node   ast.Decl
+}
+
+// declarationsIn returns the top-level declarations of one file, bounded by the
+// PARSER's idea of where each ends rather than by a blank line — the rule is
+// concatenated after a closing backtick, and SQL formatted with a blank line
+// between clauses would cut a declaration before the part saying which rule it
+// builds on.
+func declarationsIn(t *testing.T, name string) []declaration {
+	t.Helper()
+	source := readSource(t, name)
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, name, source, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", name, err)
+	}
+	var out []declaration
+	for _, decl := range file.Decls {
+		start, end := fset.Position(decl.Pos()).Offset, fset.Position(decl.End()).Offset
+		if start < 0 || end > len(source) || start >= end {
+			continue
 		}
-		out = append(out, "FROM passport p"+chunk[:end])
+		out = append(out, declaration{name: declarationLabel(decl), source: source[start:end], node: decl})
 	}
 	return out
+}
+
+// packageSources names this package's own non-test files. The whole package,
+// because the claim is about the package: reading one file would leave a third
+// free to grow a rule nobody checks, which is how the liveness rule moving to
+// its own file for the size cap would have widened the hole.
+func packageSources(t *testing.T) []string {
+	t.Helper()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("reading the package directory: %v", err)
+	}
+	var out []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() && strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// funcBodyIn finds one function's body in a named file of this package.
+func funcBodyIn(t *testing.T, file, name string) *ast.BlockStmt {
+	t.Helper()
+	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", file, err)
+	}
+	return funcBody(t, parsed, name)
+}
+
+// mentionsIdent reports whether a body names an identifier anywhere.
+func mentionsIdent(body *ast.BlockStmt, name string) bool {
+	found := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok && ident.Name == name {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 // Every condition the liveness rule EXISTS for is in it. The shared string is
@@ -226,4 +307,19 @@ func callsFunc(body *ast.BlockStmt, name string) bool {
 		return !found
 	})
 	return found
+}
+
+// declarationLabel names a declaration for a finding.
+func declarationLabel(decl ast.Decl) string {
+	switch typed := decl.(type) {
+	case *ast.FuncDecl:
+		return typed.Name.Name
+	case *ast.GenDecl:
+		for _, spec := range typed.Specs {
+			if value, ok := spec.(*ast.ValueSpec); ok && len(value.Names) > 0 {
+				return value.Names[0].Name
+			}
+		}
+	}
+	return "an unnamed declaration"
 }
