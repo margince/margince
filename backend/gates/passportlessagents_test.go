@@ -212,10 +212,11 @@ func isPlainSelector(expr ast.Expr, dotImported bool) bool {
 // namesSomePassport answers two things about a PassportID value: whether it
 // names a credential, and whether this reader could tell.
 //
-// `ids.UUID{}` is the ZERO value and names none — the field is set, the
-// census's question is unanswered, and the site is the very one it exists to
-// find. A FIELD READ (`a.PassportID.UUID`) is taken as naming one, because that
-// is how an authenticated identity hands its own credential on.
+// `ids.UUID{}` and `ids.Nil` are the ZERO value spelled two ways and name none
+// — the field is set, the census's question is unanswered, and the site is the
+// very one it exists to find. Any other FIELD READ (`a.PassportID.UUID`) is
+// taken as naming one, because that is how an authenticated identity hands its
+// own credential on.
 //
 // Everything else is UNREADABLE rather than assumed: a bare identifier or a
 // call can hold a zero id just as easily as a real one, which is the same
@@ -227,6 +228,14 @@ func namesSomePassport(expr ast.Expr) (names, readable bool) {
 	case *ast.CompositeLit:
 		return len(value.Elts) > 0, true
 	case *ast.SelectorExpr:
+		// The package's ZERO constant is not a credential. `PassportID:
+		// ids.Nil` spells "no passport" in the shape of one that can be
+		// revoked, which is precisely the site this census exists to find —
+		// and a field read is what an authenticated identity hands its own
+		// credential on with, so the two cannot both be waved through.
+		if value.Sel.Name == "Nil" {
+			return false, true
+		}
 		return true, true
 	case *ast.UnaryExpr:
 		return namesSomePassport(value.X)

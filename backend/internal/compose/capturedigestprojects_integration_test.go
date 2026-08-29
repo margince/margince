@@ -165,7 +165,7 @@ func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T
 }
 
 // AdmittedAuthority delegates to this fixture's own two reads; see
-// admittedFromPair for why the body is not written out here.
+// authztest.AdmittedFromPair for why the body is not written out here.
 func (r projectReadingAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }
