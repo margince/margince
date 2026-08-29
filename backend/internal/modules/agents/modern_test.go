@@ -437,7 +437,8 @@ func TestDiscoverAdvertisesTheWholeWindowAndTheSameCapabilitiesAsInitialize(t *t
 	}
 }
 
-// The reporting rule, held as prose because prose is what it is.
+// The reporting rule, held as prose because prose is what it is — and held
+// against the composition, because it names a tool that is not always served.
 //
 // An assistant finished a run of correct writes and reported "nothing pending
 // approval this time" while a drafted reply sat in the queue — staged by an
@@ -461,10 +462,55 @@ func TestTheSurfaceTellsAModelToLookBeforeItReportsTheWorkFinished(t *testing.T)
 		// And the moment: before telling anyone the work is done.
 		"Before telling anyone the work is finished",
 	} {
-		if !strings.Contains(surfaceInstructions, want) {
-			t.Errorf("the surface instructions no longer say %q:\n%s", want, surfaceInstructions)
+		if !strings.Contains(queueInstruction, want) {
+			t.Errorf("the queue guidance no longer says %q:\n%s", want, queueInstruction)
 		}
 	}
+}
+
+// And it is served only where the queue is. RegisterApprovalTools registers
+// nothing without an inbox — "a role with no approvals engine does not
+// advertise a queue it cannot read" — so a composition without one would be
+// telling a model to call something that answers `method not found`. A model
+// that tried and failed learns the check is broken, which is worse than not
+// being told to check at all.
+func TestTheQueueGuidanceIsServedOnlyWhereTheQueueIs(t *testing.T) {
+	bare := modernDispatcher(t)
+	if strings.Contains(bare.instructions(), queueInstruction) {
+		t.Errorf("a surface with no queue tells a model to call list_approvals:\n%s", bare.instructions())
+	}
+	if !strings.Contains(bare.instructions(), "A governed CRM tool surface") {
+		t.Error("a surface with no queue lost the guidance that is true of every tool")
+	}
+
+	// The same surface with the queue registered the way compose registers it,
+	// so what turns the sentence on is the REGISTRATION rather than a flag this
+	// test set.
+	withQueue := modernDispatcher(t)
+	RegisterApprovalTools(withQueue.registry, stubInbox{})
+	if !strings.Contains(withQueue.instructions(), queueInstruction) {
+		t.Error("a surface serving list_approvals does not tell a model to read it")
+	}
+}
+
+// stubInbox is an ApprovalInbox that is never called: this suite asks what the
+// surface SAYS about the queue, not what the queue answers.
+type stubInbox struct{}
+
+func (stubInbox) ListApprovals(context.Context, ApprovalQuery) (ApprovalPage, error) {
+	return ApprovalPage{}, nil
+}
+
+func (stubInbox) ReadApproval(context.Context, ids.UUID) (StagedApproval, error) {
+	return StagedApproval{}, nil
+}
+
+func (stubInbox) DecideApproval(context.Context, ids.UUID, bool, string) (StagedApproval, error) {
+	return StagedApproval{}, nil
+}
+
+func (stubInbox) DecideApprovalBundle(context.Context, ids.UUID, bool, string) ([]DecidedMember, error) {
+	return nil, nil
 }
 
 // A tool result is not a catalog: it is one caller's answer to one question

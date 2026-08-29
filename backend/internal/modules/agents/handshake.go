@@ -42,8 +42,23 @@ func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpc
 		// one era only, and the era it was missing from is the one most clients
 		// speak — so the surface's own rule about what a write can leave behind
 		// reached nobody who needed it.
-		"instructions": surfaceInstructions,
+		"instructions": s.instructions(),
 	}, nil
+}
+
+// instructions is the guidance as THIS composition can honour it.
+//
+// The queue sentence names a tool BY NAME, and the queue surface is optional:
+// RegisterApprovalTools registers nothing without an inbox, because "a role
+// with no approvals engine does not advertise a queue it cannot read". Told to
+// call it there, a model would get `method not found` — worse than silence,
+// since one that tried and failed learns the check is broken rather than that
+// there was nothing to check.
+func (s *Dispatcher) instructions() string {
+	if _, served := s.registry.Spec(listApprovalsToolName); !served {
+		return surfaceInstructions
+	}
+	return surfaceInstructions + " " + queueInstruction
 }
 
 // surfaceInstructions is the guidance for the model on the other side of the
@@ -55,19 +70,21 @@ func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpc
 // claim to two generations of client, and two spellings of one claim is how a
 // client ends up told different things by the same server — the reason
 // `capabilities` is shared already.
-//
-// THE LAST SENTENCE IS A REPORTING RULE, and it is here because nothing else
-// reaches. An assistant finished a run of correct writes and reported "nothing
-// pending approval this time" while a drafted reply sat in the queue: the
-// automation that staged it ran in reaction to what the agent had just logged,
-// after every one of its calls had returned. No write envelope can carry that —
-// the row did not exist when the write answered — so the only thing that
-// prevents the false report is the model knowing to look before it makes one.
 const surfaceInstructions = "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a person must approve say so in their own description; calling one " +
-	"stages the effect for review rather than performing it. " +
-	"A write can also leave a question for a human WITHOUT saying so in its answer — an " +
-	"automation reacting to what you just wrote may draft a reply or stage a change of its own, " +
-	"after your call returned. Before telling anyone the work is finished, call list_approvals " +
-	"and report what is waiting; it needs no approval of its own."
+	"stages the effect for review rather than performing it."
+
+// queueInstruction is the REPORTING RULE, appended where the queue is served.
+//
+// It is here because nothing else reaches. An assistant finished a run of
+// correct writes and reported "nothing pending approval this time" while a
+// drafted reply sat in the queue: the automation that staged it ran in reaction
+// to what the agent had just logged, after every one of its calls had returned.
+// No write envelope can carry that — the row did not exist when the write
+// answered — so the only thing that prevents the false report is the model
+// knowing to look before it makes one.
+const queueInstruction = "A write can also leave a question for a human WITHOUT saying so in its " +
+	"answer — an automation reacting to what you just wrote may draft a reply or stage a change " +
+	"of its own, after your call returned. Before telling anyone the work is finished, call " +
+	"list_approvals and report what is waiting; it needs no approval of its own."
