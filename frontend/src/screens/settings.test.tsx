@@ -84,6 +84,11 @@ describe("SettingsScreen RBAC surfaces", () => {
   // at one x. The claim is about the three ROWS being there, in the one card —
   // a page that grew a second panel back would still pass a query for any one
   // of them on its own.
+  //
+  // The tab holds a second card beside it — which kinds of proposal answer
+  // themselves — and that is a different subject rather than a fragment of this
+  // one, so the count below asks how many headings this card carries rather
+  // than how many the tab does.
   it("carries the identity, the password, the signature and the language in ONE card", async () => {
     render(<SettingsScreen route={settingsAddress()} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
@@ -105,8 +110,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(
       within(card).getByRole("combobox", { name: "Language" }),
     ).toBeTruthy();
-    // And nothing else on the tab: four panels became one.
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+    // And the four are not four cards: this one has a single title over all of
+    // them, which is what fragmenting it again would break.
+    expect(within(card).getAllByRole("heading", { level: 2 })).toHaveLength(1);
   });
 
   it("switches the language from the Account tab, through the design-system select", async () => {

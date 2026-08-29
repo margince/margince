@@ -6,7 +6,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
-import { type Translator, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -68,15 +69,21 @@ function useUpdateAutonomy() {
 // Absent rather than a row of zeroes: "you have approved 0 of these unchanged"
 // invites the reader to weigh evidence that does not exist, where saying nothing
 // leaves the switch to be judged on the description above it.
-function decidedSoFar(row: KindAutonomy, t: Translator): string {
+function decidedSoFar(
+  row: KindAutonomy,
+  t: Translator,
+  locale: Locale,
+): string {
   const decided = row.approved_clean + row.approved_edited + row.rejected;
   if (decided === 0) {
     return t("autonomy.noRecord");
   }
+  // Magnitudes, so they group: a rep who has approved 1200 of these reads
+  // "1.200" in German beside every other figure on the page.
   return t("autonomy.record", {
-    clean: String(row.approved_clean),
-    edited: String(row.approved_edited),
-    rejected: String(row.rejected),
+    clean: formatNumber(row.approved_clean, locale),
+    edited: formatNumber(row.approved_edited, locale),
+    rejected: formatNumber(row.rejected, locale),
   });
 }
 
@@ -124,6 +131,7 @@ function kindHelp(kind: string, t: Translator): string {
 
 export function AutonomySettingsCard() {
   const t = useT();
+  const { locale } = useLocale();
   const query = useAutonomy();
   const update = useUpdateAutonomy();
 
@@ -138,7 +146,10 @@ export function AutonomySettingsCard() {
                 <SettingRow
                   key={row.kind}
                   label={kindLabel(row.kind, t)}
-                  description={[kindHelp(row.kind, t), decidedSoFar(row, t)]
+                  description={[
+                    kindHelp(row.kind, t),
+                    decidedSoFar(row, t, locale),
+                  ]
                     .filter(Boolean)
                     .join(" ")}
                   control={
