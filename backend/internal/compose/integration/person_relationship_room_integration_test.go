@@ -203,6 +203,85 @@ func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
 	}
 }
 
+// The other direction, which the test above passes without: a correction must
+// not outlive the value it was correcting.
+//
+// The sequence is real and every step of it is an ordinary day. A pass writes a
+// title; a human reads it, disagrees, and records their own; then something
+// writes a newer, better value to the same field — an accepted research claim,
+// a fresh enrichment, an edit through another door — and person_profile_field's
+// updated_at moves. Without a recency check the page keeps serving the human's
+// correction, and the reader is told the current value is one the record does
+// not hold. Asked what somebody's title is, an assistant answers with a value
+// no row carries, which reads as a hallucination and is a data contradiction.
+//
+// Driven against a REAL row rather than the ruling alone, because the ruling is
+// only half the fix: it has to be handed the date the VALUE took its current
+// form, and a reader passing the wrong clock would satisfy every unit case.
+func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO person_profile_field (id, person_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := personRoomService(e)
+	personID := ids.From[ids.PersonKind](mine)
+
+	before, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+	corrected := "Head of Business Development"
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "person", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *before[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+	// The correction stands over the value it was recorded against — the
+	// direction the test above pins, asserted here too so the case below is
+	// known to be testing recency rather than a broken overlay.
+	standing, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the correction: %v", err)
+	}
+	if standing[0].Value != corrected {
+		t.Fatalf("the correction did not apply at all (%q), so this case proves nothing", standing[0].Value)
+	}
+
+	// Now a newer answer replaces the value the human was looking at. The
+	// touch trigger moves updated_at; the value is what an accepted research
+	// claim would have written.
+	if _, err := owner.Exec(context.Background(), `UPDATE person_profile_field
+		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
+		 WHERE person_id = $1 AND field = 'title'`, mine); err != nil {
+		t.Fatalf("writing the newer value: %v", err)
+	}
+
+	after, err := svc.ProfileFields(rep, personID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the newer value: %v", err)
+	}
+	if after[0].Value != "Geschaeftsfuehrerin" {
+		t.Errorf("value = %q, want the newer stored answer — the correction outlived the value it was correcting", after[0].Value)
+	}
+	// And the marker goes with it. "corrected" beside a value the human never
+	// wrote says they wrote it.
+	if after[0].Verdict != nil {
+		t.Errorf("verdict marker = %q on a value recorded after it — the page says a human decided about an answer they never saw", *after[0].Verdict)
+	}
+	page, err := svc.Assemble(rep, personID)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.ProfileFields == nil || (*page.ProfileFields)[0].Value != "Geschaeftsfuehrerin" {
+		t.Error("the composite read served the stale correction the sidecar dropped")
+	}
+}
+
 // The write is gated on the SUBJECT's own grant. A caller who may read a
 // contact but not edit them cannot overrule what the system says about them.
 func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T) {

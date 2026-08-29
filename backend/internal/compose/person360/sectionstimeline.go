@@ -388,15 +388,26 @@ func (s *Service) applyFieldVerdicts(
 		if !found {
 			continue
 		}
-		verdict := crmcontracts.PersonProfileFieldVerdict(v.Verdict)
+		// AGAINST f.CapturedAt, which is this row's updated_at — when the
+		// value took its current form. A human's decision is about the answer
+		// that was in front of them, and something may have replaced it since:
+		// a machine fill cannot (it writes DO NOTHING over a row that exists),
+		// but an accepted research claim replaces the whole row and moves this
+		// date. A verdict older than that is about a value the record no
+		// longer holds, and ai.Verdict.AsOf is where that ruling lives.
+		decision, applies := v.AsOf(f.CapturedAt)
+		if !applies {
+			continue
+		}
+		verdict := crmcontracts.PersonProfileFieldVerdict(decision.Verdict)
 		f.Verdict = &verdict
-		f.VerdictNote = v.Note
-		if v.Verdict == ai.VerdictCorrected && v.CorrectedValue != nil {
+		f.VerdictNote = decision.Note
+		if decision.Verdict == ai.VerdictCorrected && decision.CorrectedValue != nil {
 			// The human's value stands. The captured snippet is left in place
 			// beneath it on purpose — what the machine read is still the
 			// evidence for why it got this wrong, and hiding it would leave the
 			// correction unexplainable.
-			f.Value = *v.CorrectedValue
+			f.Value = *decision.CorrectedValue
 		}
 	}
 	return fields, nil
