@@ -23029,9 +23029,19 @@ components:
     RenewContractRequest:
       type: object
       required: [title, value_basis]
-      description: The successor's terms. It freezes its own rate and inherits none.
+      description: |
+        The successor's terms. It freezes its own rate and inherits none — the counterparty
+        excepted, which comes from the predecessor because a renewal that changed companies would
+        be a different agreement wearing this one's history.
+
+        `deal_id` and `project_id` are the successor's OWN, exactly as on a create: a renewal is
+        usually won by its own opportunity, so inheriting the predecessor's would attribute the new
+        term to the deal that won the old one. Both must belong to the counterparty the successor
+        inherits, and a caller may not name one it cannot see.
       properties:
         title: { type: string, minLength: 1 }
+        deal_id: { type: [string, 'null'], format: uuid }
+        project_id: { type: [string, 'null'], format: uuid }
         contract_number: { type: [string, 'null'] }
         value_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }

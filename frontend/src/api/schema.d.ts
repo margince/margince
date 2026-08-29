@@ -16251,9 +16251,22 @@ export interface components {
              */
             cancellation_effective_on: string;
         };
-        /** @description The successor's terms. It freezes its own rate and inherits none. */
+        /**
+         * @description The successor's terms. It freezes its own rate and inherits none — the counterparty
+         *     excepted, which comes from the predecessor because a renewal that changed companies would
+         *     be a different agreement wearing this one's history.
+         *
+         *     `deal_id` and `project_id` are the successor's OWN, exactly as on a create: a renewal is
+         *     usually won by its own opportunity, so inheriting the predecessor's would attribute the new
+         *     term to the deal that won the old one. Both must belong to the counterparty the successor
+         *     inherits, and a caller may not name one it cannot see.
+         */
         RenewContractRequest: {
             title: string;
+            /** Format: uuid */
+            deal_id?: string | null;
+            /** Format: uuid */
+            project_id?: string | null;
             contract_number?: string | null;
             /** Format: int64 */
             value_minor?: number | null;

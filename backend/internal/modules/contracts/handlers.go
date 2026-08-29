@@ -216,12 +216,7 @@ func createInput(req crmcontracts.CreateContractRequest) (CreateContractInput, e
 	if req.ValueBasis != nil {
 		in.ValueBasis = string(*req.ValueBasis)
 	}
-	if req.DealId != nil {
-		in.DealID = &ids.DealID{UUID: ids.UUID(*req.DealId)}
-	}
-	if req.ProjectId != nil {
-		in.ProjectID = &ids.ProjectID{UUID: ids.UUID(*req.ProjectId)}
-	}
+	bindLinks(&in, req.DealId, req.ProjectId)
 	if req.AutoRenew != nil {
 		in.AutoRenew = *req.AutoRenew
 	}
@@ -245,6 +240,14 @@ func renewInput(req crmcontracts.RenewContractRequest) CreateContractInput {
 		ValueBasis:     string(req.ValueBasis),
 		Source:         "renewal",
 	}
+	// The work this term came out of, and it is the SUCCESSOR's rather than the
+	// predecessor's. A renewal is usually won by its own opportunity, so
+	// inheriting the old deal would attribute the new term to the one that won
+	// the old — and leaving it unset attaches the agreement to nothing at all,
+	// which is what put a renewed contract's PDF out of reach of every deal
+	// room. createContractTx checks both against the counterparty the successor
+	// inherits, so neither can name another company's record.
+	bindLinks(&in, req.DealId, req.ProjectId)
 	if req.AutoRenew != nil {
 		in.AutoRenew = *req.AutoRenew
 	}
@@ -254,6 +257,22 @@ func renewInput(req crmcontracts.RenewContractRequest) CreateContractInput {
 	in.RenewalOn = timePtr(req.RenewalOn)
 	in.SignedOn = timePtr(req.SignedOn)
 	return in
+}
+
+// bindLinks puts a request's optional deal and project onto the store input.
+//
+// One spelling for the create and the renewal alike: they are the same question
+// — which work this agreement came out of — and the store checks both the same
+// way (visible to the caller, and belonging to the contract's own counterparty).
+// Written twice, a change to how a link is bound would reach one door and not
+// the other, and the doors would disagree about the same field.
+func bindLinks(in *CreateContractInput, dealID, projectID *openapi_types.UUID) {
+	if dealID != nil {
+		in.DealID = &ids.DealID{UUID: ids.UUID(*dealID)}
+	}
+	if projectID != nil {
+		in.ProjectID = &ids.ProjectID{UUID: ids.UUID(*projectID)}
+	}
 }
 
 // timePtr converts a wire date into the store's time value.

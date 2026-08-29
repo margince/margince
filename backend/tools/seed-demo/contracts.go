@@ -61,7 +61,7 @@ func seedContracts(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (
 		if successors[contract.Ref] {
 			continue
 		}
-		if err := driveContract(c, contract, ids, refs, mode); err != nil {
+		if err := driveContract(c, cfg, contract, ids, refs, mode); err != nil {
 			return created, fmt.Errorf("contract %s: %w", contract.Ref, err)
 		}
 	}
@@ -151,7 +151,7 @@ func ensureContract(c *client, cfg demoConfig, contract demoContract, refs pipel
 
 // driveContract moves one contract to the state the dataset asks for. Each
 // step is skipped when it is already there, so a re-run changes nothing.
-func driveContract(c *client, contract demoContract, ids map[string]string, refs pipelineRefs, mode runMode) error {
+func driveContract(c *client, cfg demoConfig, contract demoContract, ids map[string]string, refs pipelineRefs, mode runMode) error {
 	if mode == modeDryRun {
 		return nil
 	}
@@ -165,7 +165,18 @@ func driveContract(c *client, contract demoContract, ids map[string]string, refs
 	}
 	// A terminal contract is finished with: re-asserting anything on it is
 	// refused, and a re-run must not try.
+	//
+	// Its SUCCESSOR is not finished with, though. A superseded predecessor
+	// means the renewal already happened, so nothing re-enters renewContract —
+	// and the successor is skipped by the drive loop too, because the renewal
+	// owns its row. A deal added to the successor's dataset entry after the
+	// first seed would then never be attached, which is the convergence
+	// ensureContract makes for an ordinary contract and this path owed for a
+	// renewed one.
 	if current == "cancelled" || current == "superseded" || current == "expired" {
+		if current == "superseded" && contract.RenewsInto != "" {
+			return repairSuccessorDeal(c, cfg, contract, id, refs)
+		}
 		return nil
 	}
 
@@ -180,7 +191,7 @@ func driveContract(c *client, contract demoContract, ids map[string]string, refs
 
 	switch {
 	case contract.RenewsInto != "":
-		return renewContract(c, contract, ids, refs)
+		return renewContract(c, cfg, contract, ids, refs)
 	case contract.Cancel != nil:
 		body := jsonBody{
 			"cancellation_notice_on":    refs.date(contract.Cancel.NoticeInDays),
@@ -207,7 +218,7 @@ func driveContract(c *client, contract demoContract, ids map[string]string, refs
 // the renewal replaces: renewing writes its OWN successor row, so the
 // placeholder is archived first and the dataset's second entry is what the
 // renewal is filled from.
-func renewContract(c *client, contract demoContract, ids map[string]string, refs pipelineRefs) error {
+func renewContract(c *client, cfg demoConfig, contract demoContract, ids map[string]string, refs pipelineRefs) error {
 	var terms demoContract
 	for _, candidate := range refs.contractsByRef {
 		if candidate.Ref == contract.RenewsInto {
@@ -219,6 +230,18 @@ func renewContract(c *client, contract demoContract, ids map[string]string, refs
 		return fmt.Errorf("renews_into names %q, which is not in this dataset", contract.RenewsInto)
 	}
 	body := jsonBody{"title": terms.Title, "value_basis": terms.ValueBasis, "auto_renew": terms.AutoRenew}
+	// The successor's OWN deal, from the successor's own dataset entry. A
+	// renewal inherits its counterparty and nothing else, so a successor that
+	// declares a deal and is not sent one is created attached to nothing — and
+	// its PDF is then out of reach of that deal's room, which is the blocker
+	// ensureContract already removes for an ordinary contract.
+	if terms.Deal != "" {
+		dealID, err := successorDealID(c, cfg, refs, terms)
+		if err != nil {
+			return err
+		}
+		body["deal_id"] = dealID
+	}
 	addIfSet(body, "contract_number", terms.ContractNumber)
 	if terms.ValueMinor > 0 {
 		body["value_minor"] = terms.ValueMinor
@@ -254,6 +277,80 @@ func renewContract(c *client, contract demoContract, ids map[string]string, refs
 		if err := c.post("/v1/contracts/"+successorID+"/status", jsonBody{"status": terms.Status}, nil); err != nil {
 			return fmt.Errorf("asserting the successor's status: %w", err)
 		}
+	}
+	return nil
+}
+
+// successorDealID resolves the deal a renewal successor declares, and REFUSES
+// rather than answering nothing.
+//
+// dealIDFor answers ("", nil) for a deal whose company this run did not seed,
+// which reads as "no deal" to a caller that only checks the error. Omitting it
+// would create the successor unattached — the exact defect this path exists to
+// fix — and unlike an ordinary contract nothing comes back to repair it on the
+// same run, because the renewal writes its row once.
+func successorDealID(c *client, cfg demoConfig, refs pipelineRefs, terms demoContract) (string, error) {
+	dealID, err := dealIDFor(c, cfg, refs, terms.Deal)
+	if err != nil {
+		return "", fmt.Errorf("contract %s: %w", terms.Ref, err)
+	}
+	if dealID == "" {
+		return "", fmt.Errorf("contract %s renews into a term that names deal %q, which this run has not seeded — "+
+			"a successor created without it is attached to nothing and its paperwork reaches no deal room",
+			terms.Ref, terms.Deal)
+	}
+	return dealID, nil
+}
+
+// repairSuccessorDeal attaches a successor's declared deal on a LATER run.
+//
+// The same convergence ensureContract performs for an ordinary contract, on the
+// one row it cannot reach: the successor is written by the renewal, so neither
+// the create loop nor the drive loop ever revisits it.
+func repairSuccessorDeal(c *client, cfg demoConfig, contract demoContract, predecessorID string, refs pipelineRefs) error {
+	var terms demoContract
+	for _, candidate := range refs.contractsByRef {
+		if candidate.Ref == contract.RenewsInto {
+			terms = candidate
+			break
+		}
+	}
+	if terms.Ref == "" || terms.Deal == "" {
+		return nil
+	}
+	// The predecessor NAMES its successor. Looking one up by title on the
+	// account would find whichever contract happens to share the name — two
+	// terms of one agreement legitimately do, and patching the wrong one puts
+	// the deal on a row nobody meant.
+	var predecessor struct {
+		SupersededByID string `json:"superseded_by_id"`
+	}
+	if err := c.get("/v1/contracts/"+predecessorID, nil, &predecessor); err != nil {
+		return fmt.Errorf("reading the superseded contract %s: %w", contract.Ref, err)
+	}
+	if predecessor.SupersededByID == "" {
+		return nil
+	}
+	var successor struct {
+		DealID     string  `json:"deal_id"`
+		ArchivedAt *string `json:"archived_at"`
+	}
+	if err := c.get("/v1/contracts/"+predecessor.SupersededByID, nil, &successor); err != nil {
+		return fmt.Errorf("reading successor %s: %w", terms.Ref, err)
+	}
+	// An ARCHIVED successor is left alone. A read by id still returns it — the
+	// estate is soft-delete — but a write to it is refused, so a repair here
+	// would fail and take every later phase of the seed with it, over a row
+	// somebody deliberately put away.
+	if successor.ArchivedAt != nil || successor.DealID != "" {
+		return nil
+	}
+	dealID, err := successorDealID(c, cfg, refs, terms)
+	if err != nil {
+		return err
+	}
+	if err := c.patch("/v1/contracts/"+predecessor.SupersededByID, jsonBody{"deal_id": dealID}, nil); err != nil {
+		return fmt.Errorf("attaching successor %s to its deal: %w", terms.Ref, err)
 	}
 	return nil
 }

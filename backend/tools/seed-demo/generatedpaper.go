@@ -70,7 +70,10 @@ func seedGeneratedContracts(c *client, refs pipelineRefs, plan map[string]profil
 			if isGeneratedSuccessor(contracts, contract.Ref) {
 				continue
 			}
-			if err := driveContract(c, contract, ids, local, mode); err != nil {
+			// The same empty config ensureContract is given above, for the same
+			// reason: a generated contract names no deal ref, so a renewal
+			// among them has nothing to resolve one against.
+			if err := driveContract(c, demoConfig{}, contract, ids, local, mode); err != nil {
 				return created, fmt.Errorf("contract for %s: %w", domain, err)
 			}
 		}

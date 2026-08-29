@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -105,6 +106,29 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 	}
 }
 
+// anActiveContract seeds the predecessor every renewal case needs: a live
+// agreement on a named company, activated so it can be renewed at all.
+//
+// Shared because the three cases differ only in what they RENEW INTO — a change
+// to the fixture's status vocabulary or its create shape would otherwise have to
+// be made in three places, and the one that was missed would keep passing until
+// it did not.
+func anActiveContract(t *testing.T, e *Env, org ids.UUID, title string) ids.ContractID {
+	t.Helper()
+	first, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
+		OrganizationID: ids.From[ids.OrganizationKind](org),
+		Title:          title, ValueBasis: contracts.BasisTotal, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.ContractKind](ids.UUID(first.Id))
+	if _, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 // A renewal creates the successor and supersedes the predecessor in ONE
 // transaction, so an agreement that has run for years reads as a chain rather
 // than a row somebody overwrote.
@@ -113,17 +137,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	org := e.SeedOrg(t, "Acme", nil)
 	admin := e.Admin()
 
-	first, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	predecessorID := ids.From[ids.ContractKind](ids.UUID(first.Id))
-	if _, err := e.Contracts.ChangeStatus(admin, predecessorID, contracts.StatusActive, nil); err != nil {
-		t.Fatal(err)
-	}
+	predecessorID := anActiveContract(t, e, org, "MSA 2026")
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal",
@@ -145,7 +159,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	// The successor inherits the counterparty rather than taking one from the
 	// request: a renewal that changed companies would be a different agreement
 	// wearing this one's history.
-	if successor.OrganizationId != first.OrganizationId {
+	if ids.UUID(successor.OrganizationId) != org {
 		t.Error("the successor names a different company than the agreement it renews")
 	}
 }
@@ -245,5 +259,87 @@ func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a contract outside the caller's scope: err = %v, want ErrNotFound (existence stays hidden)", err)
+	}
+}
+
+// A renewal names its OWN deal, and the successor keeps it.
+//
+// The successor inherits the counterparty and nothing else — the request's own
+// description says so — so a renewal that named no deal was created attached to
+// nothing at all. That is not a cosmetic gap: a contract's PDF reaches a deal
+// room only as an attachment on that room's deal, so a renewed agreement's
+// paperwork was unreachable from the room the renewal is discussed in.
+//
+// Its own deal rather than the predecessor's, because a renewal is usually won
+// by its own opportunity: inheriting would attribute the new term to the deal
+// that won the old one.
+func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	org := e.SeedOrg(t, "Acme", nil)
+	pipeline, open, _ := DealFixture(t, e)
+	orgID := ids.From[ids.OrganizationKind](org)
+	renewal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
+		Name: "Acme renewal 2027", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(renewal.Id))
+
+	predecessorID := anActiveContract(t, e, org, "MSA 2026")
+
+	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
+		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal", DealID: &dealID,
+	}, nil)
+	if err != nil {
+		t.Fatalf("renewing onto the renewal deal: %v", err)
+	}
+	if successor.DealId == nil {
+		t.Fatal("the successor names no deal, so its paperwork can reach no deal room — " +
+			"which is the whole reason the term was renewed against an opportunity")
+	}
+	if ids.UUID(*successor.DealId) != ids.UUID(renewal.Id) {
+		t.Errorf("successor deal = %v, want the deal the renewal named (%v)", *successor.DealId, renewal.Id)
+	}
+	// The counterparty is still the predecessor's, which is the one thing a
+	// renewal does inherit.
+	if ids.UUID(successor.OrganizationId) != org {
+		t.Errorf("successor organization = %v, want the predecessor's (%v)", successor.OrganizationId, org)
+	}
+}
+
+// And it cannot name ANOTHER company's deal. The successor's counterparty comes
+// from the predecessor, so the deal it names is checked against that — the same
+// check a create makes, reached now that a renewal can name one at all.
+func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	ours, theirs := e.SeedOrg(t, "Acme", nil), e.SeedOrg(t, "Globex", nil)
+	pipeline, open, _ := DealFixture(t, e)
+	theirOrgID := ids.From[ids.OrganizationKind](theirs)
+	elsewhere, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
+		Name: "Globex renewal", PipelineID: pipeline, StageID: open, OrganizationID: &theirOrgID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	predecessorID := anActiveContract(t, e, ours, "MSA 2026")
+
+	elsewhereID := ids.From[ids.DealKind](ids.UUID(elsewhere.Id))
+	if _, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
+		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal", DealID: &elsewhereID,
+	}, nil); err == nil {
+		t.Fatal("renewed Acme's agreement onto Globex's deal — the successor's deal must belong to " +
+			"the counterparty it inherits, or the chain and the opportunity name two different companies")
+	}
+	// And the predecessor is untouched: a refused renewal supersedes nothing.
+	predecessor, err := e.Contracts.GetContract(admin, predecessorID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if predecessor.Status == nil || string(*predecessor.Status) != contracts.StatusActive {
+		t.Errorf("predecessor status = %v after a refused renewal, want it still active", predecessor.Status)
 	}
 }
