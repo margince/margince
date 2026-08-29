@@ -20,9 +20,13 @@ package privacy
 // nothing.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,6 +44,35 @@ import (
 var nonNarrowingFilterFields = gatekit.Waive(map[string]string{
 	"Limit": "page size, not a predicate: it bounds how many rows come back rather than which, and the statement's LIMIT is appended by the caller so the same $-numbering stays contiguous",
 })
+
+// narrowingClauses is the predicate each filter field must render — the COLUMN
+// and the OPERATOR, not merely "something changed".
+//
+// Declared rather than derived, because deriving it from the code under test is
+// how a check agrees with whatever the code does. `AND (a.actor_id <> $1 OR
+// a.actor_id = $1)` differs from the empty clause and binds an argument, and
+// narrows nothing; so does the right column with the wrong comparison, which is
+// the shape that answers a window nobody asked for. A field with no entry here
+// FAILS: a new filter has to say what it means before the census will pass it.
+//
+// The fragments are what the clause must CONTAIN, with the placeholder number
+// left off because it depends on which other filters are set.
+// gatekit:fixture the predicate each audit filter is required to render
+var narrowingClauses = map[string]string{
+	"Actor":      "a.actor_id = $",
+	"EntityType": "a.entity_type = $",
+	"EntityID":   "a.entity_id = $",
+	"Action":     "a.action = $",
+	// The window bounds are the pair a census cannot tell apart on its own:
+	// swapped, they narrow as much and bind as many arguments, and answer
+	// everything before Monday to somebody who asked what happened since.
+	"From": "a.occurred_at >= $",
+	"To":   "a.occurred_at <= $",
+	// The keyset continues the newest-first ORDER BY the caller appends, so it
+	// is a TUPLE comparison and strictly less-than: `<=` would re-serve the
+	// last row of the previous page on every page.
+	"Cursor": "(a.occurred_at, a.id) < ($",
+}
 
 // placeholderRe finds a bind placeholder in a rendered clause.
 var placeholderRe = regexp.MustCompile(`\$(\d+)`)
@@ -83,12 +116,24 @@ func TestEveryAuditFilterFieldNarrowsTheRead(t *testing.T) {
 			if len(args) == 0 {
 				t.Errorf("%s narrowed the clause with no bound argument — a value spliced into SQL rather than bound", name)
 			}
+			want, declared := narrowingClauses[name]
+			if !declared {
+				t.Fatalf("%s narrows the read and narrowingClauses does not say how — a filter whose column and operator nobody declared is one a wrong comparison passes unnoticed", name)
+			}
+			if !strings.Contains(where, want) {
+				t.Errorf("%s rendered %q, which does not carry %q — the clause differs from the empty one and still asks the wrong question", name, where, want)
+			}
 			assertPlaceholdersMatchArgs(t, where, args)
 		})
 		judged++
 	}
 	// A census that judged nothing certifies nothing. AuditFilter has never
 	// had fewer than the six narrowing fields the contract publishes.
+	for name := range narrowingClauses {
+		if _, found := shape.FieldByName(name); !found {
+			t.Errorf("narrowingClauses declares a predicate for %q, which AuditFilter no longer has — a stale declaration is a column nobody is checking", name)
+		}
+	}
 	if judged < 6 {
 		t.Fatalf("this census judged %d field(s) and expects at least 6 — the struct reader has stopped seeing fields rather than the filter having lost them", judged)
 	}
@@ -231,4 +276,90 @@ func TestEveryPublishedAuditFilterReachesTheStore(t *testing.T) {
 			t.Errorf("AuditFilter carries %q and the contract publishes no such parameter — the narrowing exists and nobody can ask for it", stored.Field(i).Name)
 		}
 	}
+}
+
+// TestTheHandlerCarriesEveryPublishedFilterIntoTheStore — the third link, and
+// the one the two structural checks above leave open between them.
+//
+// Their chain is: the contract publishes a parameter, AuditFilter carries a
+// field of that name, and every field of AuditFilter narrows the read. Nothing
+// in it looks at the LINE that joins the first two. Delete `Action:
+// params.Action` from ListAuditLog and both structs still carry the field, both
+// checks still pass, and a documented, accepted filter is silently ignored —
+// the widest answer of all, because the caller has been told it works.
+//
+// Read from the SOURCE rather than driven through the handler, because driving
+// it proves one parameter at a time and this has to be a census: a field
+// nobody wrote a case for is exactly the field that gets dropped. The handler
+// binds in two shapes — a key in the AuditFilter literal, and an assignment to
+// f.<Field> below it for the id that needs converting — so both count.
+func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
+	t.Parallel()
+	file, err := parser.ParseFile(token.NewFileSet(), "handlers.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing the handler: %v", err)
+	}
+	handler := funcNamed(file, "ListAuditLog")
+	if handler == nil {
+		t.Fatal("privacy has no ListAuditLog handler — this census is reading a file that no longer holds the mapping")
+	}
+	bound := boundFilterFields(handler)
+
+	shape := reflect.TypeOf(AuditFilter{})
+	for i := range shape.NumField() {
+		name := shape.Field(i).Name
+		if !bound[name] {
+			t.Errorf("ListAuditLog never carries %s out of its parameters — the contract publishes the filter, the store declares the field, and the request drops it in between: the caller is answered the unnarrowed list and told nothing",
+				name)
+		}
+	}
+	if len(bound) < shape.NumField() {
+		t.Errorf("the handler binds %d of AuditFilter's %d fields", len(bound), shape.NumField())
+	}
+}
+
+// boundFilterFields names the AuditFilter fields the handler sets from
+// something, in either shape it uses.
+func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
+	bound := map[string]bool{}
+	ast.Inspect(handler.Body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.CompositeLit:
+			if name, ok := node.Type.(*ast.Ident); !ok || name.Name != "AuditFilter" {
+				return true
+			}
+			for _, element := range node.Elts {
+				pair, ok := element.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				if key, ok := pair.Key.(*ast.Ident); ok {
+					bound[key.Name] = true
+				}
+			}
+		case *ast.AssignStmt:
+			for _, target := range node.Lhs {
+				field, ok := target.(*ast.SelectorExpr)
+				if !ok {
+					continue
+				}
+				if receiver, ok := field.X.(*ast.Ident); ok && receiver.Name == "f" {
+					bound[field.Sel.Name] = true
+				}
+			}
+		}
+		return true
+	})
+	return bound
+}
+
+// funcNamed finds one top-level function in a parsed file.
+func funcNamed(file *ast.File, name string) *ast.FuncDecl {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if ok && fn.Name.Name == name {
+			return fn
+		}
+	}
+	return nil
 }

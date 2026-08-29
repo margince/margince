@@ -171,6 +171,12 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 		{name: "the window around it", from: &before, to: &after, wantIsSome: true},
 		{name: "a window that opens after it", from: &after, wantIsSome: false},
 		{name: "a window that closes before it", to: &before, wantIsSome: false},
+		// The bounds are INCLUSIVE, which the offset cases above cannot show:
+		// `>` and `<` narrow the same rows an hour out, and drop the row that
+		// happened exactly on the boundary. An auditor asking what happened
+		// from 09:00 means to be shown 09:00.
+		{name: "the lower bound includes the moment itself", from: &stamped, wantIsSome: true},
+		{name: "the upper bound includes the moment itself", to: &stamped, wantIsSome: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			page, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{
