@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -475,3 +476,30 @@ func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, personID ids.Perso
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// deadAddressesSection derives which of the person's addresses last refused a
+// delivery, from the send ledger the page's transaction already sees. Absent
+// addresses are simply not dead; the section reports the sorted survivors so
+// the page and the identity card agree on order.
+func (s *Service) deadAddressesSection(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+	if out.Person.Emails == nil || len(*out.Person.Emails) == 0 {
+		empty := []string{}
+		out.DeadAddresses = &empty
+		return nil
+	}
+	addresses := make([]string, 0, len(*out.Person.Emails))
+	for _, email := range *out.Person.Emails {
+		addresses = append(addresses, string(email.Email))
+	}
+	dead, err := s.comms.DeadAddressesTx(ctx, tx, addresses)
+	if err != nil {
+		return err
+	}
+	marked := make([]string, 0, len(dead))
+	for address := range dead {
+		marked = append(marked, address)
+	}
+	sort.Strings(marked)
+	out.DeadAddresses = &marked
+	return nil
+}

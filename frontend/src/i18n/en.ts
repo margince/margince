@@ -6377,6 +6377,7 @@ export const en = {
   "person.pulse.arithmetic":
     "Score {score}/100 = 100 x recency {recency} x frequency {frequency} x reciprocity {reciprocity}. Computed at read from captured cadence, never stored.",
   "person.identity.title": "Identity",
+  "person.identity.emailDead": "Bounces — mail to this address is not arriving",
   "person.identity.email": "Email",
   "person.identity.phone": "Phone",
   "person.identity.currentRole": "Current role",

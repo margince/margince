@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -50,6 +51,7 @@ type Service struct {
 	deals    *deals.Store
 	projects *projects.Store
 	consent  *consent.Store
+	comms    *comms.Store
 	// feedback is the correction ledger, consulted so a moment a human
 	// dismissed does not come back.
 	feedback *ai.FeedbackStore
@@ -68,12 +70,13 @@ func NewService(
 	dealsStore *deals.Store,
 	projectStore *projects.Store,
 	consentStore *consent.Store,
+	commsStore *comms.Store,
 	feedbackStore *ai.FeedbackStore,
 	now func() time.Time,
 ) *Service {
 	return &Service{
 		pool: pool, people: peopleStore, deals: dealsStore, projects: projectStore,
-		consent: consentStore, feedback: feedbackStore, now: now,
+		consent: consentStore, comms: commsStore, feedback: feedbackStore, now: now,
 	}
 }
 
@@ -209,6 +212,9 @@ func (s *Service) sections(personID ids.PersonID, now time.Time, opts AssembleOp
 		}},
 		{name: crmcontracts.Person360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.consentSection(ctx, tx, personID, out)
+		}},
+		{name: crmcontracts.DeadAddresses, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
+			return s.deadAddressesSection(ctx, tx, out)
 		}},
 		{name: crmcontracts.Person360SectionsOmittedProfileFields, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Person360) error {
 			return s.profileFieldsSection(ctx, tx, personID, out)

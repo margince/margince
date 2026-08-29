@@ -24,8 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -43,6 +45,7 @@ func meetingBriefReader(pool *pgxpool.Pool) agents.MeetingBriefReader {
 	peopleStore := people.NewStore(InstallationDB(pool))
 	view := person360.NewService(pool, peopleStore, deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
 		consent.NewStore(InstallationDB(pool)),
+		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))),
 		ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
 	service := meetingbrief.NewService(pool, view, peopleStore, time.Now)
 	return func(ctx context.Context, activityID ids.UUID) (agents.MeetingBriefResult, error) {

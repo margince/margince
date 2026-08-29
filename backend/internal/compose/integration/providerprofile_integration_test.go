@@ -125,7 +125,7 @@ func connectProvider(t *testing.T, e *Env) {
 func person360Service(e *Env) *person360.Service {
 	reg, _ := integrations.NewRegistry(integrations.NewOfflineProvider(0, time.Now))
 	return person360.NewService(e.Pool, people.NewStore(e.DB()), e.Deals, e.Projects,
-		consent.NewStore(e.DB()), ai.NewFeedbackStore(e.DB()), time.Now).WithProviders(reg)
+		consent.NewStore(e.DB()), nil, ai.NewFeedbackStore(e.DB()), time.Now).WithProviders(reg)
 }
 
 // Everything the offline provider returns reaches the page. Each assertion

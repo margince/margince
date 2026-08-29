@@ -87,7 +87,7 @@ func withoutGrant(perms principal.Permissions, object string) principal.Permissi
 
 func personRoomService(e *Env) *person360.Service {
 	return person360.NewService(e.Pool, e.People, e.Deals, e.Projects, consent.NewStore(e.DB()),
-		ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
+		nil, ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
 }
 
 // A contact outside the caller's row scope must be a NOT FOUND, never an empty

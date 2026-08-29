@@ -6277,6 +6277,8 @@ export const vi = {
   "person.pulse.arithmetic":
     "Điểm {score}/100 = 100 x độ gần đây {recency} x tần suất {frequency} x mức qua lại {reciprocity}. Tính lúc đọc từ nhịp trao đổi đã thu thập, không bao giờ lưu lại.",
   "person.identity.title": "Danh tính",
+  "person.identity.emailDead":
+    "Bị trả lại — thư gửi tới địa chỉ này không đến nơi",
   "person.identity.email": "Email",
   "person.identity.phone": "Điện thoại",
   "person.identity.currentRole": "Vai trò hiện tại",

@@ -260,7 +260,21 @@ export function IdentityRail({
               ...(view.person.emails ?? []).map((e) => ({
                 key: `email-${e.id}`,
                 term: t("person.identity.email"),
-                value: e.email,
+                // The dead marker is DERIVED from the send ledger — the
+                // latest delivery to this address hard-bounced and nothing
+                // has arrived since — so a later send that works clears it
+                // on its own. Absent section (no activity grant) marks
+                // nothing rather than guessing.
+                value: (view.dead_addresses ?? []).includes(e.email) ? (
+                  <>
+                    {e.email}{" "}
+                    <Badge tone="danger">
+                      {t("person.identity.emailDead")}
+                    </Badge>
+                  </>
+                ) : (
+                  e.email
+                ),
               })),
               ...(view.person.phones ?? []).map((p) => ({
                 key: `phone-${p.id}`,
