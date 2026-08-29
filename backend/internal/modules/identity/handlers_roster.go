@@ -102,22 +102,28 @@ func rosterUserMapping(isAdmin bool) func(userRow) crmcontracts.User {
 	return wireUser
 }
 
-// wireUserWithRoles is the admin view of a member: wireUser plus the role
-// keys the admin card renders and acts on. Splitting it from wireUser makes
-// the disclosure gate structural — a caller that has not been checked for
-// admin cannot reach the roles by forgetting a flag.
+// wireUserWithRoles is the admin view of a user: wireUser plus the role keys
+// and team memberships the admin card renders and acts on. Splitting it from
+// wireUser makes the disclosure gate structural — a caller that has not been
+// checked for admin cannot reach either by forgetting a flag.
 //
-// A row whose read did not ask for the keys (nil, not empty) is answered
-// WITHOUT the field rather than with an empty one: "[]" on the wire means the
-// member holds no role, and claiming that about someone who may hold several
-// is worse than saying nothing.
+// A row whose read did not ask for a field (nil, not empty) is answered
+// WITHOUT it rather than with an empty one: "[]" on the wire means the user
+// holds no role and is in no team, and claiming that about someone who may
+// hold several is worse than saying nothing.
 func wireUserWithRoles(u userRow) crmcontracts.User {
 	wire := wireUser(u)
-	if u.Roles == nil {
-		return wire
+	if u.Roles != nil {
+		roles := u.Roles
+		wire.Roles = &roles
 	}
-	roles := u.Roles
-	wire.Roles = &roles
+	if u.TeamIDs != nil {
+		teams := make([]openapi_types.UUID, 0, len(u.TeamIDs))
+		for _, id := range u.TeamIDs {
+			teams = append(teams, openapi_types.UUID(id))
+		}
+		wire.TeamIds = &teams
+	}
 	return wire
 }
 

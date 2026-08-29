@@ -5682,6 +5682,8 @@ export const en = {
   "users.inviteTitle": "Invite a user",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
+  "users.teamMembersLabel": "Who is in this team",
+  "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here.",

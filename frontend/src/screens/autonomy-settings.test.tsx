@@ -47,7 +47,7 @@ function row(kind: string, mode: "manual" | "auto", clean = 0): Row {
 // the behaviour the card's cache update depends on.
 function backendFor(rows: Row[]) {
   let state = rows;
-  let patches: unknown[] = [];
+  const patches: unknown[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =

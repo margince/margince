@@ -137,7 +137,6 @@ backend/internal/modules/customfields/service.go core 0063
 backend/internal/modules/deals/offer.go core 0217
 backend/internal/modules/identity/oauth_lend.go migration 0172
 backend/internal/modules/identity/roles.go migration 0211
-backend/internal/modules/identity/service.go migration 0268
 backend/internal/modules/overlay/freshness_integration_test.go core 0217
 backend/internal/modules/overlay/teardown.go core 0012
 backend/internal/modules/overlay/teardown_integration_test.go core 0012

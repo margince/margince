@@ -25839,6 +25839,9 @@ type User struct {
 	Roles  *[]string  `json:"roles,omitempty"`
 	Status UserStatus `json:"status"`
 
+	// TeamIds The live teams this user belongs to, newest membership last. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
+	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
+
 	// Timezone IANA name.
 	Timezone  *string    `json:"timezone,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`

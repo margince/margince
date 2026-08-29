@@ -5579,6 +5579,8 @@ export const vi = {
   "users.inviteTitle": "Mời một người dùng",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm.",
+  "users.teamNobodyToAdd": "Chưa có người dùng nào để thêm.",
+  "users.teamMembersLabel": "Ai ở trong nhóm này",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
     "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì chưa có quyền gì thêm — khách hàng, liên hệ, lead và deal ở đây ai cũng đọc được.",
