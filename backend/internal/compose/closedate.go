@@ -40,8 +40,37 @@ type closeDateStager struct {
 	svc *approvals.Service
 }
 
+// The two payload keys the staging identity is drawn from. Named because the
+// identity and the payload must spell them the same way — canonicalIdentity
+// refuses an identity field the payload does not carry, so a typo in either
+// literal is a staging that fails at runtime rather than at compile time.
+//
+// Deliberately not replayscope's offerDealField, which happens to hold the same
+// text: that one names a URL path segment on the offer routes, and binding an
+// approval payload's shape to a router's would make either one unmovable.
+const (
+	closeDateIdentityDeal     = "deal_id"
+	closeDateIdentityStanding = "standing_close_date"
+)
+
 func (s closeDateStager) HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error) {
 	return s.svc.HasPendingKind(ctx, deals.CloseDateCorrectionKind, dealID)
+}
+
+// HasRefusedCorrection reads the memory's own record: any rejected correction
+// against this deal.
+//
+// It asks whether ONE was refused rather than which, because its caller is the
+// keep-alive branch and that branch proposes no change to weigh — it re-offers
+// the date the sweep already wrote, which is the date the rep declined to have
+// set. The staging path keeps the finer answer for the branch that does propose
+// a change, where a new standing date is a new question.
+func (s closeDateStager) HasRefusedCorrection(ctx context.Context, dealID ids.UUID) (bool, error) {
+	refused, err := s.svc.RejectedChangesFor(ctx, deals.CloseDateCorrectionKind, dealID)
+	if err != nil {
+		return false, err
+	}
+	return len(refused) > 0, nil
 }
 
 func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal deals.CloseDateCorrection) error {
@@ -53,14 +82,37 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 	if err != nil {
 		return fmt.Errorf("compose: canonicalize close-date proposal: %w", err)
 	}
-	_, err = s.svc.Stage(ctx, approvals.StageInput{
+	// The logical identity is the deal AND the date it currently holds — the two
+	// fields that say WHICH correction this is.
+	//
+	// It must not carry the PROPOSED date. That one is recomputed against
+	// "today" on every pass, so an identity holding it makes each night's
+	// proposal a different one and the rejection memory recognises nothing: the
+	// rep's "no" comes back as the same question tomorrow morning.
+	//
+	// It must not be the deal ALONE either. A decline is remembered with no
+	// expiry, so a deal-only identity lets one "no" bury every future correction
+	// on that deal — the rep refuses a date, sets their own three weeks later,
+	// that one goes stale in turn, and nobody is ever told. The standing date is
+	// what separates those: unchanged while the rep has not moved it, and new
+	// exactly when they have, which is exactly when the question is a fresh one.
+	identity, err := json.Marshal(map[string]string{
+		closeDateIdentityDeal:     proposal.DealID.String(),
+		closeDateIdentityStanding: proposal.StandingCloseDate,
+	})
+	if err != nil {
+		return fmt.Errorf("compose: marshal close-date identity: %w", err)
+	}
+	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
 		Kind:           deals.CloseDateCorrectionKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
+		Identity:       identity,
 		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		TargetVersion:  &targetVersion,
 		Summary:        summary,
+		JoinPending:    true,
 	})
 	return err
 }
