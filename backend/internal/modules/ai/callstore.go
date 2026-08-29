@@ -295,7 +295,20 @@ func classifyError(err error) string {
 		return "budget_deferred"
 	case errors.Is(err, errMeteringFailed):
 		return "metering_failed"
+	case errors.Is(err, errBudgetUnavailable):
+		return "budget_unavailable"
+	case errors.Is(err, errRequestFailed):
+		return "request_failed"
 	default:
 		return "provider_error"
 	}
 }
+
+// The two non-provider failure classes the trace store distinguishes so an
+// operator can tell a flaky vendor from our own outage or a request that
+// never reached routing: a budget read that broke, and a caller-side
+// preparation that died before any model was tried.
+var (
+	errBudgetUnavailable = errors.New("ai: the budget could not be read")
+	errRequestFailed     = errors.New("ai: the request failed before routing")
+)

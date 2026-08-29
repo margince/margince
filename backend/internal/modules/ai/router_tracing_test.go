@@ -557,3 +557,50 @@ func TestCaptureOffRecordsNoPayload(t *testing.T) {
 		t.Fatal("capture off must record no payload")
 	}
 }
+
+// A budget READ that breaks is a real failure of work the caller asked for,
+// and it lands on the trace under its own sentinel — unlike a budget
+// DEFERRAL, which is pacing and deliberately stays silent (the hard-cap test
+// beside this holds that arm).
+func TestABudgetReadFailureIsTracedRatherThanSilent(t *testing.T) {
+	calls := &fakeCallStore{}
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &brokenMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r.calls = calls
+	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+	if err == nil {
+		t.Fatal("a broken budget read served a completion")
+	}
+	if len(calls.recorded) != 1 {
+		t.Fatalf("recorded %d trace rows, want the failed preflight traced", len(calls.recorded))
+	}
+	if calls.recorded[0].ErrorSentinel != "budget_unavailable" {
+		t.Fatalf("sentinel = %q, want budget_unavailable — an accounting outage must not read as a provider fault", calls.recorded[0].ErrorSentinel)
+	}
+}
+
+// A caller-side preparation failure reaches the rail through the same
+// detached flush a served call uses, labelled as a request that never
+// reached routing — never as a provider fault.
+func TestAnAnnouncedRequestFailureIsTracedUnderItsOwnSentinel(t *testing.T) {
+	calls := &fakeCallStore{}
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+	r.calls = calls
+	r.AnnounceRequestFailure(wsContext(t), TaskSummarize, errors.New("company context would not render"))
+	if len(calls.recorded) != 1 {
+		t.Fatalf("recorded %d trace rows, want exactly one", len(calls.recorded))
+	}
+	if calls.recorded[0].ErrorSentinel != "request_failed" {
+		t.Fatalf("sentinel = %q, want request_failed", calls.recorded[0].ErrorSentinel)
+	}
+	if calls.recorded[0].Task != TaskSummarize {
+		t.Fatalf("task = %q, want the announced task", calls.recorded[0].Task)
+	}
+}
+
+// brokenMeter is a usage store whose month read fails — the accounting
+// outage the traced-preflight test above exercises.
+type brokenMeter struct{ memMeter }
+
+func (*brokenMeter) MonthTokens(context.Context) (int64, error) {
+	return 0, errors.New("the usage store is unreachable")
+}
