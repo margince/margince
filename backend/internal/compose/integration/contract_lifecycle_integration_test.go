@@ -106,6 +106,29 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 	}
 }
 
+// anActiveContract seeds the predecessor every renewal case needs: a live
+// agreement on a named company, activated so it can be renewed at all.
+//
+// Shared because the three cases differ only in what they RENEW INTO — a change
+// to the fixture's status vocabulary or its create shape would otherwise have to
+// be made in three places, and the one that was missed would keep passing until
+// it did not.
+func anActiveContract(t *testing.T, e *Env, org ids.UUID, title string) ids.ContractID {
+	t.Helper()
+	first, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
+		OrganizationID: ids.From[ids.OrganizationKind](org),
+		Title:          title, ValueBasis: contracts.BasisTotal, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.ContractKind](ids.UUID(first.Id))
+	if _, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 // A renewal creates the successor and supersedes the predecessor in ONE
 // transaction, so an agreement that has run for years reads as a chain rather
 // than a row somebody overwrote.
@@ -114,17 +137,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	org := e.SeedOrg(t, "Acme", nil)
 	admin := e.Admin()
 
-	first, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	predecessorID := ids.From[ids.ContractKind](ids.UUID(first.Id))
-	if _, err := e.Contracts.ChangeStatus(admin, predecessorID, contracts.StatusActive, nil); err != nil {
-		t.Fatal(err)
-	}
+	predecessorID := anActiveContract(t, e, org, "MSA 2026")
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal",
@@ -146,7 +159,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 	// The successor inherits the counterparty rather than taking one from the
 	// request: a renewal that changed companies would be a different agreement
 	// wearing this one's history.
-	if successor.OrganizationId != first.OrganizationId {
+	if ids.UUID(successor.OrganizationId) != org {
 		t.Error("the successor names a different company than the agreement it renews")
 	}
 }
@@ -274,16 +287,7 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(renewal.Id))
 
-	first, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: orgID, Title: "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	predecessorID := ids.From[ids.ContractKind](ids.UUID(first.Id))
-	if _, err := e.Contracts.ChangeStatus(admin, predecessorID, contracts.StatusActive, nil); err != nil {
-		t.Fatal(err)
-	}
+	predecessorID := anActiveContract(t, e, org, "MSA 2026")
 
 	successor, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
 		Title: "MSA 2027", ValueBasis: contracts.BasisAnnualized, Source: "renewal", DealID: &dealID,
@@ -321,17 +325,7 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	first, err := e.Contracts.CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](ours),
-		Title:          "MSA 2026", ValueBasis: contracts.BasisTotal, Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	predecessorID := ids.From[ids.ContractKind](ids.UUID(first.Id))
-	if _, err := e.Contracts.ChangeStatus(admin, predecessorID, contracts.StatusActive, nil); err != nil {
-		t.Fatal(err)
-	}
+	predecessorID := anActiveContract(t, e, ours, "MSA 2026")
 
 	elsewhereID := ids.From[ids.DealKind](ids.UUID(elsewhere.Id))
 	if _, err := e.Contracts.Renew(admin, predecessorID, contracts.CreateContractInput{
