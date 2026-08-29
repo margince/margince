@@ -269,7 +269,13 @@ func bindRequest(built map[string]bool, lhs, rhs []ast.Expr, client string) {
 		return
 	}
 	call, isCall := rhs[0].(*ast.CallExpr)
-	if !isCall || !isRequestConstructor(call, client) {
+	// Only a NewRequest* result. The convenience forms answer a RESPONSE and
+	// send the request inside the call, so binding what they return would let
+	// `resp.Header.Set("User-Agent", …)` — a write to a copy of what came back
+	// — count as naming a request that has already gone anonymously. They stay
+	// in the detection above, where being anonymous by construction is the
+	// whole point.
+	if !isCall || !buildsAnOwnedRequest(call, client) {
 		return
 	}
 	if name, isIdent := lhs[0].(*ast.Ident); isIdent {
@@ -309,6 +315,19 @@ func isDefaultClient(expr ast.Expr, client string) bool {
 	}
 	pkg, isIdent := selector.X.(*ast.Ident)
 	return isIdent && pkg.Name == client
+}
+
+// buildsAnOwnedRequest matches only the constructors that hand BACK a request —
+// the ones whose headers the caller still owns.
+func buildsAnOwnedRequest(call *ast.CallExpr, client string) bool {
+	switch fn := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		pkg, isIdent := fn.X.(*ast.Ident)
+		return isIdent && pkg.Name == client && strings.HasPrefix(fn.Sel.Name, "NewRequest")
+	case *ast.Ident:
+		return client == "" && strings.HasPrefix(fn.Name, "NewRequest")
+	}
+	return false
 }
 
 // startsARequest names the net/http functions that put a request on the wire.
@@ -420,6 +439,16 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 			name: "the shared client's convenience call is one of these too",
 			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
 				"\tresp, _ := http.DefaultClient.Get(\"https://x.test\")\n\t_ = resp\n}\n",
+			want: 1,
+		},
+		{
+			// The response is not the request. A convenience call has already
+			// gone by the time it answers, so writing the agent onto what came
+			// back names nothing.
+			name: "naming the caller on a convenience call's response is not naming it",
+			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
+				"\tresp, _ := http.Get(\"https://x.test\")\n" +
+				"\tresp.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n}\n",
 			want: 1,
 		},
 		{
