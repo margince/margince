@@ -118,6 +118,19 @@ func writesARow(file *ast.File) bool {
 // table to read and fail on its own unreadable-argument arm — a gate failing
 // over a file that writes nothing. And a package that does not import storekit
 // cannot be calling it at all.
+//
+// The import is as far as this can be narrowed, and the residual is stated
+// rather than left to be discovered: a file that imports storekit AND declares
+// its own four-argument method under one of these names is counted here on the
+// name alone. Narrowing further by QUALIFIER — checking the selector reaches
+// the storekit identifier — is what the shapes rule out: a third of the tree's
+// applier calls are methods on a `*storekit.Patch` value whose receiver is
+// named by its holder (`p.ApplyGuarded`), so that check would stop recognising
+// them. Between the two, this gate over-recognises: an extra package joins the
+// walk and either attributes nothing or fails LOUDLY on the table it cannot
+// read, where the qualifier check drops real writers SILENTLY and every table
+// they own goes back to being unowned — the direction a census is not allowed
+// to fail in.
 func callsAStorekitApplier(file *ast.File) bool {
 	if imported, _ := gatekit.ImportedAs(file, storekitImportPath); imported == "" {
 		return false
@@ -202,6 +215,10 @@ func TestAStorekitOnlyWriterIsDiscovered(t *testing.T) {
 		want   bool
 	}{
 		{
+			// The applier as a METHOD on a storekit value, which is a third of
+			// the tree's call sites and the reason `callsAStorekitApplier`
+			// cannot narrow to calls that reach the storekit identifier: the
+			// receiver here is named by whoever holds the patch.
 			name: "an applier call with no SQL in the file",
 			source: withStorekit("func write(p *storekit.Patch, tx pgx.Tx) error {\n" +
 				"\treturn p.ApplyWithVersion(ctx, tx, \"vault_secret\", id, version)\n}\n"),

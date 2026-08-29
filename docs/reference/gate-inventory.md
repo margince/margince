@@ -67,7 +67,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (71)
+## Census (72)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
