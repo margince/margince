@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // The name shapes that put one company in a workspace twice, each pinned above
@@ -128,4 +131,138 @@ func TestAnEvidenceApplyOwesTheNameLockWheneverItCarriesANameField(t *testing.T)
 			}
 		})
 	}
+}
+
+// The same debt on the update path, and its second channel.
+//
+// An update writes a name two ways: it supplies one, or it CLEARS one. Both end
+// in the patch's after-image and both trigger the re-check, but only the
+// supplied value was ever asked about — so `Clear: ["legal_name"]` took the row
+// lock through the guarded write and then reached for the name lock inside the
+// re-check, which is the ordering lockOrgNameWrites exists to forbid.
+//
+// The clearable fields are read from the map that decides what is clearable at
+// all, rather than listed here: a name that becomes clearable later is covered
+// on the day it does, not on the day somebody remembers this test.
+func TestAnUpdateOwesTheNameLockThroughEitherChannelThatWritesAName(t *testing.T) {
+	t.Run("a supplied name", func(t *testing.T) {
+		display, legal := "Baqend", "Baqend GmbH"
+		for name, in := range map[string]UpdateOrganizationInput{
+			"display": {DisplayName: &display},
+			"legal":   {LegalName: &legal},
+		} {
+			if !renamesAnOrganization(in) {
+				t.Errorf("a supplied %s name owes the lock and was not asked for it", name)
+			}
+		}
+	})
+
+	t.Run("a cleared name", func(t *testing.T) {
+		names := 0
+		for field, clearable := range clearableOrganizationColumns(crmcontracts.Organization{}) {
+			owes := renamesAnOrganization(UpdateOrganizationInput{Clear: []string{field}})
+			if !orgNameColumns[clearable.Column] {
+				// The other end: the lock is workspace-wide, so a clear that
+				// writes no name must NOT pay for it.
+				if owes {
+					t.Errorf("clearing %q writes %s, which is no name, and it took the workspace-wide lock anyway",
+						field, clearable.Column)
+				}
+				continue
+			}
+			names++
+			if !owes {
+				t.Errorf("clearing %q writes %s and owes the name lock", field, clearable.Column)
+			}
+		}
+		// Without this the loop above proves nothing on the day no name is
+		// clearable any more — every case would fall through the non-name arm
+		// and the test would pass over a question it never asked.
+		if names == 0 {
+			t.Fatal("no clearable field writes a name column, so this test checked nothing")
+		}
+	})
+
+	t.Run("an edit that touches no name", func(t *testing.T) {
+		owner := "somebody"
+		if renamesAnOrganization(UpdateOrganizationInput{
+			Industry: &owner, Clear: []string{"description", "industry"},
+		}) {
+			t.Error("an edit writing no name column took the workspace-wide lock")
+		}
+	})
+}
+
+// An ECHO is not a rename, and both the fuzzy scan and the geocode lookup used
+// to treat it as one.
+//
+// storekit.Patch records an assignment for every field the request named,
+// whether or not the value moved, so keyed off the after-image an agent
+// re-sending a record it had just read spent a workspace-wide scan under the
+// name lock — for the rest of the transaction — and filed a pair over an edit
+// that renamed nothing. The same held for an address: a re-submitted form
+// consumed a geocoding slot, and every lookup is fifteen seconds of a rate the
+// whole installation shares.
+func TestAnEchoedValueIsNotAMove(t *testing.T) {
+	t.Run("a re-sent display name renames nothing", func(t *testing.T) {
+		p := storekit.NewPatch()
+		p.Set(fieldDisplayName, "Baqend GmbH", "Baqend GmbH")
+		if renamesInPatch(p) {
+			t.Error("an unchanged display name was read as a rename")
+		}
+	})
+
+	t.Run("a changed display name does", func(t *testing.T) {
+		p := storekit.NewPatch()
+		p.Set(fieldDisplayName, "Speedkit", "Baqend GmbH")
+		if !renamesInPatch(p) {
+			t.Error("a changed display name was not read as a rename")
+		}
+	})
+
+	// A cleared name is a rename too — the column moves to NULL, and the
+	// re-check keys on the same set the lock does.
+	t.Run("a cleared legal name does", func(t *testing.T) {
+		held := "Baqend GmbH"
+		p := storekit.NewPatch()
+		p.Set(fieldLegalName, &held, nil)
+		if !renamesInPatch(p) {
+			t.Error("a cleared legal name was not read as a rename")
+		}
+	})
+
+	// An edit that moves something else is not a rename, so it neither takes
+	// the scan nor files a pair.
+	t.Run("an edit elsewhere does not", func(t *testing.T) {
+		p := storekit.NewPatch()
+		p.Set("industry", "software", "logistics")
+		if renamesInPatch(p) {
+			t.Error("an industry edit was read as a rename")
+		}
+	})
+
+	t.Run("a re-sent address is not a relocation", func(t *testing.T) {
+		city := "Hamburg"
+		same := "Hamburg"
+		p := storekit.NewPatch()
+		// Two DISTINCT pointers holding the same city, which is what a form
+		// re-submission actually produces: the row's image and the request's
+		// are never the same pointer, so the comparison has to be by value.
+		p.Set("address_city", &city, &same)
+		if movedAddress(p.Moved()) {
+			t.Error("an unchanged address was read as a relocation")
+		}
+		if !movedAddress(p.After()) {
+			t.Fatal("the after-image does not carry the address at all, so this case proves nothing")
+		}
+	})
+
+	t.Run("a changed address is", func(t *testing.T) {
+		city, moved := "Hamburg", "Berlin"
+		p := storekit.NewPatch()
+		p.Set("address_city", &city, &moved)
+		if !movedAddress(p.Moved()) {
+			t.Error("a changed address was not read as a relocation")
+		}
+	})
 }

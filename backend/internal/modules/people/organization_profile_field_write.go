@@ -213,7 +213,18 @@ func writeCanonicalOrgColumn(
 	// write, so the value and its provenance cannot land apart.
 	nameSource := ""
 	if authoredDisplayName {
-		nameSource = ", name_source = 'human'"
+		// Only when the name MOVES. Every right-hand side in an UPDATE sees the
+		// old row, so this compares what is stored against what is being
+		// written — no read, still one statement.
+		//
+		// Re-sending the same name is not authoring it, and 'human' is a door
+		// that does not reopen: once the lattice reads human-authored no
+		// automated source may correct the name again. A write that merely
+		// echoed the name it read — an agent round-tripping a record, a form
+		// resaving an untouched field — froze a provisional domain-derived name
+		// for good, with nothing in the record saying a person never chose it.
+		nameSource = `, name_source = CASE WHEN display_name IS DISTINCT FROM $2
+		                                   THEN 'human' ELSE name_source END`
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE organization SET `+column+` = $2`+nameSource+`

@@ -411,6 +411,38 @@ func TestCorrectingTheDisplayNameIsTreatedAsAHumanRename(t *testing.T) {
 	}
 }
 
+// Re-sending the SAME display name is not authoring it.
+//
+// name_source is the top of the name lattice (ADR-0072/A118): once it reads
+// 'human', no automated source may correct the name again. So a write that
+// merely echoes the name it read — an agent round-tripping a record, a form
+// resaving an untouched field — must not promote it, or a provisional
+// domain-derived name is frozen for good with nothing in the record saying a
+// person never chose it.
+func TestResendingTheSameDisplayNameIsNotARename(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := evidenceOrg(ctx, t, e)
+
+	// Provisional, the way an enrichment run leaves it.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`UPDATE organization SET name_source = 'domain' WHERE id = $1`, orgID)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the provisional name source: %v", err)
+	}
+	unchanged := orgColumn(ctx, t, e, orgID, "display_name")
+	if _, err := e.store.UpdateOrganizationProfileField(ctx, orgID, "display_name",
+		ProfileFieldWriteInput{Value: &unchanged}); err != nil {
+		t.Fatalf("re-send display_name: %v", err)
+	}
+	if got := orgColumn(ctx, t, e, orgID, "name_source"); got != "domain" {
+		t.Errorf("name_source = %q after re-sending the same name, want domain — echoing a name "+
+			"back is not a person choosing it, and 'human' is a door that does not reopen", got)
+	}
+}
+
 // Correcting the LEGAL name is not authoring the DISPLAY name, and the two do
 // not share a provenance stamp. name_source records where display_name came
 // from: stamping it 'human' for a legal-name correction claims a human named

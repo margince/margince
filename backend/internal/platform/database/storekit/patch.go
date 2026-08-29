@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -131,6 +132,35 @@ func liveClause(archived ArchivedFilter) string {
 // Before and After expose the audit diff the accumulated Set calls built.
 func (p *Patch) Before() map[string]any { return p.before }
 func (p *Patch) After() map[string]any  { return p.after }
+
+// Moved is the subset of After whose value actually differs from Before.
+//
+// After holds every column the caller SET, whether or not the value changed:
+// Set records an assignment and does not compare. That is right for the audit
+// diff, which shows what the write touched — but wrong for every reader asking
+// "did this field change", and several were asking exactly that by testing a
+// key's presence.
+//
+// The cost is not hypothetical. `name_source` promotes to 'human' when the
+// display name is edited, and once a name reads as human-authored no automated
+// source may correct it — so an agent round-tripping a record it had just read,
+// or a form resaving an untouched field, froze a provisional derived name for
+// good, with nothing in the record saying a person had never chosen it.
+//
+// A value whose before and after are different TYPES counts as moved. That is
+// the safe direction: it is what the presence test already did, so a caller
+// switching to Moved cannot start missing a change it used to see.
+//
+//craft:ignore naked-any the audit images are map[string]any by contract
+func (p *Patch) Moved() map[string]any {
+	moved := make(map[string]any, len(p.after))
+	for column, next := range p.after {
+		if !reflect.DeepEqual(p.before[column], next) {
+			moved[column] = next
+		}
+	}
+	return moved
+}
 
 // ApplyWithVersion runs the UPDATE under optimistic concurrency: the
 // WHERE clause always carries the caller's version; zero rows affected
