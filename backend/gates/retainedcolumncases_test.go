@@ -179,7 +179,8 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
 			t.Fatalf("write: %v", err)
 		}
-		if got := assembledSweepTargets(t, path); got[table] == "" {
+		got := assembledSweepTargets(t, path)
+		if got[table] == "" {
 			t.Errorf("a statement joined to a runtime value was not reported: %v", got)
 		}
 		// Two literals joined must NOT be reported: sqlLiterals reads both
@@ -192,6 +193,24 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 		}
 		if got := assembledSweepTargets(t, whole); len(got) != 0 {
 			t.Errorf("two literals joined were reported as assembled: %v", got)
+		}
+		// Parentheses are not part of the expression, and a reader that treats
+		// them as one is wrong in both directions: the fragment goes unseen on
+		// the joined side, and on the other side an ordinary statement reads as
+		// half-assembled.
+		parens := filepath.Join(dir, "parens.go")
+		parenSource := "package p\n\nfunc f(extra string) string {\n" +
+			"\treturn (`UPDATE activity SET body = NULL`) + extra\n}\n\n" +
+			"func g() string {\n\treturn `UPDATE person SET note = NULL` + (` WHERE id = $1`)\n}\n"
+		if err := os.WriteFile(parens, []byte(parenSource), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		got = assembledSweepTargets(t, parens)
+		if got[table] == "" {
+			t.Errorf("a parenthesized fragment joined to a runtime value was not reported: %v", got)
+		}
+		if got["person"] != "" {
+			t.Errorf("a statement joined to a parenthesized LITERAL was reported as assembled: %v", got)
 		}
 	})
 

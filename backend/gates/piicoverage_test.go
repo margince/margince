@@ -662,7 +662,18 @@ func assembledSweepTargets(t *testing.T, path string) map[string]string {
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
+	// Parentheses are not part of the expression, and reading them as if they
+	// were fails in BOTH directions: a parenthesized literal on the joined side
+	// hides the fragment, and one on the other side reads as a runtime value
+	// and reports a statement that is entirely in the text.
 	text := func(e ast.Expr) (string, bool) {
+		for {
+			paren, ok := e.(*ast.ParenExpr)
+			if !ok {
+				break
+			}
+			e = paren.X
+		}
 		lit, ok := e.(*ast.BasicLit)
 		if !ok || lit.Kind != token.STRING {
 			return "", false
