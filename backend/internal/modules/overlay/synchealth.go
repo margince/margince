@@ -80,12 +80,12 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 	}
 
 	var concerns []SyncConcern
-	failing, err := s.sweepFailureConcern(ctx)
+	failing, laddered, err := s.sweepFailureConcern(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if failing != nil {
-		concerns = append(concerns, *failing)
+	if laddered {
+		concerns = append(concerns, failing)
 	}
 	if s.meter != nil {
 		if band := worstBudgetBand(s.meter.Snapshot(ctx, incumbent)); band != overlaybudget.BandOK {
@@ -119,32 +119,32 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 
 // sweepFailureConcern reads the poller's backoff ladder: a row with failures
 // on it is a connection that is not syncing and says when it will retry. No
-// row (never swept) and a clean row both answer nil.
-func (s *Service) sweepFailureConcern(ctx context.Context) (*SyncConcern, error) {
+// row (never swept) and a clean row both answer laddered=false.
+func (s *Service) sweepFailureConcern(ctx context.Context) (concern SyncConcern, laddered bool, err error) {
 	var (
 		failures    int
 		errorClass  *string
 		nextSweepAt *time.Time
 	)
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT consecutive_failures, last_error_class, next_sweep_at FROM overlay_sync_state`,
 		).Scan(&failures, &errorClass, &nextSweepAt)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return SyncConcern{}, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("overlay: reading the sweep ladder for sync health: %w", err)
+		return SyncConcern{}, false, fmt.Errorf("overlay: reading the sweep ladder for sync health: %w", err)
 	}
 	if failures == 0 {
-		return nil, nil
+		return SyncConcern{}, false, nil
 	}
-	concern := &SyncConcern{Kind: ConcernSyncFailing, Failures: failures, NextSweepAt: nextSweepAt}
+	concern = SyncConcern{Kind: ConcernSyncFailing, Failures: failures, NextSweepAt: nextSweepAt}
 	if errorClass != nil {
 		concern.ErrorClass = *errorClass
 	}
-	return concern, nil
+	return concern, true, nil
 }
 
 // worstBudgetBand collapses a budget snapshot's two windows to the worse of
