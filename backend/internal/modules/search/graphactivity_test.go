@@ -53,6 +53,21 @@ func attendee(t *testing.T, role, digit string) activitySubject {
 	}
 }
 
+// employer is the third way an event names a record: the company an attendee
+// currently works for, inferred rather than asserted.
+func employer(t *testing.T, role, digit string) activitySubject {
+	t.Helper()
+	organization := string(datasource.EntityOrganization)
+	rank, ok := participantRoleRank[role]
+	if !ok {
+		rank = unrankedRole
+	}
+	return activitySubject{
+		entityType: organization, id: idOf(t, digit), title: "employer" + digit,
+		tier: subjectTier[organization], named: namedByEmployer, role: rank,
+	}
+}
+
 func titlesOf(subjects []activitySubject) []string {
 	out := make([]string, 0, len(subjects))
 	for _, subject := range subjects {
@@ -151,6 +166,52 @@ func TestSubjectsTiedOnEveryRankFallBackToTheId(t *testing.T) {
 	first, second := link(t, organization, "1"), link(t, organization, "2")
 	assertOrder(t, foldSubjects([]activitySubject{second, first}), "organization1", "organization2")
 	assertOrder(t, foldSubjects([]activitySubject{first, second}), "organization1", "organization2")
+}
+
+// The company reached through the attendee is still the account: it outranks
+// the contact who works there, which is what makes forbidding the direct link
+// on a meeting a removal of redundancy rather than of the company itself.
+func TestAnAttendeesEmployerOutranksTheAttendee(t *testing.T) {
+	got := foldSubjects([]activitySubject{
+		attendee(t, "organizer", "1"),
+		employer(t, "organizer", "2"),
+	})
+	assertOrder(t, got, "employer2", "organizer1")
+}
+
+// And it is the WEAKER reading of the same company. A link is what capture
+// asserted about the event; an employer is what this module inferred from a
+// job. Reached both ways the company is one subject at the asserted rank, so a
+// directly-linked account is never displaced by the same account inferred.
+func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
+	organization := string(datasource.EntityOrganization)
+	linked := link(t, organization, "1")
+	inferred := employer(t, "organizer", "1")
+
+	for name, candidates := range map[string][]activitySubject{
+		"link first":     {linked, inferred},
+		"employer first": {inferred, linked},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assertOrder(t, foldSubjects(candidates), linked.title)
+		})
+	}
+	// Two DIFFERENT companies, so nothing folds and the ordering itself is
+	// what is being read.
+	assertOrder(t, foldSubjects([]activitySubject{
+		employer(t, "organizer", "2"), link(t, organization, "3"),
+	}), "organization3", "employer2")
+}
+
+// Among the inferred companies, the party who convened the meeting decides
+// which comes first — the same rule the people themselves are ordered by, since
+// the company is only as relevant as the person it was reached through.
+func TestTheOrganizersEmployerComesBeforeAnAttendees(t *testing.T) {
+	got := foldSubjects([]activitySubject{
+		employer(t, "attendee", "1"),
+		employer(t, "organizer", "2"),
+	})
+	assertOrder(t, got, "employer2", "employer1")
 }
 
 // An event that names nothing this workspace holds resolves to no subject, and

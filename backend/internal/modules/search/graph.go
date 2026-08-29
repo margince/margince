@@ -222,10 +222,19 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	// An ACCOUNT reaches its activities by three arms rather than one, so it
+	// takes a predicate where every other anchor takes a join on its own link
+	// column. That link is only one of the three, and for a meeting it is the
+	// one that cannot exist.
+	join := "JOIN activity_link l ON l.activity_id = a.id"
+	reach := fmt.Sprintf("l.%s = $%d", linkCol, anchorPos)
+	if linkCol == anchorLinkColumn[string(datasource.EntityOrganization)] {
+		join, reach = "", activityReachesOrg(anchorPos)
+	}
 	activitySQL := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, '')
-		FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.%s = $%d AND a.archived_at IS NULL`, linkCol, anchorPos)
+		FROM activity a %s
+		WHERE %s AND a.archived_at IS NULL`, join, reach)
 	if scope != "" {
 		activitySQL += " AND " + scope
 	}

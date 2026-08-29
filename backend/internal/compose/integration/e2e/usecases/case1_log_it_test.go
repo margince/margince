@@ -35,11 +35,13 @@ package usecases
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -109,17 +111,21 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 		"pipeline_id": pipeline.String(), "stage_id": stage.String(),
 	})
 
-	// ALL THREE LINKS IN ONE CALL. The tool's own copy says so — "Every record
-	// this was about … All of them here, in this call: it writes them together
-	// and needs no approval" — and an earlier run that supplied them one at a
-	// time raised three relink approvals for what is not a decision.
+	// EVERY LINK IN ONE CALL. The tool's own copy says so — "Every record this
+	// was about, ALL OF THEM in this call" — and an earlier run that supplied
+	// them one at a time raised three relink approvals for what is not a
+	// decision.
+	//
+	// The company is NOT among them, and cannot be: a meeting is with a person,
+	// and it reaches the company through the employment edge written above. The
+	// tool refuses the company link rather than storing one, which the case
+	// below asserts from the other end.
 	got := s.MCP.CallOK(t, "log_activity", map[string]any{
 		"kind":          "meeting",
 		"body":          meetingTranscript,
 		"source_system": transcriptMarker,
 		"links": []map[string]any{
 			{"entity_type": "person", "entity_id": m.person.String()},
-			{"entity_type": "organization", "entity_id": m.org.String()},
 			{"entity_type": "deal", "entity_id": m.deal.String()},
 		},
 	})
@@ -200,7 +206,6 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 		what   string
 	}{
 		{"person_id", m.person, "the person"},
-		{"organization_id", m.org, "the company"},
 		{"deal_id", m.deal, "the deal"},
 	} {
 		if n := s.countRows(t,
@@ -209,6 +214,16 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 			t.Fatalf("case 1 criterion 4: the meeting links to %s %d times, want exactly once",
 				want.what, n)
 		}
+	}
+	// And NOT to the company, which is not somebody you can meet. The account
+	// still sees the meeting — through the person who was in it — and that half
+	// is asserted below against the timeline an assistant actually reads.
+	if n := s.countRows(t,
+		`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND organization_id = $2`,
+		m.activity, m.org); n != 0 {
+		t.Fatalf("case 1 criterion 4: the meeting is filed against the company %d times; a meeting "+
+			"is with a person, and a direct link is the redundancy that made two records disagree "+
+			"about who was in the room", n)
 	}
 
 	// Written together, IN THE SAME TRANSACTION AS THE ACTIVITY.
@@ -221,8 +236,8 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 	// now(), so equality here means one write covered both.
 	if together := s.countRows(t, `SELECT count(*) FROM activity_link l
 		JOIN activity a ON a.id = l.activity_id
-		WHERE l.activity_id = $1 AND l.created_at = a.created_at`, m.activity); together != 3 {
-		t.Fatalf("case 1 criterion 4: %d of the meeting's 3 links were written in the same "+
+		WHERE l.activity_id = $1 AND l.created_at = a.created_at`, m.activity); together != 2 {
+		t.Fatalf("case 1 criterion 4: %d of the meeting's 2 links were written in the same "+
 			"transaction as the meeting itself — the rest are a relink afterwards, which is what "+
 			"used to stop for three separate approvals", together)
 	}
@@ -233,6 +248,60 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 	if staged := s.countRows(t, `SELECT count(*) FROM approval`); staged != 0 {
 		t.Fatalf("case 1 criterion 5: logging the meeting staged %d approval(s); linking a meeting "+
 			"to its own records is not a decision", staged)
+	}
+}
+
+// The other half of criterion 4: the company link a meeting cannot carry was a
+// REDUNDANCY, not the account's only way of seeing the meeting.
+//
+// This is the assertion the rule rests on. Forbidding the direct link without
+// it removes the company from every surface that assembles context — which is
+// what happened the first time the refusal shipped, and why it was withdrawn.
+// The account reaches the meeting through the person who was in the room, and
+// the timeline an assistant actually reads is where that has to be true.
+func TestCase1TheAccountSeesTheMeetingThroughThePersonWhoWasInIt(t *testing.T) {
+	s := boot(t, scopesReadWrite)
+	m := s.logTheMeeting(t)
+
+	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
+		"record_type": "organization", "record_id": m.org.String(),
+	})
+	var answer agents.AssembledContextResult
+	got.JSON(t, &answer)
+
+	items := briefingItems(answer)
+	for _, item := range items {
+		if item.RecordID == m.activity {
+			return
+		}
+	}
+	t.Fatalf("case 1 criterion 4: the meeting is not on %s's timeline, so the company link was the "+
+		"only thing carrying it there and forbidding that link cost the account the meeting; "+
+		"items were %v", newCompanyName, summariesOf(items))
+}
+
+// And the refusal itself, from the door an assistant knocks on.
+//
+// A check violation surfaced raw says "a value in this request is outside what
+// its field accepts", which names neither the link nor what to do instead — so
+// a model retries the same call or gives up on the write. The tool answers with
+// the rule and the alternative in one sentence.
+func TestCase1FilingTheMeetingAgainstTheCompanyIsRefusedWithSomethingToDo(t *testing.T) {
+	s := boot(t, scopesReadWrite)
+	m := s.logTheMeeting(t)
+
+	refusal := s.MCP.CallRefused(t, "log_activity", map[string]any{
+		"kind": "meeting", "body": meetingTranscript,
+		"links": []map[string]any{
+			{"entity_type": "person", "entity_id": m.person.String()},
+			{"entity_type": "organization", "entity_id": m.org.String()},
+		},
+	})
+	for _, want := range []string{"with a person", "employer"} {
+		if !strings.Contains(refusal, want) {
+			t.Errorf("the refusal does not say %q, so it tells the caller what is wrong without "+
+				"telling them what to do instead: %s", want, refusal)
+		}
 	}
 }
 

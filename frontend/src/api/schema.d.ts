@@ -16688,6 +16688,12 @@ export interface components {
         /**
          * @description One record an activity is filed under, as a caller supplies it. The read shape
          *     (ActivityLink) carries the ids the server assigned; this carries only the target.
+         *
+         *     **A `meeting` or a `call` cannot be filed against an `organization`** — it is with a
+         *     person, and the company is reached through that person's employer. Supplying one
+         *     returns `422 code: company_meeting` against `links`. Every other kind may name a
+         *     company: a `note` or a `task` is ABOUT a record, and an `email` can legitimately be
+         *     addressed to an account alias nobody owns personally.
          */
         ActivityLinkInput: {
             /** @enum {string} */

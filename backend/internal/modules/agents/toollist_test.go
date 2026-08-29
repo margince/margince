@@ -67,6 +67,12 @@ func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
 		// A meeting is with a PERSON, and the company follows from that.
 		"with a PERSON",
 		"reaches their company through them",
+		// And that the direct link is not merely worse but REFUSED, said as
+		// what happens rather than as advice. A caller told only that the
+		// person is the better link will still try the company and get back a
+		// check violation with no field on it.
+		"linking one to a company is REFUSED",
+		"name the person who was there",
 		// What a deal-only link actually costs, which is the mistake this copy
 		// exists to stop — on both sides, because the person's timeline and the
 		// company's are two facts and losing either leaves the copy half true.

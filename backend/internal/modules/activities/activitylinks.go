@@ -95,9 +95,12 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 // (capture/sinkproject.go: "a principal that may create captured mail but not
 // change it attributes nothing"). Two doors onto one act must not disagree
 // about who may perform it; before this the create door was the cheaper way in.
-func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []ActivityLinkInput) error {
+func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput) error {
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
+	}
+	if err := refuseACompanyMeeting(kind, links); err != nil {
+		return err
 	}
 	seen := make(map[ActivityLinkInput]struct{}, len(links))
 	for _, link := range links {
@@ -135,6 +138,57 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 	}
 	return nil
+}
+
+// refuseACompanyMeeting answers the company link on a meeting or a call the way
+// a caller can act on.
+//
+// The estate refuses it either way — a trigger, because activity_link is
+// written by the MCP tool, a REST caller and the web app alike (migration
+// 1787990100). What that refusal alone gives a caller is a check violation with
+// no field on it: the tool surface renders it as "a value in this request is
+// outside what its field accepts", which names neither the link nor what to do
+// instead, so a model retries the same call or abandons the write. Named here,
+// the answer says which array to change and what the company is reached
+// through.
+//
+// The KIND is passed in rather than read back: the creating caller has it in
+// hand, and a read of `activity` here would be a reader of the restricted table
+// that excludes no held row. The relink path takes the trigger's answer
+// instead — it holds no kind and would need that read to name one.
+func refuseACompanyMeeting(kind string, links []ActivityLinkInput) error {
+	if !personalActivityKinds[kind] {
+		return nil
+	}
+	for _, link := range links {
+		if link.EntityType == linkEntityOrganization {
+			return &CompanyMeetingError{Kind: kind}
+		}
+	}
+	return nil
+}
+
+// personalActivityKinds are the kinds that are inherently WITH A HUMAN, and so
+// cannot be filed against a company.
+//
+// Email is deliberately absent: a mail can legitimately be addressed to an
+// account alias nobody owns personally. `note` and `task` are absent for a
+// different reason — they are ABOUT a record rather than with a person, and a
+// note about a company is exactly what a company timeline is for.
+var personalActivityKinds = map[string]bool{"meeting": true, "call": true}
+
+// CompanyMeetingError refuses a meeting or a call filed against a company.
+type CompanyMeetingError struct{ Kind string }
+
+func (e *CompanyMeetingError) Error() string {
+	return fmt.Sprintf("a %s is with a person, not with a company: link the person who was there, "+
+		"and the company is reached through their employer", e.Kind)
+}
+
+// FieldFault names the array the caller can correct, so the refusal is a 422
+// against `links` rather than an unattributed check violation.
+func (e *CompanyMeetingError) FieldFault() (field, code, message string) {
+	return fieldLinks, "company_meeting", e.Error()
 }
 
 // InvalidLinkTypeError maps to 422.

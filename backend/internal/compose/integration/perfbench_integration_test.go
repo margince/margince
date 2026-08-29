@@ -382,7 +382,11 @@ func seedBenchAnchor(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierS
 	}
 	benchExec(t, owner, spec.tier, `WITH act AS (
 	        INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
-	        SELECT CASE WHEN i % 4 = 0 THEN 'task' ELSE 'meeting' END,
+	        -- 'note', not 'meeting': the rows below are filed straight against
+	        -- an account, and a meeting is with a person rather than with a
+	        -- company. The bench measures fan-out, which the kind does not
+	        -- change.
+	        SELECT CASE WHEN i % 4 = 0 THEN 'task' ELSE 'note' END,
 	               'Anchor touch ' || i, 'Anchor body ' || i,
 	               now() - (i || ' hours')::interval,
 	               'manual', 'human:bench'

@@ -128,7 +128,14 @@ func (e *SearchEnv) SeedID(t *testing.T, sql string, args ...any) ids.UUID {
 // once because the read and write grant sets must cover the same objects — if
 // they drifted, a suite comparing a reader against a writer would be comparing
 // two different vocabularies and attributing the difference to permissions.
-var searchObjects = []string{objPerson, objOrg, objDeal, "lead", objActivity}
+//
+// `relationship` is here because a prep reaches an attendee's COMPANY through
+// the employment edge, and an edge discloses its endpoints as a pair — which is
+// what relationship.read governs and what neither endpoint's grant covers. A
+// principal without it sees no employer-derived account at all, which is a
+// different suite's question (TestASubjectTypeTheCallerMayNotReadIsNeverNamed
+// asks it deliberately, by naming its own grants).
+var searchObjects = []string{objPerson, objOrg, objDeal, "lead", objActivity, objRelationship}
 
 // searchReadGrants is read on every record type this fixture's principals can
 // reach. Read-only on purpose: the suites riding it assert what a caller may SEE,

@@ -176,7 +176,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
-	if err := insertActivityLinks(ctx, tx, id, in.Links); err != nil {
+	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
