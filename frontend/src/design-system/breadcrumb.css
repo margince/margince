@@ -7,6 +7,16 @@
    unchanged on screen. */
 .crumbs {
   min-width: 0;
+  /* The trail owns its own overflow rather than trusting a caller's wrapper
+     to. Without this, the last label's 2ch floor (below) is still painted in
+     full even when the row has no room for it — the ancestors' `flex: none`
+     never yields, so the floored box is pushed past the trail's own right
+     edge and bleeds, uncropped, into whatever sits beside it (measured: the
+     top bar's centred search box, at 1280px — the label was visible but
+     unreachable, sitting under a control that intercepted every hover and
+     click meant for it). Clipping here keeps the bleed inside the primitive
+     that owns the promise, instead of asking every consumer to remember it. */
+  overflow: hidden;
 }
 .crumbs > ol {
   display: flex;
@@ -82,9 +92,17 @@
 /* Only the last label clips, and it needs the whole chain to allow it: a flex
    item does not shrink below its content unless it is told it may. The tip
    `useTruncationTooltip` hangs on this element is what carries the rest of the
-   name, on hover and on focus alike. */
+   name, on hover and on focus alike.
+
+   The floor is 2ch, not 0: `min-width: 0` alone has no lower bound, and at a
+   width where the unshrinkable ancestor crumbs already fill the row (measured:
+   1280px in the shell's own top bar), flexbox drove this label to literally
+   0px — past the point `text-overflow: ellipsis` has anything to paint the
+   glyph into, so the current page read as nothing at all rather than as
+   truncated (margince#3122). 2ch is enough room for the ellipsis on its own;
+   it does not promise any of the actual label survives. */
 .crumbs > ol > li:last-child .crumbs-label {
-  min-width: 0;
+  min-width: 2ch;
   overflow: hidden;
   text-overflow: ellipsis;
 }
