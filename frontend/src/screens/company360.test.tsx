@@ -606,7 +606,9 @@ describe("company view — consent is per purpose", () => {
       await screen.findByRole("button", { name: /^People/ }),
     );
 
-    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
+    );
     expect(screen.getByText("No consent on file")).toBeTruthy();
     expect(screen.queryByText("May contact")).toBeNull();
   });
@@ -1378,6 +1380,59 @@ describe("company view — naming the buying committee", () => {
     ).toBeTruthy();
   });
 
+  // The connection map keeps a fresh graph copy for a minute, so a save that
+  // changes the committee must re-read it explicitly — otherwise the map
+  // beside the roster shows the pre-save committee until the copy expires.
+  it("re-reads the connection map after a role is saved", async () => {
+    const fetched = stub(
+      view({
+        deals: {
+          data: [
+            { deal_id: "d-1", name: "Pilot", status: "open", stalled: false },
+          ],
+          page: { has_more: false, next_cursor: null },
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+        people: {
+          data: [
+            {
+              person_id: "p-1",
+              full_name: "Christian Hagemeyer",
+              deal_roles: [],
+              consent: {},
+              strength: {
+                score: 0,
+                bucket: "none",
+                factors: {
+                  recency: 0,
+                  frequency: 0,
+                  reciprocity: 0,
+                  direction: 0,
+                },
+              },
+            },
+          ],
+          page: emptyPage,
+        },
+      }),
+    );
+    renderCompany();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^People/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Set role" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    // One read when the tab drew the map, one after the save invalidated it.
+    await waitFor(() =>
+      expect(fetched.filter((path) => path.endsWith("/graph"))).toHaveLength(2),
+    );
+  });
+
   // A role belongs to a DEAL. With nothing open there is nothing to be a
   // champion of, and offering the verb would invite a write that has no
   // subject.
@@ -1465,7 +1520,9 @@ describe("company view — a buying role names the deal it is on", () => {
       await screen.findByRole("button", { name: /^People/ }),
     );
 
-    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
+    );
     // Both roles read as one quiet line under the name, not as two badges.
     expect(
       screen.getByText("champion · Renewal · champion · New business"),
@@ -1495,7 +1552,9 @@ describe("company view — a buying role names the deal it is on", () => {
       await screen.findByRole("button", { name: /^People/ }),
     );
 
-    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
+    );
     expect(screen.getByText("champion")).toBeTruthy();
   });
 });
@@ -2350,8 +2409,9 @@ describe("company view — the way in to one contact", () => {
       screen.getAllByRole("button", { name: "Route in" })[0],
     );
 
-    await screen.findByText("Mira");
-    expect(screen.getByText("in regular contact")).toBeTruthy();
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Mira");
+    expect(within(dialog).getByText("in regular contact")).toBeTruthy();
     expect(fetched.filter((path) => path.endsWith("/graph"))).toHaveLength(1);
   });
 });

@@ -520,8 +520,13 @@ function SetRoleAction({
       setOpen(false);
       // The committee reading, the missing-role warning and the row's own
       // chips all come off the 360, so the account is re-read rather than
-      // patched in place.
-      await queryClient.invalidateQueries({ queryKey: ["organization360"] });
+      // patched in place. The connection map reads the new stakeholder edge
+      // through its own query, which now keeps a fresh copy for a minute —
+      // without the invalidation it would show the pre-save committee.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["organization360"] }),
+        queryClient.invalidateQueries({ queryKey: ["organization-graph"] }),
+      ]);
     },
   });
 
