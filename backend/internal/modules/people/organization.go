@@ -256,19 +256,26 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 		if err := auth.EnsureWritable(ctx, tx, "organization", id.UUID); err != nil {
 			return err
 		}
-		current, err := readOrganization(ctx, tx, id, storekit.LiveOnly, active)
-		if err != nil {
-			return fmt.Errorf("read organization before update: %w", err)
-		}
 		// Only a rename needs the name lock, and only a rename should pay for
 		// it: the key is workspace-wide, so taking it for an owner change would
 		// serialize every organization write behind an edit that cannot create
-		// a duplicate. Taken here, ahead of the patch's row lock, per the
-		// ordering rule on lockOrgNameWrites.
+		// a duplicate. Taken ahead of the patch's row lock, per the ordering
+		// rule on lockOrgNameWrites.
+		//
+		// And ahead of the READ, because the read is what the rename is judged
+		// against. Taken after it, a concurrent rename landing in between left
+		// `current` holding a name nobody stored any more — so this write
+		// overwrote that rename while its before-image said the name had not
+		// moved, and the provenance stamp below was skipped for an edit that
+		// really did change the name.
 		if in.DisplayName != nil || in.LegalName != nil {
 			if err := lockOrgNameWrites(ctx, tx); err != nil {
 				return err
 			}
+		}
+		current, err := readOrganization(ctx, tx, id, storekit.LiveOnly, active)
+		if err != nil {
+			return fmt.Errorf("read organization before update: %w", err)
 		}
 		p, err := buildOrganizationPatch(ctx, tx, current, in)
 		if err != nil {
