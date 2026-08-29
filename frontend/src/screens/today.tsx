@@ -178,6 +178,14 @@ function quietLead(
   if (broken) {
     return broken;
   }
+  // A notice was addressed to this reader on purpose; the quiet half of the
+  // day starts with what was left for them to see.
+  const unreadNotices = day.counts.notices ?? 0;
+  if (unreadNotices > 0) {
+    return t(pluralKey(locale, "day.lead.notices", unreadNotices), {
+      count: formatNumber(unreadNotices, locale),
+    });
+  }
   const drifting = day.counts.at_risk ?? 0;
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
@@ -235,7 +243,8 @@ function quietLead(
     day.counts.meetings === undefined ||
     day.counts.capture_health === undefined ||
     day.counts.ai_work_health === undefined ||
-    day.counts.bounces === undefined
+    day.counts.bounces === undefined ||
+    day.counts.notices === undefined
   ) {
     return t("day.lead.clearOfWhatWasRead");
   }

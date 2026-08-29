@@ -796,6 +796,8 @@ describe("what the night left on the worklist", () => {
     expect(
       screen.getByText("A lead's first response is overdue."),
     ).toBeTruthy();
+    expect(screen.getByText("1 notice is waiting for you.")).toBeTruthy();
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Got it" }));
     await waitFor(() => {

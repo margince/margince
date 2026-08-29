@@ -202,6 +202,8 @@ export const en = {
   "day.automation.way.blocked": "Blocked",
   "day.automation.way.generic": "Did not run",
   "day.lead.automation": "{count} automation firings did not do their work.",
+  "day.lead.notices_one": "{count} notice is waiting for you.",
+  "day.lead.notices_other": "{count} notices are waiting for you.",
   "day.notices": "For your attention",
   "day.notices.empty": "Nothing waiting for your attention.",
   "day.acknowledge": "Got it",

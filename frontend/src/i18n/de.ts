@@ -204,6 +204,8 @@ export const de = {
   "day.automation.way.generic": "Nicht gelaufen",
   "day.lead.automation":
     "{count} Automatisierungsläufe haben ihre Arbeit nicht getan.",
+  "day.lead.notices_one": "{count} Mitteilung wartet auf Sie.",
+  "day.lead.notices_other": "{count} Mitteilungen warten auf Sie.",
   "day.notices": "Zur Kenntnis",
   "day.notices.empty": "Nichts wartet auf Ihre Kenntnisnahme.",
   "day.acknowledge": "Verstanden",

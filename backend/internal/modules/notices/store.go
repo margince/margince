@@ -96,7 +96,10 @@ func (s *Store) Create(ctx context.Context, recipient ids.UserID, kind, subject,
 // attention feed renders as a withheld lane.
 func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+		// The PERSON, not merely a user id: an agent or system principal
+		// can carry a human's id, and reading — like settling — a notice
+		// is that human's own act.
 		return nil, fmt.Errorf("notices: reading your notices needs an authenticated person: %w", apperrors.ErrPermissionDenied)
 	}
 	var unread []Notice
@@ -134,7 +137,9 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 // read-state flip is a mutation and carries the write shape.
 func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+		// The same person-not-id rule UnreadFor states: acknowledgment is
+		// the recipient's own act, never a principal acting as them.
 		return fmt.Errorf("notices: marking a notice read needs an authenticated person: %w", apperrors.ErrPermissionDenied)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
