@@ -423,6 +423,15 @@ var retentionSweepFiles = []string{
 // the destruction of a retained column in it goes unseen. Quoting is the only
 // escape the split has to understand: a doubled ” inside a string is still
 // inside it, which falls out of the scan without a case of its own.
+//
+// Two Postgres forms it does NOT understand, and does not guess at:
+// dollar-quoting ($$…$$, $tag$…$tag$) and the E” escape, where a backslashed
+// apostrophe leaves the scan believing it has closed a string it has not. Both
+// end with the scan's `quoted` inverted against the truth, and an inverted scan
+// splits INSIDE a string — the exact fragment-with-no-table this function
+// exists to prevent. quotingBeyondTheSplit answers for them at the collection
+// site, so their arrival is a failure naming the literal rather than a green
+// run over a split nobody can trust.
 func sqlStatements(literal string) []string {
 	var out []string
 	quoted := false
@@ -442,6 +451,27 @@ func sqlStatements(literal string) []string {
 		out = append(out, collapsedSQL(trimmed))
 	}
 	return out
+}
+
+// The two literal forms sqlStatements cannot track. $tag$ is matched on the
+// OPENING form alone: a scan that has met the open has already lost, whether or
+// not the close is in the same Go literal.
+var (
+	dollarQuoteRe  = regexp.MustCompile(`\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$`)
+	escapeStringRe = regexp.MustCompile(`(?i)\bE'`)
+)
+
+// quotingBeyondTheSplit names the quoting form in a literal that sqlStatements
+// would mis-scan, or "" when there is none. Nothing in the swept files uses
+// either today; this is the tripwire for the day one does, and it fails CLOSED
+// — the caller reports the literal — because the alternative is a split landing
+// inside a string and a destructive assignment riding out in a fragment that
+// names no table.
+func quotingBeyondTheSplit(literal string) string {
+	if m := dollarQuoteRe.FindString(literal); m != "" {
+		return m
+	}
+	return escapeStringRe.FindString(literal)
 }
 
 // setAssignments returns the assignment list of one UPDATE — what sits between
@@ -582,19 +612,89 @@ func statementDestroying(statements []string, table, column string) string {
 // which is indistinguishable from a statement that really destroys nothing, and
 // that is the shape gate-patterns.md §D says a shape check silently passes.
 //
-// Nothing in the swept files assembles one today. This is the tripwire for the
-// day something does: the answer then is a failure naming the statement, not a
-// green run over a column nobody can see being written.
+// A SET clause is unreadable in two shapes, and reading only the first was the
+// same quiet pass one level in. `UPDATE provider_run SET` — which the sweep
+// really does assemble today, in retentionactions.go, joined to
+// storekit.ScrubProviderRunColumns — leaves NO assignments.
+// `UPDATE activity SET body = NULL, ` + column + ` = NULL` leaves one, so a
+// check asking only "is it empty" reads that as an ordinary statement and the
+// assembled column goes unseen exactly as before. The trailing comma is the
+// tell: an assignment list ending on a separator has an assignment after it
+// that is not in the text.
+//
+// Both answers are read off the literal alone, which is why
+// assembledSweepTargets below reads the concatenation instead: a fragment can
+// also be a COMPLETE statement — `"UPDATE activity SET body = NULL" + more +
+// " WHERE id = $1"` — and no amount of looking at that text says more follows.
+//
+// Neither reports provider_run, and that is the scoping and not an oversight.
+// The caller asks these only of a table registering columns the sweep KEEPS,
+// because the question they serve — "is the KEEPS registration still being
+// checked against this statement" — has no meaning for a table with no such
+// registration. provider_run declares none; its assembly is a named constant a
+// reader can follow, not a column hidden from one.
 func assembledSetTarget(statements []string) string {
 	for _, stmt := range statements {
 		if !updateRe.MatchString(stmt) {
 			continue
 		}
-		if strings.TrimSpace(setAssignments(stmt)) == "" {
+		assignments := strings.TrimSpace(setAssignments(stmt))
+		if assignments == "" || strings.HasSuffix(assignments, ",") {
 			return stmt
 		}
 	}
 	return ""
+}
+
+// assembledSweepTargets returns, per table, a swept SQL literal that is joined
+// to a runtime value — `"UPDATE provider_run SET" + storekit.Scrub…`. The table
+// comes from the literal's own text, which is where the write target is even
+// when the assignments are not.
+//
+// This reads the CONCATENATION, not the string, and that is the whole point.
+// assembledSetTarget can only judge the text it is handed, and a fragment that
+// reads as a finished statement is indistinguishable from one that is; the `+`
+// node is the only place the fact that more follows is written down.
+func assembledSweepTargets(t *testing.T, path string) map[string]string {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, 0)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	text := func(e ast.Expr) (string, bool) {
+		lit, ok := e.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return "", false
+		}
+		unquoted, err := strconv.Unquote(lit.Value)
+		return unquoted, err == nil
+	}
+	out := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		join, ok := n.(*ast.BinaryExpr)
+		if !ok || join.Op != token.ADD {
+			return true
+		}
+		// One side a literal and the other not. Two literals joined are still
+		// one literal as far as the text is concerned — sqlLiterals reads both
+		// halves — and reporting those would fire on every wrapped statement in
+		// the tree.
+		for _, side := range [2][2]ast.Expr{{join.X, join.Y}, {join.Y, join.X}} {
+			fragment, ok := text(side[0])
+			if !ok {
+				continue
+			}
+			if _, alsoLiteral := text(side[1]); alsoLiteral {
+				continue
+			}
+			for _, table := range sqlWriteTargets(collapsedSQL(fragment)) {
+				out[table] = collapsedSQL(fragment)
+			}
+		}
+		return true
+	})
+	return out
 }
 
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
@@ -617,8 +717,24 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// look inside one statement's SET clause, or a WHERE predicate naming the
 	// column in a neighbouring statement would answer for it.
 	sweepStatements := map[string][]string{}
+	// The sweep statements this gate can only read HALF of, keyed by the table
+	// the readable half names. Collected from the syntax tree rather than the
+	// text, for the reason assembledSweepTargets gives.
+	assembled := map[string]string{}
 	for _, path := range retentionSweepFiles {
+		for table, fragment := range assembledSweepTargets(t, path) {
+			assembled[table] = fragment
+		}
 		for _, lit := range sqlLiterals(t, path) {
+			// Before the split, whether the split can be trusted. A quoting
+			// form the scan cannot track leaves it inverted, and an inverted
+			// scan cuts inside a string — which is the fragment naming no
+			// table that sqlStatements was written to prevent.
+			if form := quotingBeyondTheSplit(lit); form != "" {
+				t.Fatalf("%s carries a `%s` literal, which the statement split cannot track: %q\n"+
+					"the split would cut inside the string and the fragment carrying the assignment would name no table. "+
+					"Teach sqlStatements this form, or keep the statement out of the swept files", path, form, collapsedSQL(lit))
+			}
 			// SPLIT, because the unit both checks below name is the statement
 			// and a literal is not one. Read whole, a literal carrying two
 			// would let the first statement's SET clause answer for the second
@@ -703,10 +819,16 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 		// at all. A SET clause with no column in it is one the gate cannot
 		// judge, and answering "keeps everything" for it is the quiet pass.
 		if len(h.retentionKeeps) > 0 {
-			if assembled := assembledSetTarget(sweepStatements[table]); assembled != "" {
+			unreadable := assembledSetTarget(sweepStatements[table])
+			if unreadable == "" {
+				// The statement can be complete and still be half of one. Only
+				// the `+` says so.
+				unreadable = assembled[table]
+			}
+			if unreadable != "" {
 				missing = append(missing, "the retention sweep writes PII table "+table+
-					" with a SET clause this gate cannot read (`"+assembled+"`) — the column is assembled at runtime, so the"+
-					" columns registered as deliberately KEPT are no longer checked against it. Name the column in the"+
+					" with a statement this gate can only half read (`"+unreadable+"`) — the rest of it is assembled at runtime, so the"+
+					" columns registered as deliberately KEPT are no longer checked against it. Name the columns in the"+
 					" statement, or move the write out of the swept files and register what it does")
 			}
 		}
