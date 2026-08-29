@@ -301,12 +301,15 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 		}
 
 		before, after := p.Before(), p.After()
-		// A human editing the display name is the top of the name-source
-		// lattice (ADR-0072/A118): stamp 'human' so no automated source ever
-		// overwrites it. Only when the name actually changed — re-setting it to
-		// the same value is not a re-authoring. It rides the patch's own
-		// guarded write above, on the row that write just locked.
-		if _, changed := after["display_name"]; changed {
+		// MOVED, not merely set. A human editing the display name is the top of
+		// the name-source lattice (ADR-0072/A118): stamp 'human' so no
+		// automated source ever overwrites it. Re-sending the same value is not
+		// a re-authoring, and reading After() made it one — an agent
+		// round-tripping a record it had just read froze a provisional
+		// domain-derived name for good, with nothing in the record saying a
+		// person had never chosen it. It rides the patch's own guarded write
+		// above, on the row that write just locked.
+		if _, changed := p.Moved()["display_name"]; changed {
 			if _, err := tx.Exec(ctx, `UPDATE organization SET name_source = 'human' WHERE id = $1`, id); err != nil {
 				return fmt.Errorf("stamp organization name provenance: %w", err)
 			}

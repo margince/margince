@@ -160,3 +160,45 @@ func TestARowLockRemembersTheFilterItWasTakenUnder(t *testing.T) {
 		}
 	}
 }
+
+// TestMovedIsWhatActuallyChanged is the difference between what a write TOUCHED
+// and what it CHANGED.
+//
+// After holds every column the caller Set, because Set records an assignment
+// and does not compare — right for the audit diff, wrong for a reader asking
+// whether a field moved. Several were asking exactly that by testing a key's
+// presence, and the cost was a provenance stamp: a display name re-sent
+// unchanged promoted name_source to 'human', after which no automated source
+// may correct it.
+func TestMovedIsWhatActuallyChanged(t *testing.T) {
+	same := "Acme GmbH"
+	renamed := "Acme AG"
+	p := NewPatch()
+	p.Set("display_name", same, same)
+	p.Set("legal_name", same, renamed)
+
+	after := p.After()
+	if len(after) != 2 {
+		t.Fatalf("After() = %v, want both columns — it reports what the write touched", after)
+	}
+	moved := p.Moved()
+	if _, unchanged := moved["display_name"]; unchanged {
+		t.Error("a column re-set to its own value is reported as moved; re-sending a name is " +
+			"not re-authoring it")
+	}
+	if got, ok := moved["legal_name"]; !ok || got != renamed {
+		t.Errorf("moved[legal_name] = %v (present %t), want the new value", got, ok)
+	}
+}
+
+// A before and after of different TYPES counts as moved, which is the safe
+// direction: it is what the presence test already did, so a caller switching to
+// Moved cannot start missing a change it used to see.
+func TestAChangeOfShapeCountsAsMoved(t *testing.T) {
+	value := "Acme GmbH"
+	p := NewPatch()
+	p.Set("display_name", nil, &value)
+	if _, moved := p.Moved()["display_name"]; !moved {
+		t.Error("setting a value where there was none is not reported as moved")
+	}
+}
