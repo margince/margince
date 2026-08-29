@@ -182,10 +182,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	wsID := ids.From[ids.WorkspaceKind](rawWS)
 	ladder, degraded, budgetErr := r.applyBudget(ctx, task, wsID, ladder)
 	if budgetErr != nil && errors.Is(budgetErr, ErrBudgetDeferred) {
-		// A deferral is pacing, not failure: the work re-queues itself for
-		// the boundary the error names, so a rail line per retry would be
-		// noise about work that is still going to happen. Only a budget
-		// READ that broke falls through to the traced return below.
+		// A deferral is pacing, not failure — the work re-queues itself for
+		// the boundary the error names — so it is neither traced nor
+		// announced; a broken budget READ falls through to the traced
+		// return below.
 		return model.Response{}, RouteInfo{}, budgetErr
 	}
 	if req.SecretStripper == nil {
@@ -193,14 +193,12 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 	key, keyErr := cacheKey(wsID, task, req)
 
-	// Every terminal from here on is traced — the budget and cache-key
+	// Every terminal from here on is traced — the budget-read and cache-key
 	// failures included: one Call appended to lc for the served call, the
-	// cache hit, or the failure. Those two used to return before the trace
-	// was built, and a user who asked for the work saw a failure the rail
-	// never recorded — the settle announce is what ends that silence, and
-	// it does not need the start line to have run. Only the no-workspace
-	// return above stays untraced: with no tenant there is no row to write
-	// and no occurrence to announce.
+	// cache hit, or the failure, and the settle announce needs no start
+	// line to have run. Only the no-workspace return above is untraced:
+	// with no tenant there is no row to write and no occurrence to
+	// announce.
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
@@ -258,6 +256,8 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	return model.Response{}, RouteInfo{}, fmt.Errorf("ai: no bound tier can serve %s in profile %s", task, b.profile)
 }
 
+// Invalidate drops a workspace's cached results — the hook the §6
+// record-change invalidation rides (wired from event consumers).
 func (r *Router) Invalidate(workspaceID ids.WorkspaceID) { r.cache.invalidate(workspaceID) }
 
 // applyBudget bends the ladder per §1.3: soft-degrade one tier at 80%,
@@ -265,16 +265,16 @@ func (r *Router) Invalidate(workspaceID ids.WorkspaceID) { r.cache.invalidate(wo
 func (r *Router) applyBudget(ctx context.Context, task Task, wsID ids.WorkspaceID, ladder []Tier) ([]Tier, bool, error) {
 	budgetTokens, err := r.budget.MonthlyTokenBudget(ctx, wsID)
 	if err != nil {
-		return nil, false, fmt.Errorf("ai: budget policy: %w", err)
+		return nil, false, fmt.Errorf("ai: budget policy: %w", errors.Join(errBudgetUnavailable, err))
 	}
 	if budgetTokens <= 0 {
 		// Fail closed on misconfiguration — an accidental zero budget must
 		// not read as "unlimited".
-		return nil, false, fmt.Errorf("ai: workspace has a non-positive token budget (%d)", budgetTokens)
+		return nil, false, fmt.Errorf("ai: workspace has a non-positive token budget (%d): %w", budgetTokens, errBudgetUnavailable)
 	}
 	spent, err := r.meter.MonthTokens(ctx)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("ai: reading month usage: %w", errors.Join(errBudgetUnavailable, err))
 	}
 	utilization := float64(spent) / float64(budgetTokens)
 	switch {

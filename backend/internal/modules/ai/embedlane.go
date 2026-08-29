@@ -106,6 +106,3 @@ func (r *Router) EmbedIdentity() (string, int) {
 	}
 	return fmt.Sprintf("%s/%s@%d", m.provider, m.model, b.embedDims), b.embedDims
 }
-
-// Invalidate drops a workspace's cached results — the hook the §6
-// record-change invalidation rides (wired from event consumers).

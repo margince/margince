@@ -332,16 +332,25 @@ type routerBrain struct {
 func (b routerBrain) AttachmentMIMEs() []string { return b.router.AttachmentMIMEs(b.task) }
 
 func (b routerBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	prepared, err := b.companyContext.Prepare(ctx, b.task, req)
+	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, b.task, req)
 	if err != nil {
-		// A preparation failure is still a failure of work the user asked
-		// for: announce it, or the rail says nothing ran while the user
-		// holds an error.
-		b.router.AnnounceRequestFailure(ctx, b.task, err)
 		return model.Response{}, err
 	}
 	resp, _, err := b.router.Complete(ctx, b.task, prepared)
 	return resp, err
+}
+
+// prepareOrAnnounce is the one spelling of the seams' preparation step: a
+// preparation failure is a failure of work the user asked for, so it reaches
+// the rail before the error reaches the caller — and a seam that prepares
+// through this helper cannot forget the announce.
+func prepareOrAnnounce(ctx context.Context, router *ai.Router, cc *companyContextProvider, task ai.Task, req model.Request) (model.Request, error) {
+	prepared, err := cc.Prepare(ctx, task, req)
+	if err != nil {
+		router.AnnounceRequestFailure(ctx, task, err)
+		return model.Request{}, err
+	}
+	return prepared, nil
 }
 
 // agentBrain adapts the router into the runner's Brain seam: it surfaces
@@ -355,11 +364,8 @@ type agentBrain struct {
 }
 
 func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
-	prepared, err := b.companyContext.Prepare(ctx, ai.TaskAgentLoop, req)
+	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, ai.TaskAgentLoop, req)
 	if err != nil {
-		// The same rule routerBrain.Complete states: a preparation failure
-		// is announced rather than silent.
-		b.router.AnnounceRequestFailure(ctx, ai.TaskAgentLoop, err)
 		return model.Response{}, runner.Meta{}, err
 	}
 	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
@@ -370,10 +376,8 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 // (validate → retry with feedback → escalate a tier) on the lane's own
 // task label.
 func (b routerBrain) CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error) {
-	prepared, err := b.companyContext.Prepare(ctx, b.task, req)
+	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, b.task, req)
 	if err != nil {
-		// The rule Complete states: a preparation failure is announced.
-		b.router.AnnounceRequestFailure(ctx, b.task, err)
 		return model.Response{}, err
 	}
 	resp, _, err := b.router.CompleteStructured(ctx, b.task, prepared, validate)
