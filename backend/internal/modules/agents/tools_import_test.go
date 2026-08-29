@@ -130,6 +130,7 @@ type recordingImports struct {
 	targets   []string
 	discarded *[]string
 	stageErr  error
+	sawLive   *bool
 }
 
 func (r recordingImports) StageRun(
@@ -141,9 +142,15 @@ func (r recordingImports) StageRun(
 	return crmcontracts.ImportRun{}, nil
 }
 
-func (r recordingImports) DiscardSource(_ context.Context, ref string) error {
+func (r recordingImports) DiscardSource(ctx context.Context, ref string) error {
 	if r.discarded != nil {
 		*r.discarded = append(*r.discarded, ref)
+	}
+	if r.sawLive != nil {
+		// Read INSIDE the call: the cleanup context is cancelled by its own
+		// defer the moment discarding returns, so a context captured for later
+		// inspection always reads cancelled whatever it was during the call.
+		*r.sawLive = ctx.Err() == nil
 	}
 	return nil
 }
@@ -369,5 +376,36 @@ func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
 	}
 	if len(discarded) != 0 {
 		t.Errorf("discarded = %v, and a failed run is resumable from that source", discarded)
+	}
+}
+
+// The cleanup survives the caller hanging up.
+//
+// A request cancelled between the store and the refusal is exactly when the
+// file is most certainly unwanted, and a discard that took the cancelled
+// context with it would leave the orphan precisely then — a caller could spend
+// storage by cancelling.
+func TestACancelledPreviewStillTakesItsFile(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	live := false
+	discarded := []string{}
+	imports := recordingImports{
+		suggested: map[string]string{"id": "id"},
+		columns:   []string{"id", "Company"},
+		targets:   []string{"display_name", "id"},
+		discarded: &discarded,
+		sawLive:   &live,
+	}
+	cancel()
+	if _, err := (previewImport{imports: imports}).Handle(ctx, json.RawMessage(
+		`{"object":"organization","csv":"id,Company\nx,Acme\n"}`)); err == nil {
+		t.Fatal("a partial proposal was accepted")
+	}
+	if len(discarded) != 1 {
+		t.Fatalf("discarded = %v, and the refused call stored a file", discarded)
+	}
+	if !live {
+		t.Error("the discard ran on a cancelled context, so the store would refuse it and the " +
+			"file would outlive the call that stored it")
 	}
 }
