@@ -183,12 +183,17 @@ function quietLead(
   // states that nothing was found ANYWHERE, and a feed that never read the
   // claims has not looked where promises live. The weaker line says only what
   // is true — nothing is waiting among the lanes this page did read.
+  // capture_health joins the list: its absence means the feed never read the
+  // reader's mailboxes. sync_health deliberately does not — that lane is
+  // absent on every workspace not running in overlay mode, which is a mode
+  // fact rather than an unread lane.
   if (
     day.counts.commitments === undefined ||
     day.counts.at_risk === undefined ||
     day.counts.relationship_decay === undefined ||
     day.counts.did_not_run === undefined ||
-    day.counts.meetings === undefined
+    day.counts.meetings === undefined ||
+    day.counts.capture_health === undefined
   ) {
     return t("day.lead.clearOfWhatWasRead");
   }

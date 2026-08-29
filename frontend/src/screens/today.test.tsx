@@ -645,6 +645,56 @@ describe("what the night left on the worklist", () => {
     await screen.findByText("Nothing is waiting in the lanes on this page.");
     expect(screen.queryByText("Your day is clear.")).toBeNull();
   });
+  // The same rule for the reader's mailboxes: an absent capture_health lane
+  // means nobody read them, so the weaker line answers; a populated one stops
+  // "clear" outright, because a quiet day read through a broken mailbox may
+  // be quiet only because nothing is being captured.
+  it("does not call a day clear when nothing read the mailboxes", async () => {
+    stub({
+      ...emptyDay,
+      commitments: [],
+      at_risk: [],
+      relationship_decay: [],
+      did_not_run: [],
+      meetings: [],
+      counts: {
+        this_morning: 0,
+        needs_you: 0,
+        planned: 0,
+        commitments: 0,
+        at_risk: 0,
+        relationship_decay: 0,
+        did_not_run: 0,
+        meetings: 0,
+      },
+    });
+    renderToday();
+
+    await screen.findByText("Nothing is waiting in the lanes on this page.");
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
+  it("leads with the broken mailbox rather than a quiet day", async () => {
+    stub({
+      ...emptyDay,
+      capture_health: [
+        {
+          id: "conn-1",
+          source: "capture_health",
+          kind: "reauth_required",
+          detail: "rep@example.com",
+          actions: [],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, capture_health: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("A mailbox needs you to sign in again");
+    expect(
+      screen.getByText("One of your mailbox connections needs attention."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
   // The same defect, one lane later, and caught the same way: the lead line
   // read "Your day is clear" directly above an OVERDUE promise. It repeats
   // because every new lane has to be added to a summary written before it, so
