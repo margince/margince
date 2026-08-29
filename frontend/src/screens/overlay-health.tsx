@@ -291,7 +291,16 @@ function BudgetPanel({
           state={readingState(query.isPending, query.data ? 1 : 0)}
           emptyLabel={t("overlay.budgetEmpty")}
         >
-          {query.data && <BudgetReading budget={query.data} locale={locale} />}
+          {/* Printing an unmeasured snapshot's numbers as facts would send
+              an operator chasing HubSpot quota when the fault is on our
+              side (the meter's own doc says which arms report false). */}
+          {query.data?.measured === false ? (
+            <Callout tone="warn" live="status">
+              {t("overlay.budgetUnmeasured")}
+            </Callout>
+          ) : (
+            query.data && <BudgetReading budget={query.data} locale={locale} />
+          )}
         </SurfaceState>
       )}
     </section>

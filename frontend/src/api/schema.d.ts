@@ -12059,6 +12059,8 @@ export interface components {
             };
             /** @description Free REST capacity derived from our own counts, or the `~unknown` sentinel (OVB-PARAM-5) when a share cannot be attributed — never a fabricated number (OVB-AC-1). */
             headroom?: string;
+            /** @description Whether the figures were READ rather than assumed. False on the meter's fail-closed arms — no accounting store reachable, an unconfigured incumbent, a read error — where the bands report the shed a spender must assume, not a measured exhaustion. A surface showing this budget to a human states the difference rather than presenting an accounting outage as quota pressure. */
+            measured?: boolean;
             search?: components["schemas"]["OverlayBudgetSearch"];
         };
         /** @description The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST. */

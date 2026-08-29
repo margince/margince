@@ -229,6 +229,7 @@ func budgetToWire(b overlaybudget.Budget) crmcontracts.OverlayBudget {
 	searchConsumed := int64(b.SearchConsumed)
 	searchLimit := int64(b.SearchLimit)
 	searchBand := crmcontracts.OverlayBudgetBand(b.SearchBand)
+	measured := b.Measured
 
 	return crmcontracts.OverlayBudget{
 		Window:   &window,
@@ -236,6 +237,7 @@ func budgetToWire(b overlaybudget.Budget) crmcontracts.OverlayBudget {
 		Limit:    &limit,
 		Band:     &band,
 		Headroom: &headroom,
+		Measured: &measured,
 		Sources: &struct {
 			Capture    *int64 `json:"capture,omitempty"`
 			ForceFresh *int64 `json:"force_fresh,omitempty"`

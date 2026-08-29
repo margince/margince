@@ -791,6 +791,8 @@ export const en = {
   "overlay.budgetTitle": "API budget",
   "overlay.budgetLoadFailed": "Couldn't load the budget window.",
   "overlay.budgetHeadroom": "Headroom: {headroom}",
+  "overlay.budgetUnmeasured":
+    "The call budget cannot be measured right now, so live calls are paused as a precaution. This is not HubSpot quota pressure — the meter itself is not reporting.",
   "overlay.budgetEmpty":
     "The incumbent reported no budget window for this period.",
   "overlay.budgetSources":

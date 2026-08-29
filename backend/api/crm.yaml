@@ -17999,6 +17999,15 @@ components:
             Free REST capacity derived from our own counts, or the `~unknown`
             sentinel (OVB-PARAM-5) when a share cannot be attributed — never a
             fabricated number (OVB-AC-1).
+        measured:
+          type: boolean
+          description: >-
+            Whether the figures were READ rather than assumed. False on the
+            meter's fail-closed arms — no accounting store reachable, an
+            unconfigured incumbent, a read error — where the bands report the
+            shed a spender must assume, not a measured exhaustion. A surface
+            showing this budget to a human states the difference rather than
+            presenting an accounting outage as quota pressure.
         search:
           $ref: '#/components/schemas/OverlayBudgetSearch'
 
