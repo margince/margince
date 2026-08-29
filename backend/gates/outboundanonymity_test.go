@@ -244,20 +244,37 @@ func setsUserAgent(fn *ast.FuncDecl, built map[string]bool) bool {
 func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]bool {
 	built := map[string]bool{}
 	ast.Inspect(body, func(node ast.Node) bool {
-		assign, isAssign := node.(*ast.AssignStmt)
-		if !isAssign || len(assign.Rhs) != 1 || len(assign.Lhs) == 0 {
-			return true
-		}
-		call, isCall := assign.Rhs[0].(*ast.CallExpr)
-		if !isCall || !isRequestConstructor(call, client) {
-			return true
-		}
-		if name, isIdent := assign.Lhs[0].(*ast.Ident); isIdent {
-			built[name.Name] = true
+		switch typed := node.(type) {
+		case *ast.AssignStmt:
+			bindRequest(built, typed.Lhs, typed.Rhs, client)
+		case *ast.ValueSpec:
+			// `var req, err = http.NewRequest(…)`. Read as an assignment only,
+			// a function declaring its request this way looked as though it had
+			// built one and never named it — a false finding, which costs a
+			// census its reader as surely as a missed one.
+			names := make([]ast.Expr, 0, len(typed.Names))
+			for _, name := range typed.Names {
+				names = append(names, name)
+			}
+			bindRequest(built, names, typed.Values, client)
 		}
 		return true
 	})
 	return built
+}
+
+// bindRequest records the identifier a request constructor's result lands in.
+func bindRequest(built map[string]bool, lhs, rhs []ast.Expr, client string) {
+	if len(rhs) != 1 || len(lhs) == 0 {
+		return
+	}
+	call, isCall := rhs[0].(*ast.CallExpr)
+	if !isCall || !isRequestConstructor(call, client) {
+		return
+	}
+	if name, isIdent := lhs[0].(*ast.Ident); isIdent {
+		built[name.Name] = true
+	}
 }
 
 // isRequestConstructor matches the ways net/http starts an outbound request,
@@ -265,13 +282,33 @@ func requestsBuiltIn(body *ast.BlockStmt, client string) map[string]bool {
 func isRequestConstructor(call *ast.CallExpr, client string) bool {
 	switch fn := call.Fun.(type) {
 	case *ast.SelectorExpr:
-		pkg, isIdent := fn.X.(*ast.Ident)
-		return isIdent && pkg.Name == client && startsARequest(fn.Sel.Name)
+		if pkg, isIdent := fn.X.(*ast.Ident); isIdent && pkg.Name == client {
+			return startsARequest(fn.Sel.Name)
+		}
+		// `http.DefaultClient.Get(…)` — the shared client, which is still one
+		// of these calls and still has nowhere to put a name.
+		return isDefaultClient(fn.X, client) && startsARequest(fn.Sel.Name)
 	case *ast.Ident:
 		// A dot import spells it unqualified.
 		return client == "" && startsARequest(fn.Name)
 	}
 	return false
+}
+
+// isDefaultClient matches net/http's package-level client, by name.
+//
+// A convenience method on a *http.Client VARIABLE is not matched, and cannot be
+// without type information a syntactic census does not have — `c.Get(url)` is
+// indistinguishable here from any other Get. The shared client is the one
+// spelling that is decidable, and it is also the one somebody reaches for when
+// they are not building a request at all.
+func isDefaultClient(expr ast.Expr, client string) bool {
+	selector, isSelector := expr.(*ast.SelectorExpr)
+	if !isSelector || selector.Sel.Name != "DefaultClient" {
+		return false
+	}
+	pkg, isIdent := selector.X.(*ast.Ident)
+	return isIdent && pkg.Name == client
 }
 
 // startsARequest names the net/http functions that put a request on the wire.
@@ -370,6 +407,19 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 			name: "a convenience call is a request with nowhere to put a name",
 			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
 				"\tresp, _ := http.Get(\"https://x.test\")\n\t_ = resp\n}\n",
+			want: 1,
+		},
+		{
+			name: "a request declared with var is still this function's",
+			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
+				"\tvar req, _ = http.NewRequest(\"GET\", \"https://x.test\", nil)\n" +
+				"\treq.Header.Set(\"User-Agent\", \"margince-x/1.0\")\n}\n",
+			want: 0,
+		},
+		{
+			name: "the shared client's convenience call is one of these too",
+			source: "package p\nimport \"net/http\"\nfunc call() {\n" +
+				"\tresp, _ := http.DefaultClient.Get(\"https://x.test\")\n\t_ = resp\n}\n",
 			want: 1,
 		},
 		{
