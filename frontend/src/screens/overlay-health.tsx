@@ -291,12 +291,9 @@ function BudgetPanel({
           state={readingState(query.isPending, query.data ? 1 : 0)}
           emptyLabel={t("overlay.budgetEmpty")}
         >
-          {/* An UNMEASURED snapshot is an accounting outage, not a reading:
-              the meter fails closed (shed, zero consumption) so a spender
-              cannot overspend, and printing those numbers as facts would
-              send an operator chasing HubSpot quota when the thing to fix
-              is our own accounting store. The figures are withheld and the
-              outage named instead. */}
+          {/* Printing an unmeasured snapshot's numbers as facts would send
+              an operator chasing HubSpot quota when the fault is on our
+              side (the meter's own doc says which arms report false). */}
           {query.data?.measured === false ? (
             <Callout tone="warn" live="status">
               {t("overlay.budgetUnmeasured")}

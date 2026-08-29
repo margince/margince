@@ -745,7 +745,7 @@ export const vi = {
   "overlay.budgetLoadFailed": "Không tải được cửa sổ hạn mức.",
   "overlay.budgetHeadroom": "Còn dư: {headroom}",
   "overlay.budgetUnmeasured":
-    "Hiện không đo được hạn mức lệnh gọi — kho đếm không truy cập được, các lệnh gọi trực tiếp tạm dừng để phòng ngừa. Đây không phải áp lực hạn mức HubSpot.",
+    "Hiện không đo được hạn mức lệnh gọi, các lệnh gọi trực tiếp tạm dừng để phòng ngừa. Đây không phải áp lực hạn mức HubSpot — bộ đếm không báo số liệu.",
   "overlay.budgetEmpty":
     "Hệ thống cũ không báo cáo cửa sổ ngân sách nào cho kỳ này.",
   "overlay.budgetSources":

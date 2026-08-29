@@ -763,7 +763,7 @@ export const de = {
   "overlay.budgetLoadFailed": "Das Budget-Fenster konnte nicht geladen werden.",
   "overlay.budgetHeadroom": "Spielraum: {headroom}",
   "overlay.budgetUnmeasured":
-    "Das Aufrufbudget kann gerade nicht gemessen werden — der Zählerspeicher ist nicht erreichbar, Live-Aufrufe pausieren vorsorglich. Das ist kein HubSpot-Quotendruck.",
+    "Das Aufrufbudget kann gerade nicht gemessen werden, Live-Aufrufe pausieren vorsorglich. Das ist kein HubSpot-Quotendruck — der Zähler selbst liefert keine Werte.",
   "overlay.budgetEmpty":
     "Das Altsystem hat für diesen Zeitraum kein Budgetfenster gemeldet.",
   "overlay.budgetSources":

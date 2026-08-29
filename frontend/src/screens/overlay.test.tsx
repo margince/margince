@@ -287,7 +287,7 @@ describe("the overlay card", () => {
       await screen.findByText(/cannot be measured right now/),
     ).toBeTruthy();
     expect(screen.queryByText("Shedding load")).toBeNull();
-    expect(screen.queryByText(/0 \/ /)).toBeNull();
+    expect(screen.queryByText(/Headroom:/)).toBeNull();
   });
 
   it("renders a sync state or budget band this build doesn't recognize as the server's own raw value, not blank or literal 'undefined'", async () => {

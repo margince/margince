@@ -85,6 +85,7 @@ function budgetFixture(band: Budget["band"]): Budget {
     consumed: band === "shed" ? 980 : band === "warn" ? 750 : 100,
     limit: 1000,
     band,
+    measured: true,
     sources: { force_fresh: 20, poller: 700, capture: 30 },
     headroom: band === "shed" ? "0" : "~unknown",
     search: {
@@ -231,6 +232,29 @@ export const BudgetShed: Story = {
       "GET /overlay/connection": () => jsonResponse(activeConnection),
       "GET /overlay/sync-status": () => jsonResponse(freshSyncStatus),
       "GET /overlay/budget": () => jsonResponse(budgetFixture("shed")),
+    });
+    return (
+      <StoryProviders>
+        <OverlayCard />
+      </StoryProviders>
+    );
+  },
+};
+
+// The meter itself not reporting: the figures are withheld and the outage
+// named, instead of the fail-closed shed printing as measured exhaustion.
+export const BudgetUnmeasured: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /overlay/connection": () => jsonResponse(activeConnection),
+      "GET /overlay/sync-status": () => jsonResponse(freshSyncStatus),
+      "GET /overlay/budget": () =>
+        jsonResponse({
+          ...budgetFixture("shed"),
+          measured: false,
+          consumed: 0,
+        }),
     });
     return (
       <StoryProviders>

@@ -28,7 +28,8 @@ func budgetI64(p *int64) int64 {
 // window. An absent source (capture here) spent nothing and reads 0.
 func TestBudgetToWireExposesBreakdownHeadroomAndSearch(t *testing.T) {
 	w := budgetToWire(overlaybudget.Budget{
-		Window: "24h", Consumed: 7, Limit: 10, Band: overlaybudget.BandWarn,
+		Measured: true,
+		Window:   "24h", Consumed: 7, Limit: 10, Band: overlaybudget.BandWarn,
 		Headroom: overlaybudget.UnknownHeadroom,
 		Breakdown: map[overlaybudget.Source]int{
 			overlaybudget.SourceForceFresh: 4,
@@ -36,6 +37,14 @@ func TestBudgetToWireExposesBreakdownHeadroomAndSearch(t *testing.T) {
 		},
 		SearchWindow: "1s", SearchConsumed: 2, SearchLimit: 4, SearchBand: overlaybudget.BandOK,
 	})
+	if w.Measured == nil || !*w.Measured {
+		t.Fatalf("a measured snapshot's flag did not reach the wire: %v", w.Measured)
+	}
+	// The honesty half of the same field: a fail-closed snapshot must say it
+	// was assumed, or the client prints the shed as measured exhaustion.
+	if unmeasured := budgetToWire(overlaybudget.Budget{}); unmeasured.Measured == nil || *unmeasured.Measured {
+		t.Fatalf("a fail-closed snapshot's flag did not reach the wire as false: %v", unmeasured.Measured)
+	}
 
 	if w.Headroom == nil || *w.Headroom != overlaybudget.UnknownHeadroom {
 		t.Errorf("headroom = %v, want the %q sentinel (never a number, OVB-AC-1)", w.Headroom, overlaybudget.UnknownHeadroom)
