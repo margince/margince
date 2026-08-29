@@ -208,7 +208,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		return model.Response{}, RouteInfo{}, budgetErr
 	}
 	if keyErr != nil {
-		return model.Response{}, RouteInfo{}, keyErr
+		// No provider was tried: the sentinel must say so, or the trace
+		// blames a vendor for our own key construction.
+		return model.Response{}, RouteInfo{}, fmt.Errorf("%w: %w", errRequestFailed, keyErr)
 	}
 
 	trace.Degraded = degraded
