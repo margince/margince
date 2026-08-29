@@ -61,7 +61,7 @@ func seedContracts(c *client, cfg demoConfig, refs pipelineRefs, mode runMode) (
 		if successors[contract.Ref] {
 			continue
 		}
-		if err := driveContract(c, contract, ids, refs, mode); err != nil {
+		if err := driveContract(c, cfg, contract, ids, refs, mode); err != nil {
 			return created, fmt.Errorf("contract %s: %w", contract.Ref, err)
 		}
 	}
@@ -151,7 +151,7 @@ func ensureContract(c *client, cfg demoConfig, contract demoContract, refs pipel
 
 // driveContract moves one contract to the state the dataset asks for. Each
 // step is skipped when it is already there, so a re-run changes nothing.
-func driveContract(c *client, contract demoContract, ids map[string]string, refs pipelineRefs, mode runMode) error {
+func driveContract(c *client, cfg demoConfig, contract demoContract, ids map[string]string, refs pipelineRefs, mode runMode) error {
 	if mode == modeDryRun {
 		return nil
 	}
@@ -180,7 +180,7 @@ func driveContract(c *client, contract demoContract, ids map[string]string, refs
 
 	switch {
 	case contract.RenewsInto != "":
-		return renewContract(c, contract, ids, refs)
+		return renewContract(c, cfg, contract, ids, refs)
 	case contract.Cancel != nil:
 		body := jsonBody{
 			"cancellation_notice_on":    refs.date(contract.Cancel.NoticeInDays),
@@ -207,7 +207,7 @@ func driveContract(c *client, contract demoContract, ids map[string]string, refs
 // the renewal replaces: renewing writes its OWN successor row, so the
 // placeholder is archived first and the dataset's second entry is what the
 // renewal is filled from.
-func renewContract(c *client, contract demoContract, ids map[string]string, refs pipelineRefs) error {
+func renewContract(c *client, cfg demoConfig, contract demoContract, ids map[string]string, refs pipelineRefs) error {
 	var terms demoContract
 	for _, candidate := range refs.contractsByRef {
 		if candidate.Ref == contract.RenewsInto {
@@ -219,6 +219,18 @@ func renewContract(c *client, contract demoContract, ids map[string]string, refs
 		return fmt.Errorf("renews_into names %q, which is not in this dataset", contract.RenewsInto)
 	}
 	body := jsonBody{"title": terms.Title, "value_basis": terms.ValueBasis, "auto_renew": terms.AutoRenew}
+	// The successor's OWN deal, from the successor's own dataset entry. A
+	// renewal inherits its counterparty and nothing else, so a successor that
+	// declares a deal and is not sent one is created attached to nothing — and
+	// its PDF is then out of reach of that deal's room, which is the blocker
+	// ensureContract already removes for an ordinary contract.
+	if terms.Deal != "" {
+		dealID, err := dealIDFor(c, cfg, refs, terms.Deal)
+		if err != nil {
+			return fmt.Errorf("contract %s: %w", terms.Ref, err)
+		}
+		addIfSet(body, "deal_id", dealID)
+	}
 	addIfSet(body, "contract_number", terms.ContractNumber)
 	if terms.ValueMinor > 0 {
 		body["value_minor"] = terms.ValueMinor

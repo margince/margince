@@ -245,6 +245,19 @@ func renewInput(req crmcontracts.RenewContractRequest) CreateContractInput {
 		ValueBasis:     string(req.ValueBasis),
 		Source:         "renewal",
 	}
+	// The work this term came out of, and it is the SUCCESSOR's rather than the
+	// predecessor's. A renewal is usually won by its own opportunity, so
+	// inheriting the old deal would attribute the new term to the one that won
+	// the old — and leaving it unset attaches the agreement to nothing at all,
+	// which is what put a renewed contract's PDF out of reach of every deal
+	// room. createContractTx checks both against the counterparty the successor
+	// inherits, so neither can name another company's record.
+	if req.DealId != nil {
+		in.DealID = &ids.DealID{UUID: ids.UUID(*req.DealId)}
+	}
+	if req.ProjectId != nil {
+		in.ProjectID = &ids.ProjectID{UUID: ids.UUID(*req.ProjectId)}
+	}
 	if req.AutoRenew != nil {
 		in.AutoRenew = *req.AutoRenew
 	}

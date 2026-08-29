@@ -23868,13 +23868,22 @@ type RenameCustomFieldRequest struct {
 	Label *string `json:"label,omitempty"`
 }
 
-// RenewContractRequest The successor's terms. It freezes its own rate and inherits none.
+// RenewContractRequest The successor's terms. It freezes its own rate and inherits none — the counterparty
+// excepted, which comes from the predecessor because a renewal that changed companies would
+// be a different agreement wearing this one's history.
+//
+// `deal_id` and `project_id` are the successor's OWN, exactly as on a create: a renewal is
+// usually won by its own opportunity, so inheriting the predecessor's would attribute the new
+// term to the deal that won the old one. Both must belong to the counterparty the successor
+// inherits, and a caller may not name one it cannot see.
 type RenewContractRequest struct {
 	AutoRenew        *bool               `json:"auto_renew,omitempty"`
 	ContractNumber   *string             `json:"contract_number,omitempty"`
 	Currency         *string             `json:"currency,omitempty"`
+	DealId           *openapi_types.UUID `json:"deal_id,omitempty"`
 	EndsOn           *openapi_types.Date `json:"ends_on,omitempty"`
 	NoticePeriodDays *int                `json:"notice_period_days,omitempty"`
+	ProjectId        *openapi_types.UUID `json:"project_id,omitempty"`
 	RenewalOn        *openapi_types.Date `json:"renewal_on,omitempty"`
 	SignedOn         *openapi_types.Date `json:"signed_on,omitempty"`
 	StartsOn         *openapi_types.Date `json:"starts_on,omitempty"`
