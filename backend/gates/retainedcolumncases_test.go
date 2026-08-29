@@ -33,11 +33,20 @@ package gates
 //     assignments, or an assignment list ending on a comma), and from the
 //     SYNTAX when it reads as finished but is joined to a runtime value
 //     (assembledSweepTargets). Both shapes are planted below.
-//   - A statement assembled by something other than `+` — fmt.Sprintf, a
-//     strings.Builder, a query builder — is seen by neither: the literal reads
-//     as ordinary and no `+` node says otherwise. Nothing in the swept files
-//     does this today and the gate would pass the day one did; closing it needs
-//     the gate to evaluate the expression rather than read it.
+//   - A statement assembled by something other than `+` is reported from two
+//     directions as well. `fmt.Sprintf("UPDATE activity SET %s = NULL", col)`
+//     leaves a fmt VERB standing where a column should be, which is the text
+//     tell; and a fragment handed to a named assembler — Sprintf, a
+//     strings.Builder's WriteString, strings.Replace, strings.Join — is a half
+//     statement with no `+` node to say so, which is the syntax tell. The
+//     assembler list is a LIST rather than "any call", because a literal inside
+//     a call is every statement in this tree: tx.Exec takes the whole thing.
+//   - What still gets past all four: an assembler this tree does not use, and a
+//     builder that writes the column in a call carrying no SQL literal at all —
+//     `b.WriteString(column)` after `b.WriteString("UPDATE activity SET ")`
+//     IS caught, because the first call carries the fragment, but a builder fed
+//     entirely from variables carries no text to read. Closing that needs the
+//     gate to evaluate the expression rather than read it.
 
 import (
 	"os"
@@ -132,6 +141,16 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The shapes the check cannot MATCH, and therefore REPORTS. Split from the
+// case table above because they ask a different question: the table asks
+// whether a destructive statement is seen, and these ask whether a statement
+// the gate cannot read is refused rather than read as harmless — which is how
+// a shape gate goes quietly green (gate-patterns.md §D).
+func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
+	t.Parallel()
+	const table, column = "activity", "counterparty_email"
 
 	// The shape the check cannot MATCH, and therefore reports. A column
 	// assembled at runtime is not in the literal, so statementDestroying
@@ -211,6 +230,75 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 		}
 		if got["person"] != "" {
 			t.Errorf("a statement joined to a parenthesized LITERAL was reported as assembled: %v", got)
+		}
+	})
+
+	// A fmt verb standing where a column should be. The literal reads as a
+	// finished statement — assignments present, no dangling comma — and no `+`
+	// node exists for the syntax side either, so the verb is the only tell.
+	t.Run("a format verb in the SET clause is reported", func(t *testing.T) {
+		stmt := collapsedSQL(`UPDATE activity SET body = NULL, %s = NULL WHERE id = $1`)
+		if statementDestroying([]string{stmt}, table, column) != "" {
+			t.Error("a statement with no column in it was read as destroying one")
+		}
+		if assembledSetTarget([]string{stmt}) == "" {
+			t.Error("a SET clause naming a fmt verb was read as complete — the column arrives at runtime " +
+				"and the KEEPS registration is no longer checked against it")
+		}
+		// A percent that is not a verb must not fire it, or an ordinary LIKE
+		// pattern would be a finding and the tripwire would get turned off.
+		ordinary := collapsedSQL(`UPDATE activity SET body = NULL WHERE subject LIKE '100%'`)
+		if got := assembledSetTarget([]string{ordinary}); got != "" {
+			t.Errorf("an ordinary statement was reported as assembled: %q", got)
+		}
+	})
+
+	// A fragment handed to an assembler. Sprintf and a builder leave no `+`
+	// node, and the fragment can read as a whole statement.
+	t.Run("a fragment handed to an assembler is reported", func(t *testing.T) {
+		dir := t.TempDir()
+		const head = "package p\n\nfunc f(extra string) string {\n"
+		for _, tc := range []struct{ name, body string }{
+			{"sprintf", "\treturn fmt.Sprintf(`UPDATE activity SET body = NULL, %s = NULL`, extra)\n"},
+			{"join", "\treturn strings.Join([]string{`UPDATE activity SET body = NULL`, extra}, \" \")\n"},
+			{"builder", "\tvar b strings.Builder\n\tb.WriteString(`UPDATE activity SET body = NULL`)\n\tb.WriteString(extra)\n\treturn b.String()\n"},
+			{"replace", "\treturn strings.Replace(`UPDATE activity SET body = NULL`, `NULL`, extra, 1)\n"},
+		} {
+			path := filepath.Join(dir, tc.name+".go")
+			if err := os.WriteFile(path, []byte(head+tc.body+"}\n"), 0o600); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			if got := assembledSweepTargets(t, path); got[table] == "" {
+				t.Errorf("%s: a fragment handed to an assembler was not reported: %v", tc.name, got)
+			}
+		}
+		// The whole statement passed to a QUERY call is not an assembly, or
+		// every statement in the tree would be a finding.
+		whole := filepath.Join(dir, "exec.go")
+		wholeSource := "package p\n\ntype T interface{ Exec(c C, q string) }\ntype C interface{}\n\nfunc g(tx T, ctx C) { tx.Exec(ctx, `UPDATE activity SET body = NULL WHERE id = $1`) }\n"
+		if err := os.WriteFile(whole, []byte(wholeSource), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := assembledSweepTargets(t, whole); len(got) != 0 {
+			t.Errorf("a statement passed whole to a query call was reported as assembled: %v", got)
+		}
+	})
+
+	// The two halves of the report, and the reason it is one function: dropping
+	// either arm is silent, because each answers for shapes the other cannot
+	// see.
+	t.Run("both halves of the unreadable report are consulted", func(t *testing.T) {
+		fromText := []string{collapsedSQL(`UPDATE activity SET `)}
+		if unreadableWriteOn(fromText, "") == "" {
+			t.Error("an unfinished fragment went unreported when the syntax side had nothing to say")
+		}
+		ordinary := []string{collapsedSQL(`UPDATE activity SET body = NULL WHERE id = $1`)}
+		if unreadableWriteOn(ordinary, `update activity set body = null`) == "" {
+			t.Error("a fragment the SYNTAX reported went unreported because the text read it as complete — " +
+				"this is the arm a caller keeping only assembledSetTarget would drop")
+		}
+		if got := unreadableWriteOn(ordinary, ""); got != "" {
+			t.Errorf("an ordinary statement was reported as unreadable: %q", got)
 		}
 	})
 

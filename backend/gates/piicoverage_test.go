@@ -639,11 +639,33 @@ func assembledSetTarget(statements []string) string {
 			continue
 		}
 		assignments := strings.TrimSpace(setAssignments(stmt))
-		if assignments == "" || strings.HasSuffix(assignments, ",") {
+		if assignments == "" || strings.HasSuffix(assignments, ",") || formatVerbRe.MatchString(assignments) {
 			return stmt
 		}
 	}
 	return ""
+}
+
+// formatVerbRe is a fmt verb standing where a column or a value should be.
+// `fmt.Sprintf("UPDATE activity SET %s = NULL", column)` reaches the reader as
+// a literal that looks complete and names a column that is not a column, so
+// neither the empty-clause nor the dangling-comma tell fires — and no `+` node
+// exists for assembledSweepTargets to read either. The verb IS the tell.
+var formatVerbRe = regexp.MustCompile(`%[-+# 0-9.*]*[a-zA-Z]`)
+
+// unreadableWriteOn answers the swept statement on one table that this gate
+// can only half read, or "" when it can read them all.
+//
+// It is a function rather than two lines at the call site because the ANSWER is
+// two answers and dropping either is silent. The text says a fragment is
+// unfinished (assembledSetTarget); the syntax says a finished-looking fragment
+// has more joined onto it (the caller's assembledSweepTargets). A regression
+// that kept only the first would keep passing every case written for it.
+func unreadableWriteOn(statements []string, assembledFragment string) string {
+	if unreadable := assembledSetTarget(statements); unreadable != "" {
+		return unreadable
+	}
+	return assembledFragment
 }
 
 // assembledSweepTargets returns, per table, a swept SQL literal that is joined
@@ -683,6 +705,31 @@ func assembledSweepTargets(t *testing.T, path string) map[string]string {
 	}
 	out := map[string]string{}
 	ast.Inspect(file, func(n ast.Node) bool {
+		// A SQL fragment handed to an ASSEMBLER — fmt.Sprintf, a
+		// strings.Builder's WriteString, strings.Replace — is half a statement
+		// with no `+` node to say so. tx.Exec's own literal is not: the whole
+		// statement is the argument, which is why the call names are listed
+		// rather than "any call".
+		if call, isCall := n.(*ast.CallExpr); isCall && assemblesSQL(call) {
+			// The whole SUBTREE, not the direct arguments: strings.Join takes
+			// its pieces inside a slice literal, and a Sprintf format string
+			// can itself be a join of literals.
+			ast.Inspect(call, func(inner ast.Node) bool {
+				expr, isExpr := inner.(ast.Expr)
+				if !isExpr {
+					return true
+				}
+				fragment, ok := text(expr)
+				if !ok {
+					return true
+				}
+				for _, table := range sqlWriteTargets(collapsedSQL(fragment)) {
+					out[table] = collapsedSQL(fragment)
+				}
+				return true
+			})
+			return true
+		}
 		join, ok := n.(*ast.BinaryExpr)
 		if !ok || join.Op != token.ADD {
 			return true
@@ -706,6 +753,25 @@ func assembledSweepTargets(t *testing.T, path string) map[string]string {
 		return true
 	})
 	return out
+}
+
+// sqlAssemblers are the calls that build a statement out of pieces. Named
+// rather than inferred, because "a literal inside a call" is every statement in
+// the tree: tx.Exec takes the whole thing.
+var sqlAssemblers = map[string]bool{
+	"Sprintf": true, "Sprint": true, "Sprintln": true,
+	"Fprintf": true, "WriteString": true, "Replace": true, "ReplaceAll": true,
+	"Join": true,
+}
+
+func assemblesSQL(call *ast.CallExpr) bool {
+	switch fn := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		return sqlAssemblers[fn.Sel.Name]
+	case *ast.Ident:
+		return sqlAssemblers[fn.Name]
+	}
+	return false
 }
 
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
@@ -830,13 +896,7 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 		// at all. A SET clause with no column in it is one the gate cannot
 		// judge, and answering "keeps everything" for it is the quiet pass.
 		if len(h.retentionKeeps) > 0 {
-			unreadable := assembledSetTarget(sweepStatements[table])
-			if unreadable == "" {
-				// The statement can be complete and still be half of one. Only
-				// the `+` says so.
-				unreadable = assembled[table]
-			}
-			if unreadable != "" {
+			if unreadable := unreadableWriteOn(sweepStatements[table], assembled[table]); unreadable != "" {
 				missing = append(missing, "the retention sweep writes PII table "+table+
 					" with a statement this gate can only half read (`"+unreadable+"`) — the rest of it is assembled at runtime, so the"+
 					" columns registered as deliberately KEPT are no longer checked against it. Name the columns in the"+
