@@ -198,6 +198,25 @@ export const en = {
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",
   "day.didNotRun": "Approved, but did not run",
+  "day.syncHealth": "CRM sync",
+  "day.syncHealth.empty": "Your existing CRM is in sync.",
+  "day.syncHealth.kind.sync_failing":
+    "The connection to your existing CRM is failing",
+  "day.syncHealth.kind.budget_degraded":
+    "Calls to your existing CRM are being throttled",
+  "day.syncHealth.kind.objects_stale":
+    "Some records are behind your existing CRM",
+  "day.syncHealth.kind.backfill_incomplete":
+    "The initial import is still running",
+  "day.syncHealth.kind.generic": "A sync concern",
+  "day.syncHealth.cause.auth":
+    "The connection was refused — the credentials need attention.",
+  "day.syncHealth.cause.rate_limited":
+    "The other side is rate-limiting us; syncing is paced down.",
+  "day.syncHealth.cause.internal":
+    "The last sync attempts failed; retrying automatically.",
+  "day.syncHealth.band.warn": "Close to the call limit.",
+  "day.syncHealth.band.shed": "Over the call limit — live reads are on hold.",
   "day.dsr": "Privacy requests",
   "day.dsr.empty": "No open requests from data subjects.",
   "day.dsr.kind.access": "Someone wants to know what data we hold",

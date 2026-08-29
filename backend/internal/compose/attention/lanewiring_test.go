@@ -37,9 +37,9 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
+		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -63,6 +63,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 			"this was approved, but the work it released did not run",
 		},
 		{"dsr", out.Dsr, "dsr", ""},
+		{"sync_health", out.SyncHealth, "sync_health", ""},
 	} {
 		if lane.items == nil || len(*lane.items) != 1 {
 			t.Fatalf("%s carries %v, want one item", lane.name, lane.items)
@@ -109,9 +110,9 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
+		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -168,9 +169,9 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
+		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		nil,
-		fixedClock,
-	)
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

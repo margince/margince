@@ -205,6 +205,26 @@ export const vi = {
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
   "day.didNotRun": "Đã duyệt nhưng chưa chạy",
+  "day.syncHealth": "Đồng bộ CRM",
+  "day.syncHealth.empty": "CRM hiện tại của bạn đang đồng bộ.",
+  "day.syncHealth.kind.sync_failing":
+    "Kết nối tới CRM hiện tại của bạn đang lỗi",
+  "day.syncHealth.kind.budget_degraded":
+    "Các lệnh gọi tới CRM hiện tại đang bị hạn chế",
+  "day.syncHealth.kind.objects_stale":
+    "Một số bản ghi đang chậm hơn CRM hiện tại của bạn",
+  "day.syncHealth.kind.backfill_incomplete":
+    "Đợt nhập dữ liệu ban đầu vẫn đang chạy",
+  "day.syncHealth.kind.generic": "Một vấn đề đồng bộ",
+  "day.syncHealth.cause.auth":
+    "Kết nối bị từ chối — thông tin đăng nhập cần được xem lại.",
+  "day.syncHealth.cause.rate_limited":
+    "Phía bên kia đang giới hạn tần suất; đồng bộ được giãn ra.",
+  "day.syncHealth.cause.internal":
+    "Những lần đồng bộ gần đây thất bại; hệ thống sẽ tự thử lại.",
+  "day.syncHealth.band.warn": "Gần chạm giới hạn lệnh gọi.",
+  "day.syncHealth.band.shed":
+    "Vượt giới hạn lệnh gọi — tạm dừng đọc trực tiếp.",
   "day.dsr": "Yêu cầu quyền riêng tư",
   "day.dsr.empty": "Không có yêu cầu nào đang mở từ chủ thể dữ liệu.",
   "day.dsr.kind.access": "Có người muốn biết chúng ta giữ dữ liệu gì",

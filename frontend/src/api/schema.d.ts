@@ -22778,8 +22778,22 @@ export interface components {
              *     failure marks.
              */
             did_not_run?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The overlay sync's current concerns: the poller backing off, the incumbent
+             *     call budget degraded, mirrored classes stale or still backfilling. One card
+             *     per CONDITION, never one per affected row, so a broken connector is a single
+             *     card rather than a flood. Each card's `kind` names the condition and
+             *     `detail` carries its facts (the affected object classes, the failure
+             *     class, or the budget band); fixing the connection stays on the sync
+             *     settings screen, so the card offers no verbs.
+             *
+             *     Absent — not empty — on a workspace that is not running in overlay mode:
+             *     an installation with no incumbent connected does not look here, which is a
+             *     different fact from a healthy sync.
+             */
+            sync_health?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22806,6 +22820,8 @@ export interface components {
             did_not_run?: number;
             /** @description How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in. */
             dsr?: number;
+            /** @description How many sync concerns the lane carries — one per condition, so this is the full count, never a bounded page of a larger one. */
+            sync_health?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22820,7 +22836,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

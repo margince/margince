@@ -27,9 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay/hubspot"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -432,9 +435,34 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 	return entries, true, nil
 }
 
-// newAttentionHandlers assembles the surface for the API role.
-func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
-	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
+// attentionSyncHealth binds the sync-health lane to the overlay module's own
+// aggregated read; the mode gate and the every-role read posture live there.
+type attentionSyncHealth struct{ svc *overlay.Service }
+
+func (h attentionSyncHealth) Concerns(ctx context.Context) ([]attention.SyncConcern, error) {
+	concerns, err := h.svc.SyncHealth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.SyncConcern, 0, len(concerns))
+	for _, concern := range concerns {
+		out = append(out, attention.SyncConcern{
+			Kind:        concern.Kind,
+			ErrorClass:  concern.ErrorClass,
+			Failures:    concern.Failures,
+			NextSweepAt: concern.NextSweepAt,
+			Band:        concern.Band,
+			Objects:     concern.Objects,
+		})
+	}
+	return out, nil
+}
+
+// newAttentionHandlers assembles the surface for the API role. meter is the
+// Server's shared OVB meter (rebindable; overlay.go), which the sync-health
+// lane's budget concern reads.
+func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter) attention.Handlers {
+	return attention.NewHandlers(newAttentionService(pool, svc, meter, func() time.Time { return time.Now().UTC() }))
 }
 
 // newAttentionService binds every lane to the module that owns what it shows.
@@ -444,7 +472,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 // keep passing while the shipped feed lost one — which is the failure the feed's
 // stub-driven unit tests already have, and the reason its producers went so long
 // without a test that reads them end to end.
-func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
+func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
@@ -473,6 +501,16 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// exactly as far as consent's own DSR-admin gate reaches — the store
 		// refuses everyone else and the lane renders that as withheld.
 		attentionDSRs{store: consent.NewStore(db)},
+		// The sync's own health, read through the module that owns the
+		// mirror. Built without a vault on purpose: the health read never
+		// touches a credential, and binding it here (rather than inside the
+		// vault-gated overlay wiring) keeps the lane alive on every role
+		// that serves the feed. A workspace not in overlay mode answers
+		// ErrModeNotOverlay and the lane stays absent.
+		attentionSyncHealth{svc: overlay.NewService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{})).
+			WithBudgetMeter(meter).
+			WithIncumbentClassesTranslator(hubspot.IncumbentClassesFor).
+			WithProjectionFingerprints(OverlayProjectionFingerprints())},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).

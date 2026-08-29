@@ -3,6 +3,7 @@ import {
   CheckSquare,
   GitMerge,
   Handshake,
+  RefreshCw,
   Scale,
   ShieldAlert,
   Sparkles,
@@ -618,6 +619,11 @@ function TodayLanes({
   // served this lane at all; warn-toned whenever it holds anything, because
   // every row is a deadline the law set.
   const requests = day.dsr;
+  // The overlay sync's concerns. Absent on a workspace not running in
+  // overlay mode; warn-toned whenever it holds anything, because every row
+  // is data a rep is reading going stale or a connection not syncing.
+  const syncConcerns = day.sync_health;
+  const syncTone = warnWhenHolding(syncConcerns);
   const requestsTone = warnWhenHolding(requests);
   const failedTone = warnWhenHolding(failed);
   const lapsed = day.relationship_decay;
@@ -752,6 +758,22 @@ function TodayLanes({
         lane="did_not_run"
         total={day.counts.did_not_run ?? 0}
         tone={failedTone}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={syncConcerns}
+        shape={{
+          title: t("day.syncHealth"),
+          empty: t("day.syncHealth.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: RefreshCw,
+        }}
+        omitted={omitted}
+        lane="sync_health"
+        total={day.counts.sync_health ?? 0}
+        tone={syncTone}
         onComplete={onComplete}
         onSnooze={onSnooze}
         completing={complete.isPending}

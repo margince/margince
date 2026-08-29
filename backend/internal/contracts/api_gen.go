@@ -1257,6 +1257,7 @@ const (
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
 	AttentionLanesOmittedPlanned           AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedRelationshipDecay AttentionLanesOmitted = "relationship_decay"
+	AttentionLanesOmittedSyncHealth        AttentionLanesOmitted = "sync_health"
 	AttentionLanesOmittedThisMorning       AttentionLanesOmitted = "this_morning"
 )
 
@@ -1280,6 +1281,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedPlanned:
 		return true
 	case AttentionLanesOmittedRelationshipDecay:
+		return true
+	case AttentionLanesOmittedSyncHealth:
 		return true
 	case AttentionLanesOmittedThisMorning:
 		return true
@@ -1356,6 +1359,7 @@ const (
 	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
+	AttentionItemSourceSyncHealth        AttentionItemSource = "sync_health"
 	AttentionItemSourceTask              AttentionItemSource = "task"
 )
 
@@ -1379,6 +1383,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceMeeting:
 		return true
 	case AttentionItemSourceRelationshipDecay:
+		return true
+	case AttentionItemSourceSyncHealth:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -13750,6 +13756,19 @@ type Attention struct {
 	// changes.
 	RelationshipDecay *[]AttentionItem `json:"relationship_decay,omitempty"`
 
+	// SyncHealth The overlay sync's current concerns: the poller backing off, the incumbent
+	// call budget degraded, mirrored classes stale or still backfilling. One card
+	// per CONDITION, never one per affected row, so a broken connector is a single
+	// card rather than a flood. Each card's `kind` names the condition and
+	// `detail` carries its facts (the affected object classes, or the failure
+	// class and retry time); fixing the connection stays on the sync settings
+	// screen, so the card offers no verbs.
+	//
+	// Absent — not empty — on a workspace that is not running in overlay mode:
+	// an installation with no incumbent connected does not look here, which is a
+	// different fact from a healthy sync.
+	SyncHealth *[]AttentionItem `json:"sync_health,omitempty"`
+
 	// ThisMorning The overnight brief's queue, best-ranked first — what the night found worth
 	// the rep's first hour.
 	//
@@ -13810,6 +13829,9 @@ type AttentionCounts struct {
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
+
+	// SyncHealth How many sync concerns the lane carries — one per condition, so this is the full count, never a bounded page of a larger one.
+	SyncHealth *int `json:"sync_health,omitempty"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`

@@ -1,0 +1,160 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package overlay
+
+// The sync-health read: the handful of overlay conditions a rep can see at a
+// glance — the poller backing off, the incumbent budget degraded, mirror
+// classes stale or still backfilling. It aggregates rather than enumerates
+// (one concern per condition, never one per row) so a broken connector is one
+// card, not a flood. The facts come from the surfaces that already own them:
+// overlay_sync_state for the poller's ladder (syncbackoff.go writes it),
+// SyncStatus for per-class freshness, and the OVB meter for the budget — this
+// read derives nothing of its own.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sort"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// The sync-health concern vocabulary. Each names one condition; a reading
+// carries at most one concern per kind.
+const (
+	// ConcernSyncFailing: the reconcile poller's last sweeps failed and the
+	// connection is on the backoff ladder.
+	ConcernSyncFailing = "sync_failing"
+	// ConcernBudgetDegraded: the incumbent call budget is in its warn or shed
+	// band, so live reads are throttled or declined.
+	ConcernBudgetDegraded = "budget_degraded"
+	// ConcernObjectsStale: at least one mirrored class holds rows the current
+	// sync would not produce — stale, or carrying an undrained local write.
+	ConcernObjectsStale = "objects_stale"
+	// ConcernBackfillIncomplete: at least one mirrored class has not confirmed
+	// its initial backfill converged.
+	ConcernBackfillIncomplete = "backfill_incomplete"
+)
+
+// SyncConcern is one health condition worth a rep's glance. Kind says which;
+// the remaining fields carry that kind's facts and are zero for the others.
+type SyncConcern struct {
+	Kind string
+	// ErrorClass and Failures describe a failing sweep (the ladder's own
+	// class vocabulary: auth, rate_limited, internal); NextSweepAt is when
+	// the poller will try again.
+	ErrorClass  string
+	Failures    int
+	NextSweepAt *time.Time
+	// Band is the budget band a degraded budget sits in (warn or shed).
+	Band string
+	// Objects are the CANONICAL classes a stale/backfilling concern covers,
+	// sorted for a stable card.
+	Objects []string
+}
+
+// SyncHealth answers the workspace's current sync concerns, empty when
+// everything is healthy. Gated exactly as SyncStatus is — every role reads
+// (`overlay_connection` read), overlay mode required — so a workspace that
+// never connected an incumbent answers apperrors.ErrModeNotOverlay and the
+// caller renders no surface at all rather than a clear bill of health.
+//
+// A mirror frozen for a pending flip suppresses the staleness concern:
+// staleness grows on purpose while the seal holds (ObjectSyncStatus's own
+// FrozenForFlip doc), and alarming on the operator's deliberate cutover would
+// train readers to ignore the lane.
+func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
+	if err := auth.Require(ctx, overlayConnectionObject, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	incumbent, err := s.resolveOverlayMode(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var concerns []SyncConcern
+	failing, err := s.sweepFailureConcern(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if failing != nil {
+		concerns = append(concerns, *failing)
+	}
+	if s.meter != nil {
+		if band := worstBudgetBand(s.meter.Snapshot(ctx, incumbent)); band != overlaybudget.BandOK {
+			concerns = append(concerns, SyncConcern{Kind: ConcernBudgetDegraded, Band: band})
+		}
+	}
+
+	objects, err := s.SyncStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var stale, backfilling []string
+	for _, object := range objects {
+		if object.State != syncStateFresh && !object.FrozenForFlip {
+			stale = append(stale, object.Object)
+		}
+		if !object.BackfillComplete {
+			backfilling = append(backfilling, object.Object)
+		}
+	}
+	sort.Strings(stale)
+	sort.Strings(backfilling)
+	if len(stale) > 0 {
+		concerns = append(concerns, SyncConcern{Kind: ConcernObjectsStale, Objects: stale})
+	}
+	if len(backfilling) > 0 {
+		concerns = append(concerns, SyncConcern{Kind: ConcernBackfillIncomplete, Objects: backfilling})
+	}
+	return concerns, nil
+}
+
+// sweepFailureConcern reads the poller's backoff ladder: a row with failures
+// on it is a connection that is not syncing and says when it will retry. No
+// row (never swept) and a clean row both answer nil.
+func (s *Service) sweepFailureConcern(ctx context.Context) (*SyncConcern, error) {
+	var (
+		failures    int
+		errorClass  *string
+		nextSweepAt *time.Time
+	)
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT consecutive_failures, last_error_class, next_sweep_at FROM overlay_sync_state`,
+		).Scan(&failures, &errorClass, &nextSweepAt)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("overlay: reading the sweep ladder for sync health: %w", err)
+	}
+	if failures == 0 {
+		return nil, nil
+	}
+	concern := &SyncConcern{Kind: ConcernSyncFailing, Failures: failures, NextSweepAt: nextSweepAt}
+	if errorClass != nil {
+		concern.ErrorClass = *errorClass
+	}
+	return concern, nil
+}
+
+// worstBudgetBand collapses a budget snapshot's two windows to the worse of
+// their bands: a shed on either throttles real reads, whichever window it is.
+func worstBudgetBand(b overlaybudget.Budget) string {
+	if b.Band == overlaybudget.BandShed || b.SearchBand == overlaybudget.BandShed {
+		return overlaybudget.BandShed
+	}
+	if b.Band == overlaybudget.BandWarn || b.SearchBand == overlaybudget.BandWarn {
+		return overlaybudget.BandWarn
+	}
+	return overlaybudget.BandOK
+}

@@ -39,6 +39,11 @@ type optionalLane struct {
 //
 // A refusal NAMES the lane; any other failure is returned, because a lane that
 // is broken rather than withheld must not read as a quiet one.
+//
+// ErrModeNotOverlay is unbound-at-read: whether an installation runs in
+// overlay mode is a fact only the read can answer, and a workspace that is
+// not simply does not have the lane — absent like an unbound one, never
+// withheld, because nothing was hidden from this reader.
 func (l optionalLane) collect(
 	omitted []crmcontracts.AttentionLanesOmitted,
 ) ([]crmcontracts.AttentionLanesOmitted, error) {
@@ -47,6 +52,8 @@ func (l optionalLane) collect(
 	}
 	items, err := l.read()
 	switch {
+	case errors.Is(err, apperrors.ErrModeNotOverlay):
+		return omitted, nil
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 	case err != nil:
@@ -111,6 +118,14 @@ func (s *Service) optionalLanes(
 				}), err
 			},
 			into: &out.Dsr, count: &out.Counts.Dsr,
+		},
+		{
+			name: "sync_health", bound: s.syncHealth != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				concerns, err := s.syncHealth.Concerns(ctx)
+				return renderEach(concerns, syncItem), err
+			},
+			into: &out.SyncHealth, count: &out.Counts.SyncHealth,
 		},
 		{
 			name: "relationship_decay", bound: s.decay != nil,

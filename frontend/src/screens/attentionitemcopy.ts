@@ -30,7 +30,34 @@ export function itemTitle(item: AttentionItem, t: T): string {
   if (item.source === "dsr") {
     return t(`day.dsr.kind.${dsrNoun(item.kind)}` as const);
   }
+  // A sync concern's sentence is the client's to write for the same reason:
+  // the server names the condition, and each locale says what it means.
+  if (item.source === "sync_health") {
+    return t(`day.syncHealth.kind.${syncNoun(item.kind)}` as const);
+  }
   return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
+}
+
+// Which sync condition a concern names. Only a condition with its own
+// sentence names itself; anything else takes the generic line rather than
+// guessing at an operational fact.
+function syncNoun(
+  kind: string | undefined,
+):
+  | "sync_failing"
+  | "budget_degraded"
+  | "objects_stale"
+  | "backfill_incomplete"
+  | "generic" {
+  if (
+    kind === "sync_failing" ||
+    kind === "budget_degraded" ||
+    kind === "objects_stale" ||
+    kind === "backfill_incomplete"
+  ) {
+    return kind;
+  }
+  return "generic";
 }
 
 // Which obligation a data-subject request carries. Only a kind with its own
@@ -110,6 +137,27 @@ function riskDetail(
   return null;
 }
 
+// The localized line for a sync concern's cause, when its detail is one of
+// the two closed vocabularies (the sweep's failure class, the budget band).
+// Anything else — the affected object classes — is data and stays as sent.
+function syncCauseLine(item: AttentionItem, t: T): string | null {
+  if (
+    item.kind === "sync_failing" &&
+    (item.detail === "auth" ||
+      item.detail === "rate_limited" ||
+      item.detail === "internal")
+  ) {
+    return t(`day.syncHealth.cause.${item.detail}` as const);
+  }
+  if (
+    item.kind === "budget_degraded" &&
+    (item.detail === "warn" || item.detail === "shed")
+  ) {
+    return t(`day.syncHealth.band.${item.detail}` as const);
+  }
+  return null;
+}
+
 // The supporting line under a headline: how sure the detector was, or when this
 // is due, or when it happened. At most one — a card that stacked all three
 // would make the reader read three things to learn one.
@@ -134,6 +182,12 @@ export function itemDetail(
       quote: item.detail,
       due: formatDateTime(item.due_at, locale, zone),
     });
+  }
+  // A sync concern's cause travels in the producer's own vocabulary; the two
+  // closed sets get the reader's language, and the affected object classes
+  // stay the data they are.
+  if (item.source === "sync_health" && item.detail) {
+    return syncCauseLine(item, t) ?? item.detail;
   }
   if (item.detail) {
     return item.detail;
