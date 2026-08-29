@@ -52,7 +52,7 @@ const populated: Graph = {
       label: "Milan Prohaska",
       detail: "Head of Fleet",
       strength: 41,
-      strength_bucket: "warm",
+      strength_bucket: "moderate",
     }),
     node({
       id: "d-1",

@@ -39,7 +39,7 @@ func sampleInput() Input {
 			Name:      "Sarah Cole",
 			FirstName: "Sarah",
 			Email:     "sarah@glazedfrog.example",
-			Bucket:    "warm",
+			Bucket:    "moderate",
 		},
 		Deal: &DealIn{
 			ID: "019fe7ae-0000-7000-8000-000000000002", Name: "Expansion Phase 2",

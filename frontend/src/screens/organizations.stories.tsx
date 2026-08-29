@@ -39,7 +39,7 @@ const org = {
 
 const dormantStrength = {
   score: 0,
-  bucket: "dormant",
+  bucket: "none",
   factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
   last_interaction: null,
 };

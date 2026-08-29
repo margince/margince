@@ -633,7 +633,7 @@ describe("CompanyRail", () => {
                 title: "VP Procurement",
                 strength: {
                   score: 40,
-                  bucket: "warm",
+                  bucket: "moderate",
                   factors: {},
                   inbound_90d: 1,
                 },

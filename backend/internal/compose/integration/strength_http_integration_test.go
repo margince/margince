@@ -77,9 +77,9 @@ func TestPersonStrengthHTTPReconciles(t *testing.T) {
 	}
 
 	switch wire.Bucket {
-	case "dormant", "weak", "warm", "strong":
+	case "none", "weak", "moderate", "strong":
 	default:
-		t.Errorf("bucket = %q, want one of dormant|weak|warm|strong", wire.Bucket)
+		t.Errorf("bucket = %q, want one of none|weak|moderate|strong", wire.Bucket)
 	}
 	if wire.Score < 0 || wire.Score > 100 {
 		t.Fatalf("score = %d, want 0..100", wire.Score)

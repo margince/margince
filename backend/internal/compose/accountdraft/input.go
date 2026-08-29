@@ -72,7 +72,7 @@ type RecipientIn struct {
 	FirstName string `json:"first_name"`
 	Title     string `json:"title,omitempty"`
 	Email     string `json:"email,omitempty"`
-	// Bucket is the relationship's own reading (strong/warm/weak/dormant),
+	// Bucket is the relationship's own reading (strong/moderate/weak/none),
 	// which tells the writer how familiar to be. Never a score: a number would
 	// invite the prose to quote it.
 	Bucket string `json:"relationship,omitempty"`

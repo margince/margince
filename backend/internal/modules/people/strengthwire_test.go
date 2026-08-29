@@ -18,13 +18,13 @@ import (
 func TestStrengthBucketToWireCoversTheDomainVocabulary(t *testing.T) {
 	cases := map[string]crmcontracts.RelationshipStrengthBucket{
 		"weak":     crmcontracts.RelationshipStrengthBucketWeak,
-		"moderate": crmcontracts.RelationshipStrengthBucketWarm,
+		"moderate": crmcontracts.RelationshipStrengthBucketModerate,
 		"strong":   crmcontracts.RelationshipStrengthBucketStrong,
-		"none":     crmcontracts.RelationshipStrengthBucketDormant,
+		"none":     crmcontracts.RelationshipStrengthBucketNone,
 		// A value the domain never emits must still land on a declared
 		// enum member — a wire value the contract does not declare is worse
 		// than a conservative one.
-		"something-new": crmcontracts.RelationshipStrengthBucketDormant,
+		"something-new": crmcontracts.RelationshipStrengthBucketNone,
 	}
 	for domain, want := range cases {
 		if got := StrengthBucketToWire(domain); got != want {
@@ -71,7 +71,7 @@ func TestStrengthToWireReportsNoDirectionWithoutInteractions(t *testing.T) {
 	if wire.Factors.Direction != 0 {
 		t.Errorf("factors.direction = %v with no interactions, want 0", wire.Factors.Direction)
 	}
-	if wire.Bucket != crmcontracts.RelationshipStrengthBucketDormant {
-		t.Errorf("bucket = %q, want dormant", wire.Bucket)
+	if wire.Bucket != crmcontracts.RelationshipStrengthBucketNone {
+		t.Errorf("bucket = %q, want none", wire.Bucket)
 	}
 }

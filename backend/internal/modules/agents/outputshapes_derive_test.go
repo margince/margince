@@ -150,7 +150,7 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 		"AvailabilityResult":   AvailabilityResult{Slots: []FreeSlot{{Start: time.Now().UTC(), End: time.Now().UTC().Add(time.Hour)}}, Truncated: false},
 		"PassthroughEntity":    PassthroughEntityResult{ID: id},
 		"listPipelinesAnswer":  listPipelinesAnswer{Pipelines: []Pipeline{{ID: id, Name: "Sales", IsDefault: true, Stages: []Stage{{ID: id, Name: "Open", Semantic: "open"}}}}},
-		"WhoKnowsAnswer":       WhoKnowsAnswer{PersonID: id, Colleagues: []KnownColleague{{UserID: id, DisplayName: "Ada", StrengthBucket: "warm"}}},
+		"WhoKnowsAnswer":       WhoKnowsAnswer{PersonID: id, Colleagues: []KnownColleague{{UserID: id, DisplayName: "Ada", StrengthBucket: "moderate"}}},
 		"IntroPathAnswer":      IntroPathAnswer{OrganizationID: id, Routes: []IntroRoute{}},
 		"AtRiskReport":         AtRiskReport{Deals: []AtRiskDeal{}, DealsScanned: 4},
 		"DealCoverageAnswer":   DealCoverageAnswer{DealID: id, Stakeholders: []CoverageSeat{}, OurSide: []KnownColleague{}, Risks: []CoverageRisk{}, SectionsOmitted: []string{}},

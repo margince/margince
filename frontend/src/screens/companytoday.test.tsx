@@ -177,7 +177,7 @@ describe("the day's call, and which record it is read from", () => {
   const CONTACT = {
     person_id: "p-1",
     full_name: "Sarah Cole",
-    strength: { score: 40, bucket: "warm" as const, factors: FACTORS },
+    strength: { score: 40, bucket: "moderate" as const, factors: FACTORS },
     deal_roles: [],
     consent: {},
   };
