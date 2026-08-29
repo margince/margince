@@ -76,6 +76,12 @@ type RelationKey =
 export function useOrganizationGraph(id: string, enabled = true) {
   return useQuery({
     enabled,
+    // The People tab's card and the per-contact "Route in" modal read the same
+    // graph moments apart; a fresh-enough copy serves both as one read. A
+    // write that changes the graph (setting a buying role) must invalidate
+    // this key explicitly — the minute of freshness would otherwise outlive
+    // the save the user is looking at.
+    staleTime: 60_000,
     queryKey: ["organization-graph", id],
     queryFn: async () => {
       const { data, error } = await api.GET("/organizations/{id}/graph", {

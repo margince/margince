@@ -104,6 +104,7 @@ import {
   sinceLastVisitFooter,
 } from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
+import { ConnectionsCard } from "./connections";
 import {
   CreateAction,
   type CreateField,
@@ -2416,12 +2417,20 @@ function CompanyRecordBody({
           copy stands down while it is open — the same roster twice, side by
           side, is the duplication this page's own rule forbids. */}
       {tab === "people" && (
-        <PeopleCard
-          view={view}
-          writable={orgWritable}
-          orgId={org.id}
-          loading={loading}
-        />
+        <div className="co-panel-stack">
+          <PeopleCard
+            view={view}
+            writable={orgWritable}
+            orgId={org.id}
+            loading={loading}
+          />
+          {/* The connection map under the roster: who here deals with the
+              account, who there is to deal with, and — expanded — the diagram
+              with the contact-to-contact lines. The roster answers "who works
+              there"; this answers "who talks to whom", and the People tab is
+              where a reader asks both. */}
+          <ConnectionsCard orgId={org.id} />
+        </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
           gives them. The grid keeps its compact card for the reader who only
