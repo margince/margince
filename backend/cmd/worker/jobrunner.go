@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/platform/vatcheck"
 	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
@@ -195,8 +196,9 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// worker records that it cannot resolve, and radius queries stay
 		// unavailable — which is honest for an installation that geocodes
 		// nothing, and better than answering from an empty table.
-		Geocoder:  geocoderFor(cfg.geocodeBaseURL),
-		Geocoding: compose.GeocodingConfig{BackfillInterval: cfg.geocodeBackfill},
+		Geocoder:   geocoderFor(cfg.geocodeBaseURL),
+		VatChecker: vatCheckerFor(cfg.vatCheckBaseURL, cfg.vatCheckRequester),
+		Geocoding:  compose.GeocodingConfig{BackfillInterval: cfg.geocodeBackfill},
 		// The technical lookup, when the operator turned it on. Nil leaves the
 		// sweep unregistered and the button answering 501 — declared absent
 		// rather than a lane that queues into a process that will not read.
@@ -332,6 +334,23 @@ const dnsReadInterval = 200 * time.Millisecond
 // baseURLPublic is the word an operator writes to mean "the free public
 // service", for whichever lane the flag belongs to.
 const baseURLPublic = "public"
+
+// vatCheckerFor builds the VAT-register client, or nil for a deployment that
+// checks nothing. The requester is this installation's own VAT number and is
+// separately optional: without it the check still answers, it just comes back
+// with no consultation number attached.
+//
+//nolint:ireturn // the PORT is the return type: nil means this deployment checks no VAT numbers, which a concrete type cannot express.
+func vatCheckerFor(baseURL, requester string) vatcheck.Checker {
+	switch baseURL {
+	case "":
+		return nil
+	case baseURLPublic:
+		return vatcheck.NewVIES(vatcheck.PublicBaseURL, requester, nil)
+	default:
+		return vatcheck.NewVIES(baseURL, requester, nil)
+	}
+}
 
 func geocoderFor(baseURL string) geocode.Client {
 	switch baseURL {

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/vatcheck"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -92,6 +93,7 @@ func censusJobConfig() JobRunnerConfig {
 		DeepReadBrain:          seam,
 		TranscriptProposeBrain: seam,
 		Geocoder:               censusGeocoder{},
+		VatChecker:             censusVatChecker{},
 		DocumentExtractBrain:   censusDocumentSeam{},
 		VoiceBrain:             seam,
 		Embedder:               seam,
@@ -179,4 +181,13 @@ type censusGeocoder struct{}
 
 func (censusGeocoder) Resolve(context.Context, string) (geocode.Point, bool, error) {
 	return geocode.Point{}, false, errCensusSeam
+}
+
+// censusVatChecker stands in for the VAT register on the same terms: wired for
+// the count, refusing every consultation, so no test passes on an answer the
+// register never gave.
+type censusVatChecker struct{}
+
+func (censusVatChecker) Check(context.Context, string) (vatcheck.Result, error) {
+	return vatcheck.Result{}, errCensusSeam
 }

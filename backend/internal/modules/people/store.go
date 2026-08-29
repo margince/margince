@@ -36,6 +36,10 @@ type Store struct {
 	// address and queues nothing; the coordinates are what an installation can
 	// offer, the address is what the caller asked for.
 	geocodeEnqueue GeocodeEnqueue
+	// vatCheckEnqueue queues a VIES consultation when a VAT number is written.
+	// Nil is a real composition, for geocodeEnqueue's reason: the number is
+	// what the page stated, the verification is what an installation can offer.
+	vatCheckEnqueue VatCheckEnqueue
 	// consumerMail answers which domains can never name a company. The
 	// counterparty ensure needs the same answer capture's tier ladder does — the
 	// verdict engine and the review-queue accept enter the ensure without
@@ -97,6 +101,12 @@ func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
 // every writer gets it without any of them having to remember.
 func (s *Store) WithGeocodeEnqueue(enqueue GeocodeEnqueue) *Store {
 	s.geocodeEnqueue = enqueue
+	return s
+}
+
+// WithVatCheckEnqueue wires the VIES consultation a VAT-number write queues.
+func (s *Store) WithVatCheckEnqueue(enqueue VatCheckEnqueue) *Store {
+	s.vatCheckEnqueue = enqueue
 	return s
 }
 

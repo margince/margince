@@ -161,6 +161,20 @@ func (s *Store) writeProfileField(
 			return writeCanonicalOrgColumn(ctx, tx, orgID, column, *in.Value)
 		}
 	}
+	// A VAT number that just changed has not been checked. The consultation is
+	// QUEUED rather than made here — it reaches a service that may be slow or
+	// refuse, and a correction must not wait on either — and it is queued in
+	// the same transaction as the write, so a rolled-back correction leaves no
+	// job asking about a number the record does not hold.
+	//
+	// It rides the canonical hook because that hook is simply "the other thing
+	// this write owes, inside its transaction", and register_vat has no column
+	// of its own to compete for it.
+	if field == fieldRegisterVat && in.Value != nil {
+		w.canonical = func(ctx context.Context, tx pgx.Tx) error {
+			return s.enqueueVatCheck(ctx, tx, orgID)
+		}
+	}
 	return writeEvidence(ctx, s, orgID, w)
 }
 

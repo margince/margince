@@ -37,6 +37,12 @@ func jobQueues() map[string]river.QueueConfig {
 		// itself. The pacer enforces the interval; this bound enforces the
 		// single thread. Neither alone is enough.
 		geocodeQueue: {MaxWorkers: geocodeMaxWorkers},
+		// ONE worker, and it is the service's terms rather than a performance
+		// choice. VIES describes itself as a service for occasional
+		// verification, throttles by IP and blocks abusers, so a second worker
+		// would be a second requester however carefully each paced itself. The
+		// pacer enforces the interval; this bound enforces the single thread.
+		vatCheckQueue: {MaxWorkers: vatCheckMaxWorkers},
 		// ONE worker, for the geocode queue's reason rather than a performance
 		// one. A technical lookup asks three free public services, and the
 		// certificate log in particular is a single small service running on

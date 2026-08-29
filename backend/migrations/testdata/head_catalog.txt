@@ -3139,6 +3139,26 @@ public.organization_technical_state.organization_technical_state_outcome_check C
 public.organization_technical_state.organization_technical_state_pkey PRIMARY KEY (organization_id, lane)
 public.organization_technical_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.organization_technical_state_pkey CREATE UNIQUE INDEX organization_technical_state_pkey ON public.organization_technical_state USING btree (organization_id, lane)
+public.organization_vat_check acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.organization_vat_check.captured_by text NOT NULL gen=- def=-
+public.organization_vat_check.checked_at timestamp with time zone NOT NULL gen=- def=now()
+public.organization_vat_check.consultation_number text gen=- def=-
+public.organization_vat_check.id uuid NOT NULL gen=- def=uuidv7()
+public.organization_vat_check.organization_id uuid NOT NULL gen=- def=-
+public.organization_vat_check.organization_vat_check_number_not_blank CHECK ((btrim(vat_number) <> ''::text))
+public.organization_vat_check.organization_vat_check_one_per_org UNIQUE (organization_id)
+public.organization_vat_check.organization_vat_check_org_fk FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
+public.organization_vat_check.organization_vat_check_pkey PRIMARY KEY (id)
+public.organization_vat_check.organization_vat_check_receipt_needs_an_answer CHECK (((consultation_number IS NULL) OR (status <> 'unavailable'::text)))
+public.organization_vat_check.organization_vat_check_status_check CHECK ((status = ANY (ARRAY['valid'::text, 'invalid'::text, 'unavailable'::text])))
+public.organization_vat_check.registered_address text gen=- def=-
+public.organization_vat_check.registered_name text gen=- def=-
+public.organization_vat_check.status text NOT NULL gen=- def=-
+public.organization_vat_check.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.organization_vat_check.vat_number text NOT NULL gen=- def=-
+public.organization_vat_check.version bigint NOT NULL gen=- def=1
+public.organization_vat_check_one_per_org CREATE UNIQUE INDEX organization_vat_check_one_per_org ON public.organization_vat_check USING btree (organization_id)
+public.organization_vat_check_pkey CREATE UNIQUE INDEX organization_vat_check_pkey ON public.organization_vat_check USING btree (id)
 public.overlay_association acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.overlay_association.category text NOT NULL gen=- def=-
 public.overlay_association.direction text NOT NULL gen=- def=-

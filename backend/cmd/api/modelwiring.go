@@ -212,6 +212,7 @@ func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compo
 		// — and that split is what keeps the single-requester rule enforceable:
 		// several api replicas may queue, exactly one worker asks.
 		compose.WithGeocoding(inserter),
+		compose.WithVatChecking(inserter),
 	}, nil
 }
 

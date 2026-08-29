@@ -86,6 +86,14 @@ func (h Handlers) WithGeocodeEnqueue(enqueue GeocodeEnqueue) Handlers {
 	return h
 }
 
+// WithVatCheckEnqueue wires the register consultation a VAT-number write
+// queues, into the TRANSPORT's own store — for the reason stated above, which
+// binds every enqueue this module takes rather than only the geocoder's.
+func (h Handlers) WithVatCheckEnqueue(enqueue VatCheckEnqueue) Handlers {
+	h.store = h.store.WithVatCheckEnqueue(enqueue)
+	return h
+}
+
 // WithBlobstore wires the object store the organization-logo stream reads.
 func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	h.blob = blob

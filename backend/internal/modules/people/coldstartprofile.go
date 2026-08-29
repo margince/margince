@@ -53,7 +53,12 @@ type ApplyColdStartProfileInput struct {
 // registered_address onto address_line1, so a field name and a column name
 // agreeing here is a coincidence, not a rule. The two constants stay apart so
 // renaming one cannot silently rename the other.
-const columnLegalName = "legal_name"
+const (
+	columnLegalName   = "legal_name"
+	columnIndustry    = "industry"
+	columnAddress     = "address"
+	columnDescription = "description"
+)
 
 // columnBackedColdStartFields maps read-back fields onto organization
 // columns; everything else lives only in organization_profile_field.
@@ -90,7 +95,17 @@ func (s *Store) ApplyColdStartProfile(ctx context.Context, in ApplyColdStartProf
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		orgID, err = applyColdStartTx(ctx, tx, in, host, by)
-		return err
+		if err != nil {
+			return err
+		}
+		// A VAT number a read just extracted has not been checked, and this is
+		// where most of them arrive — a rep correcting one afterwards is the
+		// rarer path. Queued in the SAME transaction, so a rolled-back apply
+		// leaves no job asking about a number the record does not hold.
+		if statesAVatNumber(in.Fields) {
+			return s.enqueueVatCheck(ctx, tx, orgID)
+		}
+		return nil
 	})
 	if err != nil {
 		return ids.OrganizationID{}, err
@@ -370,79 +385,6 @@ func applyEvidenceFieldsWithOverwrite(
 	return applied, nil
 }
 
-func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string, overwrite bool) (bool, error) {
-	if !overwrite {
-		return applyUnclaimedOrgColumn(ctx, tx, orgID, column, value)
-	}
-	queries := map[string]string{
-		columnLegalName: `UPDATE organization SET legal_name = $2, updated_at = now()
-			WHERE id = $1 AND legal_name IS DISTINCT FROM $2`,
-		"industry": `UPDATE organization SET industry = $2, updated_at = now()
-			WHERE id = $1 AND industry IS DISTINCT FROM $2`,
-		"address": `UPDATE organization SET address_line1 = $2, updated_at = now()
-			WHERE id = $1 AND address_line1 IS DISTINCT FROM $2`,
-		"description": `UPDATE organization SET description = $2, updated_at = now()
-			WHERE id = $1 AND description IS DISTINCT FROM $2
-			AND ($2::text IS NULL OR length($2) <= 500)`,
-	}
-	query, ok := queries[column]
-	if !ok {
-		return false, fmt.Errorf("people: %q is not a coldstart-writable column", column)
-	}
-	// An empty value clears the column to NULL, not to "". The fill arm above
-	// matches on IS NULL, so a column cleared to the empty string could never
-	// be filled again by any later read — the record would look answered while
-	// holding nothing, and no enrichment would ever correct it. The human
-	// company form clears to NULL for the same reason (setCompanyColumn).
-	tag, err := tx.Exec(ctx, query, orgID, emptyToNil(value))
-	if err != nil {
-		return false, fmt.Errorf("replace %s: %w", column, err)
-	}
-	return tag.RowsAffected() == 1, nil
-}
-
-// applyUnclaimedOrgColumn writes a read-back value onto a column nobody has
-// claimed. For legal_name, industry and address that means the column is still
-// empty, which each statement enforces with IS NULL. The description is the one
-// column an automated read may also REPLACE, because the site is the authority
-// on what a company sells — so for that one "unclaimed" means no person has
-// authored it, and the check is below rather than in the statement.
-func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string) (bool, error) {
-	query, ok := coldStartColumns[column]
-	if !ok {
-		return false, fmt.Errorf("people: %q is not a coldstart-fillable column", column)
-	}
-	if column == descriptionField {
-		held, err := descriptionHeldByHuman(ctx, tx, orgID)
-		if err != nil {
-			return false, err
-		}
-		if held {
-			return false, nil
-		}
-	}
-	// Nothing to fill. Writing "" here would satisfy this arm's own WHERE
-	// legal_name IS NULL once and never again: the column would read as
-	// answered while holding nothing, and no later read could correct it.
-	if value == "" {
-		return false, nil
-	}
-	tag, err := tx.Exec(ctx, query, orgID, value)
-	if err != nil {
-		return false, fmt.Errorf("fill %s: %w", column, err)
-	}
-	return tag.RowsAffected() == 1, nil
-}
-
-// carriesOrgName reports whether this apply could write a name column, and so
-// whether it owes the organization-name lock.
-//
-// Presence of the field is the test, because that is what the loop in
-// applyEvidenceFieldsWithOverwrite acts on: writeOrgColumn's overwrite arm
-// matches on IS DISTINCT FROM, so an apply that clears legal_name to "" still
-// writes the row — taking its row lock — and still reaches the re-check, which
-// wants the name lock. Anything narrower than presence lets that apply take the
-// two in the order that deadlocks against a human rename.
 func carriesOrgName(fields []ColdStartFieldInput) bool {
 	for _, f := range fields {
 		if f.Field == fieldLegalName {
