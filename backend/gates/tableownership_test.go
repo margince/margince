@@ -52,31 +52,26 @@ import (
 // walked package owns them, so any direct module write needs a waiver.
 const storekitOwned = "internal/platform/database/storekit"
 
-// extSecretsStoreDir is the second platform package this gate walks (after
-// settingsStoreDir): the extension tier's secret namespace owns
-// extension_secret, so leaving it outside the sweep would let a future
-// second writer of that table land unnoticed. Named explicitly, for the
-// same reason settingsStoreDir is — the rest of platform owns no rows, and
-// widening to internal/platform would sweep in files this gate has not
-// judged.
+// extSecretsStoreDir is the extension tier's secret namespace, which owns
+// extension_secret. The constant exists so tableOwners can point at it in one
+// spelling; WHICH platform packages this gate walks is answered by
+// platformStoreDirs, not by a name here.
 const extSecretsStoreDir = "internal/platform/extsecrets"
 
-// keyVaultStoreDir is the third, for the same reason and found the same way: the
-// local key-vault provider owns vault_secret, and until this gate walked it the
-// table had no owner entry at all.
+// keyVaultStoreDir is the local key-vault provider, which owns vault_secret.
+// Until this gate walked it the table had no owner entry at all.
 //
-// What that actually left open, stated narrowly because the wide version is not
-// true: a second writer in internal/modules or internal/compose was already
-// caught, by the no-declared-owner arm below. The unguarded case was a second
-// writer inside a platform package this gate does not walk — and two such
-// packages write rows today (platform/events/relay.go UPDATEs event_outbox,
-// which this map declares; platform/jobs/quiesce.go DELETEs river_job), so the
-// case is live rather than theoretical.
-//
-// The list is named rather than reached by widening to internal/platform, which
-// would sweep in files this gate has not judged. Deriving it instead is
-// https://github.com/margince/margince/issues/2554.
+// What that left open, stated narrowly because the wide version is not true: a
+// second writer in internal/modules or internal/compose was already caught, by
+// the no-declared-owner arm below. The unguarded case was a second writer
+// inside a platform package the gate did not walk — and the hand-kept list of
+// those was short by two, which is what the derivation replaced.
 const keyVaultStoreDir = "internal/platform/keyvault"
+
+// jobsStoreDir runs the River fleet, and is where river_job is written from —
+// discovered by platformStoreDirs rather than named here; the constant exists
+// so tableOwners can point at it in one spelling.
+const jobsStoreDir = "internal/platform/jobs"
 
 // tableOwners maps every core-migration table to the ONE module whose store
 // owns its writes (module doc.go "Tables owned" declarations, kept in sync).
@@ -438,6 +433,11 @@ var tableOwners = map[string]string{
 	// tenant.
 	"vault_secret": keyVaultStoreDir,
 
+	// River's own queue table. Owned by the package that runs the fleet, which
+	// is the only one that writes it directly: the client library writes the
+	// rest, and a purge is the one statement this tree issues against it.
+	"river_job": jobsStoreDir,
+
 	// platform, storekit: the audit+outbox pair has ONE sanctioned writer, and
 	// the shared field-provenance layer (B-E02.12) is spelled once next to it.
 	// system_log is the non-entity operational ledger written through
@@ -631,7 +631,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 	// versioned writes in it. The floor is what tells those two apart.
 	storekitWrites := 0
 	fset := token.NewFileSet()
-	roots := []string{"internal/modules", "internal/compose", settingsStoreDir, extSecretsStoreDir, keyVaultStoreDir}
+	roots := append([]string{"internal/modules", "internal/compose"}, platformStoreDirs(t)...)
 	consts := stringConstsByPackage(t, fset, roots)
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
