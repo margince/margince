@@ -5,16 +5,32 @@
 
 package gates
 
-// The retained-column check, driven with SYNTHETIC statements rather than the
-// tree — the same reason extensionsqlscopecases_test.go gives for its own
-// cases. The sweep is supposed to pass, so a gate proven only by "the one
+// The retention sweep's two SQL claims, driven with SYNTHETIC statements rather
+// than the tree — the same reason extensionsqlscopecases_test.go gives for its
+// own cases. The sweep is supposed to pass, so a gate proven only by "the one
 // statement in the tree is clean" is one that keeps passing after it stops
 // working.
 //
-// Every MISSED row below is a shape an earlier version of this check could not
+// Two claims, not one, and the file is named for the larger: that the sweep does
+// not write a column registered as KEPT (statementDestroying), and that a
+// declared erasure arrives in ONE statement (oneStatementCarries).
+//
+// Every MISSED row below is a shape an earlier version of the check could not
 // see, each one green while the sweep destroyed the column the declaration
 // exists to protect. Rule 8 asks what shape of the defect a gate cannot see and
 // says to plant that case; this is that list.
+//
+// WHAT IS STILL NOT ON IT, stated because a list that reads as complete is what
+// stops the next author looking:
+//
+//   - A statement satisfies a declaration by EXISTING. A decoy carrying the
+//     whole erasure — a helper nobody calls — answers for an action that has
+//     stopped making it. Closing that needs call-graph reachability, which no
+//     SQL gate in this tree has; piicoverage_test.go states it at the call site.
+//   - An assembled SET target is not matched, because the column is not in the
+//     text to match. It is REPORTED instead — assembledSetTarget fails on a
+//     swept UPDATE whose SET clause names nothing — and the case below plants
+//     that shape.
 
 import "testing"
 
@@ -70,6 +86,22 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 			name:      "a longer column that merely starts with the retained name",
 			statement: `UPDATE activity SET counterparty_email_hash = NULL WHERE id = $1`,
 			destroys:  false,
+		}, {
+			// gate-patterns.md §D's own example. Split naively on `;`, this is
+			// two fragments and the second — `b', counterparty_email = null
+			// where …` — names no table, so sqlWriteTargets drops it and the
+			// destruction rides out inside a string nobody parsed.
+			name:      "a semicolon inside a quoted value",
+			statement: `UPDATE activity SET body = 'a;b', counterparty_email = NULL WHERE id = $1`,
+			destroys:  true,
+		}, {
+			// The other half of the same trap: a REAL second statement still
+			// has to split, so the fix for the case above must not be "stop
+			// splitting".
+			name: "a quoted semicolon and a real one",
+			statement: `UPDATE activity SET body = 'a;b' WHERE id = $1; ` +
+				`UPDATE activity SET counterparty_email = NULL WHERE id = $1`,
+			destroys: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -79,6 +111,26 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 			}
 		})
 	}
+
+	// The shape the check cannot MATCH, and therefore reports. A column
+	// assembled at runtime is not in the literal, so statementDestroying
+	// answers "destroys nothing" — indistinguishable from a statement that
+	// really destroys nothing, which is how a shape gate goes green (§D).
+	t.Run("an assembled SET target is reported rather than read as harmless", func(t *testing.T) {
+		assembled := []string{collapsedSQL(`UPDATE activity SET `)}
+		if statementDestroying(assembled, table, column) != "" {
+			t.Error("a statement with no column in it was read as destroying one")
+		}
+		if assembledSetTarget(assembled) == "" {
+			t.Error("a swept UPDATE whose SET clause names no column was not reported — the column is " +
+				"assembled at runtime and the KEEPS registration is no longer checked against it")
+		}
+		// And an ordinary statement is not reported, or the tripwire would fire
+		// on every sweep and be turned off.
+		if got := assembledSetTarget([]string{`UPDATE activity SET body = NULL WHERE id = $1`}); got != "" {
+			t.Errorf("an ordinary UPDATE was reported as assembled: %q", got)
+		}
+	})
 
 	// Two statements in one Go literal, the second destroying. Read whole, the
 	// first statement's SET clause answers for both.

@@ -416,12 +416,30 @@ var retentionSweepFiles = []string{
 // literal is not a statement: several in this tree carry two, and a check that
 // read the literal whole would let a second statement's SET clause hide behind
 // the first one's.
+//
+// The split skips SEMICOLONS INSIDE STRINGS, which is the case gate-patterns.md
+// §D names. `SET body = 'a;b', counterparty_email = NULL` splits naively into
+// two fragments, and the second names no table — so sqlWriteTargets drops it and
+// the destruction of a retained column in it goes unseen. Quoting is the only
+// escape the split has to understand: a doubled ” inside a string is still
+// inside it, which falls out of the scan without a case of its own.
 func sqlStatements(literal string) []string {
 	var out []string
-	for _, stmt := range strings.Split(literal, ";") {
-		if strings.TrimSpace(stmt) != "" {
-			out = append(out, collapsedSQL(stmt))
+	quoted := false
+	start := 0
+	for i, r := range literal {
+		switch {
+		case r == '\'':
+			quoted = !quoted
+		case r == ';' && !quoted:
+			if trimmed := strings.TrimSpace(literal[start:i]); trimmed != "" {
+				out = append(out, collapsedSQL(trimmed))
+			}
+			start = i + 1
 		}
+	}
+	if trimmed := strings.TrimSpace(literal[start:]); trimmed != "" {
+		out = append(out, collapsedSQL(trimmed))
 	}
 	return out
 }
@@ -518,6 +536,15 @@ func sweepPurges(statements []string, table string, predicates []string) bool {
 // does not write, so any write to it is the finding, and a DELETE of the row
 // counts because it takes the column with it.
 //
+// WHAT IT CANNOT SEE, and the tripwire that makes that loud. The column is
+// matched as a LITERAL name, so a statement whose SET target is assembled —
+// `"UPDATE activity SET " + column + " = NULL"` — carries no name to match and
+// would pass silently. gate-patterns.md §D names that as the way a shape gate
+// goes green. It cannot be read from a string literal at all, so it is not
+// matched but REPORTED: assembledSetTarget below answers for a swept UPDATE
+// whose SET clause names nothing, and the caller fails on it rather than
+// reading it as a statement that destroys no column.
+//
 // Held by TestTheRetainedColumnCheckSeesEveryDestructiveShape, which plants the
 // shapes an earlier version of this missed rather than trusting that the one
 // statement in the tree passes.
@@ -546,6 +573,30 @@ func statementDestroying(statements []string, table, column string) string {
 	return ""
 }
 
+// assembledSetTarget answers the swept UPDATE whose SET clause names no column,
+// or "" when every one of them does.
+//
+// A statement built by concatenation reaches a gate that reads string literals
+// as its literal half alone — `UPDATE activity SET ` — and the column it writes
+// is never in the text. statementDestroying would answer "destroys nothing",
+// which is indistinguishable from a statement that really destroys nothing, and
+// that is the shape gate-patterns.md §D says a shape check silently passes.
+//
+// Nothing in the swept files assembles one today. This is the tripwire for the
+// day something does: the answer then is a failure naming the statement, not a
+// green run over a column nobody can see being written.
+func assembledSetTarget(statements []string) string {
+	for _, stmt := range statements {
+		if !updateRe.MatchString(stmt) {
+			continue
+		}
+		if strings.TrimSpace(setAssignments(stmt)) == "" {
+			return stmt
+		}
+	}
+	return ""
+}
+
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	t.Parallel()
 	writes := map[string]bool{}
@@ -568,9 +619,18 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	sweepStatements := map[string][]string{}
 	for _, path := range retentionSweepFiles {
 		for _, lit := range sqlLiterals(t, path) {
-			for _, table := range sqlWriteTargets(lit) {
-				sweeps[table] += " " + collapsedSQL(lit)
-				sweepStatements[table] = append(sweepStatements[table], collapsedSQL(lit))
+			// SPLIT, because the unit both checks below name is the statement
+			// and a literal is not one. Read whole, a literal carrying two
+			// would let the first statement's SET clause answer for the second
+			// — which is what sqlStatements exists to prevent, and it was
+			// reached only by the falsification case: the gate itself passed
+			// the literal, so the shape that case plants was not one the sweep
+			// was actually checked against.
+			for _, stmt := range sqlStatements(lit) {
+				for _, table := range sqlWriteTargets(stmt) {
+					sweeps[table] += " " + stmt
+					sweepStatements[table] = append(sweepStatements[table], stmt)
+				}
 			}
 		}
 	}
@@ -638,6 +698,17 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 		if len(h.retentionKeeps) > 0 && len(sweepStatements[table]) == 0 {
 			missing = append(missing, "PII table "+table+
 				" registers a column the sweep deliberately keeps, but the sweep no longer writes this table at all — the check has nothing to read and is passing vacuously; add the file that holds the sweep's statements to retentionSweepFiles, or drop the registration")
+		}
+		// Before asking what the statements destroy, whether they can be read
+		// at all. A SET clause with no column in it is one the gate cannot
+		// judge, and answering "keeps everything" for it is the quiet pass.
+		if len(h.retentionKeeps) > 0 {
+			if assembled := assembledSetTarget(sweepStatements[table]); assembled != "" {
+				missing = append(missing, "the retention sweep writes PII table "+table+
+					" with a SET clause this gate cannot read (`"+assembled+"`) — the column is assembled at runtime, so the"+
+					" columns registered as deliberately KEPT are no longer checked against it. Name the column in the"+
+					" statement, or move the write out of the swept files and register what it does")
+			}
 		}
 		for _, column := range h.retentionKeeps {
 			if destroyer := statementDestroying(sweepStatements[table], table, column); destroyer != "" {
