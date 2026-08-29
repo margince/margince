@@ -522,4 +522,13 @@ func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
 	if got := lineOf(migration.SkippedRow{ExternalID: "b@x.test", Line: 4}); got != 4 {
 		t.Errorf("line = %d, want the carried 4", got)
 	}
+	// The id is not always one of ours — a mirror source's rows carry the
+	// incumbent's — so the fallback reads the WHOLE id or nothing. Unanchored
+	// it reported "line 7 of the export" as line 7, which is a number the
+	// reader would go looking for and not find.
+	for _, foreign := range []string{"line 7 of the export", "outline 7", "line seven", "line"} {
+		if got := lineOf(migration.SkippedRow{ExternalID: foreign}); got != 0 {
+			t.Errorf("lineOf(%q) = %d, want 0 — that id is not this source's disclosure", foreign, got)
+		}
+	}
 }
