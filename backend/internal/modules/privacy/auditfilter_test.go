@@ -294,12 +294,14 @@ func TestEveryPublishedAuditFilterReachesTheStore(t *testing.T) {
 // binds in two shapes — a key in the AuditFilter literal, and an assignment to
 // f.<Field> below it for the id that needs converting — so both count.
 //
-// And the VALUE has to come from the parameters, not merely exist. A field set
-// to a constant is bound by every reading of the syntax and carries nothing the
-// caller sent: `Action: addr("FIXED")` names the field, satisfies both structs,
-// and drops the request exactly as deleting the line would. So the origin is
-// what is checked — somewhere under the assigned expression, the params value
-// this field takes.
+// And the VALUE has to come from the parameters — from the RIGHT one. A field
+// set to a constant is bound by every reading of the syntax and carries nothing
+// the caller sent: `Action: addr("FIXED")` names the field, satisfies both
+// structs, and drops the request exactly as deleting the line would. A field
+// set to the WRONG parameter is worse, because something arrives: `Action:
+// params.Actor` answers a question nobody asked while every count agrees, and
+// `From: params.To` inverts a window. So what is checked is the parameter's own
+// name, matched against the field it lands in.
 func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 	t.Parallel()
 	file, err := parser.ParseFile(token.NewFileSet(), "handlers.go", nil, 0)
@@ -310,14 +312,24 @@ func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 	if handler == nil {
 		t.Fatal("privacy has no ListAuditLog handler — this census is reading a file that no longer holds the mapping")
 	}
+	// The parameter each field is bound FROM, by name.
 	bound := boundFilterFields(handler)
 
 	shape := reflect.TypeOf(AuditFilter{})
 	for i := range shape.NumField() {
-		name := shape.Field(i).Name
-		if !bound[name] {
-			t.Errorf("ListAuditLog never carries %s out of its parameters — the contract publishes the filter, the store declares the field, and the request drops it in between: the caller is answered the unnarrowed list and told nothing",
-				name)
+		field := shape.Field(i).Name
+		want := field
+		if spelling, renamed := storeFieldSpellings[field]; renamed {
+			want = spelling
+		}
+		got, isBound := bound[field]
+		switch {
+		case !isBound:
+			t.Errorf("ListAuditLog never carries params.%s into AuditFilter.%s — the contract publishes the filter, the store declares the field, and the request drops it in between: the caller is answered the unnarrowed list and told nothing",
+				want, field)
+		case got != want:
+			t.Errorf("ListAuditLog carries params.%s into AuditFilter.%s, which wants params.%s — the caller's filter arrives on the wrong field, so a question nobody asked is answered while every count agrees",
+				got, field, want)
 		}
 	}
 	if len(bound) < shape.NumField() {
@@ -325,13 +337,18 @@ func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 	}
 }
 
-// boundFilterFields names the AuditFilter fields the handler sets from
-// something, in either shape it uses.
-func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
-	bound := map[string]bool{}
+// storeFieldSpellings maps a store field onto the contract parameter it takes,
+// where the generator spells the two differently. Declared rather than
+// normalized away, so a SECOND divergence has to be looked at.
+var storeFieldSpellings = map[string]string{"EntityID": "EntityId"}
+
+// boundFilterFields answers, for each AuditFilter field the handler sets, WHICH
+// parameter it took the value from — in either shape the handler uses.
+func boundFilterFields(handler *ast.FuncDecl) map[string]string {
+	bound := map[string]string{}
 	// Locals that hold a parameter value, so an assignment routed through one
 	// still counts as having come from the request.
-	fromParams := map[string]bool{}
+	fromParams := map[string]string{}
 	ast.Inspect(handler.Body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CompositeLit:
@@ -343,8 +360,12 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 				if !ok {
 					continue
 				}
-				if key, ok := pair.Key.(*ast.Ident); ok && readsRequestParams(pair.Value) {
-					bound[key.Name] = true
+				key, isKey := pair.Key.(*ast.Ident)
+				if !isKey {
+					continue
+				}
+				if param := requestParamRead(pair.Value); param != "" {
+					bound[key.Name] = param
 				}
 			}
 		case *ast.AssignStmt:
@@ -365,8 +386,15 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 				if !isLocal || i >= len(node.Rhs) {
 					continue
 				}
-				fromParams[local.Name] = readsRequestParams(node.Rhs[i]) ||
-					readsLocalFromParams(node.Rhs[i], fromParams)
+				param := requestParamRead(node.Rhs[i])
+				if param == "" {
+					param = localParamRead(node.Rhs[i], fromParams)
+				}
+				if param == "" {
+					delete(fromParams, local.Name)
+					continue
+				}
+				fromParams[local.Name] = param
 			}
 			for i, target := range node.Lhs {
 				field, ok := target.(*ast.SelectorExpr)
@@ -377,8 +405,15 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 				if !ok || receiver.Name != "f" {
 					continue
 				}
-				if i < len(node.Rhs) && (readsRequestParams(node.Rhs[i]) || readsLocalFromParams(node.Rhs[i], fromParams)) {
-					bound[field.Sel.Name] = true
+				if i >= len(node.Rhs) {
+					continue
+				}
+				param := requestParamRead(node.Rhs[i])
+				if param == "" {
+					param = localParamRead(node.Rhs[i], fromParams)
+				}
+				if param != "" {
+					bound[field.Sel.Name] = param
 				}
 			}
 		}
@@ -391,33 +426,35 @@ func boundFilterFields(handler *ast.FuncDecl) map[string]bool {
 // generated request parameters.
 //
 // By the RECEIVER's name, which is the handler's own — the parameter is
-// declared `params crmcontracts.ListAuditLogParams`. A value that reaches for
-// something else is a constant, a literal or a local, and none of those is the
-// caller's.
-func readsRequestParams(expr ast.Expr) bool {
-	found := false
+// declared `params crmcontracts.ListAuditLogParams` — and it answers WHICH
+// field was read, because "some parameter" is not the question. `Action:
+// params.Actor` reads the request and answers a question nobody asked; `From:
+// params.To` inverts a window. Both look bound to a reader that asks only
+// whether params was touched at all.
+func requestParamRead(expr ast.Expr) string {
+	found := ""
 	ast.Inspect(expr, func(n ast.Node) bool {
 		sel, ok := n.(*ast.SelectorExpr)
 		if !ok {
 			return true
 		}
 		if receiver, ok := sel.X.(*ast.Ident); ok && receiver.Name == "params" {
-			found = true
+			found = sel.Sel.Name
 		}
-		return !found
+		return found == ""
 	})
 	return found
 }
 
-// readsLocalFromParams reports whether an expression reads a local this walk
-// has already seen take its value from the parameters.
-func readsLocalFromParams(expr ast.Expr, fromParams map[string]bool) bool {
-	found := false
+// localParamRead names the parameter behind an expression reading a local this
+// walk has already seen take a value from the request.
+func localParamRead(expr ast.Expr, fromParams map[string]string) string {
+	found := ""
 	ast.Inspect(expr, func(n ast.Node) bool {
-		if ident, ok := n.(*ast.Ident); ok && fromParams[ident.Name] {
-			found = true
+		if ident, ok := n.(*ast.Ident); ok && fromParams[ident.Name] != "" {
+			found = fromParams[ident.Name]
 		}
-		return !found
+		return found == ""
 	})
 	return found
 }
