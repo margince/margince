@@ -96,7 +96,9 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 		// "Vorschlag:", a heading — parse as a few attributed words among many
 		// unattributed ones. Listing those labels as speakers would ask the
 		// owner which of their own headings they are, so a source whose words
-		// mostly belong to nobody is reported as the single-author text it is.
+		// mostly belong to nobody is reported as the single-author text it is,
+		// with the count a text ingest of it would store: in prose the labels
+		// the parser read as speakers are the author's own words.
 		if concrete == corpusFormatSRT {
 			return CorpusPreview{DetectedFormat: corpusFormatTxt, TotalWords: WordCount(content)}, nil
 		}

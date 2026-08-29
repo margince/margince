@@ -92,8 +92,12 @@ export function VoiceCorpusIntake({
                 onDismiss={intake.dismissAsk}
               />
             )}
+            {/* Polite, so the outcome of a drop reaches a screen reader as it
+                lands: the zone's own live region only ever states the
+                invitation, because the input is cleared after every pick. A
+                refusal is still an alert of its own. */}
             {intake.notices.length > 0 && (
-              <ul className="vdna-notices">
+              <ul className="vdna-notices" aria-live="polite">
                 {intake.notices.map((notice) => (
                   <NoticeRow key={notice.ref} notice={notice} />
                 ))}
