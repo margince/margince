@@ -583,6 +583,53 @@ describe("HomeGlance — the greeting follows the reader's own hour", () => {
 
 // ── A reading is absent until it is read. Never zero. ──
 
+// ── A bundle's chips are claims about the ACT, not about the drawn member ──
+
+describe("HomeScreen — a bundle says only what its members agree on", () => {
+  // A bundle is drawn from one member, which is right for what the card decides
+  // and wrong for what it claims. Two site reads of the same company stage under
+  // one bundle — the second joins the first's still-pending rows and moves them
+  // onto its own bundle — so the members really do name different agents.
+  it("draws no provenance tag where the members name different agents", async () => {
+    const queue = [
+      proposal("apx-1", "Lead: Anna Weber", {
+        bundle_id: "bn-2",
+        proposed_by: "agent:deepread",
+      }),
+      proposal("apx-2", "Lead: Mira Osei", {
+        bundle_id: "bn-2",
+        proposed_by: "agent:site-read",
+      }),
+    ];
+    stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText("One decision · 2 items")).toBeTruthy();
+    // Neither agent's name — and not the unnamed tag either, which would still
+    // claim one agent produced the whole act.
+    expect(screen.queryByText("Automated by deepread")).toBeNull();
+    expect(screen.queryByText("Automated by site-read")).toBeNull();
+    expect(screen.queryByText("Automated by an agent")).toBeNull();
+    // The KIND is every member's, so the chip that says what this act is stays:
+    // the rule drops the fact that diverged, not the card's meta line.
+    expect(screen.getByText("Send an email")).toBeTruthy();
+  });
+
+  // The other end. Without this, blanking the tag unconditionally would pass the
+  // case above, and every single-agent bundle would lose a true reading.
+  it("keeps the tag where every member names the same agent", async () => {
+    const queue = [
+      proposal("apy-1", "Lead: Anna Weber", { bundle_id: "bn-3" }),
+      proposal("apy-2", "Lead: Mira Osei", { bundle_id: "bn-3" }),
+    ];
+    stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
+    render(<HomeScreen />);
+
+    expect(await screen.findByText("One decision · 2 items")).toBeTruthy();
+    expect(screen.getByText("Automated by runner")).toBeTruthy();
+  });
+});
+
 describe("HomeScreen — a reading in flight is absent, not zero", () => {
   /** The deck's own section, which is where a failed decisions read belongs. */
   function deckSection(): HTMLElement {

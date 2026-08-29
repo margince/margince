@@ -9,8 +9,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
 import {
   DecisionDeck,
+  type DecisionDeckChips,
   type DecisionDeckItem,
   type DecisionDeckLabels,
+  type DecisionSharedFacts,
   type DeckVerdict,
   dragVerdict,
   keyVerdict,
@@ -346,6 +348,92 @@ describe("DecisionDeck — a bundle is one decision", () => {
     expect(onCommit).toHaveBeenCalledWith([
       { id: "bundle-1", verdict: "accept" as DeckVerdict },
     ]);
+  });
+});
+
+describe("DecisionDeck — a card states only what its members agree on", () => {
+  // The chips as a caller draws them, one line per fact, and a fact the caller
+  // was not given simply has no line. Reading them back out of the DOM is what
+  // proves the deck hands over the AGREEMENT rather than the member it drew.
+  const CHIPS = (
+    _approval: DecisionApproval,
+    shared: DecisionSharedFacts,
+  ): DecisionDeckChips => ({
+    meta: (
+      <>
+        {shared.kind !== undefined && <span>{`kind: ${shared.kind}`}</span>}
+        {shared.proposedBy !== undefined && (
+          <span>{`by: ${shared.proposedBy}`}</span>
+        )}
+        {shared.confidence !== undefined && (
+          <span>{`confidence: ${shared.confidence}`}</span>
+        )}
+      </>
+    ),
+  });
+
+  function bundle(...members: readonly DecisionApproval[]): DecisionDeckItem {
+    return { kind: "bundle", id: "bundle-1", bundleId: "bundle-1", members };
+  }
+
+  it("states a fact every member carries", () => {
+    render(
+      deck({
+        items: [
+          bundle(
+            approval(11, { confidence: 0.9 }),
+            approval(12, { confidence: 0.9 }),
+          ),
+        ],
+        chips: CHIPS,
+      }),
+    );
+    expect(screen.getByText("kind: held_draft")).toBeInTheDocument();
+    expect(screen.getByText("by: agent:mailroom")).toBeInTheDocument();
+    expect(screen.getByText("confidence: 0.9")).toBeInTheDocument();
+  });
+
+  // The one the drawn member would have answered wrongly: it names an agent,
+  // and the card would have said that agent staged all of them.
+  it("drops the fact the members disagree on, and only that one", () => {
+    render(
+      deck({
+        items: [
+          bundle(
+            approval(11, { proposed_by: "agent:deepread", confidence: 0.9 }),
+            approval(12, { proposed_by: "agent:site-read", confidence: 0.9 }),
+          ),
+        ],
+        chips: CHIPS,
+      }),
+    );
+    expect(screen.queryByText(/^by: /)).not.toBeInTheDocument();
+    expect(screen.getByText("kind: held_draft")).toBeInTheDocument();
+    expect(screen.getByText("confidence: 0.9")).toBeInTheDocument();
+  });
+
+  // Absence is a disagreement too. One member scored and one unscored is not a
+  // scored act, and taking the reading that exists is exactly how a bundle came
+  // to report a confidence nobody claimed for the rest of it.
+  it("counts a fact one member never carried as a disagreement", () => {
+    render(
+      deck({
+        items: [bundle(approval(11, { confidence: 0.9 }), approval(12))],
+        chips: CHIPS,
+      }),
+    );
+    expect(screen.queryByText(/^confidence: /)).not.toBeInTheDocument();
+    expect(screen.getByText("by: agent:mailroom")).toBeInTheDocument();
+  });
+
+  // The other end: a single agrees with itself, so nothing is withheld from the
+  // card that was never a bundle. A rule that quietly blanked every chip would
+  // satisfy every case above.
+  it("leaves a single's own facts whole", () => {
+    render(deck({ items: [single(1, { confidence: 0.42 })], chips: CHIPS }));
+    expect(screen.getByText("kind: held_draft")).toBeInTheDocument();
+    expect(screen.getByText("by: agent:mailroom")).toBeInTheDocument();
+    expect(screen.getByText("confidence: 0.42")).toBeInTheDocument();
   });
 });
 

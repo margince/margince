@@ -210,6 +210,62 @@ function itemLapsed(item: DecisionDeckItem, now: number): boolean {
   return decisionLapsed(representative(item, now), now);
 }
 
+/**
+ * The facts a card may state about the WHOLE item — never the representative's
+ * alone.
+ *
+ * Drawing a bundle from one member is right for what the card DECIDES and wrong
+ * for what it CLAIMS. A ten-recipient send staged by two agents at two
+ * confidences read as one agent at one confidence, and the reader answered all
+ * ten on that reading. So a fact its members do not share is absent here rather
+ * than sampled from one of them: an omitted chip is honest, a wrong one is not.
+ *
+ * Absent is also what a fact nobody recorded looks like, and that collapse is
+ * deliberate — both mean "this card cannot say", which is the whole of what a
+ * chip could truthfully report either way.
+ */
+export type DecisionSharedFacts = Readonly<{
+  kind?: string;
+  proposedBy?: string;
+  confidence?: number;
+}>;
+
+/**
+ * What every member of an item agrees on. A single agrees with itself, so it
+ * carries its own facts whole.
+ *
+ * The chips are built from THIS rather than from the drawn approval, which is
+ * what keeps the rule from being one a caller has to remember: a fact the
+ * members disagree on is not merely discouraged as a chip, it is not there to
+ * draw one from.
+ */
+export function sharedFacts(item: DecisionDeckItem): DecisionSharedFacts {
+  const members = item.kind === "single" ? [item.approval] : item.members;
+  return {
+    kind: agreed(members, (member) => member.kind),
+    proposedBy: agreed(members, (member) => member.proposed_by),
+    confidence: agreed(members, (member) => member.confidence),
+  };
+}
+
+/**
+ * One fact across the members, or undefined where any two disagree.
+ *
+ * A member that never carried the fact needs no arm of its own: it reads as
+ * absent, a set holding one absence and one value does not agree, and a set of
+ * absences agrees on nothing a chip could print.
+ */
+function agreed<T>(
+  members: readonly DecisionApproval[],
+  read: (member: DecisionApproval) => T | null | undefined,
+): T | undefined {
+  const values = members.map(read);
+  const first = values[0];
+  return first != null && values.every((value) => value === first)
+    ? first
+    : undefined;
+}
+
 // What the deck's body is in, given what the caller knows and what the deck can
 // see. A caller's non-ready state wins — a failed read is a fact the deck has no
 // way to discover — and `ready` defers, because only the deck knows whether
@@ -320,7 +376,10 @@ export type DecisionDeckProps = Readonly<{
   loadingLabel?: string;
   /** Under the tray: what a refused commit said, in the caller's words. */
   notice?: ReactNode;
-  chips?: (approval: DecisionApproval) => DecisionDeckChips;
+  chips?: (
+    approval: DecisionApproval,
+    shared: DecisionSharedFacts,
+  ) => DecisionDeckChips;
 }>;
 
 export function DecisionDeck({
@@ -694,7 +753,10 @@ function DeckStack({
   leaving: Leaving | null;
   now: number;
   labels: DecisionDeckLabels;
-  chips?: (approval: DecisionApproval) => DecisionDeckChips;
+  chips?: (
+    approval: DecisionApproval,
+    shared: DecisionSharedFacts,
+  ) => DecisionDeckChips;
   onStage: (
     item: DecisionDeckItem,
     verdict: DeckVerdict,
@@ -840,11 +902,14 @@ function ItemCard({
   layout: "deck" | "row";
   now: number;
   labels: DecisionDeckLabels;
-  chips?: (approval: DecisionApproval) => DecisionDeckChips;
+  chips?: (
+    approval: DecisionApproval,
+    shared: DecisionSharedFacts,
+  ) => DecisionDeckChips;
   onStage: (item: DecisionDeckItem, verdict: DeckVerdict) => void;
 }>) {
   const approval = representative(item, now);
-  const trim = chips?.(approval) ?? {};
+  const trim = chips?.(approval, sharedFacts(item)) ?? {};
   const members = item.kind === "bundle" ? item.members : [];
   return (
     <DecisionCard
