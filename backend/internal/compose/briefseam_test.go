@@ -26,6 +26,8 @@ var withheldFromTheTool = gatekit.Waive(map[string]string{
 
 	"RevenueNormMinor": "the workspace-wide base the revenue FACTOR was divided by; the factor is " +
 		"served already normalized, so the base explains nothing an agent can act on",
+	"RevenueNormCurrency": "what that base is in, withheld with it — a currency qualifying a figure " +
+		"this surface does not serve names nothing",
 
 	"Narrative": "the agent's OWN sentence about the night, withheld from the agent. It is the " +
 		"only field here the tool's caller wrote rather than read, and handing it back is how a " +
@@ -57,7 +59,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	run := briefs.BriefRun{
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
 		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
-		CandidateCount: 17, RevenueNormMinor: 918_273,
+		CandidateCount: 17, RevenueNormMinor: 918_273, RevenueNormCurrency: "CHF",
 		Narrative:   "Two replies overnight, one deal went quiet.",
 		AnnotatedAt: &annotatedAt,
 		Items: []briefs.BriefRunItem{{
@@ -95,6 +97,9 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		// Withheld — so the probe is what a LEAK would look like: the value
 		// itself, which must appear nowhere in what the tool served.
 		"RevenueNormMinor": "918273",
+		// Upper case, so it cannot be found inside a uuid or a timestamp — the
+		// same reason every probe here is a fragment rather than a bare value.
+		"RevenueNormCurrency": "CHF",
 		// The items are covered field by field below; what this row asserts is
 		// that the list itself arrived.
 		"Items": `"deal_id":"` + dealID.String(),
