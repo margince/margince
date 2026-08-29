@@ -14,7 +14,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The peer arm's budget. Same shape as the direct arm: over-fetch recency-
@@ -38,9 +37,11 @@ const (
 //
 // No grant of its own and so no withheld state: the person read the anchor
 // already required is the only object this arm discloses, and each peer row
-// was filtered through the caller's person row scope at source. A peer whose
-// pair has decayed to the none band is not drawn at all — "they were once on
-// a thread together" is an archive fact, not an acquaintance.
+// was filtered through the caller's person row scope at source. There is no
+// none-band peer to filter: a row only exists here because §4's decay floors
+// at BucketWeak for any real LastInteraction, and a ContactEdge cannot exist
+// without one — "they were once on a thread together" is exactly what made
+// the row, however long ago.
 //
 // Pooled counts only, no receipts, the account arm's disclosure rule: the
 // metadata may be shown where the correspondence behind it may not.
@@ -71,9 +72,6 @@ func (h Reads) addPeerGroup(
 	qualified := 0
 	for _, peer := range peers {
 		score := peer.Edge.StrengthOf(now)
-		if score.Bucket == relstrength.BucketNone {
-			continue
-		}
 		qualified++
 		if shown >= graphPeerCap {
 			continue
