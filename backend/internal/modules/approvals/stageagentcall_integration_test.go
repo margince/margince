@@ -151,10 +151,13 @@ func TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds(t *testing.T) {
 
 // agentWithoutPassport is an agent principal carrying no passport.
 //
-// Production builds no such caller on any agent surface: AgentIdentity.Principal
-// is what the REST bearer, both MCP transports and the Surface-B runner arrive
-// as, and it always carries the authenticated passport. The shape is planted
-// here because the guard that refuses it has to be exercised by something.
+// No agent SURFACE builds one: AgentIdentity.Principal is what the REST bearer,
+// both MCP transports and the Surface-B runner arrive as, and it always carries
+// the passport it authenticated. compose/autoapply.go does build one — and only
+// ever DECIDES with it, where the sweep releases under the owner's own policy
+// rather than a credential releasing its own proposal, so the staging guard
+// does not reach it. The shape is planted here because the guard that refuses
+// it has to be exercised by something.
 func (e *stagingEnv) agentWithoutPassport() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -332,5 +335,41 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 	}
 	if staged != 0 {
 		t.Errorf("the refused staging left %d row(s) behind — a refusal that writes is not a refusal", staged)
+	}
+}
+
+// The REPEAT is the case an insert-level guard would have missed.
+//
+// A staging does not always insert: the joining path hands back a live row under
+// the same identity, and StageAgentCall hands back an approved-and-unspent one.
+// So a passport-less agent asking a second time would have been handed the row
+// its first attempt wrote — a NULL passport_id, which the redemption then spends
+// without a binding to check, because the caller presents none either. Refused
+// at the entry point, it is handed nothing and writes nothing.
+func TestAPassportLessAgentIsRefusedTheSecondTimeToo(t *testing.T) {
+	e := setupStaging(t)
+	target := e.seedOrg(t)
+	in := e.agentCall(target)
+
+	// The row it would have joined, staged by a credential that may make one.
+	passport := e.seedPassport(t)
+	staged, _, err := e.svc.StageAgentCall(e.asPassport(passport), in)
+	if err != nil {
+		t.Fatalf("staging the call: %v", err)
+	}
+	e.approve(t, staged)
+
+	// The same call, from a caller carrying nothing. It is not handed the
+	// approval it did not make, and it does not stage one of its own.
+	if _, approved, err := e.svc.StageAgentCall(e.agentWithoutPassport(), in); err == nil {
+		t.Fatalf("a passport-less agent was answered (approved=%t) for a call it may not stage", approved)
+	}
+	var rows int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM approval WHERE target_entity_id = $1`, target).Scan(&rows); err != nil {
+		t.Fatalf("counting the approvals for the target: %v", err)
+	}
+	if rows != 1 {
+		t.Errorf("the target carries %d approvals, want only the one a passport staged", rows)
 	}
 }

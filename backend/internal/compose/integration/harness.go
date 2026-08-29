@@ -56,8 +56,11 @@ type Env struct {
 	// because approval.passport_id is a foreign key AND because an agent staging
 	// without one writes the NULL that means "the server proposed this" — the
 	// row a credential is then allowed to release, since there is no passport to
-	// compare its own against. Every live agent principal carries one; a fixture
-	// that did not was modelling a caller production cannot build.
+	// compare its own against. Every agent SURFACE carries one — the REST
+	// bearer, both MCP transports, the Surface-B runner — so a staging fixture
+	// that did not was modelling a caller none of them produces. (An agent
+	// principal without a passport does exist live, in compose/autoapply.go, and
+	// it only decides.)
 	//
 	// Lent by Rep1 rather than by a seat of its own: an extra app_user would
 	// move every seat count and seat-derived budget this package asserts, over a
@@ -241,9 +244,9 @@ func (e *Env) Admin() context.Context { return e.As(e.AdminUser, nil, AdminPerms
 // AgentCtx binds a synthetic agent principal for staging (the staging
 // path itself is not what a suite using this is testing).
 //
-// It presents e.AgentPassport, as every live agent principal does: a staging
-// with none writes a NULL passport_id, which is what a SERVER proposal looks
-// like, and the credential may then release its own proposal.
+// It presents e.AgentPassport, as every agent that STAGES does: a staging with
+// none writes a NULL passport_id, which is what a SERVER proposal looks like,
+// and the credential may then release its own proposal.
 func (e *Env) AgentCtx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
