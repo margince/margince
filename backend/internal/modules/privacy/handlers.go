@@ -60,6 +60,19 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	return h
 }
 
+// WithRawCapturePurger gives the controller's release the seam it needs to
+// destroy the provider original behind the record it erases.
+//
+// Separate from WithBlobstore because it is not optional the way an object
+// store is: a release without it destroys the parsed text and leaves the
+// verbatim original, and the erasure reports success. The release refuses
+// instead, which is why compose wires this on the same path it wires the
+// blobstore rather than only where an object store exists.
+func (h Handlers) WithRawCapturePurger(purge RawCapturePurger) Handlers {
+	h.eraser = h.eraser.WithRawCapturePurger(purge)
+	return h
+}
+
 // ListAuditLog implements (GET /audit-log).
 func (h Handlers) ListAuditLog(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAuditLogParams) {
 	f := AuditFilter{

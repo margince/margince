@@ -21,8 +21,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -48,37 +46,20 @@ const evidenceKeyRetentionAction = "retention_action"
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
 	evidenceKeyCause = "cause"
-	// The two causes a collateral tombstone can carry: an Art. 17 erasure of a
-	// subject, or a retention sweep clearing a record on its own schedule.
+	// The three causes a collateral tombstone can carry: an Art. 17 erasure of
+	// a subject, a retention sweep clearing a record on its own schedule, and a
+	// controller ending a restriction by hand.
 	causePersonErasure = "person_erasure"
 	causeRetention     = "retention"
-	evidenceKeyClass   = "class"
-	evidenceKeyBasis   = "basis"
-	evidenceKeyReason  = "reason"
+	// causeControllerRelease is the third: a restriction a controller ended by
+	// hand, completing the erasure it had suspended. The release's decision row
+	// and the collateral tombstones that release leaves behind both take their
+	// cause from here, so a supervisory authority reading the two sees one act.
+	causeControllerRelease = "controller_release"
+	evidenceKeyClass       = "class"
+	evidenceKeyBasis       = "basis"
+	evidenceKeyReason      = "reason"
 )
-
-// Eraser executes the shared erase path both the DSR surface and the
-// retention engine's 'erase' action ride.
-type Eraser struct {
-	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
-	db *database.DB
-	// blob purges the subject's attachment objects (Art. 17 reaches the
-	// bytes, not only the row). nil in a deployment with no object store —
-	// where no upload path could have stored an object either.
-	blob blobstore.Store
-}
-
-// NewEraser binds the erasure pass to the installation's pool.
-func NewEraser(db *database.DB) *Eraser { return &Eraser{db: db} }
-
-// WithBlobstore returns an eraser that also purges attachment objects.
-// Compose passes the object store so erasure reaches the bytes behind the
-// attachment rows it deletes.
-func (e *Eraser) WithBlobstore(blob blobstore.Store) *Eraser {
-	clone := *e
-	clone.blob = blob
-	return &clone
-}
 
 // ErasePerson removes the subject's PII in ONE transaction: person row
 // anonymized, email/phone/channel-identity child rows deleted, raw

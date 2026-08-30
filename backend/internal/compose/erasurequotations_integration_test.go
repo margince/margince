@@ -26,6 +26,7 @@ package compose
 // still on it.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The line the proposal was read out of. It names the subject the way a meeting
@@ -258,6 +260,76 @@ func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 		approvalID, privacy.AgedOutSourceWithdrawal); n != 1 {
 		t.Error("the withdrawal does not say the record reached the end of its retention window")
 	}
+}
+
+// TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew is the other
+// half of the sentence the test above asserts.
+//
+// A policy ending the material and a controller deciding to end it are
+// different answers to "why did this card go", and the collateral tombstone is
+// where an auditor reads that answer. Both acts destroy the same list — that is
+// the whole point of there being one helper — but a release stamped with a
+// retention age-out would tell a supervisory authority that a window ran out on
+// a record where somebody actually decided.
+func TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew(t *testing.T) {
+	e := integration.Setup(t)
+	integration.SeedRetentionPolicies(t, e)
+
+	// The restriction is seeded on the INSERT rather than through PinToFloor.
+	// The pin resolves its window from the compiled-in jurisdiction floor, and
+	// this suite package does not arm one — a pack is process-global and armed
+	// per binary. Arming it here to reach a restricted row would change what
+	// every other test in this package's sweep may destroy, to set up a test
+	// about a tombstone. What is under test is the RELEASE, and a release needs
+	// a held record however it came to be held.
+	held := ids.NewV7()
+	e.WsExec(t, `
+		INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at,
+		                      source, source_system, source_id, captured_by,
+		                      retention_class, retention_class_at,
+		                      restricted_at, restricted_until, restricted_reason, archived_at)
+		VALUES ($1, 'email', 'Lieferschein 88-2026', $2, 'supplier@parts.test',
+		        now() - interval '30 days', 'capture_email', 'imap', $3, 'human:seed',
+		        'commercial_correspondence', now(), now(), now() + interval '6 years', 'commercial_correspondence', now())`,
+		held, quotedTranscriptLine, "supplier-"+ids.NewV7().String())
+	approvalID := stageProposalQuoting(t, e, held, quotedTranscriptLine)
+
+	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
+	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eraser.ReleaseRestriction(releaseControllerCtx(e), held, reason); err != nil {
+		t.Fatalf("releasing → %v", err)
+	}
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND body IS NULL`, held); n != 1 {
+		t.Fatalf("the release did not erase the body — the rest of this test would prove nothing")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND decision_reason = $2`,
+		approvalID, privacy.ReleasedSourceWithdrawal); n != 1 {
+		t.Error("the withdrawal does not say a controller decided; the clock did not run out on this record")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND decision_reason = $2`,
+		approvalID, privacy.AgedOutSourceWithdrawal); n != 0 {
+		t.Error("the withdrawal reports a retention age-out on a record a controller released by hand")
+	}
+}
+
+// releaseControllerCtx is a named administrator holding the retention
+// authority, which both overrides require. A SEEDED user, because a decision is
+// attributed to a person the installation can name and an id with no app_user
+// row behind it is refused by design.
+func releaseControllerCtx(e *integration.Env) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"retention_policy": {Read: true, Update: true, Delete: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }
 
 // The export half. A quotation is the part of a staging held in the subject's
