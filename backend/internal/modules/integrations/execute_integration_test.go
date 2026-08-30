@@ -533,6 +533,7 @@ func TestARunAuditsTheProviderItIsFor(t *testing.T) {
 	// settlement writes an audit row: the connection's status changes, and the
 	// row says who observed it.
 	e := setupRuns(t, runsConfig{provider: "otherco", subjectLastName: "InvalidCredentials"})
+	want := "connector:" + e.provider
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
 
@@ -544,8 +545,8 @@ func TestARunAuditsTheProviderItIsFor(t *testing.T) {
 	rows, err := e.owner.Query(context.Background(), `
 		SELECT DISTINCT actor_id FROM audit_log
 		 WHERE entity_type = 'provider_connection'
-		   AND after->>'provider' = 'otherco'
-		 ORDER BY actor_id`)
+		   AND after->>'provider' = $1
+		 ORDER BY actor_id`, e.provider)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -564,10 +565,10 @@ func TestARunAuditsTheProviderItIsFor(t *testing.T) {
 		t.Fatal("the refused submission wrote no audit row, so this test asserted nothing about who acted")
 	}
 	for _, actor := range actors {
-		if actor != "connector:otherco" {
-			t.Errorf("an audit row for otherco's connection names %q as the actor — the claim rows on a record "+
+		if actor != want {
+			t.Errorf("an audit row for %s's connection names %q as the actor, want %q — the claim rows on a record "+
 				"derive their provenance from the run's own provider, so the log and the evidence would disagree "+
-				"about who acted for this vendor", actor)
+				"about who acted for this vendor", e.provider, actor, want)
 		}
 	}
 }
