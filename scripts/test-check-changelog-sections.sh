@@ -62,7 +62,7 @@ MD
 
 # The closing sentence fits every refusal class, so a maintainer acting on it is
 # never sent looking for sections to merge that were never split.
-case_is "the closing sentence does not claim a duplicate on a read-nothing refusal" 1 "does not present one section per change type per release" <<'MD'
+case_is "the closing sentence names the file it read and claims no duplicate" 1 "case.md does not present one section per change type per release" <<'MD'
 # Changelog
 
 Nothing here yet.

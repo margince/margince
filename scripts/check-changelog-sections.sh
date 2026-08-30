@@ -102,7 +102,7 @@ if [[ $status -ne 0 ]]; then
 	# One sentence for every refusal class. A duplicate-specific line printed
 	# over a read-nothing refusal sends a maintainer looking for sections to
 	# merge that were never split.
-	echo "FAIL: CHANGELOG.md does not present one section per change type per release — see the line(s) above" >&2
+	echo "FAIL: $changelog does not present one section per change type per release — see the line(s) above" >&2
 	exit 1
 fi
 
