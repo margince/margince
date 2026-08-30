@@ -114,10 +114,13 @@ type writtenActorID struct {
 // different distances.
 //
 // Names are indexed per PACKAGE, not per scope, so two functions binding the
-// same name to different strings share an entry. That can only produce a false
-// POSITIVE — a literal reported at a site that did not use it — which is a
-// loud failure a reader resolves in a minute. The other direction is the one a
-// census may not have.
+// same name to different strings share an entry. EVERY binding is kept and a
+// connector value wins the entry, because the alternative is the failure a
+// census may not have: a later `vendor := someProvider` in an unrelated
+// function masking an earlier `vendor := "connector:surfe"`, and the literal
+// disappearing. Keeping the connector value can only report it at a site that
+// did not use it — a loud failure a reader resolves in a minute — where the
+// other direction is silent.
 func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]string) {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -125,9 +128,10 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 		t.Fatalf("reading %s: %v", dir, err)
 	}
 	files := map[string]*ast.File{}
-	// bound is name → expression, resolved to text afterwards so an alias can
-	// name a constant declared later or in another file of the package.
-	bound := map[string]ast.Expr{}
+	// bound is name → every expression bound to it, resolved to text afterwards
+	// so an alias can name a constant declared later or in another file of the
+	// package.
+	bound := map[string][]ast.Expr{}
 	for _, entry := range entries {
 		name := entry.Name()
 		path := filepath.ToSlash(filepath.Join(dir, name))
@@ -142,18 +146,29 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 		files[path] = file
 		indexBindings(file, bound)
 	}
-	// A fixpoint, because an alias resolves only once its target has: the
-	// first pass folds the literals, the next folds the names pointing at
-	// them, and so on until nothing new resolves. The bound is what ends a
-	// cycle the compiler would refuse but this reader does not typecheck.
+	// A fixpoint, because an alias resolves only once its target has: the first
+	// pass folds the literals, the next folds the names pointing at them, and
+	// so on until a pass changes nothing. No pass count — a cap would truncate
+	// a legitimately deep chain and drop its tail out of the census without a
+	// sound, and "nothing changed" already ends both a cycle and a chain.
 	constants := map[string]string{}
-	for pass := 0; pass < 8; pass++ {
+	for {
 		progressed := false
-		for name, expr := range bound {
-			if _, done := constants[name]; done {
-				continue
-			}
-			if text, ok := gatekit.StringExpr(expr, constants, gatekit.FoldStrict); ok {
+		for name, exprs := range bound {
+			for _, expr := range exprs {
+				text, ok := gatekit.StringExpr(expr, constants, gatekit.FoldStrict)
+				if !ok {
+					continue
+				}
+				current, have := constants[name]
+				if have && (current == text || strings.HasPrefix(current, connectorActorPrefix)) {
+					// Already settled, or already holding the value that must
+					// not be masked.
+					continue
+				}
+				if have && !strings.HasPrefix(text, connectorActorPrefix) {
+					continue
+				}
 				constants[name] = text
 				progressed = true
 			}
@@ -167,7 +182,7 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 
 // indexBindings records every name a file binds to an expression, wherever it
 // binds it.
-func indexBindings(file *ast.File, bound map[string]ast.Expr) {
+func indexBindings(file *ast.File, bound map[string][]ast.Expr) {
 	// A const block repeats the previous spec's values when a spec has none:
 	//	const ( vend = "connector:surfe"; alias )
 	// carries the same value, and reading only the specs with values would
@@ -189,7 +204,7 @@ func indexBindings(file *ast.File, bound map[string]ast.Expr) {
 				}
 				for i, ident := range value.Names {
 					if i < len(values) {
-						bound[ident.Name] = values[i]
+						bound[ident.Name] = append(bound[ident.Name], values[i])
 					}
 				}
 			}
@@ -197,7 +212,7 @@ func indexBindings(file *ast.File, bound map[string]ast.Expr) {
 			for i, lhs := range node.Lhs {
 				ident, isIdent := lhs.(*ast.Ident)
 				if isIdent && i < len(node.Rhs) {
-					bound[ident.Name] = node.Rhs[i]
+					bound[ident.Name] = append(bound[ident.Name], node.Rhs[i])
 				}
 			}
 		}
