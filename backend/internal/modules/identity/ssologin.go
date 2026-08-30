@@ -15,7 +15,6 @@ package identity
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
@@ -94,14 +93,6 @@ func clearLoginStateCookie(w http.ResponseWriter) {
 	})
 }
 
-func randomURLSafe(n int) (string, error) {
-	buf := make([]byte, n)
-	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("identity: read random bytes: %w", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(buf), nil
-}
-
 // StartOidcSignIn redirects to the provider's consent screen. Unconfigured
 // or unknown provider is a 404 — an authentically absent flow. The provider
 // parameter type is generated from crm.yaml's enumerated path parameter.
@@ -112,12 +103,12 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	nonce, err := randomURLSafe(oidcNonceBytes)
+	nonce, err := randomTokenOfLength(oidcNonceBytes)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	verifier, err := randomURLSafe(oidcVerifierLen)
+	verifier, err := randomTokenOfLength(oidcVerifierLen)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
