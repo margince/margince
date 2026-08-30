@@ -23,6 +23,19 @@ import (
 // actually needs is a NEW job enqueued under the CURRENT config.
 var ErrIdentityDrift = errors.New("search: embedder identity drifted from the job's target identity")
 
+// ReembedConsecutiveFailureLimit is how many entities in a row may fail before
+// a pass stops calling the provider at all.
+//
+// It separates the two things a failure can mean. Scattered bad rows — one
+// entity whose text a provider will not take — must not cost the corpus behind
+// them, which is why the loop collects rather than returns. A provider that has
+// stopped answering fails EVERY row, and carrying on then buys nothing: each
+// call waits out its own timeout, the run's attempt is spent regardless, and
+// the joined error grows one entry per entity. Twenty is comfortably more than
+// any run of genuinely bad rows this corpus has produced and small enough that
+// an outage costs seconds rather than hours.
+const ReembedConsecutiveFailureLimit = 20
+
 // ReembedPass is one workspace's slice of a run: the run it reports its progress
 // to, the identity it must still be re-embedding under, and the clock that
 // progress reporting is paced by.
@@ -108,7 +121,17 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 	// one, so a single unembeddable entity costs its own row and not the corpus
 	// behind it. The pass still FAILS if any entity failed — this changes what
 	// an attempt covers, never whether the run reports the fault.
-	var failures []error
+	//
+	// consecutive counts failures in a row, and is what tells one bad entity
+	// apart from a provider that has stopped answering. Carrying on through an
+	// OUTAGE would call the vendor once per remaining entity, each call waiting
+	// out its own timeout, so a large corpus could spend hours failing before
+	// River ever got to back off. The counter resets on every success, so a
+	// corpus with scattered bad rows still runs to the end.
+	var (
+		failures    []error
+		consecutive int
+	)
 
 	for entityType, src := range pendingSources {
 		// The marker is refreshed on BOTH sides of the scan, and the first of
@@ -119,15 +142,18 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 		// dominant leg looking dead. The note before the scan is what the scan's
 		// own duration is measured from; the note after it is where the embed
 		// loop's pacing restarts.
+		// Each of these returns joins what the pass has already collected: a
+		// scan or a marker write that fails LATER must not swallow the provider
+		// faults that explain why this run is in trouble in the first place.
 		if err := note(); err != nil {
-			return err
+			return errors.Join(err, errors.Join(failures...))
 		}
 		items, err := ws.liveEntitiesOf(wsCtx, entityType, src)
 		if err != nil {
-			return err
+			return errors.Join(err, errors.Join(failures...))
 		}
 		if err := note(); err != nil {
-			return err
+			return errors.Join(err, errors.Join(failures...))
 		}
 		for _, item := range items {
 			if _, err := ws.UpsertEmbedding(wsCtx, entityType, item.id, item.text, embedder); err != nil {
@@ -150,7 +176,14 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 				// that one bad entity no longer hides the rest of the corpus
 				// behind it.
 				failures = append(failures, fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err))
+				consecutive++
+				if consecutive >= ReembedConsecutiveFailureLimit {
+					return fmt.Errorf("search: reembedding gave up after %d consecutive failures (the embed provider is not answering): %w",
+						consecutive, errors.Join(failures...))
+				}
+				continue
 			}
+			consecutive = 0
 			// Paced by the clock and not by a count of entities: an entity is not a
 			// unit of time, so a count would have to be divided by the slowest an
 			// entity can be. This carries the one upsert in flight when the interval
@@ -158,7 +191,7 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 			// states and nothing here can cap.
 			if now().Sub(noted) >= ReembedProgressStaleness {
 				if err := note(); err != nil {
-					return err
+					return errors.Join(err, errors.Join(failures...))
 				}
 			}
 		}

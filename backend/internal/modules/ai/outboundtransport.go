@@ -9,16 +9,16 @@ import (
 )
 
 // Timeouts bounding one outbound model call. requestTimeout is the ceiling on
-// the whole call; the two below bound the legs that can stall while the ceiling
-// is still far away.
+// the whole call; the rest bound the legs that can stall while the ceiling is
+// still far away.
 //
 // The ceiling alone is not enough, and the difference is not theoretical: a
 // re-embed pass on this tree spent 246 seconds inside a single embedding call
 // on a connection the network had silently dropped, then lost the run's River
-// attempt to a peer reset on the next one. A vendor answers an embedding in
-// under two seconds, so five minutes of silence is never the vendor thinking —
-// it is a connection that will not answer at all, and the sooner the transport
-// says so the sooner the caller retries on a fresh one.
+// attempt to a peer reset on the next one. Five minutes of silence on an
+// embedding is never the vendor thinking — it is a connection that will not
+// answer at all, and the sooner the caller hears so the sooner it retries on a
+// fresh one.
 const (
 	// requestTimeout bounds a single model call. Generous because premium
 	// completions on long context are legitimately slow — a streamed corpus
@@ -26,12 +26,22 @@ const (
 	// contexts tighten it where a caller has a real deadline.
 	requestTimeout = 300 * time.Second
 
-	// responseHeaderTimeout bounds the wait for the response HEADERS only, so a
-	// slow BODY — the streamed extraction requestTimeout is generous for — is
-	// untouched by it. A vendor that has accepted a request and is working sends
-	// its status line long before the tokens; ninety seconds of silence before
-	// the first byte is a dead connection, not a thinking model.
-	responseHeaderTimeout = 90 * time.Second
+	// EmbedCallTimeout bounds ONE embedding call, and is the reason there is no
+	// response-header timeout on the shared transport.
+	//
+	// A header timeout cannot tell the two kinds of call apart. A completion is
+	// sent with stream:false (openai.go's Complete and every adapter beside it),
+	// so the vendor holds its status line until generation FINISHES — a slow
+	// reasoning model legitimately says nothing for minutes, and a header
+	// deadline would cut exactly the call requestTimeout is generous for. An
+	// embedding is the opposite: it is one forward pass, it answers in about a
+	// second, and a minute of silence on one is never the model thinking.
+	//
+	// So the bound lives on the embed lane instead, where the expected duration
+	// is actually known — Router.Embed applies it to every embedding call there
+	// is. The ping below is what protects the completion path, by killing a dead
+	// connection rather than by guessing how long an answer may take.
+	EmbedCallTimeout = 60 * time.Second
 
 	// http2PingAfterIdle asks the HTTP/2 transport to ping a connection that has
 	// gone this long without a frame, and http2PingTimeout is how long the ping
@@ -59,7 +69,6 @@ const (
 // connections crowd out another's.
 func newOutboundClient() *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's own DefaultTransport is a *http.Transport by construction
-	transport.ResponseHeaderTimeout = responseHeaderTimeout
 	transport.IdleConnTimeout = idleConnTimeout
 	transport.ForceAttemptHTTP2 = true
 	transport.HTTP2 = &http.HTTP2Config{

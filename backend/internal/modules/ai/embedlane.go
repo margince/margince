@@ -42,8 +42,20 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 		req.Dimensions = b.embedDims
 	}
 
+	// One embedding is one forward pass and answers in about a second, so a
+	// minute of silence is a connection that will not answer rather than a model
+	// still working. Without this the caller waits out requestTimeout — five
+	// minutes, with its database transaction open — and a re-embed pass spends
+	// its River attempts on connections the network already dropped.
+	//
+	// A deadline the caller set EARLIER still wins: WithTimeout only ever
+	// shortens, so a request that is already nearly out of time is not handed a
+	// fresh minute here.
+	embedCtx, cancel := context.WithTimeout(ctx, EmbedCallTimeout)
+	defer cancel()
+
 	start := r.now()
-	res, err := b.embedder.Embed(ctx, req)
+	res, err := b.embedder.Embed(embedCtx, req)
 	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, CacheOff: r.cacheOff, LatencyMS: r.now().Sub(start).Milliseconds()}
 	if err == nil {
 		// Stamp the SAME token estimate the meter records below onto the
