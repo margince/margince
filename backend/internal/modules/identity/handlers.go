@@ -127,6 +127,57 @@ type Handlers struct {
 	// rotation — because a short-lived access token an hour-old rotation
 	// re-issues for 30 days is not short-lived.
 	oauthAccessTokenTTL time.Duration
+
+	// oidcProviders/oidcVerifiers/oidcExchangers/stateSigner wire
+	// /auth/oidc/{provider}/start and /callback (WithOIDCProviders). Absent
+	// from oidcProviders means unconfigured, and Start/Callback both 404 for
+	// it. oidcRedirectBase/oidcPostLoginURL/oidcFailureURL are the fixed
+	// external base and SPA routes the flow redirects through — never
+	// derived from the request Host.
+	oidcProviders    map[string]OIDCProviderConfig
+	oidcVerifiers    map[string]OIDCVerifier
+	oidcExchangers   map[string]OIDCExchanger
+	stateSigner      OIDCStateSigner
+	oidcRedirectBase string
+	oidcPostLoginURL string
+	oidcFailureURL   string
+	// oidcCapabilitiesFn resolves the currently-configured provider list for
+	// GetAuthCapabilities, read fresh on every request rather than fixed at
+	// boot (WithOIDCCapabilitiesFn) — separate from oidcProviders above
+	// because a Settings-configured Google app can change after boot without
+	// a restart. Nil reports no providers.
+	oidcCapabilitiesFn func() []OIDCProviderConfig
+}
+
+// WithOIDCProviders injects the configured external identity providers and
+// their verifiers/exchangers for the /auth/oidc/{provider}/start and
+// /callback routes. Keyed by provider key ("google").
+func (h Handlers) WithOIDCProviders(
+	providers map[string]OIDCProviderConfig,
+	verifiers map[string]OIDCVerifier,
+	exchangers map[string]OIDCExchanger,
+	signer OIDCStateSigner,
+	redirectBase, postLoginURL, failureURL string,
+) Handlers {
+	h.oidcProviders = providers
+	h.oidcVerifiers = verifiers
+	h.oidcExchangers = exchangers
+	h.stateSigner = signer
+	h.oidcRedirectBase = redirectBase
+	h.oidcPostLoginURL = postLoginURL
+	h.oidcFailureURL = failureURL
+	return h
+}
+
+// WithOIDCCapabilitiesFn injects how GetAuthCapabilities discovers the
+// currently-configured provider list. Separate from WithOIDCProviders on
+// purpose: that call wires the start/callback routes from a fixed provider
+// map; this one is read fresh on every request, so it can reflect a
+// Settings-configured Google app that changed after boot without requiring a
+// restart.
+func (h Handlers) WithOIDCCapabilitiesFn(fn func() []OIDCProviderConfig) Handlers {
+	h.oidcCapabilitiesFn = fn
+	return h
 }
 
 // NewHandlers builds the identity transport surface over its service.
@@ -262,6 +313,14 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 		Key   string `json:"key"`
 		Label string `json:"label"`
 	}, 0)
+	if h.oidcCapabilitiesFn != nil {
+		for _, p := range h.oidcCapabilitiesFn() {
+			caps.OidcProviders = append(caps.OidcProviders, struct {
+				Key   string `json:"key"`
+				Label string `json:"label"`
+			}{Key: p.Key, Label: p.Label})
+		}
+	}
 	// NO-STORE, and the release version is what makes it mandatory rather than
 	// tidy. This response is not per-principal, so a shared cache leaks nothing —
 	// but the SPA refuses to render at all when the release it reads here differs

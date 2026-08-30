@@ -4,10 +4,51 @@
 package identity
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
+
+func TestGetAuthCapabilitiesReportsOIDCProviders(t *testing.T) {
+	h := Handlers{}.WithOIDCCapabilitiesFn(func() []OIDCProviderConfig {
+		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil)
+	rec := httptest.NewRecorder()
+
+	h.GetAuthCapabilities(rec, req)
+
+	var body struct {
+		OidcProviders []struct{ Key, Label string } `json:"oidc_providers"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(body.OidcProviders) != 1 || body.OidcProviders[0].Key != "google" {
+		t.Fatalf("oidc_providers = %+v", body.OidcProviders)
+	}
+}
+
+func TestGetAuthCapabilitiesEmptyWhenUnconfigured(t *testing.T) {
+	h := Handlers{}
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil)
+	rec := httptest.NewRecorder()
+
+	h.GetAuthCapabilities(rec, req)
+
+	var body struct {
+		OidcProviders []struct{ Key, Label string } `json:"oidc_providers"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(body.OidcProviders) != 0 {
+		t.Fatalf("oidc_providers = %+v, want empty", body.OidcProviders)
+	}
+}
 
 func TestResetRateLimitsReopensASpentBucket(t *testing.T) {
 	h := NewHandlers(&Service{})
