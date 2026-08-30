@@ -138,6 +138,108 @@ func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
 	}
 }
 
+// TestAuditLogNarrowsByActorAndByWindow — the three filters the case above
+// never asks for, and the two of them a census cannot judge.
+//
+// privacy's own TestEveryAuditFilterFieldNarrowsTheRead holds that every field
+// of AuditFilter reaches the WHERE clause. It cannot hold that the clause is
+// the RIGHT one: `from` compiled as `<=` and `to` as `>=` narrows exactly as
+// much, binds exactly as many arguments, and answers a window nobody asked for
+// — an auditor asking what happened since Monday is shown everything before it.
+// Only a real row on a real clock separates the two.
+func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
+	e := Setup(t)
+	subject := e.SeedPerson(t, "Window Subject", nil)
+	admin := e.Admin()
+
+	entityType := "person"
+	all, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{EntityType: &entityType, EntityID: &subject})
+	if err != nil {
+		t.Fatalf("unfiltered: %v", err)
+	}
+	if len(all.Entries) == 0 {
+		t.Fatal("the seeded person wrote no audit row, so nothing below is being narrowed")
+	}
+	stamped := all.Entries[0].OccurredAt
+
+	before, after := stamped.Add(-time.Hour), stamped.Add(time.Hour)
+	stampedRow := all.Entries[0].ID
+	for _, tc := range []struct {
+		name       string
+		from, to   *time.Time
+		wantIsSome bool
+	}{
+		{name: "the window around it", from: &before, to: &after, wantIsSome: true},
+		{name: "a window that opens after it", from: &after, wantIsSome: false},
+		{name: "a window that closes before it", to: &before, wantIsSome: false},
+		// The bounds are INCLUSIVE, which the offset cases above cannot show:
+		// `>` and `<` narrow the same rows an hour out, and drop the row that
+		// happened exactly on the boundary. An auditor asking what happened
+		// from 09:00 means to be shown 09:00.
+		{name: "the lower bound includes the moment itself", from: &stamped, wantIsSome: true},
+		{name: "the upper bound includes the moment itself", to: &stamped, wantIsSome: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			page, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{
+				EntityType: &entityType, EntityID: &subject, From: tc.from, To: tc.to,
+			})
+			if err != nil {
+				t.Fatalf("windowed list: %v", err)
+			}
+			if got := len(page.Entries) > 0; got != tc.wantIsSome {
+				t.Errorf("%d row(s) in %s, want some=%v — the window bound is compiled the wrong way round",
+					len(page.Entries), tc.name, tc.wantIsSome)
+			}
+			// THE row, not any row. The subject may carry more than one audit
+			// line, so a bound compiled exclusively can drop the one standing
+			// on it and still answer a page — which "nonempty" reads as a pass.
+			if tc.wantIsSome && !carriesRow(page.Entries, stampedRow) {
+				t.Errorf("%s answered %d row(s) and none of them is the one it stands on — the bound excludes the moment itself",
+					tc.name, len(page.Entries))
+			}
+		})
+	}
+
+	// And the actor, which is a typed principal string rather than a bare id.
+	t.Run("an actor nobody is", func(t *testing.T) {
+		nobody := "human:" + ids.NewV7().String()
+		page, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{
+			EntityType: &entityType, EntityID: &subject, Actor: &nobody,
+		})
+		if err != nil {
+			t.Fatalf("actor list: %v", err)
+		}
+		if len(page.Entries) != 0 {
+			t.Errorf("%d row(s) attributed to an actor nobody is — the filter narrows nothing", len(page.Entries))
+		}
+	})
+	t.Run("the actor who wrote it", func(t *testing.T) {
+		who := all.Entries[0].ActorID
+		if who == "" {
+			t.Skip("the seeded row records no actor id to filter on")
+		}
+		page, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{
+			EntityType: &entityType, EntityID: &subject, Actor: &who,
+		})
+		if err != nil {
+			t.Fatalf("actor list: %v", err)
+		}
+		if len(page.Entries) == 0 {
+			t.Error("the actor who wrote the row matches none of it")
+		}
+	})
+}
+
+// carriesRow reports whether a page holds one particular audit line.
+func carriesRow(entries []privacy.AuditEntry, id ids.UUID) bool {
+	for _, entry := range entries {
+		if entry.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 // TestAuditLogResolvesTheHumanBehindEveryRow pins PD-002 on the compliance
 // read: attribution names the PERSON, and an identifier is what a reader falls
 // back to only when no person resolves. The screen this feeds is the one an
