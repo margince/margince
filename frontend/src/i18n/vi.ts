@@ -1641,6 +1641,7 @@ export const vi = {
     "Margince đọc cuộc họp, email và hóa đơn để tìm lời hứa, vướng mắc và rủi ro. Trước hết cần có ít nhất một trong số đó.",
   "co.signals.empty": "Không có tín hiệu nào đang mở trên tài khoản này.",
   "co.signals.openProject": "Mở dự án",
+  "co.signals.openSource": "Đọc thông báo",
   "chronology.label": "Hiện gì trên timeline",
   "chronology.activities": "Hoạt động",
   "chronology.changes": "Thay đổi",

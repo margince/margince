@@ -18,8 +18,10 @@ import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
+import { linkedinUrl } from "../format/weburl";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -99,6 +101,30 @@ function composerIntentOf(
 ): string {
   const key = COMPOSER_INTENT_KEYS[prefill?.intent ?? ""];
   return key ? t(key) : "";
+}
+
+/**
+ * ProfileLink is the header's LinkedIn fact: a link when the recorded address
+ * really is LinkedIn, the word alone when it is not.
+ *
+ * The label is the fixed word rather than the address, which makes it a CLAIM
+ * about the destination — and `social` is an open map a crawl or a connector
+ * can write. An arbitrary host under that word is a phishing link wearing the
+ * product's own chrome, so the host is checked before the anchor is drawn. The
+ * fact is kept either way: that this contact has a profile recorded is true
+ * whatever the value turns out to be.
+ */
+function ProfileLink({ href }: Readonly<{ href: string }>) {
+  const t = useT();
+  const label = t("person.page.linkedin");
+  if (!linkedinUrl(href)) {
+    return label;
+  }
+  return (
+    <OffsiteLink href={href} className="pe-meta-link">
+      {label}
+    </OffsiteLink>
+  );
 }
 
 /**
@@ -520,11 +546,17 @@ function PersonIdentityLine({
         {/* `social` is an open map on the wire, so its values are unknown to
             the type system. The fact renders only when there is a string to
             stand behind it — a link with nothing at the end is worse than no
-            link at all. */}
+            link at all.
+
+            It IS a link, because it wears a link's icon: a reader who sees the
+            chain and the word clicks it, and for a while this row answered that
+            click with nothing. OffsiteLink falls back to plain text when the
+            value is not a web address, so a malformed one degrades to what this
+            row used to be rather than to a dead anchor. */}
         {typeof person.social?.linkedin === "string" && (
           <span className="pe-meta-fact">
             <LinkIcon size={13} aria-hidden="true" />
-            {t("person.page.linkedin")}
+            <ProfileLink href={person.social.linkedin} />
           </span>
         )}
         {/* The role is what the relationship edge records — never inferred from
