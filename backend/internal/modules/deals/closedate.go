@@ -189,11 +189,20 @@ func proposedCloseDate(today time.Time, remainingOpenStages int, velocityDays fl
 	if velocityDays <= 0 {
 		velocityDays = CloseDateStageDays
 	}
-	stages := remainingOpenStages
-	if stages < 1 {
-		stages = 1
-	}
-	return today.AddDate(0, 0, int(float64(stages)*velocityDays))
+	return today.AddDate(0, 0, int(float64(StagesToGo(remainingOpenStages))*velocityDays))
+}
+
+// StagesToGo is how many stage-worths of pace the guess is built from: the
+// deal's remaining open stages, and never fewer than one — a deal sitting in
+// the last open stage still needs time to clear it.
+//
+// The rejection memory keys on this same number rather than on the date it
+// produces, so the clamp has to be one function: were it spelled twice, deals
+// with zero and one stage left would be offered the identical date while
+// counting as different questions, and a rep's refusal of one would be
+// forgotten the moment the other came round.
+func StagesToGo(remainingOpenStages int) int {
+	return max(1, remainingOpenStages)
 }
 
 // CloseIsOverdue answers whether an expected close date has passed, and it is

@@ -40,19 +40,6 @@ type closeDateStager struct {
 	svc *approvals.Service
 }
 
-// The two payload keys the staging identity is drawn from. Named because the
-// identity and the payload must spell them the same way — canonicalIdentity
-// refuses an identity field the payload does not carry, so a typo in either
-// literal is a staging that fails at runtime rather than at compile time.
-//
-// Deliberately not replayscope's offerDealField, which happens to hold the same
-// text: that one names a URL path segment on the offer routes, and binding an
-// approval payload's shape to a router's would make either one unmovable.
-const (
-	closeDateIdentityDeal     = "deal_id"
-	closeDateIdentityStanding = "standing_close_date"
-)
-
 func (s closeDateStager) HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error) {
 	return s.svc.HasPendingKind(ctx, deals.CloseDateCorrectionKind, dealID)
 }
@@ -101,32 +88,26 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 	if err != nil {
 		return fmt.Errorf("compose: canonicalize close-date proposal: %w", err)
 	}
-	// The logical identity is the deal AND the date it currently holds — the two
-	// fields that say WHICH correction this is, for the purpose of collapsing a
-	// LIVE duplicate.
+	// No Identity is declared, and that is deliberate rather than an omission.
 	//
-	// Not the deal alone: a decline is remembered with no expiry, so a deal-only
-	// identity lets one "no" bury every future correction on that deal — the rep
-	// refuses a date, sets their own three weeks later, that one goes stale in
-	// turn, and nobody is ever told. The standing date separates those, being new
-	// exactly when the rep has moved it.
+	// An Identity makes StageUnlessDeclined refuse on its own, by jsonb
+	// containment: same field, same value. What makes two close-date corrections
+	// the same question cannot be written that way — it compares TONIGHT's
+	// standing date against the date an EARLIER payload proposed, which is a
+	// relation between two different fields of two different rows. Declaring a
+	// containment identity anyway would give the memory a second, cruder
+	// enforcement point that silently wins: it would suppress a card
+	// RefusedCloseDate had already decided to raise, with nothing failing to say
+	// so. The judgment lives in exactly one place, in the module that owns close
+	// dates, and ensureStaged asks it before it gets here.
 	//
-	// It cannot carry the whole memory by itself, because the sweep writes its
-	// date onto the deal BEFORE staging: what the deal stands at tonight is what
-	// was proposed last night, so a refusal recorded then matches nothing now.
-	// That is what ensureStaged's own refusal check answers.
-	identity, err := json.Marshal(map[string]string{
-		closeDateIdentityDeal:     proposal.DealID.String(),
-		closeDateIdentityStanding: proposal.StandingCloseDate,
-	})
-	if err != nil {
-		return fmt.Errorf("compose: marshal close-date identity: %w", err)
-	}
+	// Without an Identity the declined probe falls back to the whole-payload diff
+	// hash, which carries the proposed date and so changes nightly. It suppresses
+	// nothing, which is the right behaviour for a check that is not the memory.
 	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
 		Kind:           deals.CloseDateCorrectionKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
-		Identity:       identity,
 		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		TargetVersion:  &targetVersion,

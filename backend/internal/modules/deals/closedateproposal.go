@@ -9,14 +9,16 @@ package deals
 // already proposed and what a human has already refused.
 //
 // This lives apart from the sweep because the shape outlives any one pass: the
-// confirm effect unmarshals this payload, the queue renders it, and the staging
-// identity is drawn from its fields. The sweep is one caller of it.
+// confirm effect unmarshals this payload, the queue renders it, and the
+// rejection memory compares it against what the sweep wants to raise tonight.
+// The sweep is one caller of it.
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,14 +37,11 @@ type CorrectionStager interface {
 	HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error)
 	StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal CloseDateCorrection) error
 	// RefusedCloseDate reports whether a human has already turned down the
-	// correction this probe describes.
+	// correction this probe describes. It is the WHOLE of the rejection memory:
+	// the staging engine's own declined check cannot express this rule, so the
+	// composition root declares no identity for it to enforce.
 	//
-	// The staging memory cannot answer it alone. The sweep writes its new date
-	// onto the deal BEFORE staging, so the standing date the identity is drawn
-	// from has already moved by the time the proposal is built, and a refusal
-	// recorded last night matches nothing tonight.
-	//
-	// The probe carries the judgment rather than a bare date, because what makes
+	// The probe carries the question rather than a bare date, because what makes
 	// two corrections the same question belongs to this module and the adapter
 	// only walks the payloads.
 	RefusedCloseDate(ctx context.Context, dealID ids.UUID, proposed RefusalProbe) (bool, error)
@@ -83,78 +82,96 @@ type CloseDateCorrection struct {
 	// Basis is the plain-language derivation of the proposed date — the
 	// "no mystery number" duty (P6) applied to a guess.
 	Basis string `json:"basis"`
-	// StandingCloseDate is the date the REP owns, in the form a staging identity
-	// can be keyed on: never absent, and a sentinel where there is no such date.
+	// RemainingOpenStages is how far the deal still has to go: the count of open
+	// stages at or beyond the one it sits in. It is what the guessed date is
+	// computed from, and it is the only part of the question that holds still
+	// from one night to the next — see SameQuestionAs.
 	//
-	// It exists beside the nullable PreviousCloseDate rather than replacing it
-	// because a staging identity must be a string the payload carries with the
-	// same value (canonicalIdentity enforces both), and an absent key never
-	// matches. The card renders the nullable one, which reads as "no previous
-	// date" rather than as a sentinel word.
-	StandingCloseDate string `json:"standing_close_date"`
+	// The approvals card never shows it: the kind declares its editable and its
+	// displayed fields explicitly, and this is in neither list.
+	RemainingOpenStages string `json:"remaining_open_stages"`
+}
+
+// StagesRemaining renders the stage distance in the form the payload carries.
+// It reads StagesToGo rather than the raw count so the memory's key and the
+// date's derivation clamp identically.
+func StagesRemaining(openStages int) string {
+	return strconv.Itoa(StagesToGo(openStages))
+}
+
+// RefusalProbe is tonight's proposed correction plus the date the deal actually
+// stands at, which together decide whether a human has already answered it.
+type RefusalProbe struct {
+	// RemainingOpenStages is the deal's distance from the end, spelled as the
+	// payload spells it so the comparison is against what was really stored.
+	RemainingOpenStages string
+	// StandingCloseDate is the date on the deal right now, before this pass
+	// writes anything. It is not compared against another probe's — it is
+	// compared against what the REFUSED proposal wanted to put there, which is
+	// how "the rep has since set their own date" is recognised.
+	StandingCloseDate string
+}
+
+// ProbeFor reads tonight's proposal, and the date the deal currently holds, into
+// the question it asks.
+func ProbeFor(proposal CloseDateCorrection, standing *time.Time) RefusalProbe {
+	return RefusalProbe{
+		RemainingOpenStages: proposal.RemainingOpenStages,
+		StandingCloseDate:   standingDate(standing),
+	}
 }
 
 // standingNoDate is a deal holding no close date at all — a real case, the
-// `missing` flag exists for it. A value rather than an absent key, because jsonb
-// containment never matches a key the payload does not carry, so such a deal's
-// proposals would otherwise carry no rejection memory whatever. It cannot
-// collide with a real date: every one of those is formatted YYYY-MM-DD.
+// `missing` flag exists for it. It cannot collide with a real date, every one of
+// which is formatted YYYY-MM-DD.
 const standingNoDate = "none"
 
-// RefusalProbe is one proposed correction, in the terms that decide whether a
-// human has already answered it.
-type RefusalProbe struct {
-	// Proposed is the date this pass wants to put on the deal.
-	Proposed string
-	// AfterHumanEdit says the deal is standing at a date a person chose, so this
-	// is a question about THEIR date rather than about the machine's own guess.
-	AfterHumanEdit bool
-}
-
-// ProbeFor reads a proposal and the state it was raised from into the question
-// it asks.
-func ProbeFor(proposal CloseDateCorrection, provisional bool) RefusalProbe {
-	return RefusalProbe{Proposed: proposal.ExpectedCloseDate, AfterHumanEdit: !provisional}
+func standingDate(current *time.Time) string {
+	if current == nil {
+		return standingNoDate
+	}
+	return current.Format(time.DateOnly)
 }
 
 // SameQuestionAs reports whether an earlier refused correction already answered
 // this one.
 //
-// The date proposed is what a rep actually said no to, and it is stable across
-// nights: the sweep computes it from stage velocity, so a deal whose situation
-// has not changed is offered the same date again. That is the resurrection this
-// memory exists to stop, and matching on the proposed date alone stops it.
+// Neither date can carry this. The proposed date is today plus a stage-velocity
+// offset, so it moves every calendar day; the standing date moves with it,
+// because the sweep writes its guess onto the deal before staging. A memory
+// keyed on either recognises a refusal for exactly one night, which is
+// indistinguishable from no memory at all on every night after the first.
 //
-// The second term stops it silencing too much. A rep who refuses a date and then
-// sets their own has changed the question — the deal now stands at a date a
-// person chose, and the sweep's next guess for it can easily be the same
-// computed day. Without this, that guess would read as the refused one and the
-// rep would never hear that their own date had gone stale.
+// What holds still is the JUDGMENT the rep turned down: this deal has N stages
+// left, so push it out by a stage-worth of the usual pace for each. Refusing
+// that is refusing the reasoning, and the reasoning is the same tomorrow. It
+// stops being the same when the deal advances a stage — then N drops, the guess
+// is drawn from a genuinely different situation, and the rep is asked again.
 //
-// What it deliberately does NOT use is the standing date. The sweep writes its
-// date onto the deal before staging, so what a deal stands at tonight is what
-// was proposed last night — every pass would look like a fresh question and
-// nothing would be remembered at all.
+// The second term is what keeps a rep's own date askable. A refusal is
+// remembered with no expiry, so without it one "no" would end close-date
+// hygiene on that deal for good: the rep refuses a guess, puts their own date
+// on the deal, that one slips in turn, and nobody ever tells them.
+//
+// It asks whether the deal is still sitting where that refusal left it. The
+// sweep writes its proposal onto the deal before staging, so a deal nobody has
+// touched since stands at exactly the date the refused card offered — the
+// refusal still describes it. A deal standing anywhere else has been moved by a
+// person, and what they chose has not been asked about yet.
+//
+// Note which two values that compares: TONIGHT's standing date against the
+// EARLIER proposal. Comparing two standing dates, or two proposed ones, is the
+// trap this went round twice — both move with the calendar, so the memory would
+// hold for exactly one night.
 func (p RefusalProbe) SameQuestionAs(earlier CloseDateCorrection) bool {
-	return p.Proposed == earlier.ExpectedCloseDate && !p.AfterHumanEdit
-}
-
-// StandingCloseDate spells, for a staging identity, WHICH date this correction
-// is about: the one the deal holds and the sweep is asking to replace.
-//
-// Not the PROPOSED date, which is recomputed against "today" on every pass — an
-// identity carrying it makes each night a different question and a rep's "no" is
-// forgotten by morning.
-//
-// It does move when the sweep writes its own guess, and that is what the
-// keep-alive branch's separate refusal check exists to cover. Here it is what
-// keeps a date the rep sets themselves askable: a new standing date is a new
-// question, so one refusal cannot end close-date hygiene on a deal for good.
-func StandingCloseDate(current *string) string {
-	if current == nil {
-		return standingNoDate
+	if p.RemainingOpenStages == "" || earlier.RemainingOpenStages == "" {
+		// A payload staged before this key existed carries no stage count, and
+		// two unknowns are not a match: reading them as one would let the oldest
+		// refusal in the queue silence every deal that ever reaches it.
+		return false
 	}
-	return *current
+	return p.RemainingOpenStages == earlier.RemainingOpenStages &&
+		p.StandingCloseDate == earlier.ExpectedCloseDate
 }
 
 // UnmarshalCloseDateCorrection decodes a staged (possibly human-edited)

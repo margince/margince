@@ -43,8 +43,10 @@ type CloseDateCorrector struct {
 	stager   CorrectionStager
 	reviewer QuietReviewReader
 	log      *slog.Logger
-	// now is the corrector's clock so the fixed-clock invariant test
-	// ("no open deal survives the run with a past date") can pin a day.
+	// now is the corrector's clock. WithClock overrides it, and a test that
+	// asks what TOMORROW's pass does has no other way to get there: the
+	// proposed date is computed from "today", so two passes in one process
+	// otherwise always run on the same day.
 	now func() time.Time
 	// installation answers which zone this sweep computes its dates in. A
 	// close date is a DATE, so the zone decides which day a deal is late on.
@@ -61,6 +63,18 @@ func NewCloseDateCorrector(db *database.DB, stager CorrectionStager, reviewer Qu
 		db: db, stager: stager, reviewer: reviewer, log: log,
 		now: time.Now, installation: inst.orRefusing(),
 	}
+}
+
+// WithClock overrides the "today" this sweep computes its dates against
+// (tests only). Returns the corrector for chaining, like every other clock
+// seam in this module.
+//
+// Without it no test can state what the sweep does on a SECOND night, because
+// every pass in one process reads the same wall clock — and "the same question
+// tomorrow" is the whole of what the rejection memory promises.
+func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrector {
+	c.now = clock
+	return c
 }
 
 // SweepWorkspace is one close-date hygiene pass over the workspace already
@@ -251,23 +265,23 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			// previous staging expired undecided.
 			//
 			return c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
-				DealID:            cand.id,
-				ExpectedCloseDate: cand.expectedClose.Format(time.DateOnly),
-				PreviousCloseDate: dateString(cand.expectedClose),
-				StandingCloseDate: StandingCloseDate(dateString(cand.expectedClose)),
-				Basis:             quietHoldingBasis,
+				DealID:              cand.id,
+				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
+				PreviousCloseDate:   dateString(cand.expectedClose),
+				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
+				Basis:               quietHoldingBasis,
 			})
 		}
 		return nil
 	}
 
 	proposal := CloseDateCorrection{
-		DealID:            cand.id,
-		ExpectedCloseDate: hygiene.ProposedClose.Format(time.DateOnly),
-		PreviousCloseDate: dateString(cand.expectedClose),
-		StandingCloseDate: StandingCloseDate(dateString(cand.expectedClose)),
-		Flags:             hygiene.Flags,
-		Basis:             pacedBasis(max(1, cand.remainingOpen)),
+		DealID:              cand.id,
+		ExpectedCloseDate:   hygiene.ProposedClose.Format(time.DateOnly),
+		PreviousCloseDate:   dateString(cand.expectedClose),
+		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
+		Flags:               hygiene.Flags,
+		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
 	}
 
 	switch hygiene.Action {
@@ -417,7 +431,7 @@ func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCan
 	if pending {
 		return nil
 	}
-	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.provisional))
+	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.expectedClose))
 	if err != nil {
 		return err
 	}

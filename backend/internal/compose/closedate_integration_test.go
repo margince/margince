@@ -46,11 +46,25 @@ type closeDateEnv struct {
 	late      ids.UUID // 60%, position 1
 	corrector *deals.CloseDateCorrector
 	svc       *approvals.Service
+	// day is the date the sweep believes it is running on. It starts at the real
+	// today, so every test that never touches it runs exactly as before; a test
+	// about what TOMORROW's pass does calls nextDay, which is the only way to get
+	// there — the proposed date is computed from "today", so two passes in one
+	// process otherwise always land on the same day.
+	day time.Time
+}
+
+// nextDay moves the sweep's clock forward one day. The database keeps real
+// time, and that is safe here: the SQL pre-filter is a deliberate superset
+// (anything dated within the stalled window, missing, or provisional), so a
+// clock one day ahead only widens what the Go assessment then judges.
+func (e *closeDateEnv) nextDay() {
+	e.day = e.day.AddDate(0, 0, 1)
 }
 
 func setupCloseDate(t *testing.T) *closeDateEnv {
 	t.Helper()
-	e := &closeDateEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
+	e := &closeDateEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t), day: time.Now()}
 	e.pipeline = integration.SeedIDRow(t, e.owner,
 		`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Hygiene', true, 0)`)
 	ctx := context.Background()
@@ -71,7 +85,8 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), closeDateStager{svc: e.svc},
-		quietReviewReader{db: e.DB(), owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}}, quiet, installseam.Deals())
+		quietReviewReader{db: e.DB(), owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}}, quiet, installseam.Deals()).
+		WithClock(func() time.Time { return e.day })
 	return e
 }
 
