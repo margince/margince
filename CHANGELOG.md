@@ -241,6 +241,17 @@ numbers appear here when releases start.
 
 ### Added
 
+- **A standing overnight grant says when the agent has outgrown it.** A grant
+  mints the scopes the agent needed at the moment the rep answered; when the
+  agent later gains a tool needing a wider scope, every already-minted passport
+  is short. Nothing failed — the runner degrades the unfunded tools before the
+  first model step, so the rep's overnight work simply stopped, with no error,
+  no expiry and no prompt, and the grant still reported a usable credential
+  because liveness was all that was checked. `credential_funds_agent` is the
+  second renewal cause, computed at request time from what the build would mint
+  today, and the Settings card now offers renewal on it with copy that says the
+  authority was outgrown rather than that it expired.
+
 - **Foundation (WP0)**: the full core data model as reversible
   migrations — RLS (`ENABLE`+`FORCE`, deny-on-unset) on every tenant
   table, composite same-workspace foreign keys, append-only audit log,

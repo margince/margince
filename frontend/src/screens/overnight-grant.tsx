@@ -217,11 +217,21 @@ export function OvernightGrantCard() {
             const grant = morningBriefGrant(grants);
             const granted = grant?.state === "granted";
             const shown = optimistic ?? granted;
-            // The rep agreed and has nothing to act with: their passport was
-            // revoked or has expired. Reported as its own state rather than as
-            // a decline, because they already answered — asking again would be
-            // putting a settled question back to them.
-            const needsRenewal = granted && !grant?.credential_usable;
+            // The rep agreed and their credential no longer does the job.
+            // Reported as its own state rather than as a decline, because they
+            // already answered — asking again would be putting a settled
+            // question back to them.
+            //
+            // TWO CAUSES, and the rep is owed which one. The passport lapsed —
+            // revoked or expired — or the agent has since gained a tool the
+            // passport was never minted to fund, in which case it is perfectly
+            // live authority for a job this agent no longer does. Neither
+            // fails the run: it degrades, silently, at 2am.
+            const lapsed = granted && !grant?.credential_usable;
+            const outgrown =
+              granted &&
+              grant?.credential_usable === true &&
+              !grant?.credential_funds_agent;
             return (
               <>
                 <SettingList>
@@ -248,7 +258,8 @@ export function OvernightGrantCard() {
                 </SettingList>
                 <GrantNotices
                   showDanger={!shown}
-                  showRenewal={needsRenewal && shown}
+                  showRenewal={lapsed && shown}
+                  showScopeRenewal={outgrown && shown}
                   error={
                     save.isError ? problemMessageOf(save.error, t) : undefined
                   }
@@ -267,14 +278,16 @@ export function OvernightGrantCard() {
 function GrantNotices({
   showDanger,
   showRenewal,
+  showScopeRenewal,
   error,
 }: Readonly<{
   showDanger: boolean;
   showRenewal: boolean;
+  showScopeRenewal: boolean;
   error?: ReactNode;
 }>) {
   const t = useT();
-  if (!showDanger && !showRenewal && error === undefined) {
+  if (!showDanger && !showRenewal && !showScopeRenewal && error === undefined) {
     return null;
   }
   return (
@@ -283,6 +296,11 @@ function GrantNotices({
       {showRenewal && (
         <Callout tone="warn" live="status">
           {t("overnightGrant.renew")}
+        </Callout>
+      )}
+      {showScopeRenewal && (
+        <Callout tone="warn" live="status">
+          {t("overnightGrant.renewScope")}
         </Callout>
       )}
       {error !== undefined && (

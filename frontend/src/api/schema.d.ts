@@ -19695,6 +19695,20 @@ export interface components {
              */
             credential_usable: boolean;
             /**
+             * @description Whether that passport still covers what this agent DOES. A grant mints the
+             *     scopes the agent needed at the moment it was answered; when the agent later
+             *     gains a tool needing a wider scope, the passport is short. It is neither
+             *     revoked nor expired, so `credential_usable` stays true — but the run degrades
+             *     the unfunded tools away before its first step and the rep's overnight work
+             *     silently stops.
+             *
+             *     Computed at request time from what the build would mint today, never stored.
+             *     False against `granted` is the SECOND renewal case, and a client must offer
+             *     renewal on it exactly as it does on the first — the two differ only in what
+             *     the rep is told went wrong.
+             */
+            credential_funds_agent: boolean;
+            /**
              * Format: date-time
              * @description When the rep last answered. Absent when they never were asked.
              */

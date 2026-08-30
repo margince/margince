@@ -40,6 +40,7 @@ func (a agentGrantStore) MyAnswerTx(ctx context.Context, tx pgx.Tx, spec string)
 		State:            grant.State,
 		PassportID:       grant.PassportID,
 		CredentialUsable: grant.CredentialUsable,
+		PassportScopes:   grant.PassportScopes,
 		DecidedAt:        grant.DecidedAt,
 	}, true, nil
 }

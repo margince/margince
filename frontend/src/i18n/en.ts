@@ -3939,6 +3939,8 @@ export const en = {
     "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
   "overnightGrant.renew":
     "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
+  "overnightGrant.renewScope":
+    "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",

@@ -19852,6 +19852,19 @@ type MorningDigestConnectorsStatus string
 
 // MyAgentGrant One rep's standing answer for one scheduled agent.
 type MyAgentGrant struct {
+	// CredentialFundsAgent Whether that passport still covers what this agent DOES. A grant mints the
+	// scopes the agent needed at the moment it was answered; when the agent later
+	// gains a tool needing a wider scope, the passport is short. It is neither
+	// revoked nor expired, so `credential_usable` stays true — but the run degrades
+	// the unfunded tools away before its first step and the rep's overnight work
+	// silently stops.
+	//
+	// Computed at request time from what the build would mint today, never stored.
+	// False against `granted` is the SECOND renewal case, and a client must offer
+	// renewal on it exactly as it does on the first — the two differ only in what
+	// the rep is told went wrong.
+	CredentialFundsAgent bool `json:"credential_funds_agent"`
+
 	// CredentialUsable Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
 	// not expired. Read from the passport at request time, never stored, because it
 	// changes at a moment nothing writes to the grant. False against `granted` is

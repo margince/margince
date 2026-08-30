@@ -48,7 +48,12 @@ type Answer struct {
 	// copy would say "granted" about a credential that stopped working hours
 	// ago.
 	CredentialUsable bool
-	DecidedAt        time.Time
+	// PassportScopes is what the credential was minted with. The grant table
+	// can say what a passport HOLDS; only the module that mints them knows what
+	// an agent NEEDS, so the comparison belongs on the reader's side of this
+	// port rather than behind it.
+	PassportScopes []string
+	DecidedAt      time.Time
 }
 
 // Store is what the credential-holding module needs from the grant table.
