@@ -32,7 +32,7 @@ const (
 	googleTokenURL = "https://oauth2.googleapis.com/token"
 )
 
-// GoogleSignInConfig is every input WithGoogleSignIn needs. ClientID/Secret
+// GoogleSignInConfig carries what WithGoogleSignIn needs. ClientID/Secret
 // are the existing Gmail-capture pair (see cmd/api/googlesignin.go);
 // StateKey signs the login flow's own state/PKCE cookie (oidcloginstate.go)
 // — it may be the same key as the connector flow's, or a dedicated one;

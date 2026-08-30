@@ -74,8 +74,8 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 
 	startReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	startRec := httptest.NewRecorder()
-	s.authHandlers.StartOIDCSignIn(startRec, startReq, "google")
+	s.authHandlers.StartOidcSignIn(startRec, startReq, "google")
 	if startRec.Code != http.StatusFound {
-		t.Fatalf("StartOIDCSignIn status = %d, want 302 (the route the capability just advertised must actually be mounted)", startRec.Code)
+		t.Fatalf("StartOidcSignIn status = %d, want 302 (the route the capability just advertised must actually be mounted)", startRec.Code)
 	}
 }

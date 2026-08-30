@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -101,9 +102,11 @@ func randomURLSafe(n int) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
-// StartOIDCSignIn redirects to the provider's consent screen. Unconfigured
-// or unknown provider is a 404 — an authentically absent flow.
-func (h Handlers) StartOIDCSignIn(w http.ResponseWriter, r *http.Request, provider string) {
+// StartOidcSignIn redirects to the provider's consent screen. Unconfigured
+// or unknown provider is a 404 — an authentically absent flow. The provider
+// parameter type is generated from crm.yaml's enumerated path parameter.
+func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, providerParam crmcontracts.StartOidcSignInParamsProvider) {
+	provider := string(providerParam)
 	cfg, ok := h.oidcProviders[provider]
 	if !ok {
 		httperr.Write(w, r, apperrors.ErrNotFound)
@@ -136,11 +139,12 @@ func (h Handlers) StartOIDCSignIn(w http.ResponseWriter, r *http.Request, provid
 	http.Redirect(w, r, cfg.AuthURL+"?"+q.Encode(), http.StatusFound)
 }
 
-// OIDCSignInCallback verifies the round trip, resolves/links the account,
+// OidcSignInCallback verifies the round trip, resolves/links the account,
 // and mints a session — or redirects to a neutral failure marker. Every
 // error path below redirects rather than returning a JSON error: this route
 // is reached by a full-page browser navigation, not an API caller.
-func (h Handlers) OIDCSignInCallback(w http.ResponseWriter, r *http.Request, provider string) {
+func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, providerParam crmcontracts.OidcSignInCallbackParamsProvider, params crmcontracts.OidcSignInCallbackParams) {
+	provider := string(providerParam)
 	fail := func() {
 		http.Redirect(w, r, h.oidcFailureURL, http.StatusFound)
 	}
@@ -150,6 +154,14 @@ func (h Handlers) OIDCSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
+	var code, state string
+	if params.Code != nil {
+		code = *params.Code
+	}
+	if params.State != nil {
+		state = *params.State
+	}
+
 	cookie, err := r.Cookie(oidcLoginCookie)
 	if err != nil {
 		fail()
@@ -157,12 +169,12 @@ func (h Handlers) OIDCSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	}
 	clearLoginStateCookie(w) // one-shot: consumed here whether verification below succeeds or not
 	stProvider, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
-	if err != nil || stProvider != provider || stNonce != r.URL.Query().Get("state") {
+	if err != nil || stProvider != provider || stNonce != state {
 		fail()
 		return
 	}
 
-	idToken, err := h.oidcExchangers[provider].Exchange(r.Context(), r.URL.Query().Get("code"), codeVerifier,
+	idToken, err := h.oidcExchangers[provider].Exchange(r.Context(), code, codeVerifier,
 		h.oidcRedirectBase+"/auth/oidc/"+provider+"/callback")
 	if err != nil {
 		fail()

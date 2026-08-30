@@ -8,7 +8,7 @@ package identity
 // Federated sign-in resolution and linking, proven over a real migrated
 // Postgres: subject-first resolution, email fallback for a first link, the
 // no-account-creation refusal, the subject re-link (email recycling) case,
-// and the full HTTP round trip through OIDCSignInCallback. ssologin_test.go
+// and the full HTTP round trip through OidcSignInCallback. ssologin_test.go
 // covers the pure-Go handler edge cases (unconfigured provider, missing
 // cookie) with stubs; this file is only for what genuinely needs a database.
 
@@ -162,7 +162,7 @@ func TestOIDCSignInFullRoundTrip(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
 	rec := httptest.NewRecorder()
 
-	h.OIDCSignInCallback(rec, req, "google")
+	h.OidcSignInCallback(rec, req, "google", callbackParams("c", "n1"))
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/" {
 		t.Fatalf("status=%d location=%q", rec.Code, rec.Header().Get("Location"))

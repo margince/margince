@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 type stubVerifier struct{}
@@ -60,31 +62,37 @@ func (f fixedStateSigner) Verify(string) (string, string, string, error) {
 	return f.provider, f.nonce, f.codeVerifier, nil
 }
 
-func TestStartOIDCSignInUnknownProviderIs404(t *testing.T) {
+func oidcStrPtr(s string) *string { return &s }
+
+func callbackParams(code, state string) crmcontracts.OidcSignInCallbackParams {
+	return crmcontracts.OidcSignInCallbackParams{Code: oidcStrPtr(code), State: oidcStrPtr(state)}
+}
+
+func TestStartOidcSignInUnknownProviderIs404(t *testing.T) {
 	h := Handlers{} // no providers injected
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	rec := httptest.NewRecorder()
 
-	h.StartOIDCSignIn(rec, req, "google")
+	h.StartOidcSignIn(rec, req, "google")
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
 }
 
-func TestOIDCSignInCallbackUnknownProviderIs404(t *testing.T) {
+func TestOidcSignInCallbackUnknownProviderIs404(t *testing.T) {
 	h := Handlers{}
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=y", nil)
 	rec := httptest.NewRecorder()
 
-	h.OIDCSignInCallback(rec, req, "google")
+	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "y"))
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
 }
 
-func TestOIDCSignInCallbackMissingCookieIsRefused(t *testing.T) {
+func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
 		map[string]OIDCVerifier{"google": stubVerifier{}},
@@ -95,7 +103,7 @@ func TestOIDCSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=y", nil)
 	rec := httptest.NewRecorder()
 
-	h.OIDCSignInCallback(rec, req, "google")
+	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "y"))
 
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status = %d, want 302", rec.Code)
@@ -105,7 +113,7 @@ func TestOIDCSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	}
 }
 
-func TestOIDCSignInCallbackStateMismatchIsRefused(t *testing.T) {
+func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
 		map[string]OIDCVerifier{"google": stubVerifier{}},
@@ -117,7 +125,7 @@ func TestOIDCSignInCallbackStateMismatchIsRefused(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
 	rec := httptest.NewRecorder()
 
-	h.OIDCSignInCallback(rec, req, "google")
+	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "wrong-nonce"))
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
 		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))

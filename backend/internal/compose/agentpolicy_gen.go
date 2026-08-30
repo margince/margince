@@ -171,6 +171,8 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/attention":                                                  {Op: "getAttention", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/audit-log":                                                  {Op: "listAuditLog", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/auth/capabilities":                                          {Op: "getAuthCapabilities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/auth/oidc/{provider}/callback":                              {Op: "oidcSignInCallback", Access: "auth-bootstrap", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/auth/oidc/{provider}/start":                                 {Op: "startOidcSignIn", Access: "auth-bootstrap", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/automations/{id}/runs":                                      {Op: "listAutomationRuns", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/autonomy":                                                   {Op: "getAutonomy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/availability":                                               {Op: "getAvailability", Access: "tool", Tool: "check_availability", RecordType: "", Tier: "auto_execute", Scope: "read"},
