@@ -260,6 +260,25 @@ func (s *Store) auditTechnicalEnrichment(
 	if err != nil {
 		return fmt.Errorf("audit technical enrichment: %w", err)
 	}
+	// THE AUDIT ROW ALWAYS, THE EVENT ONLY ON A CHANGE. A lane that completed is
+	// worth recording whatever it found: it is what says when the record was
+	// last looked at, and it is what lets a technology the company dropped
+	// leave. Whether anything MOVED is a different question, and
+	// organization.updated is the answer to that one — announcing it over an
+	// unchanged record tells every subscriber a record moved when it did not.
+	//
+	// `changes` rather than `written`: an upsert reports a re-observed fact as
+	// written, so a nightly lane over a company whose stack has not moved would
+	// still announce one. technicalChanges is what actually moved — appeared,
+	// moved, or gone — so a removal still announces and a refresh does not.
+	//
+	// Neither shape is rare. Most companies' sites declare no technology this
+	// build recognises, and most that do declare the same one they declared
+	// yesterday: between them the lane emitted a no-op event on nearly every
+	// read in an installation, and each subscriber had to learn to ignore it.
+	if len(changes) == 0 {
+		return nil
+	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, in.OrganizationID.UUID,
 		crmcontracts.PublicEventOrganizationUpdated{
 			ChangedFields: map[string]any{

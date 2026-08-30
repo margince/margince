@@ -291,6 +291,21 @@ func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 	if held := technicalFactsOf(ctx, t, e, orgID); len(held[FactOperatedService]) != 0 {
 		t.Errorf("the record still claims %v after the source answered that there is none", held)
 	}
+	// A technology LEAVING is a change, and the one a rep most wants to hear
+	// about: the arrival announced, and so must the departure. Both events, not
+	// one — the guard on the empty delta must not swallow this.
+	var events int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'organization.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+	}); err != nil {
+		t.Fatalf("read back the events: %v", err)
+	}
+	if events != 2 {
+		t.Errorf("%d organization.updated events for an arrival and a departure, want 2 — a technology leaving is a change", events)
+	}
 }
 
 // TestEveryTechnicalWriteCommitsItsAuditAndItsEvent holds the write shape.
@@ -328,6 +343,124 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	}
 	if events == 0 {
 		t.Error("the write left an audit row with no outbox event — the two are one transaction")
+	}
+}
+
+// TestALaneThatChangedNothingRecordsItAndAnnouncesNothing is the other half of
+// the write shape.
+//
+// A lane that completed having found nothing is worth an AUDIT row: it is what
+// says when the record was last looked at, and it is what lets a technology the
+// company dropped leave. It is not an update. Nothing was written, nothing was
+// removed, and `organization.updated` announcing an empty delta tells every
+// subscriber a record moved when it did not.
+//
+// Most companies' sites declare no technology this build recognises, so the
+// homepage lane hit this shape on nearly every site read in an installation —
+// a no-op event each time, which every subscriber had to learn to ignore.
+func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := seedTechnicalOrg(ctx, t, e, "Leerlauf GmbH", "leerlauf.de")
+
+	empty := TechnicalEnrichment{
+		OrganizationID: orgID,
+		Completed:      []TechnicalLane{LaneHomepage},
+		ObservedAt:     technicalObservedAt,
+	}
+	if err := e.store.ApplyTechnicalEnrichment(ctx, empty, nil); err != nil {
+		t.Fatalf("apply the empty reading: %v", err)
+	}
+
+	var audits, events int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'organization' AND entity_id = $1
+			   AND evidence->>'source' = $2`, orgID, companySourceTechnical).Scan(&audits); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'organization.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+	}); err != nil {
+		t.Fatalf("read back the trail: %v", err)
+	}
+	if audits != 1 {
+		t.Errorf("the lane left %d audit rows, want 1: a completed lane is worth recording even when it found nothing", audits)
+	}
+	if events != 0 {
+		t.Errorf("the lane announced %d organization.updated events having changed nothing — a subscriber acting on one finds an identical record", events)
+	}
+}
+
+// TestARefreshThatFoundTheSameStackAnnouncesNothing is the same rule on the
+// other common shape.
+//
+// A lane re-reading a company whose stack has not moved UPSERTS every fact it
+// found, so the write count is not zero — but nothing appeared, moved or went.
+// Most companies that declare a recognisable technology declare the same one
+// they declared yesterday, so this is the nightly case, not an edge.
+func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := seedTechnicalOrg(ctx, t, e, "Gleichstand GmbH", "gleichstand.de")
+
+	read := TechnicalEnrichment{
+		OrganizationID: orgID,
+		Completed:      []TechnicalLane{LaneDNS},
+		Observations:   []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")},
+		ObservedAt:     technicalObservedAt,
+	}
+	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
+		t.Fatalf("apply the first reading: %v", err)
+	}
+	// The same ANSWER, read at a later time — which is what a nightly lane
+	// produces. ObservedAt advances, so the rows' retrieval metadata moves and
+	// nothing about the technology does: reapplying the identical struct would
+	// leave retrieved_at untouched and never exercise that.
+	refresh := read
+	refresh.ObservedAt = read.ObservedAt.Add(24 * time.Hour)
+	if err := e.store.ApplyTechnicalEnrichment(ctx, refresh, nil); err != nil {
+		t.Fatalf("apply the refresh: %v", err)
+	}
+
+	var audits, events int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'organization' AND entity_id = $1
+			   AND evidence->>'source' = $2`, orgID, companySourceTechnical).Scan(&audits); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'organization.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+	}); err != nil {
+		t.Fatalf("read back the trail: %v", err)
+	}
+	if audits != 2 {
+		t.Errorf("the two lanes left %d audit rows, want 2: each one looked, and when it looked is the record", audits)
+	}
+	if events != 1 {
+		t.Errorf("%d organization.updated events for one arrival and one refresh, want 1 — the refresh moved nothing", events)
+	}
+	// And the refresh DID land: the rows carry the later reading, so what this
+	// test proves is that metadata moving is not an update, rather than that
+	// the second lane did nothing at all.
+	var retrievedAt time.Time
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT max(retrieved_at) FROM organization_fact
+			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&retrievedAt)
+	}); err != nil {
+		t.Fatalf("read back the retrieval time: %v", err)
+	}
+	if !retrievedAt.Equal(refresh.ObservedAt) {
+		t.Errorf("retrieved_at is %s, want the refresh's %s — the second lane did not land, so the silence above proves nothing",
+			retrievedAt, refresh.ObservedAt)
 	}
 }
 
