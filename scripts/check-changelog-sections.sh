@@ -26,26 +26,49 @@ if [[ ! -f "$changelog" ]]; then
 fi
 
 # The awk below reports, so a release with no duplicate prints nothing and the
-# exit status carries the verdict. `releases` is counted so that a rewrite
-# which renamed the release heading — leaving nothing to walk — fails loudly
-# rather than passing as clean: a census that finds nothing certifies nothing.
+# exit status carries the verdict.
+#
+# WHAT IT READS, AND WHAT IT STEPS OVER. Headings outside fenced code, and
+# nothing else. An entry that quotes a changelog — this file's own entries
+# do — carries `## [1.0.0]` and `### Changed` inside a fence, and a scanner that
+# counted those would refuse a correct file for describing itself.
+#
+# EVERY release is judged on its own. Both the duplicate check and the
+# read-nothing floor were global once, which meant one release with a section
+# excused a release with none, and a diagnostic count carried over from the
+# release above. A `##` heading that is NOT a release ends the release it
+# follows rather than lending its own `###` children to it.
 verdict=$(awk '
-	/^## \[/ { release = $0; releases++; delete seen; next }
-	release != "" && /^### / {
-		sections++
-		if ($0 in seen) {
-			printf "%s: %s appears %d times under %s\n", FILENAME, $0, ++count[$0] + 1, release
+	function leaveRelease() {
+		if (release != "" && sections == 0) {
+			printf "%s: %s carries no `### ` section — this gate read nothing under it and cannot certify it\n",
+				FILENAME, release
 			bad = 1
 		}
-		seen[$0] = 1
+		release = ""; sections = 0
+		delete seen; delete count
+	}
+	/^[ \t]*(```|~~~)/ { fenced = !fenced; next }
+	fenced { next }
+	/^## / {
+		leaveRelease()
+		if ($0 ~ /^## \[/) { release = $0; releases++ }
+		next
+	}
+	release != "" && /^### / {
+		heading = $0
+		sub(/[ \t]+$/, "", heading)
+		sections++
+		if (heading in seen) {
+			printf "%s: %s appears %d times under %s\n", FILENAME, heading, ++count[heading] + 1, release
+			bad = 1
+		}
+		seen[heading] = 1
 	}
 	END {
+		leaveRelease()
 		if (releases == 0) {
-			print "no `## [release]` heading found — this gate read nothing and cannot certify the file"
-			bad = 1
-		}
-		if (releases > 0 && sections == 0) {
-			print "no `### ` section found under any release — this gate read nothing and cannot certify the file"
+			printf "%s: no `## [release]` heading found — this gate read nothing and cannot certify the file\n", FILENAME
 			bad = 1
 		}
 		exit bad

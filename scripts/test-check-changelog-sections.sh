@@ -12,7 +12,16 @@
 # that would go stale if the file drifted back.
 set -euo pipefail
 
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Resolve this script through any symlinks BEFORE deriving the root, and clear
+# CDPATH: with CDPATH set, `cd` can land in a directory of the same name
+# somewhere else entirely, and every fixture would then invoke a gate that does
+# not exist — a harness failing before it tested anything.
+self="${BASH_SOURCE[0]}"
+while [[ -L "$self" ]]; do
+	link="$(readlink "$self")"
+	[[ "$link" == /* ]] && self="$link" || self="$(dirname "$self")/$link"
+done
+root="$(CDPATH= cd -P "$(dirname "$self")/.." && pwd)"
 gate="$root/scripts/check-changelog-sections.sh"
 failures=0
 
@@ -138,10 +147,95 @@ case_is "a file with no release heading refuses rather than passing" 1 "cannot c
 Nothing here yet.
 MD
 
-case_is "a release with no sections refuses rather than passing" 1 "cannot certify the file" <<'MD'
+case_is "a release with no sections refuses rather than passing" 1 "cannot certify" <<'MD'
 ## [Unreleased]
 
 Nothing here yet.
+MD
+
+# Every release is judged on its own: a release with sections must not excuse
+# one without them, which is what a global count would have done.
+case_is "an empty release is refused even when another release has sections" 1 "[Unreleased] carries no" <<'MD'
+## [Unreleased]
+
+Nothing here yet.
+
+## [1.0.0] - 2026-01-01
+
+### Changed
+
+- an older thing
+MD
+
+# The diagnostic count is per release too. A reader acting on "appears 3 times"
+# would go looking for a third section that is not there.
+case_is "the count does not carry over from an earlier release" 1 "appears 2 times under ## [1.0.0]" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- one
+
+### Changed
+
+- two
+
+## [1.0.0] - 2026-01-01
+
+### Changed
+
+- three
+
+### Changed
+
+- four
+MD
+
+# An entry that QUOTES a changelog — this file's own entries do — must not be
+# read as one. A scanner that counted headings inside a fence would refuse a
+# correct file for describing itself.
+case_is "headings inside a fenced block are not sections" 0 "OK: changelog-sections" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- A gate now holds the file's shape. It refuses this:
+
+  ```
+  ## [Unreleased]
+  ### Changed
+  ### Changed
+  ```
+MD
+
+# A `##` heading that is not a release ends the release above it. Otherwise its
+# own children are counted as that release's sections.
+case_is "a non-release level-2 heading ends the release above it" 0 "OK: changelog-sections" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- a thing
+
+## Notes
+
+### Changed
+
+### Changed
+MD
+
+# The key is the heading TEXT. Trailing whitespace is invisible in a diff and
+# would otherwise be a way to keep a second section.
+case_is "trailing whitespace does not buy a second section" 1 "appears 2 times" <<MD
+## [Unreleased]
+
+### Changed
+
+- one
+
+### Changed 
+
+- two
 MD
 
 # A missing file is an operator error, not a clean changelog.
@@ -156,7 +250,11 @@ if "$gate" "$root/CHANGELOG.md" >/dev/null 2>&1; then
 	echo "ok: the repository's own CHANGELOG.md holds"
 else
 	echo "FAIL: the repository's own CHANGELOG.md does not hold"
-	"$gate" "$root/CHANGELOG.md" 2>&1 | sed 's/^/    /'
+	# `|| :` because pipefail would otherwise make this diagnostic the thing
+	# that ends the run, under set -e, before the counter below is read — a
+	# harness that stops at the first failure reports one of however many there
+	# are.
+	"$gate" "$root/CHANGELOG.md" 2>&1 | sed 's/^/    /' || :
 	failures=$((failures + 1))
 fi
 
