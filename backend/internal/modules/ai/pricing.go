@@ -198,8 +198,9 @@ func vendorSheetRates(day time.Time) []ModelRate {
 // per-token prices scaled by 1e12 — on 2026-07-31. Every model the example
 // names is here, the commented jurisdiction alternates included: the file
 // presents them as one-line swaps, and a swap must not silently turn the
-// cost report UNPRICED. No entry publishes a cache-WRITE price, so that
-// column is 0 throughout.
+// cost report UNPRICED. Only the two Anthropic rows publish a cache-WRITE
+// price; that column is 0 for every other entry, which is the vendor
+// declining to charge separately for the write rather than a gap here.
 //
 // These rows are keyed on the GENERIC provider name, because that is what a
 // call on this adapter reports. An operator who points openai_compatible at
