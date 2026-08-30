@@ -29,7 +29,12 @@ import (
 
 const (
 	googleAuthURL  = "https://accounts.google.com/o/oauth2/v2/auth"
-	googleTokenURL = "https://oauth2.googleapis.com/token"
+	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: an endpoint URL, not a credential
+
+	// googleProviderKey is the one provider this file wires; every map here is
+	// keyed on it, and identity.OIDCProviderConfig.Key carries the same value.
+	googleProviderKey   = "google"
+	googleProviderLabel = "Continue with Google"
 )
 
 // GoogleSignInConfig carries what WithGoogleSignIn needs. ClientID/Secret
@@ -47,6 +52,9 @@ type GoogleSignInConfig struct {
 	FailureURL   string
 }
 
+// Enabled reports whether cfg is complete enough for WithGoogleSignIn to
+// mount the routes and report the capability — see MissingFields for which
+// fields that requires.
 func (cfg GoogleSignInConfig) Enabled() bool {
 	return len(cfg.MissingFields()) == 0
 }
@@ -115,7 +123,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			return
 		}
 		providers := map[string]identity.OIDCProviderConfig{
-			"google": {Key: "google", Label: "Continue with Google", ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, AuthURL: googleAuthURL, TokenURL: googleTokenURL},
+			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, AuthURL: googleAuthURL, TokenURL: googleTokenURL},
 		}
 		matchIdentity := func(c oidcClaims) error {
 			if c.Aud != cfg.ClientID {
@@ -131,16 +139,16 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		exchanger := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}}
 		signer := loginStateSignerAdapter{s: newLoginStateSigner([]byte(cfg.StateKey))}
 
-		s.authHandlers = s.authHandlers.WithOIDCProviders(
+		s.authHandlers = s.WithOIDCProviders(
 			providers,
-			map[string]identity.OIDCVerifier{"google": verifier},
-			map[string]identity.OIDCExchanger{"google": exchanger},
+			map[string]identity.OIDCVerifier{googleProviderKey: verifier},
+			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
 			signer,
 			strings.TrimSuffix(cfg.RedirectBase, "/")+"/v1",
 			cfg.PostLoginURL, cfg.FailureURL,
 		)
-		s.authHandlers = s.authHandlers.WithOIDCCapabilitiesFn(func() []identity.OIDCProviderConfig {
-			return []identity.OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}
+		s.authHandlers = s.WithOIDCCapabilitiesFn(func() []identity.OIDCProviderConfig {
+			return []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
 		})
 	}
 }

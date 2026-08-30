@@ -130,7 +130,7 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 	q := url.Values{
 		"client_id":             {cfg.ClientID},
 		"redirect_uri":          {redirectURI},
-		"response_type":         {"code"},
+		"response_type":         {oauthResponseTypeCode},
 		"scope":                 {"openid email profile"},
 		"state":                 {nonce},
 		"code_challenge":        {base64.RawURLEncoding.EncodeToString(challenge[:])},

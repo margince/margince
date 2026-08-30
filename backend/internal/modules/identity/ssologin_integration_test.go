@@ -150,8 +150,10 @@ func TestOIDCSignInFullRoundTrip(t *testing.T) {
 	svc, _, userID, email := seedSSOEnv(t, "sso-full-round-trip")
 
 	h := Handlers{svc: svc}.WithOIDCProviders(
-		map[string]OIDCProviderConfig{"google": {Key: "google", ClientID: "cid", ClientSecret: "secret",
-			AuthURL: "https://accounts.google.com/o/oauth2/v2/auth", TokenURL: "https://oauth2.googleapis.com/token"}},
+		map[string]OIDCProviderConfig{"google": {
+			Key: "google", ClientID: "cid", ClientSecret: "secret",
+			AuthURL: "https://accounts.google.com/o/oauth2/v2/auth", TokenURL: "https://oauth2.googleapis.com/token",
+		}},
 		map[string]OIDCVerifier{"google": fixedVerifier{email: email, sub: "sub-carol", emailVerified: true}},
 		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused-by-fixedVerifier"}},
 		fixedStateSigner{provider: "google", nonce: "n1", codeVerifier: "v1"},

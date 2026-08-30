@@ -39,7 +39,7 @@ func TestWithGoogleSignInAbsentIsNoOp(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil)
 	rec := httptest.NewRecorder()
-	s.authHandlers.GetAuthCapabilities(rec, req)
+	s.GetAuthCapabilities(rec, req)
 	var body struct {
 		OidcProviders []struct{ Key string } `json:"oidc_providers"`
 	}
@@ -61,7 +61,7 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil)
 	rec := httptest.NewRecorder()
-	s.authHandlers.GetAuthCapabilities(rec, req)
+	s.GetAuthCapabilities(rec, req)
 	var body struct {
 		OidcProviders []struct{ Key, Label string } `json:"oidc_providers"`
 	}
@@ -74,7 +74,7 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 
 	startReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	startRec := httptest.NewRecorder()
-	s.authHandlers.StartOidcSignIn(startRec, startReq, "google")
+	s.StartOidcSignIn(startRec, startReq, "google")
 	if startRec.Code != http.StatusFound {
 		t.Fatalf("StartOidcSignIn status = %d, want 302 (the route the capability just advertised must actually be mounted)", startRec.Code)
 	}
