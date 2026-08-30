@@ -440,10 +440,28 @@ dev_app_url="$(with_database "$APP_DSN" "$db")"
 # psql is NOT a host requirement (hosts need Go + Docker only): every ad-hoc
 # SQL statement runs inside the compose postgres container, the same way
 # `make db-init` applies scripts/db-init.sql.
+#
+# WHICH container is resolved from the DSN's own port, not from the compose
+# project. infra/docker-compose.dev.yml pins `name: margince`, so every checkout
+# on one machine resolves to the same project and `compose exec` lands in
+# whichever brought the stack up first — while the api, the worker and the
+# migrator connect through this DSN. Two ways to name one database, and when
+# they diverged nothing said so: a seed ran against another checkout's postgres.
 psql_owner() { # db [psql args…] — SQL via args or stdin
   local db="$1"; shift
-  docker compose -f infra/docker-compose.dev.yml exec -T postgres \
-    psql -U margince_owner -d "$db" "$@"
+  scripts/dev-psql.sh "$(dsn_port "$OWNER_DSN")" "$db" "$@"
+}
+
+# dsn_port is the host port a postgres URL names, or 5432 when it names none —
+# the port postgres itself defaults to, so a DSN written without one resolves
+# the container it would actually reach.
+dsn_port() { # dsn
+  local hostport="${1#*@}"
+  hostport="${hostport%%/*}"
+  case "$hostport" in
+  *:*) printf '%s\n' "${hostport##*:}" ;;
+  *) printf '5432\n' ;;
+  esac
 }
 
 # Under the machine-global root, not the worktree's own .tmp/ — the same reason

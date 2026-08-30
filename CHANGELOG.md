@@ -483,6 +483,22 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **The dev tooling's psql path and its DSN name one database.** They were two,
+  with nothing tying them together: ad-hoc statements went through `docker
+  compose exec`, and the api, worker and migrator connected through a published
+  host port. `infra/docker-compose.dev.yml` pins one project name, so every
+  checkout on a machine resolves to the same project — and a seed run from a
+  second checkout landed in the first one's container while the api served the
+  migrated database on `:15432`, untouched. That run failed loudly because the
+  wrong database was empty; the ordinary case is a migrated one, where the seed
+  succeeds and writes another checkout's data. There is one way to name the
+  database now, the DSN's own port, so the statements land where the binaries
+  are looking. A DSN pointed at another checkout still reaches that checkout —
+  it is the DSN's job to say which database — but the two paths can no longer
+  disagree about which one that is without saying so: when no container
+  publishes the port, or more than one does, the command refuses and names what
+  it found.
+
 - **A technology lane announces an update only when something moved.** A
   completed lane is worth an audit row whatever it found — it is what says when
   the record was last looked at, and what lets a technology the company dropped
