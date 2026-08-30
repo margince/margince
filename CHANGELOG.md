@@ -483,6 +483,15 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A refusal the server has settled is asked once, not three times.** The
+  retry policy retried every status at or above 500, which swept in `501 Not
+  Implemented` — a final answer, not a failure the server may recover from. An
+  installation with no embeddings model bound answers 501 to the reindex status
+  by design, so every reader of that surface produced three requests and three
+  console errors for one settled answer, which an operator scanning for a real
+  fault reads first. 501 and 505 are excluded now; their neighbours are still
+  retried.
+
 - **A provider name the contract cannot carry is refused at registration.** The
   API publishes `Provider` as a pattern-constrained string — a pattern rather
   than an enum, because which providers exist is a deployment fact — and nothing

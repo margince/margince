@@ -18,6 +18,22 @@ const STALE_TIME_MS = 30_000;
 // own fault.
 const MAX_RETRIES = 2;
 
+// The 5xx statuses that are SETTLED rather than failed, and so are not retried.
+//
+// The 4xx/5xx split is the wrong seam for these two. Both are classed as server
+// errors and neither says the server failed trying: 501 says it does not
+// support what was asked, and 505 that it will not speak this version of the
+// protocol. Nothing about asking again changes either within a session, so a
+// retry buys three requests and three console errors where one would do — and
+// an operator reading the console for a real fault reads those first.
+//
+// 501 is not hypothetical here. httperr has a generated 501 path precisely so
+// a surface the contract specifies and this build does not implement refuses
+// cleanly instead of 500ing, which is a state this product reaches on purpose:
+// an installation with no embeddings model bound answers 501 to the reindex
+// status, every time it is asked.
+const SETTLED_SERVER_REFUSALS = new Set([501, 505]);
+
 // The RFC-7807 `status` a failure carries, or null when it carries none. Only
 // a ProblemError holds a server problem body, on the same terms as
 // problemCodeOf: a rejected fetch, or a query function that threw a plain
@@ -32,7 +48,8 @@ function problemStatusOf(error: unknown): number | null {
   return typeof problem.status === "number" ? problem.status : null;
 }
 
-// FE-PARAM-2: retry a server error, never a client error.
+// FE-PARAM-2: retry a server error that the server may yet recover from —
+// never a client error, and never a refusal it has already settled.
 export function retryQuery(failureCount: number, error: Error): boolean {
   const status = problemStatusOf(error);
   // A failure that carries no status is NOT retried, and that stays true now
@@ -43,7 +60,12 @@ export function retryQuery(failureCount: number, error: Error): boolean {
   // bug in a query function returns the same failure however often it is
   // asked. The error state that follows offers the reader a retry either way,
   // so nothing is lost but the silent second request.
-  return status !== null && status >= 500 && failureCount < MAX_RETRIES;
+  return (
+    status !== null &&
+    status >= 500 &&
+    !SETTLED_SERVER_REFUSALS.has(status) &&
+    failureCount < MAX_RETRIES
+  );
 }
 
 // FE-PARAM-4: the ONE place a query failure is reported. This installation
