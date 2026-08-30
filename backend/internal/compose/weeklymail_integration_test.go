@@ -120,7 +120,7 @@ func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
 	if got := e.relay.count(); got != 1 {
 		t.Fatalf("the relay was handed the week %d times; the mail is at-most-once", got)
 	}
-	if !strings.Contains(e.relay.subjects[0], "29 June 2026") {
+	if !strings.Contains(e.relay.subjects[0], "2026-06-29") {
 		t.Errorf("the subject does not name the week: %q", e.relay.subjects[0])
 	}
 }

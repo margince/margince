@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -50,18 +52,29 @@ const mailDealCap = 10
 // The week is in the subject on purpose: these arrive weekly into a mailbox
 // that already has last week's, and two identical subjects are two messages a
 // reader cannot tell apart in a list.
-func MailSubject(review Review) string {
-	return "Your week: " + review.LocalWeekStart.Format("2 January 2006")
+func MailSubject(review Review, words mailcopy.Copy) string {
+	return words.WeeklySubject + review.LocalWeekStart.Format(mailDateLayout)
 }
+
+// mailDateLayout is how a week's start is written, in every language.
+//
+// ISO, and that is the point: `2 January 2006` puts an English month name in
+// the middle of a German sentence, which is the half-translated message this
+// catalog exists to stop, and a numeric order like 06/01 is read as 6 January
+// by half the world. A reader needs two things from this date — to tell one
+// week's message from the next, and to know which week — and 2026-06-01 gives
+// both in any language. The deal lines in the same message already read this
+// way.
+const mailDateLayout = time.DateOnly
 
 // MailBody renders one review as the message a rep reads on Monday.
 //
 // homeURL is the installation's own Home. Empty omits the closing line rather
 // than mailing a link built on an empty origin — an unusable URL in a message
 // whose only call to action it is.
-func MailBody(review Review, homeURL string) string {
+func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Your week of %s\n\n", review.LocalWeekStart.Format("2 January 2006"))
+	fmt.Fprintf(&b, "%s%s\n\n", words.WeeklyHeading, review.LocalWeekStart.Format(mailDateLayout))
 
 	// The sentence first, when a pass wrote one. It is the only part of the
 	// message that reads as a person talking, so it goes above the numbers it
@@ -75,44 +88,65 @@ func MailBody(review Review, homeURL string) string {
 	}
 
 	c := review.Counts
-	b.WriteString("Promised, delivered:  " +
-		strconv.Itoa(c.TasksDone) + " of " + strconv.Itoa(c.TasksDue) + "\n")
-	b.WriteString("Deals:                " +
-		strconv.Itoa(c.DealsWon) + " won · " +
-		strconv.Itoa(c.DealsLost) + " lost · " +
-		strconv.Itoa(c.DealsMoved) + " moved\n")
-	b.WriteString("You decided:          " +
-		strconv.Itoa(c.ProposalsAccepted) + " yes · " +
-		strconv.Itoa(c.ProposalsRejected) + " no\n")
-	b.WriteString("Morning queue:        " +
-		strconv.Itoa(c.BriefItemsActed) + " acted · " +
-		strconv.Itoa(c.BriefItemsDismissed) + " dismissed\n")
-	b.WriteString("Carried into Monday:  " +
-		strconv.Itoa(c.TasksCarriedOver) + "\n")
+	// The label column is padded to the WIDEST label in this language rather
+	// than to a constant: German and Vietnamese labels are longer than the
+	// English ones they were laid out for, and a fixed width turns the column
+	// into a ragged edge in two of the three.
+	rows := [][2]string{
+		{words.WeeklyPromised, strconv.Itoa(c.TasksDone) + "/" + strconv.Itoa(c.TasksDue)},
+		{
+			words.WeeklyDealsWon + " · " + words.WeeklyDealsLost + " · " + words.WeeklyMoved,
+			strconv.Itoa(c.DealsWon) + " · " + strconv.Itoa(c.DealsLost) + " · " + strconv.Itoa(c.DealsMoved),
+		},
+		{words.WeeklyDecided, strconv.Itoa(c.ProposalsAccepted) + " " + words.WeeklyYes +
+			" · " + strconv.Itoa(c.ProposalsRejected) + " " + words.WeeklyNo},
+		{words.WeeklyQueue, strconv.Itoa(c.BriefItemsActed) + " " + words.WeeklyActed +
+			" · " + strconv.Itoa(c.BriefItemsDismissed) + " " + words.WeeklyDismissed},
+		{words.WeeklyCarried, strconv.Itoa(c.TasksCarriedOver)},
+	}
+	writeRows(&b, rows)
 
-	writeDealLines(&b, review.Deals)
+	writeDealLines(&b, review.Deals, words)
 
 	if homeURL != "" {
-		b.WriteString("\nThe full week, and the ones before it:\n  " + homeURL + "\n")
+		b.WriteString("\n" + words.WeeklyFullWeek + "\n  " + homeURL + "\n")
 	}
 	return b.String()
 }
 
+// writeRows lays the tallies out as a label column and a value column, sized to
+// the labels it was actually given.
+func writeRows(b *strings.Builder, rows [][2]string) {
+	widest := 0
+	for _, row := range rows {
+		// RUNES, not bytes: `Übernommen` is ten characters and eleven bytes,
+		// and padding by length would short-change every row with an umlaut or
+		// a Vietnamese diacritic in it.
+		if n := utf8.RuneCountInString(row[0]); n > widest {
+			widest = n
+		}
+	}
+	for _, row := range rows {
+		pad := strings.Repeat(" ", widest-utf8.RuneCountInString(row[0]))
+		b.WriteString(row[0] + ":" + pad + "  " + row[1] + "\n")
+	}
+}
+
 // writeDealLines writes the week's deals, capped, saying so when it caps.
-func writeDealLines(b *strings.Builder, deals []DealLine) {
+func writeDealLines(b *strings.Builder, deals []DealLine, words mailcopy.Copy) {
 	if len(deals) == 0 {
 		return
 	}
-	b.WriteString("\nWhat moved:\n")
+	b.WriteString("\n" + words.WeeklyWhatMoved + "\n")
 	shown := deals
 	if len(shown) > mailDealCap {
 		shown = shown[:mailDealCap]
 	}
 	for _, line := range shown {
-		b.WriteString("  · " + mailDealLine(line) + "\n")
+		b.WriteString("  · " + mailDealLine(line, words) + "\n")
 	}
 	if rest := len(deals) - len(shown); rest > 0 {
-		fmt.Fprintf(b, "  … and %d more, on Home\n", rest)
+		fmt.Fprintf(b, "  "+words.WeeklyAndMore+"\n", rest)
 	}
 }
 
@@ -141,8 +175,8 @@ func oneLine(text string) string {
 // The LABEL is what was frozen when the review was written, never a lookup: a
 // deal renamed or deleted since still reads here as it did that week, which is
 // the same promise the panel makes.
-func mailDealLine(line DealLine) string {
-	parts := []string{oneLine(line.Label), line.Outcome}
+func mailDealLine(line DealLine, words mailcopy.Copy) string {
+	parts := []string{oneLine(line.Label), outcomeWord(line.Outcome, words)}
 	if line.ToStageLabel != "" {
 		// A stage name is stored with no single-line validation, so it is the
 		// same species of input as the label beside it.
@@ -295,3 +329,23 @@ func (e *Engine) MailFailed(ctx context.Context, reviewID ids.UUID, cause string
 // unbounded, and a row nothing can render helps nobody — so the cause is cut
 // here rather than learned from a constraint violation at 06:00 on a Monday.
 const maxMailErrorRunes = 500
+
+// outcomeWord is what a deal's outcome is called in the reader's language.
+//
+// The stored value is the vocabulary the API publishes, so it is translated at
+// the edge rather than stored translated: a review written under one base
+// language and read after it changed would otherwise be half in each. An
+// outcome this build cannot spell is written through as it was stored — a
+// reader seeing `won` in a German message has learned something, where a blank
+// tells them nothing.
+func outcomeWord(outcome string, words mailcopy.Copy) string {
+	switch outcome {
+	case "won":
+		return words.WeeklyOutcomeWon
+	case "lost":
+		return words.WeeklyOutcomeLost
+	case "moved":
+		return words.WeeklyOutcomeMoved
+	}
+	return outcome
+}
