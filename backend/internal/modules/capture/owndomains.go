@@ -235,3 +235,68 @@ func queryDomains(ctx context.Context, tx pgx.Tx, query string) (InternalDomains
 func (d InternalDomains) Domains() []string {
 	return append([]string(nil), d.domains...)
 }
+
+// SelfSet is one SEAT's own addresses: the exact aliases they declared, plus
+// any private domains of theirs, which cover subdomains the way the workspace's
+// own domains do.
+//
+// It sits beside InternalDomains because the two answer the same shape of
+// question about different subjects — "is this address us" against "is this
+// address me" — and composes one rather than restating it: a domain claim is a
+// domain claim, and a second suffix test that folded case or handled
+// subdomains differently would disagree with this one on exactly the addresses
+// nobody writes a fixture for.
+//
+// The zero value is a seat that has declared nothing, and it answers false to
+// everything — which leaves every gate reading it exactly where it was.
+type SelfSet struct {
+	addresses map[string]struct{}
+	domains   InternalDomains
+}
+
+// NewSelfSet folds and de-duplicates a seat's declared addresses and domains.
+func NewSelfSet(addresses, domains []string) SelfSet {
+	set := SelfSet{addresses: make(map[string]struct{}, len(addresses)), domains: NewInternalDomains(domains)}
+	for _, address := range addresses {
+		folded := strings.ToLower(strings.TrimSpace(address))
+		if folded == "" {
+			continue
+		}
+		set.addresses[folded] = struct{}{}
+	}
+	return set
+}
+
+// Covers reports whether this address is one the seat declared as their own,
+// exactly or by one of their domains.
+func (s SelfSet) Covers(address string) bool {
+	folded := strings.ToLower(strings.TrimSpace(address))
+	if folded == "" {
+		return false
+	}
+	if _, ok := s.addresses[folded]; ok {
+		return true
+	}
+	return s.domains.Covers(folded)
+}
+
+// Empty reports whether the seat declared nothing, which lets a caller skip
+// work rather than test every address against an empty set.
+func (s SelfSet) Empty() bool { return len(s.addresses) == 0 && s.domains.empty() }
+
+// WithoutSelf is the addresses that are NOT the seat's own, order preserved.
+// The gates need the remainder rather than a yes/no: what makes a message
+// internal is that nothing external is left, and what the creation ladder is
+// about is the first thing that IS.
+func (s SelfSet) WithoutSelf(addresses []string) []string {
+	if s.Empty() {
+		return addresses
+	}
+	out := make([]string, 0, len(addresses))
+	for _, address := range addresses {
+		if !s.Covers(address) {
+			out = append(out, address)
+		}
+	}
+	return out
+}

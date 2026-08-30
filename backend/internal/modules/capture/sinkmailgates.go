@@ -54,7 +54,29 @@ func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	if err != nil {
 		return false, err
 	}
-	return own.AllInternal(rec.Addresses), nil
+	// The acting seat's own other addresses count as internal too. A founder
+	// writing between their work address and their private domain is one person
+	// talking to themselves, which is less of a customer relationship than two
+	// colleagues talking — and the whole point of a declared alias is that it
+	// is not somebody else.
+	//
+	// Removed before the test rather than folded into the own-domain set: these
+	// are ONE seat's claim, and AllInternal answers a question about the
+	// workspace. A message whose only remaining parties are the seat's own
+	// addresses has nothing external left, which is the same zero-rows rule
+	// AllInternal already applies.
+	self, err := ownerIdentitiesTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	external := self.WithoutSelf(rec.Addresses)
+	if len(external) == 0 {
+		// Every party was the seat themselves. Internal by the same reasoning
+		// AllInternal uses, without asking the workspace's domains about
+		// addresses that are not on them.
+		return !self.Empty(), nil
+	}
+	return own.AllInternal(external), nil
 }
 
 // internalDomainTx reports whether domain is one of the workspace's own mail

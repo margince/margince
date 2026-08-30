@@ -387,6 +387,18 @@ func (stubs) DeleteCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "DeleteCaptureExclusion")
 }
 
+func (stubs) ListCaptureOwnerIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCaptureOwnerIdentities")
+}
+
+func (stubs) CreateCaptureOwnerIdentity(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateCaptureOwnerIdentity")
+}
+
+func (stubs) DeleteCaptureOwnerIdentity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeleteCaptureOwnerIdentity")
+}
+
 func (stubs) GetCaptureSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureSettings")
 }

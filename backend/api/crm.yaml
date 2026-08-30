@@ -8088,6 +8088,72 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /capture/owner-identities:
+    get:
+      tags: [Capture]
+      operationId: listCaptureOwnerIdentities
+      summary: The caller's own other email addresses.
+      description: |
+        A seat's other addresses: a send-as alias, a private domain the same person reads, an
+        address they forward from. Mail among a person's own addresses is not correspondence with
+        anybody, so a message whose every party is the caller themselves is dropped before storage,
+        and an address listed here is never minted as a contact.
+
+        The caller's own only. A colleague's alias says which of THEIR mail is private, which is the
+        thing the list exists to protect, so it is never shown here.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The caller's identities.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureOwnerIdentityListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Capture]
+      operationId: createCaptureOwnerIdentity
+      summary: Declare another address as your own.
+      description: |
+        Takes a human seat and nothing more: claiming your own address needs no grant, and the claim
+        binds only your own mail. Not retroactive — mail already captured under the old reading
+        stays, and a contact already minted from an alias stays until it is merged or removed.
+        Idempotent on the folded value.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCaptureOwnerIdentityRequest' }
+      responses:
+        '201':
+          description: The identity.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /capture/owner-identities/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Capture]
+      operationId: deleteCaptureOwnerIdentity
+      summary: Withdraw one of your own addresses.
+      description: |
+        Yours alone to withdraw. Mail naming the address is judged like any other sender from the
+        next message on; nothing already dropped comes back. A colleague's identity answers
+        not-found rather than forbidden — the two are the same answer to somebody who may not know
+        it exists.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '204': { description: Withdrawn. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /capture/email-domains/{domain}:
     parameters:
       - name: domain
@@ -17723,6 +17789,35 @@ components:
       required: [scope, kind, value]
       properties:
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
+        kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
+        value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
+    CaptureOwnerIdentity:
+      type: object
+      required: [id, kind, value, source, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
+        value: { type: string, description: 'The folded address or domain.' }
+        source: { $ref: '#/components/schemas/CaptureOwnerIdentitySource' }
+        created_at: { type: string, format: date-time }
+    CaptureOwnerIdentitySource:
+      type: string
+      enum: [user, provider]
+      description: |
+        Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
+        provider attests; nothing writes it yet, because reading a provider's send-as list needs a
+        scope the connection grant does not request.
+    CaptureOwnerIdentityListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
+    CreateCaptureOwnerIdentityRequest:
+      type: object
+      required: [kind, value]
+      properties:
         kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
     WorkspaceEmailDomainListResponse:

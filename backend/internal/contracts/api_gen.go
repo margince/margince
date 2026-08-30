@@ -2071,6 +2071,24 @@ func (e CaptureExclusionScope) Valid() bool {
 	}
 }
 
+// Defines values for CaptureOwnerIdentitySource.
+const (
+	CaptureOwnerIdentitySourceProvider CaptureOwnerIdentitySource = "provider"
+	CaptureOwnerIdentitySourceUser     CaptureOwnerIdentitySource = "user"
+)
+
+// Valid indicates whether the value is a known member of the CaptureOwnerIdentitySource enum.
+func (e CaptureOwnerIdentitySource) Valid() bool {
+	switch e {
+	case CaptureOwnerIdentitySourceProvider:
+		return true
+	case CaptureOwnerIdentitySourceUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceEntryOutcome.
 const (
 	CaptureTraceEntryOutcomeCaptured   CaptureTraceEntryOutcome = "captured"
@@ -14848,6 +14866,31 @@ type CaptureExclusionListResponse struct {
 // CaptureExclusionScope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 type CaptureExclusionScope string
 
+// CaptureOwnerIdentity defines model for CaptureOwnerIdentity.
+type CaptureOwnerIdentity struct {
+	CreatedAt time.Time            `json:"created_at"`
+	Id        openapi_types.UUID   `json:"id"`
+	Kind      CaptureExclusionKind `json:"kind"`
+
+	// Source Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
+	// provider attests; nothing writes it yet, because reading a provider's send-as list needs a
+	// scope the connection grant does not request.
+	Source CaptureOwnerIdentitySource `json:"source"`
+
+	// Value The folded address or domain.
+	Value string `json:"value"`
+}
+
+// CaptureOwnerIdentityListResponse defines model for CaptureOwnerIdentityListResponse.
+type CaptureOwnerIdentityListResponse struct {
+	Data []CaptureOwnerIdentity `json:"data"`
+}
+
+// CaptureOwnerIdentitySource Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
+// provider attests; nothing writes it yet, because reading a provider's send-as list needs a
+// scope the connection grant does not request.
+type CaptureOwnerIdentitySource string
+
 // CaptureSettings The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
 // changed only by admin/ops.
 type CaptureSettings struct {
@@ -16276,6 +16319,14 @@ type CreateCaptureExclusionRequest struct {
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 	Scope CaptureExclusionScope `json:"scope"`
+
+	// Value An email address, or a bare domain.
+	Value string `json:"value"`
+}
+
+// CreateCaptureOwnerIdentityRequest defines model for CreateCaptureOwnerIdentityRequest.
+type CreateCaptureOwnerIdentityRequest struct {
+	Kind CaptureExclusionKind `json:"kind"`
 
 	// Value An email address, or a bare domain.
 	Value string `json:"value"`
@@ -30889,6 +30940,9 @@ type CreateWorkspaceEmailDomainJSONRequestBody = CreateWorkspaceEmailDomainReque
 // CreateCaptureExclusionJSONRequestBody defines body for CreateCaptureExclusion for application/json ContentType.
 type CreateCaptureExclusionJSONRequestBody = CreateCaptureExclusionRequest
 
+// CreateCaptureOwnerIdentityJSONRequestBody defines body for CreateCaptureOwnerIdentity for application/json ContentType.
+type CreateCaptureOwnerIdentityJSONRequestBody = CreateCaptureOwnerIdentityRequest
+
 // UpdateCaptureSettingsJSONRequestBody defines body for UpdateCaptureSettings for application/json ContentType.
 type UpdateCaptureSettingsJSONRequestBody = UpdateCaptureSettingsRequest
 
@@ -39324,6 +39378,15 @@ type ServerInterface interface {
 	// Lift an exclusion.
 	// (DELETE /capture/exclusions/{id})
 	DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id)
+	// The caller's own other email addresses.
+	// (GET /capture/owner-identities)
+	ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request)
+	// Declare another address as your own.
+	// (POST /capture/owner-identities)
+	CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request)
+	// Withdraw one of your own addresses.
+	// (DELETE /capture/owner-identities/{id})
+	DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
 	// The workspace's capture settings.
 	// (GET /capture/settings)
 	GetCaptureSettings(w http.ResponseWriter, r *http.Request)
@@ -41130,6 +41193,24 @@ func (_ Unimplemented) CreateCaptureExclusion(w http.ResponseWriter, r *http.Req
 // Lift an exclusion.
 // (DELETE /capture/exclusions/{id})
 func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's own other email addresses.
+// (GET /capture/owner-identities)
+func (_ Unimplemented) ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Declare another address as your own.
+// (POST /capture/owner-identities)
+func (_ Unimplemented) CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw one of your own addresses.
+// (DELETE /capture/owner-identities/{id})
+func (_ Unimplemented) DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47222,6 +47303,78 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureExclusion(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureExclusion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCaptureOwnerIdentities operation middleware
+func (siw *ServerInterfaceWrapper) ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCaptureOwnerIdentities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCaptureOwnerIdentity operation middleware
+func (siw *ServerInterfaceWrapper) CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCaptureOwnerIdentity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCaptureOwnerIdentity operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCaptureOwnerIdentity(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66562,6 +66715,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/exclusions/{id}", wrapper.DeleteCaptureExclusion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/owner-identities", wrapper.ListCaptureOwnerIdentities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/owner-identities", wrapper.CreateCaptureOwnerIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/capture/owner-identities/{id}", wrapper.DeleteCaptureOwnerIdentity)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/settings", wrapper.GetCaptureSettings)
