@@ -59,7 +59,10 @@ func refuseUnmintableTriggerRef(ref string) error {
 	segments := strings.Split(ref, ":")
 	kind := segments[0]
 	if reason, occurrence := occurrenceTriggerKinds[kind]; occurrence {
-		if parsed, err := ids.Parse(segments[1]); len(segments) != 2 || err != nil || parsed.IsZero() {
+		// The length FIRST: `calendar` with no occurrence behind it is a
+		// fixture somebody wrote by hand, and reading segments[1] to tell them
+		// so would panic instead.
+		if !occurrenceIdentified(segments) {
 			return fmt.Errorf(
 				"%s: trigger ref %q names the occurrence-driven kind %q (%s), whose shape is `%s:<uuid>` — this one is not",
 				agentLoopSite, ref, kind, reason, kind)
@@ -75,6 +78,16 @@ func refuseUnmintableTriggerRef(ref string) error {
 			agentLoopSite, ref, kind, strings.Join(sortedKeys(occurrenceTriggerKinds), ", "))
 	}
 	return refuseDriftedFrom(reference, ref)
+}
+
+// occurrenceIdentified reports whether an occurrence-driven ref names exactly
+// one occurrence, by an id.
+func occurrenceIdentified(segments []string) bool {
+	if len(segments) != 2 {
+		return false
+	}
+	parsed, err := ids.Parse(segments[1])
+	return err == nil && !parsed.IsZero()
 }
 
 // mintedSchedulerTriggerRef mints what the scheduler would put on a job for the
@@ -114,7 +127,9 @@ func refuseDriftedFrom(minted, ref string) error {
 	}
 	// Segment 0 is the spec name and was matched to find `minted` at all.
 	for i := 1; i < len(want); i++ {
-		if len(got[i]) != len(want[i]) || charactersOf(got[i]) != charactersOf(want[i]) {
+		mintedClasses, _ := charactersOf(want[i])
+		fixtureClasses, readable := charactersOf(got[i])
+		if len(got[i]) != len(want[i]) || !readable || fixtureClasses != mintedClasses {
 			return fmt.Errorf(
 				"%s: trigger ref %q segment %d is %q; the scheduler mints segments shaped like %q here (%q) — the "+
 					"fixture has drifted from what production puts on a job",
@@ -125,12 +140,18 @@ func refuseDriftedFrom(minted, ref string) error {
 }
 
 // charactersOf is the character classes a segment is drawn from, in a settled
-// order. It is deliberately coarse: it separates a date from a digest and a
-// digest from a word, and it does NOT try to be a format, because a format
-// stated here is the second spelling this whole function exists to avoid.
-func charactersOf(segment string) string {
-	var classes []string
-	for _, class := range []struct {
+// order, and whether EVERY rune of it fell into one.
+//
+// It is deliberately coarse: it separates a date from a digest and a digest
+// from a word, and it does NOT try to be a format, because a format stated here
+// is the second spelling this whole function exists to avoid.
+//
+// The second return is what stops the coarseness from being a hole. Presence
+// alone would let `2026-01-0!` pass for a date: same width, same classes
+// present, one rune that is neither. A segment carrying a rune no class claims
+// is not the shape the writer mints, whatever else it looks like.
+func charactersOf(segment string) (classes string, readable bool) {
+	named := []struct {
 		name string
 		has  func(rune) bool
 	}{
@@ -138,10 +159,21 @@ func charactersOf(segment string) string {
 		{"hex-letter", func(r rune) bool { return r >= 'a' && r <= 'f' }},
 		{"letter", func(r rune) bool { return (r >= 'g' && r <= 'z') || (r >= 'A' && r <= 'Z') }},
 		{"dash", func(r rune) bool { return r == '-' || r == '_' }},
-	} {
+	}
+	var present []string
+	for _, class := range named {
 		if strings.ContainsFunc(segment, class.has) {
-			classes = append(classes, class.name)
+			present = append(present, class.name)
 		}
 	}
-	return strings.Join(classes, "+")
+	for _, r := range segment {
+		claimed := false
+		for _, class := range named {
+			claimed = claimed || class.has(r)
+		}
+		if !claimed {
+			return strings.Join(present, "+"), false
+		}
+	}
+	return strings.Join(present, "+"), true
 }

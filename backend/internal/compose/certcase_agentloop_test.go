@@ -391,6 +391,22 @@ func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
 			want:     "segment 2 is",
 		},
 		{
+			name: "an occurrence-driven kind naming no occurrence",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "calendar"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "whose shape is `calendar:<uuid>`",
+		},
+		{
+			name: "a segment of the right width carrying a character the writer never mints",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "morning_brief:2026-07-2!:d48b383f3e8acec5d620c82b8c9b4202"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "segment 2 is",
+		},
+		{
 			name: "a trigger no writer mints",
 			fixture: agentLoopVariant(func(f *agentLoopFixture) {
 				f.TriggerRef = "webhook:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e08"

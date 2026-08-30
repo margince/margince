@@ -76,10 +76,12 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 			"unless it can see the seeding path, so either the scan broke or the " +
 			"caller moved and this gate must move with it")
 	}
+	seeding := 0
 	for _, c := range calls {
 		if mintsAShapeRatherThanAnOccurrence.Waived(t, c.site) {
 			continue
 		}
+		seeding++
 		if c.seatArg == "" {
 			t.Errorf("%s: TriggerRef is called without a seat, so every rep in the "+
 				"workspace shares one trigger ref and only the first seeded gets a run", c.pos)
@@ -92,6 +94,15 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 				"and the uniqueness constraints then admit exactly one run for the whole "+
 				"workspace", c.pos, c.seatArg)
 		}
+	}
+	// A tree where every call is waived validates no seeding path, and the loop
+	// above reports nothing about it — which reads exactly like a tree where
+	// every call is correct. The waiver list is the one thing that can grow
+	// until that is true.
+	if seeding == 0 {
+		t.Errorf("all %d TriggerRef call(s) are waived as shape-readers, so this gate checked no seeding path: "+
+			"either the seeding call moved and this gate must move with it, or a waiver was written for one that "+
+			"does seed", len(calls))
 	}
 	mintsAShapeRatherThanAnOccurrence.AssertAllMatched(t)
 }
