@@ -48,6 +48,9 @@ type runsEnv struct {
 	// gated on visibility was gated on nothing at all.
 	theirsInBook ids.PersonID
 	owner        *pgx.Conn
+	// provider is the vendor this environment's connection and adapter are
+	// for, so a test can name it without restating the fixture's choice.
+	provider string
 	// enqueued counts durable hand-offs, so a test can prove one happened.
 	enqueued int
 	// vault and fake are the store's own instances, exposed so the execution
@@ -133,10 +136,10 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 	if err := owner.QueryRow(ctx, `
 		INSERT INTO provider_connection
 		       (id, provider, status, mode, preset, categories, daily_run_limit)
-		VALUES ($1, 'surfe', 'connected', 'automatic_on_create', 'full',
+		VALUES ($1, $2, 'connected', 'automatic_on_create', 'full',
 		        ARRAY['professional_email','mobile'], NULL)
 		ON CONFLICT (provider) DO UPDATE SET status = 'connected'
-		RETURNING id`, ids.NewV7()).Scan(&connID); err != nil {
+		RETURNING id`, ids.NewV7(), cfg.providerOf()).Scan(&connID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
@@ -167,7 +170,8 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 	// would go on writing into the database the NEXT test just reset.
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
 
-	e.fake = NewOfflineProvider(0, time.Now)
+	e.provider = cfg.providerOf()
+	e.fake = NewOfflineProvider(0, time.Now).Named(e.provider)
 	reg, err := NewRegistry(e.fake)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +188,9 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		},
 		nil,
 		func(context.Context, pgx.Tx, string) (provider.PersonIdentifiers, error) {
-			return provider.PersonIdentifiers{FirstName: "Anna", LastName: "Muster", CompanyName: "Example"}, nil
+			return provider.PersonIdentifiers{
+				FirstName: "Anna", LastName: cfg.subjectOf(), CompanyName: "Example",
+			}, nil
 		},
 	)
 	if !cfg.withoutEnqueue {
@@ -219,6 +225,31 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 type runsConfig struct {
 	ceilings       map[string]int
 	withoutEnqueue bool
+	// subjectLastName picks the fake's scenario, which it reads out of the
+	// subject's name. Empty means Muster, which succeeds.
+	subjectLastName string
+	// provider names the vendor this environment's connection and adapter are
+	// for. Empty means surfe, which is what almost every test wants; a test
+	// asserting that something is derived FROM the run sets it, because a
+	// fixture carrying one name cannot tell derivation from a hard-coded
+	// constant that happens to match.
+	provider string
+}
+
+// subjectOf is the last name the fake is asked about.
+func (c runsConfig) subjectOf() string {
+	if c.subjectLastName == "" {
+		return "Muster"
+	}
+	return c.subjectLastName
+}
+
+// providerOf is the vendor an environment runs as.
+func (c runsConfig) providerOf() string {
+	if c.provider == "" {
+		return "surfe"
+	}
+	return c.provider
 }
 
 // The defect: QueueRun checked the role grant but never the row scope, so a

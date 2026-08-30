@@ -44,6 +44,11 @@ type OfflineProvider struct {
 	// a run in the dev stack never left in_progress.
 	polls sync.Map
 	now   func() time.Time
+	// name is the vendor this fake stands in for. Almost always the one real
+	// adapter's, because the fake exists to exercise the same cost table and
+	// cascade; a caller renames it to prove a claim about WHICH provider a run
+	// belongs to, which no single-provider fixture can distinguish.
+	name string
 }
 
 // NewOfflineProvider builds the fake. pollsBeforeDone of 0 completes on the
@@ -53,7 +58,20 @@ func NewOfflineProvider(pollsBeforeDone int, now func() time.Time) *OfflineProvi
 	return &OfflineProvider{
 		pollsBeforeDone: pollsBeforeDone,
 		now:             now,
+		name:            "surfe",
 	}
+}
+
+// Named is this fake standing in for a different vendor.
+//
+// Every provider-run seam is keyed on the run's own provider — the claim rows'
+// provenance, the audit actor, the connection lock — and a fixture carrying one
+// name proves none of that: the value under test is also the only value there
+// is. This is what lets a test tell "derived from the run" from "hard-coded to
+// the provider that used to be the only one".
+func (p *OfflineProvider) Named(name string) *OfflineProvider {
+	p.name = name
+	return p
 }
 
 // Calls reports how many times this provider was asked to do anything
@@ -66,7 +84,7 @@ func (p *OfflineProvider) Calls() int64 { return p.calls.Load() }
 // pricing pass every test.
 func (p *OfflineProvider) Descriptor() provider.Descriptor {
 	return provider.Descriptor{
-		Name:        "surfe",
+		Name:        p.name,
 		Transport:   provider.TransportPolled,
 		Billing:     provider.BillingPerSuccessfulResult,
 		CreditPools: []provider.Pool{"email", "mobile"},

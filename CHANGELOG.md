@@ -432,6 +432,16 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A provider run's audit actor names the provider it is for.** Every run was
+  audited as `connector:surfe`, whichever vendor it actually belonged to,
+  because the workers that execute a run hold a run id and the poll sweep drains
+  many at once — the name could only be a guess, and it was correct only while a
+  CHECK constraint made a second provider impossible. Those constraints are
+  gone, and the claim rows already derived their provenance from the run's own
+  provider, so the audit log and the evidence on the record would have named
+  different vendors for one purchase. The actor is now narrowed to the run's own
+  connector inside the module that reads it.
+
 - **A partial payload took down the whole application.** `settings/maintenance`
   dereferenced a contract-required field on `/admin/job-health`, and the only
   error boundary was app-level, so one card's throw cost the reader the rail and

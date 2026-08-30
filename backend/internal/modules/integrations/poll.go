@@ -139,6 +139,9 @@ func (s *Store) pollOne(ctx context.Context, runID string) error {
 	if err != nil {
 		return err
 	}
+	// The run acts as its own connector from here: the sweep that called in
+	// drains many runs at once and cannot name any one of their vendors.
+	ctx = actingForProvider(ctx, name)
 	adapter, err := s.registry.Adapter(name)
 	if err != nil {
 		return fmt.Errorf("integrations: run %s names a provider this build does not carry: %w", runID, err)

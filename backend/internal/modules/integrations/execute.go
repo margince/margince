@@ -93,6 +93,9 @@ func (s *Store) ExecuteSubmit(ctx context.Context, runID string) error {
 	if err != nil {
 		return err
 	}
+	// From here on the run acts as ITS OWN connector. Everything below writes
+	// audit, and the worker that called in could only name a vendor it guessed.
+	ctx = actingForProvider(ctx, name)
 	adapter, err := s.registry.Adapter(name)
 	if err != nil {
 		return fmt.Errorf("integrations: run %s names a provider this build does not carry: %w", runID, err)

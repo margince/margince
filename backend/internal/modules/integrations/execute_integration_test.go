@@ -47,7 +47,7 @@ func sealCredential(t *testing.T, e *runsEnv) {
 	}
 	if _, err := e.owner.Exec(ctx, `
 		UPDATE provider_connection SET credential_ref = $1, execution_epoch = execution_epoch + 1
-		 WHERE provider = 'surfe'`, string(ref)); err != nil {
+		 WHERE provider = $2`, string(ref), e.provider); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -55,7 +55,7 @@ func sealCredential(t *testing.T, e *runsEnv) {
 func queueFor(t *testing.T, e *runsEnv, personID string) provider.Run {
 	t.Helper()
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: personID, Provider: "surfe", Trigger: provider.TriggerManual,
+		PersonID: personID, Provider: e.provider, Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -512,5 +512,62 @@ func TestARefusalAuditsTheConnectionStatusItChangedFrom(t *testing.T) {
 	}
 	if after["status"] != "rate_limited" || after["safe_status_code"] != "provider_rate_limited" {
 		t.Errorf("audit after = %+v, want status rate_limited and safe_status_code provider_rate_limited", after)
+	}
+}
+
+// TestARunAuditsTheProviderItIsFor is the actor, derived rather than assumed.
+//
+// The workers that execute a run hold a run id — the poll sweep drains many at
+// once — so a principal bound out there can only name a vendor it guessed. It
+// guessed the one provider that could exist while a CHECK constraint pinned
+// provider_connection, provider_run and person_provider_claim to a single name.
+// Those checks are gone, and the claim rows already derive their provenance
+// from the run's own provider: a guessed audit actor and a derived claim row
+// name different vendors for one purchase, and the entry that reads as
+// authoritative is the wrong one.
+//
+// The environment is deliberately NOT surfe, because a fixture carrying the one
+// name cannot tell a derived answer from a constant that happens to match.
+func TestARunAuditsTheProviderItIsFor(t *testing.T) {
+	// The credential is refused, because that is the submission outcome whose
+	// settlement writes an audit row: the connection's status changes, and the
+	// row says who observed it.
+	e := setupRuns(t, runsConfig{provider: "otherco", subjectLastName: "InvalidCredentials"})
+	sealCredential(t, e)
+	run := queueFor(t, e, e.mine.String())
+
+	if err := e.store.ExecuteSubmit(e.ctx, run.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	var actors []string
+	rows, err := e.owner.Query(context.Background(), `
+		SELECT DISTINCT actor_id FROM audit_log
+		 WHERE entity_type = 'provider_connection'
+		   AND after->>'provider' = 'otherco'
+		 ORDER BY actor_id`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var actor string
+		if err := rows.Scan(&actor); err != nil {
+			t.Fatal(err)
+		}
+		actors = append(actors, actor)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(actors) == 0 {
+		t.Fatal("the refused submission wrote no audit row, so this test asserted nothing about who acted")
+	}
+	for _, actor := range actors {
+		if actor != "connector:otherco" {
+			t.Errorf("an audit row for otherco's connection names %q as the actor — the claim rows on a record "+
+				"derive their provenance from the run's own provider, so the log and the evidence would disagree "+
+				"about who acted for this vendor", actor)
+		}
 	}
 }
