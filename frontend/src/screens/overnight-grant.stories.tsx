@@ -23,9 +23,9 @@ type Story = StoryObj<typeof OvernightGrantCard>;
 function grantsResponse(
   state: "granted" | "declined" | "never_asked",
   credentialUsable = true,
-  // Defaults to true so a story about anything else shows a covered
-  // credential. Omitting it would read as false and put the scope-renewal
-  // notice on every story in this file.
+  // Defaulted, because the field's ABSENCE from the response reads as false
+  // and put the scope-renewal notice on every granted story in this file. A
+  // story about anything else shows a covered credential.
   credentialFundsAgent = true,
 ) {
   return jsonResponse({

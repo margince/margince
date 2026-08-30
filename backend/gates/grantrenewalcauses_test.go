@@ -50,17 +50,19 @@ func TestEveryRenewalCauseReachesTheCardThatAsksForIt(t *testing.T) {
 		t.Fatalf("found %d credential field(s) on MyAgentGrant and expects at least 2 — either the schema lost one "+
 			"or this reader has stopped matching, and it cannot tell the difference: %v", len(causes), causes)
 	}
-	card, err := os.ReadFile(grantRenewalCard)
+	source, err := os.ReadFile(grantRenewalCard)
 	if err != nil {
 		t.Fatalf("reading the settings card: %v", err)
 	}
+	card := codeOf(string(source))
 	for _, cause := range causes {
-		// The field READ, not the name anywhere in the file. A card that
-		// carried the name in a type annotation, a comment or a dead
-		// expression would satisfy a substring search while ignoring the cause
-		// entirely — the exact silence this gate exists to break.
-		if !strings.Contains(string(card), "grant?."+cause) &&
-			!strings.Contains(string(card), "grant."+cause) {
+		// The field READ, in CODE. A name in a type annotation satisfies a bare
+		// substring search while the cause goes unshown, which is the exact
+		// silence this gate exists to break; a name in a comment or a string
+		// satisfies it without being a name at all, which is why those are
+		// stripped before the match.
+		if !strings.Contains(card, "grant?."+cause) &&
+			!strings.Contains(card, "grant."+cause) {
 			t.Errorf("MyAgentGrant.%s says a rep's standing grant has stopped working, and %s never READS it (no "+
 				"`grant.%[1]s`) — "+
 				"so the run degrades every night and nothing on the surface the rep can act on says why. Branch on "+
@@ -110,4 +112,57 @@ func credentialFieldsOfMyAgentGrant(t *testing.T) []string {
 		}
 	}
 	return out
+}
+
+// codeOf is the card with its comments and its string and template literals
+// removed, so a match is a read rather than a mention.
+//
+// WHAT IT IS, AND IS NOT. A scanner, not a parser. It separates `grant.x` in an
+// expression from `grant.x` inside a comment or a translation key, which is the
+// difference that made a bare substring search too weak. It does NOT prove the
+// expression is REACHED: a branch left in the file but never rendered still
+// reads as a read. Proving that needs the card's own tests, and it has them —
+// one per renewal cause, asserting the notice a rep actually sees. This gate is
+// the floor under those: it fails when a cause has no branch at all, which is
+// the case a card's tests cannot cover, because nobody writes a test for a
+// notice they did not know to add.
+func codeOf(source string) string {
+	var out strings.Builder
+	for i := 0; i < len(source); i++ {
+		switch {
+		case strings.HasPrefix(source[i:], "//"):
+			end := strings.IndexByte(source[i:], '\n')
+			if end < 0 {
+				return out.String()
+			}
+			i += end
+			out.WriteByte('\n')
+		case strings.HasPrefix(source[i:], "/*"):
+			end := strings.Index(source[i+2:], "*/")
+			if end < 0 {
+				return out.String()
+			}
+			i += 2 + end + 1
+			out.WriteByte(' ')
+		case source[i] == '"' || source[i] == '\'' || source[i] == '`':
+			// A literal runs to its unescaped closing quote. An unterminated
+			// one ends the scan rather than swallowing the rest as code.
+			quote := source[i]
+			j := i + 1
+			for j < len(source) && source[j] != quote {
+				if source[j] == '\\' {
+					j++
+				}
+				j++
+			}
+			if j >= len(source) {
+				return out.String()
+			}
+			i = j
+			out.WriteByte(' ')
+		default:
+			out.WriteByte(source[i])
+		}
+	}
+	return out.String()
 }
