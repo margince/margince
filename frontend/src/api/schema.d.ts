@@ -19695,6 +19695,17 @@ export interface components {
              */
             credential_usable: boolean;
             /**
+             * @description Whether that passport still covers what this agent does. Read at request time
+             *     and never stored, so it must not be cached across requests.
+             *
+             *     False against `granted` is the second renewal case, distinct from an expiry:
+             *     the credential works, and does not reach far enough. A client must offer
+             *     renewal on it exactly as it does on `credential_usable: false`, and say which
+             *     of the two happened — a rep sent looking for a lapse that never happened
+             *     cannot fix anything.
+             */
+            credential_funds_agent: boolean;
+            /**
              * Format: date-time
              * @description When the rep last answered. Absent when they never were asked.
              */

@@ -69,6 +69,47 @@ func scopesForAgent(spec string) ([]string, bool) {
 	return scopes, known
 }
 
+// credentialFundsAgent reports whether a passport minted at some past moment
+// still covers what this agent needs today.
+//
+// A standing grant mints the scopes the agent needed AT THAT MOMENT. When the
+// agent later gains a tool that needs a wider scope, every already-minted
+// passport is short — and the run does not fail, it DEGRADES: the runner drops
+// the unfunded tools before the first model step, which is right for a
+// misconfiguration and invisible to the rep. No error, no expiry, no prompt;
+// their overnight work simply stops. Liveness cannot see it, because the
+// passport is neither revoked nor expired. It is perfectly good authority for
+// a job this agent no longer does.
+//
+// The comparison is against what would be MINTED today, not against the tools
+// directly, and that is what makes it derived rather than a second opinion: the
+// mint reads grantScopes, this reads grantScopes, and the gate below holds
+// grantScopes at or above what the agent's tools require. There is one place a
+// requirement can be stated and all three read it.
+//
+// Held by: TestEveryGrantFundsTheToolsItsAgentDeclares
+// (backend/gates/agentgrantscopes_test.go)
+//
+// An agent this build cannot spell funds nothing. There is no scope list to
+// meet, and answering "covered" about a requirement nobody can state would be
+// the silent failure this exists to end.
+func credentialFundsAgent(spec string, held []string) bool {
+	need, known := scopesForAgent(spec)
+	if !known {
+		return false
+	}
+	carried := make(map[string]bool, len(held))
+	for _, scope := range held {
+		carried[scope] = true
+	}
+	for _, scope := range need {
+		if !carried[scope] {
+			return false
+		}
+	}
+	return true
+}
+
 // ListMyAgentGrants implements (GET /me/agent-grants).
 //
 // It enumerates the CATALOG rather than the stored rows, because "never asked"
@@ -223,6 +264,7 @@ func renderAgentGrant(spec string, answer agentgrant.Answer, found bool) crmcont
 		return out
 	}
 	out.CredentialUsable = answer.CredentialUsable
+	out.CredentialFundsAgent = credentialFundsAgent(spec, answer.PassportScopes)
 	decided := answer.DecidedAt
 	out.DecidedAt = &decided
 	switch answer.State {

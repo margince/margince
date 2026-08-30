@@ -72,6 +72,65 @@ func TestGrantingMintsTheRepsOwnCredentialAndNothingWider(t *testing.T) {
 	}
 }
 
+// TestAGrantMintedBeforeTheAgentGrewReportsItselfShort is the case liveness
+// cannot see.
+//
+// The passport is neither revoked nor expired, so `credential_usable` is true —
+// it is perfectly good authority for the job the agent did when the rep
+// answered. What it is not is enough for the job the agent does now. Nothing
+// fails: the runner degrades the unfunded tools before the first model step and
+// the rep's brief is simply not prepared, silently, at 2am. The only thing that
+// can tell them is this field.
+//
+// The passport is narrowed IN PLACE rather than minted narrow, because that is
+// what actually happened: the rows were written by an older build and no
+// migration or renewal path touches them.
+func TestAGrantMintedBeforeTheAgentGrewReportsItselfShort(t *testing.T) {
+	re := setupRunner(t)
+	if status := re.answerGrant(t, true); status != http.StatusOK {
+		t.Fatalf("grant → %d", status)
+	}
+	if _, err := re.Owner.Exec(context.Background(), `
+		UPDATE passport SET scopes = ARRAY['read']
+		 WHERE id = (SELECT passport_id FROM agent_standing_grant
+		              WHERE agent_spec = 'morning_brief')`); err != nil {
+		t.Fatalf("narrowing the credential to what an older build minted: %v", err)
+	}
+
+	var body struct {
+		Data []struct {
+			Spec             string `json:"spec"`
+			State            string `json:"state"`
+			CredentialUsable bool   `json:"credential_usable"`
+			FundsAgent       bool   `json:"credential_funds_agent"`
+		} `json:"data"`
+	}
+	if status := re.Call(t, "GET", "/v1/me/agent-grants", nil, nil, &body); status != http.StatusOK {
+		t.Fatalf("listing the rep's grants → %d", status)
+	}
+	found := false
+	for _, grant := range body.Data {
+		if grant.Spec != "morning_brief" {
+			continue
+		}
+		found = true
+		if grant.State != "granted" {
+			t.Errorf("state = %q, want granted: the rep answered and nothing has changed that", grant.State)
+		}
+		if !grant.CredentialUsable {
+			t.Error("credential_usable is false on a passport that is neither revoked nor expired — " +
+				"reporting an expiry sends the rep looking for a lapse that never happened")
+		}
+		if grant.FundsAgent {
+			t.Error("credential_funds_agent is true on a passport minted before the agent gained a write tool: " +
+				"the run degrades every night and the rep is told nothing is wrong")
+		}
+	}
+	if !found {
+		t.Fatal("the rep's own grant list does not carry morning_brief, so this test asserted nothing")
+	}
+}
+
 func TestWithdrawingEndsTheAuthorityRatherThanTheReference(t *testing.T) {
 	re := setupRunner(t)
 	if status := re.answerGrant(t, true); status != http.StatusOK {

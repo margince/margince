@@ -118,6 +118,53 @@ it("the settings card shows the stored answer and writes when flipped", async ()
   await waitFor(() => expect(written).toEqual([{ granted: false }]));
 });
 
+it("tells the rep the agent outgrew their authority, not that it lapsed", async () => {
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [
+          // Live authority — neither revoked nor expired — for a job this
+          // agent no longer does. The run does not fail; it degrades the
+          // unfunded tools away and prepares nothing, silently, at 2am.
+          {
+            spec: "morning_brief",
+            state: "granted",
+            credential_usable: true,
+            credential_funds_agent: false,
+          },
+        ],
+      }),
+  });
+  render(<OvernightGrantCard />);
+
+  expect(await screen.findByText(en["overnightGrant.renewScope"])).toBeTruthy();
+  // NOT the expiry notice: nothing expired, and telling the rep it did sends
+  // them looking for a lapse that never happened.
+  expect(screen.queryByText(en["overnightGrant.renew"])).toBeNull();
+  expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+});
+
+it("says nothing when the authority still covers the agent", async () => {
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [
+          {
+            spec: "morning_brief",
+            state: "granted",
+            credential_usable: true,
+            credential_funds_agent: true,
+          },
+        ],
+      }),
+  });
+  render(<OvernightGrantCard />);
+
+  await screen.findByTestId("overnight-grant-toggle");
+  expect(screen.queryByText(en["overnightGrant.renewScope"])).toBeNull();
+  expect(screen.queryByText(en["overnightGrant.renew"])).toBeNull();
+});
+
 it("tells the rep their authority died rather than that they declined", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
@@ -132,8 +179,11 @@ it("tells the rep their authority died rather than that they declined", async ()
 
   expect(await screen.findByText(en["overnightGrant.renew"])).toBeTruthy();
   // NOT the decline warning: they already answered, and showing that would put
-  // a settled question back in front of them.
+  // a settled question back in front of them. And not the scope notice either:
+  // a lapsed passport funds nothing, so BOTH would be true of it and a rep
+  // reading two notices cannot tell which one to act on.
   expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+  expect(screen.queryByText(en["overnightGrant.renewScope"])).toBeNull();
 });
 
 it("says the same thing about the same authority in both places", async () => {

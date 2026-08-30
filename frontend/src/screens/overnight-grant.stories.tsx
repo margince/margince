@@ -23,6 +23,10 @@ type Story = StoryObj<typeof OvernightGrantCard>;
 function grantsResponse(
   state: "granted" | "declined" | "never_asked",
   credentialUsable = true,
+  // Defaulted, because the field's ABSENCE from the response reads as false
+  // and put the scope-renewal notice on every granted story in this file. A
+  // story about anything else shows a covered credential.
+  credentialFundsAgent = true,
 ) {
   return jsonResponse({
     data: [
@@ -30,6 +34,7 @@ function grantsResponse(
         spec: "morning_brief",
         state,
         credential_usable: credentialUsable,
+        credential_funds_agent: credentialFundsAgent,
         decided_at: "2026-08-20T06:00:00Z",
       },
     ],
@@ -94,6 +99,22 @@ export const SettingsNeedsRenewal: Story = {
   render: () => {
     installFetchStub({
       "GET /me/agent-grants": () => grantsResponse("granted", false),
+    });
+    return (
+      <StoryProviders>
+        <OvernightGrantCard />
+      </StoryProviders>
+    );
+  },
+};
+
+/** The rep agreed, their credential still works, and the agent has since
+ * learned to do more than it covers. Its own notice: nothing expired, and
+ * telling them it did sends them looking for a lapse that never happened. */
+export const SettingsNeedsWiderAuthority: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me/agent-grants": () => grantsResponse("granted", true, false),
     });
     return (
       <StoryProviders>

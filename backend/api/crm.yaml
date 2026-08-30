@@ -27036,7 +27036,7 @@ components:
     MyAgentGrant:
       type: object
       additionalProperties: false
-      required: [spec, state, credential_usable]
+      required: [spec, state, credential_usable, credential_funds_agent]
       properties:
         spec: { $ref: '#/components/schemas/ScheduledAgentName' }
         state: { $ref: '#/components/schemas/MyAgentGrantState' }
@@ -27047,6 +27047,23 @@ components:
             not expired. Read from the passport at request time, never stored, because it
             changes at a moment nothing writes to the grant. False against `granted` is
             the renewal case: the rep agreed and has nothing to act with.
+        # A grant mints the scopes the agent needed at the moment it was answered, and
+        # nothing renews them: when the agent gains a tool needing a wider scope, every
+        # already-minted passport is short. The run does not fail, it degrades the
+        # unfunded tools away before its first model step — so this is the only place a
+        # rep can be told. Derived per request from what this build would mint today,
+        # never stored, for the same reason credential_usable is not.
+        credential_funds_agent:
+          type: boolean
+          description: |
+            Whether that passport still covers what this agent does. Read at request time
+            and never stored, so it must not be cached across requests.
+
+            False against `granted` is the second renewal case, distinct from an expiry:
+            the credential works, and does not reach far enough. A client must offer
+            renewal on it exactly as it does on `credential_usable: false`, and say which
+            of the two happened — a rep sent looking for a lapse that never happened
+            cannot fix anything.
         decided_at:
           type: string
           format: date-time

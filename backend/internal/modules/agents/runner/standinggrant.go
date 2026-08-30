@@ -66,7 +66,12 @@ type StandingGrant struct {
 	// not expired. Read from the passport rather than stored here, because it
 	// changes at a moment nothing writes to this table.
 	CredentialUsable bool
-	DecidedAt        time.Time
+	// PassportScopes is what the credential was minted with. Reported rather
+	// than judged: this package knows what a passport HOLDS, and the module
+	// that mints them knows what an agent NEEDS. A passport minted before an
+	// agent gained a tool is short, and neither fact alone can say so.
+	PassportScopes []string
+	DecidedAt      time.Time
 }
 
 // Live reports whether this grant can authorize a run right now: the rep said
@@ -134,12 +139,13 @@ func grantForTx(ctx context.Context, tx pgx.Tx, userID ids.UserID, spec string) 
 	// about whether their authority still works.
 	row := tx.QueryRow(ctx, `
 		SELECT g.user_id, g.agent_spec, g.state, g.passport_id, g.decided_at,
-		       coalesce(p.revoked_at IS NULL AND p.expires_at > now(), false)
+		       coalesce(p.revoked_at IS NULL AND p.expires_at > now(), false),
+		       coalesce(p.scopes, '{}')
 		  FROM agent_standing_grant g
 		  LEFT JOIN passport p ON p.id = g.passport_id
 		 WHERE g.user_id = $1 AND g.agent_spec = $2`, userID, spec)
 	switch err := row.Scan(&out.UserID, &out.Spec, &out.State,
-		&out.PassportID, &out.DecidedAt, &out.CredentialUsable); {
+		&out.PassportID, &out.DecidedAt, &out.CredentialUsable, &out.PassportScopes); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return StandingGrant{}, false, nil
 	case err != nil:
@@ -206,6 +212,11 @@ func (s *Store) LiveGrantsFor(ctx context.Context, spec string) ([]StandingGrant
 		defer rows.Close()
 		for rows.Next() {
 			var g StandingGrant
+			// PassportScopes is deliberately not read here. The fan-out asks
+			// whether a credential is live tonight, which the JOIN above has
+			// already decided; whether it still FUNDS the agent is a question
+			// the rep's own card asks, through grantForTx. Pulling the array
+			// for every live grant on every nightly pass would buy nothing.
 			if err := rows.Scan(&g.UserID, &g.Spec, &g.State, &g.PassportID,
 				&g.DecidedAt, &g.CredentialUsable); err != nil {
 				return fmt.Errorf("scan a standing grant: %w", err)
