@@ -977,6 +977,22 @@ public.capture_freemail_domain.domain text NOT NULL gen=- def=-
 public.capture_freemail_domain.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_freemail_domain.kind text NOT NULL gen=- def=-
 public.capture_freemail_domain_pkey CREATE UNIQUE INDEX capture_freemail_domain_pkey ON public.capture_freemail_domain USING btree (id)
+public.capture_owner_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_owner_identity.capture_owner_identity_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
+public.capture_owner_identity.capture_owner_identity_pkey PRIMARY KEY (id)
+public.capture_owner_identity.capture_owner_identity_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text])))
+public.capture_owner_identity.capture_owner_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_owner_identity.capture_owner_identity_user_value_key UNIQUE (user_id, kind, value)
+public.capture_owner_identity.capture_owner_identity_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+public.capture_owner_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_owner_identity.created_by text NOT NULL gen=- def=-
+public.capture_owner_identity.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_owner_identity.kind text NOT NULL gen=- def=-
+public.capture_owner_identity.source text NOT NULL gen=- def='user'::text
+public.capture_owner_identity.user_id uuid NOT NULL gen=- def=-
+public.capture_owner_identity.value text NOT NULL gen=- def=-
+public.capture_owner_identity_pkey CREATE UNIQUE INDEX capture_owner_identity_pkey ON public.capture_owner_identity USING btree (id)
+public.capture_owner_identity_user_value_key CREATE UNIQUE INDEX capture_owner_identity_user_value_key ON public.capture_owner_identity USING btree (user_id, kind, value)
 public.capture_pending_counterparty acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_pending_counterparty.activity_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.attempts integer NOT NULL gen=- def=0
