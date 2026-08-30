@@ -144,18 +144,24 @@ func TestOidcSignInCallbackUnknownProviderIs404(t *testing.T) {
 	}
 }
 
-func TestOidcSignInCallbackProviderDenialIsRefusedBeforeCookieCheck(t *testing.T) {
+// TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSucceed
+// pins the `error` branch specifically: a verifier, exchanger and state
+// signer that would all otherwise complete the round trip successfully, and
+// a valid state cookie, so the ONLY thing standing between this request and
+// a minted session is the `error` parameter. A test with no cookie at all
+// (the earlier version of this test) would pass identically whether or not
+// the `error` branch existed — it would just hit the missing-cookie refusal
+// instead, which proves nothing about ordering.
+func TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSucceed(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": fixedVerifier{}},
-		map[string]OIDCExchanger{"google": fixedExchanger{}},
-		fixedStateSigner{},
+		map[string]OIDCVerifier{"google": fixedVerifier{email: "carol@example.com", sub: "sub-carol", emailVerified: true}},
+		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused-because-denied"}},
+		fixedStateSigner{provider: "google", nonce: "y", codeVerifier: "v"},
 		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
-	// No cookie set at all — Google sent `error` instead of `code` because the
-	// user denied consent, so the refusal must not depend on a cookie the
-	// browser was never going to bring back.
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?error=access_denied&state=y", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
@@ -164,6 +170,11 @@ func TestOidcSignInCallbackProviderDenialIsRefusedBeforeCookieCheck(t *testing.T
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
 		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookieName {
+			t.Fatal("a denied consent must never set the session cookie")
+		}
 	}
 }
 

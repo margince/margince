@@ -11,6 +11,8 @@ CREATE TABLE federated_identity (
 
 -- No standalone index on user_id: the UNIQUE (user_id, provider) constraint
 -- above already carries a btree index leading with user_id, which serves
--- every per-user lookup this module makes (resolveFederatedUser,
--- linkFederatedIdentity) without a second index paying write cost on every
--- insert.
+-- every WHERE user_id = ... lookup this module makes (linkFederatedIdentity's
+-- read-before-insert, and the CASCADE delete path above) without a second
+-- index paying write cost on every insert. resolveFederatedUser's own lookup
+-- filters by (provider, subject) instead, which is what the OTHER unique
+-- constraint's index already serves.

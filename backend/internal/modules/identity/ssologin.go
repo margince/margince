@@ -29,7 +29,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -69,73 +68,32 @@ type OIDCStateSigner interface {
 	Verify(token string) (provider, nonce, codeVerifier string, err error)
 }
 
-// OIDCRoutes is the fixed set of external URLs the OIDC login flow redirects
-// through — never derived from the request Host. A struct rather than three
-// positional string parameters: WithOIDCProviders took RedirectBase,
-// PostLoginURL, FailureURL positionally before this type existed, and a
-// transposed pair of same-typed arguments there compiles clean and ships a
-// login that lands every success on the failure page.
-type OIDCRoutes struct {
-	// RedirectBase is the api's own externally-reachable origin — where
-	// GOOGLE sends the browser back (the authorization request's
-	// redirect_uri).
-	RedirectBase string
-	// PostLoginURL is the SPA's origin — where the callback sends the
-	// browser on success.
-	PostLoginURL string
-	// FailureURL is the SPA's neutral failure marker — where the callback
-	// sends the browser on refusal.
-	FailureURL string
-}
-
-// callbackURI is the one place /auth/oidc/{provider}/callback's absolute URL
-// is built, so the authorization request (StartOidcSignIn) and the token
-// exchange (OidcSignInCallback) can never drift apart — Google requires the
-// two to be byte-identical, and a redirect_uri_mismatch from a future edit to
-// only one call site would explain itself to nobody.
-func (h Handlers) callbackURI(provider string) string {
-	return h.oidcRoutes.RedirectBase + "/auth/oidc/" + provider + "/callback"
-}
-
-// WithOIDCProviders injects the configured external identity providers and
-// their verifiers/exchangers for the /auth/oidc/{provider}/start and
-// /callback routes. Keyed by provider key ("google").
-func (h Handlers) WithOIDCProviders(
-	providers map[string]OIDCProviderConfig,
-	verifiers map[string]OIDCVerifier,
-	exchangers map[string]OIDCExchanger,
-	signer OIDCStateSigner,
-	routes OIDCRoutes,
-) Handlers {
-	h.oidcProviders = providers
-	h.oidcVerifiers = verifiers
-	h.oidcExchangers = exchangers
-	h.stateSigner = signer
-	h.oidcRoutes = routes
-	if h.oidcPerIP == nil {
-		h.oidcPerIP = ratelimit.New(30, time.Minute)
-	}
-	return h
-}
-
-// WithOIDCCapabilitiesFn injects how GetAuthCapabilities discovers the
-// currently-configured provider list. Separate from WithOIDCProviders on
-// purpose: that call wires the start/callback routes from a fixed provider
-// map; this one is read fresh on every request, so it can reflect a
-// Settings-configured Google app that changed after boot without requiring a
-// restart.
-func (h Handlers) WithOIDCCapabilitiesFn(fn func() []OIDCProviderConfig) Handlers {
-	h.oidcCapabilitiesFn = fn
-	return h
-}
-
 const (
 	oidcStateTTL        = 10 * time.Minute
 	oidcNonceBytes      = 32
 	oidcVerifierLen     = 64 // 64 bytes -> an 86-char base64url verifier, inside RFC 7636's 43-128 character range.
 	oidcLoginCookie     = "oidc_login_state"
 	oidcLoginCookiePath = "/v1/auth/oidc"
+	// oidcLoggedErrorMaxLen bounds how much of Google's `error` query value
+	// this route ever writes to system_log. It is a public, unauthenticated
+	// callback the browser's address bar reaches directly, so the value is
+	// caller-controlled — the per-IP limiter bounds request RATE, not the
+	// SIZE of what one request can persist. Standard OAuth error codes
+	// (access_denied, invalid_scope, ...) are a handful of characters; this
+	// is generous headroom for those, not an attempt to keep a longer value.
+	oidcLoggedErrorMaxLen = 64
 )
+
+// truncateForLog caps s to n bytes for a log/audit field a caller controls —
+// never used on a value already bounded by its own contract (a UUID, an
+// enum). Byte-based cuts can split a multi-byte rune at the boundary; that
+// is acceptable for a diagnostic trail no code parses back.
+func truncateForLog(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}
 
 // setLoginStateCookie/clearLoginStateCookie own the one cookie this flow
 // needs, right beside setSessionCookie (handlers.go) which already does the
@@ -241,9 +199,13 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// Google sends `error` instead of `code` when the user denies consent —
 	// e.g. access_denied. Caught here, before the cookie/state checks below,
 	// so a denial is refused for what it is rather than for a code the
-	// browser was never going to bring back.
+	// browser was never going to bring back. The cookie is cleared on this
+	// path too: it is a one-shot regardless of which refusal consumes it,
+	// and leaving it set here would keep the signed PKCE state usable for
+	// its full 10-minute TTL instead of being spent by this request.
 	if params.Error != nil && *params.Error != "" {
-		fail(ctx, "provider error: "+*params.Error, nil)
+		clearLoginStateCookie(w)
+		fail(ctx, "provider error: "+truncateForLog(*params.Error, oidcLoggedErrorMaxLen), nil)
 		return
 	}
 
