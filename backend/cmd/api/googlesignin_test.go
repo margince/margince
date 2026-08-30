@@ -5,8 +5,13 @@ package main
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 func TestGoogleSignInOptionsRefusesAMalformedPublicBaseURL(t *testing.T) {
@@ -38,6 +43,43 @@ func TestGoogleSignInOptionsAcceptsABareOrigin(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "google sign-in enabled") {
 		t.Fatalf("boot log = %q, want the enabled line", stdout.String())
+	}
+}
+
+// TestGoogleSignInOptionsSplitOriginUsesTheAPIHostForGoogleAndThePublicHostForTheLanding
+// holds the same split gmail.go's callbackURL and connectors_outcome.go's
+// landingURL already make: on a dev stack where the api and the SPA are
+// different origins (--api-base-url set), the redirect_uri sent to Google
+// must reach the api, while the human-facing landing after the round trip
+// must reach the SPA — the two are NOT the same base.
+func TestGoogleSignInOptionsSplitOriginUsesTheAPIHostForGoogleAndThePublicHostForTheLanding(t *testing.T) {
+	cfg := apiConfig{
+		gmailClientID:     "cid",
+		gmailClientSecret: "secret",
+		connectorStateKey: "0123456789012345678901234567890123",
+		publicBaseURL:     "https://app.example.com",
+		apiBaseURL:        "https://api.example.com",
+	}
+	opts, err := googleSignInOptions(cfg, &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("googleSignInOptions: %v", err)
+	}
+	if len(opts) != 1 {
+		t.Fatalf("opts = %v, want exactly one Option", opts)
+	}
+
+	var s compose.Server
+	opts[0](&s, nil)
+
+	startReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
+	startRec := httptest.NewRecorder()
+	s.StartOidcSignIn(startRec, startReq, "google")
+	loc, err := url.Parse(startRec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parse Location: %v", err)
+	}
+	if got := loc.Query().Get("redirect_uri"); got != "https://api.example.com/v1/auth/oidc/google/callback" {
+		t.Fatalf("redirect_uri = %q, want the api host", got)
 	}
 }
 

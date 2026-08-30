@@ -47,7 +47,21 @@ type GoogleSignInConfig struct {
 	ClientID     string
 	ClientSecret string
 	StateKey     string
-	RedirectBase string // e.g. "https://app.example.com" — never derived from Host
+	// RedirectBase is where GOOGLE sends the browser back to — the api's own
+	// externally-reachable origin (cfg.apiBaseURL, falling back to
+	// cfg.publicBaseURL), never derived from Host. A split dev stack (SPA on
+	// one port, api on another) needs this distinct from PostLoginURL/
+	// FailureURL below: connectorHandlers.callbackURL (connectors.go) makes
+	// the same distinction for the connector OAuth flows, and Google sign-in
+	// mirrors it rather than inventing a second convention.
+	RedirectBase string
+	// PostLoginURL/FailureURL are where the CALLBACK sends the browser once
+	// Google's round trip is done — the SPA's own origin (cfg.publicBaseURL),
+	// which on a split dev stack is a DIFFERENT host than RedirectBase above.
+	// Absolute for the same reason connectorHandlers.landingURL builds an
+	// absolute URL rather than a bare path: the callback handler runs on the
+	// api's origin, so a relative Location header would resolve against the
+	// api, not the SPA.
 	PostLoginURL string
 	FailureURL   string
 }

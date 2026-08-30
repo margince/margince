@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/compose"
 )
@@ -17,21 +18,37 @@ import (
 // per-provider lookup handles that; nothing here needs to 501 a route
 // explicitly).
 //
+// RedirectBase (where Google sends the browser back) and PostLoginURL/
+// FailureURL (where the callback then sends it) deliberately read DIFFERENT
+// bases, the same split gmail.go's callbackURL and connectors_outcome.go's
+// landingURL already make for the connector flow: --api-base-url is set only
+// on a deployment where the api and the SPA are different origins (this
+// repo's own per-worktree dev stack is exactly that), and Google's
+// redirect_uri must reach the api while the human-facing landing must reach
+// the SPA.
+//
 // RedirectBase is validated here rather than trusted from bindInstallation's
 // own --public-base-url check: that check runs only when
 // mcp.connector_enabled, and an installation that runs Google sign-in
 // without the MCP connector would otherwise bake a malformed or
 // credential-bearing base straight into the redirect_uri this sends to
 // Google — a boot-time refusal is the only place that can catch it before
-// it reaches a request Google's own server logs.
+// it reaches a request Google's own server logs. --api-base-url is not
+// separately validated for the same reason gmail.go/graph.go's own APIBaseURL
+// fields are not: it is an operator-supplied override of an already-validated
+// origin, not a second untrusted input.
 func googleSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, error) {
+	redirectBase := cfg.apiBaseURL
+	if redirectBase == "" {
+		redirectBase = cfg.publicBaseURL
+	}
 	ssoCfg := compose.GoogleSignInConfig{
 		ClientID:     cfg.gmailClientID,
 		ClientSecret: cfg.gmailClientSecret,
 		StateKey:     cfg.connectorStateKey,
-		RedirectBase: cfg.publicBaseURL,
-		PostLoginURL: "/",
-		FailureURL:   "/#/login?oidc=failed",
+		RedirectBase: redirectBase,
+		PostLoginURL: strings.TrimRight(cfg.publicBaseURL, "/") + "/",
+		FailureURL:   strings.TrimRight(cfg.publicBaseURL, "/") + "/#/login?oidc=failed",
 	}
 	if ssoCfg.Enabled() {
 		if err := validatePublicBaseURL(cfg.publicBaseURL); err != nil {
