@@ -59,39 +59,17 @@ func (s *Store) EdgeFactsForReverse(ctx context.Context, tx pgx.Tx, id ids.UUID)
 	if err != nil {
 		return EdgeFacts{}, err
 	}
-	anchor, _ := relationshipAnchor(row.Kind)
-	facts := EdgeFacts{
+	anchor, anchorID, err := anchorIDOf(row)
+	if err != nil {
+		return EdgeFacts{}, err
+	}
+	return EdgeFacts{
 		Kind:     row.Kind,
 		Version:  row.Version,
 		Archived: row.ArchivedAt != nil,
 		Anchor:   anchor,
-	}
-	facts.AnchorID, err = anchorIDOf(row, anchor)
-	if err != nil {
-		return EdgeFacts{}, err
-	}
-	return facts, nil
-}
-
-// anchorIDOf names the record whose authority governs this edge. An edge with no
-// anchor id is a row no kind's shape admits, and answering "writable" about a
-// record that is not there would light a button on a write that cannot happen.
-func anchorIDOf(row relationshipRow, anchor string) (ids.UUID, error) {
-	var id *ids.UUID
-	switch anchor {
-	case anchorPerson:
-		id = untypedPtr(row.PersonID)
-	case anchorDeal:
-		id = untypedPtr(row.DealID)
-	case projectObjectName:
-		id = untypedPtr(row.ProjectID)
-	default:
-		id = untypedPtr(row.OrganizationID)
-	}
-	if id == nil {
-		return ids.UUID{}, fmt.Errorf("people: %s edge %s names no %s to anchor on", row.Kind, row.ID, anchor)
-	}
-	return *id, nil
+		AnchorID: anchorID,
+	}, nil
 }
 
 // RefuseEdgeWrite answers the OBJECT half of the authority the inverse of one

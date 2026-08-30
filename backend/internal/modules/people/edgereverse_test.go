@@ -80,15 +80,23 @@ func TestAnEdgeImageValueOfTheWrongShapeIsAFault(t *testing.T) {
 // hold. A row holding none is a shape no kind admits, and answering "writable"
 // about a record that is not there would light a button on a write that cannot
 // happen.
+//
+// The object comes back with the id rather than being handed in: the caller
+// that names the anchor and the switch that reads it off the row are one
+// answer now, so a caller cannot ask for one kind's anchor and be given
+// another kind's column.
 func TestAnEdgeWithNoAnchorIsAFaultRatherThanAnEmptyAnswer(t *testing.T) {
 	t.Parallel()
-	if _, err := anchorIDOf(relationshipRow{ID: ids.NewV7(), Kind: "employment"}, anchorPerson); err == nil {
+	if _, _, err := anchorIDOf(relationshipRow{ID: ids.NewV7(), Kind: "employment"}); err == nil {
 		t.Error("an employment with no person was given an anchor")
 	}
 	person := ids.From[ids.PersonKind](ids.NewV7())
-	got, err := anchorIDOf(relationshipRow{Kind: "employment", PersonID: &person}, anchorPerson)
+	object, got, err := anchorIDOf(relationshipRow{Kind: "employment", PersonID: &person})
 	if err != nil {
 		t.Fatalf("anchoring an employment on its person: %v", err)
+	}
+	if object != anchorPerson {
+		t.Errorf("anchor object = %q, want %q — an employment annotates its person", object, anchorPerson)
 	}
 	if got != person.UUID {
 		t.Errorf("anchor = %s, want the person the employment names", got)

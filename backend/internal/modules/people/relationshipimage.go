@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // relationshipFieldImage is the edge as its own fields: every column
@@ -74,17 +73,13 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 func emitRelationshipChangeWithEvidence(ctx context.Context, tx pgx.Tx, action string,
 	before map[string]any, rel relationshipRow, evidence map[string]any,
 ) error {
-	anchorObject, _ := relationshipAnchor(rel.Kind)
-	var anchorID ids.UUID
-	switch anchorObject {
-	case anchorPerson:
-		anchorID = rel.PersonID.UUID
-	case anchorDeal:
-		anchorID = rel.DealID.UUID
-	case projectObjectName:
-		anchorID = rel.ProjectID.UUID
-	default:
-		anchorID = rel.OrganizationID.UUID
+	// Through the shared resolver, which answers with an error rather than a
+	// nil dereference: this used to read the endpoint pointer the kind implied
+	// straight off the row, and a kind whose shape did not hold would panic
+	// here instead of refusing.
+	anchorObject, anchorID, err := anchorIDOf(rel)
+	if err != nil {
+		return err
 	}
 	after := relationshipIdentityImage(rel)
 	if !storekit.AbsentImage(before) {
