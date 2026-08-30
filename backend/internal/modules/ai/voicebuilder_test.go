@@ -242,21 +242,44 @@ func TestSafeVoiceBuildFailureNamesTheCause(t *testing.T) {
 	}
 }
 
-// Every provider ADAPTER marks its own 429 — asserted through the real error
-// functions, not through the helper they share. Testing the helper alone let
-// three of four adapters drop their wrap with the suite still green.
-func TestEveryProviderAdapterMarksAQuotaRefusal(t *testing.T) {
-	// The body each vendor returns, so the adapter takes its structured path
-	// rather than its "could not parse" fallback.
+// Every provider ADAPTER classifies its own 429, asserted through the real
+// error functions rather than the helper they share — testing the helper alone
+// let three of four adapters drop their wrap with the suite still green.
+//
+// The bodies are the ones these vendors actually return.
+func TestEveryProviderAdapterClassifiesItsRefusal(t *testing.T) {
 	adapters := []struct {
-		name string
-		body string
-		read func(*http.Response) error
+		name     string
+		quota    string
+		throttle string
+		read     func(*http.Response) error
 	}{
-		{"gemini", `{"error":{"status":"RESOURCE_EXHAUSTED","message":"cap reached"}}`, geminiError},
-		{"openai", `{"error":{"type":"insufficient_quota","message":"cap reached"}}`, openaiError},
-		{"anthropic", `{"error":{"type":"rate_limit_error","message":"cap reached"}}`, anthropicError},
-		{"openai-compat", `{"error":{"type":"insufficient_quota","message":"cap reached"}}`, openAICompatError},
+		{
+			name:     "gemini",
+			quota:    `{"error":{"status":"RESOURCE_EXHAUSTED","message":"Your project has exceeded its monthly spending cap."}}`,
+			throttle: `{"error":{"status":"RESOURCE_EXHAUSTED","message":"Rate limit exceeded for this model."}}`,
+			read:     geminiError,
+		},
+		{
+			name:     "openai",
+			quota:    `{"error":{"type":"insufficient_quota","message":"You exceeded your current quota, please check your plan and billing details."}}`,
+			throttle: `{"error":{"type":"rate_limit_exceeded","message":"Rate limit reached for gpt-4o."}}`,
+			read:     openaiError,
+		},
+		{
+			name:     "anthropic",
+			quota:    `{"error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the API."}}`,
+			throttle: `{"error":{"type":"rate_limit_error","message":"Number of requests has exceeded your rate limit."}}`,
+			read:     anthropicError,
+		},
+		{
+			// The broker shape: its OWN message says nothing, and the vendor's
+			// sentence is in metadata.raw. This is the live OpenRouter answer.
+			name:     "openai-compat",
+			quota:    `{"error":{"message":"Provider returned error","metadata":{"provider_name":"Mistral","raw":"Insufficient credits to run this request.","limit_source":"account_credits"}}}`,
+			throttle: `{"error":{"message":"Provider returned error","metadata":{"provider_name":"Mistral","raw":"mistralai/mistral-large-2512 is temporarily rate-limited upstream. Please retry shortly","limit_source":"upstream_provider_shared_pool"}}}`,
+			read:     openAICompatError,
+		},
 	}
 	for _, adapter := range adapters {
 		t.Run(adapter.name, func(t *testing.T) {
@@ -270,35 +293,62 @@ func TestEveryProviderAdapterMarksAQuotaRefusal(t *testing.T) {
 				return adapter.read(resp)
 			}
 
-			// An account with nothing left names no moment to come back at.
-			refusal := read(http.StatusTooManyRequests, adapter.body, "")
-			if !errors.Is(refusal, ErrProviderQuota) {
-				t.Fatalf("a 429 naming no retry moment is a quota refusal: %v", refusal)
+			quota := read(http.StatusTooManyRequests, adapter.quota, "")
+			if !errors.Is(quota, ErrProviderQuota) || errors.Is(quota, ErrProviderThrottled) {
+				t.Fatalf("an account with nothing left is a quota refusal: %v", quota)
 			}
-			if !strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", refusal)), "out of budget") {
+			if !strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", quota)), "out of budget") {
 				t.Fatal("the build message names the account, not the model")
 			}
 
-			// A burst limit says when to return, and is not the same failure.
-			throttle := read(http.StatusTooManyRequests, adapter.body, "30")
+			// A burst limit is the opposite answer even though the status is
+			// the same, and it must never send the reader to their billing.
+			throttle := read(http.StatusTooManyRequests, adapter.throttle, "")
 			if !errors.Is(throttle, ErrProviderThrottled) || errors.Is(throttle, ErrProviderQuota) {
-				t.Fatalf("Retry-After marks a throttle, not an empty account: %v", throttle)
+				t.Fatalf("a busy model is a throttle, not an empty account: %v", throttle)
+			}
+			if strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", throttle)), "out of budget") {
+				t.Fatal("a throttle must not send the reader to a billing console")
 			}
 
-			// A body this adapter cannot parse still classifies by status:
-			// the fallback path is the one a vendor outage actually takes.
+			// A body this adapter cannot read still says the model was never
+			// reached, without inventing which limit was hit.
 			garbled := read(http.StatusTooManyRequests, "<html>gateway</html>", "")
-			if !errors.Is(garbled, ErrProviderQuota) {
-				t.Fatalf("an unparseable 429 body is still a refusal: %v", garbled)
+			if errors.Is(garbled, ErrProviderQuota) || errors.Is(garbled, ErrProviderThrottled) {
+				t.Fatalf("an unreadable body names no cause: %v", garbled)
+			}
+			if message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", garbled)); !strings.Contains(message, "turned the call away") {
+				t.Fatalf("an unclassified refusal still says the model never ran: %q", message)
 			}
 
-			// Any other status is an ordinary provider error. Dressing one up
-			// as a billing problem sends an operator to the wrong console.
-			other := read(http.StatusInternalServerError, adapter.body, "")
+			// Any other status is an ordinary provider error.
+			other := read(http.StatusInternalServerError, adapter.quota, "")
 			if errors.Is(other, ErrProviderQuota) || errors.Is(other, ErrProviderThrottled) {
 				t.Fatalf("only a 429 is a quota or throttle answer: %v", other)
 			}
 		})
+	}
+}
+
+// The broker's own message says nothing about the cause; the upstream vendor's
+// sentence and name are what a reader needs, so both reach the log line.
+func TestABrokerRefusalQuotesTheUpstreamVendor(t *testing.T) {
+	body := `{"error":{"message":"Provider returned error","metadata":{"provider_name":"Mistral","raw":"temporarily rate-limited upstream","limit_source":"upstream_provider_shared_pool"}}}`
+	resp := refusalResponse(http.StatusTooManyRequests, body, "")
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			t.Errorf("closing the provider response: %v", closeErr)
+		}
+	}()
+
+	err := openAICompatError(resp)
+	for _, want := range []string{"Mistral", "temporarily rate-limited upstream"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("the logged failure carries %q: %v", want, err)
+		}
+	}
+	if strings.Contains(err.Error(), "Provider returned error") {
+		t.Fatalf("the broker's own placeholder is not the cause: %v", err)
 	}
 }
 
@@ -312,5 +362,71 @@ func refusalResponse(status int, body, retryAfter string) *http.Response {
 		StatusCode: status,
 		Header:     header,
 		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+// Gemini spends RESOURCE_EXHAUSTED and the word "quota" on BOTH an exhausted
+// spending cap and an ordinary per-minute limit, so the words cannot separate
+// them. Only the retryable one carries a RetryInfo detail, and reading the
+// words alone is what told an operator with unspent credit to raise a limit.
+func TestGeminiQuotaWordingDoesNotHideARetryableLimit(t *testing.T) {
+	retryable := `{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"You exceeded your current quota. Quota exceeded for metric generate_requests_per_minute.","details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"45s"}]}}`
+	exhausted := `{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Your project has exceeded its monthly spending cap. Please go to AI Studio to manage your project spend cap."}}`
+
+	read := func(body string) error {
+		resp := refusalResponse(http.StatusTooManyRequests, body, "")
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				t.Errorf("closing the provider response: %v", closeErr)
+			}
+		}()
+		return geminiError(resp)
+	}
+
+	perMinute := read(retryable)
+	if !errors.Is(perMinute, ErrProviderThrottled) || errors.Is(perMinute, ErrProviderQuota) {
+		t.Fatalf("a limit the vendor offers a retry delay for is a throttle: %v", perMinute)
+	}
+	if strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", perMinute)), "out of budget") {
+		t.Fatal("a per-minute limit must not send the reader to a billing console")
+	}
+
+	spendCap := read(exhausted)
+	if !errors.Is(spendCap, ErrProviderQuota) || errors.Is(spendCap, ErrProviderThrottled) {
+		t.Fatalf("a spending cap with no retry offered is an account refusal: %v", spendCap)
+	}
+}
+
+// A vendor's sentence is text a REMOTE party chose. It reaches this
+// installation's logs, so it is redacted and bounded on the way — nothing else
+// guards that path.
+func TestABrokerSentenceIsRedactedAndBoundedBeforeItIsLogged(t *testing.T) {
+	leaky := `{"error":{"message":"Provider returned error","metadata":{"provider_name":"Mistral","raw":"upstream rejected key sk-or-v1-abcdefghijklmnopqrstuvwxyz012345 while calling the model"}}}`
+	resp := refusalResponse(http.StatusTooManyRequests, leaky, "")
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			t.Errorf("closing the provider response: %v", closeErr)
+		}
+	}()
+
+	err := openAICompatError(resp)
+	if strings.Contains(err.Error(), "sk-or-v1-abcdefghijklmnopqrstuvwxyz012345") {
+		t.Fatalf("a credential a vendor echoed back must not reach the log: %v", err)
+	}
+	if !strings.Contains(err.Error(), "Mistral") {
+		t.Fatalf("the vendor is still named, so the cause stays readable: %v", err)
+	}
+
+	// A body that lost its way into a message field is truncated rather than
+	// written whole.
+	long := `{"error":{"message":"Provider returned error","metadata":{"provider_name":"X","raw":"` + strings.Repeat("verbose ", 200) + `"}}}`
+	longResp := refusalResponse(http.StatusTooManyRequests, long, "")
+	defer func() {
+		if closeErr := longResp.Body.Close(); closeErr != nil {
+			t.Errorf("closing the provider response: %v", closeErr)
+		}
+	}()
+	if got := len(openAICompatError(longResp).Error()); got > providerTextMax+120 {
+		t.Fatalf("one logged vendor sentence is bounded; got %d characters", got)
 	}
 }

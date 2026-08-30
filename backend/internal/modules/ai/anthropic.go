@@ -329,9 +329,9 @@ func anthropicError(resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Type != "" {
-		return quotaWrapped(resp, fmt.Errorf("ai: anthropic: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
+		return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
 	}
-	return quotaWrapped(resp, fmt.Errorf("ai: anthropic: http %d", resp.StatusCode))
+	return providerRefusal(resp, "", fmt.Errorf("ai: anthropic: http %d", resp.StatusCode))
 }
 
 // anthropicStream parses the Messages SSE stream, yielding text deltas.
