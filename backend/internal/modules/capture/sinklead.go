@@ -33,10 +33,17 @@ import (
 // (the incumbent's id and the captured fields) for the caller to stage
 // after commit.
 func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields LeadFields) (datasource.EntityRef, *ids.LeadID, json.RawMessage, error) {
-	// Provider payloads carry whitespace; every downstream email
-	// comparison (suppression, dedupe, the DB lower()) assumes a
-	// trimmed address.
-	fields.Email = strings.TrimSpace(fields.Email)
+	// Provider payloads carry whitespace and arbitrary case; every downstream
+	// email comparison (suppression, dedupe, the DB lower()) assumes a trimmed,
+	// lowercased address.
+	//
+	// Lowercased HERE rather than left to the SQL, because the address also
+	// leaves this path in the dedupe payload, and the merge proposal's rejection
+	// memory is keyed on it. Two syncs of one upstream record differing only in
+	// case collide with the same lead — `email = lower($1)` — so an identity
+	// carrying the raw spelling would read them as two questions and forget a
+	// refusal the first time a provider changed its capitalisation.
+	fields.Email = strings.ToLower(strings.TrimSpace(fields.Email))
 	// The A13 resurrection guard: an erased subject's address
 	// refuses re-capture — deletion sticks. The natural key, not
 	// the address, names the skip (the log must not re-store PII).

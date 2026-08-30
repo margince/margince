@@ -51,7 +51,31 @@ type TranscriptStepProposal struct {
 	Owner       string                         `json:"owner"`
 	SourceLines []int                          `json:"source_lines"`
 	Links       []activities.ActivityLinkInput `json:"links"`
+	// Cited is the transcript's OWN words behind this step, and it is what a
+	// second reading of the same transcript has in common with the first.
+	//
+	// Nothing else here does. Summary and Owner are the model's prose and vary
+	// between readings; SourceLines is the model's citation and can shift by a
+	// line for the same sentence. The transcript is a fixed document, so the
+	// commitment it states is the one thing that holds still — which is what the
+	// rejection memory has to key on for a rep's "no" to survive somebody
+	// pressing read again.
+	//
+	// It duplicates the evidence snippet deliberately. A staging identity must be
+	// a string the PAYLOAD carries with the same value (canonicalIdentity
+	// enforces both), and evidence is a sibling record rather than part of the
+	// proposed change.
+	Cited string `json:"cited"`
 }
+
+// The payload keys the staging identity is drawn from. Each must spell exactly
+// what the struct tag above spells — canonicalIdentity refuses an identity field
+// the payload does not carry, so a typo here is a staging that fails when a rep
+// reads a transcript rather than at compile time.
+const (
+	transcriptIdentityCited = "cited"
+	transcriptIdentityOwner = "owner"
+)
 
 // UnmarshalTranscriptStepProposal reads back what was staged.
 func UnmarshalTranscriptStepProposal(raw json.RawMessage) (TranscriptStepProposal, error) {
@@ -111,11 +135,20 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	if err != nil {
 		return err
 	}
-	return store.FinishTranscriptRead(ctx, readID, activities.TranscriptReadOutcome{
+	outcome := activities.TranscriptReadOutcome{
 		Status:      activities.TranscriptReadDone,
 		ProposalIDs: staged,
 		LineCount:   len(reading.Lines),
-	})
+	}
+	if len(staged) == 0 {
+		// The reading found commitments and raised none of them: every one was
+		// already answered, either waiting in the queue or turned down before.
+		// That is a real outcome and it needs saying — a run that finishes with
+		// nothing and no reason reads exactly like a broken one, which is the
+		// distinction FinishTranscriptRead refuses to let collapse.
+		outcome.Detail = "every next step this transcript states has already been put to you"
+	}
+	return store.FinishTranscriptRead(ctx, readID, outcome)
 }
 
 // unreadableTranscript separates a refusal a rep can act on from a fault the
@@ -167,6 +200,7 @@ func (p *TranscriptProposer) stage(
 			Owner:       step.Owner,
 			SourceLines: step.SourceLines,
 			Links:       reading.Links,
+			Cited:       quotedFromTranscript(step, reading.Lines),
 		}
 		raw, err := json.Marshal(proposal)
 		if err != nil {
@@ -176,18 +210,49 @@ func (p *TranscriptProposer) stage(
 		if err != nil {
 			return nil, fmt.Errorf("compose: canonicalize transcript step proposal: %w", err)
 		}
-		approvalID, err := p.approval.Stage(ctx, approvals.StageInput{
+		// A rep can read the same transcript again — the in-flight uniqueness
+		// index covers only a queued or running reading — so a refused step must
+		// not come straight back. The identity is what the transcript itself
+		// says: the words behind the step, and who it names as promising them.
+		// Both hold still between readings of one document, where the model's
+		// summary and its line citation do not — so a diff hash remembers
+		// nothing.
+		//
+		// The owner is here to tell two commitments in ONE sentence apart. "I'll
+		// send pricing and Dana will book the call" cites one line twice, and on
+		// the quotation alone those are one identity: the second staging would
+		// supersede the first and a rep would see one of the two, with nothing
+		// saying the other existed. The owner is safe to key on for the same
+		// reason the quotation is — it is the party AS THE TRANSCRIPT NAMES
+		// THEM, carved out of the translation rule precisely because a
+		// translated name is a different person.
+		identity, err := json.Marshal(map[string]string{
+			transcriptIdentityCited: proposal.Cited,
+			transcriptIdentityOwner: proposal.Owner,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("compose: marshal transcript step identity: %w", err)
+		}
+		approvalID, staged1, err := p.approval.StageUnlessDeclined(ctx, approvals.StageInput{
 			Kind:           TranscriptProposalKind,
 			ProposedChange: canonical,
 			DiffHash:       hash,
+			Identity:       identity,
 			TargetType:     transcriptTargetType,
 			TargetID:       activityID.UUID,
 			Summary:        step.Summary,
 			Evidence:       []approvals.Evidence{stepEvidence(step, reading.Lines, activityID)},
 			BundleID:       bundleID,
+			JoinPending:    true,
 		})
 		if err != nil {
 			return nil, err
+		}
+		if !staged1 {
+			// Already refused, or already waiting. Either way this reading adds
+			// nothing to the queue, and the run's own record says how many steps
+			// it raised — so a step that was answered before is not counted again.
+			continue
 		}
 		staged = append(staged, approvalID.UUID)
 	}

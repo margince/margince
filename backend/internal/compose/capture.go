@@ -10,9 +10,6 @@ package compose
 // imports identity or approvals (ADR-0054 §9).
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // gmailScopes are the Google scopes a Gmail connection requests: mail read for
@@ -453,32 +449,4 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// object: ChannelSendCapable is a pool query, not a connector lookup.
 		installSendPreflight(s, pool)
 	}
-}
-
-// mergeStager adapts the approvals engine to capture's dedupe seam.
-type mergeStager struct {
-	svc *approvals.Service
-}
-
-func (m mergeStager) StageMerge(ctx context.Context, in capture.MergeProposal) (ids.UUID, error) {
-	digest := sha256.Sum256(in.ProposedChange)
-	// A connector re-syncing the same upstream record hits the same
-	// collision every cycle; an identical pending proposal must absorb
-	// the repeat, not multiply in the inbox.
-	pending, err := m.svc.HasPendingFor(ctx, "merge_records", in.TargetID, hex.EncodeToString(digest[:]))
-	if err != nil {
-		return ids.Nil, err
-	}
-	if pending {
-		return ids.Nil, nil
-	}
-	id, err := m.svc.Stage(ctx, approvals.StageInput{
-		Kind:           "merge_records",
-		ProposedChange: in.ProposedChange,
-		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     in.TargetType,
-		TargetID:       in.TargetID,
-		Summary:        in.Summary,
-	})
-	return id.UUID, err
 }
