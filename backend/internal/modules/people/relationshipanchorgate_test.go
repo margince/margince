@@ -44,10 +44,12 @@ const (
 )
 
 // wantMinimumAnchorAskers is the anti-vacuity floor. Seven functions ask the
-// object half today — three create shapes, the update, the archive, its
-// stage-time refusal and the deal-qualification seat — so a floor of five
-// leaves room for one to be folded away and still fails loudly if the pairing
-// this gate matches on stops being recognisable.
+// object half today, and naming them is the point of stating a number at all:
+// the two create shapes, the update, the archive, the archive's own stage-time
+// refusal, the edge reversal's stage-time refusal, and the stakeholder seat a
+// lead qualification mints. A floor of five leaves room for one to be folded
+// away, and still fails loudly if the pairing this gate matches on stops being
+// recognisable.
 const wantMinimumAnchorAskers = 5
 
 // anchorAskersWithoutTheRowGate ratifies a function that asks the anchor's

@@ -103,6 +103,14 @@ func relationshipAnchorRow(kind string, e relationshipEndpoints) (object string,
 // object it is. An edge with no anchor id is a row no kind's shape admits, and
 // answering about a record that is not there would put an audit row on nothing
 // and light a button on a write that cannot happen.
+//
+// It answers an internal fault where ensureRelationshipAnchorWritable answers
+// RelationshipShapeError on the same nil, and the difference is where the nil
+// CAME FROM rather than two minds about one rule. There the endpoints arrived
+// on a request and the caller can correct them. Here they came off a stored row
+// whose rel_*_shape CHECK already guarantees the anchor endpoint is NOT NULL —
+// so a nil is the database disagreeing with itself, and a refusal telling the
+// caller to fix a field they never sent would send them after the wrong thing.
 func anchorIDOf(row relationshipRow) (object string, id ids.UUID, err error) {
 	object, found := relationshipAnchorRow(row.Kind, row.endpoints())
 	if found == nil {
