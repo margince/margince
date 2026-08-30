@@ -251,7 +251,7 @@ func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
 	if before != nil && before.Equal(proposed) {
 		return
 	}
-	p.Set(closeDateField, before, proposed)
+	p.SetDate(closeDateField, before, &proposed)
 }
 
 // correct applies one deal's A6 tier. The write runs in its own audited

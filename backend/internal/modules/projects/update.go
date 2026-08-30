@@ -131,13 +131,13 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) (*s
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.StartedAt != nil {
-		p.Set(startedAtColumn, current.StartedAt, *in.StartedAt)
+		p.SetDate(startedAtColumn, storekit.PlainDate(current.StartedAt), in.StartedAt)
 	}
 	if in.TargetEndDate != nil {
-		p.Set(targetEndDateColumn, current.TargetEndDate, *in.TargetEndDate)
+		p.SetDate(targetEndDateColumn, storekit.PlainDate(current.TargetEndDate), in.TargetEndDate)
 	}
 	if in.EndedAt != nil {
-		p.Set(endedAtColumn, current.EndedAt, *in.EndedAt)
+		p.SetDate(endedAtColumn, storekit.PlainDate(current.EndedAt), in.EndedAt)
 	}
 	return p, nil
 }

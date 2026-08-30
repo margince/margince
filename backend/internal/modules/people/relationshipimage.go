@@ -15,6 +15,7 @@ package people
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -39,9 +40,28 @@ func relationshipFieldImage(rel relationshipRow) map[string]any {
 		relationshipKindField: rel.Kind,
 		relationshipRoleField: rel.Role,
 		"is_current_primary":  rel.IsCurrentPrimary,
-		"started_at":          rel.StartedAt,
-		"ended_at":            rel.EndedAt,
+		// Both are `date` columns, and a date has two renderings that are not
+		// interchangeable here: `to_jsonb(row)` gives "2024-05-06" and a Go
+		// time.Time marshals as "2024-05-06T00:00:00Z". The undo path asks whether
+		// a field has moved by comparing this image against the live row as JSON,
+		// so the timestamp spelling reads as moved the instant it is written — and
+		// undo refuses a change nobody has touched, blaming a supersession that
+		// never happened. imageTime reads both spellings, because images written
+		// the old way are already in every deployed database.
+		"started_at": edgeImageDate(rel.StartedAt),
+		"ended_at":   edgeImageDate(rel.EndedAt),
 	}
+}
+
+// edgeImageDate renders a link's date the way Postgres renders the `date`
+// column it came from, keeping absence as absence.
+//
+//craft:ignore naked-any a date is either its own text or a JSON null, and this feeds a map[string]any audit image that must carry both
+func edgeImageDate(v *time.Time) any {
+	if v == nil {
+		return nil
+	}
+	return v.Format(time.DateOnly)
 }
 
 // relationshipIdentityImage is the edge named and typed, which is what a create

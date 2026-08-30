@@ -10,8 +10,10 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -78,6 +80,53 @@ func NewPatch() *Patch {
 //craft:ignore naked-any column values span every SQL type a module owns; they flow to bind parameters and the schemaless audit diff
 func (p *Patch) Set(column string, oldVal, newVal any) {
 	p.recordAssignment(column, column, oldVal, newVal)
+}
+
+// SetDate records one changed `date`-typed column, in the spelling Postgres
+// itself uses for one.
+//
+// A calendar date has two renderings and they are not interchangeable here.
+// `to_jsonb(row)` renders a `date` column as "2026-12-01"; a Go time.Time
+// marshals as "2026-12-01T00:00:00Z". Both name the same day, and nothing
+// compares them as days: the undo path asks whether a field has moved by
+// testing the audit image against the live row as JSON, so a time.Time image
+// reads as moved the instant it is written. Undo then refuses a change nobody
+// has touched, and says the field was superseded — which is not true, and
+// leaves a whole kind of record permanently un-undoable.
+//
+// So a date column goes in as its own text, and both audit images are recorded
+// in that same text. Postgres accepts it as a bind value for a date column,
+// which is the shape catalog cf_ date columns have always used.
+//
+// Use this for every `date` column. A `timestamptz` stays on Set: its JSON
+// rendering and Go's agree, and forcing it to a day would throw away the time.
+func (p *Patch) SetDate(column string, oldVal, newVal *time.Time) {
+	p.recordAssignment(column, column, dateOnly(oldVal), dateOnly(newVal))
+}
+
+// dateOnly renders a calendar date the way Postgres renders a `date` column,
+// keeping nil as nil so a cleared date stays a JSON null on both sides.
+//
+//craft:ignore naked-any a date is either its own text or a JSON null, and the audit image and the bind value both have to carry that pair — the same column-value contract as Set
+func dateOnly(v *time.Time) any {
+	if v == nil {
+		return nil
+	}
+	return v.Format(time.DateOnly)
+}
+
+// PlainDate sheds the contract's Date wrapper for a SetDate call.
+//
+// The two sides of one SetDate are usually spelled differently — a row read
+// back carries its dates as the generated Date, a write input carries them as
+// time.Time — so this shedding happens at every date write in the tree. Written
+// once rather than as `&x.Time` at each call site, which is the spelling that
+// panics on a nil x.
+func PlainDate(v *openapi_types.Date) *time.Time {
+	if v == nil {
+		return nil
+	}
+	return &v.Time
 }
 
 // setQuoted records one changed column whose SQL identifier is quoted in

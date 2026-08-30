@@ -136,7 +136,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 			}
 		}
 		if current.ExpectedCloseDate == nil || !current.ExpectedCloseDate.Equal(*in.ExpectedClose) {
-			p.Set(closeDateField, current.ExpectedCloseDate, *in.ExpectedClose)
+			p.SetDate(closeDateField, storekit.PlainDate(current.ExpectedCloseDate), in.ExpectedClose)
 		}
 		// A human setting the date IS the §11 confirmation — the machine's
 		// provisional guess stops excluding the deal from Commit. This one turns
@@ -150,7 +150,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.Set("forecast_category", current.ForecastCategory, *in.ForecastCategory)
 	}
 	if in.WaitUntil != nil {
-		p.Set("wait_until", current.WaitUntil, *in.WaitUntil)
+		p.SetDate("wait_until", storekit.PlainDate(current.WaitUntil), in.WaitUntil)
 	}
 	return p, nil
 }

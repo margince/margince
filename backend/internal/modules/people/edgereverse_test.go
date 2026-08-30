@@ -12,6 +12,7 @@ package people
 // restore a state the entry never held.
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -42,6 +43,60 @@ func TestAnEdgeImageIsReadBackAsThePatchThatRestatesIt(t *testing.T) {
 	}
 	if patch.EndedAt == nil {
 		t.Error("ended_at was dropped; the patch would leave the date the entry changed")
+	}
+}
+
+// What TODAY's writer records reads back as the same dates.
+//
+// The image and the parser are one change: the writer emits "2024-03-01" so the
+// undo path's JSON comparison against the `date` column agrees with itself, and
+// a parser that only knew timestamps would refuse every entry written since. The
+// test above pins the OLD spelling, which is already in every deployed database;
+// this pins the new one, and reads it out of the writer rather than a literal so
+// a change to what the writer records fails here.
+func TestTheEdgeImageThisWriterRecordsIsReadBackAsItsOwnDates(t *testing.T) {
+	t.Parallel()
+	started := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	ended := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	// Through JSON, because that is the trip the image really takes: it is stored
+	// as jsonb and read back decoded, so a value the writer holds as a pointer
+	// reaches the parser as a plain string.
+	written := relationshipFieldImage(relationshipRow{
+		Kind: "employment", StartedAt: &started, EndedAt: &ended,
+	})
+	raw, err := json.Marshal(written)
+	if err != nil {
+		t.Fatalf("storing the image: %v", err)
+	}
+	var stored map[string]any
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		t.Fatalf("reading the image back out of jsonb: %v", err)
+	}
+	patch, err := relationshipPatchFromImage(stored)
+	if err != nil {
+		t.Fatalf("reading back what this writer records: %v", err)
+	}
+	if patch.StartedAt == nil || !patch.StartedAt.Equal(started) {
+		t.Errorf("started_at = %v, want %v", patch.StartedAt, started)
+	}
+	if patch.EndedAt == nil || !patch.EndedAt.Equal(ended) {
+		t.Errorf("ended_at = %v, want %v", patch.EndedAt, ended)
+	}
+}
+
+// And the writer really does record the date-only spelling. Without this the
+// round trip above would still pass if both halves reverted to timestamps
+// together, which is exactly the state that breaks undo.
+func TestTheEdgeImageRecordsADateTheWayPostgresRendersOne(t *testing.T) {
+	t.Parallel()
+	started := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	image := relationshipFieldImage(relationshipRow{Kind: "employment", StartedAt: &started})
+	if got := image["started_at"]; got != "2024-03-01" {
+		t.Errorf("the image records started_at as %#v; a `date` column reads back "+
+			"from to_jsonb as \"2024-03-01\", and anything else makes undo refuse", got)
+	}
+	if got := relationshipFieldImage(relationshipRow{Kind: "employment"})["ended_at"]; got != nil {
+		t.Errorf("a link with no end date records %#v, want a null", got)
 	}
 }
 
