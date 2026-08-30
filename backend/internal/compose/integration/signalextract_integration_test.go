@@ -843,3 +843,49 @@ func TestALongThreadIsWalkedToItsStartOnePassAtATime(t *testing.T) {
 			brain.calls)
 	}
 }
+
+// A limited message takes its whole conversation out of the pass, and it does
+// NOT fall back to the mailbox owner the way a capture-private RECORD does.
+//
+// The two look alike and are not. A record's owner visibility says one person is
+// the reader, so a summary addressed to that person discloses nothing new. A
+// limited audience says the content is withheld from readers who can still see
+// the records the message is filed against, and an owner-scoped signal is a
+// durable, searchable restatement of that content which outlives the message's
+// own limit. There is no owner for whom extracting it is free.
+func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
+	e := Setup(t)
+	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	at := extractClock.Add(-48 * time.Hour)
+	contact := employeeOf(t, e, org, "Ada at Acme")
+
+	// Two messages on one conversation: one ordinary, one limited. The pass
+	// reads a whole thread at once, so what it writes is as private as the most
+	// private thing it read — the ordinary half is not a licence to read it.
+	seedMessage(t, e, contact, "thread-limited", "Renewal", "Happy to continue.", "inbound", at)
+	limited := seedMessage(t, e, contact, "thread-limited", "Renewal",
+		"internal note: we are preparing to terminate", "inbound", at.Add(time.Minute))
+	if _, err := OwnerConn(t).Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, limited); err != nil {
+		t.Fatal(err)
+	}
+
+	brain := &scriptedBrain{reply: `{"events": []}`}
+	if raised := extractPass(t, e, brain); raised != 0 {
+		t.Fatalf("a conversation carrying a limited message was read: %d signals raised", raised)
+	}
+	if brain.calls != 0 {
+		t.Errorf("the model was called %d times on a conversation carrying a limited message — its bodies were sent for summarising", brain.calls)
+	}
+
+	// Opening it makes the same conversation due, which proves the refusal was
+	// the audience and not some other property of the fixture.
+	if _, err := OwnerConn(t).Exec(context.Background(),
+		`UPDATE activity SET audience = 'workspace' WHERE id = $1`, limited); err != nil {
+		t.Fatal(err)
+	}
+	reopened := &scriptedBrain{reply: `{"events": []}`}
+	if extractPass(t, e, reopened); reopened.calls != 1 {
+		t.Errorf("the re-opened conversation was read %d times, want 1 — the fixture was refused for something other than its audience", reopened.calls)
+	}
+}

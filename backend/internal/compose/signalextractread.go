@@ -163,26 +163,27 @@ var dueThreadsQuery = `
 			       -- actually faces, and withhold a finding about mail anyone
 			       -- may open.
 			       --
-			       -- A message whose AUDIENCE a human limited is private too,
-			       -- whatever its links say, and belongs to the mailbox owner
-			       -- behind its provenance (connector:<name>:<uuid>) — the one
-			       -- reader the content gate always admits.
-			       --
-			       -- A thread whose private messages answer to DIFFERENT
-			       -- owners has no one reader every message admits; naming
-			       -- one of them would hand that person the others' content
-			       -- through the summary. It names nobody, and the WHERE below
-			       -- then refuses it.
-			       bool_and(coalesce(vis.shared, true) AND a.audience = 'workspace') AS shared,
-			       CASE WHEN count(DISTINCT coalesce(vis.private_owner,
-			                    CASE WHEN a.audience <> 'workspace'
-			                         THEN substring(a.captured_by from '([0-9a-f-]{36})$')
-			                    END)) > 1 THEN NULL
-			            ELSE min(coalesce(vis.private_owner,
-			                    CASE WHEN a.audience <> 'workspace'
-			                         THEN substring(a.captured_by from '([0-9a-f-]{36})$')
-			                    END))
-			       END AS private_owner
+			       -- A thread whose messages answer to DIFFERENT owners has no
+			       -- one reader every message admits; naming one of them would
+			       -- hand that person the others' content through the summary.
+			       -- It names nobody, and the WHERE below then refuses it.
+			       bool_and(coalesce(vis.shared, true)) AS shared,
+			       CASE WHEN count(DISTINCT vis.private_owner) > 1 THEN NULL
+			            ELSE min(vis.private_owner)
+			       END AS private_owner,
+			       -- A message whose AUDIENCE a human or a classifier limited
+			       -- takes the whole thread out of the pass, and does NOT fall
+			       -- back to its mailbox owner the way capture-private RECORDS
+			       -- do. The two look alike and are not: a record's owner
+			       -- visibility says one person is the reader, so a summary
+			       -- addressed to that person discloses nothing new, while a
+			       -- limited audience says the message's content is withheld
+			       -- from readers who can still see the records it is filed
+			       -- against — and an owner-scoped signal is a durable,
+			       -- searchable restatement of it that outlives the message's
+			       -- own limit. There is no owner for whom extracting it is
+			       -- free, so the thread is not offered.
+			       bool_and(a.audience = 'workspace') AS every_message_open
 			  FROM activity a
 			  LEFT JOIN (` + activities.OrgReachSet() + `) ro ON ro.activity_id = a.id
 			  -- Who may read this message, asked of the records it is filed
@@ -218,6 +219,7 @@ var dueThreadsQuery = `
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
 		 WHERE c.org_count = 1
+		   AND c.every_message_open
 		   -- A conversation nobody else may read, whose reader cannot be named,
 		   -- is not offered at all. Reading it would produce a finding with no
 		   -- owner to answer to, and a signal that names no owner is a shared

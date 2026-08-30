@@ -76,6 +76,7 @@ var reasonTexts = map[Reason]string{
 	ReasonSenderUndecided:      "the sender is still waiting on a verdict, so the message is held back",
 	ReasonArchived:             "the message is archived",
 	ReasonNotConnectorCaptured: "the message was not captured by a connector",
+	ReasonAudienceLimited:      "the message is limited to the people on it, and this step does not read limited mail",
 	ReasonAwaitingBatch:        "it is eligible and waiting for the next batch",
 	ReasonLabelled:             "the message was labelled",
 	AbsentNotComparable: "what a connector filters on its own side is not counted here — " +

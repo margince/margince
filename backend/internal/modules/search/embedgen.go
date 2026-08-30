@@ -48,8 +48,15 @@ var embedText = map[string]string{
 	entityOrganization: `SELECT concat_ws(' ', display_name, legal_name, industry) FROM organization WHERE id = $1 AND archived_at IS NULL`,
 	entityDeal:         `SELECT name FROM deal WHERE id = $1 AND archived_at IS NULL`,
 	entityLead:         `SELECT concat_ws(' ', full_name, company_name, title) FROM lead WHERE id = $1 AND archived_at IS NULL`,
-	entityActivity:     `SELECT concat_ws(' ', subject, body) FROM activity WHERE id = $1 AND archived_at IS NULL`,
-	entityProject:      `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
+	// The audience clause is the vector lane's half of capture privacy. An
+	// embedding is built as the system principal and queried by everyone, so a
+	// held message indexed here is retrievable by semantic neighbourhood no
+	// matter how tightly the row itself is scoped — the query-side gate filters
+	// the ROWS it returns, not the fact that a phrase from a colleague's legal
+	// mail is what pulled them back. A limited activity is therefore not indexed
+	// at all, and audiencerescope drops the vector when a row narrows.
+	entityActivity: `SELECT concat_ws(' ', subject, body) FROM activity WHERE id = $1 AND archived_at IS NULL AND audience = 'workspace'`,
+	entityProject:  `SELECT concat_ws(' ', name, key, description) FROM project WHERE id = $1 AND archived_at IS NULL`,
 }
 
 // HandleEvent maintains embeddings for created/updated/captured

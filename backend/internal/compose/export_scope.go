@@ -149,15 +149,30 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 // polymorphicVisible renders "the referenced record is visible" for a
 // polymorphic (entity_type, entity_id) pair — the attachment manifest and
 // the audit-log member both ride it so neither leaks a row pointing at a
-// record outside the caller's scope. Only an actor unbounded over every
-// arm carries no clause.
+// record outside the caller's scope.
+//
+// An actor unbounded over every RECORD arm is spared the record walk and is
+// NOT spared the activity arm. Row scope and audience are different
+// obligations: row scope says which records an admin may reach, and an
+// admin reaches all of them; audience says who may read one message's
+// content, and it does not yield to row_scope=all (auth.ActivityContentClause
+// — an admin reading a colleague's limited mail is the disclosure the limit
+// exists to prevent). An attachment's filename and an audit image's before
+// and after are that message's content, so an unbounded export that skipped
+// this arm handed over the attachment names of every held conversation in
+// the workspace.
 func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
+	activityArm, err := activityMemberClause(ctx, typeCol, idCol, arg)
+	if err != nil {
+		return "", err
+	}
 	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
-		return "", nil
+		// Every non-activity row passes; an activity row faces the audience.
+		return fmt.Sprintf("(%s <> 'activity' OR %s)", typeCol, activityArm), nil
 	}
 	var parts []string
 	for _, e := range []struct{ kind, table string }{
@@ -172,16 +187,25 @@ func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any
 			typeCol, e.kind, e.table, idCol, predicate("ep"),
 		))
 	}
-	// Activities have no owner; they inherit visibility from their links.
+	parts = append(parts, activityArm)
+	return "(" + strings.Join(parts, " OR ") + ")", nil
+}
+
+// activityMemberClause renders "this row points at an activity whose content
+// the caller may read". Split out of polymorphicVisible because both of its
+// arms need it — the bounded actor as one disjunct beside the record arms, the
+// unbounded actor as the only test it still owes.
+func activityMemberClause(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
+	// Activities have no owner; they inherit visibility from their links, and
+	// their content additionally from their audience.
 	activityClause, err := auth.ActivityContentClause(ctx, "av", arg)
 	if err != nil {
 		return "", err
 	}
-	parts = append(parts, fmt.Sprintf(
+	return fmt.Sprintf(
 		`(%s = 'activity' AND EXISTS (SELECT 1 FROM activity av WHERE av.id = %s AND %s))`,
 		typeCol, idCol, activityClause,
-	))
-	return "(" + strings.Join(parts, " OR ") + ")", nil
+	), nil
 }
 
 // auditExportScope scopes the audit_log to the caller's view: a row is
@@ -195,12 +219,23 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
-		return "", nil
-	}
 	entity, err := polymorphicVisible(ctx, alias+".entity_type", alias+".entity_id", arg)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("(%s OR %s.actor_id = $%d)", entity, alias, arg(actor.ID)), nil
+	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
+		// The unbounded clause is the activity audience arm alone (see
+		// polymorphicVisible), and the actor's own trail does NOT widen it:
+		// "I performed the change" is not permission to read the content of a
+		// message whose audience excludes me. It never did for a bounded
+		// actor either, because an admin's own audit rows about a limited
+		// activity are the same disclosure by the same route.
+		return entity, nil
+	}
+	// The own-trail arm is bounded the same way: it may admit a row about any
+	// object type, and it may not admit one about an activity whose audience
+	// excludes the caller. Without the second test, a colleague who touched a
+	// message before it was limited exports its before-and-after image forever.
+	return fmt.Sprintf("(%s OR (%s.actor_id = $%d AND %s.entity_type <> 'activity'))",
+		entity, alias, arg(actor.ID), alias), nil
 }

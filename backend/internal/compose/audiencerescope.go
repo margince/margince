@@ -8,8 +8,15 @@ package compose
 // refolds on the same activity.updated through its own consumer, and this one
 // handles what that fold cannot: the derived SIGNALS whose evidence cites the
 // limited message (a workspace-visible summary of a limited email is that
-// email's content, read by everyone), and the thread-scan watermark, so the
+// email's content, read by everyone), the vector and the attention label
+// derived from the message's own text, and the thread-scan watermark, so the
 // next extraction pass re-reads the conversation under its new audience.
+//
+// Narrowing is the direction that needs the consumer. Widening re-derives
+// itself: the embedding generator listens to the same activity.updated and
+// re-indexes a row that is workspace again, and the classify backlog picks the
+// row up on its next pass. A narrowed row produces no such work, so what was
+// derived while it was open would simply stay.
 
 import (
 	"context"
@@ -19,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -107,6 +115,9 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 	}
 	if audience != "workspace" {
 		if _, err := signals.NarrowDerivedForActivity(ctx, tx, activityID, owner); err != nil {
+			return err
+		}
+		if err := activities.RetractDerivedForActivityTx(ctx, tx, activityID); err != nil {
 			return err
 		}
 	}

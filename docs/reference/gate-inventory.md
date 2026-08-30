@@ -80,6 +80,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
+| `audiencereaders_test.go` | H2 | A message's AUDIENCE says who may read its content. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed FROM. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |

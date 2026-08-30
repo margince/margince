@@ -108,6 +108,7 @@ type capturedRow struct {
 	kind            string
 	capturedBy      string
 	archived        bool
+	audience        string
 	undecidedSender bool
 	withPerson      bool
 }
@@ -120,12 +121,17 @@ func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
 		capturedBy = "connector:gmail"
 	}
 	email := "sender-" + id.String() + "@outside.test"
+	audience := row.audience
+	if audience == "" {
+		audience = "workspace"
+	}
 	e.exec(t, `
-		INSERT INTO activity (id, kind, occurred_at, source, captured_by, counterparty_email, archived_at, channel_provider)
+		INSERT INTO activity (id, kind, occurred_at, source, captured_by, counterparty_email, archived_at, channel_provider, audience)
 		VALUES ($1, $2, now(), 'test', $3, $4,
 		        CASE WHEN $5 THEN now() ELSE NULL END,
-		        CASE WHEN $2 = 'message' THEN 'telegram' ELSE NULL END)`,
-		id, row.kind, capturedBy, email, row.archived)
+		        CASE WHEN $2 = 'message' THEN 'telegram' ELSE NULL END,
+		        $6)`,
+		id, row.kind, capturedBy, email, row.archived, audience)
 	if row.undecidedSender {
 		e.exec(t, `
 			INSERT INTO capture_pending_counterparty (id, owner_id, email, status, activity_id)
@@ -152,6 +158,11 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		e.seed(t, capturedRow{kind: "email", archived: true}):              pipelinetrace.ReasonArchived,
 		e.seed(t, capturedRow{kind: "email", capturedBy: "human:someone"}): pipelinetrace.ReasonNotConnectorCaptured,
 		e.seed(t, capturedRow{kind: "email", undecidedSender: true}):       pipelinetrace.ReasonSenderUndecided,
+		// A limited message is not labelled: the label is derived from subject
+		// and body and shown on a worklist the message's audience does not
+		// bound. Without its own reason the member would be told the batch
+		// simply has not reached it, and would wait forever.
+		e.seed(t, capturedRow{kind: "email", audience: "participants"}): pipelinetrace.ReasonAudienceLimited,
 	}
 
 	// Half one: the classifier's own backlog selects EXACTLY the eligible row.

@@ -56,7 +56,7 @@ var activityReadLiteral = gatekit.TableReadPattern("activity")
 // does so through EnsureActivityContentVisibleLive; it is here because a write
 // path probes with it and nothing else, and a reader inside such a transaction
 // is guarded by a call this gate could not otherwise see.
-var scopeMarkers = []string{
+var heldScopeMarkers = []string{
 	"ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause",
 	"EnsureActivityVisible", "EnsureActivityVisibleLive",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
@@ -82,10 +82,36 @@ var scopeMarkers = []string{
 // column and its test rather than on one spelling of the pair — a gate that
 // only recognised the unaliased form would report green code as red, which
 // costs its own credibility faster than a miss does.
-var literalMarkers = []*regexp.Regexp{
+var heldLiteralMarkers = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)restricted_at`),
 	regexp.MustCompile(`(?i)\barchived_at\s+IS\s+NULL`),
 }
+
+// activityDimension is one obligation an activity reader owes, as the two
+// things the walk needs to recognise it being met: the shared gates that carry
+// it (Go names) and the predicates that spell it inline (SQL). The walk itself
+// — call graph, fragments, per-function granularity, waivers — is one piece of
+// machinery asked the same question about two different exclusions, because a
+// second copy of it would drift from this one and the drift would show up as a
+// census that quietly stopped seeing half the tree.
+type activityDimension struct {
+	scopeMarkers   []string
+	literalMarkers []*regexp.Regexp
+	// subject narrows WHICH activity reads the dimension is owed by. Nil means
+	// every read of the table, which is the availability rule. The audience
+	// rule is owed only by a read that projects content, and asking the whole
+	// corpus for it produces a waiver list long enough to hide a real finding.
+	subject *regexp.Regexp
+}
+
+// owes answers whether one activity read is in this dimension's corpus.
+func (d activityDimension) owes(sql string) bool {
+	return d.subject == nil || d.subject.MatchString(sql)
+}
+
+// heldDimension is the statutory hold: a restricted row is out of every
+// ordinary read path (A165/ADR-0114 §2).
+var heldDimension = activityDimension{scopeMarkers: heldScopeMarkers, literalMarkers: heldLiteralMarkers}
 
 // restrictedReadersAdmitted ratifies the readers that reach a held row and may.
 //
@@ -143,11 +169,20 @@ func readsActivityTable(path string, file *ast.File) bool {
 // see rather than a route that carries nothing. A reader guarded only through
 // such a call reports red and is ratified by name, which is the direction that
 // asks a human instead of assuming one.
-func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File) []string {
+func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim activityDimension) []string {
 	var offenders []string
 	for _, decl := range file.Decls {
 		reads := gatekit.DeclReads(decl, activityReadLiteral)
 		if len(reads) == 0 {
+			continue
+		}
+		owed := false
+		for _, read := range reads {
+			if dim.owes(read.SQL) {
+				owed = true
+			}
+		}
+		if !owed {
 			continue
 		}
 		fn, isFunc := decl.(*ast.FuncDecl)
@@ -165,17 +200,20 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File) []str
 			// counting a sibling's namer as evidence that the fragment is
 			// composed somewhere.
 			for _, fragment := range activityFragmentsIn(decl) {
-				for _, namer := range unguardedNamers(graph, fragment.names) {
+				if !dim.owes(fragment.sql) {
+					continue
+				}
+				for _, namer := range unguardedNamers(graph, fragment.names, dim) {
 					offenders = append(offenders, namer+": "+gatekit.FirstLineOf(fragment.sql))
 				}
 			}
 			continue
 		}
 		key := scrubKey(receiverTypeName(fn), fn.Name.Name)
-		if guardedInItsPackage(graph, key) {
+		if guardedInItsPackage(graph, key, dim) {
 			continue
 		}
-		offenders = append(offenders, key+": "+gatekit.FirstLineOf(reads[0].SQL))
+		offenders = append(offenders, key+": "+gatekit.FirstLineOf(owedRead(reads, dim)))
 	}
 	return offenders
 }
@@ -201,8 +239,8 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File) []str
 // actually constrains THIS query. That is the same assumption the downward arm
 // has always made, and it is the price of a gate that does not report the
 // composition this tree is built out of.
-func guardedInItsPackage(graph map[string]*graphFunc, key string) bool {
-	if reachesAnExclusion(graph, key, true) {
+func guardedInItsPackage(graph map[string]*graphFunc, key string, dim activityDimension) bool {
+	if reachesAnExclusion(graph, key, true, dim) {
 		return true
 	}
 	called := false
@@ -211,7 +249,7 @@ func guardedInItsPackage(graph map[string]*graphFunc, key string) bool {
 			continue
 		}
 		called = true
-		if !reachesAnExclusion(graph, callerKey, true) {
+		if !reachesAnExclusion(graph, callerKey, true, dim) {
 			return false
 		}
 	}
@@ -226,13 +264,13 @@ func guardedInItsPackage(graph map[string]*graphFunc, key string) bool {
 // further would start admitting readers whose exclusion is three unrelated
 // frames away, which is the file-scope looseness this replaced, spelled
 // differently.
-func reachesAnExclusion(graph map[string]*graphFunc, key string, followCalls bool) bool {
+func reachesAnExclusion(graph map[string]*graphFunc, key string, followCalls bool, dim activityDimension) bool {
 	entry, known := graph[key]
 	if !known {
 		return false
 	}
 	for _, statement := range entry.statements {
-		if matchesAny(statement, literalMarkers) {
+		if matchesAny(statement, dim.literalMarkers) {
 			return true
 		}
 	}
@@ -241,7 +279,7 @@ func reachesAnExclusion(graph map[string]*graphFunc, key string, followCalls boo
 	// tree passes a clause builder by name as often as it calls it.
 	for _, names := range []map[string]bool{entry.calls, entry.reads} {
 		for name := range names {
-			if matchesMarker(name, scopeMarkers) {
+			if matchesMarker(name, dim.scopeMarkers) {
 				return true
 			}
 		}
@@ -250,7 +288,7 @@ func reachesAnExclusion(graph map[string]*graphFunc, key string, followCalls boo
 		return false
 	}
 	for callee := range entry.calls {
-		if reachesAnExclusion(graph, callee, false) {
+		if reachesAnExclusion(graph, callee, false, dim) {
 			return true
 		}
 	}
@@ -374,7 +412,7 @@ func activitySQLIn(value ast.Expr) (string, bool) {
 // SQL that reads activity is either dead or reached by a spelling this gate
 // cannot see, and both deserve a sentence. nil means every namer is guarded,
 // which is the only way a fragment passes.
-func unguardedNamers(graph map[string]*graphFunc, names []string) []string {
+func unguardedNamers(graph map[string]*graphFunc, names []string, dim activityDimension) []string {
 	var unguarded []string
 	named := false
 	for key, entry := range graph {
@@ -388,7 +426,7 @@ func unguardedNamers(graph map[string]*graphFunc, names []string) []string {
 			continue
 		}
 		named = true
-		if !guardedInItsPackage(graph, key) {
+		if !guardedInItsPackage(graph, key, dim) {
 			unguarded = append(unguarded, key)
 		}
 	}
@@ -426,13 +464,25 @@ func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
 			// a helper that excludes nothing.
 			graphs[dir] = packageCallGraph(t, dir)
 		}
-		for _, offender := range unguardedActivityReaders(graphs[dir], src.File) {
+		for _, offender := range unguardedActivityReaders(graphs[dir], src.File, heldDimension) {
 			if restrictedReadersAdmitted.Waived(t, src.Path+":"+strings.SplitN(offender, ":", 2)[0]) {
 				continue
 			}
 			t.Errorf("%s: %s reads the activity table and excludes no held row — compose auth.ActivityContentClause / ActivityDiscoverClause / ActivityAvailableClause, filter `restricted_at IS NULL` or `archived_at IS NULL`, or ratify the reader in restrictedReadersAdmitted with the cost stated (A165/ADR-0114 §2)", src.Path, offender)
 		}
 	}
+}
+
+// owedRead is the first read that put this function in the dimension's corpus,
+// so the failure quotes the statement the reader actually owes for rather than
+// whichever activity read happened to come first in the body.
+func owedRead(reads []gatekit.TableRead, dim activityDimension) string {
+	for _, read := range reads {
+		if dim.owes(read.SQL) {
+			return read.SQL
+		}
+	}
+	return reads[0].SQL
 }
 
 func matchesAny(text string, markers []*regexp.Regexp) bool {

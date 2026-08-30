@@ -299,11 +299,39 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		// excludes `restricted_at IS NOT NULL`; this is the one that must not,
 		// and saying so here is what keeps the omission a decision rather than
 		// an oversight the next reader "fixes".
-		{&pkg.Activities, `SELECT a.id, a.kind, a.subject, a.body, a.occurred_at, a.source_system
+		//
+		// The AUDIENCE is a different obligation from the statutory hold above,
+		// and it goes the other way. A restriction bars processing of a record
+		// the workspace holds ABOUT the subject, and Art. 15 pierces it. A
+		// limited audience says the message's content belongs to the mailbox
+		// that captured it and to the humans on it — the mailbox owner's own
+		// correspondence, quoted third parties included. Handing that text to
+		// whoever operates the SAR would disclose a colleague's private mail to
+		// a person the message's audience excludes, in a package the subject
+		// then holds a copy of. So a limited message is DISCLOSED, with the
+		// fields that prove it exists — id, kind, when, where it came from, and
+		// which mailboxes hold it — and its subject and body are withheld
+		// pending a release by one of those mailbox owners.
+		{&pkg.Activities, `SELECT a.id, a.kind, a.occurred_at, a.source_system,
+		       a.audience = 'workspace' AS content_disclosed,
+		       CASE WHEN a.audience = 'workspace' THEN a.subject END AS subject,
+		       CASE WHEN a.audience = 'workspace' THEN a.body END AS body,
+		       CASE WHEN a.audience = 'workspace' THEN NULL
+		            ELSE substring(a.captured_by from '([0-9a-f-]{36})$')
+		       END AS withheld_from_mailbox_of
 		   FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		   WHERE l.person_id = $1`, nil},
-		{&pkg.Attachments, `SELECT at.id, at.entity_type, at.entity_id, at.filename,
-		      at.content_type, at.byte_size, at.created_at
+		// A filename is content: `Aufhebungsvertrag_Mueller.pdf` states what the
+		// message is about. An attachment of a limited message is therefore
+		// listed by id and size with its name withheld, under the same rule as
+		// the body above.
+		{&pkg.Attachments, `SELECT at.id, at.entity_type, at.entity_id,
+		      at.content_type, at.byte_size, at.created_at,
+		      CASE WHEN at.entity_type <> 'activity' THEN at.filename
+		           WHEN EXISTS (SELECT 1 FROM activity a
+		                         WHERE a.id = at.entity_id AND a.audience = 'workspace')
+		           THEN at.filename
+		      END AS filename
 		   FROM attachment at
 		   WHERE (at.entity_type = 'person' AND at.entity_id = $1)
 		      OR (at.entity_type = 'activity' AND at.entity_id IN (
@@ -351,7 +379,25 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// (capture/telegram/membership.go): keyed on that, a subject who only
 		// ever blocked the bot would be handed an export missing the one
 		// record the installation holds about them.
-		{&pkg.RawCapture, `SELECT rc.source_system, rc.source_id, rc.payload, rc.received_at
+		//
+		// The payload of a LIMITED message is withheld, and this is where the
+		// withholding has to bite hardest: it is the provider original, so it
+		// carries the message's full text and every header regardless of what
+		// the activity row above discloses. Matching is by substring anywhere in
+		// the payload, so a subject merely quoted in a colleague's held thread
+		// matches it — and the export would then hand over that whole thread.
+		// The row is still LISTED, because Art. 15 owes the fact that a raw
+		// original is held, and its content waits for a release.
+		{&pkg.RawCapture, `SELECT rc.source_system, rc.source_id, rc.received_at,
+		       NOT EXISTS (SELECT 1 FROM activity a
+		                    WHERE a.source_system = rc.source_system
+		                      AND a.source_id = rc.source_id
+		                      AND a.audience <> 'workspace') AS content_disclosed,
+		       CASE WHEN NOT EXISTS (SELECT 1 FROM activity a
+		                              WHERE a.source_system = rc.source_system
+		                                AND a.source_id = rc.source_id
+		                                AND a.audience <> 'workspace')
+		            THEN rc.payload END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM person_email pe WHERE pe.person_id = $1
 		                 AND rc.payload::text ILIKE

@@ -349,3 +349,69 @@ func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
 		t.Error("the erased record's audit rows vanished from the bundle entirely")
 	}
 }
+
+// The unbounded export and the audience. Row scope and audience are different
+// obligations: row scope says which RECORDS an admin may reach, and an admin
+// reaches all of them; the audience says who may read one message's CONTENT,
+// and it does not yield to row_scope=all. The attachment manifest and the audit
+// log both point at activities, so an export that spared the unbounded actor
+// the whole polymorphic clause handed over the attachment names and the
+// before-and-after images of every limited conversation in the workspace.
+func TestAnUnboundedExportCarriesNoHeldAttachmentOrAuditImage(t *testing.T) {
+	e := SetupSearch(t)
+	e.seedExportFixture(t)
+
+	seedMail := func(subject, audience, filename string) {
+		t.Helper()
+		activity := e.SeedID(t, `
+			INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', $2, 'the body of it', now(), 'gmail', 'connector:gmail:'||$3::text, $4)`,
+			subject, e.Rep1.String(), audience)
+		e.SeedID(t, `
+			INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
+			VALUES ($1, 'activity', $2, $3, 'blob/'||$3, 'gmail', 'connector:gmail')`, activity, filename)
+		e.SeedID(t, `
+			INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
+			VALUES ($1, 'human', $2, 'update', 'activity', $3)`, "human:"+e.Rep1.String(), activity)
+	}
+	// The open message is what tells a working gate from a broken export: both
+	// rows travel the same code path and differ only in the audience.
+	seedMail("ordinary quote", "workspace", "Angebot_offen.pdf")
+	seedMail("Aufhebungsvertrag", "participants", "Aufhebungsvertrag_Mueller.pdf")
+
+	var buf bytes.Buffer
+	if _, err := compose.NewExportWriter(e.Pool).WriteBundle(e.exportAdmin(), &buf); err != nil {
+		t.Fatal(err)
+	}
+	entries := BundleEntries(t, buf.Bytes())
+
+	names := CSVColumn(t, entries["attachment.csv"], "filename")
+	open, held := false, false
+	for _, name := range names {
+		switch name {
+		case "Angebot_offen.pdf":
+			open = true
+		case "Aufhebungsvertrag_Mueller.pdf":
+			held = true
+		}
+	}
+	if !open {
+		t.Fatal("the open message's attachment is missing from the admin bundle — the fixture cannot tell a working gate from a broken export")
+	}
+	if held {
+		t.Errorf("the limited message's attachment name is in an admin export: %v — the filename states what the message is about, to a reader its audience excludes", names)
+	}
+
+	// The audit image is the same disclosure by another route: it carries the
+	// before and after of a change to the message.
+	auditTargets := CSVColumn(t, entries["audit_log.csv"], "entity_type")
+	activityImages := 0
+	for _, kind := range auditTargets {
+		if kind == "activity" {
+			activityImages++
+		}
+	}
+	if activityImages != 1 {
+		t.Errorf("the admin bundle carried %d activity audit images, want 1 (the open message's) — an image of a limited message is that message's content in the compliance trail", activityImages)
+	}
+}

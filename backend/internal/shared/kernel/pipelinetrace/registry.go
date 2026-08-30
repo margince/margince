@@ -152,8 +152,8 @@ var registrations = []Registration{{
 	Sources:     []Source{SourceDerived},
 	Reasons: []Reason{
 		ReasonTransportNotRead, ReasonSenderUndecided, ReasonArchived,
-		ReasonNotConnectorCaptured, ReasonAwaitingBatch, ReasonLabelled,
-		ReasonRecordNotAvailable,
+		ReasonNotConnectorCaptured, ReasonAudienceLimited, ReasonAwaitingBatch,
+		ReasonLabelled, ReasonRecordNotAvailable,
 	},
 }, {
 	// Runs, but not reported here yet. Worth deriving together with the

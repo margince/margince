@@ -365,6 +365,17 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 				JOIN activity a ON a.id = al.activity_id
 				WHERE al.person_id = p.id AND al.entity_type = 'person'
 				  AND a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+				  -- A limited message is not signature material. What this pass
+				  -- extracts — a title, a phone, an employer — is written onto a
+				  -- person every seat can read, so mining a message whose
+				  -- audience excludes those seats republishes its content in
+				  -- field form, and narrowing the mail afterwards does not take
+				  -- the field back. The candidate simply waits for open mail.
+				  AND a.audience = 'workspace'
+				  -- A row held under a statutory obligation is out of reach of
+				  -- every ordinary read (A165/ADR-0114 §2); the model call this
+				  -- feeds is processing, which is what the hold bars.
+				  AND a.restricted_at IS NULL
 				ORDER BY a.occurred_at DESC
 				LIMIT 1
 			) a ON true

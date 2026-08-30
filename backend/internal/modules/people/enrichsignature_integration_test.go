@@ -33,6 +33,19 @@ func (e *dedupeEnv) seedSignatureCandidate(
 	name string,
 	capturedBy string,
 ) {
+	e.seedSignatureCandidateWithAudience(ctx, t, name, capturedBy, "workspace")
+}
+
+// seedSignatureCandidateWithAudience is the same fixture with the mail's
+// audience under the caller's control, so a test can tell a candidate skipped
+// for its MAILBOX apart from one skipped for its message's audience.
+func (e *dedupeEnv) seedSignatureCandidateWithAudience(
+	ctx context.Context,
+	t *testing.T,
+	name string,
+	capturedBy string,
+	audience string,
+) {
 	t.Helper()
 	person, err := e.store.CreatePerson(ctx, CreatePersonInput{
 		FullName: name,
@@ -56,9 +69,9 @@ func (e *dedupeEnv) seedSignatureCandidate(
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by)
-			VALUES ($1, 'email', 'Regards, Dana | VP Finance | +49 30 1234', 'inbound', now(), 'gmail:seed', $2)`,
-			activityID, capturedBy); err != nil {
+			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Regards, Dana | VP Finance | +49 30 1234', 'inbound', now(), 'gmail:seed', $2, $3)`,
+			activityID, capturedBy, audience); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
@@ -193,5 +206,39 @@ func TestSignatureCandidatesTreatUnboundMailAsTheWorkspaceDefault(t *testing.T) 
 	}
 	if contains(candidateNames(disabled), "Unbound Provenance") {
 		t.Error("unbound mail was selected while the workspace default was off")
+	}
+}
+
+// A limited message is not signature material. The pass writes what it extracts
+// onto a person every seat can read, so mining a message whose audience
+// excludes those seats republishes its content as fields — and narrowing the
+// message afterwards does not take the fields back.
+//
+// The switched-on mailbox is what makes this a claim about the AUDIENCE: both
+// people below sit behind the same willing mailbox, and only the audience of
+// the mail they were last written from differs.
+func TestSignatureCandidatesSkipALimitedMessage(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	on := true
+	mailbox := ids.NewV7()
+	e.connectedMailbox(ctx, t, mailbox, &on)
+	stamp := "connector:gmail:" + mailbox.String()
+
+	e.seedSignatureCandidateWithAudience(ctx, t, "Wrote From Open Mail", stamp, "workspace")
+	e.seedSignatureCandidateWithAudience(ctx, t, "Wrote From Limited Mail", stamp, "participants")
+
+	got, err := e.store.SignatureCandidates(ctx, 50, true)
+	if err != nil {
+		t.Fatalf("selecting candidates: %v", err)
+	}
+	names := candidateNames(got)
+	if !contains(names, "Wrote From Open Mail") {
+		t.Errorf("the open message's person is absent from %v — the fixture cannot tell a working gate from a broken query", names)
+	}
+	if contains(names, "Wrote From Limited Mail") {
+		t.Errorf("a person whose only mail is limited was offered for signature mining: %v — "+
+			"their title, phone and employer would be written onto a workspace-readable record from a message those readers may not open", names)
 	}
 }
