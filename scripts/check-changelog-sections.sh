@@ -56,10 +56,11 @@ verdict=$(awk '
 	# never closes and swallow every heading below it.
 	#
 	# Spelled as an alternation rather than as `^ {0,3}`: the interval is an
-	# ERE extension that not every awk this script may meet supports, and an
-	# awk that silently matches nothing would recognise no fence at all —
-	# counting the headings this file quotes INSIDE fences as real ones, and
-	# refusing a correct changelog for describing itself.
+	# ERE extension, and this script says `awk`. One that did not honour it
+	# would recognise no fence at all and refuse a correct changelog for
+	# quoting one — loudly, since five cases in the self-test plant duplicate
+	# headings inside fences and expect a PASS, so all five would fail. The
+	# alternation says the same thing everywhere and costs nothing.
 	/^(```|~~~)/ || /^ (```|~~~)/ || /^  (```|~~~)/ || /^   (```|~~~)/ {
 		run = $0
 		sub(/^ */, "", run)
