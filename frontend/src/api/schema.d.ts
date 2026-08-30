@@ -20129,10 +20129,11 @@ export interface components {
         TechnicalMailProvider: "google_workspace" | "microsoft365" | "self_hosted" | "other";
         /**
          * @description Where a company's website answers from, classified from its address, CNAME and reverse
-         *     DNS records.
+         *     DNS records. There is no `other`: a host the classifier does not recognise produces no
+         *     hosting fact at all, so the absence of a value is the answer rather than a catch-all.
          * @enum {string}
          */
-        TechnicalHostingProvider: "hetzner" | "aws" | "cloudflare" | "ionos" | "strato" | "azure" | "google_cloud" | "ovh" | "other";
+        TechnicalHostingProvider: "hetzner" | "aws" | "cloudflare" | "ionos" | "strato" | "azure" | "google_cloud" | "ovh";
         /**
          * @description A service a company demonstrably operates, proved by a subdomain in its certificate
          *     history. The set is an ALLOWLIST: a certificate log publishes every hostname a company

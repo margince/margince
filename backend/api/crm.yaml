@@ -27540,9 +27540,10 @@ components:
       type: string
       description: |
         Where a company's website answers from, classified from its address, CNAME and reverse
-        DNS records.
-      enum: [hetzner, aws, cloudflare, ionos, strato, azure, google_cloud, ovh, other]
-      x-enum-varnames: [TechnicalHostingProviderHetzner, TechnicalHostingProviderAWS, TechnicalHostingProviderCloudflare, TechnicalHostingProviderIONOS, TechnicalHostingProviderStrato, TechnicalHostingProviderAzure, TechnicalHostingProviderGoogleCloud, TechnicalHostingProviderOVH, TechnicalHostingProviderOther]
+        DNS records. There is no `other`: a host the classifier does not recognise produces no
+        hosting fact at all, so the absence of a value is the answer rather than a catch-all.
+      enum: [hetzner, aws, cloudflare, ionos, strato, azure, google_cloud, ovh]
+      x-enum-varnames: [TechnicalHostingProviderHetzner, TechnicalHostingProviderAWS, TechnicalHostingProviderCloudflare, TechnicalHostingProviderIONOS, TechnicalHostingProviderStrato, TechnicalHostingProviderAzure, TechnicalHostingProviderGoogleCloud, TechnicalHostingProviderOVH]
 
     TechnicalOperatedService:
       type: string
