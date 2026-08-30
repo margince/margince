@@ -726,9 +726,13 @@ test-v: composition ## go test -v across the module
 test-cover: composition ## Go unit tests with coverage summary
 	$(GOWORK_COMPOSED) $(GO) test -cover ./...
 
+# The container is resolved ONCE, before the loop, and its refusal is not
+# swallowed: an empty id inside the loop would make `docker exec` fail every
+# time and this target wait forever for a container that is not there.
 db-wait: ## Block until Postgres answers pg_isready
-	@until docker exec -i "$$(bash ../scripts/dev-postgres-container.sh $(PG_PORT) 2>/dev/null)" \
-	    pg_isready -U margince_owner -d $(DB_NAME) >/dev/null 2>&1; do sleep 1; done; echo "postgres ready"
+	@pg="$$(bash ../scripts/dev-postgres-container.sh $(PG_PORT))" && { \
+	  until docker exec -i "$$pg" pg_isready -U margince_owner -d $(DB_NAME) >/dev/null 2>&1; \
+	  do sleep 1; done; echo "postgres ready"; }
 
 infra-logs: ## Tail the dev stack logs
 	$(COMPOSE) logs -f

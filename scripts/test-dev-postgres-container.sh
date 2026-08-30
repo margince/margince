@@ -105,6 +105,31 @@ for required in "publish=" "label=com.docker.compose.service=postgres"; do
 	fi
 done
 
+# dsn_port is what picks the port this whole resolution hangs on, so its own
+# reading of a DSN is checked here rather than left to the one shape a dev
+# stack happens to write.
+port_of() {
+	# shellcheck source=/dev/null
+	. /dev/stdin <<-EOF
+		$(sed -n '/^dsn_port() {/,/^}$/p' "$root/scripts/dev.sh")
+	EOF
+	dsn_port "$1"
+}
+while read -r dsn want why; do
+	got="$(port_of "$dsn")"
+	if [[ "$got" != "$want" ]]; then
+		echo "FAIL: dsn_port($dsn) = $got, want $want — $why"
+		failures=$((failures + 1))
+	else
+		echo "ok: $why"
+	fi
+done <<'DSNS'
+postgres://u:p@localhost:15432/margince 15432 an explicit port is the port
+postgres://u:p@localhost/margince 5432 no port means the one postgres defaults to
+postgres://u:p@[::1]:15432/margince 15432 a bracketed IPv6 host with a port
+postgres://u:p@[::1]/margince 5432 a bracketed IPv6 host whose colons are the address, not a port
+DSNS
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures dev-postgres-container case(s) did not hold" >&2
 	exit 1

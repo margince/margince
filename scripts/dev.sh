@@ -455,10 +455,17 @@ psql_owner() { # db [psql args…] — SQL via args or stdin
 # dsn_port is the host port a postgres URL names, or 5432 when it names none —
 # the port postgres itself defaults to, so a DSN written without one resolves
 # the container it would actually reach.
+#
+# A BRACKETED IPv6 authority is taken apart first. `postgres://u:p@[::1]/db`
+# has colons inside the host, so the generic "text after the last colon" read
+# answers `1]` — a port nothing publishes, and a resolution failure for a DSN
+# that is perfectly well formed.
 dsn_port() { # dsn
   local hostport="${1#*@}"
   hostport="${hostport%%/*}"
   case "$hostport" in
+  \[*\]:*) printf '%s\n' "${hostport##*:}" ;;
+  \[*\]) printf '5432\n' ;;
   *:*) printf '%s\n' "${hostport##*:}" ;;
   *) printf '5432\n' ;;
   esac
