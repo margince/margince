@@ -38,9 +38,40 @@ import "./auth.css";
 // the server can complete it.
 
 // AuthNotice is the boundary's transient context for the login screen: a
-// deliberate sign-out or an expired session — informational, never danger
-// styling (§9.5: the user has nothing to correct).
-export type AuthNotice = "signed-out" | "session-expired" | null;
+// deliberate sign-out, an expired session, or a federated sign-in that did
+// not complete — informational, never danger styling (§9.5: the user has
+// nothing to correct). The first two arrive as a prop from App's own state;
+// "oidc-failed" is read from the address instead (see oidcFailureNotice
+// below) because it is the callback redirect's own doing, not something
+// App decided.
+export type AuthNotice =
+  | "signed-out"
+  | "session-expired"
+  | "oidc-failed"
+  | null;
+
+// The OIDC callback's neutral-failure redirect lands on this exact route
+// (cmd/api/googlesignin.go's FailureURL) — not a Screen this app routes to
+// (no "login" entry in app/router.tsx's SCREENS), because the unauthenticated
+// gate in App.tsx renders AuthScreen ahead of any route match regardless of
+// what the hash names. Consumed the same way clearResetHash below scrubs its
+// own marker: read once on mount, then rewritten out of the address so a
+// reload or a Back press cannot replay it.
+const OIDC_FAILURE_HASH = "#/login?oidc=failed";
+
+// oidcFailureNotice reads and clears the marker in one step — read-then-clear
+// rather than read-only, for the same reason takeHashCredential's callers
+// never re-derive from a stale address: a component that re-checked on every
+// render would re-show the notice after the reader dismissed it and the hash
+// had not yet caught up.
+function oidcFailureNotice(): boolean {
+  if (globalThis.location?.hash !== OIDC_FAILURE_HASH) {
+    return false;
+  }
+  const { pathname, search } = globalThis.location;
+  globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
+  return true;
+}
 
 // The installation's operational federated providers, exactly as
 // /auth/capabilities serves them. `label` is the SERVER's string — the contract
@@ -113,6 +144,12 @@ export function AuthScreen({
     const token = takeHashCredential(RESET_ROUTE);
     return token ? { kind: "reset", token } : { kind: "login" };
   });
+  // Read once, same instant as the reset token above: both are one-shot
+  // markers this screen's own mount is responsible for taking out of the
+  // address before anything else reads it.
+  const [oidcFailed] = useState(oidcFailureNotice);
+  const effectiveNotice: AuthNotice =
+    notice ?? (oidcFailed ? "oidc-failed" : null);
   // A link pasted into a tab already on this screen changes the hash and
   // nothing else — no remount, so the initializer above never runs again. The
   // one view that sends a reader off to ask for a fresh link leaves them on
@@ -183,12 +220,14 @@ export function AuthScreen({
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (
         <>
-          {notice && (
+          {effectiveNotice && (
             <p className="auth-notice" role="status">
               {t(
-                notice === "signed-out"
+                effectiveNotice === "signed-out"
                   ? "auth.noticeSignedOut"
-                  : "auth.noticeSessionExpired",
+                  : effectiveNotice === "session-expired"
+                    ? "auth.noticeSessionExpired"
+                    : "auth.noticeOidcFailed",
               )}
             </p>
           )}
@@ -387,11 +426,13 @@ function loginErrorKey(error: unknown): MessageKey {
  * **Renders nothing when the capability is empty**, and that is the §19
  * enforcement point rather than a convenience: `oidc_providers` is served by
  * `/auth/capabilities`, so a control for a flow this installation cannot
- * complete never reaches the screen. This build's server serves `[]` until the
- * OIDC flow ships, which is why no provider button appears at runtime today. Do
- * not "fix" this to render a disabled button, and do not seed a provider list
- * into the capability response — the empty list IS the gate, and this component
- * must keep asking only "did I get providers?".
+ * complete never reaches the screen. An installation with no Google OAuth app
+ * configured (or where the deployment's state-signing key/redirect base are
+ * incomplete) serves `[]`, and this component draws nothing for it — exactly
+ * as an installation with a configured app draws the button. Do not "fix"
+ * this to render a disabled button, and do not seed a provider list into the
+ * capability response — the empty list IS the gate, and this component must
+ * keep asking only "did I get providers?".
  *
  * The one thing that may put providers here without a server is
  * `app/ui-preview.ts`, and it is not an exception to the above: it substitutes
@@ -516,24 +557,15 @@ function ProviderLabel({
   );
 }
 
-// startFederatedSignIn is the hand-off itself, and today it is deliberately
-// inert.
-//
-// The real flow is a full-page redirect to the provider and back to a callback
-// route. crm.yaml documents NEITHER path — `AuthCapabilities.oidc_providers`
-// ("empty until the OIDC flow ships") is the only OIDC thing in the contract —
-// so there is no endpoint to send the browser to, and composing a start URL out
-// of the provider key would be inventing a wire this build cannot honour.
-//
-// No USER reaches it in this build, and that is the honest part rather than a
-// loose end: the server serves `oidc_providers: []`, so `ProviderButtons`
-// renders nothing and no user can meet this (§19). The seeded story, the seeded
-// e2e case and the `VITE_UI_PREVIEW_OIDC` preview build are review fixtures for
-// the DESIGN — the preview draws the buttons and they land here, which is to say
-// they do nothing, deliberately and visibly. When the flow ships, this function
-// is the one thing that changes — the markup, the copy and the capability gate
-// are already right.
-function startFederatedSignIn(_providerKey: string): void {}
+// startFederatedSignIn is the hand-off itself: a full-page navigation to
+// `/v1/auth/oidc/{provider}/start` (identity/ssologin.go), never an XHR — the
+// server's redirect chain to the provider's consent screen and back has to
+// carry the browser's whole address bar, not a fetch response this app could
+// read. `location.assign` (not a hash route) because the target is outside
+// this SPA's own address space entirely.
+function startFederatedSignIn(providerKey: string): void {
+  globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
+}
 
 function LoginForm({
   onAuthed,

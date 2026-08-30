@@ -605,6 +605,61 @@ describe("federated sign-in", () => {
     );
     expect(chosen).toEqual(["corp-sso"]);
   });
+
+  // The real hand-off: a full-page navigation, never an XHR. `location.assign`
+  // is the seam — jsdom cannot perform a real cross-origin navigation, and
+  // `Location.prototype.assign` is non-configurable, so the whole object is
+  // swapped for the one call and restored immediately after.
+  it("navigates to the provider's start URL on click", async () => {
+    const originalLocation = window.location;
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, assign },
+      writable: true,
+      configurable: true,
+    });
+    try {
+      stubApi(
+        {
+          password: true,
+          password_reset: true,
+          oidc_providers: [{ key: "google", label: "Continue with Google" }],
+        },
+        () => ok(200),
+      );
+      render(<AuthScreen onAuthed={vi.fn()} />);
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Continue with Google" }),
+      );
+
+      expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      });
+    }
+  });
+});
+
+describe("OIDC failure notice", () => {
+  it("shows a neutral notice when the address carries the callback's failure marker, then scrubs it", async () => {
+    window.location.hash = "#/login?oidc=failed";
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    expect(window.location.hash).toBe("");
+  });
+
+  it("stays silent for an ordinary address", async () => {
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await screen.findByLabelText("Email");
+    expect(screen.queryByText(t("auth.noticeOidcFailed"))).toBeNull();
+  });
 });
 
 describe("AuthScreen forgot password", () => {

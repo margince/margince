@@ -4755,6 +4755,8 @@ export const de = {
   "auth.noticeSignedOut": "Du wurdest abgemeldet.",
   "auth.noticeSessionExpired":
     "Deine Sitzung ist abgelaufen. Melde dich erneut an, um fortzufahren.",
+  "auth.noticeOidcFailed":
+    "Die Anmeldung mit Google hat nicht funktioniert – versuche es erneut oder verwende dein Passwort.",
   "auth.connectionTitle": "Margince ist nicht erreichbar",
   "auth.connectionBody":
     "Prüfe deine Verbindung und versuche es erneut. Besteht das Problem weiter, startet der Server womöglich gerade neu.",
