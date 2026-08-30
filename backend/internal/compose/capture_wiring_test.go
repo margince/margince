@@ -41,7 +41,7 @@ func TestCaptureRegistryComposition(t *testing.T) {
 
 	t.Run("neither source carries standing imap, never gmail", func(t *testing.T) {
 		reg := newCaptureRegistryWithGoogle(nil, nil, nil, GmailConfig{}, CaptureConfig{})
-		names := registered(reg)
+		names := registeredNames(reg.Connectors())
 		if names["gmail"] {
 			t.Fatal("gmail must be absent when neither the stored app nor the deployment's pair can supply one")
 		}
@@ -131,20 +131,11 @@ func TestWithKeyvaultWiresTheSendPreflightWithNoGoogleApp(t *testing.T) {
 	}
 }
 
-// registered names the connectors a registry carries.
-func registered(reg *capture.Registry) map[string]bool {
-	names := map[string]bool{}
-	for _, d := range reg.Connectors() {
-		names[d.Name] = true
-	}
-	return names
-}
-
 // assertRegisters is the shape both reachability arms assert, so neither can
 // drift into checking less than the other.
 func assertRegisters(t *testing.T, reg *capture.Registry, want ...string) {
 	t.Helper()
-	names := registered(reg)
+	names := registeredNames(reg.Connectors())
 	for _, name := range want {
 		if !names[name] {
 			t.Errorf("connectors = %v, want %s registered", names, name)
