@@ -30,7 +30,22 @@ type loginState struct {
 	CodeVerifier string
 }
 
+// loginStateTyp domain-separates this signer's tokens from
+// connectorstate.go's stateSigner — both may be keyed with the SAME
+// operator-supplied secret (cmd/api/googlesignin.go reuses
+// --connector-state-key rather than adding a new flag), and neither wire
+// struct declares its non-omitempty fields required at unmarshal time, so a
+// validly-signed connectorstate.go wireState token would otherwise decode
+// into a wireLoginState with empty Nonce/CodeVerifier and pass this
+// verifier's signature check. The provider mismatch OidcSignInCallback
+// checks afterward happens to catch it today (no connector provider is
+// named "google"), but that is incidental, not a guarantee for whichever
+// provider name is added next; this field makes the two token kinds refuse
+// to parse as each other regardless of what either names.
+const loginStateTyp = "oidc-login"
+
 type wireLoginState struct {
+	Typ string `json:"t"`
 	P   string `json:"p"`
 	N   string `json:"n"`
 	CV  string `json:"cv"`
@@ -48,7 +63,7 @@ func newLoginStateSigner(key []byte) loginStateSigner {
 
 func (s loginStateSigner) sign(st loginState, exp time.Time) string {
 	payload, _ := json.Marshal(wireLoginState{ //nolint:errchkjson // string/int-only struct never errors
-		P: st.Provider, N: st.Nonce, CV: st.CodeVerifier, Exp: exp.Unix(),
+		Typ: loginStateTyp, P: st.Provider, N: st.Nonce, CV: st.CodeVerifier, Exp: exp.Unix(),
 	})
 	enc := base64.RawURLEncoding.EncodeToString(payload)
 	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc))
@@ -73,6 +88,9 @@ func (s loginStateSigner) verify(token string, now time.Time) (loginState, error
 	var w wireLoginState
 	if err := json.Unmarshal(payload, &w); err != nil {
 		return loginState{}, fmt.Errorf("oidc login state: bad payload: %w", err)
+	}
+	if w.Typ != loginStateTyp {
+		return loginState{}, errors.New("oidc login state: wrong token type")
 	}
 	if now.Unix() > w.Exp {
 		return loginState{}, errors.New("oidc login state: expired")

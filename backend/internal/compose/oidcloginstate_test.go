@@ -48,3 +48,23 @@ func TestLoginStateSignerRejectsTamperedPayload(t *testing.T) {
 		t.Fatal("expected signature rejection")
 	}
 }
+
+// TestLoginStateSignerRejectsAConnectorMintedToken closes the cross-parse gap
+// a shared key opens: cmd/api/googlesignin.go signs with the SAME
+// --connector-state-key stateSigner uses, and neither wire struct's
+// non-omitempty fields are required at unmarshal time, so a validly-signed
+// connectorstate.go token would otherwise decode into a loginState with
+// empty Nonce/CodeVerifier and pass the MAC check. The `t` field this test
+// pins is what makes the two token kinds refuse to parse as each other.
+func TestLoginStateSignerRejectsAConnectorMintedToken(t *testing.T) {
+	key := []byte("0123456789012345678901234567890123")
+	now := time.Unix(1_700_000_000, 0)
+
+	connectorToken := newStateSigner(key).sign(connectState{
+		Provider: "google", Nonce: "n",
+	}, now.Add(10*time.Minute))
+
+	if _, err := newLoginStateSigner(key).verify(connectorToken, now); err == nil {
+		t.Fatal("expected a connector-flow token to be refused by the login-flow signer")
+	}
+}
