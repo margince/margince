@@ -227,35 +227,34 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 	if err != nil {
 		return "", err
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
-		// The unbounded clause is the activity audience arm alone (see
-		// polymorphicVisible), and the actor's own trail does NOT widen it:
-		// "I performed the change" is not permission to read the content of a
-		// message whose audience excludes me. It never did for a bounded
-		// actor either, because an admin's own audit rows about a limited
-		// activity are the same disclosure by the same route.
-		return entity, nil
-	}
-	// The own-trail arm is bounded the same way: it may admit a row about any
-	// object type, and it may not admit one about a limited message. Without
-	// that test, a colleague who touched a message before it was limited
-	// exports its before-and-after image forever.
-	//
-	// Two shapes reach a message, not one. The audit row may target the
-	// activity itself, and it may target an ATTACHMENT of it — whose image
-	// carries the filename, and a filename states what the message is about.
-	// Excluding only the first is the half-fix that leaves the same content
-	// reachable by the longer route.
-	ownTrail, err := carriesNoLimitedMessage(ctx, alias, arg)
+	// Two shapes reach a message, not one. An audit row may target the ACTIVITY,
+	// and it may target an ATTACHMENT of it — whose image carries the filename,
+	// and a filename states what the message is about. Excluding only the first
+	// is the half-fix that leaves the same content reachable by the longer
+	// route, so both arms below take this one test.
+	noLimitedMessage, err := carriesNoLimitedMessage(ctx, alias, arg)
 	if err != nil {
 		return "", err
 	}
+	if auth.UnboundedFor(actor, "person", "organization", "deal", "lead") {
+		// The system principal's branch, and only its: person and organization
+		// are owner-private (auth.ownerPrivateTables), so UnboundedFor is false
+		// for every human including one with row_scope=all, and an admin export
+		// takes the bounded path below.
+		//
+		// It carries the message test anyway, because polymorphicVisible asks
+		// the audience of a row that names an activity DIRECTLY and an
+		// attachment row would pass that arm on its own. Composing it here
+		// rather than returning the entity clause alone is what keeps the
+		// branch honest if the owner-private set ever changes.
+		return fmt.Sprintf("(%s AND %s)", entity, noLimitedMessage), nil
+	}
 	return fmt.Sprintf("(%s OR (%s.actor_id = $%d AND %s))",
-		entity, alias, arg(actor.ID), ownTrail), nil
+		entity, alias, arg(actor.ID), noLimitedMessage), nil
 }
 
 // carriesNoLimitedMessage renders "this audit row is not about a message whose
-// content the caller may not read" for the own-trail arm.
+// content the caller may not read".
 //
 // Two shapes reach a message. The row may target the ACTIVITY, and it may
 // target an ATTACHMENT of one — whose image carries the filename, and a
@@ -267,18 +266,18 @@ func carriesNoLimitedMessage(ctx context.Context, alias string, arg func(any) in
 	if err != nil {
 		return "", err
 	}
+	// One arm per shape rather than a CASE that picks the id: an attachment row
+	// has to reach its activity through the attachment table, and folding that
+	// hop into the same EXISTS as the direct arm made a subquery whose
+	// correlation was easy to get subtly wrong and impossible to read.
 	return fmt.Sprintf(
 		`(%[1]s.entity_type NOT IN ('activity', 'attachment')
-		  OR EXISTS (SELECT 1 FROM activity av
-		              WHERE av.id = CASE %[1]s.entity_type
-		                              WHEN 'activity' THEN %[1]s.entity_id
-		                              ELSE (SELECT ata.entity_id FROM attachment ata
-		                                     WHERE ata.id = %[1]s.entity_id
-		                                       AND ata.entity_type = 'activity')
-		                            END
-		                AND %[2]s)
+		  OR (%[1]s.entity_type = 'activity' AND EXISTS (
+		       SELECT 1 FROM activity av WHERE av.id = %[1]s.entity_id AND %[2]s))
 		  OR (%[1]s.entity_type = 'attachment' AND NOT EXISTS (
 		       SELECT 1 FROM attachment ata
-		        WHERE ata.id = %[1]s.entity_id AND ata.entity_type = 'activity')))`,
+		        JOIN activity av ON av.id = ata.entity_id
+		       WHERE ata.id = %[1]s.entity_id AND ata.entity_type = 'activity'
+		         AND NOT (%[2]s))))`,
 		alias, readable), nil
 }
