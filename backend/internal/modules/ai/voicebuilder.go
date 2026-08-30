@@ -40,6 +40,20 @@ func SafeVoiceBuildFailure(err error) string {
 	if err == nil {
 		return "The build failed. Try again."
 	}
+	// Asked FIRST, and by sentinel rather than by message: a provider that
+	// refused on billing never ran the model, so every message below it would
+	// be a claim about an answer nobody received. This was the defect — a
+	// spending cap read to the operator as "the model could not produce a
+	// valid profile", which sent them looking at their writing samples.
+	if errors.Is(err, ErrProviderQuota) {
+		return "Our AI provider refused the call: the account behind it is out of budget or over its quota, so the build never ran. Your previous version is unchanged. Raise the limit on the provider account, then build again."
+	}
+	// A burst limit, not an empty account: the same build succeeds shortly,
+	// and telling this operator to go raise a spending limit would send them
+	// to a console where nothing is wrong.
+	if errors.Is(err, ErrProviderThrottled) {
+		return "Our AI provider is rate limiting us right now, so the build did not run. Your previous version is unchanged; wait a minute and build again."
+	}
 	text := strings.ToLower(err.Error())
 	switch {
 	// Only OUR OWN word-floor message is safe verbatim: match its exact
@@ -51,7 +65,7 @@ func SafeVoiceBuildFailure(err error) string {
 		strings.Contains(text, "not bound"), strings.Contains(text, "unbound"):
 		return "Voice building is unavailable until an AI provider is configured."
 	default:
-		return "The voice model could not produce a valid profile. Your previous version is unchanged; try again."
+		return "The voice model returned something we could not read as a profile. Your previous version is unchanged; try again, and if it keeps failing the model or its configuration is at fault rather than your samples."
 	}
 }
 

@@ -343,9 +343,9 @@ func openaiError(resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Type != "" {
-		return fmt.Errorf("ai: openai: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode)
+		return quotaWrapped(resp, fmt.Errorf("ai: openai: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
 	}
-	return fmt.Errorf("ai: openai: http %d", resp.StatusCode)
+	return quotaWrapped(resp, fmt.Errorf("ai: openai: http %d", resp.StatusCode))
 }
 
 // openaiTerminalStatus maps a non-completed Responses object to an error: a

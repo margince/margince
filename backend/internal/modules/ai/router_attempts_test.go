@@ -10,8 +10,10 @@ package ai
 // terminal tracing this behavior builds on.
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -390,5 +392,83 @@ func TestMetricsCountOneCallPerLogicalCallNotPerAttempt(t *testing.T) {
 	}
 	if strings.Contains(out, `provider="anthropic"`) {
 		t.Fatalf("the non-terminal failed rung must not surface in /metrics at all:\n%s", out)
+	}
+}
+
+// countingClient answers like stubClient and remembers how often it was asked,
+// which is what proves a rung was never reached rather than merely unused.
+// It embeds stubClient so it stays a model.Client as that interface grows.
+type countingClient struct {
+	stubClient
+	calls *int
+}
+
+func (c countingClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	*c.calls++
+	return c.stubClient.Complete(ctx, req)
+}
+
+// Every rung bills to the same provider account, so escalating past a quota
+// refusal spends latency to arrive at the same refusal — and the LAST rung's
+// error is the one the caller sees. That is how a spending cap reached an
+// operator as "the model returned something unreadable": the honest refusal
+// below was overwritten by whatever the rung above failed with.
+func TestAQuotaRefusalStopsTheLadderInsteadOfEscalating(t *testing.T) {
+	premiumCalls := 0
+	r := assembleRouter(
+		map[Tier]model.Client{
+			TierCheapCloud: stubClient{err: fmt.Errorf("ai: openai: %w", ErrProviderQuota)},
+			TierPremium: countingClient{
+				stubClient: stubClient{err: errors.New("premium returned something unreadable")},
+				calls:      &premiumCalls,
+			},
+		},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, &fakeCallStore{},
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "openai", model: "gpt-cheap"},
+			TierPremium:    {provider: "anthropic", model: "claude-premium"},
+		},
+		false, nil,
+	)
+	r.now = func() time.Time { return time.Unix(0, 0) }
+
+	_, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{})
+
+	if premiumCalls != 0 {
+		t.Fatalf("the rung above was asked %d time(s); an empty account cannot pay for it either", premiumCalls)
+	}
+	if !errors.Is(err, ErrProviderQuota) {
+		t.Fatalf("the caller is told the account refused, not what a later rung did: %v", err)
+	}
+}
+
+// A throttle is the opposite: another tier is another limit, so the ladder
+// keeps walking and a burst on one provider still gets an answer.
+func TestAThrottleStillEscalates(t *testing.T) {
+	premiumCalls := 0
+	r := assembleRouter(
+		map[Tier]model.Client{
+			TierCheapCloud: stubClient{err: fmt.Errorf("ai: openai: %w", ErrProviderThrottled)},
+			TierPremium: countingClient{
+				stubClient: stubClient{resp: model.Response{Text: "premium answer", OutputTokens: 2}},
+				calls:      &premiumCalls,
+			},
+		},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, &fakeCallStore{},
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "openai", model: "gpt-cheap"},
+			TierPremium:    {provider: "anthropic", model: "claude-premium"},
+		},
+		false, nil,
+	)
+	r.now = func() time.Time { return time.Unix(0, 0) }
+
+	_, info, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{})
+
+	if err != nil || info.Tier != TierPremium {
+		t.Fatalf("a rate-limited rung escalates to the next: err=%v tier=%s", err, info.Tier)
+	}
+	if premiumCalls != 1 {
+		t.Fatalf("premium calls = %d, want 1", premiumCalls)
 	}
 }

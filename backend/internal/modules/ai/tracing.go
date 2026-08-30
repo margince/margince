@@ -147,6 +147,22 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		out, callErr := b.clients[t].Complete(ctx, req)
 		if callErr != nil {
 			lastErr, lastTier = callErr, t
+			// A refused account is the operator's to fix, and only the rung
+			// that hit it knows so. The walk keeps just `lastErr`, so an
+			// escalation overwrites that refusal with whatever the rung above
+			// failed with — which is exactly how a spending cap reached an
+			// operator as "the model returned something unreadable". Stopping
+			// here keeps the one error they can act on.
+			//
+			// Rungs may be different vendors, so the rung above might well
+			// have answered. That trade is deliberate: a silent fallback bills
+			// a premium provider for every call while the configured cheap one
+			// is unusable and nobody is told. A throttle keeps escalating,
+			// because it clears by itself and names no account to fix.
+			if errors.Is(callErr, ErrProviderQuota) {
+				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
+				break
+			}
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
 			}
