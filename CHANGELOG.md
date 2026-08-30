@@ -483,6 +483,16 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A technology lane announces an update only when something moved.** A
+  completed lane is worth an audit row whatever it found — it is what says when
+  the record was last looked at, and what lets a technology the company dropped
+  leave — but it emitted `organization.updated` even when nothing appeared,
+  moved or went. Both shapes are common: most companies' sites declare nothing
+  this build recognises, and most that do declare the same thing they declared
+  yesterday. Between them the lane produced a no-op event on nearly every read,
+  which every subscriber had to learn to ignore. A lane that REMOVES a stale
+  fact still announces, because that is a change.
+
 - **A refusal the server has settled is asked once, not three times.** The
   retry policy retried every status at or above 500, which swept in `501 Not
   Implemented` — a final answer, not a failure the server may recover from. An

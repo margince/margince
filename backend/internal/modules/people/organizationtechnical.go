@@ -260,6 +260,20 @@ func (s *Store) auditTechnicalEnrichment(
 	if err != nil {
 		return fmt.Errorf("audit technical enrichment: %w", err)
 	}
+	// THE AUDIT ROW ALWAYS, THE EVENT ONLY ON A CHANGE. A lane that completed
+	// having found nothing is worth recording — it is what says when the record
+	// was last looked at, and it is what lets a technology the company dropped
+	// leave. It is not an UPDATE: nothing was written, nothing was removed, and
+	// organization.updated announcing an empty delta tells every subscriber a
+	// record moved when it did not.
+	//
+	// That is not a rare shape. Most companies' sites declare no technology this
+	// build recognises, so before this the homepage lane emitted a no-op event
+	// for nearly every site read in the installation, and each subscriber had to
+	// learn to ignore it.
+	if len(written) == 0 && len(removed) == 0 {
+		return nil
+	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, in.OrganizationID.UUID,
 		crmcontracts.PublicEventOrganizationUpdated{
 			ChangedFields: map[string]any{

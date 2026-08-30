@@ -331,6 +331,55 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	}
 }
 
+// TestALaneThatChangedNothingRecordsItAndAnnouncesNothing is the other half of
+// the write shape.
+//
+// A lane that completed having found nothing is worth an AUDIT row: it is what
+// says when the record was last looked at, and it is what lets a technology the
+// company dropped leave. It is not an update. Nothing was written, nothing was
+// removed, and `organization.updated` announcing an empty delta tells every
+// subscriber a record moved when it did not.
+//
+// Most companies' sites declare no technology this build recognises, so the
+// homepage lane hit this shape on nearly every site read in an installation —
+// a no-op event each time, which every subscriber had to learn to ignore.
+func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := seedTechnicalOrg(ctx, t, e, "Leerlauf GmbH", "leerlauf.de")
+
+	empty := TechnicalEnrichment{
+		OrganizationID: orgID,
+		Completed:      []TechnicalLane{LaneHomepage},
+		ObservedAt:     technicalObservedAt,
+	}
+	if err := e.store.ApplyTechnicalEnrichment(ctx, empty, nil); err != nil {
+		t.Fatalf("apply the empty reading: %v", err)
+	}
+
+	var audits, events int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'organization' AND entity_id = $1
+			   AND evidence->>'source' = $2`, orgID, companySourceTechnical).Scan(&audits); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'organization.updated'
+			   AND envelope->'entity'->>'id' = $1::text`, orgID.String()).Scan(&events)
+	}); err != nil {
+		t.Fatalf("read back the trail: %v", err)
+	}
+	if audits != 1 {
+		t.Errorf("the lane left %d audit rows, want 1: a completed lane is worth recording even when it found nothing", audits)
+	}
+	if events != 0 {
+		t.Errorf("the lane announced %d organization.updated events having changed nothing — a subscriber acting on one finds an identical record", events)
+	}
+}
+
 // TestATechnicalFactMustNameWhatProvedIt holds the evidence obligation the DDL
 // carries, and it is the product promise in constraint form: a rep asking "how
 // do you know they run Microsoft 365?" is owed the MX host.
