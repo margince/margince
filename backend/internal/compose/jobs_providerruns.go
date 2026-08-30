@@ -115,20 +115,25 @@ func (ProviderRunPollSweepArgs) Kind() string { return "provider_run_poll_sweep"
 // tenant work of its own (jobs.FleetWide).
 func (ProviderRunPollSweepArgs) FleetWide() {}
 
-// providerJobActor binds the principal a provider run executes as.
+// providerJobActor binds the principal a provider run STARTS as, plus the
+// correlation id the outbox envelope requires.
 //
-// The connector is the actor because every value these runs write is bought
-// from the provider, not typed by anybody: the claim rows carry
-// `connector:surfe` provenance, and a reader must be able to tell purchased
-// data from a colleague's entry. It also carries a correlation id, which the
-// outbox envelope requires.
+// It names the worker, not a vendor, and that is the whole of what this layer
+// knows: the submit worker holds a run id and the poll sweep drains many runs
+// at once, so a connector named here could only ever be a guess. It used to be
+// one — `connector:surfe`, correct only while a CHECK constraint made a second
+// provider impossible. The store narrows this to the run's own connector the
+// moment it has read which one that is, and every audit row a run writes is
+// written after that.
 //
-// Without this the hand-off refused with "no actor bound to context" and every
-// polled run stayed in_progress forever — the run was paid for, the provider
-// had answered, and the values reached nobody.
+// This binding is still load-bearing, for the reason it was added: without an
+// actor the hand-off refused with "no actor bound to context" and every polled
+// run stayed in_progress forever — paid for, answered, and reaching nobody. It
+// is the floor under a path that reaches a gated write before it has resolved a
+// provider, and it is deliberately a name no reader can mistake for a vendor.
 func providerJobActor(ctx context.Context) context.Context {
 	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "connector:surfe",
+		Type: principal.PrincipalSystem, ID: "provider_run_worker",
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
