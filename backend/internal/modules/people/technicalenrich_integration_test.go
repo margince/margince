@@ -416,8 +416,13 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
 		t.Fatalf("apply the first reading: %v", err)
 	}
-	// The SAME answer again, which is what a nightly lane produces.
-	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
+	// The same ANSWER, read at a later time — which is what a nightly lane
+	// produces. ObservedAt advances, so the rows' retrieval metadata moves and
+	// nothing about the technology does: reapplying the identical struct would
+	// leave retrieved_at untouched and never exercise that.
+	refresh := read
+	refresh.ObservedAt = read.ObservedAt.Add(24 * time.Hour)
+	if err := e.store.ApplyTechnicalEnrichment(ctx, refresh, nil); err != nil {
 		t.Fatalf("apply the refresh: %v", err)
 	}
 
@@ -441,6 +446,21 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 	}
 	if events != 1 {
 		t.Errorf("%d organization.updated events for one arrival and one refresh, want 1 — the refresh moved nothing", events)
+	}
+	// And the refresh DID land: the rows carry the later reading, so what this
+	// test proves is that metadata moving is not an update, rather than that
+	// the second lane did nothing at all.
+	var retrievedAt time.Time
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT max(retrieved_at) FROM organization_fact
+			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&retrievedAt)
+	}); err != nil {
+		t.Fatalf("read back the retrieval time: %v", err)
+	}
+	if !retrievedAt.Equal(refresh.ObservedAt) {
+		t.Errorf("retrieved_at is %s, want the refresh's %s — the second lane did not land, so the silence above proves nothing",
+			retrievedAt, refresh.ObservedAt)
 	}
 }
 
