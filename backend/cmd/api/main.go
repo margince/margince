@@ -327,6 +327,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		return nil, nil, nil, err
 	}
 	opts = append(opts, gmailOpts...)
+	opts = append(opts, googleSignInOptions(cfg, stdout)...)
 	graphOpts, err := graphOptions(cfg, pool, logger, stdout)
 	if err != nil {
 		return nil, nil, nil, err
