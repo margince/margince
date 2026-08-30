@@ -55,9 +55,23 @@ const (
 // unlockedLiveWrites ratifies a live-probed writer of an erasure-cleared table
 // that does not hold its subject.
 //
-// Empty, and the map exists so that adding an entry is a visible decision with a
-// reason beside it rather than a silent edit to the walk above.
-var unlockedLiveWrites = gatekit.Waive(map[string]string{})
+// Every entry so far shares one reason, and it is the only reason that makes the
+// residue nil rather than small: the subject is CREATED by the very transaction
+// that writes its children. An Art. 17 erasure races a row it can see, and no
+// other transaction can see this person until this one commits — so there is no
+// window to lose, and a lock would be taken against nobody.
+//
+// These three reach the live probe through the employment edge they attach,
+// which probes the person it hangs on. That edge takes lockPersonForAttach on
+// the same row, for the archive race one level down; the walk does not read it
+// as the subject lock because it deliberately is not one (personattachlock.go
+// says why at length — routing it through the mutation door would answer a
+// product question as a side effect of a concurrency fix).
+var unlockedLiveWrites = gatekit.Waive(map[string]string{
+	"internal/modules/people:Store.QuickCapture":            "quick capture creates the person and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
+	"internal/modules/people:Store.quickCaptureInTx":        "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same person before writing its socials",
+	"internal/modules/people:Store.CreateFromVCardReviewTx": "a reviewed card accepted into a new person: CreatePersonTx mints the row and its socials, and the employer attach that follows is what reaches the probe. The subject is this transaction's own creation, so there is no concurrent erasure to lose a race to",
+})
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 	t.Parallel()

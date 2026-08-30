@@ -5625,7 +5625,22 @@ export const en = {
     "AI-assisted drafts; every send stays a human decision.",
   "voice.insights.nextBestLabel": "To make it better:",
   "voice.candidate.title":
-    "A new voice version (v{n}) is waiting for your review.",
+    "A new voice version (v{n}) is ready — read it before you use it.",
+  "voice.candidate.whatItIs":
+    "This is what the build learned from your samples. It is not in use yet: nothing is drafted in this voice until you choose it.",
+  "voice.candidate.reviewLabel": "What this version says about how you write",
+  "voice.candidate.concernsLabel":
+    "Why it is waiting for you rather than going live on its own",
+  "voice.candidate.applyHint":
+    "If it reads like you, use it. If it does not, keep your current voice and add more of your own writing — the next build learns from what is in your corpus.",
+  "voice.candidate.reason.malformed":
+    "The check that scores a new voice could not read some of the sample drafts, so its score is based on fewer samples than usual.",
+  "voice.candidate.reason.lowScore":
+    "Sample drafts written in this voice scored {score} against your own writing, under the {floor} this installation requires to activate a voice on its own.",
+  "voice.candidate.reason.hardFailures":
+    "{n} phrases this voice is supposed to avoid survived into the sample drafts.",
+  "voice.candidate.reason.rulesRemoved":
+    "{n} rules about what to avoid were dropped compared with your previous version.",
   "voice.candidate.apply": "Use this version",
   "voice.candidate.reject": "Keep my current voice",
   "voice.history.label": "Versions and learning",
@@ -5690,6 +5705,8 @@ export const en = {
   "settings.voice.buildsTitle": "Builds",
   "settings.voice.buildRowLabel": "Build from your samples",
   "settings.voice.building": "Building…",
+  "settings.voice.buildRunning":
+    "Building your voice now — this takes about a minute. You can leave this page; the build keeps running.",
   "settings.voice.rebuild": "Rebuild Voice DNA",
   "settings.voice.buildFirst": "Build my Voice DNA",
   "settings.voice.buildNeedsWords":

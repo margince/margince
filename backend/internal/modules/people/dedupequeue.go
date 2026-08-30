@@ -76,8 +76,9 @@ const (
 	auditEntityDedupe = "dedupe_candidate"
 	// auditKeyDisposition is the audited field name of the queue verdict.
 	auditKeyDisposition = "disposition"
-	// sqlAlwaysVisible is the no-op arm of the pair-visibility predicate:
-	// the caller's scope leaves that record type unbounded.
+	// sqlAlwaysVisible is the no-op arm a scoped predicate falls back to when
+	// the caller's scope leaves that record type unbounded. Declared here and
+	// used across this module's scoped reads.
 	sqlAlwaysVisible = "true"
 )
 
@@ -147,7 +148,7 @@ func requireDedupeWrite(ctx context.Context, entityType string) error {
 // surfaces only when BOTH sides of its pair are visible to the caller —
 // the evidence snapshot reads both records, so listing a pair IS a read of
 // them (H1). Empty for unbounded callers.
-func dedupeVisibilityClause(ctx context.Context, arg func(any) int) (string, error) {
+func dedupeVisibilityClause(ctx context.Context, arg func(any) int, mustBeLive bool) (string, error) {
 	personClause, err := auth.ScopeClauseFor(ctx, entityPerson, "vp", arg)
 	if err != nil {
 		return "", err
@@ -160,26 +161,48 @@ func dedupeVisibilityClause(ctx context.Context, arg func(any) int) (string, err
 	if err != nil {
 		return "", err
 	}
-	if personClause == "" && orgClause == "" && leadClause == "" {
-		return "", nil
-	}
-	personOK := sqlAlwaysVisible
-	if personClause != "" {
-		personOK = fmt.Sprintf(`(EXISTS (SELECT 1 FROM person vp WHERE vp.id = dedupe_candidate.left_person_id AND %[1]s)
-			AND EXISTS (SELECT 1 FROM person vp WHERE vp.id = dedupe_candidate.right_person_id AND %[1]s))`, personClause)
-	}
-	orgOK := sqlAlwaysVisible
-	if orgClause != "" {
-		orgOK = fmt.Sprintf(`(EXISTS (SELECT 1 FROM organization vo WHERE vo.id = dedupe_candidate.left_org_id AND %[1]s)
-			AND EXISTS (SELECT 1 FROM organization vo WHERE vo.id = dedupe_candidate.right_org_id AND %[1]s))`, orgClause)
-	}
-	leadOK := sqlAlwaysVisible
-	if leadClause != "" {
-		leadOK = fmt.Sprintf(`(EXISTS (SELECT 1 FROM lead vl WHERE vl.id = dedupe_candidate.left_lead_id AND %[1]s)
-			AND EXISTS (SELECT 1 FROM lead vl WHERE vl.id = dedupe_candidate.right_lead_id AND %[1]s))`, leadClause)
-	}
 	return fmt.Sprintf(`((entity_type = 'person' AND %s) OR (entity_type = 'organization' AND %s) OR (entity_type = 'lead' AND %s))`,
-		personOK, orgOK, leadOK), nil
+		bothSidesServable(entityPerson, "vp", "left_person_id", "right_person_id", personClause, mustBeLive),
+		bothSidesServable(entityOrganization, "vo", "left_org_id", "right_org_id", orgClause, mustBeLive),
+		bothSidesServable(entityLead, "vl", "left_lead_id", "right_lead_id", leadClause, mustBeLive)), nil
+}
+
+// bothSidesServable is the per-side predicate for one entity type: the subject
+// row must EXIST, be LIVE, and pass whatever row scope the caller has.
+//
+// Emitted unconditionally, where the predicate this replaced was skipped whole
+// when no record type narrowed the caller. That was not the bug — person and
+// organization are capture-private, so even an all-scope human is bounded on
+// them and the clause was built anyway — but it made the liveness term depend on
+// a scope the reader might not have. A system principal is unbounded on all
+// three (auth.Unbounded), so on the day one reads this queue the old shape would
+// have served it every archived pair in the installation.
+//
+// The liveness term is not part of the scope clause and cannot be folded into
+// it. auth.EnsureVisibleLive says why in its own words: erasure anonymizes a
+// person in place and stamps archived_at while LEAVING owner_id alone, so a
+// scope predicate answers "yes, still yours" for a record every live read path
+// refuses. The same is true of a plain archive.
+//
+// Without it a decision outlives both records it is about. The candidate carries
+// its own archived_at and nothing sweeps it when a SUBJECT is archived, so the
+// pair keeps the confidence it was filed with and holds its rank in a lane that
+// serves ten by score. Archiving one of two duplicates is a reasonable way to
+// resolve a pair — the most natural one for a company entered twice, since it
+// needs no merge decision — so the more diligently a workspace resolves them
+// that way, the faster its queue fills with its own finished work.
+func bothSidesServable(entityType, alias, leftColumn, rightColumn, scopeClause string, mustBeLive bool) string {
+	side := func(column string) string {
+		terms := fmt.Sprintf("%[1]s.id = dedupe_candidate.%[2]s", alias, column)
+		if mustBeLive {
+			terms += fmt.Sprintf(" AND %s.archived_at IS NULL", alias)
+		}
+		if scopeClause != "" {
+			terms += " AND " + scopeClause
+		}
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s)", entityType, alias, terms)
+	}
+	return "(" + side(leftColumn) + " AND " + side(rightColumn) + ")"
 }
 
 // ListDedupeCandidates pages the queue, confidence-sorted (AC-dedupe-1).
@@ -200,7 +223,13 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		FROM dedupe_candidate
 		WHERE disposition = $1 AND archived_at IS NULL`
 	args := []any{in.Status}
-	visClause, err := dedupeVisibilityClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	// Liveness binds the OPEN lane only. A decided pair is a record of what
+	// somebody decided, and every merge archives the loser by definition — so
+	// asking both sides to be live on `status=merged` would hide every row that
+	// filter exists to serve.
+	visClause, err := dedupeVisibilityClause(ctx,
+		func(v any) int { args = append(args, v); return len(args) },
+		in.Status == dispositionOpen)
 	if err != nil {
 		return nil, "", err
 	}
@@ -267,7 +296,8 @@ func (s *Store) CountOpenDedupeCandidates(ctx context.Context) (int, error) {
 	}
 	query := `SELECT count(*) FROM dedupe_candidate WHERE disposition = $1 AND archived_at IS NULL`
 	args := []any{dispositionOpen}
-	visClause, err := dedupeVisibilityClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	visClause, err := dedupeVisibilityClause(ctx,
+		func(v any) int { args = append(args, v); return len(args) }, true)
 	if err != nil {
 		return 0, err
 	}
@@ -295,10 +325,7 @@ func (s *Store) GetDedupeCandidate(ctx context.Context, id ids.UUID) (DedupeCand
 		if err != nil {
 			return err
 		}
-		if err := auth.EnsureVisible(ctx, tx, row.EntityType, row.LeftID); err != nil {
-			return err
-		}
-		return auth.EnsureVisible(ctx, tx, row.EntityType, row.RightID)
+		return bothSidesReadable(ctx, tx, row)
 	})
 	if err != nil {
 		return DedupeCandidateRow{}, err
@@ -307,6 +334,38 @@ func (s *Store) GetDedupeCandidate(ctx context.Context, id ids.UUID) (DedupeCand
 		return DedupeCandidateRow{}, err
 	}
 	return row, nil
+}
+
+// bothSidesReadable is the by-id twin of the list's own predicate: a pair is
+// readable when its reader can see both sides, and — while the pair is still
+// OPEN — when both sides are still live.
+//
+// The live probe is auth.EnsureVisibleLive rather than EnsureVisible, and the
+// difference is the whole point. Erasure anonymizes a person in place and stamps
+// archived_at while LEAVING owner_id alone, so a plain scope probe answers "yes,
+// still yours" for a record every live read path refuses — EnsureVisibleLive
+// says so in its own doc. Without it the queue stops serving a dead pair and the
+// review route still hands it over by id, evidence snapshot and all.
+//
+// A DECIDED pair keeps the plain probe. Every merge archives the loser, so
+// asking both sides to be live would make the record of a completed merge
+// unreadable — and that record is what the merged list exists to show.
+//
+// Choosing the probe through a value is what the two cases need, and it is worth
+// knowing that the write-authority gate cannot follow it: that gate reads the
+// probe SPELLED inside a mutating function's own body. This is a read, so it was
+// waived there before and needs no waiver now — but nothing mechanical is left
+// watching this call either. The behaviour is held by a test instead, over the
+// route a reader actually takes: fetch and dispose a pair whose side is gone.
+func bothSidesReadable(ctx context.Context, tx pgx.Tx, row DedupeCandidateRow) error {
+	visible := auth.EnsureVisible
+	if row.Disposition == dispositionOpen {
+		visible = auth.EnsureVisibleLive
+	}
+	if err := visible(ctx, tx, row.EntityType, row.LeftID); err != nil {
+		return err
+	}
+	return visible(ctx, tx, row.EntityType, row.RightID)
 }
 
 func readDedupeCandidate(ctx context.Context, tx pgx.Tx, id ids.UUID) (DedupeCandidateRow, error) {
@@ -366,7 +425,8 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		  FROM dedupe_candidate
 		 WHERE disposition = $1 AND archived_at IS NULL
 		   AND (%s = $2 OR %s = $2)`, column[0], column[1])
-	visClause, err := dedupeVisibilityClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	visClause, err := dedupeVisibilityClause(ctx,
+		func(v any) int { args = append(args, v); return len(args) }, true)
 	if err != nil {
 		return nil, err
 	}

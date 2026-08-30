@@ -295,6 +295,22 @@ func aboveFloor(steps []proposedStep) []proposedStep {
 // evidence, quoting the transcript rather than the model's paraphrase of it —
 // the point is to show the human what the text actually says.
 func stepEvidence(step proposedStep, lines []string, activityID ids.ActivityID) approvals.Evidence {
+	return approvals.Evidence{
+		Snippet:     quotedFromTranscript(step, lines),
+		SourceType:  string(recordTypeActivity),
+		SourceID:    activityID.UUID,
+		SourceLines: step.SourceLines,
+	}
+}
+
+// quotedFromTranscript is the transcript's own words behind one step.
+//
+// One function because two readers need the SAME string: the evidence a reader
+// sees, and the proposal's `cited` field, which the rejection memory keys on. A
+// second spelling of the trim would let the two diverge on a long quotation,
+// and the memory would then fail to recognise a refusal that a reader can see
+// is about the same words.
+func quotedFromTranscript(step proposedStep, lines []string) string {
 	quoted := make([]string, 0, len(step.SourceLines))
 	for _, line := range step.SourceLines {
 		quoted = append(quoted, lines[line-1])
@@ -306,12 +322,7 @@ func stepEvidence(step proposedStep, lines []string, activityID ids.ActivityID) 
 		// end in a glyph the transcript does not contain.
 		snippet = strings.ToValidUTF8(snippet[:approvals.MaxEvidenceSnippet], "")
 	}
-	return approvals.Evidence{
-		Snippet:     snippet,
-		SourceType:  string(recordTypeActivity),
-		SourceID:    activityID.UUID,
-		SourceLines: step.SourceLines,
-	}
+	return snippet
 }
 
 // transcriptReadStore is the slice of the activities store this engine drives.
