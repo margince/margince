@@ -50,47 +50,9 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 		// one account makes that account know everybody.
 		author := seats.as(handlerOf(act, cfg, refs))
 
-		// One of the two offsets is set: DaysAgo for something that happened,
-		// DaysIn for something still to come.
-		occurred := -act.DaysAgo
-		if act.DaysIn > 0 {
-			occurred = act.DaysIn
-		}
-		// An activity links to every record it touched rather than belonging
-		// to one, so a mail is one row that appears on the company, on the
-		// person it was with, and on the deal it moved. Linking only the
-		// company — which is what this did first — leaves every person's
-		// timeline empty, which is where a rep actually looks.
-		links, err := activityLinks(c, refs, act, orgID)
+		body, err := activityBody(c, refs, act, orgID, i)
 		if err != nil {
-			return created, fmt.Errorf("activity %d on %s: %w", i, act.Company, err)
-		}
-		body := jsonBody{
-			"kind":          act.Kind,
-			"occurred_at":   refs.timestamp(occurred),
-			"source":        seedSource,
-			"source_system": seedSourceSystem,
-			"source_id":     fmt.Sprintf("act-%d", i),
-			"links":         links,
-		}
-		addIfSet(body, "subject", act.Subject)
-		addIfSet(body, "body", act.Body)
-		addIfSet(body, "direction", act.Direction)
-		addIfSet(body, "meeting_status", act.MeetingStatus)
-		if act.DurationSeconds > 0 {
-			body["duration_seconds"] = act.DurationSeconds
-		}
-		// assignee_id and due_at belong to a TASK and to nothing else — the
-		// activity_task_fields CHECK refuses them on a mail or a meeting,
-		// because those record what happened rather than what somebody owes.
-		// Who handled the others is carried by the record's owner instead.
-		if act.Kind == "task" {
-			if assignee, ok := refs.usersByRef[act.Assignee]; ok {
-				body["assignee_id"] = assignee
-			}
-			if act.DaysIn > 0 {
-				body["due_at"] = refs.timestamp(act.DaysIn)
-			}
+			return created, err
 		}
 
 		// Idempotent on source_system+source_id, so a re-run replays the same
@@ -123,6 +85,73 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 	return created, nil
 }
 
+// activityBody is the write for one dataset entry: which kind it survives as,
+// who and what it links, and the fields that kind is allowed to carry.
+func activityBody(c *client, refs pipelineRefs, act demoActivity, orgID string, i int) (jsonBody, error) {
+	// One of the two offsets is set: DaysAgo for something that happened,
+	// DaysIn for something still to come.
+	occurred := -act.DaysAgo
+	if act.DaysIn > 0 {
+		occurred = act.DaysIn
+	}
+	// Who the activity was with, when it was with anybody — needed both to
+	// pick the kind actually filed and to link that person below.
+	var personID string
+	if act.Kind == "email" || act.Kind == "call" || act.Kind == "meeting" {
+		var err error
+		personID, err = counterpartFor(c, act, orgID)
+		if err != nil {
+			return nil, fmt.Errorf("activity %d on %s: %w", i, act.Company, err)
+		}
+	}
+	// A meeting or a call the database can reach through nobody there is
+	// filed as a note about the account instead — activity_link_no_company_meeting
+	// refuses a direct company link on either kind, and without an attendee
+	// that link is the only way the company timeline would ever see it.
+	effectiveKind := act.Kind
+	if (act.Kind == "meeting" || act.Kind == "call") && personID == "" {
+		effectiveKind = "note"
+	}
+	// An activity links to every record it touched rather than belonging to
+	// one, so a mail is one row that appears on the company, on the person it
+	// was with, and on the deal it moved. Linking only the company — which is
+	// what this did first — leaves every person's timeline empty, which is
+	// where a rep actually looks.
+	links := activityLinks(effectiveKind, personID, orgID, refs, act)
+	body := jsonBody{
+		"kind":          effectiveKind,
+		"occurred_at":   refs.timestamp(occurred),
+		"source":        seedSource,
+		"source_system": seedSourceSystem,
+		"source_id":     fmt.Sprintf("act-%d", i),
+		"links":         links,
+	}
+	addIfSet(body, "subject", act.Subject)
+	addIfSet(body, "body", act.Body)
+	addIfSet(body, "direction", act.Direction)
+	// field_not_valid_for_kind: only a kind that survived as "meeting" above
+	// may carry meeting_status — a downgraded note may not.
+	if effectiveKind == "meeting" {
+		addIfSet(body, "meeting_status", act.MeetingStatus)
+	}
+	if act.DurationSeconds > 0 {
+		body["duration_seconds"] = act.DurationSeconds
+	}
+	// assignee_id and due_at belong to a TASK and to nothing else — the
+	// activity_task_fields CHECK refuses them on a mail or a meeting, because
+	// those record what happened rather than what somebody owes. Who handled
+	// the others is carried by the record's owner instead.
+	if act.Kind == "task" {
+		if assignee, ok := refs.usersByRef[act.Assignee]; ok {
+			body["assignee_id"] = assignee
+		}
+		if act.DaysIn > 0 {
+			body["due_at"] = refs.timestamp(act.DaysIn)
+		}
+	}
+	return body, nil
+}
+
 // handlerOf is the colleague who had this conversation.
 //
 // Derived rather than configured, so a company ingested next month is covered
@@ -142,25 +171,28 @@ func handlerOf(act demoActivity, cfg demoConfig, refs pipelineRefs) demoUser {
 	return demoUser{}
 }
 
-// activityLinks is what one activity touched: always its company, plus the
-// company's most senior contact and any open deal there.
+// activityLinks is what one activity touched: its company or its counterpart
+// — never both on a meeting or a call, per the database's own rule — plus any
+// open deal there.
 //
-// Derived rather than listed, because a dataset that names the counterpart
-// per activity would have to be rewritten for every company ingested later.
-// The senior contact is the one a conversation with an account is most likely
-// to have been with — a heuristic, and better than an empty timeline.
-func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string) ([]jsonBody, error) {
-	links := []jsonBody{{"entity_type": "organization", "entity_id": orgID}}
+// The counterpart is derived rather than listed, because a dataset that named
+// it per activity would have to be rewritten for every company ingested
+// later; effectiveKind and personID are decided by the caller, which already
+// downgraded a meeting or call reached through nobody to a note.
+func activityLinks(effectiveKind, personID, orgID string, refs pipelineRefs, act demoActivity) []jsonBody {
+	var links []jsonBody
 
-	// A note or a task is internal — it is about the account, not with anybody.
-	if act.Kind == "email" || act.Kind == "call" || act.Kind == "meeting" {
-		personID, err := counterpartFor(c, act, orgID)
-		if err != nil {
-			return nil, err
-		}
-		if personID != "" {
-			links = append(links, jsonBody{"entity_type": "person", "entity_id": personID})
-		}
+	// activity_link_no_company_meeting refuses a direct company link on a
+	// meeting or a call: the company is reached through the attendee instead.
+	// Every other kind still links it directly — a note or a task is about the
+	// account rather than with anybody, an email may legitimately have no
+	// single attendee, and a meeting or call reached through nobody has
+	// already become a note, above.
+	if effectiveKind != "meeting" && effectiveKind != "call" {
+		links = append(links, jsonBody{"entity_type": "organization", "entity_id": orgID})
+	}
+	if personID != "" {
+		links = append(links, jsonBody{"entity_type": "person", "entity_id": personID})
 	}
 
 	for _, deal := range refs.dealsByOrg[refs.orgForDomain(act.Company)] {
@@ -173,7 +205,7 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 	if project := projectForActivity(refs, act); project != "" {
 		links = append(links, jsonBody{"entity_type": "project", "entity_id": project})
 	}
-	return links, nil
+	return links
 }
 
 // counterpartFor answers WHO at the customer an activity was with.
