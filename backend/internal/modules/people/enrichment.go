@@ -129,13 +129,23 @@ func anyAddressSuppressed(ctx context.Context, tx pgx.Tx, personID string) (bool
 // candidate ties to this one. It is what stops two records of the same human
 // each buying the same answer (PI-PARAM-9); an empty answer degrades the
 // fence to the single-record rule rather than blocking work.
+//
+// Both the candidate and the twin must be LIVE. A pair the queue has retired is
+// not a claim about anybody any more, and a twin that has been archived — or
+// anonymized in place by an erasure, which stamps archived_at and leaves the row
+// — is not a record whose spend this one should be charged against. Without the
+// second term this went on clustering a person the product has erased.
 func DuplicateCluster(ctx context.Context, tx pgx.Tx, personID string) ([]string, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT CASE WHEN left_person_id = $1 THEN right_person_id ELSE left_person_id END::text
-		  FROM dedupe_candidate
-		 WHERE entity_type = 'person'
-		   AND (left_person_id = $1 OR right_person_id = $1)
-		   AND disposition = 'open'`, personID)
+		SELECT CASE WHEN d.left_person_id = $1 THEN d.right_person_id ELSE d.left_person_id END::text
+		  FROM dedupe_candidate d
+		  JOIN person twin
+		    ON twin.id = CASE WHEN d.left_person_id = $1 THEN d.right_person_id ELSE d.left_person_id END
+		 WHERE d.entity_type = 'person'
+		   AND (d.left_person_id = $1 OR d.right_person_id = $1)
+		   AND d.disposition = 'open'
+		   AND d.archived_at IS NULL
+		   AND twin.archived_at IS NULL`, personID)
 	if err != nil {
 		return nil, fmt.Errorf("people: reading the duplicate cluster: %w", err)
 	}
