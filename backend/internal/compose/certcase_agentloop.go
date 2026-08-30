@@ -223,6 +223,9 @@ func refuseUnrunnableAgentJob(f agentLoopFixture) error {
 			"%s: the fixture names no trigger, and every run the scheduler starts is one named occurrence",
 			agentLoopSite)
 	}
+	if err := refuseUnmintableTriggerRef(f.TriggerRef); err != nil {
+		return err
+	}
 	for _, item := range f.Grounding {
 		if strings.TrimSpace(item.TrustTier) == "" {
 			return fmt.Errorf(

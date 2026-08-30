@@ -11,6 +11,15 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **A certification fixture's trigger ref is checked against the shape
+  production mints.** The validator accepted any non-empty string, so a corpus
+  scenario could drift arbitrarily far from the runner and stay green: when the
+  ref grew a seat segment, a fixture kept the old two-segment value and nothing
+  failed, because a fixture that describes a different system has no failing
+  assertion to notice. The check is now derived from `AgentSpec.TriggerRef`
+  itself — a reference ref is minted and compared segment for segment — so the
+  day the writer changes shape, every stale fixture fails naming itself.
+
 - **BREAKING (metrics): the sweep gauges no longer carry a `_total` suffix.**
   `margince_sweep_workspaces_total` is now `margince_sweep_workspaces`, and
   `margince_sweep_units_total` is now `margince_sweep_units`. The two `_failed`
