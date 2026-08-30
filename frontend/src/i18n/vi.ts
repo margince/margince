@@ -623,6 +623,8 @@ export const vi = {
   "common.error": "Không tải được màn hình này.",
   "common.errorNoCause":
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
+  "common.gatewayUnavailable":
+    "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
     "Bạn không có quyền cho hành động này. Hãy nhờ quản trị viên, hoặc người đã chia sẻ bản ghi này với bạn, mở rộng quyền truy cập của bạn.",
   "common.seatReadOnly":

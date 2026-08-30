@@ -38,13 +38,19 @@ function readerLanguage(): string | undefined {
 
 // How long a request may stay open before this client stops waiting for it.
 //
-// The API's own http.Server carries a 30s WriteTimeout, so no answer this
-// client can legitimately receive takes longer than that; the rest is headroom
-// for whatever sits between the two. Nothing long-lived comes through here —
-// the polling screens issue ordinary short requests on a refetchInterval, and
-// the file uploads call `fetch` directly rather than this client — so there is
-// no request this deadline can cut off mid-answer.
-const REQUEST_TIMEOUT_MS = 45_000;
+// This used to be derived from the API's 30s WriteTimeout — "no answer this
+// client can legitimately receive takes longer than that". That stopped being
+// true: the endpoints that call a model and wait (a reply draft, a dossier, a
+// growth-fit read) run 13 to 45 seconds against a cloud provider, and the
+// server now allows them the AI layer's own ceiling rather than cutting the
+// response at 30s.
+//
+// So this deadline was cutting exactly the answers it was written to be
+// generous towards, and the reader saw a request that failed for no stated
+// reason. It sits above the server's own ceiling now, so the SERVER is what
+// ends a hopeless request — it knows what the work was — and this remains what
+// it was for: the request that opened and will never answer at all.
+export const REQUEST_TIMEOUT_MS = 360_000;
 
 /**
  * A request that opened and never answered.
@@ -78,19 +84,96 @@ export class RequestTimeoutError extends Error {
 // a deadline nothing can exercise is a deadline nobody knows still works.
 async function fetchWithDeadline(request: Request): Promise<Response> {
   const deadline = new AbortController();
+  // The REQUEST's own signal is what React Query aborts when a screen unmounts
+  // or a query is cancelled. Without this the deadline was the only way a call
+  // could end, so navigating away from a 45-second draft left it running and a
+  // manual retry ran a second model call beside the first.
+  if (request.signal.aborted) {
+    deadline.abort(request.signal.reason);
+  } else {
+    request.signal.addEventListener(
+      "abort",
+      () => deadline.abort(request.signal.reason),
+      {
+        once: true,
+      },
+    );
+  }
   const expiry = globalThis.setTimeout(() => {
     deadline.abort(
       new RequestTimeoutError(request.method, request.url, REQUEST_TIMEOUT_MS),
     );
   }, REQUEST_TIMEOUT_MS);
   try {
-    return await globalThis.fetch(request, { signal: deadline.signal });
+    return withGatewayProblem(
+      await globalThis.fetch(request, { signal: deadline.signal }),
+      request.url,
+    );
   } finally {
     // Whatever the outcome. A cleared timer is what keeps a settled request
     // from holding the page awake, and — on a request that failed for its own
     // reasons — from aborting a controller nobody is listening to any more.
     globalThis.clearTimeout(expiry);
   }
+}
+
+// The statuses a PROXY answers with when it gave up on the app behind it,
+// rather than the app refusing something.
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
+// The routes whose handler calls a model and waits. Only these get the gateway
+// message below, and the narrowness is the point: a bodiless 5xx from any other
+// endpoint is an ordinary server fault, and the app has surfaces that read it
+// as one — the composer branches on a bare 501, the connector screens on a
+// bodiless 503. Rewriting every one of those to say "the work may still be
+// running" would be false about a mailer that is simply not wired.
+//
+// What makes these three different is duration: a model call runs for tens of
+// seconds, so a proxy giving up on one really does leave work in flight, and
+// really does make a retry a second call rather than a repeat.
+const MODEL_ROUTE_SUFFIXES = ["/draft-email", "/dossier", "/growth-fit"];
+
+/**
+ * Give a proxy's failure ON A SLOW AI ROUTE a problem body, so the reader is
+ * told what happened instead of "the request failed".
+ *
+ * These responses come from the PROXY, not the app, so they carry no RFC 7807
+ * body — `problemDetail` finds no code and the caller falls back to its own
+ * generic sentence. That is how a reply draft that ran 45 seconds and had its
+ * connection cut reached the screen as "The request failed. Please try again."
+ *
+ * Identified by CONTENT TYPE, not an empty body: nginx and Vite both answer
+ * with an HTML error page, so a check for "no body at all" matches almost none
+ * of the real cases. Anything the app itself answered is problem+json and
+ * passes through untouched — the server's own sentence is always better.
+ */
+function withGatewayProblem(response: Response, url: string): Response {
+  if (!GATEWAY_STATUSES.has(response.status) || !callsAModel(url)) {
+    return response;
+  }
+  const contentType = response.headers.get("Content-Type") ?? "";
+  if (contentType.includes("application/problem+json")) {
+    return response;
+  }
+  return new Response(
+    JSON.stringify({
+      type: "about:blank",
+      title: "Gateway",
+      status: response.status,
+      code: "gateway_unavailable",
+      detail: "the server did not finish this request",
+    }),
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers: { "Content-Type": "application/problem+json" },
+    },
+  );
+}
+
+function callsAModel(url: string): boolean {
+  const path = URL.canParse(url) ? new URL(url).pathname : url;
+  return MODEL_ROUTE_SUFFIXES.some((suffix) => path.endsWith(suffix));
 }
 
 export const api = createClient<paths>({

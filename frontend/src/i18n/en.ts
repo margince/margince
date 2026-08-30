@@ -634,6 +634,8 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.gatewayUnavailable":
+    "The server did not finish this request in time. It may still be working — wait a moment before trying again, or the same work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
   // one name: a role that does not admit the action on this kind of record, and
   // a record the reader holds read-only through a share. Nothing on the wire

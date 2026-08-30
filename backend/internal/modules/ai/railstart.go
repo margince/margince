@@ -61,7 +61,7 @@ type railStarter interface {
 // DERIVED from the bound it must outlast, never chosen. Three factors, and the
 // third is the one an earlier version of this file got wrong:
 //
-//   - requestTimeout caps a SINGLE model call — the http.Client timeout every
+//   - CallCeiling caps a SINGLE model call — the http.Client timeout every
 //     adapter is built with.
 //   - a walk of the ladder may spend that bound on EVERY rung.
 //   - and CompleteStructured walks the ladder up to maxLadderWalks times for one
@@ -89,7 +89,7 @@ func railLease(ladder []Tier) time.Duration {
 		// occurrence stale the instant it appeared.
 		rungs = 1
 	}
-	return requestTimeout*time.Duration(rungs*maxLadderWalks) + traceWriteTimeout
+	return CallCeiling*time.Duration(rungs*maxLadderWalks) + traceWriteTimeout
 }
 
 // announceRailStartOnce opens this logical call's occurrence, at most once.
