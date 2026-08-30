@@ -47,7 +47,7 @@ const (
 func agentLoopBaseFixture() agentLoopFixture {
 	return agentLoopFixture{
 		Goal:       "Find my open deals and log a follow-up note on the largest one.",
-		TriggerRef: "morning_brief:2026-07-27",
+		TriggerRef: "morning_brief:2026-07-27:d48b383f3e8acec5d620c82b8c9b4202",
 		Grounding: []agentLoopGrounding{
 			{SourceID: agentLoopUserRef, TrustTier: "T1", Content: "owner_id=user_42"},
 			{SourceID: agentLoopDealRef, TrustTier: "T2", Content: agentLoopSeedSnippet},
@@ -365,6 +365,62 @@ func TestAgentLoopCaseRefusesAWindowTheLoopIsNeverHanded(t *testing.T) {
 			fixture:  agentLoopVariant(func(f *agentLoopFixture) { f.TriggerRef = "" }),
 			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
 			want:     "names no trigger",
+		},
+		{
+			name: "a fixture left on the trigger shape production stopped minting",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "morning_brief:2026-07-27"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "has 2 segment(s); the scheduler mints 3",
+		},
+		{
+			name: "a seat digest of the wrong width",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "morning_brief:2026-07-27:d48b383f"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "segment 3 is",
+		},
+		{
+			name: "a date segment that is not a date",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "morning_brief:yesterdayx:d48b383f3e8acec5d620c82b8c9b4202"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "segment 2 is",
+		},
+		{
+			name: "an occurrence-driven kind naming no occurrence",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "calendar"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "whose shape is `calendar:<uuid>`",
+		},
+		{
+			name: "a segment of the right width carrying a character the writer never mints",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "morning_brief:2026-07-2!:d48b383f3e8acec5d620c82b8c9b4202"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "segment 2 is",
+		},
+		{
+			name: "a trigger no writer mints",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "webhook:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e08"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "neither a spec in the agent catalog nor one of the occurrence-driven kinds",
+		},
+		{
+			name: "an occurrence-driven trigger whose occurrence is not an id",
+			fixture: agentLoopVariant(func(f *agentLoopFixture) {
+				f.TriggerRef = "calendar:tomorrows-standup"
+			}),
+			expected: agentLoopExpectationJSON(t, agentLoopFinalStep),
+			want:     "whose shape is `calendar:<uuid>`",
 		},
 		{
 			name:     "a run offered no tools at all",

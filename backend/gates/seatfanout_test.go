@@ -28,6 +28,16 @@ package gates
 // cannot stop the next author threading a constant, a zero value, or one seat
 // resolved outside the loop through it — which compiles, reads fine, and
 // restores the workspace-wide behaviour exactly.
+//
+// The obligation belongs to the SEEDING path, which is the only place a ref
+// becomes a row. A caller that mints a ref to read its SHAPE and throws the
+// value away carries no fan-out question at all, and there is one: the
+// certification fixture validator derives what a corpus trigger ref must look
+// like by asking the writer, rather than restating the format a second time.
+// It is named below with its reason. What would make that waiver wrong is the
+// value reaching a job — so the reason says what it is used for, and a reader
+// who finds it doing anything else should delete the entry rather than widen
+// it.
 
 import (
 	"go/ast"
@@ -37,6 +47,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two constraints whose key IS the trigger ref. Named here because the
@@ -64,7 +76,12 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 			"unless it can see the seeding path, so either the scan broke or the " +
 			"caller moved and this gate must move with it")
 	}
+	seeding := 0
 	for _, c := range calls {
+		if mintsAShapeRatherThanAnOccurrence.Waived(t, c.site) {
+			continue
+		}
+		seeding++
 		if c.seatArg == "" {
 			t.Errorf("%s: TriggerRef is called without a seat, so every rep in the "+
 				"workspace shares one trigger ref and only the first seeded gets a run", c.pos)
@@ -78,7 +95,25 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 				"workspace", c.pos, c.seatArg)
 		}
 	}
+	// A tree where every call is waived validates no seeding path, and the loop
+	// above reports nothing about it — which reads exactly like a tree where
+	// every call is correct. The waiver list is the one thing that can grow
+	// until that is true.
+	if seeding == 0 {
+		t.Errorf("all %d TriggerRef call(s) are waived as shape-readers, so this gate checked no seeding path: "+
+			"either the seeding call moved and this gate must move with it, or a waiver was written for one that "+
+			"does seed", len(calls))
+	}
+	mintsAShapeRatherThanAnOccurrence.AssertAllMatched(t)
 }
+
+// mintsAShapeRatherThanAnOccurrence names the calls that build a reference
+// value to COMPARE against, never one to seed with. A seat that varies per
+// iteration is meaningless to them: nothing they produce is inserted, so
+// nothing they produce can collide.
+var mintsAShapeRatherThanAnOccurrence = gatekit.Waive(map[string]string{
+	"internal/compose/certcase_agentlooptrigger.go:mintedSchedulerTriggerRef": "mints a ref from a fixed day and seat so the certification fixture validator can compare a corpus trigger ref's SHAPE against what the writer produces, rather than restating the format; the value is compared and discarded, and never reaches EnqueueJob or a job row",
+})
 
 // TestTheTriggerRefStillCarriesTheWholeUniquenessKey fails when a migration
 // re-keys either constraint away from the trigger ref.
@@ -119,6 +154,7 @@ func TestTheTriggerRefStillCarriesTheWholeUniquenessKey(t *testing.T) {
 // the seat.
 type triggerRefCall struct {
 	pos     string
+	site    string
 	seatArg string
 	// fromRangeVar is whether the seat traces to the range variable of a loop
 	// enclosing the call. That is the property the fan-out actually needs: a
@@ -155,8 +191,24 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 		// The range variables currently in scope, innermost last. A call is
 		// only per-seat if its seat argument is rooted in one of them.
 		var inScope []string
+		// The function a call sits in, so a waiver names one call site rather
+		// than a whole file. A call outside any function declaration keeps the
+		// empty name, which matches no waiver and so must satisfy the seat rule
+		// on its own — the safe direction for a reader that meets a shape it
+		// was not built for.
+		enclosing := ""
 		var walk func(ast.Node) bool
 		walk = func(n ast.Node) bool {
+			if fn, ok := n.(*ast.FuncDecl); ok {
+				if fn.Body == nil {
+					return false
+				}
+				before := enclosing
+				enclosing = fn.Name.Name
+				ast.Inspect(fn.Body, walk)
+				enclosing = before
+				return false
+			}
 			if rng, ok := n.(*ast.RangeStmt); ok {
 				before := len(inScope)
 				for _, key := range []ast.Expr{rng.Key, rng.Value} {
@@ -176,7 +228,7 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 			if !ok || sel.Sel.Name != "TriggerRef" {
 				return true
 			}
-			c := triggerRefCall{pos: fset.Position(call.Pos()).String()}
+			c := triggerRefCall{pos: fset.Position(call.Pos()).String(), site: path + ":" + enclosing}
 			// The seat is the LAST argument: the day names the occurrence and
 			// the seat names whose occurrence it is.
 			if n := len(call.Args); n >= 2 {
