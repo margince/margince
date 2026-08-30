@@ -9,7 +9,7 @@ package privacy
 // the attachments, the transmitted copy.
 //
 // This package has shipped the same defect twice by keeping that list in two
-// places. Migration 0291 had to add counterparty_email to a guard written from
+// places. A migration had to add counterparty_email to a guard written from
 // the smaller of two content lists. Then the lift arm destroyed the body and
 // left the raw_capture row standing, joined on the (source_system, source_id)
 // pair the lift deliberately keeps — so an Art. 15 export served the verbatim
