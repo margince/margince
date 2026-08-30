@@ -5274,6 +5274,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/owner-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own other email addresses.
+         * @description A seat's other addresses: a send-as alias, a private domain the same person reads, an
+         *     address they forward from. Mail among a person's own addresses is not correspondence with
+         *     anybody, so a message whose every party is the caller themselves is dropped before storage,
+         *     and an address listed here is never minted as a contact.
+         *
+         *     The caller's own only. A colleague's alias says which of THEIR mail is private, which is the
+         *     thing the list exists to protect, so it is never shown here.
+         */
+        get: operations["listCaptureOwnerIdentities"];
+        put?: never;
+        /**
+         * Declare another address as your own.
+         * @description Takes a human seat and nothing more: claiming your own address needs no grant, and the claim
+         *     binds only your own mail. Not retroactive — mail already captured under the old reading
+         *     stays, and a contact already minted from an alias stays until it is merged or removed.
+         *     Idempotent on the folded value.
+         */
+        post: operations["createCaptureOwnerIdentity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/owner-identities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw one of your own addresses.
+         * @description Yours alone to withdraw. Mail naming the address is judged like any other sender from the
+         *     next message on; nothing already dropped comes back. A colleague's identity answers
+         *     not-found rather than forbidden — the two are the same answer to somebody who may not know
+         *     it exists.
+         */
+        delete: operations["deleteCaptureOwnerIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/email-domains/{domain}": {
         parameters: {
             query?: never;
@@ -11723,6 +11782,31 @@ export interface components {
         };
         CreateCaptureExclusionRequest: {
             scope: components["schemas"]["CaptureExclusionScope"];
+            kind: components["schemas"]["CaptureExclusionKind"];
+            /** @description An email address, or a bare domain. */
+            value: string;
+        };
+        CaptureOwnerIdentity: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["CaptureExclusionKind"];
+            /** @description The folded address or domain. */
+            value: string;
+            source: components["schemas"]["CaptureOwnerIdentitySource"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
+         *     provider attests; nothing writes it yet, because reading a provider's send-as list needs a
+         *     scope the connection grant does not request.
+         * @enum {string}
+         */
+        CaptureOwnerIdentitySource: "user" | "provider";
+        CaptureOwnerIdentityListResponse: {
+            data: components["schemas"]["CaptureOwnerIdentity"][];
+        };
+        CreateCaptureOwnerIdentityRequest: {
             kind: components["schemas"]["CaptureExclusionKind"];
             /** @description An email address, or a bare domain. */
             value: string;
@@ -33201,6 +33285,76 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCaptureOwnerIdentities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's identities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOwnerIdentityListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createCaptureOwnerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCaptureOwnerIdentityRequest"];
+            };
+        };
+        responses: {
+            /** @description The identity. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOwnerIdentity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteCaptureOwnerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
