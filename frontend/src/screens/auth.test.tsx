@@ -12,12 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { THEME_KEY } from "../app/theme";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, LocaleProvider, localeNameKey, translate } from "../i18n";
-import {
-  AuthScreen,
-  AvailabilityScreen,
-  ProviderButtons,
-  resetOidcFailureNoticeForTests,
-} from "./auth";
+import { AuthScreen, AvailabilityScreen, ProviderButtons } from "./auth";
 
 // The unauthenticated surface (A107/ADR-0061 §12): login is the default —
 // no signup mode, no workspace field, no tenant selector on the wire — and
@@ -28,12 +23,8 @@ const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 
 // The theme lives in one module-level store, so the case that presses the
 // toggle below would otherwise hand every later case a flipped document,
-// `localStorage` and store. The OIDC failure marker's read is memoized the
-// same way (auth.tsx's own comment says why), so it needs the same reset.
-beforeEach(() => {
-  resetTheme();
-  resetOidcFailureNoticeForTests();
-});
+// `localStorage` and store.
+beforeEach(resetTheme);
 
 afterEach(() => {
   cleanup();
@@ -104,6 +95,31 @@ const ok = (status: number, body?: unknown) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+// stubLocationAssign swaps `window.location` for the duration of `run`, so a
+// test can observe `location.assign` calls without a real cross-origin
+// navigation. `Location.prototype.assign` is non-configurable in jsdom, so
+// `vi.spyOn` cannot touch it — the whole object has to move.
+async function stubLocationAssign(
+  run: (assign: ReturnType<typeof vi.fn>) => Promise<void>,
+) {
+  const originalLocation = window.location;
+  const assign = vi.fn();
+  Object.defineProperty(window, "location", {
+    value: { ...originalLocation, assign },
+    writable: true,
+    configurable: true,
+  });
+  try {
+    await run(assign);
+  } finally {
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+  }
+}
 
 describe("AuthScreen login", () => {
   it("introduces Margince as AI and renders the configured routing posture without claiming health", async () => {
@@ -503,13 +519,20 @@ describe("federated sign-in", () => {
     expect(microsoft.disabled).toBe(true);
     expect(microsoft.classList.contains("btn-unavailable")).toBe(true);
     // Inert, and that is the point of the switch: it draws the design, it does
-    // not invent a redirect. Clicking must neither navigate nor hit the wire.
-    const calls = stubApi({ password: true, password_reset: true }, () =>
-      ok(200),
-    );
-    await userEvent.click(google);
-    expect(calls).toEqual([]);
-    expect(google).toBeTruthy();
+    // not invent a redirect. Clicking must neither navigate nor hit the wire —
+    // the navigate assertion is the one that actually matters once
+    // startFederatedSignIn performs a real `location.assign`: without the
+    // preview guard in front of it, this click would take the whole review
+    // tab to a route the preview build never mounts.
+    await stubLocationAssign(async (assign) => {
+      const calls = stubApi({ password: true, password_reset: true }, () =>
+        ok(200),
+      );
+      await userEvent.click(google);
+      expect(calls).toEqual([]);
+      expect(assign).not.toHaveBeenCalled();
+      expect(google).toBeTruthy();
+    });
   });
 
   // The product path, asserted as a property rather than assumed. A real server
@@ -615,19 +638,9 @@ describe("federated sign-in", () => {
     expect(chosen).toEqual(["corp-sso"]);
   });
 
-  // The real hand-off: a full-page navigation, never an XHR. `location.assign`
-  // is the seam — jsdom cannot perform a real cross-origin navigation, and
-  // `Location.prototype.assign` is non-configurable, so the whole object is
-  // swapped for the one call and restored immediately after.
+  // The real hand-off: a full-page navigation, never an XHR.
   it("navigates to the provider's start URL on click", async () => {
-    const originalLocation = window.location;
-    const assign = vi.fn();
-    Object.defineProperty(window, "location", {
-      value: { ...originalLocation, assign },
-      writable: true,
-      configurable: true,
-    });
-    try {
+    await stubLocationAssign(async (assign) => {
       stubApi(
         {
           password: true,
@@ -643,13 +656,7 @@ describe("federated sign-in", () => {
       );
 
       expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
-    } finally {
-      Object.defineProperty(window, "location", {
-        value: originalLocation,
-        writable: true,
-        configurable: true,
-      });
-    }
+    });
   });
 });
 
@@ -664,6 +671,24 @@ describe("OIDC failure notice", () => {
   });
 
   it("stays silent for an ordinary address", async () => {
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await screen.findByLabelText("Email");
+    expect(screen.queryByText(t("auth.noticeOidcFailed"))).toBeNull();
+  });
+
+  // A later, unrelated remount of AuthScreen within the same page — a
+  // session expiring and sending the reader back to login, say — must not
+  // replay a marker that was already consumed and scrubbed from the
+  // address. This is the exact case a page-lifetime memo would get wrong:
+  // it would keep answering the FIRST mount's verdict forever.
+  it("does not replay the notice on a later, unrelated mount", async () => {
+    window.location.hash = "#/login?oidc=failed";
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    const { unmount } = render(<AuthScreen onAuthed={vi.fn()} />);
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    unmount();
+
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     await screen.findByLabelText("Email");

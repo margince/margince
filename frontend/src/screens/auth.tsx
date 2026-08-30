@@ -13,6 +13,7 @@ import {
   previewedOidcProviders,
   previewedPasswordReset,
   previewedUnavailableProviders,
+  uiPreviewOidcEnabled,
 } from "../app/ui-preview";
 import wordmarkDark from "../assets/wordmark-dark.png";
 import wordmarkWhite from "../assets/wordmark-white.png";
@@ -59,46 +60,33 @@ export type AuthNotice =
 // reload or a Back press cannot replay it.
 const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
-// Module-level, not component state: React (StrictMode, development only)
-// double-invokes a useState lazy initializer to surface impure ones, and
-// this one is impure by necessity (it mutates the address). Without a memo,
-// the first invocation clears the hash and answers true; the second sees the
-// already-cleared hash and answers false — and false is what would win,
-// silently dropping the notice on every dev-mode render. Memoizing the
-// answer on first read makes every later invocation, however many React
-// makes, agree with the first.
-let oidcFailureResolved: boolean | null = null;
-
-// oidcFailureNotice reads and clears the marker in one step — read-then-clear
-// rather than read-only, for the same reason takeHashCredential's callers
-// never re-derive from a stale address: a component that re-checked on every
-// render would re-show the notice after the reader dismissed it and the hash
-// had not yet caught up.
-function oidcFailureNotice(): boolean {
-  if (oidcFailureResolved !== null) {
-    return oidcFailureResolved;
-  }
-  oidcFailureResolved = globalThis.location?.hash === OIDC_FAILURE_HASH;
-  if (oidcFailureResolved) {
-    const { pathname, search } = globalThis.location;
-    globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
-  }
-  return oidcFailureResolved;
+// isOidcFailureMarker is a PURE read — no mutation — so it is safe under
+// React's StrictMode (development only), which double-invokes a useState
+// lazy initializer to surface impure ones. An earlier version decided the
+// answer AND cleared the address in one impure step: the first invocation
+// cleared it and answered true, the second then saw the already-cleared
+// hash and answered false — and false is the call whose result actually
+// became the committed state, silently dropping the notice on every
+// dev-mode render. Splitting the read from the clear (below) removes the
+// impurity instead of working around it, so no double-invoke count changes
+// the answer.
+function isOidcFailureMarker(): boolean {
+  return globalThis.location?.hash === OIDC_FAILURE_HASH;
 }
 
-/**
- * Test-only: puts the marker-read memo back to its pre-mount state.
- *
- * The memo above is scoped to the page's whole lifetime by design — a real
- * page load only ever evaluates it once, so it never needs resetting outside
- * a test runner, where one module instance is shared across every case in
- * the file (the same reason `app/theme-reset.ts`'s `resetTheme` exists).
- * Without this, the second `it()` to render `AuthScreen` in a suite would
- * inherit the first case's already-resolved answer instead of reading its
- * own hash.
- */
-export function resetOidcFailureNoticeForTests(): void {
-  oidcFailureResolved = null;
+// clearOidcFailureMarker is the side effect, kept OUT of the initializer and
+// run from an effect instead — effects are also double-invoked in
+// StrictMode (mount, cleanup, mount again), but this one is idempotent: the
+// second call finds the marker already gone and does nothing. Guarding on
+// isOidcFailureMarker() first (rather than clearing unconditionally) is what
+// makes a later, unrelated remount of AuthScreen safe too — by then the
+// address has moved on and there is nothing here to touch.
+function clearOidcFailureMarker(): void {
+  if (!isOidcFailureMarker()) {
+    return;
+  }
+  const { pathname, search } = globalThis.location;
+  globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
 }
 
 // The installation's operational federated providers, exactly as
@@ -174,8 +162,15 @@ export function AuthScreen({
   });
   // Read once, same instant as the reset token above: both are one-shot
   // markers this screen's own mount is responsible for taking out of the
-  // address before anything else reads it.
-  const [oidcFailed] = useState(oidcFailureNotice);
+  // address before anything else reads it. The read itself is pure — see
+  // isOidcFailureMarker's comment for why — the clear happens in the effect
+  // below.
+  const [oidcFailed] = useState(isOidcFailureMarker);
+  useEffect(() => {
+    if (oidcFailed) {
+      clearOidcFailureMarker();
+    }
+  }, [oidcFailed]);
   const effectiveNotice: AuthNotice =
     notice ?? (oidcFailed ? "oidc-failed" : null);
   // A link pasted into a tab already on this screen changes the hash and
@@ -591,7 +586,17 @@ function ProviderLabel({
 // carry the browser's whole address bar, not a fetch response this app could
 // read. `location.assign` (not a hash route) because the target is outside
 // this SPA's own address space entirely.
+//
+// Guarded on the SAME preview switch `previewedOidcProviders` reads, and for
+// the reason `app/ui-preview.ts`'s own doc comment on `uiPreviewOidcEnabled`
+// promises: a preview build draws the federated block for design review on
+// an installation that serves no providers at all, so this call's real
+// target never exists there — navigating anyway would take the whole review
+// tab to a 404 instead of the documented no-op.
 function startFederatedSignIn(providerKey: string): void {
+  if (uiPreviewOidcEnabled()) {
+    return;
+  }
   globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
 }
 

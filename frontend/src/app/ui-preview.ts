@@ -30,11 +30,11 @@ const isOff = (value: unknown) => value === "0" || value === "false";
  * means the federated block, which IS designed and built, can only be seen in
  * Storybook. A UI/UX review of the login screen needs it on the login screen.
  *
- * What it does NOT do: it does not touch the wire, the query cache, or
- * `startFederatedSignIn`, which stays inert. The buttons render, take focus, and
- * do nothing when clicked — there is no OIDC endpoint in the contract to send a
- * browser to, and inventing one would be the exact lie this switch is written to
- * avoid.
+ * What it does NOT do: it does not touch the wire or the query cache.
+ * `startFederatedSignIn` (screens/auth.tsx) checks this same switch and stays
+ * inert under it — the real flow is a full-page navigation to an endpoint this
+ * preview build never mounts, and letting the click through would take the
+ * whole review tab to a 404 instead of drawing the design.
  *
  * Read at the call rather than at module load so a test can pin BOTH positions
  * of the switch without re-evaluating the module graph. `import.meta.env` is a
