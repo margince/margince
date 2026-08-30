@@ -94,14 +94,25 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Three outcomes, not two. An installation that sends no mail at all and a
+	// relay that refused this one message are different facts about different
+	// things, and a rep's next move differs: configure a relay, or try again.
+	// Collapsing them let the screen tell somebody "this installation sends no
+	// mail" about an installation that does.
+	sendable := h.canSendConfirm()
 	delivered := false
-	if h.canSendConfirm() {
+	if sendable {
 		if sendErr := h.sendConfirmLink(r, issued); sendErr != nil {
-			// Logged rather than returned, for the reason above. The address is
-			// NOT logged: it is the subject's own mailbox, and a delivery
-			// failure is not a reason to copy it into an operator's log.
+			// Logged rather than returned, for the reason above.
+			//
+			// The error is NOT logged. A relay's own diagnostics quote what it
+			// refused, so an SMTP error can carry the recipient — and the
+			// message it was handed carries a live token. Neither belongs in an
+			// operator's log, and a wrapped error is not a safe place to decide
+			// that case by case. The person id is enough to find the record;
+			// what the relay said is the relay's own log to keep.
 			slog.ErrorContext(r.Context(), "confirm-details email failed",
-				"person_id", id, "err", sendErr)
+				"person_id", id)
 		} else {
 			delivered = true
 		}
@@ -111,9 +122,11 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 		DeliveredTo string    `json:"delivered_to"`
 		ExpiresAt   time.Time `json:"expires_at"`
 		Delivered   bool      `json:"delivered"`
+		Sendable    bool      `json:"sendable"`
 	}{
 		DeliveredTo: issued.DeliveredTo,
 		ExpiresAt:   issued.ExpiresAt,
 		Delivered:   delivered,
+		Sendable:    sendable,
 	})
 }

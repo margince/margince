@@ -922,6 +922,8 @@ export const en = {
   "consent.askSent": "Sent to {address}.",
   "consent.askNotDelivered":
     "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
+  "consent.askSendFailed":
+    "The link was created for {address} but the mail did not go out. Try again — a new link replaces this one.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This organization tracks no consent purposes yet.",

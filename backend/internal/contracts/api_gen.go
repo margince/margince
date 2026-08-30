@@ -15735,6 +15735,24 @@ type ConfirmFieldOrigin struct {
 	Source     string `json:"source"`
 }
 
+// ConfirmRequestIssued A confirm link that now exists, and what became of the attempt to deliver it. Three
+// outcomes rather than two, because a reader's next move differs: it went, this
+// installation cannot send at all, or the send was tried and failed.
+type ConfirmRequestIssued struct {
+	// Delivered Whether the relay accepted the message. False while `sendable` is true means the send
+	// was attempted and failed, which is a different fact from an installation that cannot
+	// send at all.
+	Delivered bool `json:"delivered"`
+
+	// DeliveredTo The address the link was posted to — the person's own live primary email.
+	DeliveredTo string    `json:"delivered_to"`
+	ExpiresAt   time.Time `json:"expires_at"`
+
+	// Sendable Whether this installation has an outbound relay and a link origin configured. False
+	// means nothing was attempted — the link exists and must be passed on by hand.
+	Sendable bool `json:"sendable"`
+}
+
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
 	// BotToken The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back.

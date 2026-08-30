@@ -376,9 +376,28 @@ export function ConsentSection({ personId }: Readonly<{ personId: string }>) {
           of inside one: the link opens everything held about them and asks the
           marketing question once, which is not a fact about any single
           purpose. */}
-      <ConfirmDetailsAction personId={personId} />
+      {/* Keyed on the person: a mutation result is about the record it was
+          asked for, and React would otherwise reuse this component across a
+          navigation between two cached contacts and leave the previous
+          contact's address sitting under the new record. */}
+      <ConfirmDetailsAction key={personId} personId={personId} />
     </Card>
   );
+}
+
+/** What to say about a link that was just issued. The three outcomes are three
+ * different next moves for the reader, so each gets its own sentence. */
+function sentenceFor(
+  issued: components["schemas"]["ConfirmRequestIssued"],
+  t: ReturnType<typeof useT>,
+): string {
+  const address = issued.delivered_to;
+  if (issued.delivered) {
+    return t("consent.askSent", { address });
+  }
+  return issued.sendable
+    ? t("consent.askSendFailed", { address })
+    : t("consent.askNotDelivered", { address });
 }
 
 /**
@@ -396,6 +415,12 @@ function ConfirmDetailsAction({ personId }: Readonly<{ personId: string }>) {
   const zone = viewerZone();
   const mayAsk = useCanWrite("person", "update");
   const ask = useMutation({
+    // Keyed on the person, so a result belongs to the record it was asked
+    // about. React reuses this component across a navigation between two
+    // cached contacts, and without the key the previous contact's address sat
+    // under the new record's rows — naming somebody else's mailbox as the one
+    // this contact's link went to.
+    mutationKey: ["confirm-request", personId],
     mutationFn: async (id: string) => {
       const { data, error } = await api.POST(
         "/people/{id}/consent/confirm-request",
@@ -425,12 +450,11 @@ function ConfirmDetailsAction({ personId }: Readonly<{ personId: string }>) {
       {ask.isError && <MutationError error={ask.error} />}
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">
-          {ask.data.delivered
-            ? t("consent.askSent", { address: ask.data.delivered_to })
-            : t("consent.askNotDelivered", {
-                address: ask.data.delivered_to,
-              })}{" "}
-          {t("consent.askExpires")}:{" "}
+          {/* Three outcomes: it went, this installation cannot send at all,
+              or the send was tried and failed. The middle and the last ask
+              different things of the reader — configure a relay, or press
+              again — so they cannot share a sentence. */}
+          {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}
           {formatDateTime(ask.data.expires_at, locale, zone)}
         </p>
       )}

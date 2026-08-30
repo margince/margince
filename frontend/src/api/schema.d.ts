@@ -7215,9 +7215,11 @@ export interface paths {
          *     one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
          *     A fresh request supersedes any unspent earlier link for the same person.
          *
-         *     `delivered` reports whether the mail actually left. An installation with no outbound relay
-         *     configured still mints the token and answers 201 with `delivered: false`, because the write
-         *     happened and reporting it as a failure would invite a second one.
+         *     `delivered` reports whether the mail actually left, and `sendable` says whether this
+         *     installation can send at all. Both, because they are different facts and a reader's next
+         *     move differs: configure a relay, or try again. An installation with no relay still mints
+         *     the token and answers 201, because the write happened and reporting it as a failure would
+         *     invite a second request that mints another token and supersedes the first.
          */
         post: operations["requestDetailsConfirmation"];
         delete?: never;
@@ -20500,6 +20502,28 @@ export interface components {
              * @enum {string}
              */
             status: "queued";
+        };
+        /**
+         * @description A confirm link that now exists, and what became of the attempt to deliver it. Three
+         *     outcomes rather than two, because a reader's next move differs: it went, this
+         *     installation cannot send at all, or the send was tried and failed.
+         */
+        ConfirmRequestIssued: {
+            /** @description The address the link was posted to — the person's own live primary email. */
+            delivered_to: string;
+            /** Format: date-time */
+            expires_at: string;
+            /**
+             * @description Whether the relay accepted the message. False while `sendable` is true means the send
+             *     was attempted and failed, which is a different fact from an installation that cannot
+             *     send at all.
+             */
+            delivered: boolean;
+            /**
+             * @description Whether this installation has an outbound relay and a link origin configured. False
+             *     means nothing was attempted — the link exists and must be passed on by hand.
+             */
+            sendable: boolean;
         };
         /**
          * @description One company's current VAT standing, and the evidence for it. The row keeps only the
@@ -35761,20 +35785,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Link issued, and whether it reached the relay. */
+            /** @description Link issued, and what became of the delivery. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @description The address the link was posted to — the person's own live primary email. */
-                        delivered_to: string;
-                        /** Format: date-time */
-                        expires_at: string;
-                        /** @description False when this installation has no outbound relay; the link exists but nobody was sent it. */
-                        delivered: boolean;
-                    };
+                    "application/json": components["schemas"]["ConfirmRequestIssued"];
                 };
             };
             401: components["responses"]["Unauthorized"];

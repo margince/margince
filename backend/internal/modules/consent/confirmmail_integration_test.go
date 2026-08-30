@@ -11,9 +11,11 @@ package consent
 // link exists.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -133,6 +135,7 @@ func TestAnInstallationThatCannotDeliverStillMintsTheLink(t *testing.T) {
 	}
 	var got struct {
 		Delivered bool `json:"delivered"`
+		Sendable  bool `json:"sendable"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode the issue response: %v", err)
@@ -141,6 +144,12 @@ func TestAnInstallationThatCannotDeliverStillMintsTheLink(t *testing.T) {
 	// request that mints another token and supersedes the first.
 	if got.Delivered {
 		t.Fatal("delivered = true with no relay configured")
+	}
+	// And the reason is NOT a failed send. A reader told "the mail did not go
+	// out" would press again forever against an installation that cannot send
+	// at all.
+	if got.Sendable {
+		t.Fatal("sendable = true with neither a mailer nor a link base wired")
 	}
 }
 
@@ -158,6 +167,7 @@ func TestARelayOutageDoesNotFailTheRequestOrHideItself(t *testing.T) {
 	}
 	var got struct {
 		Delivered bool `json:"delivered"`
+		Sendable  bool `json:"sendable"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode the issue response: %v", err)
@@ -168,8 +178,50 @@ func TestARelayOutageDoesNotFailTheRequestOrHideItself(t *testing.T) {
 	if got.Delivered {
 		t.Fatal("delivered = true after the relay refused the message")
 	}
+	// And this is the OTHER undelivered case: a relay exists and refused. The
+	// reader's move is to press again, not to go configure a mailer that is
+	// already configured — which is what the screen says when sendable is
+	// false, so collapsing the two sends them to the wrong place.
+	if !got.Sendable {
+		t.Fatal("sendable = false with a relay and a link base wired")
+	}
 	if relay.calls != 1 {
 		t.Fatalf("the relay was called %d times, want exactly one attempt", relay.calls)
+	}
+}
+
+func TestAFailedSendLogsNeitherTheAddressNorTheToken(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	// A relay's own diagnostics quote what it refused, so an SMTP error is a
+	// plausible carrier for both the recipient and the message it was handed —
+	// and that message holds a live token.
+	relay := &recordingMailer{fail: errors.New(
+		"relay refused subject-" + e.person.String() + "@example.test: 550 cfm_leaked_token_here")}
+	var logged bytes.Buffer
+	h := Handlers{store: e.store}.
+		WithConfirmMailer(relay).
+		WithConfirmLinkBase("https://crm.example.test")
+
+	prior := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
+	t.Cleanup(func() { slog.SetDefault(prior) })
+
+	if rec := confirmRequest(t, e, h); rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201", rec.Code)
+	}
+
+	written := logged.String()
+	if strings.Contains(written, "@example.test") {
+		t.Fatalf("the subject's address reached the log:\n%s", written)
+	}
+	if strings.Contains(written, "cfm_") {
+		t.Fatalf("a token reached the log:\n%s", written)
+	}
+	// The failure is still recorded — silence would leave an operator with no
+	// sign that mail is not going out at all.
+	if !strings.Contains(written, "confirm-details email failed") {
+		t.Fatalf("the failure was not logged at all:\n%s", written)
 	}
 }
 

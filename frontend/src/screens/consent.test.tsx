@@ -499,6 +499,7 @@ describe("asking a contact to confirm their details", () => {
               delivered_to: "ada@example.test",
               expires_at: "2026-09-13T09:00:00Z",
               delivered: true,
+              sendable: true,
             },
             201,
           ),
@@ -517,6 +518,33 @@ describe("asking a contact to confirm their details", () => {
     // subject's own.
     const ask = sent.find((one) => one.key.includes("confirm-request"));
     expect(ask?.body).toBeFalsy();
+  });
+
+  it("tells a failed send apart from an installation that cannot send", async () => {
+    stubRoutes({
+      "GET /me": () => jsonResponse(MAY_WRITE),
+      "POST /people/person-1/consent/confirm-request": () =>
+        jsonResponse(
+          {
+            delivered_to: "ada@example.test",
+            expires_at: "2026-09-13T09:00:00Z",
+            delivered: false,
+            // The relay exists and refused this one message. Telling a rep
+            // "this installation sends no mail" would send them to configure
+            // something that is already configured, and pressing again is what
+            // actually helps.
+            sendable: true,
+          },
+          201,
+        ),
+    });
+    render(<ConsentSection personId="person-1" />);
+
+    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+
+    const sent = await screen.findByTestId("confirm-details-sent");
+    expect(sent).toHaveTextContent(/did not go out/i);
+    expect(sent).not.toHaveTextContent(/sends no mail/i);
   });
 
   it("says plainly when the link exists but nobody was sent it", async () => {

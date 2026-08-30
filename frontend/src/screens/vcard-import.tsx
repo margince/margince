@@ -28,6 +28,16 @@ const OUTCOMES: Readonly<
   skipped: { label: "vcardImport.outcome.skipped" },
 };
 
+/** isReport reports whether a body carries the one thing the report renderer
+ * needs. Narrow on purpose: this guards against a truncated or wrong answer,
+ * not against a server that disagrees with the contract about a field. */
+function isReport(body: unknown): body is VCardReport {
+  if (typeof body !== "object" || body === null || !("results" in body)) {
+    return false;
+  }
+  return Array.isArray(body.results);
+}
+
 /** useImportVCards posts the file and refreshes the contact list behind it. */
 function useImportVCards() {
   const client = useQueryClient();
@@ -50,7 +60,15 @@ function useImportVCards() {
       if (!response.ok) {
         throwProblem(payload);
       }
-      return payload as VCardReport;
+      // A 200 whose body is not a report is a transport fault, not an import
+      // of nothing. Rendering it would say "that file held no cards" about a
+      // file whose cards may well have been written.
+      if (!isReport(payload)) {
+        throw new Error(
+          "the import answered with something this app cannot read",
+        );
+      }
+      return payload;
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["people"] });
@@ -88,22 +106,28 @@ export function VCardImport() {
       <Modal open={open} onClose={close} labelledBy={titleId}>
         <h2 id={titleId}>{t("vcardImport.title")}</h2>
         <div data-testid="vcard-import-file">
-          <FileDropzone
-            label={t("vcardImport.fileLabel")}
-            hint={t("vcardImport.whichFile")}
-            emptyLabel={t("vcardImport.choose")}
-            accept=".vcf,text/vcard"
-            file={picked}
-            onPick={(file) => {
-              setPicked(file);
-              importer.mutate(file);
-            }}
-          />
+          {/* Withdrawn while an import is running. A second file chosen mid-
+              flight would start a second write, and this dialog holds ONE
+              report — so one set of contact changes would land with nothing on
+              screen saying what happened to it. Taking the control away is
+              honest; leaving it live and dropping the pick would not be. */}
+          {importer.isPending ? (
+            <p className="co-muted">{t("vcardImport.working")}</p>
+          ) : (
+            <FileDropzone
+              label={t("vcardImport.fileLabel")}
+              hint={t("vcardImport.whichFile")}
+              emptyLabel={t("vcardImport.choose")}
+              accept=".vcf,text/vcard"
+              file={picked}
+              onPick={(file) => {
+                setPicked(file);
+                importer.mutate(file);
+              }}
+            />
+          )}
         </div>
 
-        {importer.isPending && (
-          <p className="co-muted">{t("vcardImport.working")}</p>
-        )}
         {importer.isError && (
           <div data-testid="vcard-import-error">
             <Callout tone="danger" live="alert">

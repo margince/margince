@@ -10744,25 +10744,17 @@ paths:
         one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
         A fresh request supersedes any unspent earlier link for the same person.
 
-        `delivered` reports whether the mail actually left. An installation with no outbound relay
-        configured still mints the token and answers 201 with `delivered: false`, because the write
-        happened and reporting it as a failure would invite a second one.
+        `delivered` reports whether the mail actually left, and `sendable` says whether this
+        installation can send at all. Both, because they are different facts and a reader's next
+        move differs: configure a relay, or try again. An installation with no relay still mints
+        the token and answers 201, because the write happened and reporting it as a failure would
+        invite a second request that mints another token and supersedes the first.
       responses:
         '201':
-          description: Link issued, and whether it reached the relay.
+          description: Link issued, and what became of the delivery.
           content:
             application/json:
-              schema:
-                type: object
-                required: [delivered_to, expires_at, delivered]
-                properties:
-                  delivered_to:
-                    type: string
-                    description: The address the link was posted to — the person's own live primary email.
-                  expires_at: { type: string, format: date-time }
-                  delivered:
-                    type: boolean
-                    description: False when this installation has no outbound relay; the link exists but nobody was sent it.
+              schema: { $ref: '#/components/schemas/ConfirmRequestIssued' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -28014,6 +28006,30 @@ components:
           # drops the type prefix from the OTHER one, renaming VoiceBuildStatus's
           # constants to a bare `Queued` that reads as nobody's.
           x-enum-varnames: [TechnicalEnrichStartedStatusQueued]
+
+    ConfirmRequestIssued:
+      type: object
+      description: |
+        A confirm link that now exists, and what became of the attempt to deliver it. Three
+        outcomes rather than two, because a reader's next move differs: it went, this
+        installation cannot send at all, or the send was tried and failed.
+      required: [delivered_to, expires_at, delivered, sendable]
+      properties:
+        delivered_to:
+          type: string
+          description: The address the link was posted to — the person's own live primary email.
+        expires_at: { type: string, format: date-time }
+        delivered:
+          type: boolean
+          description: |
+            Whether the relay accepted the message. False while `sendable` is true means the send
+            was attempted and failed, which is a different fact from an installation that cannot
+            send at all.
+        sendable:
+          type: boolean
+          description: |
+            Whether this installation has an outbound relay and a link origin configured. False
+            means nothing was attempted — the link exists and must be passed on by hand.
 
     OrganizationVatCheck:
       type: object

@@ -108,17 +108,22 @@ describe("VatCheckCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("treats a body that is not a consultation as no answer", async () => {
-    // A 200 carrying something else entirely. The formatter throws on a date
-    // it cannot parse, and an unguarded throw here blanks the whole company
-    // record rather than this one card.
+  it("reports a body it cannot read as a fault, never as never-consulted", async () => {
+    // A 200 carrying something else entirely. Two things must not happen: the
+    // unparseable date must not reach the formatter, which throws and blanks
+    // the whole company record; and the card must not state that this
+    // company's VAT ID was never consulted, which is a business fact it has no
+    // evidence for.
     answerWith({ data: [], page: {} });
 
     render(<VatCheckCard orgId={ORG_ID} />);
 
     expect(
-      await screen.findByText(/has not been consulted/),
+      await screen.findByText(/cannot read|couldn't|could not/i),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/has not been consulted/),
+    ).not.toBeInTheDocument();
   });
 
   it("survives a verdict this build has no name for", async () => {

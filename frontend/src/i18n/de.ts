@@ -893,6 +893,8 @@ export const de = {
   "consent.askSent": "An {address} geschickt.",
   "consent.askNotDelivered":
     "Der Link wurde für {address} erstellt, aber diese Installation verschickt keine Mails — es hat ihn also niemand bekommen.",
+  "consent.askSendFailed":
+    "Der Link wurde für {address} erstellt, aber die Mail ist nicht rausgegangen. Versuch es nochmal — ein neuer Link ersetzt diesen.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":

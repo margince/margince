@@ -78,11 +78,18 @@ export function VatCheckCard({
       if (error) {
         throwProblem(error);
       }
-      // A body that carries neither a verdict nor a date is not a consultation,
-      // whatever its status code said. Rendering it would put an unparseable
-      // date through the formatter and take the whole record page down, so an
-      // answer this card cannot read counts as no answer.
-      return isConsultation(data) ? data : null;
+      // A body that carries neither a verdict nor a date is not a
+      // consultation, whatever its status code said. It is a fault rather than
+      // an absence: reporting it as "never consulted" would state a business
+      // fact about the company on the strength of a broken response, and
+      // rendering it would put an unparseable date through the formatter and
+      // take the whole record page down.
+      if (!isConsultation(data)) {
+        throw new Error(
+          "the VAT register answered with something this app cannot read",
+        );
+      }
+      return data;
     },
   });
 
