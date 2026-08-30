@@ -40,16 +40,26 @@ port="$1"
 # that is not this stack's postgres is somebody else's server, and running the
 # seed inside it is the failure this exists to stop, one host over.
 #
+# The query's own exit status is checked, because a docker that could not be
+# reached at all answers with no rows — indistinguishable, downstream, from a
+# stack that is simply not up. Telling a developer to run `make db-up` when the
+# daemon is stopped sends them to the wrong problem.
+if ! listed="$(docker ps \
+  --filter "publish=${port}" \
+  --filter "label=com.docker.compose.service=postgres" \
+  --format '{{.ID}} {{.Names}}' 2>&1)"; then
+  echo "FAIL: docker could not be asked which container publishes :${port}:" >&2
+  printf '  %s\n' "$listed" >&2
+  exit 1
+fi
+
 # A read loop rather than `mapfile`: this runs on whatever bash the host has,
 # and macOS still ships 3.2, where mapfile does not exist. The failure was
 # "command not found" mid-run, which reads like the container is missing.
 found=()
 while IFS= read -r line; do
   [[ -n "$line" ]] && found+=("$line")
-done < <(docker ps \
-  --filter "publish=${port}" \
-  --filter "label=com.docker.compose.service=postgres" \
-  --format '{{.ID}} {{.Names}}')
+done <<<"$listed"
 
 case "${#found[@]}" in
 0)

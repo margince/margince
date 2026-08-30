@@ -462,7 +462,13 @@ psql_owner() { # db [psql args…] — SQL via args or stdin
 # that is perfectly well formed.
 dsn_port() { # dsn
   local hostport="${1#*@}"
+  # Everything after the authority, in the three ways a URL can start it: a
+  # path, a query, or a fragment. A DSN with no database but with parameters —
+  # postgres://u:p@host:5432?sslmode=disable — would otherwise read its port as
+  # `5432?sslmode=disable`, which nothing publishes.
   hostport="${hostport%%/*}"
+  hostport="${hostport%%\?*}"
+  hostport="${hostport%%#*}"
   case "$hostport" in
   \[*\]:*) printf '%s\n' "${hostport##*:}" ;;
   \[*\]) printf '5432\n' ;;
