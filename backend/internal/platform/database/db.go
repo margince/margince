@@ -119,6 +119,32 @@ func (d *DB) Pool() *pgxpool.Pool {
 // resolves the installation's workspace itself, and still refuses before any
 // SQL runs when it cannot.
 func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
+	return d.transact(ctx, pgx.TxOptions{}, fn)
+}
+
+// TxIsolated is Tx at a chosen isolation level, for the reads whose answer is
+// COMPOSED from several statements.
+//
+// The level belongs at BEGIN and not inside the closure, and that is the whole
+// reason this exists rather than a `SET TRANSACTION ISOLATION LEVEL` at the top
+// of a caller: Postgres refuses the statement once a query has taken a
+// snapshot, and Tx already runs one of its own on a bounded handle (the
+// statement-timeout set_config). A caller that pinned itself would work on an
+// unbounded handle and fail on a bounded one — the same code, correct or broken
+// depending on how compose wired it.
+func (d *DB) TxIsolated(ctx context.Context, level pgx.TxIsoLevel, fn func(pgx.Tx) error) error {
+	return d.transact(ctx, pgx.TxOptions{IsoLevel: level}, fn)
+}
+
+// transact is what both of them are: the handle's own admission, the statement
+// budget, and one transaction.
+//
+// ONE body, because the two differ in a transaction OPTION and in nothing else.
+// Written out twice, the refusal a nil handle owes its callers, the workspace
+// resolution that must happen before any SQL, and the budget wrapper would each
+// be two places — and a change to the transaction contract would reach the
+// isolated read only if whoever made it went looking for a second copy.
+func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) error) error {
 	if d == nil {
 		// A store built without a handle, answered with the sentinel that
 		// already means "no workspace could be bound, and no SQL ran".
@@ -149,38 +175,7 @@ func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 			return bounded(tx)
 		}
 	}
-	return runTx(ctx, d.pool, fn)
-}
-
-// TxIsolated is Tx at a chosen isolation level, for the reads whose answer is
-// COMPOSED from several statements.
-//
-// The level belongs at BEGIN and not inside the closure, and that is the whole
-// reason this exists rather than a `SET TRANSACTION ISOLATION LEVEL` at the top
-// of a caller: Postgres refuses the statement once a query has taken a
-// snapshot, and Tx already runs one of its own on a bounded handle (the
-// statement-timeout set_config). A caller that pinned itself would work on an
-// unbounded handle and fail on a bounded one — the same code, correct or broken
-// depending on how compose wired it.
-func (d *DB) TxIsolated(ctx context.Context, level pgx.TxIsoLevel, fn func(pgx.Tx) error) error {
-	if d == nil {
-		return fmt.Errorf("%w: no database handle was injected; "+
-			"construct this store through compose, which binds the installation's pool",
-			ErrNoWorkspace)
-	}
-	if _, err := d.workspace(ctx); err != nil {
-		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
-	}
-	if d.budget != 0 {
-		bounded := fn
-		fn = func(tx pgx.Tx) error {
-			if err := BoundStatement(ctx, tx, d.budget); err != nil {
-				return err
-			}
-			return bounded(tx)
-		}
-	}
-	return runTxWith(ctx, d.pool, pgx.TxOptions{IsoLevel: level}, fn)
+	return runTxWith(ctx, d.pool, opts, fn)
 }
 
 // ForWorkspace is this handle re-bound to another workspace, for the fleet
