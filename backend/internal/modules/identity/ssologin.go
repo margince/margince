@@ -238,6 +238,14 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	if params.State != nil {
 		state = *params.State
 	}
+	// Google sends `error` instead of `code` when the user denies consent —
+	// e.g. access_denied. Caught here, before the cookie/state checks below,
+	// so a denial is refused for what it is rather than for a code the
+	// browser was never going to bring back.
+	if params.Error != nil && *params.Error != "" {
+		fail(ctx, "provider error: "+*params.Error, nil)
+		return
+	}
 
 	cookie, err := r.Cookie(oidcLoginCookie)
 	if err != nil {
@@ -251,27 +259,9 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	idToken, err := h.oidcExchangers[provider].Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
-	if err != nil {
-		fail(ctx, "token exchange", err)
-		return
-	}
-	email, sub, emailVerified, err := h.oidcVerifiers[provider].Verify(ctx, idToken)
-	if err != nil {
-		fail(ctx, "id token verification", err)
-		return
-	}
-	if !emailVerified {
-		fail(ctx, "email not verified", nil)
-		return
-	}
-	// email/sub are both required to reach here (they identify who signed
-	// in and are what LoginViaFederatedIdentity resolves/links against) —
-	// the verifier contract does not itself guarantee either is non-empty,
-	// so an unchecked blank value would resolve/link a blank identity
-	// rather than being refused here.
-	if email == "" || sub == "" {
-		fail(ctx, "missing email or subject claim", nil)
+	email, sub, reason, err := h.exchangeAndVerify(ctx, provider, code, codeVerifier)
+	if reason != "" {
+		fail(ctx, reason, err)
 		return
 	}
 
@@ -282,6 +272,34 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	}
 	setSessionCookie(w, token)
 	http.Redirect(w, r, h.oidcRoutes.PostLoginURL, http.StatusFound)
+}
+
+// exchangeAndVerify redeems the authorization code and validates the ID
+// token it returns, split out of OidcSignInCallback so that function's own
+// branching stays over the state/cookie plumbing rather than growing to
+// cover the token round trip too. A non-empty reason means refuse; email/sub
+// are meaningful only when reason is empty.
+func (h Handlers) exchangeAndVerify(ctx context.Context, provider, code, codeVerifier string) (email, sub, reason string, err error) {
+	idToken, err := h.oidcExchangers[provider].Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
+	if err != nil {
+		return "", "", "token exchange", err
+	}
+	email, sub, emailVerified, err := h.oidcVerifiers[provider].Verify(ctx, idToken)
+	if err != nil {
+		return "", "", "id token verification", err
+	}
+	if !emailVerified {
+		return "", "", "email not verified", nil
+	}
+	// email/sub are both required to reach here (they identify who signed
+	// in and are what LoginViaFederatedIdentity resolves/links against) —
+	// the verifier contract does not itself guarantee either is non-empty,
+	// so an unchecked blank value would resolve/link a blank identity
+	// rather than being refused here.
+	if email == "" || sub == "" {
+		return "", "", "missing email or subject claim", nil
+	}
+	return email, sub, "", nil
 }
 
 // logOidcFailure writes one system_log row for a refused/failed OIDC

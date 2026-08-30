@@ -144,6 +144,29 @@ func TestOidcSignInCallbackUnknownProviderIs404(t *testing.T) {
 	}
 }
 
+func TestOidcSignInCallbackProviderDenialIsRefusedBeforeCookieCheck(t *testing.T) {
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {Key: "google"}},
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		fixedStateSigner{},
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
+	)
+	// No cookie set at all — Google sent `error` instead of `code` because the
+	// user denied consent, so the refusal must not depend on a cookie the
+	// browser was never going to bring back.
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?error=access_denied&state=y", nil)
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
+		State: oidcStrPtr("y"), Error: oidcStrPtr("access_denied"),
+	})
+
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
+		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
 func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
