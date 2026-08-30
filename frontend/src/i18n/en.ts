@@ -1681,6 +1681,7 @@ export const en = {
     "Margince reads meetings, mail and invoices for promises, blockers and risks. It needs at least one of those first.",
   "co.signals.empty": "No open signal on this account.",
   "co.signals.openProject": "Open the project",
+  "co.signals.openSource": "Read the announcement",
   "chronology.label": "What to show in the timeline",
   "chronology.activities": "Activities",
   "chronology.changes": "Changes",

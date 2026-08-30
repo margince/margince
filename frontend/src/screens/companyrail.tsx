@@ -6,6 +6,7 @@ import { routeHash } from "../app/router";
 import { Avatar, Button, Disclosure } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { EvidenceMark } from "../design-system/evidencemark";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
   type SectionState,
@@ -388,15 +389,40 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
 }
 
 /**
+ * SourcePageLink opens the page a signal was read off, when it names one.
+ *
+ * The address rides `evidence` rather than a field of its own: a signal cites
+ * its source, and a citation is per-claim. `source_type: "page"` is the one
+ * kind that is a web address — the others point at rows inside this product,
+ * which a reader reaches by other means — so it is the only one linked here.
+ *
+ * Renders nothing when no evidence names a page, which is the ordinary case
+ * for a signal derived from the product's own records.
+ */
+function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
+  const t = useT();
+  const page = (signal.evidence ?? []).find(
+    (cited) => cited.source_type === "page" && cited.source_id,
+  );
+  if (!page?.source_id) {
+    return null;
+  }
+  return (
+    <OffsiteLink href={page.source_id} className="co-rowlink co-signal-link">
+      {t("co.signals.openSource")}
+    </OffsiteLink>
+  );
+}
+
+/**
  * SignalsSection reads the account-filtered signals, same endpoint and same
  * withheld/failed handling SignalsCard used. Signals are a separately
  * governed surface, not a 360 section, so this runs its own query rather
  * than reading a slice of `view`.
  *
- * No longer mounted by CompanyRail — signals moved out of the rail to sit
- * beside the account's other readings — but exported rather than deleted so
- * that new home can mount it without a second implementation of the same
- * read.
+ * Not mounted by CompanyRail — signals moved out of the rail to sit beside the
+ * account's other readings, and the company record's overview stack mounts it
+ * there.
  */
 export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
@@ -464,6 +490,12 @@ export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
                   {t("co.signals.openProject")}
                 </a>
               )}
+              {/* The page the claim was read off. A newsroom signal cites the
+                  article rather than copying it, so the headline on this row
+                  is the whole of what we hold — without the address, a reader
+                  who wants the announcement itself has nowhere to go and the
+                  citation proves nothing. */}
+              <SourcePageLink signal={signal} />
             </span>
             <span className="co-row-meta">
               {formatDate(signal.detected_at, locale, recordZone)}

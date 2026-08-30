@@ -1653,6 +1653,7 @@ export const de = {
     "Margince liest Meetings, Mails und Rechnungen auf Zusagen, Blocker und Risiken. Dafür braucht es zuerst mindestens eines davon.",
   "co.signals.empty": "Kein offenes Signal zu diesem Account.",
   "co.signals.openProject": "Projekt öffnen",
+  "co.signals.openSource": "Meldung lesen",
   "chronology.label": "Was im Verlauf angezeigt wird",
   "chronology.activities": "Aktivitäten",
   "chronology.changes": "Änderungen",

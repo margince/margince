@@ -18,6 +18,7 @@ import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
 import { useT } from "../i18n";
@@ -520,11 +521,19 @@ function PersonIdentityLine({
         {/* `social` is an open map on the wire, so its values are unknown to
             the type system. The fact renders only when there is a string to
             stand behind it — a link with nothing at the end is worse than no
-            link at all. */}
+            link at all.
+
+            It IS a link, because it wears a link's icon: a reader who sees the
+            chain and the word clicks it, and for a while this row answered that
+            click with nothing. OffsiteLink falls back to plain text when the
+            value is not a web address, so a malformed one degrades to what this
+            row used to be rather than to a dead anchor. */}
         {typeof person.social?.linkedin === "string" && (
           <span className="pe-meta-fact">
             <LinkIcon size={13} aria-hidden="true" />
-            {t("person.page.linkedin")}
+            <OffsiteLink href={person.social.linkedin} className="pe-meta-link">
+              {t("person.page.linkedin")}
+            </OffsiteLink>
           </span>
         )}
         {/* The role is what the relationship edge records — never inferred from
