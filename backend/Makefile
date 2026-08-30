@@ -643,14 +643,23 @@ db-up: ## Start the dev stack (infra/docker-compose.dev.yml) and create the app 
 	@docker rm -f fable-pg16 fable-redis 2>/dev/null || true
 	$(COMPOSE) up -d --wait
 	$(MAKE) db-init
+# Every ad-hoc statement goes through PSQL, which resolves the container from
+# PG_PORT — the port the DSNs above name — rather than from the compose project.
+# infra/docker-compose.dev.yml pins `name: margince`, so every checkout on this
+# machine resolves to the same project and `$(COMPOSE) exec` lands in whichever
+# one brought the stack up first, while the api and the migrator connect through
+# the port. Two ways to name one database: a seed run from a second checkout
+# went into the first checkout's postgres, and nothing said so.
+PSQL = bash ../scripts/dev-psql.sh $(PG_PORT)
+
 db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
-	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
+	$(PSQL) $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
 
 seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (scripts/seed-reset.sql); make seed-dev refills it, no restart needed
-	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql
+	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql
 
 seed-dev-db: ## Apply the dev DB seed for API-less demo data (scripts/seed-dev.sql); run after seed-dev
-	$(COMPOSE) exec -T postgres psql -U margince_owner -d $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-dev.sql
+	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-dev.sql
 
 # MARGINCE_SEED_DSN is not optional in practice, and the root target always
 # supplies it: without a DSN the seeder silently skips teams, seats, finance
@@ -717,8 +726,13 @@ test-v: composition ## go test -v across the module
 test-cover: composition ## Go unit tests with coverage summary
 	$(GOWORK_COMPOSED) $(GO) test -cover ./...
 
+# The container is resolved ONCE, before the loop, and its refusal is not
+# swallowed: an empty id inside the loop would make `docker exec` fail every
+# time and this target wait forever for a container that is not there.
 db-wait: ## Block until Postgres answers pg_isready
-	@until $(COMPOSE) exec -T postgres pg_isready -U margince_owner -d $(DB_NAME) >/dev/null 2>&1; do sleep 1; done; echo "postgres ready"
+	@pg="$$(bash ../scripts/dev-postgres-container.sh $(PG_PORT))" && { \
+	  until docker exec -i "$$pg" pg_isready -U margince_owner -d $(DB_NAME) >/dev/null 2>&1; \
+	  do sleep 1; done; echo "postgres ready"; }
 
 infra-logs: ## Tail the dev stack logs
 	$(COMPOSE) logs -f

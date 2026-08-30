@@ -85,10 +85,21 @@ check yes "$(grep -q 'APP_DSN="${APP_DSN:-${MARGINCE_DSN:-$COMPOSE_APP_DSN}}"' "
 check yes "$(grep -q '"\$OWNER_DSN" != "\$COMPOSE_OWNER_DSN"' "$dev" && echo yes || echo no)" \
       "--fresh compares the EFFECTIVE owner DSN against the compose default, not a literal"
 
-# Every destructive path goes through the compose container, never the DSN, so
-# honouring MARGINCE_DSN cannot widen what a drop can reach.
-check yes "$(sed -n '/^psql_owner() {/,/^}$/p' "$dev" | grep -q 'docker compose' && echo yes || echo no)" \
-      "psql_owner talks to the compose container, so a redirected DSN drops nothing new"
+# psql_owner resolves its container from the OWNER DSN's own port rather than
+# from the compose project, because the project name is shared by every checkout
+# on the machine and the port is what the api and the migrator actually connect
+# to. Addressing one database two ways is how a seed ran against another
+# checkout's postgres.
+check yes "$(sed -n '/^psql_owner() {/,/^}$/p' "$dev" | grep -q 'dev-psql.sh "$(dsn_port "$OWNER_DSN")"' && echo yes || echo no)" \
+      "psql_owner resolves its container from the owner DSN's port, not the compose project"
+
+# That resolution can only ever reach a LOCAL container — `docker exec` has no
+# other kind — so honouring MARGINCE_OWNER_DSN still cannot let a drop reach a
+# database on another host. What guards the destructive path itself is the
+# --fresh interlock above, which refuses outright when the owner DSN is not the
+# compose one.
+check yes "$(grep -q 'exec docker exec -i "$container" psql' "$root/scripts/dev-psql.sh" && echo yes || echo no)" \
+      "ad-hoc SQL runs through docker exec, so a redirected DSN reaches no host but this one"
 
 # A DSN carries a password. echo/printf must never be handed one.
 leaks="$(grep -nE '^[^#]*(echo|printf)[^|]*\$(dev_owner_url|dev_app_url|OWNER_DSN|APP_DSN|MARGINCE_DSN|MARGINCE_OWNER_DSN)' "$dev" || true)"
