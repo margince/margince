@@ -76,8 +76,9 @@ const (
 	auditEntityDedupe = "dedupe_candidate"
 	// auditKeyDisposition is the audited field name of the queue verdict.
 	auditKeyDisposition = "disposition"
-	// sqlAlwaysVisible is the no-op arm of the pair-visibility predicate:
-	// the caller's scope leaves that record type unbounded.
+	// sqlAlwaysVisible is the no-op arm a scoped predicate falls back to when
+	// the caller's scope leaves that record type unbounded. Declared here and
+	// used across this module's scoped reads.
 	sqlAlwaysVisible = "true"
 )
 
@@ -160,26 +161,45 @@ func dedupeVisibilityClause(ctx context.Context, arg func(any) int) (string, err
 	if err != nil {
 		return "", err
 	}
-	if personClause == "" && orgClause == "" && leadClause == "" {
-		return "", nil
-	}
-	personOK := sqlAlwaysVisible
-	if personClause != "" {
-		personOK = fmt.Sprintf(`(EXISTS (SELECT 1 FROM person vp WHERE vp.id = dedupe_candidate.left_person_id AND %[1]s)
-			AND EXISTS (SELECT 1 FROM person vp WHERE vp.id = dedupe_candidate.right_person_id AND %[1]s))`, personClause)
-	}
-	orgOK := sqlAlwaysVisible
-	if orgClause != "" {
-		orgOK = fmt.Sprintf(`(EXISTS (SELECT 1 FROM organization vo WHERE vo.id = dedupe_candidate.left_org_id AND %[1]s)
-			AND EXISTS (SELECT 1 FROM organization vo WHERE vo.id = dedupe_candidate.right_org_id AND %[1]s))`, orgClause)
-	}
-	leadOK := sqlAlwaysVisible
-	if leadClause != "" {
-		leadOK = fmt.Sprintf(`(EXISTS (SELECT 1 FROM lead vl WHERE vl.id = dedupe_candidate.left_lead_id AND %[1]s)
-			AND EXISTS (SELECT 1 FROM lead vl WHERE vl.id = dedupe_candidate.right_lead_id AND %[1]s))`, leadClause)
-	}
 	return fmt.Sprintf(`((entity_type = 'person' AND %s) OR (entity_type = 'organization' AND %s) OR (entity_type = 'lead' AND %s))`,
-		personOK, orgOK, leadOK), nil
+		bothSidesServable(entityPerson, "vp", "left_person_id", "right_person_id", personClause),
+		bothSidesServable(entityOrganization, "vo", "left_org_id", "right_org_id", orgClause),
+		bothSidesServable(entityLead, "vl", "left_lead_id", "right_lead_id", leadClause)), nil
+}
+
+// bothSidesServable is the per-side predicate for one entity type: the subject
+// row must EXIST, be LIVE, and pass whatever row scope the caller has.
+//
+// Emitted unconditionally, where the predicate this replaced was skipped whole
+// when no record type narrowed the caller. That was not the bug — person and
+// organization are capture-private, so even an all-scope human is bounded on
+// them and the clause was built anyway — but it made the liveness term depend on
+// a scope the reader might not have. A system principal is unbounded on all
+// three (auth.Unbounded), so on the day one reads this queue the old shape would
+// have served it every archived pair in the installation.
+//
+// The liveness term is not part of the scope clause and cannot be folded into
+// it. auth.EnsureVisibleLive says why in its own words: erasure anonymizes a
+// person in place and stamps archived_at while LEAVING owner_id alone, so a
+// scope predicate answers "yes, still yours" for a record every live read path
+// refuses. The same is true of a plain archive.
+//
+// Without it a decision outlives both records it is about. The candidate carries
+// its own archived_at and nothing sweeps it when a SUBJECT is archived, so the
+// pair keeps the confidence it was filed with and holds its rank in a lane that
+// serves ten by score. Archiving one of two duplicates is a reasonable way to
+// resolve a pair — the most natural one for a company entered twice, since it
+// needs no merge decision — so the more diligently a workspace resolves them
+// that way, the faster its queue fills with its own finished work.
+func bothSidesServable(entityType, alias, leftColumn, rightColumn, scopeClause string) string {
+	side := func(column string) string {
+		terms := fmt.Sprintf("%[1]s.id = dedupe_candidate.%[2]s AND %[1]s.archived_at IS NULL", alias, column)
+		if scopeClause != "" {
+			terms += " AND " + scopeClause
+		}
+		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s)", entityType, alias, terms)
+	}
+	return "(" + side(leftColumn) + " AND " + side(rightColumn) + ")"
 }
 
 // ListDedupeCandidates pages the queue, confidence-sorted (AC-dedupe-1).
