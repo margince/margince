@@ -91,29 +91,33 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 		}
 		preview.Speakers[at].Words += words
 	}
-	if !attributedMajority(turns) {
-		// Prose lines that open with a short label and a colon — "Frage:",
-		// "Vorschlag:", a heading — parse as a few attributed words among many
-		// unattributed ones. Listing those labels as speakers would ask the
-		// owner which of their own headings they are, so a source whose words
-		// mostly belong to nobody is reported as the single-author text it is,
-		// with the count a text ingest of it would store: in prose the labels
-		// the parser read as speakers are the author's own words.
-		if concrete == corpusFormatSRT {
-			return CorpusPreview{DetectedFormat: corpusFormatTxt, TotalWords: WordCount(content)}, nil
-		}
-		preview.IngestibleAsTranscript = false
-		return preview, nil
-	}
-	preview.IngestibleAsTranscript = len(preview.Speakers) > 0
+	// Whether the speaker filter can act on this source, and — when it cannot —
+	// what the caller is holding instead.
+	//
+	// The parser accepts any letter-initial word before a colon, so "Frage:" in
+	// an email and "Sam:" in a chat log arrive identically. Nothing in the text
+	// separates them; only the SHARE of the words those labels own does. At or
+	// above half the source is a conversation and the owner is asked which
+	// speaker they are. Below half the labels are headings inside somebody's
+	// own writing.
+	//
+	// The labels are reported either way. A caller reads an empty speakers list
+	// as "single-author prose, ingest it whole", so erasing them is what would
+	// carry a counterparty's words into the corpus as the owner's own. What the
+	// caller does with a minority-labelled file is its own decision: the
+	// Settings intake takes it as the prose it reads as, which is why an email
+	// with two headings is not refused.
+	preview.IngestibleAsTranscript = len(preview.Speakers) > 0 && attributedMajority(turns)
 	return preview, nil
 }
 
-// attributedMajority is what makes a source a conversation rather than prose
-// with labels in it: at least half of its words belong to a named speaker. A
-// meeting export attributes nearly every word; narration between turns stays
-// well under half. Preview and ingest both decide by it, so what the preview
-// calls prose the ingest cannot be talked into filtering as a transcript.
+// attributedMajority reports whether at least half of a source's words belong
+// to a named label. It is what separates a conversation from prose carrying
+// headings: a meeting export attributes nearly every word, an email's "Frage:"
+// a handful. Preview and ingest both decide by it, so a source the preview will
+// not offer a speaker question for cannot be filtered to one on the write path
+// either — filtering prose to one of its own headings stores a fragment and
+// calls it a voice.
 func attributedMajority(turns []speakerTurn) bool {
 	attributed, total := 0, 0
 	for _, turn := range turns {
