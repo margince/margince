@@ -98,6 +98,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/oidc/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Begin federated sign-in with a configured OIDC provider.
+         * @description Redirects the browser to the provider's consent screen (authorization code +
+         *     PKCE S256). Sets a one-shot, `HttpOnly; Secure; SameSite=Lax` state cookie the
+         *     callback consumes. An unconfigured or unknown provider answers 404 — an
+         *     authentically absent flow, never a dead-ended redirect.
+         */
+        get: operations["startOidcSignIn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/oidc/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Complete federated sign-in; sets the session cookie on success.
+         * @description Verifies the round trip, resolves the verified email/subject to an existing,
+         *     active `app_user` (no account creation — an unrecognized email is a neutral
+         *     failure, exactly like an unrecognized password), and mints a session. Always
+         *     redirects into the SPA: success to the configured post-login route with
+         *     `crm_session` set, refusal to the configured failure route with a neutral
+         *     marker, never a JSON error body — this route is reached by a full-page browser
+         *     navigation, not an API caller.
+         */
+        get: operations["oidcSignInCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -23989,6 +24038,53 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    startOidcSignIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "google";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to the provider's consent screen. */
+            302: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    oidcSignInCallback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+            };
+            header?: never;
+            path: {
+                provider: "google";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session established (or a neutral failure); redirects into the SPA. */
+            302: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     logout: {
