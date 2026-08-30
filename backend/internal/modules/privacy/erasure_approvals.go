@@ -99,6 +99,12 @@ const (
 	// AgedOutSourceWithdrawal names one withdrawn because that record reached
 	// the end of its retention window.
 	AgedOutSourceWithdrawal = "withdrawn: the record it was read from reached the end of its retention window"
+	// ReleasedSourceWithdrawal names one withdrawn because a controller
+	// released the restriction on the record it quotes, which erases it. The
+	// clock did not run out on that record; somebody decided, and a card
+	// telling its reader otherwise misdescribes the decision to the person
+	// reviewing it.
+	ReleasedSourceWithdrawal = "withdrawn: the record it was read from was erased by a controller's decision"
 )
 
 // addressPatterns turns the subject's addresses into regexes that match each

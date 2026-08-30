@@ -204,7 +204,7 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		// shorter one was missing the provider original and the quoting
 		// proposals — which is what a second list does, whatever the comment
 		// beside it promises.
-		err = s.eraser.purgeContentDerivedFrom(ctx, tx, id)
+		err = s.eraser.purgeContentDerivedFrom(ctx, tx, id, theClockRanOut)
 	}
 	if err == nil {
 		// Not in the shared helper, and that is the difference between the two

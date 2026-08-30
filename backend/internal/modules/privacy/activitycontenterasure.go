@@ -41,11 +41,18 @@ import (
 // body, which the transcript sweep never revisits: its selector requires a
 // body, and the lift removed it.
 //
+// The act is the caller's, and only the act. What is destroyed is the same
+// list for every arm — that is the whole point of there being one — but a
+// tombstone says WHY, and a controller's decision is not a window ending. An
+// audit read of a released record that reported "reached the end of its
+// retention window" would describe an act nobody performed, on evidence a
+// supervisory authority reads.
+//
 // A nil purger REFUSES rather than skipping. There is no second path that ages
 // raw_capture out — the Art. 17 cascade's purge is scoped to a PERSON where a
 // retention window is scoped to time — so an unwired seam is not a degraded
 // mode, it is an erasure that reports success over an intact original.
-func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
 	if e.purgeRawCaptures == nil {
 		return fmt.Errorf("%w: this eraser was built without a raw-capture purger, so it can destroy "+
 			"an activity's text and not the provider original behind it", ErrRetentionSeamMissing)
@@ -68,11 +75,47 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
-	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, AgedOutSourceWithdrawal); err != nil {
+	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, act.approvalWithdrawal); err != nil {
 		return err
 	}
-	if err := e.eraseAttachments(ctx, tx, "retention: the record's content was erased", causeRetention, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
+	if err := e.eraseAttachments(ctx, tx, act.attachmentReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
 		return err
 	}
 	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject)
 }
+
+// erasureAct is what one arm records on everything it destroys collaterally:
+// the reason a pending proposal was withdrawn, the reason an attachment was
+// destroyed, and the cause stamped on the audit evidence.
+//
+// The two acts are declared here rather than passed as three loose strings so
+// that a third arm has to say which of them it is, and so that a reader
+// comparing the tombstones on one record can see the whole vocabulary at once.
+//
+// The delivery subject is NOT part of this. It is the same word for both,
+// because it names the state of the message — the text is gone — rather than
+// the reason it went, and a reader of a mailbox is owed the first.
+type erasureAct struct {
+	approvalWithdrawal string
+	attachmentReason   string
+	cause              string
+}
+
+var (
+	// theClockRanOut is the nightly retention pass and a statutory floor
+	// expiring. Both are the same act by the same actor: time.
+	theClockRanOut = erasureAct{
+		approvalWithdrawal: AgedOutSourceWithdrawal,
+		attachmentReason:   "retention: the record's content was erased",
+		cause:              causeRetention,
+	}
+	// aControllerDecided is a restriction released by hand. It completes the
+	// Art. 17 request the restriction suspended, and the cause it stamps is the
+	// same one ReleaseRestriction writes on its own audit row — one spelling,
+	// because the collateral rows and the decision row describe one act.
+	aControllerDecided = erasureAct{
+		approvalWithdrawal: ReleasedSourceWithdrawal,
+		attachmentReason:   "controller release: the record's content was erased",
+		cause:              causeControllerRelease,
+	}
+)

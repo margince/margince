@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H2
+
 package gates
 
 // Reading the SQL the PII census judges: where one statement ends and the next
@@ -108,7 +110,10 @@ var erasureCascadeFiles = []string{
 	// of both. Same Art. 17 transaction, its own file for the same size reason
 	// the timeline has one.
 	"internal/modules/privacy/erasure_graph.go",
-	// Retention’s graph invalidation — same Art. 17/retention transaction.
+	// The uploaded BYTES behind the rows that name them, and the channel
+	// identities a re-capture would resurrect the subject by. Both are the same
+	// Art. 17 transaction, each in its own file for the size reason the
+	// timeline has one.
 	"internal/modules/privacy/erasure_attachments.go",
 	"internal/modules/privacy/erasure_channels.go",
 	// The live capabilities over the subject's consent record — the
@@ -254,13 +259,20 @@ func quotingBeyondTheSplit(literal string) string {
 // setAssignments returns the assignment list of one UPDATE — what sits between
 // SET and the clause that ends it — or "" when the statement has none.
 //
-// Scanned at PAREN DEPTH ZERO rather than matched with a lazy regex, and that
-// is the whole point of it being a scan. `SET redacted_fields = ARRAY(SELECT c
-// FROM unnest(…) WHERE c IS NOT NULL), counterparty_email = NULL` is a shape
-// this tree already writes (retentionrestricted.go), and a regex ending at the
-// first WHERE stops inside that subquery — so every assignment after it becomes
-// invisible and reordering the list, which nobody reviews as a compliance
-// change, turns the check off.
+// Scanned at PAREN DEPTH ZERO and OUTSIDE every quoted span, rather than
+// matched with a lazy regex, and that is the whole point of it being a scan.
+//
+// Depth, because `SET redacted_fields = ARRAY(SELECT c FROM unnest(…) WHERE c
+// IS NOT NULL), counterparty_email = NULL` is a shape this tree already writes
+// (retentionrestricted.go): a regex ending at the first WHERE stops inside that
+// subquery, so every assignment after it becomes invisible and reordering the
+// list — which nobody reviews as a compliance change — turns the check off.
+//
+// Spans, because a clause word can sit inside a VALUE. `SET body = 'one, from
+// the meeting', counterparty_email = NULL` ends the list at " from " and hands
+// back `body = 'one,`, and statementDestroying then reads counterparty_email as
+// a column this statement leaves intact. That is the under-recognition
+// direction: the gate goes quietly green over an erasure it never read.
 func setAssignments(statement string) string {
 	low := strings.ToLower(statement)
 	i := strings.Index(low, " set ")
@@ -269,7 +281,19 @@ func setAssignments(statement string) string {
 	}
 	rest := statement[i+len(" set "):]
 	depth := 0
-	for pos := range rest {
+	for pos := 0; pos < len(rest); pos++ {
+		// A quoted value, a dollar-quoted body or a comment is stepped OVER
+		// whole: nothing inside one is a paren, a clause word, or anything else
+		// this scan has an opinion about. An UNCLOSED span runs to the end of
+		// the statement, which ends the list there rather than reading the rest
+		// of it as SQL.
+		if length, closed := gatekit.SQLSpanAt(rest, pos); length > 0 {
+			if !closed {
+				return rest[:pos]
+			}
+			pos += length - 1
+			continue
+		}
 		switch rest[pos] {
 		case '(':
 			depth++
@@ -563,4 +587,63 @@ func assemblesSQL(call *ast.CallExpr) bool {
 		return sqlAssemblers[fn.Name]
 	}
 	return false
+}
+
+// TestTheSQLReaderStepsOverWhatIsNotSQL is the reader's own falsification.
+//
+// Every arm of the census above is only as good as this scan, and the scan's
+// failure mode is silent: a value that swallows the rest of an assignment list
+// makes the columns after it invisible, and an erasure the reader never saw
+// reads exactly like one that has nothing to report. Each case below is a shape
+// that would have gone quietly green.
+func TestTheSQLReaderStepsOverWhatIsNotSQL(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name      string
+		statement string
+		want      string
+	}{
+		{
+			name:      "a clause word inside a quoted value does not end the list",
+			statement: `UPDATE activity SET body = 'one, from the meeting', counterparty_email = NULL WHERE id = $1`,
+			want:      `body = 'one, from the meeting', counterparty_email = NULL`,
+		},
+		{
+			name:      "a subquery's own WHERE does not end the list",
+			statement: `UPDATE activity SET redacted_fields = ARRAY(SELECT c FROM unnest($2::text[]) WHERE c IS NOT NULL), counterparty_email = NULL WHERE id = $1`,
+			want:      `redacted_fields = ARRAY(SELECT c FROM unnest($2::text[]) WHERE c IS NOT NULL), counterparty_email = NULL`,
+		},
+		{
+			name:      "a dollar-quoted body is one span, whatever it contains",
+			statement: `UPDATE activity SET body = $tag$ where from returning $tag$, counterparty_email = NULL WHERE id = $1`,
+			want:      `body = $tag$ where from returning $tag$, counterparty_email = NULL`,
+		},
+		{
+			name:      "a comment inside the list is stepped over",
+			statement: "UPDATE activity SET body = NULL, /* where */ counterparty_email = NULL WHERE id = $1",
+			want:      "body = NULL, /* where */ counterparty_email = NULL",
+		},
+		{
+			name:      "the real clause still ends the list",
+			statement: `UPDATE activity SET body = NULL WHERE id = $1`,
+			want:      `body = NULL`,
+		},
+		{
+			name:      "an unclosed quote ends the list rather than reading the rest as SQL",
+			statement: `UPDATE activity SET body = 'unterminated, counterparty_email = NULL WHERE id = $1`,
+			want:      `body = `,
+		},
+		{
+			name:      "a statement with no SET clause has no assignments",
+			statement: `DELETE FROM activity WHERE id = $1`,
+			want:      ``,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got := setAssignments(c.statement); got != c.want {
+				t.Errorf("setAssignments\n  got  %q\n  want %q", got, c.want)
+			}
+		})
+	}
 }

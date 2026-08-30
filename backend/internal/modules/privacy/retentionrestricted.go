@@ -100,7 +100,7 @@ func (s *RetentionService) expireRestriction(ctx context.Context, id ids.UUID) e
 		if err != nil {
 			return err
 		}
-		if err := s.eraser.purgeContentDerivedFrom(ctx, tx, id); err != nil {
+		if err := s.eraser.purgeContentDerivedFrom(ctx, tx, id, theClockRanOut); err != nil {
 			return err
 		}
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionExpire, "activity", id, nil, nil, map[string]any{

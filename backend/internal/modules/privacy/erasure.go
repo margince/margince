@@ -50,9 +50,14 @@ const (
 	// subject, or a retention sweep clearing a record on its own schedule.
 	causePersonErasure = "person_erasure"
 	causeRetention     = "retention"
-	evidenceKeyClass   = "class"
-	evidenceKeyBasis   = "basis"
-	evidenceKeyReason  = "reason"
+	// causeControllerRelease is the third: a restriction a controller ended by
+	// hand, completing the erasure it had suspended. The release's decision row
+	// and the collateral tombstones that release leaves behind both take their
+	// cause from here, so a supervisory authority reading the two sees one act.
+	causeControllerRelease = "controller_release"
+	evidenceKeyClass       = "class"
+	evidenceKeyBasis       = "basis"
+	evidenceKeyReason      = "reason"
 )
 
 // ErasePerson removes the subject's PII in ONE transaction: person row

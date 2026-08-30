@@ -22,12 +22,33 @@ package privacy
 // one. It reads this package's own source, because the property is structural:
 // a second list reads correctly at every call site, and the half that drifts
 // leaves originals behind while reporting success.
+//
+// WHAT THIS CENSUS IS, AND IS NOT. It is structural, not a flow analysis. A
+// destroyer is accepted the moment its body contains a call to the purger — it
+// does not check that the call runs for the SAME activity, that it precedes the
+// body clear, or that it is not on a branch the destroying path never takes. So
+// a function that nulled one activity's body and purged a different one's, or
+// purged only inside an `if`, would pass.
+//
+// That limit is relied upon rather than enforced, and the reason it is
+// acceptable HERE is that these functions are short, each acts on one id, and
+// each is exercised end to end by an integration test that reads the raw
+// capture back (erasure_restriction_integration_test.go). A destroyer that grew
+// branches, a loop over several ids, or an id it did not receive would be past
+// what this reader can judge — and the right response then is a test that reads
+// the rows, not a cleverer parser here. A reader who finds one should say so
+// rather than trusting a green run.
+//
+// It also does not resolve which TYPE a method call lands on. Two types
+// declaring the same method name would share an entry; the package has no such
+// pair today.
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -50,7 +71,7 @@ import (
 // under ErasedSourceWithdrawal (erasure.go), purgeTranscriptReadings over the
 // held ids (erasure_restrict.go), the attachments and the embeddings.
 var finishedAnotherWay = gatekit.Waive(map[string]string{
-	"ErasePerson": "the Art. 17 cascade, whose purges are scoped to the SUBJECT rather than to one activity: raw_capture by every address and channel identity of theirs (purgeDerivedTraces, purgeChannelRawCapture) — which reaches originals an activity's own natural-key join cannot — plus redactApprovalsCitingActivities under ErasedSourceWithdrawal, purgeTranscriptReadings, the attachments and the embeddings. Per-activity purging here would be N statements for one subject and would still miss the channel lane",
+	"method ErasePerson": "the Art. 17 cascade, whose purges are scoped to the SUBJECT rather than to one activity: raw_capture by every address and channel identity of theirs (purgeDerivedTraces, purgeChannelRawCapture) — which reaches originals an activity's own natural-key join cannot — plus redactApprovalsCitingActivities under ErasedSourceWithdrawal, purgeTranscriptReadings, the attachments and the embeddings. Per-activity purging here would be N statements for one subject and would still miss the channel lane",
 })
 
 // contentPurger is the one function that finishes an activity-content erasure.
@@ -59,12 +80,26 @@ var finishedAnotherWay = gatekit.Waive(map[string]string{
 // (backend/internal/modules/privacy/activityerasureparity_test.go)
 const contentPurger = "purgeContentDerivedFrom"
 
+// updatesActivity and nullsBody read the two halves of the act, normalised.
+//
+// Substring matching on `update activity` and `body = null` was the first
+// spelling of this and it was too literal to be a census: `UPDATE "activity"`,
+// `UPDATE public.activity`, `UPDATE ONLY activity`, an alias after the target,
+// or `body=NULL` with no spaces all destroy the same text and all read as a
+// clean tree. Under-recognition is the one direction this file must not fail
+// in — a second content-destroying list that spells its UPDATE differently is
+// exactly the defect it exists to catch.
+var (
+	updatesActivity = regexp.MustCompile(`(?s)\bupdate\s+(?:only\s+)?(?:"?[a-z_][a-z_0-9]*"?\s*\.\s*)?"?activity"?(?:\s|$)`)
+	nullsBody       = regexp.MustCompile(`(?s)\b(?:"?[a-z_][a-z_0-9]*"?\s*\.\s*)?"?body"?\s*=\s*null\b`)
+)
+
 // destroysActivityBody reports whether a statement clears an activity's text.
 // `body = NULL` on the activity relation is the act every arm here performs and
 // the one that leaves the derived copies behind.
 func destroysActivityBody(statement string) bool {
 	low := strings.ToLower(statement)
-	return strings.Contains(low, "update activity") && strings.Contains(low, "body = null")
+	return updatesActivity.MatchString(low) && nullsBody.MatchString(low)
 }
 
 // TestEveryContentDestroyerFinishesTheErasure is the census.
@@ -124,25 +159,51 @@ func readActivityErasureShape(t *testing.T) (destroyers, purgers map[string]bool
 			if !isFunc || fn.Body == nil {
 				continue
 			}
+			declared := declarationKey(fn)
 			for _, statement := range gatekit.SQLStatementsOf(fn) {
 				if destroysActivityBody(statement) {
-					destroyers[fn.Name.Name] = true
+					destroyers[declared] = true
 				}
 			}
 			for _, called := range functionsCalledIn(fn) {
-				if called == contentPurger {
-					purgers[fn.Name.Name] = true
+				if called == methodKey+contentPurger {
+					purgers[declared] = true
 					continue
 				}
-				callers[called] = append(callers[called], fn.Name.Name)
+				callers[called] = append(callers[called], declared)
 			}
 		}
 	}
 	return destroyers, purgers, callers
 }
 
+// A method and a package function may share a name — RetentionService's
+// eraseActivityContent does today — so the two are kept apart. Folding them
+// would credit a package function with every `obj.foo()` in the package, and
+// then demand purger or waiver status from a function that never calls the
+// destroyer at all.
+//
+// What this does NOT resolve is which TYPE a method call lands on: that needs
+// type information this reader does not load. Two types declaring the same
+// method name would share an entry. The header says so; the package has no such
+// pair today, and the census would err toward reporting rather than toward
+// silence if it grew one.
+const (
+	methodKey   = "method "
+	functionKey = "func "
+)
+
+// declarationKey names a declaration the way a call to it is recorded.
+func declarationKey(fn *ast.FuncDecl) string {
+	if fn.Recv != nil && len(fn.Recv.List) > 0 {
+		return methodKey + fn.Name.Name
+	}
+	return functionKey + fn.Name.Name
+}
+
 // functionsCalledIn names every function a body calls, by the identifier at the
-// call — a package-local function by its own name, a method by its selector.
+// call — a package-local function by its own name, a method by its selector,
+// each tagged with which it is.
 func functionsCalledIn(fn *ast.FuncDecl) []string {
 	var out []string
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
@@ -152,9 +213,9 @@ func functionsCalledIn(fn *ast.FuncDecl) []string {
 		}
 		switch called := call.Fun.(type) {
 		case *ast.Ident:
-			out = append(out, called.Name)
+			out = append(out, functionKey+called.Name)
 		case *ast.SelectorExpr:
-			out = append(out, called.Sel.Name)
+			out = append(out, methodKey+called.Sel.Name)
 		}
 		return true
 	})
