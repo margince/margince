@@ -54,7 +54,13 @@ verdict=$(awk '
 	# Up to THREE leading spaces. Four is an indented code block, not a fence,
 	# so a four-space line that looked like one could open a block the file
 	# never closes and swallow every heading below it.
-	/^ {0,3}(```|~~~)/ {
+	#
+	# Spelled as an alternation rather than as `^ {0,3}`: the interval is an
+	# ERE extension that not every awk this script may meet supports, and an
+	# awk that silently matches nothing would recognise no fence at all —
+	# counting the headings this file quotes INSIDE fences as real ones, and
+	# refusing a correct changelog for describing itself.
+	/^(```|~~~)/ || /^ (```|~~~)/ || /^  (```|~~~)/ || /^   (```|~~~)/ {
 		run = $0
 		sub(/^ */, "", run)
 		marker = substr(run, 1, 1)
