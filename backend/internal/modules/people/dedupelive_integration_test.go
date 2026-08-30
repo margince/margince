@@ -22,6 +22,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -174,5 +176,46 @@ func TestADisqualifiedLeadsDuplicateDecisionClosesWithIt(t *testing.T) {
 	if got := len(openCandidates(ctx, t, e, entityLead)); got != 0 {
 		t.Errorf("after one side was disqualified the queue still serves %d decisions "+
 			"about a lead nobody can open, want 0", got)
+	}
+}
+
+// The enrichment spend fence clusters live twins and nothing else.
+//
+// DuplicateCluster is what stops two records of one human each buying the same
+// answer. It reads the same table the queue does and had neither filter: not the
+// candidate's own flag, and not the twin's — so it went on charging a record
+// against a person the product had archived, or erased, which stamps the same
+// column and leaves the row.
+func TestTheSpendFenceClustersOnlyLiveTwins(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := asArchiver(e)
+	incumbent, twin := seedPersonPair(ctx, t, e,
+		"Mara Kessler", "mara@fence.test", "Marah Kessler", "marah@fence.test", "fence.test")
+
+	cluster := func(of ids.UUID) []string {
+		t.Helper()
+		var out []string
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			out, err = DuplicateCluster(ctx, tx, of.String())
+			return err
+		}); err != nil {
+			t.Fatalf("reading the duplicate cluster: %v", err)
+		}
+		return out
+	}
+
+	// The admit case first: without it the assertion below passes for a fence
+	// that answers nothing at all, which would silently un-fence every spend.
+	if got := cluster(incumbent); len(got) != 1 || got[0] != twin.String() {
+		t.Fatalf("a live pair clusters as %v, want just the twin %s", got, twin)
+	}
+
+	if _, err := e.store.ArchivePerson(ctx, ids.From[ids.PersonKind](twin), nil); err != nil {
+		t.Fatalf("archiving the twin: %v", err)
+	}
+	if got := cluster(incumbent); len(got) != 0 {
+		t.Errorf("an archived twin still clusters as %v — this record is being charged "+
+			"against a person nobody can open", got)
 	}
 }
