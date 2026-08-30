@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -114,7 +115,13 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 }
 
 func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
+	var gotForm url.Values
+	var gotContentType string
+	var gotParseErr error
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotContentType = r.Header.Get("Content-Type")
+		gotParseErr = r.ParseForm()
+		gotForm = r.Form
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id_token":"the.id.token"}`))
 	}))
@@ -125,8 +132,18 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)
 	}
+	if gotParseErr != nil {
+		t.Fatalf("server failed to parse the exchange request's form body: %v", gotParseErr)
+	}
 	if idToken != "the.id.token" {
 		t.Fatalf("idToken = %q", idToken)
+	}
+	if gotContentType != "application/x-www-form-urlencoded" {
+		t.Fatalf("Content-Type = %q", gotContentType)
+	}
+	if gotForm.Get("code") != "code" || gotForm.Get("code_verifier") != "verifier" ||
+		gotForm.Get("redirect_uri") != "https://app.example.com/cb" || gotForm.Get("client_id") != "cid" {
+		t.Fatalf("form = %v, want code/code_verifier/redirect_uri/client_id passed through", gotForm)
 	}
 }
 

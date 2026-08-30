@@ -14,6 +14,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -125,8 +126,8 @@ func TestResolveFederatedUserRefusesUnknownEmail(t *testing.T) {
 		_, _, resolveErr := svc.resolveFederatedUser(context.Background(), tx, "google", "sub-x", "nobody@example.com")
 		return resolveErr
 	})
-	if err == nil {
-		t.Fatal("expected a refusal for an email with no live app_user")
+	if !errors.Is(err, ErrFederatedSignInRefused) {
+		t.Fatalf("err = %v, want ErrFederatedSignInRefused for an email with no live app_user", err)
 	}
 }
 
@@ -147,8 +148,8 @@ func TestResolveFederatedUserRefusesADeactivatedLinkedSubject(t *testing.T) {
 		_, _, resolveErr := svc.resolveFederatedUser(context.Background(), tx, "google", "sub-1", email)
 		return resolveErr
 	})
-	if err == nil {
-		t.Fatal("expected a refusal for a linked subject whose user is no longer live")
+	if !errors.Is(err, ErrFederatedSignInRefused) {
+		t.Fatalf("err = %v, want ErrFederatedSignInRefused for a linked subject whose user is no longer live", err)
 	}
 }
 
@@ -173,8 +174,8 @@ func TestResolveFederatedUserRefusesAnUnactivatedInvite(t *testing.T) {
 		_, _, resolveErr := svc.resolveFederatedUser(context.Background(), tx, "google", "sub-invite", invitedEmail)
 		return resolveErr
 	})
-	if err == nil {
-		t.Fatal("expected a refusal for an active, un-activated (NULL password_hash) invite")
+	if !errors.Is(err, ErrFederatedSignInRefused) {
+		t.Fatalf("err = %v, want ErrFederatedSignInRefused for an active, un-activated (NULL password_hash) invite", err)
 	}
 }
 
@@ -196,8 +197,8 @@ func TestResolveFederatedUserRefusesTheAgentSeat(t *testing.T) {
 		_, _, resolveErr := svc.resolveFederatedUser(context.Background(), tx, "google", "sub-agent", agentEmail)
 		return resolveErr
 	})
-	if err == nil {
-		t.Fatal("expected a refusal for the agent seat — an identity, not an authority")
+	if !errors.Is(err, ErrFederatedSignInRefused) {
+		t.Fatalf("err = %v, want ErrFederatedSignInRefused for the agent seat", err)
 	}
 }
 
@@ -294,8 +295,18 @@ func TestOIDCSignInFullRoundTrip(t *testing.T) {
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/" {
 		t.Fatalf("status=%d location=%q", rec.Code, rec.Header().Get("Location"))
 	}
-	if len(rec.Result().Cookies()) == 0 {
-		t.Fatal("expected a session cookie to be set")
+	var sessionCookie *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookieName {
+			sessionCookie = c
+		}
+	}
+	// The success path always calls clearLoginStateCookie before
+	// setSessionCookie, so the response carries the expired oidc_login_state
+	// cookie either way — checking cookie COUNT alone would pass even if
+	// setSessionCookie itself were broken or removed.
+	if sessionCookie == nil || sessionCookie.Value == "" {
+		t.Fatal("expected a non-empty session cookie to be set")
 	}
 	var count int
 	if err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {

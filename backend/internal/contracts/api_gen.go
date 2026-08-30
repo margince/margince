@@ -27011,6 +27011,9 @@ type RequestPasswordResetJSONBody struct {
 type OidcSignInCallbackParams struct {
 	Code  *string `form:"code,omitempty" json:"code,omitempty"`
 	State *string `form:"state,omitempty" json:"state,omitempty"`
+
+	// Error Set by the provider instead of `code` when the user denies consent.
+	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
 // OidcSignInCallbackParamsProvider defines parameters for OidcSignInCallback.
@@ -46071,6 +46074,19 @@ func (siw *ServerInterfaceWrapper) OidcSignInCallback(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "error" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "error", r.URL.Query(), &params.Error, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "error"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "error", Err: err})
 		}
 		return
 	}

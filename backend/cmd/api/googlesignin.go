@@ -33,10 +33,11 @@ import (
 // without the MCP connector would otherwise bake a malformed or
 // credential-bearing base straight into the redirect_uri this sends to
 // Google — a boot-time refusal is the only place that can catch it before
-// it reaches a request Google's own server logs. --api-base-url is not
-// separately validated for the same reason gmail.go/graph.go's own APIBaseURL
-// fields are not: it is an operator-supplied override of an already-validated
-// origin, not a second untrusted input.
+// it reaches a request Google's own server logs. Unlike gmail.go/graph.go's
+// APIBaseURL fields, this one flows into an outbound URL this process itself
+// builds and sends (the redirect_uri query parameter) rather than being
+// dereferenced by Google against its own record of the client — so it gets
+// its own validateBareOrigin check when set, same as --public-base-url.
 func googleSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, error) {
 	redirectBase := cfg.apiBaseURL
 	if redirectBase == "" {
@@ -53,6 +54,11 @@ func googleSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, err
 	if ssoCfg.Enabled() {
 		if err := validatePublicBaseURL(cfg.publicBaseURL); err != nil {
 			return nil, fmt.Errorf("api: google sign-in: %w", err)
+		}
+		if cfg.apiBaseURL != "" {
+			if err := validateBareOrigin("--api-base-url", cfg.apiBaseURL); err != nil {
+				return nil, fmt.Errorf("api: google sign-in: %w", err)
+			}
 		}
 	}
 	switch {

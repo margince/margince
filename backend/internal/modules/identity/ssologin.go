@@ -265,6 +265,15 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		fail(ctx, "email not verified", nil)
 		return
 	}
+	// email/sub are both required to reach here (they identify who signed
+	// in and are what LoginViaFederatedIdentity resolves/links against) —
+	// the verifier contract does not itself guarantee either is non-empty,
+	// so an unchecked blank value would resolve/link a blank identity
+	// rather than being refused here.
+	if email == "" || sub == "" {
+		fail(ctx, "missing email or subject claim", nil)
+		return
+	}
 
 	token, err := h.svc.LoginViaFederatedIdentity(ctx, provider, sub, email)
 	if err != nil {

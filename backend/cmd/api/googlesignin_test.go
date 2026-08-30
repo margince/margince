@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestGoogleSignInOptionsRefusesAMalformedPublicBaseURL(t *testing.T) {
@@ -80,6 +81,16 @@ func TestGoogleSignInOptionsSplitOriginUsesTheAPIHostForGoogleAndThePublicHostFo
 	}
 	if got := loc.Query().Get("redirect_uri"); got != "https://api.example.com/v1/auth/oidc/google/callback" {
 		t.Fatalf("redirect_uri = %q, want the api host", got)
+	}
+
+	// The other half of the split: the callback's own landing must reach the
+	// PUBLIC host, not the api host redirect_uri above used.
+	callbackReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=y", nil)
+	callbackRec := httptest.NewRecorder()
+	s.OidcSignInCallback(callbackRec, callbackReq, "google", crmcontracts.OidcSignInCallbackParams{})
+	failureLoc := callbackRec.Header().Get("Location")
+	if !strings.HasPrefix(failureLoc, "https://app.example.com/") {
+		t.Fatalf("failure redirect = %q, want it to land on the public host", failureLoc)
 	}
 }
 

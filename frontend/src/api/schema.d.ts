@@ -131,12 +131,13 @@ export interface paths {
         /**
          * Complete federated sign-in; sets the session cookie on success.
          * @description Verifies the round trip, resolves the verified email/subject to an existing,
-         *     active `app_user` (no account creation — an unrecognized email is a neutral
-         *     failure, exactly like an unrecognized password), and mints a session. Always
-         *     redirects into the SPA: success to the configured post-login route with
-         *     `crm_session` set, refusal to the configured failure route with a neutral
-         *     marker, never a JSON error body — this route is reached by a full-page browser
-         *     navigation, not an API caller.
+         *     active member (no account creation — an unrecognized email is a neutral
+         *     failure, exactly like an unrecognized password), and mints a session. For a
+         *     configured provider, always redirects into the SPA: success to the configured
+         *     post-login route with `crm_session` set, refusal to the configured failure
+         *     route with a neutral marker, never a JSON error body — this route is reached
+         *     by a full-page browser navigation, not an API caller. An unconfigured or
+         *     unknown provider is the one exception: it answers 404, the same as `start`.
          */
         get: operations["oidcSignInCallback"];
         put?: never;
@@ -24067,6 +24068,8 @@ export interface operations {
             query?: {
                 code?: string;
                 state?: string;
+                /** @description Set by the provider instead of `code` when the user denies consent. */
+                error?: string;
             };
             header?: never;
             path: {

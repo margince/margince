@@ -4816,7 +4816,7 @@ export const en = {
   "auth.noticeSessionExpired":
     "Your session expired. Sign in again to continue.",
   "auth.noticeOidcFailed":
-    "Sign-in with Google didn't work — try again or use your password.",
+    "Sign-in with Google didn't work. Try again or use your password.",
   "auth.connectionTitle": "Margince couldn't be reached",
   "auth.connectionBody":
     "Check your connection and try again. If the problem persists, the server may be restarting.",

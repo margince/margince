@@ -70,6 +70,9 @@ func isPublicRequest(r *http.Request) bool {
 // /v1/auth/oidc/{provider}/start and /v1/auth/oidc/{provider}/callback — a
 // single provider segment, no deeper path, mirroring isConnectorOAuthCallback
 // for the same reason: a prefix test alone would also admit a deeper path.
+// Like isConnectorOAuthCallback, this matches PATH only, not method: the
+// contract (crm.yaml) declares both as GET-only, so any other verb reaches no
+// handler through the generated router regardless of what this bypass admits.
 func isOIDCLoginRequest(path string) bool {
 	rest, ok := strings.CutPrefix(path, "/v1/auth/oidc/")
 	if !ok {
