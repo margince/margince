@@ -46,14 +46,13 @@ const jwksRefreshCooldown = time.Minute
 
 // errOIDCRejected is the single opaque failure the verifier returns; the
 // wrapped cause is for server-side logs only.
-var errOIDCRejected = errors.New("oidc: push token rejected")
+var errOIDCRejected = errors.New("oidc: token rejected")
 
 type googleOIDCVerifier struct {
-	jwksURL        string
-	audience       string
-	serviceAccount string
-	client         *http.Client
-	now            func() time.Time
+	jwksURL       string
+	matchIdentity func(oidcClaims) error
+	client        *http.Client
+	now           func() time.Time
 
 	mu          sync.Mutex
 	keys        map[string]*rsa.PublicKey
@@ -70,16 +69,18 @@ type jwksRefreshFlight struct {
 	err  error
 }
 
-func newGoogleOIDCVerifier(jwksURL, audience, serviceAccount string) *googleOIDCVerifier {
+// newGoogleOIDCVerifier's audience/serviceAccount params are replaced by one
+// matchIdentity callback, so a shared verifier does not need to hardcode
+// which caller it is.
+func newGoogleOIDCVerifier(jwksURL string, matchIdentity func(oidcClaims) error) *googleOIDCVerifier {
 	if jwksURL == "" {
 		jwksURL = googleJWKSURL
 	}
 	return &googleOIDCVerifier{
-		jwksURL:        jwksURL,
-		audience:       audience,
-		serviceAccount: serviceAccount,
-		client:         &http.Client{Timeout: 30 * time.Second},
-		now:            time.Now,
+		jwksURL:       jwksURL,
+		matchIdentity: matchIdentity,
+		client:        &http.Client{Timeout: 30 * time.Second},
+		now:           time.Now,
 	}
 }
 
@@ -101,55 +102,47 @@ type oidcHeader struct {
 type oidcClaims struct {
 	Iss           string `json:"iss"`
 	Aud           string `json:"aud"`
+	Sub           string `json:"sub"`
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
 	Exp           int64  `json:"exp"`
 	Iat           int64  `json:"iat"`
 }
 
-// Verify returns nil only for a well-formed, correctly-signed Google push
-// token whose claims match the configured audience and push service account.
-func (v *googleOIDCVerifier) Verify(ctx context.Context, bearer string) error {
+// Verify returns the decoded claims only for a well-formed, correctly-signed
+// Google-issued token whose claims pass the injected matchIdentity check.
+func (v *googleOIDCVerifier) Verify(ctx context.Context, bearer string) (oidcClaims, error) {
 	if bearer == "" {
-		return fmt.Errorf("%w: empty bearer", errOIDCRejected)
+		return oidcClaims{}, fmt.Errorf("%w: empty bearer", errOIDCRejected)
 	}
 	parts := strings.Split(bearer, ".")
 	if len(parts) != 3 {
-		return fmt.Errorf("%w: not a JWT", errOIDCRejected)
+		return oidcClaims{}, fmt.Errorf("%w: not a JWT", errOIDCRejected)
 	}
 	hdr, err := decodeHeaderSegment(parts[0])
 	if err != nil {
-		return fmt.Errorf("%w: header: %v", errOIDCRejected, err)
+		return oidcClaims{}, fmt.Errorf("%w: header: %v", errOIDCRejected, err)
 	}
 	if hdr.Alg != "RS256" {
-		return fmt.Errorf("%w: alg %q not RS256", errOIDCRejected, hdr.Alg)
+		return oidcClaims{}, fmt.Errorf("%w: alg %q not RS256", errOIDCRejected, hdr.Alg)
 	}
 	key, err := v.key(ctx, hdr.Kid)
 	if err != nil {
-		return fmt.Errorf("%w: key: %v", errOIDCRejected, err)
+		return oidcClaims{}, fmt.Errorf("%w: key: %v", errOIDCRejected, err)
 	}
 	if err := verifyRS256(key, parts[0]+"."+parts[1], parts[2]); err != nil {
-		return fmt.Errorf("%w: signature: %v", errOIDCRejected, err)
+		return oidcClaims{}, fmt.Errorf("%w: signature: %v", errOIDCRejected, err)
 	}
 	claims, err := decodeClaimsSegment(parts[1])
 	if err != nil {
-		return fmt.Errorf("%w: claims: %v", errOIDCRejected, err)
+		return oidcClaims{}, fmt.Errorf("%w: claims: %v", errOIDCRejected, err)
 	}
-	return v.checkClaims(claims)
+	return claims, v.checkClaims(claims)
 }
 
 func (v *googleOIDCVerifier) checkClaims(c oidcClaims) error {
 	if c.Iss != "accounts.google.com" && c.Iss != "https://accounts.google.com" {
 		return fmt.Errorf("%w: iss %q", errOIDCRejected, c.Iss)
-	}
-	if c.Aud != v.audience {
-		return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-	}
-	if c.Email != v.serviceAccount {
-		return fmt.Errorf("%w: email mismatch", errOIDCRejected)
-	}
-	if !c.EmailVerified {
-		return fmt.Errorf("%w: email not verified", errOIDCRejected)
 	}
 	now := v.now()
 	if c.Exp == 0 || now.After(time.Unix(c.Exp, 0).Add(oidcSkew)) {
@@ -161,7 +154,7 @@ func (v *googleOIDCVerifier) checkClaims(c oidcClaims) error {
 	if now.Add(oidcSkew).Before(time.Unix(c.Iat, 0)) {
 		return fmt.Errorf("%w: issued in the future", errOIDCRejected)
 	}
-	return nil
+	return v.matchIdentity(c)
 }
 
 // key returns the cached public key for kid, refreshing the JWKS if the

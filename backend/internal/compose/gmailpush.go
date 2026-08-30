@@ -31,6 +31,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -88,7 +89,18 @@ func WithGmailPush(inserter *jobs.Runner, cfg GmailPushConfig) Option {
 		}
 		var verifier *googleOIDCVerifier
 		if cfg.OIDC() {
-			verifier = newGoogleOIDCVerifier(cfg.JWKSURL, cfg.Audience, cfg.ServiceAccount)
+			verifier = newGoogleOIDCVerifier(cfg.JWKSURL, func(c oidcClaims) error {
+				if c.Aud != cfg.Audience {
+					return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
+				}
+				if c.Email != cfg.ServiceAccount {
+					return fmt.Errorf("%w: email mismatch", errOIDCRejected)
+				}
+				if !c.EmailVerified {
+					return fmt.Errorf("%w: email not verified", errOIDCRejected)
+				}
+				return nil
+			})
 		}
 		s.gmailPush = Webhook(gmailPushSpec(pool, inserter, cfg.Token, verifier, s.log), s.log)
 	}
@@ -111,7 +123,8 @@ func gmailPushSpec(pool *pgxpool.Pool, inserter *jobs.Runner, token string, veri
 	}
 	if verifier != nil {
 		spec.Verify = func(ctx context.Context, r *http.Request) error {
-			return verifier.Verify(ctx, httpserver.BearerToken(r.Header.Get("Authorization")))
+			_, err := verifier.Verify(ctx, httpserver.BearerToken(r.Header.Get("Authorization")))
+			return err
 		}
 	}
 	return spec
