@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -94,13 +95,13 @@ func (f fakeMailConnector) SendEmail(context.Context, connector.Auth, connector.
 // answer, with no second marker to keep in sync.
 func TestChannelProvidersReportsOnlyMessageSenderConnectors(t *testing.T) {
 	r := NewRegistry(nil, nil, nil, nil)
-	r.Register(fakeChannelConnector{name: "fake-channel"})
-	r.Register(fakeMailConnector{name: "fake-mail"})
+	r.Register(fakeChannelConnector{name: "fake_channel"})
+	r.Register(fakeMailConnector{name: "fake_mail"})
 
 	got := r.ChannelProviders()
 
-	if len(got) != 1 || got[0] != "fake-channel" {
-		t.Fatalf("ChannelProviders() = %v, want [fake-channel]", got)
+	if len(got) != 1 || got[0] != "fake_channel" {
+		t.Fatalf("ChannelProviders() = %v, want [fake_channel]", got)
 	}
 }
 
@@ -108,13 +109,13 @@ func TestChannelProvidersReportsOnlyMessageSenderConnectors(t *testing.T) {
 // spurious churn from Go's randomized map iteration order.
 func TestChannelProvidersIsSorted(t *testing.T) {
 	r := NewRegistry(nil, nil, nil, nil)
-	r.Register(fakeChannelConnector{name: "zzz-channel"})
-	r.Register(fakeChannelConnector{name: "aaa-channel"})
+	r.Register(fakeChannelConnector{name: "zzz_channel"})
+	r.Register(fakeChannelConnector{name: "aaa_channel"})
 
 	got := r.ChannelProviders()
 
-	if len(got) != 2 || got[0] != "aaa-channel" || got[1] != "zzz-channel" {
-		t.Fatalf("ChannelProviders() = %v, want sorted [aaa-channel zzz-channel]", got)
+	if len(got) != 2 || got[0] != "aaa_channel" || got[1] != "zzz_channel" {
+		t.Fatalf("ChannelProviders() = %v, want sorted [aaa_channel zzz_channel]", got)
 	}
 }
 
@@ -126,5 +127,35 @@ func TestChannelProvidersOnAnEmptyRegistry(t *testing.T) {
 
 	if got := r.ChannelProviders(); len(got) != 0 {
 		t.Fatalf("ChannelProviders() on an empty registry = %v, want empty", got)
+	}
+}
+
+// TestRegisteringATransportTheContractCannotNameIsRefused holds the other half
+// of the name rule at its own door.
+//
+// A transport name reaches a client as `ProviderRef`, which the contract
+// publishes under a pattern. One the schema refuses would capture activities,
+// bind identities and be serialized into responses that fail validation — an
+// extension unit that works locally and breaks for anybody who checks, with
+// the failure surfacing far from the author who chose the name.
+//
+// A panic rather than an error because registration is composition-time, like
+// its two siblings here: a build that cannot state its own surface should not
+// start.
+func TestRegisteringATransportTheContractCannotNameIsRefused(t *testing.T) {
+	for _, name := range []string{"", "fake-channel", "FakeChannel", "2fake", "fake channel"} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				refusal, refused := recover().(string)
+				if !refused {
+					t.Fatalf("a connector named %q registered, and the contract publishes transport names as %s",
+						name, connector.NamePattern)
+				}
+				if !strings.Contains(refusal, connector.NamePattern) {
+					t.Errorf("the refusal of %q does not say what a legal name looks like: %s", name, refusal)
+				}
+			}()
+			NewRegistry(nil, nil, nil, nil).Register(fakeChannelConnector{name: name})
+		})
 	}
 }

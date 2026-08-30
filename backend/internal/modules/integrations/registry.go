@@ -35,8 +35,20 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 	r := &Registry{adapters: map[string]provider.Adapter{}}
 	for _, a := range adapters {
 		d := a.Descriptor()
-		if d.Name == "" {
-			return nil, errors.New("integrations: an adapter declared no provider name")
+		// The name is the discriminator on every row this provider's runs
+		// touch, the provenance on the values they buy, and a field the API
+		// publishes under a pattern. An adapter refused here is one whose
+		// author finds out now, rather than through a client that validates
+		// responses and reports a schema breach far from the cause.
+		//
+		// No name at all goes through the same door: it is one of the names
+		// the contract cannot carry, and a caller who gets a different
+		// sentence for it has to be told the rule twice.
+		if !provider.ValidName(d.Name) {
+			return nil, fmt.Errorf(
+				"integrations: provider name %q is not one the contract can carry (%s, at most %d characters): "+
+					"lower-case letters, digits and underscores, starting with a letter",
+				d.Name, provider.NamePattern, provider.NameMaxLength)
 		}
 		if _, dup := r.adapters[d.Name]; dup {
 			return nil, fmt.Errorf("integrations: provider %q registered twice", d.Name)

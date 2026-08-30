@@ -99,7 +99,10 @@ type GrantedScoper interface {
 
 // Descriptor — declared capabilities; ⊆ the granting human's scopes.
 type Descriptor struct {
-	Name     string // stable id: "gmail", "gcal", "hubspot", "coldstart-scrape"
+	// Name is the stable id: "gmail", "gcal", "imap". Lower-case letters,
+	// digits and underscores, starting with a letter — the shape the contract
+	// publishes as ProviderRef, held by ValidName at registration.
+	Name     string
 	Version  string
 	Scopes   []principal.Scope
 	RiskTier mcp.RiskTier // capture/read = auto_execute; any outbound = confirmation_required

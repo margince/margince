@@ -476,6 +476,19 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A provider name the contract cannot carry is refused at registration.** The
+  API publishes `Provider` as a pattern-constrained string — a pattern rather
+  than an enum, because which providers exist is a deployment fact — and nothing
+  enforced it where a name enters the system: the registry asked only that a
+  name be non-empty and unique, and the database CHECK that pinned it to one
+  vendor is gone. An adapter called `Acme-Data` would have registered, written
+  rows, and been serialized into responses that violate the published schema,
+  with the failure surfacing at a client that validates rather than at the
+  author who chose the name. A gate compares the registry's rule against the
+  contract's own, so the two cannot drift. The same rule now holds at the
+  messaging-transport registry, whose names the contract publishes the same way
+  under `ProviderRef`; three test fixtures were already named with hyphens.
+
 - **A provider run's audit actor names the provider it is for.** Every run was
   audited as `connector:surfe`, whichever vendor it actually belonged to,
   because the workers that execute a run hold a run id and the poll sweep drains
