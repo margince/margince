@@ -61,10 +61,12 @@ func For(language string) Copy {
 // Copy holds the strings the senders need, in one language.
 //
 // A field left out of an entry below is the empty string, which for a subject
-// is a message a mail client files as blank — the compiler will not say so, and
-// neither will a map. What says so is
-// TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits, which is the reason a
-// language reaching a mailbox half-written is caught here rather than there.
+// is a message a mail client files as blank. A keyed struct literal does not
+// require every field, so the compiler will not say so — and neither would a
+// map. What says so is
+// TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits, which walks every
+// field of every language: that is what stops a language reaching a mailbox
+// half-written.
 type Copy struct {
 	// The password reset a person asked for.
 	ResetSubject string

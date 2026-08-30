@@ -26,6 +26,7 @@ package gates
 
 import (
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -151,6 +152,19 @@ func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 			t.Errorf("the contract admits base_language %q and the mail catalog has no copy for it, so an "+
 				"installation set to it is sent %s mail without anything saying so",
 				language, mailcopy.Fallback)
+			continue
+		}
+		// EVERY FIELD, not merely the entry. A keyed struct literal does not
+		// require them all, and an omitted one is the empty string — for a
+		// subject, a message the reader's client files as blank. Nothing about
+		// the type says so, which is why this is here.
+		written := reflect.ValueOf(mailcopy.For(language))
+		for i := range written.NumField() {
+			if written.Field(i).Kind() == reflect.String && written.Field(i).String() == "" {
+				t.Errorf("the %s copy leaves %s empty, and an empty line reaches a reader as a blank subject "+
+					"or a missing sentence — a keyed struct literal does not require it, so nothing else says so",
+					language, written.Type().Field(i).Name)
+			}
 		}
 	}
 }
