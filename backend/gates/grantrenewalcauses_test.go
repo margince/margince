@@ -55,8 +55,14 @@ func TestEveryRenewalCauseReachesTheCardThatAsksForIt(t *testing.T) {
 		t.Fatalf("reading the settings card: %v", err)
 	}
 	for _, cause := range causes {
-		if !strings.Contains(string(card), cause) {
-			t.Errorf("MyAgentGrant.%s says a rep's standing grant has stopped working, and %s never reads it — "+
+		// The field READ, not the name anywhere in the file. A card that
+		// carried the name in a type annotation, a comment or a dead
+		// expression would satisfy a substring search while ignoring the cause
+		// entirely — the exact silence this gate exists to break.
+		if !strings.Contains(string(card), "grant?."+cause) &&
+			!strings.Contains(string(card), "grant."+cause) {
+			t.Errorf("MyAgentGrant.%s says a rep's standing grant has stopped working, and %s never READS it (no "+
+				"`grant.%[1]s`) — "+
 				"so the run degrades every night and nothing on the surface the rep can act on says why. Branch on "+
 				"it beside the causes already there",
 				cause, grantRenewalCard)

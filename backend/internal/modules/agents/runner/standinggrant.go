@@ -192,7 +192,7 @@ func (s *Store) LiveGrantsFor(ctx context.Context, spec string) ([]StandingGrant
 	var out []StandingGrant
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT g.user_id, g.agent_spec, g.state, g.passport_id, g.decided_at, true, p.scopes
+			SELECT g.user_id, g.agent_spec, g.state, g.passport_id, g.decided_at, true
 			  FROM agent_standing_grant g
 			  JOIN passport p ON p.id = g.passport_id
 			 WHERE g.agent_spec = $1
@@ -212,8 +212,13 @@ func (s *Store) LiveGrantsFor(ctx context.Context, spec string) ([]StandingGrant
 		defer rows.Close()
 		for rows.Next() {
 			var g StandingGrant
+			// PassportScopes is deliberately not read here. The fan-out asks
+			// whether a credential is live tonight, which the JOIN above has
+			// already decided; whether it still FUNDS the agent is a question
+			// the rep's own card asks, through grantForTx. Pulling the array
+			// for every live grant on every nightly pass would buy nothing.
 			if err := rows.Scan(&g.UserID, &g.Spec, &g.State, &g.PassportID,
-				&g.DecidedAt, &g.CredentialUsable, &g.PassportScopes); err != nil {
+				&g.DecidedAt, &g.CredentialUsable); err != nil {
 				return fmt.Errorf("scan a standing grant: %w", err)
 			}
 			out = append(out, g)
