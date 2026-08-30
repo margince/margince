@@ -121,13 +121,16 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 			       OR archived_at IS NOT NULL
 			  FROM activity WHERE id = $1 FOR SHARE`,
 			sourceActivity).Scan(&sourceLimited); err != nil {
-			// A source this store never had, or one erased since the candidate
-			// was selected, says nothing about an audience — the fields land
-			// or not on their own merits, as they did before this test existed.
 			if !errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("people: reading the signature's source message: %w", err)
 			}
-			sourceLimited = false
+			// No source row: nothing lands. The fields being applied were read
+			// OUT of that message, so a source that is gone — erased since the
+			// candidate was selected — means writing erased content onto a
+			// person every seat reads, into fields the audience rescope does
+			// not retract and an audit trail that is append-only. Absence is
+			// the one answer that cannot be checked, so it fails closed.
+			sourceLimited = true
 		}
 		if sourceLimited {
 			res.Skipped += len(fields)

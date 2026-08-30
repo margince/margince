@@ -223,7 +223,7 @@ func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
 	personID, _ := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
-	res, err := e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{{
+	res, err := e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{{
 		Name: "title", Value: "Head of Platform",
 		Evidence: "Mira Halvorsen | Head of Platform | Voltaq", Confidence: 0.9,
 	}})
@@ -256,7 +256,7 @@ func TestASitePersonFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 	personID, orgID := e.seedEmployedPerson(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
-	if _, err := e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{{
+	if _, err := e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{{
 		Name: "role", Value: "Chief Platform Officer",
 		Evidence: "Mira Halvorsen | Chief Platform Officer", Confidence: 0.9,
 	}}); err != nil {
@@ -337,7 +337,7 @@ func TestASignatureFillRecordsTheEmptySidecarFields(t *testing.T) {
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
 
 	const profile = "https://linkedin.test/in/mira-halvorsen"
-	res, err := e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+	res, err := e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
 		{Name: "role", Value: "Head of Platform", Evidence: "Mira Halvorsen | Head of Platform", Confidence: 0.9},
 		{Name: "linkedin", Value: profile, Evidence: "linkedin.test/in/mira-halvorsen", Confidence: 0.9},
 	})

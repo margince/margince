@@ -99,13 +99,25 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 	// activity stamps its passport id there, and a passport is not a reader a
 	// signal can answer to — it resolves to no owner, and the signals narrow
 	// to the archive path instead of failing the app_user FK.
+	// FOR UPDATE OF a, so the audience this reads is the one that still stands
+	// when the corrections below run. Unlocked, a widening committing between
+	// this read and the retraction would be undone by it: the widening
+	// re-indexes, this deletes the fresh vector, and the widening's own event
+	// finds the row workspace and does nothing — leaving an open message
+	// unindexed and unlabelled, with nothing scheduled to notice.
+	//
+	// The activity is also the FIRST row this transaction takes, which is the
+	// order every writer of a derived row follows (the embedding upsert's share
+	// lock, the retraction's own). Taking a derived row first would deadlock
+	// against them.
 	var current string
 	err := tx.QueryRow(ctx, `
 		SELECT a.thread_key, a.audience, u.id
 		  FROM activity a
 		  LEFT JOIN app_user u
 		    ON u.id = substring(a.captured_by from '([0-9a-f-]{36})$')::uuid
-		 WHERE a.id = $1`, activityID).Scan(&threadKey, &current, &owner)
+		 WHERE a.id = $1
+		 FOR UPDATE OF a`, activityID).Scan(&threadKey, &current, &owner)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// Deleted or erased between the event and this pass: the models

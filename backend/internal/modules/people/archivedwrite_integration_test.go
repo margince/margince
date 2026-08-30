@@ -30,7 +30,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
@@ -134,7 +133,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 				// round after an erasure — erasure deletes person_phone, so
 				// "no live phone row" is exactly what an erased subject
 				// answers.
-				_, err := e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+				_, err := e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
 					{
 						Name: "title", Value: "Head of Procurement",
 						Evidence: "Mira Halvorsen | Head of Procurement", Confidence: 0.9,

@@ -51,6 +51,26 @@ import (
 // Idempotent: re-running deletes nothing more, which is what lets the consumer
 // that calls it retry.
 func RetractDerivedForActivityTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+	// THE ACTIVITY FIRST, BEFORE ANY DERIVED ROW. Both things this function
+	// removes have a concurrent writer that takes the activity and then the
+	// derived row — the embedding upsert holds a share lock on the activity
+	// while it writes the vector, the classifier's SetCaptureLabel updates the
+	// activity itself — so taking them in the other order here would deadlock
+	// against both, and a deadlock in the consumer is a narrowing whose
+	// residue is never collected.
+	//
+	// An archived row is locked too (IncludeArchived): a narrowing that arrives
+	// after an archive still owes the retraction, and refusing here would leave
+	// the residue behind exactly when the message is least likely to be looked
+	// at again.
+	if _, err := storekit.LockRow(ctx, tx, "activity", activityID, storekit.IncludeArchived); err != nil {
+		// A row erased between the event and this pass has no residue to
+		// retract; the destruction path already took it.
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("activities: locking the narrowed activity: %w", err)
+	}
 	// The vector is the sharper of the two. It is built as the system principal
 	// over the whole workspace and queried by everyone, so a stale vector for a
 	// narrowed row does not merely return the row — it returns whoever's search
@@ -65,25 +85,10 @@ func RetractDerivedForActivityTx(ctx context.Context, tx pgx.Tx, activityID ids.
 	// backlog predicate now excludes the row, so no pass will recompute it, and
 	// a label with no readable message behind it is the residue itself.
 	//
-	// The row is locked first because the label has a concurrent writer: the
-	// classifier's SetCaptureLabel is a separate transaction that read the
-	// backlog before this narrowing committed, and without the lock its write
-	// can land after the clear — leaving the narrowed message labelled from
-	// text nobody may read. The lock makes the two serialise, and the
-	// classifier's own write then sees the narrowed row.
-	//
-	// An archived row is locked too (IncludeArchived): a narrowing that arrives
-	// after an archive still owes the retraction, and refusing here would leave
-	// the residue behind exactly when the message is least likely to be looked
-	// at again.
-	if _, err := storekit.LockRow(ctx, tx, "activity", activityID, storekit.IncludeArchived); err != nil {
-		// A row erased between the event and this pass has no residue to
-		// retract; the destruction path already took it.
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
-		return fmt.Errorf("activities: locking the narrowed activity: %w", err)
-	}
+	// The lock above is what makes this stick against the classifier: it read
+	// the backlog before the narrowing committed, and without the lock its
+	// write can land after this clear, leaving the narrowed message labelled
+	// from text nobody may read.
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity SET capture_label = NULL WHERE id = $1 AND capture_label IS NOT NULL`, activityID); err != nil {
 		return fmt.Errorf("activities: clearing the narrowed activity's attention label: %w", err)

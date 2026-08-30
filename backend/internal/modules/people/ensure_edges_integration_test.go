@@ -268,7 +268,7 @@ func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing
 		t.Fatal(err)
 	}
 
-	res, err := e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+	res, err := e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
 		{Name: "title", Value: "AI CTO", Evidence: "AI CTO", Confidence: 0.9},
 		{Name: "", Value: "   ", Evidence: ""}, // a blank value is dropped before any write
 	})
@@ -305,7 +305,7 @@ func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing
 	}); err != nil {
 		t.Fatal(err)
 	}
-	res, err = e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
 		{Name: "phone", Value: "+49 30 1234567", Evidence: "+49 30 1234567", Confidence: 0.8},
 	})
 	if err != nil {
@@ -317,20 +317,20 @@ func TestApplySignatureFieldsWithdrawsEvidenceWhenTheFillLosesItsRace(t *testing
 
 	// A sidecar-only field applies cleanly, and a second verdict for the
 	// same field defers to the first (one row per person+field, forever).
-	res, err = e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
 		{Name: "role", Value: "Decision maker", Evidence: "CTO", Confidence: 0.7},
 	})
 	if err != nil || res.Applied != 1 {
 		t.Fatalf("role apply = %+v (err %v), want 1 applied", res, err)
 	}
-	res, err = e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), []SignatureField{
 		{Name: "role", Value: "Champion", Evidence: "CTO again", Confidence: 0.9},
 	})
 	if err != nil || res.Applied != 0 || res.Skipped != 1 {
 		t.Fatalf("second role verdict = %+v (err %v), want skipped (first verdict wins)", res, err)
 	}
 
-	if res, err = e.store.ApplySignatureFields(ctx, personID, ids.NewV7(), nil); err != nil || res.Applied != 0 || res.Skipped != 0 {
+	if res, err = e.store.ApplySignatureFields(ctx, personID, e.openSignatureSource(ctx, t), nil); err != nil || res.Applied != 0 || res.Skipped != 0 {
 		t.Fatalf("empty apply = %+v (err %v), want a zero no-op", res, err)
 	}
 }

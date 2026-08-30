@@ -177,17 +177,24 @@ func readsActivityTable(path string, file *ast.File) bool {
 func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim activityDimension) []string {
 	var offenders []string
 	for _, decl := range file.Decls {
-		reads := gatekit.DeclReads(decl, activityReadLiteral)
-		if len(reads) == 0 {
+		// The read is looked for in the declaration's whole text, not literal by
+		// literal, because this tree concatenates a query out of several: a
+		// function whose `FROM activity` sits in one constant and whose
+		// `SELECT subject, body` sits in another has no single literal that
+		// matches, and a per-literal walk skips it entirely — the shape that
+		// reports PASS over a content reader.
+		whole := declText(decl)
+		if !activityReadLiteral.MatchString(whole) {
 			continue
 		}
-		owed := false
-		for _, read := range reads {
-			if dim.owes(read.SQL) {
-				owed = true
-			}
-		}
-		if !owed {
+		reads := gatekit.DeclReads(decl, activityReadLiteral)
+		// Asked of the DECLARATION's whole text, not of one literal. This tree
+		// assembles a query from several string constants — a fragment holding
+		// the WHERE, the caller holding the SELECT — so a reader whose
+		// `FROM activity` and whose `subject` sit in different literals owes
+		// the content rule just as surely, and a per-literal test would skip it
+		// and report PASS.
+		if !dim.owes(whole) {
 			continue
 		}
 		fn, isFunc := decl.(*ast.FuncDecl)
@@ -205,9 +212,6 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim a
 			// counting a sibling's namer as evidence that the fragment is
 			// composed somewhere.
 			for _, fragment := range activityFragmentsIn(decl) {
-				if !dim.owes(fragment.sql) {
-					continue
-				}
 				for _, namer := range unguardedNamers(graph, fragment.names, dim) {
 					offenders = append(offenders, namer+": "+gatekit.FirstLineOf(fragment.sql))
 				}
@@ -218,7 +222,7 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim a
 		if guardedInItsPackage(graph, key, dim) {
 			continue
 		}
-		offenders = append(offenders, key+": "+gatekit.FirstLineOf(owedRead(reads, dim)))
+		offenders = append(offenders, key+": "+gatekit.FirstLineOf(quotableRead(reads, whole)))
 	}
 	return offenders
 }
@@ -481,16 +485,33 @@ func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
 	}
 }
 
-// owedRead is the first read that put this function in the dimension's corpus,
-// so the failure quotes the statement the reader actually owes for rather than
-// whichever activity read happened to come first in the body.
-func owedRead(reads []gatekit.TableRead, dim activityDimension) string {
-	for _, read := range reads {
-		if dim.owes(read.SQL) {
-			return read.SQL
-		}
+// quotableRead is what the failure message shows: the reader's own matching
+// literal when it has one, and otherwise the assembled text — a split query has
+// no single literal to quote, and quoting nothing would name a reader without
+// showing what it reads.
+func quotableRead(reads []gatekit.TableRead, whole string) string {
+	if len(reads) > 0 {
+		return reads[0].SQL
 	}
-	return reads[0].SQL
+	return whole
+}
+
+// declText joins a declaration's string literals into the statement they
+// assemble into, which is what the dimension's subject and the table-read
+// pattern are both matched against.
+func declText(decl ast.Decl) string {
+	var parts []string
+	ast.Inspect(decl, func(node ast.Node) bool {
+		expr, isExpr := node.(ast.Expr)
+		if !isExpr {
+			return true
+		}
+		if text, isText := gatekit.LiteralText(expr); isText {
+			parts = append(parts, text)
+		}
+		return true
+	})
+	return strings.Join(parts, "\n")
 }
 
 func matchesAny(text string, markers []*regexp.Regexp) bool {
