@@ -57,4 +57,7 @@ func TestIsOIDCLoginRequest(t *testing.T) {
 	if !isPublicRequest(httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)) {
 		t.Fatal("the OIDC start route must be reachable without a session")
 	}
+	if isPublicRequest(httptest.NewRequest(http.MethodPost, "/v1/auth/oidc/google/start", nil)) {
+		t.Fatal("the OIDC routes are GET-only in the contract; POST must not bypass the session gate")
+	}
 }

@@ -273,6 +273,16 @@ export function AuthScreen({
                   brand: providerBrandName(providerKey) ?? providerKey,
                 }),
             )}
+            /* True only when previewedOidcProviders ABOVE actually invented
+               the list this render draws — never merely because the preview
+               build flag is set. An installation that genuinely serves OIDC
+               providers keeps working buttons even under a preview build:
+               the switch exists to stand in for a server with none
+               configured, not to blanket-disable a real one. */
+            providersSynthesized={
+              (capabilities.data?.oidc_providers ?? []).length === 0 &&
+              uiPreviewOidcEnabled()
+            }
             /* Empty in the product, always: the capability carries no
                availability field, so only the preview layer can mark a provider
                (app/ui-preview.ts). */
@@ -587,14 +597,15 @@ function ProviderLabel({
 // read. `location.assign` (not a hash route) because the target is outside
 // this SPA's own address space entirely.
 //
-// Guarded on the SAME preview switch `previewedOidcProviders` reads, and for
-// the reason `app/ui-preview.ts`'s own doc comment on `uiPreviewOidcEnabled`
-// promises: a preview build draws the federated block for design review on
-// an installation that serves no providers at all, so this call's real
-// target never exists there — navigating anyway would take the whole review
-// tab to a 404 instead of the documented no-op.
-function startFederatedSignIn(providerKey: string): void {
-  if (uiPreviewOidcEnabled()) {
+// `synthesized` is the caller's answer to "did previewedOidcProviders invent
+// the button this click came from?" — NOT the global preview-build flag on
+// its own. An installation that genuinely serves OIDC providers must keep
+// working buttons even under a preview build; the flag alone would make
+// every real provider inert the moment someone enabled it against a real
+// backend. Only a button that stands in for a server with none configured
+// (app/ui-preview.ts's own reason for existing) has nowhere real to go.
+function startFederatedSignIn(providerKey: string, synthesized: boolean): void {
+  if (synthesized) {
     return;
   }
   globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
@@ -605,6 +616,7 @@ function LoginForm({
   onPhase,
   resetAvailable,
   providers,
+  providersSynthesized,
   unavailableProviders,
   onForgot,
 }: Readonly<{
@@ -613,6 +625,9 @@ function LoginForm({
   resetAvailable: boolean;
   /** §11: served by /auth/capabilities. Empty means no federated block. */
   providers: OidcProviders;
+  /** True only when `providers` above was invented by the preview layer
+   * rather than served by the capability — see `startFederatedSignIn`. */
+  providersSynthesized: boolean;
   /** Preview-only; empty in the product. See `ProviderButtons`. */
   unavailableProviders: ReadonlySet<string>;
   onForgot: () => void;
@@ -695,7 +710,9 @@ function LoginForm({
         providers={providers}
         disabled={login.isPending}
         unavailable={unavailableProviders}
-        onSelect={startFederatedSignIn}
+        onSelect={(providerKey) =>
+          startFederatedSignIn(providerKey, providersSynthesized)
+        }
       />
       {/* Visible labels, which is a deliberate divergence from the reference
           artifact: it names its fields with a placeholder and an aria-label, and

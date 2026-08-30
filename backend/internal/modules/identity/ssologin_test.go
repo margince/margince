@@ -13,8 +13,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -178,6 +180,42 @@ func TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSuc
 	}
 }
 
+// TestOidcSignInCallbackProviderErrorWithNoCookieNeverClearsOneEither closes
+// the gap a review found in an earlier version of this handler: `error` was
+// checked (and the login-state cookie cleared) BEFORE the cookie/state proof
+// below. The callback is a public GET and the cookie is SameSite=Lax, so a
+// forged cross-site link carrying `?error=x` could reach a victim's browser
+// on a top-level navigation and clear their real, unrelated, still-pending
+// sign-in — a cancellation griefing primitive, not an account compromise,
+// but real: state validation must run BEFORE anything keyed off `error`
+// touches the cookie. This request presents no cookie at all, so a
+// misordered `error` check calling clearLoginStateCookie would still emit a
+// Set-Cookie header here — which the assertion below catches.
+func TestOidcSignInCallbackProviderErrorWithNoCookieNeverClearsOneEither(t *testing.T) {
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {Key: "google"}},
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		fixedStateSigner{},
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?error=access_denied&state=y", nil)
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
+		State: oidcStrPtr("y"), Error: oidcStrPtr("access_denied"),
+	})
+
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
+		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == oidcLoginCookie {
+			t.Fatal("no cookie was presented, so none should have been cleared either")
+		}
+	}
+}
+
 func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
@@ -253,5 +291,25 @@ func TestOidcSignInCallbackUnverifiedEmailIsRefused(t *testing.T) {
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
 		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+// TestTruncateForLogNeverSplitsAMultiByteRune matters because the result is
+// written to system_log as jsonb text: Postgres rejects invalid UTF-8
+// outright (error 22021), so a raw byte cut landing mid-rune would fail that
+// best-effort write silently and lose the very refusal record truncation
+// exists to keep — for exactly the attacker-controlled value (Google's
+// `error` query parameter) this function bounds.
+func TestTruncateForLogNeverSplitsAMultiByteRune(t *testing.T) {
+	s := strings.Repeat("é", 40) // each "é" is 2 bytes; a cut at byte 63 lands mid-rune
+	got := truncateForLog(s, 63)
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncateForLog(_, 63) = %q, not valid UTF-8", got)
+	}
+	if len(got) > 63 {
+		t.Fatalf("len(got) = %d, want <= 63", len(got))
+	}
+	if got := truncateForLog("short", 63); got != "short" {
+		t.Fatalf("a string under the limit must be returned unchanged, got %q", got)
 	}
 }

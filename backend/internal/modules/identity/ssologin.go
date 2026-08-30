@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -84,15 +85,24 @@ const (
 	oidcLoggedErrorMaxLen = 64
 )
 
-// truncateForLog caps s to n bytes for a log/audit field a caller controls —
-// never used on a value already bounded by its own contract (a UUID, an
-// enum). Byte-based cuts can split a multi-byte rune at the boundary; that
-// is acceptable for a diagnostic trail no code parses back.
+// truncateForLog caps s to at most n bytes for a log/audit field a caller
+// controls — never used on a value already bounded by its own contract (a
+// UUID, an enum). It backs off to the nearest preceding UTF-8 rune boundary
+// rather than cutting at a raw byte index: this value is written to
+// system_log as jsonb text, and Postgres REJECTS invalid UTF-8 outright
+// (error 22021) — a mid-rune cut would fail that write silently (this is a
+// best-effort audit trail) and lose the very refusal record the split
+// exists to keep, precisely for the attacker-controlled multi-byte value
+// this function exists to bound.
 func truncateForLog(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return s[:n]
+	cut := n
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut]
 }
 
 // setLoginStateCookie/clearLoginStateCookie own the one cookie this flow
@@ -196,19 +206,16 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	if params.State != nil {
 		state = *params.State
 	}
-	// Google sends `error` instead of `code` when the user denies consent —
-	// e.g. access_denied. Caught here, before the cookie/state checks below,
-	// so a denial is refused for what it is rather than for a code the
-	// browser was never going to bring back. The cookie is cleared on this
-	// path too: it is a one-shot regardless of which refusal consumes it,
-	// and leaving it set here would keep the signed PKCE state usable for
-	// its full 10-minute TTL instead of being spent by this request.
-	if params.Error != nil && *params.Error != "" {
-		clearLoginStateCookie(w)
-		fail(ctx, "provider error: "+truncateForLog(*params.Error, oidcLoggedErrorMaxLen), nil)
-		return
-	}
 
+	// The cookie/state check runs BEFORE the `error` check below, on
+	// purpose: this callback is a public GET, the cookie is SameSite=Lax
+	// (so it rides a cross-site top-level navigation), and `state` is
+	// attacker-suppliable. Checking `error` first — before proving the
+	// request actually carries THIS browser's signed nonce — would let an
+	// off-site link with `?error=x` clear and refuse a victim's unrelated,
+	// still-in-progress sign-in merely by being clicked. Verifying state
+	// first means only a request holding the real cookie ever reaches (and
+	// consumes) it.
 	cookie, err := r.Cookie(oidcLoginCookie)
 	if err != nil {
 		fail(ctx, "no state cookie", nil)
@@ -218,6 +225,14 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	stProvider, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
 	if err != nil || stProvider != provider || stNonce != state {
 		fail(ctx, "state verification", err)
+		return
+	}
+
+	// Google sends `error` instead of `code` when the user denies consent —
+	// e.g. access_denied. Checked here, now that the state above has proven
+	// this is genuinely the browser's own pending flow.
+	if params.Error != nil && *params.Error != "" {
+		fail(ctx, "provider error: "+truncateForLog(*params.Error, oidcLoggedErrorMaxLen), nil)
 		return
 	}
 

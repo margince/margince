@@ -658,6 +658,33 @@ describe("federated sign-in", () => {
       expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
     });
   });
+
+  // A real installation's own configured provider must keep a working
+  // button even if a preview build happens to run against it — the switch
+  // exists to stand in for a server with NO providers, not to disable a
+  // real one. Guarding on the global flag alone (rather than on whether
+  // `previewedOidcProviders` actually invented this button) would make
+  // this click a silent no-op on any deployment that combines the two.
+  it("still navigates a real served provider even when the UI-preview switch is on", async () => {
+    vi.stubEnv("VITE_UI_PREVIEW_OIDC", "1");
+    await stubLocationAssign(async (assign) => {
+      stubApi(
+        {
+          password: true,
+          password_reset: true,
+          oidc_providers: [{ key: "google", label: "Continue with Google" }],
+        },
+        () => ok(200),
+      );
+      render(<AuthScreen onAuthed={vi.fn()} />);
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Continue with Google" }),
+      );
+
+      expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
+    });
+  });
 });
 
 describe("OIDC failure notice", () => {
