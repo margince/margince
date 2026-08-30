@@ -46,8 +46,9 @@ const evidenceKeyRetentionAction = "retention_action"
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
 	evidenceKeyCause = "cause"
-	// The two causes a collateral tombstone can carry: an Art. 17 erasure of a
-	// subject, or a retention sweep clearing a record on its own schedule.
+	// The three causes a collateral tombstone can carry: an Art. 17 erasure of
+	// a subject, a retention sweep clearing a record on its own schedule, and a
+	// controller ending a restriction by hand.
 	causePersonErasure = "person_erasure"
 	causeRetention     = "retention"
 	// causeControllerRelease is the third: a restriction a controller ended by
