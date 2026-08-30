@@ -250,19 +250,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			// has not confirmed it yet: keep the 🟡 surface alive if the
 			// previous staging expired undecided.
 			//
-			// Undecided, and not REFUSED. A rep who turned this correction down
-			// has answered; re-offering the date they refused is the nightly
-			// nagging the rejection memory exists to end, and the staging's own
-			// memory cannot stop it here because each night's card names a
-			// different date and is therefore a different question to it.
-			refused, err := c.stager.HasRefusedCorrection(ctx, cand.id.UUID)
-			if err != nil {
-				return err
-			}
-			if refused {
-				return nil
-			}
-			return c.ensureStaged(ctx, cand.id, 0, cand.name, CloseDateCorrection{
+			return c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
 				DealID:            cand.id,
 				ExpectedCloseDate: cand.expectedClose.Format(time.DateOnly),
 				PreviousCloseDate: dateString(cand.expectedClose),
@@ -302,7 +290,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if err != nil {
 			return err
 		}
-		return c.ensureStaged(ctx, cand.id, version, cand.name, proposal)
+		return c.ensureStaged(ctx, cand, version, proposal)
 
 	case CloseDateActionDowngradeAndReview:
 		notched := forecastDowngrade(category)
@@ -327,7 +315,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		// date the deal already had — a card with nothing in it to approve.
 		review := proposal
 		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-		return c.ensureStaged(ctx, cand.id, version, cand.name, review)
+		return c.ensureStaged(ctx, cand, version, review)
 	}
 	return fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
 }
@@ -407,15 +395,33 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 	return version, err
 }
 
-// ensureStaged stages the 🟡 confirm-the-real-date proposal unless one
-// is already pending — the sweep's proposal moves with "today", so an
-// identity check on the exact diff would stack duplicates nightly.
-func (c *CloseDateCorrector) ensureStaged(ctx context.Context, dealID ids.DealID, targetVersion int64, name string, proposal CloseDateCorrection) error {
+// ensureStaged stages the 🟡 confirm-the-real-date proposal unless one is
+// already pending, or the rep has already refused this very date.
+//
+// TWO checks, because they answer different questions and each has a gap the
+// other fills. Pending stops the same live card multiplying. Refused stops a
+// decided one returning — and it is needed HERE, above the staging's own
+// memory, because the sweep writes its new date onto the deal before staging:
+// the standing date the identity is drawn from has already moved by the time
+// the proposal is built, so a refusal recorded last night matches nothing
+// tonight. Comparing the date being PROPOSED is what recognises it.
+//
+// Per date rather than per deal, so one "no" silences the date it was about
+// rather than ending close-date hygiene on that deal for good.
+func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) error {
+	dealID, name := cand.id, cand.name
 	pending, err := c.stager.HasPendingCorrection(ctx, dealID.UUID)
 	if err != nil {
 		return err
 	}
 	if pending {
+		return nil
+	}
+	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.provisional))
+	if err != nil {
+		return err
+	}
+	if refused {
 		return nil
 	}
 	if targetVersion == 0 {

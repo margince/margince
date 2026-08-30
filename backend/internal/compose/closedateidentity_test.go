@@ -48,21 +48,3 @@ func TestTheCloseDateIdentityNamesFieldsThePayloadCarries(t *testing.T) {
 		}
 	}
 }
-
-// A deal holding no date at all still has one identity value.
-//
-// The `missing` flag exists for that deal, and an absent or null key never
-// matches by containment: the proposals raised about it would carry no rejection
-// memory, and the rep would be asked again every night with nothing recording
-// that they had answered.
-func TestADealWithNoCloseDateStillHasAStandingValue(t *testing.T) {
-	t.Parallel()
-	if got := deals.StandingCloseDate(nil); got == "" {
-		t.Fatal("a deal with no close date spells its standing date as empty, " +
-			"which reads as an absent identity field")
-	}
-	held := "2026-08-19"
-	if got := deals.StandingCloseDate(&held); got != held {
-		t.Fatalf("a deal holding %q spells its standing date %q", held, got)
-	}
-}

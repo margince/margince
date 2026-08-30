@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -91,11 +92,12 @@ func TestARejectedCloseDateOnOneDealDoesNotSilenceAnother(t *testing.T) {
 
 // A refusal survives the proposal changing under it.
 //
-// The proposed date is recomputed against "today" on every pass, so it differs
-// from one night to the next while the rep's answer has not. An identity
-// carrying that date would recognise nothing, and the whole-payload diff hash
-// the staging falls back to has the same defect — which is why the memory is
-// keyed on the deal and the date the rep actually holds.
+// The proposed date is recomputed against "today" on every pass, and the sweep
+// writes it to the deal before staging — so on the FLAGGED arm the date and the
+// date the deal stands at both move nightly while the rep's answer has not. An
+// identity carrying either would recognise nothing, and the whole-payload diff
+// hash the staging falls back to has the same defect. A deal standing at a date
+// nobody confirmed is one question however often the guess is recomputed.
 func TestARejectedCloseDateStaysRefusedWhenTheProposalMoves(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Moves nightly", e.late, stringp("commit"), intp(-10), 3)
@@ -104,20 +106,29 @@ func TestARejectedCloseDateStaysRefusedWhenTheProposalMoves(t *testing.T) {
 	}
 	e.rejectCorrection(t, id)
 
-	// The deal goes quieter, so the next pass computes a different date from the
-	// same situation. The question is still the one the rep answered.
+	// Age the deal past the stalled threshold so the next pass is FLAGGED rather
+	// than the keep-alive arm, and leave it provisional — which is what it is
+	// after the sweep wrote a date nobody confirmed. The flagged pass recomputes
+	// a different proposed date from the same situation, so this is the arm
+	// where an identity carrying that date would forget the rep's answer.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE activity SET occurred_at = occurred_at - interval '20 days'
-		   WHERE id IN (SELECT activity_id FROM activity_link WHERE deal_id = $1)`,
-		id); err != nil {
-		t.Fatalf("ageing the deal's correspondence: %v", err)
+		`UPDATE deal SET last_activity_at = now() - make_interval(days => $2)
+		  WHERE id = $1`,
+		id, deals.StalledThresholdDays+10); err != nil {
+		t.Fatalf("ageing the deal past the stalled threshold: %v", err)
 	}
+
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("a moved proposal was staged over a rejection: %d pending — "+
 			"the memory is keyed on something that moves with the calendar", got)
+	}
+	// And the pass really did take the flagged arm, or this proves the same
+	// thing the first test does.
+	if !e.readSwept(t, id).provisional {
+		t.Error("the deal is no longer provisional; the flagged arm did not run")
 	}
 }
 
