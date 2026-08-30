@@ -57,7 +57,11 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		       email, profile_url, match_status, source, synced_at
 		   FROM linkedin_connection g
 		  WHERE g.matched_person_id = $1
-		     OR (g.email IS NOT NULL AND g.email IN (
+		     -- lower() on BOTH sides. person_email stores the address folded,
+		     -- an imported LinkedIn export does not, and comparing the two raw
+		     -- silently drops every connection whose address carries a capital
+		     -- — from the one package that is meant to say what is held.
+		     OR (g.email IS NOT NULL AND lower(g.email) IN (
 		         SELECT lower(email) FROM person_email WHERE person_id = $1))
 		     -- The profile URL is an identifier the subject is reachable by,
 		     -- and it is held about them whether or not the matcher ever

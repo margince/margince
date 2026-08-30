@@ -24,9 +24,22 @@ import (
 
 // RetractDerivedForActivityTx drops what one activity's own text produced for
 // readers who no longer belong to its audience: its embedding and its attention
-// label. It runs on the CALLER's transaction, so the narrowing and the
-// retraction commit together — a narrowing that committed without its retraction
-// would leave the residue behind with nothing scheduled to collect it.
+// label.
+//
+// It is NOT atomic with the narrowing, and nothing here can make it so. Every
+// caller is an async consumer reacting to the activity.updated event SetAudience
+// emitted AFTER committing, so between the narrowing and this pass there is a
+// real interval in which the row is limited and its vector and label still
+// stand.
+// Held by: TestTheRetractionRunsOnlyBehindACommittedNarrowing
+// (backend/gates/audienceretractioncallers_test.go) The interval is the bus's latency and
+// the retry that follows a failure; it is not a window the retraction closes,
+// it is one it ENDS.
+//
+// What stops the interval from mattering is on the write side, not here: the
+// embedding upsert and SetCaptureLabel both re-test the audience in their own
+// statements, so nothing new is derived from a limited message while this pass
+// is still on its way. This collects what was derived before.
 //
 // It is deliberately not the inverse of "everything derived from this message".
 // The derived SIGNALS are narrowed rather than deleted (signals carry their own

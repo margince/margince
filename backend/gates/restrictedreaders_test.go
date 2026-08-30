@@ -105,8 +105,13 @@ type activityDimension struct {
 }
 
 // owes answers whether one activity read is in this dimension's corpus.
+//
+// Comments are stripped first, on both sides of the census: a statement is
+// pulled in by what it PROJECTS, never by a sentence about what it projects, in
+// the same way an exclusion is recognised by a predicate and never by a comment
+// describing one.
 func (d activityDimension) owes(sql string) bool {
-	return d.subject == nil || d.subject.MatchString(sql)
+	return d.subject == nil || d.subject.MatchString(withoutComments(sql))
 }
 
 // heldDimension is the statutory hold: a restricted row is out of every

@@ -121,6 +121,13 @@ func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.
 		t.Fatal(err)
 	}
 
+	// The ROW is narrowed, then the event announces it — the order SetAudience
+	// produces, and the one the consumer reads: it corrects towards the row it
+	// finds, not towards the value the event carried, because an event can be
+	// overtaken by a later change before it is handled.
+	if _, err := owner.Exec(ctx, `UPDATE activity SET audience = 'participants' WHERE id = $1`, activity); err != nil {
+		t.Fatal(err)
+	}
 	payload, err := json.Marshal(map[string]any{"changed_fields": map[string]any{"audience": "participants"}})
 	if err != nil {
 		t.Fatal(err)
@@ -197,8 +204,14 @@ func TestOwnerlessAndCrossOwnerCitationsArchiveTheSignal(t *testing.T) {
 	seed("thr-cross:risk", rep1Activity, e.Rep2) // already private to a DIFFERENT reader
 
 	gen := compose.NewAudienceRescopeGen(e.Pool)
+	// Row first, then the event — the order SetAudience produces. The consumer
+	// corrects towards the row it finds, so a fixture that only sent the event
+	// would describe a state the product never reaches.
 	limit := func(activity ids.UUID) {
 		t.Helper()
+		if _, err := owner.Exec(ctx, `UPDATE activity SET audience = 'participants' WHERE id = $1`, activity); err != nil {
+			t.Fatal(err)
+		}
 		payload, err := json.Marshal(map[string]any{"changed_fields": map[string]any{"audience": "participants"}})
 		if err != nil {
 			t.Fatal(err)

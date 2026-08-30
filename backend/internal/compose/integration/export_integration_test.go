@@ -439,16 +439,49 @@ func TestARepsOwnAuditTrailStopsAtALimitedMessage(t *testing.T) {
 		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
 		VALUES ($1, 'human', $2, 'update', 'activity', $3)`, "human:"+e.Rep1.String(), limited)
 
+	// The same message's ATTACHMENT is the second route to the same content: an
+	// attachment audit image carries the filename, and a filename states what
+	// the message is about.
+	limitedFile := e.SeedID(t, `
+		INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
+		VALUES ($1, 'activity', $2, 'Aufhebungsvertrag_Mueller.pdf', 'blob/limited', 'gmail', 'connector:gmail')`, limited)
+	e.SeedID(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
+		VALUES ($1, 'human', $2, 'update', 'attachment', $3)`, "human:"+e.Rep1.String(), limitedFile)
+
+	// And an attachment of an OPEN message, which must still travel: the limit
+	// is the message's audience, never the fact that a row names an attachment.
+	openMail := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)
+		VALUES ($1, 'email', 'ordinary quote', now(), 'gmail', 'connector:gmail:'||$2::text, 'workspace')`,
+		e.Rep3.String())
+	openFile := e.SeedID(t, `
+		INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
+		VALUES ($1, 'activity', $2, 'Angebot_offen.pdf', 'blob/open', 'gmail', 'connector:gmail')`, openMail)
+	e.SeedID(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
+		VALUES ($1, 'human', $2, 'update', 'attachment', $3)`, "human:"+e.Rep1.String(), openFile)
+
 	var buf bytes.Buffer
 	if _, err := compose.NewExportWriter(e.Pool).WriteBundle(e.exportRep(e.Rep1, e.Team1), &buf); err != nil {
 		t.Fatal(err)
 	}
 	entries := BundleEntries(t, buf.Bytes())
+	exported := map[string]bool{}
 	for _, id := range CSVColumn(t, entries["audit_log.csv"], "entity_id") {
-		if id == limited.String() {
-			t.Error("a rep exported the audit image of a message whose audience excludes them, because they were the actor on it — " +
-				"having made a change is not permission to read what the message says")
-		}
+		exported[id] = true
+	}
+	if exported[limited.String()] {
+		t.Error("a rep exported the audit image of a message whose audience excludes them, because they were the actor on it — " +
+			"having made a change is not permission to read what the message says")
+	}
+	if exported[limitedFile.String()] {
+		t.Error("a rep exported the audit image of a limited message's ATTACHMENT — the filename states what the message is about, " +
+			"and excluding only the activity row leaves the same content reachable by the longer route")
+	}
+	if !exported[openFile.String()] {
+		t.Error("an open message's attachment audit image was withheld — the limit is the message's audience, " +
+			"not the fact that a row names an attachment")
 	}
 	_ = f
 }

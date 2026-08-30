@@ -237,9 +237,48 @@ func auditExportScope(ctx context.Context, alias string, arg func(any) int) (str
 		return entity, nil
 	}
 	// The own-trail arm is bounded the same way: it may admit a row about any
-	// object type, and it may not admit one about an activity whose audience
-	// excludes the caller. Without the second test, a colleague who touched a
-	// message before it was limited exports its before-and-after image forever.
-	return fmt.Sprintf("(%s OR (%s.actor_id = $%d AND %s.entity_type <> 'activity'))",
-		entity, alias, arg(actor.ID), alias), nil
+	// object type, and it may not admit one about a limited message. Without
+	// that test, a colleague who touched a message before it was limited
+	// exports its before-and-after image forever.
+	//
+	// Two shapes reach a message, not one. The audit row may target the
+	// activity itself, and it may target an ATTACHMENT of it — whose image
+	// carries the filename, and a filename states what the message is about.
+	// Excluding only the first is the half-fix that leaves the same content
+	// reachable by the longer route.
+	ownTrail, err := carriesNoLimitedMessage(ctx, alias, arg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("(%s OR (%s.actor_id = $%d AND %s))",
+		entity, alias, arg(actor.ID), ownTrail), nil
+}
+
+// carriesNoLimitedMessage renders "this audit row is not about a message whose
+// content the caller may not read" for the own-trail arm.
+//
+// Two shapes reach a message. The row may target the ACTIVITY, and it may
+// target an ATTACHMENT of one — whose image carries the filename, and a
+// filename states what the message is about. Both take the same audience
+// clause, so an attachment of an OPEN message still travels: the limit is the
+// message's audience, never the fact that a row points at an attachment.
+func carriesNoLimitedMessage(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	readable, err := auth.ActivityContentClause(ctx, "av", arg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(
+		`(%[1]s.entity_type NOT IN ('activity', 'attachment')
+		  OR EXISTS (SELECT 1 FROM activity av
+		              WHERE av.id = CASE %[1]s.entity_type
+		                              WHEN 'activity' THEN %[1]s.entity_id
+		                              ELSE (SELECT ata.entity_id FROM attachment ata
+		                                     WHERE ata.id = %[1]s.entity_id
+		                                       AND ata.entity_type = 'activity')
+		                            END
+		                AND %[2]s)
+		  OR (%[1]s.entity_type = 'attachment' AND NOT EXISTS (
+		       SELECT 1 FROM attachment ata
+		        WHERE ata.id = %[1]s.entity_id AND ata.entity_type = 'activity')))`,
+		alias, readable), nil
 }

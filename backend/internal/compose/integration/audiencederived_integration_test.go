@@ -325,3 +325,67 @@ func TestAWriteThatRacesANarrowingLosesToIt(t *testing.T) {
 		t.Errorf("an open message was not embedded (wrote=%v err=%v) — the re-check refuses more than the audience", wrote, err)
 	}
 }
+
+// The rescope consumer corrects towards the ROW, not towards the event that
+// woke it.
+//
+// The bus is at-least-once and events arrive out of order. A message narrowed
+// and widened again before the consumer runs has two events waiting; if the
+// narrowing one decided the direction, it would delete the vector and clear the
+// label of a row that is workspace again — and nothing would rebuild them,
+// because the widening's own event was handled first and found the row already
+// indexed.
+func TestTheRescopeConsumerFollowsTheRowNotTheStaleEvent(t *testing.T) {
+	e := SetupSearch(t)
+	fake := ai.NewFakeClient()
+	gen := search.NewEmbedGen(e.Store, fakeEmbedder(t, fake))
+	ctx := context.Background()
+
+	activity := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', $2, $3, now(), 'inbound', 'gmail', 'connector:gmail:x', 'workspace')`,
+		heldMailSubject, heldMailBody)
+	if err := gen.HandleEvent(ctx, kevents.Envelope{
+		EventID: ids.NewV7(), Type: "activity.captured",
+		Entity: kevents.EntityRef{Type: "activity", ID: activity},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	vectors := func() int {
+		t.Helper()
+		var n int
+		if err := e.Owner.QueryRow(ctx, `
+			SELECT count(*) FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, activity).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if vectors() != 1 {
+		t.Fatal("the open message was not embedded — the fixture proves nothing about a stale correction")
+	}
+
+	// Narrowed and widened again before the consumer sees either event.
+	for _, audience := range []string{"participants", "workspace"} {
+		if _, err := e.Owner.Exec(ctx, `UPDATE activity SET audience = $2 WHERE id = $1`, activity, audience); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// The narrowing's event, arriving late. It says "participants"; the row says
+	// "workspace", and the row is what decides.
+	payload, err := json.Marshal(map[string]any{"changed_fields": map[string]any{"audience": "participants"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := compose.NewAudienceRescopeGen(e.Pool).HandleEvent(ctx, kevents.Envelope{
+		Type:    "activity.updated",
+		Entity:  kevents.EntityRef{Type: "activity", ID: activity},
+		Payload: payload,
+	}); err != nil {
+		t.Fatalf("the audience-rescope consumer refused the stale event: %v", err)
+	}
+	if vectors() != 1 {
+		t.Error("a stale narrowing event deleted the vector of a message that is workspace again — " +
+			"nothing rebuilds it, because the widening's own event found the row already indexed")
+	}
+}

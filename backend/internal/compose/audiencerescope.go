@@ -70,7 +70,7 @@ func (g *AudienceRescopeGen) HandleEvent(ctx context.Context, env events.Envelop
 		return err
 	}
 	return g.db.Tx(ctx, func(tx pgx.Tx) error {
-		return g.rescope(ctx, tx, env.Entity.ID, *payload.ChangedFields.Audience)
+		return g.rescope(ctx, tx, env.Entity.ID)
 	})
 }
 
@@ -90,7 +90,7 @@ func (g *AudienceRescopeGen) rescopeContext(ctx context.Context, env events.Enve
 	}), nil
 }
 
-func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID ids.UUID, audience string) error {
+func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 	var threadKey *string
 	var owner *ids.UUID
 	// The capture owner is the one reader a limited message always admits —
@@ -99,12 +99,13 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 	// activity stamps its passport id there, and a passport is not a reader a
 	// signal can answer to — it resolves to no owner, and the signals narrow
 	// to the archive path instead of failing the app_user FK.
+	var current string
 	err := tx.QueryRow(ctx, `
-		SELECT a.thread_key, u.id
+		SELECT a.thread_key, a.audience, u.id
 		  FROM activity a
 		  LEFT JOIN app_user u
 		    ON u.id = substring(a.captured_by from '([0-9a-f-]{36})$')::uuid
-		 WHERE a.id = $1`, activityID).Scan(&threadKey, &owner)
+		 WHERE a.id = $1`, activityID).Scan(&threadKey, &current, &owner)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// Deleted or erased between the event and this pass: the models
@@ -113,7 +114,17 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 		}
 		return fmt.Errorf("audience-rescope: reading activity %s: %w", activityID, err)
 	}
-	if audience != "workspace" {
+	// The ROW's audience, not the event's. The bus is at-least-once and events
+	// arrive out of order, so a message narrowed and widened again before this
+	// consumer ran would otherwise be corrected towards a narrowing that no
+	// longer stands: the vector deleted and the label cleared on a row that is
+	// workspace, with nothing to rebuild them, because the widening's own event
+	// was handled first and found nothing to do.
+	//
+	// The event still decides that a correction is DUE — that is what the
+	// payload's changed_fields is for. What it must not decide is which
+	// direction, because by now the answer is on the row.
+	if current != "workspace" {
 		if _, err := signals.NarrowDerivedForActivity(ctx, tx, activityID, owner); err != nil {
 			return err
 		}

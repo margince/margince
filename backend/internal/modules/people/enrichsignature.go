@@ -13,6 +13,7 @@ package people
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -74,7 +75,13 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// not cover the subject going mid-transaction — the writer's row lock
 		// serializes that, and this pass still reports it as a skip, which is
 		// the honest count for a field that did not land.
-		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		//
+		// HOLD rather than probe, because the source check below takes a lock of
+		// its own. The eraser is subject-first (privacy/erasure.go anonymizes
+		// the subject's rows before deleting what hangs off it), so the subject
+		// must be the first row this transaction holds or the two deadlock and
+		// an erasure fails when it loses.
+		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
 		// The SOURCE has the same window as the subject, and for the same
@@ -91,19 +98,36 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// A narrowed source is not a fault, it is an answer that arrived too
 		// late.
 		//
+		// Archived counts with the other two: the candidate query requires
+		// `a.archived_at IS NULL`, so a message archived during the model call
+		// is one this pass would no longer select, and copying its text onto a
+		// person afterwards outlives the archive that was meant to retire it.
+		//
 		// The test is for a source that IS limited, not for the absence of an
 		// open one. A source row that is gone says nothing about an audience —
 		// it was erased, or the caller named a message this store never had —
 		// and refusing on absence would make the write depend on a row the
 		// contract never promised, which is a different rule wearing this one's
 		// clothes.
+		// FOR SHARE, so the answer cannot go stale between this statement and
+		// the field writes below. Read-committed would otherwise let a
+		// narrowing commit in that gap and the fields land anyway — and these
+		// fields are the ones no later correction reaches, because the audience
+		// rescope does not retract them.
 		var sourceLimited bool
 		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (SELECT 1 FROM activity
-			                WHERE id = $1
-			                  AND (audience <> 'workspace' OR restricted_at IS NOT NULL))`,
+			SELECT audience <> 'workspace'
+			       OR restricted_at IS NOT NULL
+			       OR archived_at IS NOT NULL
+			  FROM activity WHERE id = $1 FOR SHARE`,
 			sourceActivity).Scan(&sourceLimited); err != nil {
-			return fmt.Errorf("people: reading the signature's source message: %w", err)
+			// A source this store never had, or one erased since the candidate
+			// was selected, says nothing about an audience — the fields land
+			// or not on their own merits, as they did before this test existed.
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("people: reading the signature's source message: %w", err)
+			}
+			sourceLimited = false
 		}
 		if sourceLimited {
 			res.Skipped += len(fields)

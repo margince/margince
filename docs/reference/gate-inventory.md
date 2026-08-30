@@ -71,7 +71,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 
-## Census (74)
+## Census (75)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -81,6 +81,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
 | `audiencereaders_test.go` | H2 | A message's AUDIENCE says who may read its content. |
+| `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a COMMITTED audience change. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed FROM. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |

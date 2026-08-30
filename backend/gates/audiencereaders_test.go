@@ -126,16 +126,55 @@ var audienceReaderScope = gatekit.Scope{
 	Exempt:  gatekit.Waive(map[string]string{}),
 }
 
+// readsActivityContent selects a file that reads the activity table and
+// projects content from it.
+//
+// The two tests are per FILE, not per literal, and that is the difference
+// between a census and a sieve: this tree assembles one query out of several
+// string constants — a package-level fragment holding the WHERE, a caller
+// holding the SELECT — so a reader whose `FROM activity` and whose `subject`
+// live in different literals is one a same-literal test would never select at
+// all, and never selecting it reports PASS over a content leak.
+//
+// Widening to the file over-selects instead, which is the safe direction: a
+// marker-only reader in a file that also holds a content query is examined,
+// and either it composes the audience or somebody writes a sentence about why
+// it need not. Comments are stripped from both halves, so a query is never
+// pulled into the corpus by a comment that merely mentions `subject` or
+// `payload`, and never certified by one that mentions `audience`.
 func readsActivityContent(path string, file *ast.File) bool {
 	if !gatekit.FileReadsTable(path, file, activityReadLiteral) {
 		return false
 	}
 	for _, read := range gatekit.TableReads(file, activityReadLiteral) {
-		if activityContentColumn.MatchString(read.SQL) {
+		if activityContentColumn.MatchString(withoutComments(read.SQL)) {
 			return true
 		}
 	}
-	return false
+	return fileProjectsActivityContent(file)
+}
+
+// fileProjectsActivityContent answers whether ANY string literal in the file
+// projects a content column, wherever the `FROM activity` that pairs with it
+// happens to live.
+func fileProjectsActivityContent(file *ast.File) bool {
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		if found {
+			return false
+		}
+		expr, isExpr := node.(ast.Expr)
+		if !isExpr {
+			return true
+		}
+		text, isText := gatekit.LiteralText(expr)
+		if isText && activityContentColumn.MatchString(withoutComments(text)) {
+			found = true
+			return false
+		}
+		return true
+	})
+	return found
 }
 
 var audienceDimension = activityDimension{

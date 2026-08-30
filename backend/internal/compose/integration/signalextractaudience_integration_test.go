@@ -70,21 +70,15 @@ func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
 	}
 }
 
-// The window read carries the audience itself, because the pass that offers a
-// conversation and the pass that reads it are different transactions.
+// A conversation is not re-read after one of its messages is limited.
 //
-// dueThreads commits, then each thread's readThread opens its own transaction.
-// Under read-committed the window read is a later statement against a newer
-// snapshot, so a message limited in between — by a human, or by a verdict, in
-// another process — is invisible to the offer and visible here. A window that
-// trusted the offer would send that message's body to the model.
-//
-// The race cannot be staged from inside the pass: by the time the pass calls
-// the model for a thread, that thread's window has already been read. So the
-// narrowing is applied between the two passes and the SECOND pass is what must
-// not carry it — which reaches the same statement by the same route, with the
-// concurrent writer standing in for another process.
-func TestAThreadReadAgainAfterANarrowingCarriesOnlyItsOpenMessages(t *testing.T) {
+// This asserts the OFFER, not the window: dueThreads refuses a thread any of
+// whose messages is limited, so a conversation read once and then narrowed is
+// simply never offered again. The window read's own clause — which defends the
+// interval between dueThreads committing and readThread opening — cannot be
+// reached from here and is asserted directly, against the statement, in
+// compose/signalextractwindow_integration_test.go.
+func TestAConversationIsNotReReadAfterOneOfItsMessagesIsLimited(t *testing.T) {
 	e := Setup(t)
 	org := e.SeedOrg(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
@@ -101,15 +95,14 @@ func TestAThreadReadAgainAfterANarrowingCarriesOnlyItsOpenMessages(t *testing.T)
 		t.Fatalf("signal extract: %v", err)
 	}
 	if len(brain.prompts) != 1 {
-		t.Fatalf("the first pass made %d model call(s), want 1 — the fixture never reaches the window under test", len(brain.prompts))
+		t.Fatalf("the first pass made %d model call(s), want 1 — the fixture never reaches the state under test", len(brain.prompts))
 	}
 	if !strings.Contains(brain.prompts[0], "preparing to terminate") {
-		t.Fatal("the open conversation did not carry both its messages — the assertion below could not tell a working clause from a short window")
+		t.Fatal("the open conversation did not carry both its messages — the assertion below could not tell a refused thread from a short window")
 	}
 
-	// The narrowing, and the thread made due again. The OFFER now refuses this
-	// conversation, so nothing should read it — but if it is reached by any
-	// route, the window must not carry the limited message.
+	// The narrowing, and the thread made due again. The offer refuses it now,
+	// so nothing reads it and no prompt carries the limited body.
 	if _, err := OwnerConn(t).Exec(context.Background(),
 		`UPDATE activity SET audience = 'participants' WHERE id = $1`, late); err != nil {
 		t.Fatal(err)
@@ -122,10 +115,10 @@ func TestAThreadReadAgainAfterANarrowingCarriesOnlyItsOpenMessages(t *testing.T)
 	if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("signal extract, second pass: %v", err)
 	}
-	for _, prompt := range brain.prompts[before:] {
-		if strings.Contains(prompt, "preparing to terminate") {
-			t.Error("a limited message's body reached the model on a later reading of its conversation")
-		}
+	if len(brain.prompts) != before {
+		t.Errorf("the conversation was read %d more time(s) after one of its messages was limited — "+
+			"a summary written from the rest of it would reach readers the limited message excludes",
+			len(brain.prompts)-before)
 	}
 }
 
