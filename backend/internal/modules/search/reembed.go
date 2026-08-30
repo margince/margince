@@ -48,9 +48,13 @@ type ReembedPass struct {
 // UpsertEmbedding for every live entity every time and lets that
 // skip-compare decide what actually needs a model call.
 //
-// Every UpsertEmbedding error propagates as-is (fail-loud): the job row
-// carrying this workspace fails and is retried, rather than this routine
-// silently leaving a partially re-embedded corpus behind a green pass.
+// Every UpsertEmbedding error is reported (fail-loud): the job row carrying
+// this workspace fails and is retried, rather than this routine silently
+// leaving a partially re-embedded corpus behind a green pass. The failures are
+// COLLECTED rather than returned at the first one, so a single entity a
+// provider will not embed costs its own row and not every entity behind it —
+// the reasoning is at the call site, and a cancelled context is the one fault
+// that still stops the pass where it stands.
 //
 // It also reports its own progress onto the run's marker as it goes, because a
 // pass this long is otherwise indistinguishable from one that died: nothing else
@@ -100,6 +104,12 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 		return nil
 	}
 
+	// Faults collected across the whole pass rather than returned at the first
+	// one, so a single unembeddable entity costs its own row and not the corpus
+	// behind it. The pass still FAILS if any entity failed — this changes what
+	// an attempt covers, never whether the run reports the fault.
+	var failures []error
+
 	for entityType, src := range pendingSources {
 		// The marker is refreshed on BOTH sides of the scan, and the first of
 		// those notes is also the one that covers the start of the pass: nothing
@@ -121,7 +131,25 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 		}
 		for _, item := range items {
 			if _, err := ws.UpsertEmbedding(wsCtx, entityType, item.id, item.text, embedder); err != nil {
-				return fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err)
+				// A cancelled context stops the pass at once: the deadline that
+				// cancelled it applies to every entity after this one too, so
+				// carrying on would spend the rest of the corpus re-deriving the
+				// same answer, and the run's own shutdown is not a defect to
+				// collect per entity.
+				if wsCtx.Err() != nil {
+					return errors.Join(fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err), errors.Join(failures...))
+				}
+				// Otherwise the pass CONTINUES past the entity it could not
+				// embed, the way the knowledge corpus sweep does. Stopping here
+				// spent a whole River attempt on the entities AFTER the bad one,
+				// which is what a transient provider fault actually costs: one
+				// dropped connection nine hundred entities in ended the attempt,
+				// and the next attempt re-walked the corpus to reach the same
+				// place. The failures are joined and returned, so the row still
+				// fails and the operator still sees every reason; what changes is
+				// that one bad entity no longer hides the rest of the corpus
+				// behind it.
+				failures = append(failures, fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err))
 			}
 			// Paced by the clock and not by a count of entities: an entity is not a
 			// unit of time, so a count would have to be divided by the slowest an
@@ -135,7 +163,7 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 			}
 		}
 	}
-	return nil
+	return errors.Join(failures...)
 }
 
 // liveEntity is one row selected for re-embedding: an id plus the exact

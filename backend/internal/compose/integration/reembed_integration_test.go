@@ -18,6 +18,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // TestReembedReembedsAllLiveEntitiesAndIsResumable seeds 3 people
@@ -167,6 +169,76 @@ func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
 		t.Fatal("a pass whose embedding writes could not land reported success — nothing records that the corpus was never rebuilt")
 	}
 }
+
+// TestReembedEmbedsEveryEntityPastOneItCannot proves a pass carries on past an
+// entity the provider refuses and still embeds the ones behind it, while
+// reporting the refusal.
+//
+// The defect this holds shut: the loop used to RETURN on the first
+// UpsertEmbedding error, so one transient provider fault — a dropped connection
+// partway through a corpus — ended the whole attempt, and every entity after
+// the bad one stayed on the old binding until a later attempt happened to walk
+// past it. A run has five attempts; a corpus reached the same bad entity in
+// each of them.
+//
+// The refusing embedder fails exactly one person by its text, so the assertion
+// is not "some rows survived" but "the row AFTER the failing one is current".
+func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	fake := ai.NewFakeClient()
+	inner := fakeEmbedderNamed(t, fake, "model-partial")
+	identity, _ := inner.EmbedIdentity()
+	if err := e.Store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+
+	// Three people; the middle one by NAME is what the embedder refuses, so the
+	// two either side of it in any scan order prove the pass did not stop.
+	for _, name := range []string{"Reachable One", "Refused Person", "Reachable Two"} {
+		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
+	}
+
+	err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity},
+		refusingEmbedder{inner: inner, refuseText: "Refused Person"})
+	if err == nil {
+		t.Fatal("a pass that could not embed an entity reported success — the run would stamp an identity over a corpus it never finished")
+	}
+	if !strings.Contains(err.Error(), "Refused") && !strings.Contains(err.Error(), "refusing embedder") {
+		t.Fatalf("the reported fault does not name the entity that failed: %v", err)
+	}
+
+	var current int
+	if scanErr := e.Owner.QueryRow(ctx,
+		`SELECT count(*) FROM embedding em JOIN person p ON p.id = em.entity_id
+		  WHERE em.entity_type = 'person' AND em.model = $1 AND p.full_name LIKE 'Reachable %'`,
+		identity).Scan(&current); scanErr != nil {
+		t.Fatalf("counting embedded people: %v", scanErr)
+	}
+	if current != 2 {
+		t.Fatalf("%d of the 2 embeddable people are current under %s; a pass that stops at the first refusal leaves the ones behind it stale", current, identity)
+	}
+}
+
+// refusingEmbedder embeds everything except one exact input, which it fails the
+// way a provider whose connection dropped does. It delegates rather than
+// answering vectors itself so the rows it DOES write go through the real
+// embedder and are indistinguishable from a healthy pass's.
+type refusingEmbedder struct {
+	inner      search.Embedder
+	refuseText string
+}
+
+func (r refusingEmbedder) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
+	for _, in := range req.Inputs {
+		if strings.Contains(in, r.refuseText) {
+			return model.Embeddings{}, errors.New("refusing embedder: connection reset by peer")
+		}
+	}
+	return r.inner.Embed(ctx, req)
+}
+
+func (r refusingEmbedder) EmbedIdentity() (string, int) { return r.inner.EmbedIdentity() }
 
 // TestReembedIdentityDriftCancelsWithoutTouchingRows proves the
 // entry guard fires — and touches NOTHING — when the embedder compose
