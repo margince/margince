@@ -466,7 +466,7 @@ func controllerCtx(e *Env, grant principal.ObjectGrant) context.Context {
 func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	eraser := privacy.NewEraser(e.DB())
+	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
 	if err := eraser.ErasePerson(e.Admin(), f.person, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
@@ -551,7 +551,7 @@ func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	eraser := privacy.NewEraser(e.DB())
+	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
 	if err := eraser.ErasePerson(e.Admin(), f.person, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
@@ -681,5 +681,176 @@ func TestAControllerPinsCorrespondenceTheDerivationCannotSee(t *testing.T) {
 	}
 	if len(page.Records) != 1 || page.Records[0].ActivityID != supplierMail || len(page.Records[0].Deals) != 0 {
 		t.Errorf("the pinned record is not listed as held with no transaction: %+v", page.Records)
+	}
+}
+
+// pinnedMailWithAnOriginal seeds the lane that reaches an erasure with NO
+// Art. 17 request in it: a captured supplier mail, the verbatim provider
+// original behind it, and a controller's pin to the statutory floor.
+//
+// The original matters because the pin path has no prior purge. A restriction
+// derived from an erasure request had its raw row deleted at request time by
+// purgeDerivedTraces, which is why the gap this fixture drives reads clean at a
+// glance — it is only reachable from PinToFloor.
+func pinnedMailWithAnOriginal(t *testing.T, e *Env) (activity ids.UUID, sourceID string) {
+	t.Helper()
+	activity, sourceID = ids.NewV7(), "supplier-"+ids.NewV7().String()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at,
+			                      source, source_system, source_id, captured_by)
+			VALUES ($1, 'email', 'Lieferschein 88-2026', 'Delivery note attached.', 'supplier@parts.test',
+			        now() - interval '30 days', 'capture_email', 'imap', $2, 'human:x')`,
+			activity, sourceID); err != nil {
+			return err
+		}
+		// The verbatim original, joined on the pair every erasure here keeps.
+		_, err := tx.Exec(ctx, `
+			INSERT INTO raw_capture (source_system, source_id, payload)
+			VALUES ('imap', $1, $2::jsonb)`,
+			sourceID, `{"subject":"Lieferschein 88-2026","body":"Delivery note attached."}`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
+	reason, err := privacy.ParseStatedReason("supplier correspondence: §257 HGB, no deal in the CRM")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eraser.PinToFloor(controllerCtx(e, principal.ObjectGrant{Read: true, Update: true}), activity, reason); err != nil {
+		t.Fatalf("pinning → %v", err)
+	}
+	return activity, sourceID
+}
+
+// originalsBehind counts the provider originals still standing for a source id.
+func originalsBehind(t *testing.T, e *Env, sourceID string) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM raw_capture WHERE source_system = 'imap' AND source_id = $1`,
+			sourceID).Scan(&n)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// TestAFloorExpiringDestroysTheProviderOriginalToo — the chain #2803 describes,
+// with no erasure request anywhere in it.
+//
+// A controller pins an ordinary captured message to its statutory floor. The
+// pin deliberately KEEPS the body — that is what the obligation preserves — so
+// nothing has purged the raw row at any point. The window closes, the sweep
+// lifts the restriction and destroys subject/body/raw/counterparty_email while
+// keeping source_system/source_id, and the verbatim original stood, joined on
+// exactly that pair, for an Art. 15 export to serve back.
+//
+// The lift arm and the erase arm had drifted in the direction the file's own
+// comment forbids: "a record must not be more thoroughly erased by the clock
+// than by a controller's decision".
+func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
+	e := Setup(t)
+	activity, sourceID := pinnedMailWithAnOriginal(t, e)
+	if originalsBehind(t, e, sourceID) != 1 {
+		t.Fatal("the pin did not leave the original standing, so this case would pass for the wrong reason")
+	}
+
+	owner, ctx := OwnerConn(t), context.Background()
+	for _, stmt := range []string{
+		`ALTER TABLE activity DISABLE TRIGGER activity_refuse_restricted_mutation`,
+		`UPDATE activity SET restricted_until = restricted_at + interval '1 millisecond' WHERE id = '` + activity.String() + `'`,
+		`ALTER TABLE activity ENABLE TRIGGER activity_refuse_restricted_mutation`,
+	} {
+		if _, err := owner.Exec(ctx, stmt); err != nil {
+			t.Fatalf("closing the window: %v", err)
+		}
+	}
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var body *string
+		if err := tx.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, activity).Scan(&body); err != nil {
+			return err
+		}
+		if body != nil {
+			return fmt.Errorf("the lift left the body %q", *body)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := originalsBehind(t, e, sourceID); got != 0 {
+		t.Errorf("%d provider original(s) survive the floor expiring — the parsed copy is gone and an Art. 15 export still serves the verbatim one, joined on the pair the lift keeps", got)
+	}
+}
+
+// TestAControllerReleaseDestroysTheProviderOriginalToo — the same gap on the
+// path a person takes rather than the clock.
+//
+// The file's invariant runs both ways: a release is the controller completing
+// the erasure the restriction suspended, so it must reach everything the sweep
+// reaches.
+func TestAControllerReleaseDestroysTheProviderOriginalToo(t *testing.T) {
+	e := Setup(t)
+	activity, sourceID := pinnedMailWithAnOriginal(t, e)
+
+	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
+	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eraser.ReleaseRestriction(controllerCtx(e, principal.ObjectGrant{Read: true, Update: true, Delete: true}), activity, reason); err != nil {
+		t.Fatalf("releasing → %v", err)
+	}
+	if got := originalsBehind(t, e, sourceID); got != 0 {
+		t.Errorf("%d provider original(s) survive a controller's release", got)
+	}
+}
+
+// TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf — the seam is not
+// optional, and the refusal is what says so.
+//
+// There is no second path that ages raw_capture out: the Art. 17 cascade's
+// purge is scoped to a PERSON where a retention window is scoped to time. So an
+// unwired purger is not a degraded mode that something else corrects later — it
+// is an erasure that reports success over an intact original, which is the one
+// outcome worse than refusing.
+func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
+	e := Setup(t)
+	activity, sourceID := pinnedMailWithAnOriginal(t, e)
+
+	unwired := privacy.NewEraser(e.DB())
+	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = unwired.ReleaseRestriction(controllerCtx(e, principal.ObjectGrant{Read: true, Update: true, Delete: true}), activity, reason)
+	if !errors.Is(err, privacy.ErrRetentionSeamMissing) {
+		t.Errorf("a release through an eraser with no raw-capture purger answered %v, want the missing-seam refusal", err)
+	}
+	// And it refused rather than half-erasing: the original stands because
+	// nothing was destroyed, not because the purge was skipped.
+	if got := originalsBehind(t, e, sourceID); got != 1 {
+		t.Errorf("%d provider original(s) after a refused release, want the record untouched", got)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var held bool
+		if err := tx.QueryRow(context.Background(),
+			`SELECT restricted_at IS NOT NULL FROM activity WHERE id = $1`, activity).Scan(&held); err != nil {
+			return err
+		}
+		if !held {
+			return fmt.Errorf("the refused release still lifted the restriction")
+		}
+		return nil
+	}); err != nil {
+		t.Error(err)
 	}
 }

@@ -72,7 +72,7 @@ func (e *Eraser) ReleaseRestriction(ctx context.Context, activityID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		if err := e.purgeHeldRecordTraces(ctx, tx, activityID); err != nil {
+		if err := e.purgeContentDerivedFrom(ctx, tx, activityID); err != nil {
 			return err
 		}
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionRelease, "activity", activityID, nil, nil, map[string]any{

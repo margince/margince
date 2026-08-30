@@ -132,7 +132,14 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// undoability is part of what the history surface MEANS, and a server
 		// that served the history without it would render buttons that answer
 		// 404.
-		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)),
+		// The raw-capture purger is wired at CONSTRUCTION rather than as an
+		// option, for the reason the reversal seam above is: a controller's
+		// release is an erasure, and an eraser that cannot reach the provider
+		// original destroys the parsed text while an Art. 15 export serves the
+		// verbatim copy back. Left to an option, a role that forgot it would
+		// answer success to a release that erased half a record.
+		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
+			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the

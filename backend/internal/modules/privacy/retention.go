@@ -144,7 +144,12 @@ type RetentionService struct {
 // of what it reports erasing, and there is no configuration in which that is
 // the intended behaviour. compose.NewRetentionServiceFor supplies capture's.
 func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger, purge RawCapturePurger) *RetentionService {
-	return &RetentionService{db: db, eraser: NewEraser(db).WithBlobstore(blob), log: log, purgeRawCaptures: purge}
+	return &RetentionService{
+		db:               db,
+		eraser:           NewEraser(db).WithBlobstore(blob).WithRawCapturePurger(purge),
+		log:              log,
+		purgeRawCaptures: purge,
+	}
 }
 
 // EdgeInvalidator re-folds the relationship aggregates an activity fed, inside

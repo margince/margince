@@ -194,53 +194,27 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
-		// The verbatim provider payload the parsed copy was made from. It is
-		// keyed on (source_system, source_id) — the pair the statement above
-		// deliberately keeps — so the join that makes the record replayable is
-		// the same join that serves the original back through an Art. 15
-		// export. Clearing the parsed copy alone erases nothing.
+		// Everything the text left behind — the verbatim provider original, the
+		// vectors, the provenance of fields that are now gone, the transcript
+		// readings, the proposals quoting it, the attachments and the
+		// transmitted copy.
 		//
-		// This reaches the captures written under the DOMAIN natural key, which
-		// is the mail lane. A channel poller stores its original under the
-		// provider's redelivery key instead, and no join from the activity
-		// finds it: #2802 carries that lane.
-		err = s.purgeRawCaptures(ctx, tx, []ids.UUID{id})
+		// The SAME call the restriction lift and the controller's release make.
+		// This list used to live here and a shorter one lived there, and the
+		// shorter one was missing the provider original and the quoting
+		// proposals — which is what a second list does, whatever the comment
+		// beside it promises.
+		err = s.eraser.purgeContentDerivedFrom(ctx, tx, id)
 	}
 	if err == nil {
-		// Provenance outlives the value it describes otherwise: the row names
-		// who captured the erased body and from where, and it is registered
-		// PII-bearing and SAR-exported. Both sibling erasers delete it
-		// (erasuretimeline.go, retentionrestricted.go).
-		_, err = tx.Exec(ctx,
-			`DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id)
-	}
-	if err == nil {
-		_, err = tx.Exec(ctx,
-			`DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, id)
-	}
-	if err == nil {
+		// Not in the shared helper, and that is the difference between the two
+		// arms rather than an omission from one. This arm removes an
+		// interaction the relationship aggregates counted, so it re-folds them
+		// in the same transaction; the lift paths emit their own events and the
+		// bus consumer that handles them is the backstop there. Folding it in
+		// would make the shared helper need a seam two of its three callers do
+		// not have.
 		err = s.invalidateGraph(ctx, tx, id)
-	}
-	if err == nil {
-		err = s.eraser.eraseAttachments(ctx, tx, "retention: the policy erased this record", causeRetention, `entity_type = 'activity' AND entity_id = $1`, id)
-	}
-	if err == nil {
-		// A proposal read out of this body quotes it verbatim, so it ages out
-		// on the body's schedule too. The transcript window (365 days) is the
-		// one this bites: the sweep visits a transcript ONCE — its selector
-		// requires a body, and this statement removes it — so a quotation left
-		// behind here is never revisited by anything.
-		err = redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, AgedOutSourceWithdrawal)
-	}
-	if err == nil {
-		err = purgeTranscriptReadings(ctx, tx, []ids.UUID{id})
-	}
-	if err == nil {
-		// An outbound message ages out on the schedule of the activity
-		// it belongs to: the send log holds the same recipients,
-		// subject and body, and a policy that emptied one while the
-		// other kept serving them would age out nothing.
-		err = redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject)
 	}
 	return err
 }

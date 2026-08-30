@@ -41,9 +41,24 @@ import (
 // object can exist for the erase action to purge. The other two seams have no
 // such "there is nothing to do" case and are always wired.
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
-	pending := capture.NewPendingStore(db)
-	return privacy.NewRetentionService(db, blob, log, pending.PurgeRawCaptureTx).
+	return privacy.NewRetentionService(db, blob, log, RawCapturePurgerFor(db)).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 		})
+}
+
+// RawCapturePurgerFor is capture's purge, as the seam privacy erases through.
+//
+// THREE paths destroy an activity's content and every one of them needs it: the
+// nightly erase action, a statutory floor expiring, and a controller's release. Each is reached without an Art. 17 request, so none can
+// lean on the person-scoped purge the erasure cascade does — and a path wired
+// without it destroys the parsed text while the verbatim original stands,
+// joined on the pair the erasure deliberately keeps, and an Art. 15 export
+// serves it back.
+//
+// The join those rows are found by belongs to capture, which writes them. A
+// copy of it in privacy would be a second answer to the same question, and the
+// half that drifted would leave originals behind while reporting success.
+func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
+	return capture.NewPendingStore(db).PurgeRawCaptureTx
 }

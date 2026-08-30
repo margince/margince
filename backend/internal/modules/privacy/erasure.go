@@ -21,8 +21,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,29 +54,6 @@ const (
 	evidenceKeyBasis   = "basis"
 	evidenceKeyReason  = "reason"
 )
-
-// Eraser executes the shared erase path both the DSR surface and the
-// retention engine's 'erase' action ride.
-type Eraser struct {
-	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
-	db *database.DB
-	// blob purges the subject's attachment objects (Art. 17 reaches the
-	// bytes, not only the row). nil in a deployment with no object store —
-	// where no upload path could have stored an object either.
-	blob blobstore.Store
-}
-
-// NewEraser binds the erasure pass to the installation's pool.
-func NewEraser(db *database.DB) *Eraser { return &Eraser{db: db} }
-
-// WithBlobstore returns an eraser that also purges attachment objects.
-// Compose passes the object store so erasure reaches the bytes behind the
-// attachment rows it deletes.
-func (e *Eraser) WithBlobstore(blob blobstore.Store) *Eraser {
-	clone := *e
-	clone.blob = blob
-	return &clone
-}
 
 // ErasePerson removes the subject's PII in ONE transaction: person row
 // anonymized, email/phone/channel-identity child rows deleted, raw

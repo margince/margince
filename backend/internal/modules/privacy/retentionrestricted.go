@@ -100,7 +100,7 @@ func (s *RetentionService) expireRestriction(ctx context.Context, id ids.UUID) e
 		if err != nil {
 			return err
 		}
-		if err := s.eraser.purgeHeldRecordTraces(ctx, tx, id); err != nil {
+		if err := s.eraser.purgeContentDerivedFrom(ctx, tx, id); err != nil {
 			return err
 		}
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionExpire, "activity", id, nil, nil, map[string]any{
@@ -140,29 +140,4 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		 WHERE a.id = $1 AND a.restricted_at IS NOT NULL `+due+`
 		 RETURNING a.retention_class`, id).Scan(&class)
 	return class, err
-}
-
-// purgeHeldRecordTraces finishes the erasure over everything derived from the
-// body a lift just destroyed: the vectors, the field-level provenance of text
-// that is now gone, the transcript readings, the attachments the restriction
-// kept as commercial substance, and the transmitted copy in the send log.
-//
-// It lives on the Eraser and both lift paths call it, because a record must
-// not be more thoroughly erased by the clock than by a controller's decision.
-func (e *Eraser) purgeHeldRecordTraces(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, id); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id); err != nil {
-		return err
-	}
-	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
-		return err
-	}
-	if err := e.eraseAttachments(ctx, tx, "retention: the held record reached its floor", causeRetention, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
-		return err
-	}
-	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedName)
 }
