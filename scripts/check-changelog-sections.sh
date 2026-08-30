@@ -54,9 +54,21 @@ verdict=$(awk '
 	/^[ \t]*(```|~~~)/ {
 		run = $0
 		sub(/^[ \t]*/, "", run)
-		sub(/[^`~].*$/, "", run)
-		if (fence == "") { fence = run }
-		else if (substr(run, 1, 1) == substr(fence, 1, 1) && length(run) >= length(fence)) { fence = "" }
+		marker = substr(run, 1, 1)
+		width = 0
+		while (substr(run, width + 1, 1) == marker) width++
+		trailing = substr(run, width + 1)
+		if (fence == "") {
+			# An opening fence may carry an info string, and often does:
+			# ```bash. Only the run itself is remembered.
+			fenceChar = marker
+			fenceWidth = width
+			fence = "open"
+		} else if (marker == fenceChar && width >= fenceWidth && trailing ~ /^[ \t]*$/) {
+			# A CLOSING fence carries nothing after it, so ```bash inside a
+			# backtick block is content and leaves the fence open.
+			fence = ""
+		}
 		next
 	}
 	fence != "" { next }

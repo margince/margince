@@ -249,6 +249,55 @@ case_is "a tilde line inside a backtick fence does not close it" 0 "OK: changelo
 ```
 MD
 
+# An opening fence may carry an info string; a closing one may not. Otherwise
+# ```bash inside a block closes it and exposes what follows.
+case_is "a fence with an info string opens and its bare run closes it" 0 "OK: changelog-sections" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- Refuses this:
+
+```bash
+### Changed
+### Changed
+```
+MD
+
+case_is "an info-string line inside a block is content, not a close" 0 "OK: changelog-sections" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- Refuses this:
+
+```
+```bash
+### Changed
+### Changed
+```
+MD
+
+# A mixed run is not a fence of both kinds: only the leading character counts,
+# so a `~~~` opener is still closed by `~~~` however the line continues. Read
+# the other way the block never closes, it swallows the rest of the file, and
+# the duplicate below goes unseen.
+case_is "a mixed opening run is remembered by its own character" 1 "appears 2 times" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- Refuses this:
+
+~~~```text
+### Changed
+~~~
+
+### Changed
+
+- and this list is the second one, after the fence closed
+MD
+
 # A `##` heading that is not a release ends the release above it. Otherwise its
 # own children are counted as that release's sections.
 case_is "a non-release level-2 heading ends the release above it" 0 "OK: changelog-sections" <<'MD'
