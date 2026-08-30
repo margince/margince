@@ -11,6 +11,13 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **Home's test suite is under the 1000-line ceiling again.** It crossed while
+  Home gained its weekly-review section, and the split had one honest shape: the
+  harness both halves need — the recording fetch stub, the render wrapper and
+  the fixtures — is a module now (`home.testkit.tsx`) rather than something to
+  export from a test file or copy. A second answer to "what does an unrouted
+  read reply with" is exactly what these cases turn on.
+
 - **The Unreleased section carries one list per change type.** Three separate
   `### Changed` sections had accreted under it, each appended by an author with
   no signal that the others existed, so a reader looking for what changed had to

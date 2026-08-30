@@ -1,5 +1,4 @@
 /** @vitest-environment jsdom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   render as rtlRender,
@@ -8,36 +7,25 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { HomeGlance } from "./home.glance";
-import type { Deal, MorningBrief } from "./home.queries";
-
-// Home — the morning handover, held to the three things its shape claims.
-//
-//   1. The DECK STAGES. A verdict a reader gives here does not leave the
-//      browser: the assertion that proves it is a COUNT OF WRITES, and it is
-//      zero until the explicit commit. Then exactly the staged verdicts go, a
-//      bundle through its own endpoint once rather than per member, and an
-//      `edit` sends nothing at all because the deck cannot edit — it hands the
-//      reader to the Decisions screen instead.
-//   2. The page's ORDER follows the day: decisions lead while any are waiting,
-//      the ranked queue leads once the deck is clear.
-//   3. Every reading is gated on its OWN read, and a reading still in flight is
-//      absent rather than zero. "Nothing is waiting on you" is a claim, and a
-//      page that makes it while the queue is still loading is lying.
-//
-// The clock is never the real one where a test depends on it: the greeting takes
-// `now` as a prop and is driven by a fixed instant, and the one case that asks
-// what "today" means pins the system clock. Every fixed instant is built with
-// the LOCAL Date constructor, so a machine in any zone reads the hour the case
-// is named for.
+import {
+  fleetDeal,
+  jsonResponse,
+  pendingPage,
+  proposal,
+  readSnoozedUntil,
+  render,
+  run,
+  stubApi,
+  workOrder,
+  writeRoutes,
+  writes,
+} from "./home.testkit";
 
 afterEach(() => {
   cleanup();
@@ -45,192 +33,6 @@ afterEach(() => {
   vi.useRealTimers();
   window.location.hash = "";
 });
-
-type Approval = components["schemas"]["Approval"];
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
-
-/** One request the screen made, as the route it names and what it carried. */
-type Call = { method: string; path: string; body: unknown };
-
-type Routes = Record<string, (body: unknown) => Response | Promise<Response>>;
-
-// Every read Home fans out to, answered honestly by default so each case
-// declares only the route it is about: a session, no nightly digest, no brief
-// run, and a pipeline report with no rows. The report matters — the fallback
-// empty PAGE carries no `rows`, which the pipeline reading would read as a
-// failure and put a refusal in the rail of every case in this file.
-const DEFAULTS: Routes = {
-  "GET /me": () => jsonResponse(meFixture()),
-  "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-  "GET /digest": () =>
-    jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
-  "POST /reports/deals-by-stage": () =>
-    jsonResponse({ report: "deals-by-stage", plan: {}, columns: [], rows: [] }),
-};
-
-/**
- * Routes the stubbed fetch by method+path and RECORDS every call, because what
- * this screen must not do is as load-bearing as what it must: a staged verdict
- * is only staged if nothing was sent, and no rendering can prove that.
- */
-function stubApi(routes: Routes): Call[] {
-  const calls: Call[] = [];
-  const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = new URL(
-      request ? request.url : String(input),
-      "https://test.local",
-    );
-    const method = request?.method ?? init?.method ?? "GET";
-    const path = url.pathname.replace(/^\/v1/, "");
-    let body: unknown = null;
-    if (method !== "GET") {
-      try {
-        // `clone()`: the client sends a Request and the handler below may read
-        // the same body again.
-        body = request
-          ? await request.clone().json()
-          : JSON.parse(String(init?.body));
-      } catch {
-        // A write with no body at all (POST /brief) is not a malformed one.
-        body = null;
-      }
-    }
-    calls.push({ method, path, body });
-    const handler =
-      routes[`${method} ${path}`] ?? DEFAULTS[`${method} ${path}`];
-    return handler ? handler(body) : jsonResponse(emptyPage);
-  });
-  vi.stubGlobal("fetch", mock);
-  return calls;
-}
-
-/**
- * Everything that left the browser as a write, in the order it went.
- *
- * `/reports/{report}` is excluded because it is a READ spelled as a POST — the
- * query plan does not fit a URL — and the rail runs one on every mount. Counting
- * it would make "nothing was sent" untrue of a page that sent nothing.
- */
-function writes(calls: readonly Call[]): Call[] {
-  return calls.filter(
-    (call) => call.method !== "GET" && !call.path.startsWith("/reports/"),
-  );
-}
-
-/**
- * The `snoozed_until` a write carried, narrowed rather than asserted: a body is
- * `unknown` here because it came off the wire, and casting one into shape hides
- * the case where the field never went at all.
- */
-function readSnoozedUntil(body: unknown): string {
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("snoozed_until" in body) ||
-    typeof body.snoozed_until !== "string"
-  ) {
-    throw new Error(
-      `the snooze write carried no instant: ${JSON.stringify(body)}`,
-    );
-  }
-  return body.snoozed_until;
-}
-
-/** The routes those writes named, which is what a commit is judged on. */
-function writeRoutes(calls: readonly Call[]): string[] {
-  return writes(calls).map((call) => `${call.method} ${call.path}`);
-}
-
-/** Home's two work sections, in the order the document holds them. */
-function workOrder(): string[] {
-  return [...document.querySelectorAll("#home-decisions, #home-today")].map(
-    (section) => section.id,
-  );
-}
-
-const fleetDeal: Deal = {
-  id: "d-1",
-  name: "Fleet retrofit",
-  amount_minor: 4_800_000,
-  currency: "EUR",
-  pipeline_id: "pl",
-  stage_id: "s2",
-  status: "open",
-  stalled: false,
-  source: "manual",
-  captured_by: "human:u1",
-  version: 1,
-  created_at: "2026-05-01T08:00:00Z",
-  updated_at: "2026-06-01T08:00:00Z",
-};
-
-const run: MorningBrief = {
-  id: "br-1",
-  generated_at: "2026-07-05T05:30:00Z",
-  as_of: "2026-07-05T05:00:00Z",
-  candidate_count: 1,
-  items: [
-    {
-      id: "bi-1",
-      deal_id: "d-1",
-      rank: 1,
-      composite: 0.74,
-      feature_vector: {
-        winnability: 0.4,
-        revenue: 1,
-        timing: 0.75,
-        momentum: 1,
-        warmth: 0.47,
-      },
-      evidence_ids: ["ev-1", "ev-2"],
-      state: "new",
-      state_at: null,
-    },
-  ],
-};
-
-/** One staged proposal, named by the sentence its card leads with. */
-function proposal(id: string, summary: string, over: Partial<Approval> = {}) {
-  const staged: Approval = {
-    id,
-    kind: "send_email",
-    status: "pending",
-    proposed_by: "agent:runner",
-    summary,
-    proposed_change: { body: "Hi — shall we sync next week?" },
-    created_at: "2026-07-05T05:00:00Z",
-    ...over,
-  };
-  return staged;
-}
-
-/** The pending queue, minus whatever the case has had decided. */
-function pendingPage(queue: readonly Approval[], decided: ReadonlySet<string>) {
-  return jsonResponse({
-    data: queue.filter((approval) => !decided.has(approval.id)),
-    page: { next_cursor: null, has_more: false },
-  });
-}
 
 // ── The deck: staging is local, the commit is the only thing that sends ──
 
@@ -963,162 +765,5 @@ describe("HomeScreen — the sentence about the night", () => {
     render(<HomeScreen />);
 
     await screen.findByText("He asked about the delivery date yesterday.");
-  });
-});
-
-// ── The week just gone ──
-
-describe("HomeScreen — the weekly retrospective", () => {
-  const review = {
-    id: "01a04000-0000-7000-8000-00000000000a",
-    local_week_start: "2026-06-29",
-    generated_at: "2026-07-06T06:00:00Z",
-    as_of: "2026-07-06T06:00:00Z",
-    counts: {
-      tasks_due: 5,
-      tasks_done: 4,
-      tasks_carried_over: 2,
-      deals_moved: 3,
-      deals_won: 1,
-      deals_lost: 1,
-      proposals_accepted: 7,
-      proposals_rejected: 2,
-      brief_items_acted: 6,
-      brief_items_dismissed: 3,
-    },
-    deals: [
-      {
-        deal_id: "01a04000-0000-7000-8000-00000000000b",
-        label: "Weber Rahmenvertrag",
-        outcome: "won",
-        occurred_at: "2026-07-02T14:00:00Z",
-      },
-    ],
-  };
-
-  it("shows the week's tallies and its frozen deal lines", async () => {
-    stubApi({
-      "GET /weekly-reviews/latest": () => jsonResponse(review),
-      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    // The label is what the deal was CALLED that week, served from the frozen
-    // row rather than looked up — which is why it renders with no deal in the
-    // deals payload at all.
-    await screen.findByText("Weber Rahmenvertrag");
-    expect(screen.getByText(en["home.weekly.promised"])).toBeTruthy();
-  });
-
-  it("says there is no review yet rather than drawing a week of zeroes", async () => {
-    stubApi({
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({ title: "Not Found" }, 404),
-      "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    // A page of zeroes would claim a week that was measured and empty.
-    await screen.findByText(en["home.weekly.none"]);
-  });
-
-  it("survives a payload that is not a review", async () => {
-    stubApi({
-      // The shape an unrouted read answers with: a list page, not a review.
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({
-          data: [],
-          page: { next_cursor: null, has_more: false },
-        }),
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    // The panel formats local_week_start immediately, so a half-shaped answer
-    // used to take Home's whole render down with it — the queue, the deck and
-    // everything else — rather than drawing one honest empty section.
-    await screen.findByText("Fleet retrofit");
-  });
-});
-
-describe("HomeScreen — the week's sentence", () => {
-  const narrated = {
-    id: "01a04000-0000-7000-8000-00000000000a",
-    local_week_start: "2026-06-29",
-    generated_at: "2026-07-06T06:00:00Z",
-    as_of: "2026-07-06T06:00:00Z",
-    counts: {
-      tasks_due: 5,
-      tasks_done: 4,
-      tasks_carried_over: 2,
-      deals_moved: 3,
-      deals_won: 1,
-      deals_lost: 1,
-      proposals_accepted: 7,
-      proposals_rejected: 2,
-      brief_items_acted: 6,
-      brief_items_dismissed: 3,
-    },
-    deals: [],
-  };
-
-  it("shows the sentence, marked as agent-authored", async () => {
-    stubApi({
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({
-          ...narrated,
-          narrative: "Weber signed; two promises slipped to this week.",
-          narrated_at: "2026-07-06T06:01:00Z",
-        }),
-      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    await screen.findByText("Weber signed; two promises slipped to this week.");
-    // Model-authored prose sitting beside numbers a deterministic pass
-    // computed; nothing else on the panel would tell them apart.
-    expect(
-      screen.getAllByText(en["trust.agentUnnamed"]).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it("says no pass ran, rather than showing nothing", async () => {
-    stubApi({
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({ ...narrated, narrative: null, narrated_at: null }),
-      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    // Never a blank week, never a silent one: the counts are still the week's,
-    // and a rep reading silence would conclude there was nothing to remark on.
-    await screen.findByText(en["home.weekly.noNarrative"]);
-  });
-
-  it("stays silent when a pass ran and had nothing to add", async () => {
-    stubApi({
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({
-          ...narrated,
-          narrative: null,
-          narrated_at: "2026-07-06T06:01:00Z",
-        }),
-      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    await screen.findByText(en["home.weekly.promised"]);
-    // A pass that honestly found nothing is not a pass that never ran, and
-    // claiming otherwise would tell the rep their week was never looked at.
-    expect(screen.queryByText(en["home.weekly.noNarrative"])).toBeNull();
   });
 });
