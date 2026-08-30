@@ -51,6 +51,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 )
 
 // failingResolver is an authz.Resolver whose EffectiveRBAC always returns a
@@ -977,4 +978,10 @@ func publicEventSchema(t *testing.T, name string) *openapi3.Schema {
 		t.Fatalf("api/public-events.yaml has no component schema %q", name)
 	}
 	return ref.Value
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (f failingResolver) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, f.EffectiveRBAC, f.SeatType)
 }

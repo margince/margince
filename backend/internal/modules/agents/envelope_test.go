@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -548,3 +549,9 @@ func slicesContains(haystack []string, needle string) bool {
 // readingAgent is the caller these tests dispatch as; how much of the workspace
 // it sees is the authority's answer, not this context's.
 func readingAgent() context.Context { return scopedAgentCtx(principal.ScopeRead) }
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (r unboundedAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+}

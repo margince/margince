@@ -42,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -671,4 +672,10 @@ func assertAStepOnAVanishedRunIsTerminal(t *testing.T, b *backfillWireEnv) {
 			t.Fatalf("missing run step = done=%v completed=%v retryAfter=%v err=%v, want terminal-not-completed with the not-found error", done, completed, retryAfter, err)
 		}
 	})
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

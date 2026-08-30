@@ -19,10 +19,17 @@ import (
 // HERE (the live read), never from whatever the transport stamped on the
 // principal.
 type stubAuthority struct {
-	seat  principal.SeatType
-	rbac  authz.RBAC
-	err   error
-	reads int
+	seat principal.SeatType
+	rbac authz.RBAC
+	err  error
+	// passportGone stands for the credential being killed while a run is in
+	// flight: the seam answers not-found for a revoked, expired or re-granted
+	// passport, and the gate has to refuse on it.
+	passportGone bool
+	// passports records what the gate asked about, so a case can hold that it
+	// asked about the RIGHT credential rather than merely asking.
+	passports []ids.UUID
+	reads     int
 }
 
 func (s *stubAuthority) EffectiveRBAC(ctx context.Context, ws, human ids.UUID) (authz.RBAC, error) {
@@ -43,11 +50,19 @@ var (
 func fullSeatGate() *Gate { return NewGate(&stubAuthority{seat: principal.SeatFull}) }
 
 func agentCtx(scopes ...principal.Scope) context.Context {
+	return agentCtxWithPassport(ids.UUID{}, scopes...)
+}
+
+// agentCtxWithPassport is agentCtx for a caller riding a CREDENTIAL. A zero
+// passport is a principal holding none — the product acting under a policy —
+// and the two are different subjects, so a case about revocation has to say
+// which one it is driving.
+func agentCtxWithPassport(passport ids.UUID, scopes ...principal.Scope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test",
-		OnBehalfOf: testHuman,
-		Scopes:     principal.NewScopeSet(scopes...),
+		OnBehalfOf: testHuman, PassportID: passport,
+		Scopes: principal.NewScopeSet(scopes...),
 	})
 }
 
@@ -225,5 +240,61 @@ func TestNoPrincipalIsRefused(t *testing.T) {
 	spec := mcp.ToolSpec{Name: "read_record", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
 	if _, err := fullSeatGate().Admit(context.Background(), spec, noResolve); err == nil {
 		t.Fatal("anonymous context admitted")
+	}
+}
+
+// AdmittedAuthority is the one read the gate makes. passportGone is what a
+// revoked, expired or re-granted credential answers with — the seam's own
+// contract — so the gate's behaviour on it can be driven without a database.
+func (s *stubAuthority) AdmittedAuthority(_ context.Context, _, _, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	s.reads++
+	s.passports = append(s.passports, passport)
+	if s.passportGone {
+		return authz.RBAC{}, "", apperrors.ErrNotFound
+	}
+	return s.rbac, s.seat, s.err
+}
+
+// TestARevokedPassportIsRefusedAtTheNextToolCall — the gate acting on the
+// seam's refusal, which is where a revoked credential actually stops.
+//
+// The run authenticated once and holds a principal that still reads as valid:
+// the scopes are there, the human's seat is full, nothing about the cached
+// value says the credential is dead. Only the re-read does.
+func TestARevokedPassportIsRefusedAtTheNextToolCall(t *testing.T) {
+	authority := &stubAuthority{seat: principal.SeatFull, passportGone: true}
+	spec := mcp.ToolSpec{Name: "list_people", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
+
+	// Carrying a REAL passport, because that is the scenario: a run that
+	// authenticated once with a credential and had it killed while it was
+	// still executing. With a zero one the principal rides on no credential at
+	// all, and the case would prove only that the gate maps a not-found seam
+	// answer onto a refusal.
+	_, err := NewGate(authority).Admit(agentCtxWithPassport(ids.NewV7(), principal.ScopeRead), spec, noResolve)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a tool call on a revoked passport answered %v, want permission denied — the killed credential is still executing", err)
+	}
+	if authority.reads == 0 {
+		t.Error("the gate admitted without asking the seam at all")
+	}
+}
+
+// TestTheGateAsksAboutThePrincipalsOwnPassport — asking is not enough; it has
+// to ask about the credential this call is riding.
+//
+// A gate that passed a zero id would re-check nothing while looking exactly
+// like a gate that re-checks, and the seam reads a zero as "this principal
+// holds no credential" — which is the one answer that must not be inferred
+// from a bug.
+func TestTheGateAsksAboutThePrincipalsOwnPassport(t *testing.T) {
+	authority := &stubAuthority{seat: principal.SeatFull}
+	spec := mcp.ToolSpec{Name: "list_people", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
+	passport := ids.NewV7()
+
+	if _, err := NewGate(authority).Admit(agentCtxWithPassport(passport, principal.ScopeRead), spec, noResolve); err != nil {
+		t.Fatalf("admit: %v", err)
+	}
+	if len(authority.passports) != 1 || authority.passports[0] != passport {
+		t.Errorf("the gate asked about %v, want the principal's own passport %s", authority.passports, passport)
 	}
 }

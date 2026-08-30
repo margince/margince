@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 )
 
 // liveAuthority is identity's resolver answering for a human who still holds
@@ -86,4 +87,16 @@ func TestCallbackRefusesADeadGrantorBeforeExchangingTheCode(t *testing.T) {
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/onboarding/connect/error/gmail"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
 	}
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (r liveAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (r deadAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

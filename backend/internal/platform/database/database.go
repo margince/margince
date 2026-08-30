@@ -146,7 +146,15 @@ func WithInfraTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error)
 //
 // Held by: TestTheDatabasePackageOpensATransactionInOneFunction (backend/gates/transactionopeners_test.go)
 func runTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
-	tx, err := pool.Begin(ctx)
+	return runTxWith(ctx, pool, pgx.TxOptions{}, fn)
+}
+
+// runTxWith is runTx with transaction options — the isolation level, for a read
+// whose answer is composed from several statements and must therefore see one
+// snapshot. Set at BEGIN because Postgres refuses the level once any query in
+// the transaction has taken one.
+func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn func(pgx.Tx) error) error {
+	tx, err := pool.BeginTx(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("pg: begin: %w", err)
 	}

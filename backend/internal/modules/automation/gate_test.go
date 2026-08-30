@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -333,4 +334,10 @@ func TestCheckOwnerPermissionSeatTransientErrorSurfacesForRetry(t *testing.T) {
 	if resolver.calls != 0 {
 		t.Errorf("EffectiveRBAC called %d times, want 0 — a transient seat error must surface before RBAC runs", resolver.calls)
 	}
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (f *fakeAuthzResolver) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, f.EffectiveRBAC, f.SeatType)
 }

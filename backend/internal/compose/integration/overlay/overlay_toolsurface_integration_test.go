@@ -238,7 +238,7 @@ func TestOverlayUpdateRecordRefusesAnAgentRatherThanWritingBack(t *testing.T) {
 	registry := compose.NewRegistryFor(e.DBFor(overlayWS), compose.SendPath{})
 	args := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"title":"Principal Analyst"}}`, target)
 
-	_, err = registry.Invoke(agentActorCtx(overlayWS, actorID), "update_record", json.RawMessage(args))
+	_, err = registry.Invoke(agentActorCtx(t, overlayWS, actorID), "update_record", json.RawMessage(args))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("update_record err = %v, want ErrUnsupportedBySoR — an ungoverned agent write reached the incumbent", err)
@@ -303,10 +303,10 @@ func TestOverlayWritesRefuseAnUnreleasedAgentAtTheSeam(t *testing.T) {
 
 	// An agent with no released approval is refused before the incumbent is
 	// touched, whatever route brought it here.
-	if _, err := d.Update(agentActorCtx(ws, actorID), patch); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+	if _, err := d.Update(agentActorCtx(t, ws, actorID), patch); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("agent Update err = %v, want ErrUnsupportedBySoR", err)
 	}
-	if _, err := d.Archive(agentActorCtx(ws, actorID), ref); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+	if _, err := d.Archive(agentActorCtx(t, ws, actorID), ref); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("agent Archive err = %v, want ErrUnsupportedBySoR", err)
 	}
 
@@ -320,7 +320,8 @@ func TestOverlayWritesRefuseAnUnreleasedAgentAtTheSeam(t *testing.T) {
 
 // agentActorCtx is overlayActorCtx as a PASSPORT principal — the type every
 // agent surface authenticates as, and the only one the egress backstop gates.
-func agentActorCtx(ws, user ids.UUID) context.Context {
+func agentActorCtx(t *testing.T, ws, user ids.UUID) context.Context {
+	t.Helper()
 	perms := overlayReaderPerms
 	perms.Objects = map[string]principal.ObjectGrant{
 		"person": {Read: true, Update: true, Delete: true},
@@ -329,10 +330,30 @@ func agentActorCtx(ws, user ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + user.String(),
-		OnBehalfOf: user, UserID: user, PassportID: ids.NewV7(),
+		OnBehalfOf: user, UserID: user, PassportID: livePassportFor(t, user),
 		Scopes:      principal.NewScopeSet(principal.ScopeWrite),
 		Permissions: perms,
 	})
+}
+
+// livePassportFor mints a real passport row for the acting human.
+//
+// A REAL one, because admission re-asks whether the credential is still alive
+// on every tool call (auth.Gate.Admit) — that is what makes revoking a passport
+// stop a run already in flight. An invented id passes nothing, and a fixture
+// carrying one would fail these cases with "permission denied" while they are
+// about the egress mode gate, which is passing for the wrong reason in the
+// other direction: the assertion would never reach the guard it exists for.
+func livePassportFor(t *testing.T, user ids.UUID) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
+		 VALUES ($1, $1, 'overlay suite', ARRAY['write'], $2, now() + interval '1 hour')
+		 RETURNING id`, user, "overlay-suite-"+ids.NewV7().String()).Scan(&id); err != nil {
+		t.Fatalf("minting the acting agent's passport: %v", err)
+	}
+	return id
 }
 
 // The egress gate is a mutation boundary, so it must resolve the mode
@@ -389,7 +410,7 @@ func TestOverlayUpdateRecordEgressGateIgnoresAStaleNativeModeCache(t *testing.T)
 	}
 
 	args := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"title":"Principal Analyst"}}`, found.Records[0].Ref.ID)
-	_, err = registry.Invoke(agentActorCtx(ws, actorID), "update_record", json.RawMessage(args))
+	_, err = registry.Invoke(agentActorCtx(t, ws, actorID), "update_record", json.RawMessage(args))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("update_record err = %v, want ErrUnsupportedBySoR — the egress gate trusted a stale native mode cache", err)

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/authz/authztest"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -418,4 +419,10 @@ func TestComposedReadToolRequiresTheScope(t *testing.T) {
 	if _, err := r.Invoke(ctx, "give_quote", json.RawMessage(`{}`)); !errors.Is(err, apperrors.ErrScopeExceeded) {
 		t.Fatalf("a scopeless principal must be denied with ErrScopeExceeded, got %v", err)
 	}
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (r fullSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

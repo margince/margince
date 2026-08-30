@@ -87,6 +87,53 @@ func (s *Service) EffectiveAuthority(ctx context.Context, workspaceID, humanID i
 	return rbac, seat, err
 }
 
+// AdmittedAuthority answers the whole admission question in one snapshot: the
+// passport is still live, and this is the granting human's seat and RBAC as of
+// that same instant.
+//
+// The passport is re-asked HERE, inside the transaction the seat read already
+// opens — one more statement on a connection already held, rather than a third
+// round trip through the pool. That matters because it runs on every tool call:
+// a run authenticates once at start and then executes for its whole wall clock,
+// so this asking is the "next token lookup" revocation is documented as binding
+// at. Against what it replaces it is not a new cost at all: the gate used to
+// make TWO transactions here, for the seat and the grants, and now makes one.
+//
+// It reuses passportStillLiveQuery rather than restating the rule, so a
+// condition added to authentication reaches admission without anybody
+// remembering to come here.
+func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, passportID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	var (
+		rbac authz.RBAC
+		seat principal.SeatType
+	)
+	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, seatType string) error {
+		// A ZERO passport is a principal holding no credential — the product
+		// acting under a policy, derived from a live human at construction
+		// rather than from a token somebody can revoke. There is nothing to
+		// re-ask about, and asking anyway would refuse every such call.
+		// platform/auth's Admit names the two paths that mint one.
+		if !passportID.IsZero() {
+			var live int
+			err := tx.QueryRow(ctx, passportStillLiveQuery, passportID, humanID).Scan(&live)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			}
+			if err != nil {
+				return err
+			}
+		}
+		_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
+		if err != nil {
+			return err
+		}
+		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams)}
+		seat = principal.SeatType(seatType)
+		return nil
+	})
+	return rbac, seat, err
+}
+
 // SeatType reads the human's current seat — the A62/ADR-0047 licensing
 // ceiling the gate checks before any tier reasoning.
 func (s *Service) SeatType(ctx context.Context, workspaceID, humanID ids.UUID) (principal.SeatType, error) {
@@ -108,7 +155,25 @@ func (s *Service) liveUserTx(ctx context.Context, workspaceID, humanID ids.UUID,
 	if !ok || ctxWs != workspaceID {
 		return fmt.Errorf("crmauth: authority resolution outside the bound workspace")
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	// ONE SNAPSHOT, and it has to be asked for. The pool begins at READ
+	// COMMITTED, where every statement sees its own committed view — so a seat
+	// read, a passport read and a grant read in one transaction can return
+	// values that never existed together: permissions from before a role change
+	// beside a seat from after it, or a live passport beside grants the human no
+	// longer holds.
+	//
+	// That is not an abstract race. These reads ARE the admission decision, and
+	// the composed answer is what the caller is admitted on; EffectiveAuthority's
+	// own comment says the pair must be read together, and this is what makes
+	// that true rather than intended.
+	//
+	// At BEGIN, through TxIsolated, rather than as a statement at the top of
+	// this closure. Postgres refuses the level once any query has taken a
+	// snapshot, and Tx runs one of its own on a BOUNDED handle — so a pin
+	// spelled here would work on the handle identity has today and fail on the
+	// one compose could give it tomorrow. Read-only work at REPEATABLE READ
+	// takes its snapshot at the first statement and cannot serialize-fail.
+	return s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var seatType string
 		err := tx.QueryRow(ctx,
 			`SELECT seat_type FROM app_user
