@@ -48,7 +48,7 @@ func TestTheMessageStatesTheWeeksNumbers(t *testing.T) {
 	body := MailBody(mailFixture(), "https://crm.example.test", english)
 
 	for _, want := range []string{
-		"7/9", // promised, delivered
+		"7 of 9", // promised, delivered
 		"1 · 1 · 3",
 		"4 yes · 2 no", // proposals decided
 		"6 acted · 3 dismissed",
@@ -82,7 +82,7 @@ func TestNoBaseURLMeansNoLinkRatherThanABrokenOne(t *testing.T) {
 	if strings.Contains(body, "http") {
 		t.Errorf("the message carries a link with no base configured:\n%s", body)
 	}
-	if !strings.Contains(body, "7/9") {
+	if !strings.Contains(body, "7 of 9") {
 		t.Error("the message lost its numbers along with its link")
 	}
 }
@@ -189,12 +189,12 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Zugesagt, erledigt", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
+			labels:   []string{"Zugesagt, erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
 		},
 		{
 			language: "vi",
 			subject:  "Tuần của bạn",
-			labels:   []string{"Đã hứa, đã xong", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
+			labels:   []string{"Đã hứa, đã xong", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
 		},
 		{
 			// A language this build has no copy for is written in the fallback

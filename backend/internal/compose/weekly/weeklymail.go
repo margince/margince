@@ -11,10 +11,11 @@ package weekly
 // the two disagreeing about somebody's own week is worse than either being
 // absent — the rep has no way to tell which one lied.
 //
-// Plain text, English, no link tracking and no images. It follows the
-// invitation and reset mail already in this tree: the operator relay carries
-// product-originated transactional mail, and the body says what it has to say
-// without needing a browser to render it.
+// Plain text, no link tracking and no images, in the installation's own
+// language (platform/mailcopy). It follows the invitation and reset mail
+// already in this tree: the operator relay carries product-originated
+// transactional mail, and the body says what it has to say without needing a
+// browser to render it.
 
 import (
 	"context"
@@ -93,7 +94,7 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	// English ones they were laid out for, and a fixed width turns the column
 	// into a ragged edge in two of the three.
 	rows := [][2]string{
-		{words.WeeklyPromised, strconv.Itoa(c.TasksDone) + "/" + strconv.Itoa(c.TasksDue)},
+		{words.WeeklyPromised, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue)},
 		{
 			words.WeeklyDealsWon + " · " + words.WeeklyDealsLost + " · " + words.WeeklyMoved,
 			strconv.Itoa(c.DealsWon) + " · " + strconv.Itoa(c.DealsLost) + " · " + strconv.Itoa(c.DealsMoved),

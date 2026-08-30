@@ -43,6 +43,10 @@ var mailLabelPairs = []struct {
 	field func(mailcopy.Copy) string
 }{
 	{"home.weekly.promised", func(c mailcopy.Copy) string { return c.WeeklyPromised }},
+	// The count template, with the panel's {done}/{due} placeholders read as
+	// the %d pair the mail formats with: the ORDER is the localised part, and
+	// a language that puts the total first would otherwise read backwards.
+	{"home.weekly.ofDue", func(c mailcopy.Copy) string { return placeholders(c.WeeklyOfDue) }},
 	{"home.weekly.dealsWon", func(c mailcopy.Copy) string { return c.WeeklyDealsWon }},
 	{"home.weekly.dealsLost", func(c mailcopy.Copy) string { return c.WeeklyDealsLost }},
 	{"home.weekly.dealsMoved", func(c mailcopy.Copy) string { return c.WeeklyMoved }},
@@ -54,13 +58,39 @@ var mailLabelPairs = []struct {
 	{"home.weekly.outcome.moved", func(c mailcopy.Copy) string { return c.WeeklyOutcomeMoved }},
 }
 
-// mailLabelLanguages are the languages the contract's base_language admits.
-var mailLabelLanguages = []string{"en", "de", "vi"}
+// mailLabelLanguages reads the languages the contract admits, so adding a
+// fourth to the enum compares that one too rather than leaving it unchecked —
+// which is the drift this gate exists to catch, in the one language nobody had
+// thought to list here.
+func mailLabelLanguages(t *testing.T) []string {
+	t.Helper()
+	document, err := os.ReadFile(mailLanguageContract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := regexp.MustCompile(`base_language:\s*\n\s*type: string\s*\n\s*enum: \[([^\]]*)\]`).
+		FindStringSubmatch(string(document))
+	if declared == nil {
+		t.Fatal("the contract's base_language enum could not be read: this gate compares the mail catalog " +
+			"against the frontend in each language it admits, so it now certifies nothing")
+	}
+	var out []string
+	for _, raw := range strings.Split(declared[1], ",") {
+		if language := strings.TrimSpace(raw); language != "" {
+			out = append(out, language)
+		}
+	}
+	if len(out) < 2 {
+		t.Fatalf("the contract admits %d language(s), and this tree ships three: the reader has stopped "+
+			"matching rather than the contract having shrunk", len(out))
+	}
+	return out
+}
 
 // TestEveryMailLabelMatchesTheScreenThatShowsIt is the parity check.
 func TestEveryMailLabelMatchesTheScreenThatShowsIt(t *testing.T) {
 	t.Parallel()
-	for _, language := range mailLabelLanguages {
+	for _, language := range mailLabelLanguages(t) {
 		t.Run(language, func(t *testing.T) {
 			t.Parallel()
 			screen := frontendCatalog(t, language)
@@ -115,22 +145,7 @@ func frontendCatalog(t *testing.T, language string) map[string]string {
 // mail on a German installation.
 func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 	t.Parallel()
-	document, err := os.ReadFile(mailLanguageContract)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// The enum, read from the property that declares it.
-	declared := regexp.MustCompile(`base_language:\s*\n\s*type: string\s*\n\s*enum: \[([^\]]*)\]`).
-		FindStringSubmatch(string(document))
-	if declared == nil {
-		t.Fatal("the contract's base_language enum could not be read: this gate compares the mail catalog " +
-			"against it, so it now certifies nothing")
-	}
-	for _, raw := range strings.Split(declared[1], ",") {
-		language := strings.TrimSpace(raw)
-		if language == "" {
-			continue
-		}
+	for _, language := range mailLabelLanguages(t) {
 		if mailcopy.For(language).WeeklyPromised == mailcopy.For("zz-not-a-language").WeeklyPromised &&
 			language != string(mailcopy.Fallback) {
 			t.Errorf("the contract admits base_language %q and the mail catalog has no copy for it, so an "+
@@ -142,3 +157,17 @@ func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 
 // mailLanguageContract is where the admitted languages are published.
 const mailLanguageContract = "api/crm.yaml"
+
+// placeholders rewrites a mail template's %d pair as the panel's own named
+// placeholders, in order, so the two spellings of one template can be compared
+// as text.
+//
+// The ORDER is the localised part — a language that named the total first would
+// read backwards — and it is the half a comparison of the surrounding words
+// alone would miss.
+func placeholders(template string) string {
+	for _, name := range []string{"{done}", "{due}"} {
+		template = strings.Replace(template, "%d", name, 1)
+	}
+	return template
+}

@@ -60,9 +60,11 @@ func For(language string) Copy {
 
 // Copy holds the strings the senders need, in one language.
 //
-// Struct fields rather than a keyed map, so a language missing a line does not
-// compile — a map would send an empty subject, and an empty subject is a
-// message a mail client files as blank.
+// A field left out of an entry below is the empty string, which for a subject
+// is a message a mail client files as blank — the compiler will not say so, and
+// neither will a map. What says so is
+// TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits, which is the reason a
+// language reaching a mailbox half-written is caught here rather than there.
 type Copy struct {
 	// The password reset a person asked for.
 	ResetSubject string
@@ -79,9 +81,12 @@ type Copy struct {
 	// The Monday retrospective. WeeklySubject and WeeklyHeading both name the
 	// week, because the subject is what tells two of these apart in a list and
 	// the heading is what a reader sees once the message is open.
-	WeeklySubject   string
-	WeeklyHeading   string
-	WeeklyPromised  string
+	WeeklySubject  string
+	WeeklyHeading  string
+	WeeklyPromised string
+	// WeeklyOfDue is the panel's own "{done} of {due}" template, with the two
+	// counts as %d in the order the language puts them.
+	WeeklyOfDue     string
 	WeeklyDealsWon  string
 	WeeklyDealsLost string
 	WeeklyMoved     string
