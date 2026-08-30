@@ -180,6 +180,17 @@ func prepareSource(in IngestSourceInput) (preparedSource, error) {
 	if err != nil {
 		return preparedSource{}, err
 	}
+	// Keyed on what the request ASKS FOR — a speaker filter — not on `kind`.
+	// The two are independent fields, so gating on kind alone let the same
+	// low-attribution source through under kind:"document" with a speaker
+	// label, filtered to a heading that merely looked like a speaker.
+	if !plain && in.SpeakerLabel != "" && !attributedMajority(turns) {
+		return preparedSource{}, &CorpusIngestError{
+			Field:  voiceKeyContent,
+			Code:   CorpusErrUnattributedTranscript,
+			Reason: "fewer than half of this source's words are attributed to a speaker, so it cannot be filtered to one; send it as text if it is your own writing",
+		}
+	}
 	text := in.Content
 	if !plain {
 		text, err = filterOwnTurns(turns, in.SpeakerLabel, in.Kind == voiceSourceKindTranscript)

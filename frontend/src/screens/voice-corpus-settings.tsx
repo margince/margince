@@ -1,35 +1,31 @@
-import { Upload } from "lucide-react";
-import type { ChangeEvent } from "react";
-import { useEffect, useId, useRef, useState } from "react";
-import { Button, Field, Modal, Radio, Textarea } from "../design-system/atoms";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useEffect, useRef, useState } from "react";
+import { Button, Disclosure, Radio } from "../design-system/atoms";
+import { FileDropzoneControl } from "../design-system/filedropzone";
+import { SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { useFileDrop } from "./use-file-drop";
 import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
 import { useVoiceIntake } from "./use-voice-intake";
-import { ACCEPTED_CORPUS_ATTR } from "./voice-intake-core";
+import { ACCEPTED_CORPUS_ATTR, VOICE_MIN_WORDS } from "./voice-intake-core";
 
-// The Settings intake: browse or drop a file, paste writing, and answer who is
-// speaking when a file turns out to be a conversation. It owns the intake hook
-// so the build control beside it can be disabled while a source is still
-// arriving — a build started mid-ingest describes a corpus that no longer
-// exists by the time it finishes.
+// The Settings intake: hand over files, and answer who is speaking when one
+// turns out to be a conversation. It owns the intake hook so the build control
+// beside it can be disabled while a source is still arriving — a build started
+// mid-ingest describes a corpus that no longer exists by the time it finishes.
 //
-// The settings row language decides the SHAPE. Adding writing is one decision,
-// so it is one row: what it is on the left, and the two ways in on the right.
-// The paste box is a form — a box somebody types a whole email into and then
-// commits — so it sits behind the verb, in a dialog, which keeps the row an
-// answer rather than a card-sized composer.
+// Files are the only way in. Onboarding also takes pasted text because it is a
+// conversation and a paste is a turn in it; here a reader arrives with their
+// sent mail already exported, and one control for one act is what a settings
+// row can carry. What the card explains beside that control is the part
+// onboarding narrates: what the voice is for, which writing teaches it, and
+// why only the reader's own words count.
 //
-// What deliberately did NOT move into that dialog is everything the intake has
-// to say back. The queue, the unanswered speaker questions and the per-source
-// notices all live in this component's hook, so a dialog holding them would
-// discard a pending question and stop reporting `busy` the moment the reader
-// closed it — the build guard beside this card reads that flag. They stay on
-// the card, where a reader who has just handed over six files can see what
-// happened to each.
+// Everything the intake has to say back — the unanswered speaker questions and
+// the per-source notices — lives in this component's hook and renders on the
+// card under the zone, where a reader who has just handed over six files can
+// see what happened to each.
 
 type VoiceCorpusIntakeProps = Readonly<{
   /** null for an owner who has no profile yet: the first sample mints it. */
@@ -38,7 +34,8 @@ type VoiceCorpusIntakeProps = Readonly<{
   /** Told when intake is in progress, so the caller can hold the build. */
   onBusyChange?: (busy: boolean) => void;
   /** The first sample is the one that MINTS the profile: the row names itself
-   * for that, and its verb leads rather than sitting beside a peer. */
+   * for that, and there is no meter yet to say how far the floor is, so the
+   * card states the floor itself. */
   first?: boolean;
 }>;
 
@@ -49,22 +46,14 @@ export function VoiceCorpusIntake({
   first = false,
 }: VoiceCorpusIntakeProps) {
   const t = useT();
+  const { locale } = useLocale();
   const intake = useVoiceIntake({ profileId, onChanged });
-  const [paste, setPaste] = useState("");
-  const [pasting, setPasting] = useState(false);
-  const pasteLabelId = useId();
-  const fileRef = useRef<HTMLInputElement>(null);
   const zoneRef = useRef<HTMLDivElement>(null);
 
-  // Files are accepted only inside this card. The listeners are still on the
-  // window so a file dropped anywhere cannot navigate the browser away from
-  // the app, but a drop on the command palette or a modal belongs to nobody
-  // and must not silently become a writing sample.
-  const { dragOver } = useFileDrop({
-    container: zoneRef,
-    active: intake.pendingAsk === null,
-    onFiles: intake.addFiles,
-  });
+  // The zone's own input takes every drop that lands on it. This hook is never
+  // armed: it only keeps a file that misses the zone from navigating the
+  // browser away from the app, which is what a stray drop does by default.
+  useFileDrop({ container: zoneRef, active: false, onFiles: intake.addFiles });
 
   // Told AFTER the render that changed it: calling a parent's setState from a
   // render body updates one component while another is rendering, which React
@@ -74,140 +63,78 @@ export function VoiceCorpusIntake({
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
-  const onBrowsed = (event: ChangeEvent<HTMLInputElement>) => {
-    intake.addFiles(Array.from(event.target.files ?? []));
-    // Clearing lets the same file be chosen again after a failed attempt.
-    event.target.value = "";
-  };
-
-  // The box is emptied only once its contents are on their way, and the dialog
-  // closes with them: the reader is done, and the outcome arrives as a notice
-  // on the card behind. Closing the dialog any other way KEEPS what was typed —
-  // a whole pasted email is a draft, and a dialog that discards one punishes
-  // the reader for pressing Escape.
-  const submitPaste = () => {
-    intake.addPaste(paste, t("settings.voice.pastedLabel"));
-    setPaste("");
-    setPasting(false);
-  };
-
-  const sampleLabel = t(
-    first ? "settings.voice.addFirstLabel" : "settings.voice.addSource",
-  );
-
   return (
-    <div
-      ref={zoneRef}
-      className={`vdna-intake${dragOver ? " vdna-intake-dragover" : ""}`}
-    >
-      <SettingList>
-        <SettingRow
-          label={sampleLabel}
-          description={t("settings.voice.dropHint")}
-          control={
-            <>
-              {/* Named for what it does — it opens the paste form rather than
-                  performing the add, and the button inside that form is named
-                  for the add itself. Two controls reading the same is ambiguous
-                  for a reader and for getByRole. */}
-              <Button
-                small
-                variant={first ? "primary" : undefined}
-                onClick={() => setPasting(true)}
-              >
-                {t(
-                  first
-                    ? "settings.voice.addFirstOpen"
-                    : "settings.voice.addSourceOpen",
-                )}
-              </Button>
-              <Button small onClick={() => fileRef.current?.click()}>
-                <Upload aria-hidden /> {t("settings.voice.browseFiles")}
-              </Button>
-              <input
-                ref={fileRef}
-                type="file"
-                multiple
-                accept={ACCEPTED_CORPUS_ATTR}
-                hidden
-                onChange={onBrowsed}
-              />
-            </>
-          }
-        />
-      </SettingList>
-
-      {intake.pendingAsk && (
-        // Keyed by the source: when the queue advances to the next file the
-        // panel is a NEW panel, so the previous file's chosen speaker cannot
-        // survive into a question about different people.
-        //
-        // Not a SettingRow: this is not a setting the reader may leave as it
-        // is. It is a file held out of the corpus until a question about it is
-        // answered, and it carries the warn surface that says so — a row would
-        // draw it in the same neutral ink as the decisions above it.
-        <SpeakerPanel
-          key={intake.pendingAsk.ref}
-          ask={intake.pendingAsk}
-          onAnswer={intake.answerSpeaker}
-          onDismiss={intake.dismissAsk}
-        />
-      )}
-
-      {intake.notices.length > 0 && (
-        <ul className="vdna-notices">
-          {intake.notices.map((notice) => (
-            <NoticeRow key={notice.ref} notice={notice} />
-          ))}
-        </ul>
-      )}
-
-      <Modal
-        open={pasting}
-        onClose={() => setPasting(false)}
-        labelledBy={pasteLabelId}
-      >
-        {/* A real form, so Enter-with-modifier and the submit button are the
-            same path. The dialog is named by the field's own label rather than
-            by a heading repeating it: the box IS the dialog, and two spellings
-            of one name is how a control ends up announcing something other
-            than the words above it (WCAG 2.5.3). */}
-        <form
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (paste.trim().length > 0) {
-              submitPaste();
-            }
-          }}
-        >
-          <Field label={<span id={pasteLabelId}>{sampleLabel}</span>}>
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={8}
-                value={paste}
-                placeholder={t("settings.voice.addPlaceholder")}
-                onChange={(e) => setPaste(e.target.value)}
+    <div ref={zoneRef}>
+      <SettingRow
+        label={t(
+          first ? "settings.voice.addFirstLabel" : "settings.voice.addSource",
+        )}
+        description={t("settings.voice.dropHint")}
+        layout="stack"
+        control={(control) => (
+          <div className="vdna-zone settingrow-measure">
+            <FileDropzoneControl
+              control={control}
+              emptyLabel={t("settings.voice.dropEmpty")}
+              multiple
+              accept={ACCEPTED_CORPUS_ATTR}
+              onPick={(file) => intake.addFiles([file])}
+            />
+            {intake.pendingAsk && (
+              // Keyed by the source: when the queue advances to the next file
+              // the panel is a NEW panel, so the previous file's chosen
+              // speaker cannot survive into a question about different
+              // people.
+              <SpeakerPanel
+                key={intake.pendingAsk.ref}
+                ask={intake.pendingAsk}
+                onAnswer={intake.answerSpeaker}
+                onDismiss={intake.dismissAsk}
               />
             )}
-          </Field>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={() => setPasting(false)}>
-              {t("settings.voice.pasteCancel")}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={paste.trim().length === 0}
-            >
-              {first
-                ? t("settings.voice.addFirstCta")
-                : t("settings.voice.addSource")}
-            </Button>
+            {/* Polite, so the outcome of a drop reaches a screen reader as it
+                lands: the zone's own live region only ever states the
+                invitation, because the input is cleared after every pick. A
+                refusal is still an alert of its own. */}
+            {intake.notices.length > 0 && (
+              <ul className="vdna-notices" aria-live="polite">
+                {intake.notices.map((notice) => (
+                  <NoticeRow key={notice.ref} notice={notice} />
+                ))}
+              </ul>
+            )}
+            <WhatTeachesTheVoice />
+            {first && (
+              <p className="t-small vdna-floornote">
+                {t("settings.voice.floorNote", {
+                  min: formatNumber(VOICE_MIN_WORDS, locale),
+                })}
+              </p>
+            )}
+            <Disclosure summary={t("settings.voice.whyToggle")}>
+              <p className="t-small">{t("settings.voice.whyBody")}</p>
+            </Disclosure>
           </div>
-        </form>
-      </Modal>
+        )}
+      />
+    </div>
+  );
+}
+
+// Which writing teaches the voice and which teaches it somebody else's. The
+// reader sees this beside the zone every time, not once in onboarding: the
+// question "what should I upload?" is asked at the moment of uploading.
+function WhatTeachesTheVoice() {
+  const t = useT();
+  return (
+    <div className="vdna-works">
+      <p className="t-small vdna-label">{t("settings.voice.worksTitle")}</p>
+      <ul className="t-small vdna-works-list">
+        <li>{t("settings.voice.worksEmails")}</li>
+        <li>{t("settings.voice.worksDocs")}</li>
+        <li>{t("settings.voice.worksTranscripts")}</li>
+      </ul>
+      <p className="t-small vdna-works-not">{t("settings.voice.worksNot")}</p>
     </div>
   );
 }
@@ -231,6 +158,7 @@ function SpeakerPanel({
       <legend className="vdna-label">
         {t("settings.voice.speakerQuestion", { name: ask.label })}
       </legend>
+      <p className="t-small">{t("settings.voice.speakerWhy")}</p>
       <ul className="vdna-speaker-options">
         {ask.preview.speakers.map((speaker) => (
           <li key={speaker.label}>
@@ -272,11 +200,18 @@ function noticeText(
 ): string {
   switch (notice.kind) {
     case "kept":
-      return t("settings.voice.noticeKept", {
-        name: notice.label,
-        kept: formatNumber(notice.keptWords ?? 0, locale),
-        total: formatNumber(notice.inputWords ?? 0, locale),
-      });
+      // Kept-of-total is the story of a speaker filter. A document keeps
+      // every word, and "kept 531 of 531" reads as if something was judged.
+      return notice.transcript
+        ? t("settings.voice.noticeKept", {
+            name: notice.label,
+            kept: formatNumber(notice.keptWords ?? 0, locale),
+            total: formatNumber(notice.inputWords ?? 0, locale),
+          })
+        : t("settings.voice.noticeAdded", {
+            name: notice.label,
+            words: formatNumber(notice.keptWords ?? 0, locale),
+          });
     case "skippedType":
       return t("settings.voice.noticeSkippedType", { name: notice.label });
     case "skippedEmpty":

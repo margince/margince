@@ -41,6 +41,7 @@ export function FileDropzone({
   onPick,
   multiple,
   files,
+  accept,
 }: Readonly<{
   label: string;
   hint?: string;
@@ -56,6 +57,10 @@ export function FileDropzone({
   // What is held when `multiple` is set. The zone names them instead of the
   // single `file`.
   files?: readonly File[];
+  // The picker's own filter, as the `accept` attribute takes it. A drop is not
+  // filtered by it — the browser applies it to the picker only — so a caller
+  // that can only read some types still checks what it was handed.
+  accept?: string;
 }>) {
   return (
     <Field label={label} hint={hint}>
@@ -67,6 +72,7 @@ export function FileDropzone({
           onPick={onPick}
           multiple={multiple}
           files={files}
+          accept={accept}
         />
       )}
     </Field>
@@ -87,6 +93,7 @@ export function FileDropzoneControl({
   onPick,
   multiple,
   files,
+  accept,
 }: Readonly<{
   control: FieldControl;
   emptyLabel: string;
@@ -94,6 +101,7 @@ export function FileDropzoneControl({
   onPick: (file: File) => void;
   multiple?: boolean;
   files?: readonly File[];
+  accept?: string;
 }>) {
   const [over, setOver] = useState(false);
 
@@ -142,6 +150,7 @@ export function FileDropzoneControl({
         // exactly what the add-document dialog does when an upload half
         // fails. Without this the second pick is silently inert.
         multiple={multiple}
+        accept={accept}
         onChange={(event) => {
           const chosen = event.target.files;
           take(chosen);

@@ -134,16 +134,33 @@ export function sourceRef(
 
 // What one previewed source honestly IS.
 //
-// `ingestible_as_transcript` is the SERVER's answer to "does this attribute
-// turns to named speakers?", and it is the only authority here. A client-side
-// share threshold used to gate it, which meant a .txt whose dialogue was 68%
-// attributed — the rest narration — was ingested as single-author prose with
-// the counterparty's words counted as the owner's own. Whether the reader
-// happened to name the file .vtt is not evidence about its contents.
+// `ingestible_as_transcript` is the SERVER's answer to "can this be filtered to
+// one speaker's own words?", and it is the only authority for asking who is
+// speaking. A client-side share threshold used to gate that, which meant a .txt
+// whose dialogue was 68% attributed — the rest narration — was ingested as
+// single-author prose with the counterparty's words counted as the owner's own.
+// Whether the reader happened to name the file .vtt is not evidence about its
+// contents.
 //
-// So: anything the server says carries speakers needs the speaker answer
-// first. A transcript-shaped file it CANNOT attribute is refused whole (none
-// of it can be proven the owner's own words). Everything else is prose.
+// When the server says no, the speakers it still reports decide between the two
+// remaining answers, and getting that wrong costs something either way:
+//
+//   - Most of the words belong to those labels: it is a conversation nobody can
+//     be picked out of, so it is refused whole. Taking it as prose would credit
+//     every speaker to the owner.
+//   - The labels hold a minority of the words: they are headings in somebody's
+//     own writing ("Frage:", "Vorschlag:" in an email), and the file is the
+//     prose it reads as. Refusing it would reject the owner's own sent mail.
+//
+// One shape sits on the wrong side of that line and is accepted knowingly: a
+// short quoted line attributed to someone else inside a long own-authored
+// document ("Sam: we ship Friday", then two paragraphs about it). It is
+// textually identical to a heading, so no rule over this data separates them,
+// and it is taken as prose. What that costs is a handful of quoted words in a
+// corpus of thousands; refusing it instead would reject ordinary sent mail,
+// which is the material the voice is built from.
+//
+// The share is computed from the server's own counts, never from the text.
 export function routePreview(
   name: string,
   preview: CorpusPreview,
@@ -151,16 +168,27 @@ export function routePreview(
   if (preview.ingestible_as_transcript) {
     return "ask-speaker";
   }
-  // A source with named speakers the server could not make ingestible is not
-  // prose either: ingesting it would credit every speaker to the owner. The
-  // speakers list is read defensively because being WRONG here means
-  // misattributing someone's words — an older or partial response must fall
-  // back to refusing a transcript-shaped file, never to ingesting it.
+  // Read defensively: being WRONG here means misattributing someone's words, so
+  // an older or partial response falls back to refusing a transcript-shaped
+  // file rather than ingesting it.
   const speakers = preview.speakers ?? [];
-  if (TRANSCRIPT_EXT.test(name) || speakers.length > 0) {
+  if (TRANSCRIPT_EXT.test(name)) {
     return "refuse";
   }
+  if (speakers.length > 0) {
+    return labelsAreAMinority(preview) ? "document" : "refuse";
+  }
   return "document";
+}
+
+// Whether the named labels hold fewer than half the source's words — the same
+// share the server decides `ingestible_as_transcript` by, recomputed here from
+// the numbers it reported so the two answers cannot drift apart. Unknown totals
+// answer false, which routes to the refusal.
+function labelsAreAMinority(preview: CorpusPreview): boolean {
+  const total = preview.total_words;
+  const attributed = total - preview.unattributed_words;
+  return total > 0 && attributed * 2 < total;
 }
 
 /** Why the server would not take a source, as a category both surfaces phrase

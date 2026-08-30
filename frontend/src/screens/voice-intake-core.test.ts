@@ -152,15 +152,54 @@ describe("what a previewed source honestly is", () => {
     ).toBe("refuse");
   });
 
-  // Named speakers the server could not make ingestible are still speakers:
-  // taking the file as prose would credit all of them to the owner.
-  it("refuses a source with speakers it cannot attribute, whatever its name", () => {
+  // Named speakers holding most of the words, which the server could not make
+  // ingestible, are still speakers: taking the file as prose would credit all
+  // of them to the owner.
+  it("refuses a source whose speakers own most of its words", () => {
     expect(
       routePreview(
         "notes.txt",
         preview({
           ingestible_as_transcript: false,
-          speakers: [{ label: "Sam", words: 400, turns: 8 }],
+          total_words: 1000,
+          unattributed_words: 200,
+          speakers: [{ label: "Sam", words: 800, turns: 8 }],
+        }),
+      ),
+    ).toBe("refuse");
+  });
+
+  // One short attributed line inside a long document: refusing this would
+  // reject an owner's own sent mail over a "Frage:" heading, and asking who is
+  // speaking would ask them which of their own headings they are.
+  it("takes writing whose labels hold a minority of its words as a document", () => {
+    expect(
+      routePreview(
+        "emails.txt",
+        preview({
+          ingestible_as_transcript: false,
+          total_words: 531,
+          unattributed_words: 508,
+          speakers: [
+            { label: "Frage", words: 12, turns: 1 },
+            { label: "Vorschlag", words: 11, turns: 1 },
+          ],
+        }),
+      ),
+    ).toBe("document");
+  });
+
+  // A .vtt/.srt/.json is transcript-shaped by name: if the server cannot
+  // attribute it, none of it can be proven the owner's own words.
+  it("refuses a transcript-named file whatever its attribution share", () => {
+    expect(
+      routePreview(
+        "call.vtt",
+        preview({
+          ingestible_as_transcript: false,
+          total_words: 1000,
+          unattributed_words: 900,
+          speakers: [{ label: "Sam", words: 100, turns: 1 }],
         }),
       ),
     ).toBe("refuse");

@@ -91,8 +91,43 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 		}
 		preview.Speakers[at].Words += words
 	}
-	preview.IngestibleAsTranscript = len(preview.Speakers) > 0
+	// Whether the speaker filter can act on this source, and — when it cannot —
+	// what the caller is holding instead.
+	//
+	// The parser accepts any letter-initial word before a colon, so "Frage:" in
+	// an email and "Sam:" in a chat log arrive identically. Nothing in the text
+	// separates them; only the SHARE of the words those labels own does. At or
+	// above half the source is a conversation and the owner is asked which
+	// speaker they are. Below half the labels are headings inside somebody's
+	// own writing.
+	//
+	// The labels are reported either way. A caller reads an empty speakers list
+	// as "single-author prose, ingest it whole", so erasing them is what would
+	// carry a counterparty's words into the corpus as the owner's own. What the
+	// caller does with a minority-labelled file is its own decision: the
+	// Settings intake takes it as the prose it reads as, which is why an email
+	// with two headings is not refused.
+	preview.IngestibleAsTranscript = len(preview.Speakers) > 0 && attributedMajority(turns)
 	return preview, nil
+}
+
+// attributedMajority reports whether at least half of a source's words belong
+// to a named label. It is what separates a conversation from prose carrying
+// headings: a meeting export attributes nearly every word, an email's "Frage:"
+// a handful. Preview and ingest both decide by it, so a source the preview will
+// not offer a speaker question for cannot be filtered to one on the write path
+// either — filtering prose to one of its own headings stores a fragment and
+// calls it a voice.
+func attributedMajority(turns []speakerTurn) bool {
+	attributed, total := 0, 0
+	for _, turn := range turns {
+		words := WordCount(turn.Text)
+		total += words
+		if turn.Speaker != "" {
+			attributed += words
+		}
+	}
+	return attributed > 0 && attributed*2 >= total
 }
 
 // CorpusIngestStats reports what the §B1.2 speaker filter did to one

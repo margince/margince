@@ -497,3 +497,87 @@ func TestPreviewRefusesAnUnknownWireFormat(t *testing.T) {
 		t.Fatalf("err = %v, want unsupported_format", err)
 	}
 }
+
+func TestPreviewTakesColonHeadedProseAsProse(t *testing.T) {
+	email := "Moin Stefan,\n\nJoshua und Marcus sind ja schon mit Vollgas dran. Wir gehen mit Vollgas an die ganze AI Sache.\n\n" +
+		"Frage: Ich hatte nicht geplant zu kommen. Was haelst du von der Idee?\n\n" +
+		"Vorschlag: Discovery Workshop, drei bis fuenf Tage, alle Aufgaben grob schaetzen.\n\nGanz liebe Gruesse"
+	preview, err := PreviewCorpusText("transcript", email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.IngestibleAsTranscript {
+		t.Fatalf("an email with \"Frage:\" lines is not a conversation to filter: %+v", preview)
+	}
+	// The labels it did find are still reported. A caller reads an empty list
+	// as "prose, ingest it whole", and that is what decides whether somebody
+	// else's words can enter the corpus; the share is what says these are
+	// headings rather than speakers.
+	if len(preview.Speakers) == 0 {
+		t.Fatal("the labels the parser found are reported, never erased")
+	}
+	attributed := preview.TotalWords - preview.UnattributedWords
+	if attributed*2 >= preview.TotalWords {
+		t.Fatalf("headings hold a minority of the words: %d of %d", attributed, preview.TotalWords)
+	}
+}
+
+func TestPreviewKeepsSpeakersWhenItCannotFilterThem(t *testing.T) {
+	// One short attributed turn, then long narration. Below the majority, so
+	// the filter cannot run — but erasing Sam here is what would let Sam's
+	// words enter the owner's corpus as the owner's own writing.
+	content := "Sam: we ship on Friday\n\n" +
+		"The room went quiet after that and somebody opened a window because the afternoon had turned warm and nobody wanted to answer the question that had just been put to all of them."
+	preview, err := PreviewCorpusText("transcript", content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.IngestibleAsTranscript {
+		t.Fatalf("a minority-attributed source cannot be filtered: %+v", preview)
+	}
+	if len(preview.Speakers) != 1 || preview.Speakers[0].Label != "Sam" {
+		t.Fatalf("speakers = %+v, want Sam reported so the caller can refuse the file", preview.Speakers)
+	}
+}
+
+func TestPreviewKeepsNarratedDialogueAsATranscript(t *testing.T) {
+	// Two thirds of the words are spoken turns; the rest is narration between
+	// them. That is still a conversation, and the counterparty's turns must
+	// not be credited to the owner by treating the file as prose.
+	// Blank lines end a turn, so the narration belongs to nobody rather than
+	// riding on Sam's turn.
+	content := "Lars: one two three four five six\nSam: seven eight nine ten eleven twelve\n\n[the room laughs and someone opens a window]\n\nLars: thirteen fourteen fifteen sixteen seventeen eighteen"
+	preview, err := PreviewCorpusText("transcript", content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !preview.IngestibleAsTranscript || len(preview.Speakers) != 2 || preview.UnattributedWords != 8 {
+		t.Fatalf("majority-attributed dialogue is a transcript: %+v", preview)
+	}
+}
+
+func TestIngestRefusesAFilterOnASourceThatCannotBeFiltered(t *testing.T) {
+	// The same rule the preview decides by, on the write path. `kind` is an
+	// independent field, so the refusal keys on the speaker filter the request
+	// asks for — otherwise the same body under kind:"document" would filter a
+	// heading that merely looked like a speaker.
+	email := "Moin Stefan,\n\nJoshua und Marcus sind ja schon mit Vollgas dran. Wir gehen mit Vollgas an die ganze AI Sache.\n\nFrage: Ich hatte nicht geplant zu kommen.\n\nGanz liebe Gruesse"
+	for _, kind := range []string{voiceSourceKindTranscript, voiceSourceKindDocument} {
+		_, err := prepareSource(IngestSourceInput{Kind: kind, Format: "transcript", SpeakerLabel: "Frage", Content: email, SourceLabel: "emails.txt"})
+		var refusal *CorpusIngestError
+		if !errors.As(err, &refusal) || refusal.Code != CorpusErrUnattributedTranscript {
+			t.Fatalf("kind %s: err = %v, want %s", kind, err, CorpusErrUnattributedTranscript)
+		}
+	}
+}
+
+func TestPreviewStructuredTranscriptWithoutSpeakersIsNotIngestible(t *testing.T) {
+	content := "WEBVTT\n\n00:00.000 --> 00:04.000\none two three\n\n00:04.000 --> 00:08.000\nfour five six"
+	preview, err := PreviewCorpusText("transcript", content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.DetectedFormat != "vtt" || preview.IngestibleAsTranscript {
+		t.Fatalf("a cue file that names nobody keeps its format and cannot be filtered: %+v", preview)
+	}
+}

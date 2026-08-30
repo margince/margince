@@ -2,24 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
+import { SettingList } from "../design-system/settingrow";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 
-// Where a writing sample arrives: pasted, or dropped as a file. The two forms it
-// takes are `first` — the control that MINTS the profile, whose verb leads — and
-// every one after it.
-//
-// The resting state is a ROW: what the card is asking for on the left, and the
-// two ways in on the right. The paste box itself is a form, so it lives in the
-// dialog the first verb opens; `PasteDialog` below is that state.
+// Where a writing sample arrives: dropped on the zone, or chosen through it.
+// The two forms it takes are `first` — the control that MINTS the profile,
+// which also states the word floor because there is no meter yet — and every
+// one after it, where the corpus meter above says how far the floor is.
 //
 // A file drop cannot be performed from a story, so what is catalogued is the
-// resting state of both. The label matters here: inside the dialog it is drawn
-// by a `Field` AND names the dialog, so the words above the box are its
-// accessible name — which they were not when a div and an `aria-label`
-// disagreed about what the box was called.
+// resting state of both: the zone, what teaches the voice, and the reason
+// behind the ask.
 function story(first: boolean) {
   return () => {
     installFetchStub({
@@ -32,11 +27,13 @@ function story(first: boolean) {
             ground it actually lands on. */}
         <Panel title="Writing samples">
           <PanelBody>
-            <VoiceCorpusIntake
-              first={first}
-              profileId={first ? null : "vp-1"}
-              onChanged={() => undefined}
-            />
+            <SettingList>
+              <VoiceCorpusIntake
+                first={first}
+                profileId={first ? null : "vp-1"}
+                onChanged={() => undefined}
+              />
+            </SettingList>
           </PanelBody>
         </Panel>
       </StoryProviders>
@@ -54,15 +51,3 @@ type Story = StoryObj<typeof VoiceCorpusIntake>;
 export const FirstSample: Story = { render: story(true) };
 
 export const AnotherSample: Story = { render: story(false) };
-
-/** The form behind the verb: one box, its own label, and the verb that commits
- * the sample rather than the row's verb that opened the form. */
-export const PasteDialog: Story = {
-  render: story(false),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Paste writing" }),
-    );
-  },
-};

@@ -5413,9 +5413,8 @@ export const vi = {
     "Giọng văn riêng của bạn. Nó định hình các bản nháp viết cho bạn, chỉ riêng bạn thấy, và chỉ học từ những nguồn bạn thêm vào.",
   "settings.voice.readOnly":
     "Chế độ chỉ đọc — bạn không có quyền thay đổi Voice DNA của mình.",
-  "settings.voice.emptyTitle": "Chưa có Voice DNA",
   "settings.voice.emptyBody":
-    "Hãy thêm vài mẫu văn bên dưới rồi dựng Voice DNA của bạn — hoặc làm việc đó trong Onboarding.",
+    "Thêm vài văn bản bạn đã viết và xây dựng Voice DNA từ đó. Mất khoảng một phút.",
   "settings.voice.status.collecting": "Đang thu thập",
   "settings.voice.status.ready": "Sẵn sàng",
   "settings.voice.status.stale": "Cần dựng lại",
@@ -5493,25 +5492,37 @@ export const vi = {
   "settings.voice.corpusEmpty": "Chưa có mẫu văn nào.",
   "settings.voice.excluded": "đã loại trừ",
   "settings.voice.removeSource": "Gỡ mẫu văn",
-  "settings.voice.pastedLabel": "Văn bản đã dán",
-  "settings.voice.addPlaceholder":
-    "Dán một email, bài đăng, hay bất cứ gì bạn đã viết…",
-  "settings.voice.addSource": "Thêm mẫu văn",
-  "settings.voice.addSourceOpen": "Dán văn bản",
-  "settings.voice.pasteCancel": "Huỷ",
+  "settings.voice.addSource": "Thêm mẫu văn bản",
   "settings.voice.addFirstLabel": "Mẫu văn đầu tiên của bạn",
-  "settings.voice.addFirstOpen": "Dán mẫu văn đầu tiên",
-  "settings.voice.addFirstCta": "Thêm và bắt đầu Voice DNA của tôi",
-  "settings.voice.browseFiles": "Chọn tệp",
   "settings.voice.dropHint":
-    "Hoặc thả tệp .txt, .md, .vtt, .srt hay .json vào đây.",
+    "Kéo thả tệp vào đây hoặc chọn tệp. .txt, .md, .vtt, .srt hoặc .json, nhiều tệp cùng lúc cũng được.",
+  "settings.voice.dropEmpty":
+    "Kéo thả văn bản của bạn vào đây, hoặc nhấp để chọn tệp",
+  "settings.voice.whyToggle": "Vì sao điều này quan trọng",
+  "settings.voice.whyBody":
+    "Margince soạn email cho bạn bằng chính lời văn của bạn, và không gì được gửi đi trước khi bạn duyệt. Nó học giọng điệu, nhịp và cách diễn đạt từ văn bản của chính bạn, không phải của ai khác. Các mẫu của bạn được giữ riêng tư.",
+  "settings.voice.worksTitle": "Loại nào hiệu quả nhất",
+  "settings.voice.worksEmails":
+    "Email đã gửi, lưu dưới dạng .txt hoặc .md. Chúng cho thấy bạn viết thế nào khi muốn điều gì đó.",
+  "settings.voice.worksDocs": "Đề xuất, bài đăng và bất cứ thứ gì bạn tự viết.",
+  "settings.voice.worksTranscripts":
+    "Bản ghi cuộc gọi hoặc cuộc họp (.vtt, .srt, .json hoặc bản xuất văn bản). Tôi sẽ hỏi bạn là người nói nào và chỉ giữ lại lượt nói của bạn.",
+  "settings.voice.worksNot":
+    "Bỏ qua những gì người khác viết và bản nháp do AI soạn cho bạn. Chúng sẽ dạy nó giọng văn của người khác.",
+  "settings.voice.floorNote":
+    "Tối thiểu {min} từ cho lần xây dựng đầu tiên. Dưới mức đó mô hình chỉ sao chép cách diễn đạt.",
   "settings.voice.floorLabel": "Tiến độ tới bản dựng đầu tiên ({min} từ)",
   "settings.voice.floorProgress": "{words} trên {min} từ tới bản dựng đầu tiên",
-  "settings.voice.speakerQuestion": "Bạn là người nói nào trong “{name}”?",
+  "settings.voice.speakerQuestion":
+    "“{name}” là một cuộc trò chuyện. Bạn là người nói nào?",
+  "settings.voice.speakerWhy":
+    "Chỉ lượt nói của bạn được giữ lại. Lời của những người khác bị bỏ.",
   "settings.voice.speakerDetail": "{words} từ, {turns} lượt",
   "settings.voice.speakerConfirm": "Đó là tôi",
   "settings.voice.speakerDismiss": "Bỏ qua tệp này",
-  "settings.voice.noticeKept": "{name}: giữ {kept} trên {total} từ.",
+  "settings.voice.noticeKept":
+    "{name}: giữ {kept} trên {total} từ. Chỉ lượt nói của bạn được tính.",
+  "settings.voice.noticeAdded": "{name}: đã thêm {words} từ.",
   "settings.voice.noticeSkippedType":
     "Đã bỏ qua {name} — chỉ đọc được tệp văn bản.",
   "settings.voice.noticeSkippedEmpty":
@@ -5532,6 +5543,7 @@ export const vi = {
   "settings.voice.buildRowLabel": "Dựng từ mẫu văn của bạn",
   "settings.voice.building": "Đang dựng…",
   "settings.voice.rebuild": "Dựng lại Voice DNA",
+  "settings.voice.buildFirst": "Xây dựng Voice DNA của tôi",
   "settings.voice.buildNeedsWords":
     "Thêm khoảng {n} từ nữa là tôi dựng được giọng văn đầu tiên của bạn. Dưới mức đó thì chưa đủ chữ của bạn để học ra điều gì trung thực.",
   "settings.voice.buildProvisional":
