@@ -20120,6 +20120,27 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Which system receives a company's mail, classified from its MX records. `other` is a
+         *     provider the classifier does not name rather than an absence: a company with no MX
+         *     records has no `mail_provider` fact at all.
+         * @enum {string}
+         */
+        TechnicalMailProvider: "google_workspace" | "microsoft365" | "self_hosted" | "other";
+        /**
+         * @description Where a company's website answers from, classified from its address, CNAME and reverse
+         *     DNS records.
+         * @enum {string}
+         */
+        TechnicalHostingProvider: "hetzner" | "aws" | "cloudflare" | "ionos" | "strato" | "azure" | "google_cloud" | "ovh" | "other";
+        /**
+         * @description A service a company demonstrably operates, proved by a subdomain in its certificate
+         *     history. The set is an ALLOWLIST: a certificate log publishes every hostname a company
+         *     ever held a certificate for, including people's names, and only labels naming a service
+         *     survive the classifier.
+         * @enum {string}
+         */
+        TechnicalOperatedService: "webshop" | "customer_portal" | "careers" | "api" | "vpn" | "mail_infrastructure" | "file_cloud" | "dev_infrastructure" | "status_page" | "support_site";
         OrganizationFact: {
             /**
              * Format: date-time
