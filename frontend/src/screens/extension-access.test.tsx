@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ExtensionAccessCard } from "./extension-access";
 
 // The extension-access card renders the composed unit inventory and one
@@ -32,8 +33,13 @@ import { ExtensionAccessCard } from "./extension-access";
 // app/extensions: the lookup under test IS findExtension, and the vanilla
 // registry this suite compiles against is empty by construction, so the "unit
 // has a page" case can only be reached by handing the registry the shape the
-// generator emits. `notes` resolves, `quiet` never does — which is exactly the
-// disagreement the screen has to survive, since /extensions answers with both.
+// generator emits.
+//
+// Three units, and the three cases are deliberately different. `notes` has a
+// descriptor and operations, so it has a page. `quiet` has a descriptor and NO
+// operations — the jurisdiction-pack shape, whose generic page would draw a
+// heading over an empty list. `stale` is absent from the registry entirely,
+// which is the version skew the card has to name rather than swallow.
 vi.mock("@composition/extensions", () => ({
   extensions: [
     {
@@ -49,6 +55,7 @@ vi.mock("@composition/extensions", () => ({
         },
       ],
     },
+    { name: "quiet", verbs: [] },
   ],
 }));
 
@@ -64,6 +71,8 @@ const EXTENSIONS = {
     {
       name: "notes",
       version: "0.3.1",
+      description:
+        "Notes a rep can attach to a record, with their own signing key.",
       rbac_objects: ["ext_notes_note", "ext_notes_signing_key"],
       // One entry per OPERATION, sorted by path then method, exactly as the
       // server composes it: /ext/notes/{id} carries both a GET and a DELETE,
@@ -80,6 +89,21 @@ const EXTENSIONS = {
     {
       name: "quiet",
       version: "1.0.0",
+      // A unit that contributes nothing: the jurisdiction-pack shape, which is
+      // the case the card renders compactly.
+      description:
+        "Statutory retention floors the core applies. Registers nothing.",
+      rbac_objects: [],
+      routes: [],
+      jobs: [],
+    },
+    {
+      // Composed by the running binary and absent from THIS bundle's registry:
+      // the version skew, which is a different fact from "has no page" and is
+      // said rather than silently omitted.
+      name: "stale",
+      version: "2.0.0",
+      description: "A unit this bundle predates.",
       rbac_objects: [],
       routes: [],
       jobs: [],
@@ -268,7 +292,15 @@ describe("ExtensionAccessCard", () => {
     expect(cell("ext_notes_note", "Rep", "Read").on).toBe(false);
 
     // A unit that registers nothing says so instead of rendering an empty grid.
-    expect(screen.getByText(/registers no permission objects/i)).toBeTruthy();
+    // Scoped to the unit, because more than one composed unit registers none —
+    // an unscoped query would pass on somebody else's sentence.
+    const quiet = screen.getByText("quiet").closest("section.panel");
+    if (!(quiet instanceof HTMLElement)) {
+      throw new Error("no unit block rendered for quiet");
+    }
+    expect(
+      within(quiet).getByText(/registers no permission objects/i),
+    ).toBeTruthy();
   });
 
   it("gives every unit a card of its own, headed by the unit name", async () => {
@@ -331,20 +363,22 @@ describe("ExtensionAccessCard", () => {
     render(<ExtensionAccessCard />);
     await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
 
-    // `quiet` comes back from /extensions — the binary composed it — and is
+    // `stale` comes back from /extensions — the binary composed it — and is
     // absent from the mocked SPA registry, the exact shape of a bundle older
-    // than the server. No link is rendered, because #/ext/quiet would land on
+    // than the server. No link is rendered, because #/ext/stale would land on
     // the router's not-found card …
-    expect(screen.queryByRole("link", { name: /quiet/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /stale/ })).toBeNull();
     // … and the reason is SAID, so "this unit has no page" cannot be confused
-    // with "the page is missing because the bundle is stale".
-    const unit = screen.getByText("quiet").closest("section.panel");
+    // with "the page is missing because the bundle is stale". `quiet` is the
+    // contrast: it has a descriptor and nothing to show, which is neither.
+    const unit = screen.getByText("stale").closest("section.panel");
     if (!(unit instanceof HTMLElement)) {
-      throw new Error("no unit block rendered for quiet");
+      throw new Error("no unit block rendered for stale");
     }
     expect(
-      within(unit).getByText(/quiet is composed into the API, but this build/),
+      within(unit).getByText(/stale is composed into the API, but this build/),
     ).toBeTruthy();
+    expect(screen.queryByText(/quiet is composed into the API/)).toBeNull();
     // And the resolvable unit says nothing of the kind.
     expect(screen.queryByText(/notes is composed into the API/)).toBeNull();
   });
@@ -705,5 +739,50 @@ describe("ExtensionAccessCard", () => {
     await waitFor(() =>
       expect(calls.some((call) => call.method === "PATCH")).toBe(true),
     );
+  });
+});
+
+// The card lists every composed unit, including one that contributes nothing an
+// operator can grant. What it says about that unit is the whole question: a name
+// and three empty sections leave an admin deciding about "de" with no idea what
+// it is.
+describe("ExtensionAccessCard unit identity", () => {
+  it("says what each unit is for, from the unit's own declaration", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    expect(
+      await screen.findByText(
+        "Notes a rep can attach to a record, with their own signing key.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Statutory retention floors the core applies. Registers nothing.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("offers no reference section for a unit that brought nothing", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    await screen.findByText("quiet");
+    // The unit that DOES bring something keeps its section, so this asserts the
+    // suppression rather than the absence of the feature.
+    const sections = screen.getAllByText(en["extAccess.brings.heading"]);
+    expect(sections).toHaveLength(1);
+  });
+
+  it("offers no page link for a unit this bundle has no screen and no operations for", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    await screen.findByText("quiet");
+    expect(
+      screen.queryByRole("link", {
+        name: en["extAccess.openUnit"].replace("{name}", "quiet"),
+      }),
+    ).toBeNull();
   });
 });

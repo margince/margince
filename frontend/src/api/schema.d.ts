@@ -18839,6 +18839,8 @@ export interface components {
             is_agent: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
+            /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
+            team_ids?: string[];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -18852,7 +18854,7 @@ export interface components {
             email: string;
             display_name: string;
             /**
-             * @description System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "Member"; `management` is the whole-organization seat that holds no admin power.
+             * @description System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-organization seat that holds no admin power.
              * @enum {string}
              */
             role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
@@ -19100,6 +19102,8 @@ export interface components {
         ComposedExtension: {
             /** @description The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`. */
             name: string;
+            /** @description One sentence from the unit's own declaration saying what it is for. The access screen lists every composed unit, and a name alone leaves an operator deciding what to grant to something called `de`; only the unit's author knows the answer, so the declaration is where it comes from. Required at boot — a unit without one does not compose. */
+            description: string;
             /** @description The unit's own declared version. It carries NO authority (ADR-0069 §7): operator decisions bind to manifest digests, never to this string. Display only. */
             version: string;
             /** @description The `ext_<name>_<object>` names this unit's operations gate on, registered into the vocabulary at boot — exactly the objects `setRoleObjectGrant` will accept for this unit. Sorted, and empty for a unit that owns no records (the common case). */

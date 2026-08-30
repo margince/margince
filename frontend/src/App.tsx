@@ -1,4 +1,3 @@
-import { extensionScreens as composedScreens } from "@composition/screens";
 import { useQuery } from "@tanstack/react-query";
 import {
   Fragment,
@@ -14,8 +13,8 @@ import {
 } from "react";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import {
+  composedScreens,
   EXTENSION_SCREEN,
-  type ExtensionScreenRegistry,
   findExtension,
 } from "./app/extensions";
 import {
@@ -363,7 +362,7 @@ function ResetRoute() {
 // costs nothing and moves the check rather than losing it: a unit whose default
 // export is not a component fails HERE, in core, in the composed lane, at the
 // one place both halves of the registry are visible at once.
-const extensionScreens: ExtensionScreenRegistry = composedScreens;
+const extensionScreens = composedScreens;
 
 // A fork's own screen, at `#/x/<key>`.
 //

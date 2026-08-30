@@ -235,7 +235,7 @@ result and is read-only.
 
 | Role | Create | Read | Edit and move phase | Archive |
 |---|---|---|---|---|
-| Member | yes | yes | yes | **no** |
+| User | yes | yes | yes | **no** |
 | Team Lead | yes | yes | yes | yes |
 | Management | yes | yes | yes | yes |
 | Admin / Ops | yes | yes | yes | yes |

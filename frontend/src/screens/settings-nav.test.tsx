@@ -71,7 +71,7 @@ describe("SettingsScreen tab layout", () => {
       "Writing voice",
       "Agents",
       "Connections",
-      "People & access",
+      "Users & teams",
       "Data model",
       "Privacy & audit",
       "Maintenance",
@@ -247,8 +247,18 @@ const EVERY_TAB = [...PERSONAL_TABS, ...ADMIN_TABS];
 // declared last — and the moment License landed beside it, the same slice
 // silently claimed a seat without the grant could reach the licensing page.
 const ADMIN_ONLY_TABS = [labelOf("license"), labelOf("maintenance")];
+
+// What an OPS seat cannot reach even holding every grant. `GET /extensions` is
+// auth.RequireAdmin, which admits the admin role alone — ops administers the
+// installation everywhere else and not here, so the entry follows the role and
+// this list is what tells the two seats apart.
+const ADMIN_ROLE_ONLY_TABS = [labelOf("extensions")];
+const EVERY_TAB_FOR_OPS = EVERY_TAB.filter(
+  (tab) => !ADMIN_ROLE_ONLY_TABS.includes(tab),
+);
 const SHARED_READ_TABS = EVERY_TAB.filter(
-  (tab) => !ADMIN_ONLY_TABS.includes(tab),
+  (tab) =>
+    !ADMIN_ONLY_TABS.includes(tab) && !ADMIN_ROLE_ONLY_TABS.includes(tab),
 );
 
 // What the operator SEAT alone buys: the ONE admin entry with no grant to ask
@@ -263,7 +273,7 @@ const SHARED_READ_TABS = EVERY_TAB.filter(
 // vocabulary, but the registry's server gate is not a role either: ListPurposes
 // demands `person:read`, so that is what the entry asks for. Every seeded role
 // holds it; a principal holding nothing does not.
-const OPERATOR_TABS = [...PERSONAL_TABS, "People & access"];
+const OPERATOR_TABS = [...PERSONAL_TABS, "Users & teams"];
 const OPERATOR_TABS_WITH_PRIVACY = [...OPERATOR_TABS, "Privacy & audit"];
 
 // The seat's two entries plus Maintenance, which is what EITHER half of that
@@ -271,6 +281,17 @@ const OPERATOR_TABS_WITH_PRIVACY = [...OPERATOR_TABS, "Privacy & audit"];
 // edited role can hold without it. Both halves are asserted against this list.
 const OPERATOR_TABS_WITH_MAINTENANCE = [
   ...OPERATOR_TABS_WITH_PRIVACY,
+  "Maintenance",
+];
+
+// The same list for an ADMIN, who additionally reaches Extensions: that entry
+// follows the admin ROLE rather than the operator seat, because the read behind
+// it is auth.RequireAdmin. Named beside its ops-shaped sibling so the one
+// entry that tells the two seats apart is visible in both.
+const ADMIN_TABS_WITH_MAINTENANCE = [
+  ...OPERATOR_TABS,
+  labelOf("extensions"),
+  "Privacy & audit",
   "Maintenance",
 ];
 
@@ -368,7 +389,7 @@ describe("SettingsScreen Admin settings group", () => {
   });
 
   it("gives an operator holding no read at all the one entry that asks for none", async () => {
-    // People & access has no grant to ask for: the member roster answers 200 to
+    // Users & teams has no grant to ask for: the user roster answers 200 to
     // any authenticated principal and no RBAC object describes identity
     // administration. So it is the floor of this group for an operator rather
     // than a case — every gated member is gone here, and that one stays.
@@ -443,7 +464,7 @@ describe("SettingsScreen Admin settings group", () => {
       await waitFor(() =>
         expect(navTabs()).toEqual([
           ...PERSONAL_TABS,
-          "People & access",
+          "Users & teams",
           "Data model",
           "Privacy & audit",
         ]),
@@ -464,7 +485,7 @@ describe("SettingsScreen Admin settings group", () => {
       await waitFor(() =>
         expect(navTabs()).toEqual([
           ...PERSONAL_TABS,
-          "People & access",
+          "Users & teams",
           "Integrations",
           "Privacy & audit",
         ]),
@@ -485,7 +506,7 @@ describe("SettingsScreen Admin settings group", () => {
     await waitFor(() =>
       expect(navTabs()).toEqual([
         ...PERSONAL_TABS,
-        "People & access",
+        "Users & teams",
         "Capture",
         "Privacy & audit",
       ]),
@@ -524,7 +545,7 @@ describe("SettingsScreen Admin settings group", () => {
       expect(navTabs()).toEqual([
         ...PERSONAL_TABS,
         "General",
-        "People & access",
+        "Users & teams",
         "Privacy & audit",
       ]),
     );
@@ -542,7 +563,7 @@ describe("SettingsScreen Admin settings group", () => {
     await waitFor(() =>
       expect(navTabs()).toEqual([
         ...PERSONAL_TABS,
-        "People & access",
+        "Users & teams",
         "AI",
         "Privacy & audit",
       ]),
@@ -569,7 +590,7 @@ describe("SettingsScreen Admin settings group", () => {
       }),
     );
     renderNav();
-    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB));
+    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB_FOR_OPS));
   });
 
   // The grant still decides INSIDE the group, which is what keeps the seat from
@@ -596,7 +617,7 @@ describe("SettingsScreen Admin settings group", () => {
       adminNavBackend({ roles: ["ops"], allow: SEEDED_OPS_READS }),
     );
     renderNav();
-    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB));
+    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB_FOR_OPS));
   });
 
   // An EDITED role, which is the case the seat gate must not swallow. This admin
@@ -629,7 +650,11 @@ describe("SettingsScreen Admin settings group", () => {
     vi.stubGlobal("fetch", adminNavBackend({ roles: ["admin"] }));
     renderNav();
     await waitFor(() =>
-      expect(navTabs()).toEqual([...OPERATOR_TABS, "Maintenance"]),
+      expect(navTabs()).toEqual([
+        ...OPERATOR_TABS,
+        labelOf("extensions"),
+        "Maintenance",
+      ]),
     );
   });
 
@@ -670,7 +695,7 @@ describe("SettingsScreen Admin settings group", () => {
     // are on screen — while the flag is still unanswered, because this test
     // holds the answer.
     await screen.findByRole("link", { name: "Maintenance" });
-    expect(navTabs()).toEqual(OPERATOR_TABS_WITH_MAINTENANCE);
+    expect(navTabs()).toEqual(ADMIN_TABS_WITH_MAINTENANCE);
 
     // Moment two: the answer is in the cache, which is the fact the emptiness
     // claim needs — the request having been SENT proves nothing about what the
@@ -681,6 +706,6 @@ describe("SettingsScreen Admin settings group", () => {
         client.getQueryState(companyContextCapabilitiesQueryKey)?.status,
       ).toBe("success"),
     );
-    expect(navTabs()).toEqual(OPERATOR_TABS_WITH_MAINTENANCE);
+    expect(navTabs()).toEqual(ADMIN_TABS_WITH_MAINTENANCE);
   });
 });

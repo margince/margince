@@ -55,7 +55,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "no_delivery_channel",
 			Detail: "this installation can neither email a set-password link nor build one, " +
-				"so an invited member could never sign in; ask the operator to configure " +
+				"so an invited user could never sign in; ask the operator to configure " +
 				"outbound email or a public base URL",
 		})
 		return
@@ -74,7 +74,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		err = conflictIf(err, errEmailTaken, "email_taken",
-			"a member with this email already exists in this organization; if they were "+
+			"a user with this email already exists in this organization; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
 		httperr.Write(w, r, unknownRoleRefusal(err))
 		return
@@ -95,8 +95,8 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 	}
 	if err := h.svc.ChangeUserRole(r.Context(), actor, ids.UserID{UUID: ids.UUID(id)}, string(req.Role)); err != nil {
 		err = conflictIf(err, errLastActiveAdmin, "last_active_admin",
-			"this member is the organization's only active administrator; give another "+
-				"member the admin role first, then change this one's")
+			"this user is the organization's only active administrator; give another "+
+				"user the admin role first, then change this one's")
 		err = conflictIf(err, errAgentSeatHoldsNoRole, "agent_seat_holds_no_role",
 			"this is the workspace's agent identity; what an agent may do comes from the "+
 				"passport granting it and the person that passport names, never from a role of its own")
@@ -126,8 +126,8 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 		Reason: req.Reason,
 	}); err != nil {
 		httperr.Write(w, r, conflictIf(err, errLastActiveAdmin, "last_active_admin",
-			"this member is the organization's only active administrator; deactivating them "+
-				"would leave nobody able to manage users — give another member the admin role first"))
+			"this user is the organization's only active administrator; deactivating them "+
+				"would leave nobody able to manage users — give another user the admin role first"))
 		return
 	}
 	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
@@ -145,8 +145,8 @@ func (h Handlers) ReactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 		// set a password, and a SUSPENDED one is held for a reason that
 		// reactivating would quietly clear.
 		httperr.Write(w, r, conflictIf(err, errNotDeactivated, "not_deactivated",
-			"only a deactivated member can be reactivated, and this one is not; an invited "+
-				"member is still waiting to set their password, and a suspended member needs "+
+			"only a deactivated user can be reactivated, and this one is not; an invited "+
+				"user is still waiting to set their password, and a suspended user needs "+
 				"whatever caused the suspension resolved instead"))
 		return
 	}
@@ -200,7 +200,7 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 		// member's ceiling, so that advice would send the operator down a path
 		// guaranteed to refuse.
 		httperr.Write(w, r, tooManyPasswordLinksBy("too many set-password links have been issued for "+
-			"this member in the last hour; wait before issuing another"))
+			"this user in the last hour; wait before issuing another"))
 		return
 	}
 	rawToken, expiresAt, err := h.svc.IssuePasswordLink(r.Context(), actor, target)
@@ -208,7 +208,7 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 		if errors.Is(err, errMemberNotActive) {
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusConflict, Code: "member_not_active",
-				Detail: "this member is not active; reactivate them before issuing a set-password link",
+				Detail: "this user is not active; reactivate them before issuing a set-password link",
 			})
 			return
 		}
@@ -284,7 +284,7 @@ func (h Handlers) passwordLinkRefusal() error {
 	if h.resetMailer != nil {
 		return &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "email_channel_configured",
-			Detail: "this installation delivers set-password links by email; invite the member instead",
+			Detail: "this installation delivers set-password links by email; invite the user instead",
 		}
 	}
 	if h.passwordLinkBaseURL == "" {

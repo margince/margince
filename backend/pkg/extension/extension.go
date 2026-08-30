@@ -77,6 +77,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
@@ -181,10 +182,47 @@ func (v Version) Validate() error {
 	return nil
 }
 
+// Description is one operator-facing sentence saying what the unit is for.
+//
+// Required, because the screen that grants a unit's permissions lists every
+// composed unit by name — and a name alone leaves an admin deciding what to
+// grant to something called "de". The author of the unit is the only party who
+// knows the answer, so the declaration is where it has to come from.
+type Description string
+
+// Validate requires a non-empty, single-line printable sentence. The bound is
+// the same one Version keeps and for the same reason: this string is rendered
+// verbatim to an operator and written into the unit manifest.
+func (d Description) Validate() error {
+	if strings.TrimSpace(string(d)) == "" {
+		return fmt.Errorf("extension description is empty — the access screen lists the unit by it")
+	}
+	if strings.TrimSpace(string(d)) != string(d) {
+		return fmt.Errorf("extension description %q carries surrounding whitespace", string(d))
+	}
+	for _, r := range d {
+		if !unicode.IsPrint(r) {
+			return fmt.Errorf("extension description %q carries a non-printable character", string(d))
+		}
+	}
+	// Runes, not bytes: a German or Vietnamese sentence is well inside the
+	// bound and well past it in UTF-8, and the message says "characters".
+	if n := utf8.RuneCountInString(string(d)); n > maxDescriptionLength {
+		return fmt.Errorf("extension description is %d characters — one sentence, capped at %d", n, maxDescriptionLength)
+	}
+	return nil
+}
+
+// One sentence, not a manual: the screen gives it one line under the unit name.
+const maxDescriptionLength = 200
+
 // Extension is one installed unit's declaration.
 type Extension struct {
 	Name    Name
 	Version Version
+	// Description says what this unit is for, in one sentence an operator
+	// deciding whether to grant its permissions can act on.
+	Description Description
 
 	// Jurisdictions are the unit's jurisdiction packs (policy suppliers
 	// to the core retention engine — never actors). A duplicate

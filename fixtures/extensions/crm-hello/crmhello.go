@@ -31,6 +31,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
 		Version:       "0.1.0",
+		Description:   "The tier's smoke fixture: one jurisdiction pack and nothing else.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 	}
 }

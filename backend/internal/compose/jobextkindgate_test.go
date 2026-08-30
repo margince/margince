@@ -54,9 +54,10 @@ func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
 	t.Helper()
 	err := RegisterExtensions(
 		[]extension.Extension{{
-			Name:    extension.Name(d.Unit),
-			Version: "0.1.0",
-			Jobs:    []extension.Job{{Name: d.Job, Handle: func(context.Context, extension.Runtime) error { return nil }}},
+			Name:        extension.Name(d.Unit),
+			Version:     "0.1.0",
+			Description: "A unit composed by a test.",
+			Jobs:        []extension.Job{{Name: d.Job, Handle: func(context.Context, extension.Runtime) error { return nil }}},
 		}},
 		nil,
 		[]extension.JobDeclaration{d},

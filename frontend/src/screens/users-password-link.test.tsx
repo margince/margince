@@ -114,9 +114,7 @@ afterEach(() => {
 // whole act ("Invite a member") and the dialog's submit the bare one
 // ("Invite"), which is what keeps the two tellable apart.
 async function openInvite() {
-  await userEvent.click(
-    screen.getByRole("button", { name: /invite a member/i }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: /invite a user/i }));
   return screen.findByRole("dialog");
 }
 
@@ -217,11 +215,11 @@ describe("admin-issued set-password link", () => {
 
     await openInvite();
     await userEvent.type(
-      screen.getByLabelText(/new member's email/i),
+      screen.getByLabelText(/new user's email/i),
       "newbie@acme.test",
     );
     await userEvent.type(
-      screen.getByLabelText(/new member's full name/i),
+      screen.getByLabelText(/new user's full name/i),
       "New Bie",
     );
     await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
@@ -246,11 +244,11 @@ describe("admin-issued set-password link", () => {
 
     await openInvite();
     await userEvent.type(
-      screen.getByLabelText(/new member's email/i),
+      screen.getByLabelText(/new user's email/i),
       "newbie@acme.test",
     );
     await userEvent.type(
-      screen.getByLabelText(/new member's full name/i),
+      screen.getByLabelText(/new user's full name/i),
       "New Bie",
     );
     await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));

@@ -17,7 +17,8 @@ import "github.com/margince/margince/backend/pkg/extension"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Ingress: []extension.IngressSource{
 ` + entries + `
 		},
@@ -104,7 +105,7 @@ import "github.com/margince/margince/backend/pkg/extension"
 func sources() []extension.IngressSource { return nil }
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0", Ingress: sources()}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test.", Ingress: sources()}
 }
 `
 	_, err := deriveSynthetic(t, "x", src)

@@ -44,7 +44,7 @@ func TestADeclaredVocabularyIsRegisteredForTheChildKindOnly(t *testing.T) {
 	// t.Fatalf that never runs would leave every later test in this binary reading
 	// an installation it did not compose.
 	restoreVanillaComposedTables(t)
-	if err := RegisterExtensions([]extension.Extension{unit}, nil, []extension.JobDeclaration{decl}); err != nil {
+	if err := RegisterExtensions(composableAll([]extension.Extension{unit}), nil, []extension.JobDeclaration{decl}); err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
 
@@ -156,10 +156,10 @@ func TestRegisterExtensionsRefusesAMalformedFailureClassAndNamesTheUnit(t *testi
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := RegisterExtensions([]extension.Extension{{
+			err := RegisterExtensions(composableAll([]extension.Extension{{
 				Name: "bad-vocab", Version: "0.0.1",
 				FailureClasses: []extension.FailureClass{tc.class},
-			}}, nil, nil)
+			}}), nil, nil)
 
 			if err == nil {
 				t.Fatal("RegisterExtensions accepted a malformed failure class")

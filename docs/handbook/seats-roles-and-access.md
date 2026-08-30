@@ -66,7 +66,7 @@ The licence is checked offline at start-up. It is never phoned home.
 | **Ops** | everything | everything — the same grid as Admin |
 | **Management** | every record in the organization | every record; no administrative power |
 | **Team Lead** | records | records they own; configuration read-only; no access to exchange rates, model prices, imports or retention |
-| **Member** | records | records they own; configuration read-only; full control of their own saved views |
+| **User** | records | records they own; configuration read-only; full control of their own saved views |
 | **Read-only** | every record and most configuration | nothing, except their own saved views |
 
 A member with **no** role sees nothing at all. Every gate fails closed. If
@@ -102,7 +102,7 @@ per-record share can widen access further.
 Your personal things — lists, saved views, automations, your writing voice — keep
 the classic owner rule.
 
-**No shipped role is team-scoped.** Team Lead and Member both have *own* scope.
+**No shipped role is team-scoped.** Team Lead and User both have *own* scope.
 Being on a team with someone does not by itself let you edit their records; that
 takes an explicit share or an unbounded seat.
 
@@ -146,11 +146,6 @@ things:
 2. It resolves team-level row scope — which no shipped role uses.
 
 Archiving a team stops its memberships resolving anything.
-
-> **A caution.** One screen and one part of the manual say that members of a team
-> may edit each other's records. The permissions the product actually ships say
-> otherwise: writing someone else's record takes an explicit share or an
-> unbounded seat. Test it in your own installation before relying on it.
 
 ## Sharing one record
 

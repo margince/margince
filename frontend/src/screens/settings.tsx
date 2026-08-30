@@ -7,6 +7,7 @@ import {
 import {
   Activity,
   BadgeCheck,
+  Blocks,
   BookOpen,
   Building2,
   ChevronDown,
@@ -197,7 +198,7 @@ import "./settings.css";
 // keeps the rest, which no role check alone could express.
 // One predicate for the whole group could only ever be a guess about a
 // heterogeneous set: it spans surfaces with clean object grants (data model,
-// organization) and surfaces with no RBAC object at all (people, privacy),
+// organization) and surfaces with no RBAC object at all (users, privacy),
 // which the server gates on the role itself. The server stays the RBAC
 // authority on every card within.
 //
@@ -235,8 +236,9 @@ export const SETTINGS_TABS = [
   { id: "connections", icon: Plug, group: "you" },
   { id: "capture-activity", icon: Activity, group: "you" },
   { id: "general", icon: Building2, group: "admin" },
-  { id: "people", icon: UsersRound, group: "admin" },
+  { id: "users", icon: UsersRound, group: "admin" },
   { id: "integrations", icon: Webhook, group: "admin" },
+  { id: "extensions", icon: Blocks, group: "admin" },
   { id: "capture", icon: Mail, group: "admin" },
   { id: "data-model", icon: Database, group: "admin" },
   { id: "ai", icon: Sparkles, group: "admin" },
@@ -279,17 +281,22 @@ export function tabContent(id: SettingsTabId): ReactNode {
       return <AgentsTab />;
     case "general":
       return <GeneralTab />;
-    case "people":
+    case "extensions":
+      // Its own entry rather than a third card under Users & teams: that page
+      // answers who holds which role, and this one answers what an installed
+      // unit may reach — a question about the installation's software, not
+      // about its people. They shared a page while the extension tier had one
+      // unit and no page of its own.
+      return <ExtensionAccessCard />;
+    case "users":
       return (
         <>
           <UsersAdminCard />
-          {/* Who may edit whose records is a matter of team membership now
-              that every seat reads every customer record. */}
+          {/* Teams are share targets and a way to address a group of users.
+              Membership grants no access on its own — no seeded role is
+              team-scoped — so this card sits below the roster rather than
+              claiming to answer who may edit whose records. */}
           <TeamsCard />
-          {/* Beside the member list because it answers the same question one
-              level up: that card says which role a person holds, this one says
-              what a role may reach. */}
-          <ExtensionAccessCard />
         </>
       );
     case "connections":
@@ -635,12 +642,16 @@ export function useSettingsEntryVisibility(
     // what this change costs a rep — a deliberate cost, not an oversight. The
     // server still serves them; nothing in the product offers it any more. If
     // the team directory turns out to be a read a rep needs, it belongs on a
-    // People screen of its own rather than back inside admin configuration.
+    // directory screen of its own rather than back inside admin configuration.
     //
     // The invite form and every role control below still withhold themselves on
     // their own authority, so an operator who is not an admin sees the roster
     // and none of the controls.
-    people: true,
+    users: true,
+    // `GET /extensions` is admin-only server-side, so the entry follows the
+    // role rather than a grant: an operator who is not an admin would open a
+    // page whose only read answers 403.
+    extensions: isAdmin,
     capture: captureSettings,
     // The installation's own outside wiring — the shared provider credential, the
     // outbound subscriptions, the incumbent mirror. Either read opens it, and the
@@ -719,7 +730,8 @@ export function useSettingsEntryVisibility(
   if (!operator) {
     return {
       general: false,
-      people: false,
+      users: false,
+      extensions: false,
       capture: false,
       integrations: false,
       "data-model": false,
@@ -747,11 +759,29 @@ export function useSettingsEntryVisibility(
  * is not resolved: it is not an address the product ever minted, and answering
  * it would make two live addresses for one page.
  */
+/**
+ * Entry ids this product used to mint, and the entry each one is now.
+ *
+ * A renamed tab keeps answering under its old id so a bookmark, a pasted link
+ * and the two handbook copies do not land nowhere — and it resolves through
+ * `legacy`, so the address bar is rewritten to the current spelling rather than
+ * leaving both in circulation. The map is the only place the old id survives;
+ * `SETTINGS_TABS` carries the current one alone.
+ */
+const RENAMED_TABS: Readonly<Record<string, SettingsTabId>> = {
+  people: "users",
+};
+
 export function settingsRouteTab(route: Route): {
   readonly tab: string | undefined;
   readonly legacy: boolean;
 } {
   if (route.id === ADMIN_SEGMENT) {
+    const renamed =
+      route.id2 === undefined ? undefined : RENAMED_TABS[route.id2];
+    if (renamed !== undefined) {
+      return { tab: renamed, legacy: true };
+    }
     // Only an ADMIN entry answers under the admin segment. A personal id here
     // resolves to nothing rather than to its page: the page already has an
     // address, and serving it under a second one puts a spelling in circulation
@@ -762,6 +792,10 @@ export function settingsRouteTab(route: Route): {
       tab: deep?.group === "admin" ? deep.id : undefined,
       legacy: false,
     };
+  }
+  const renamed = route.id === undefined ? undefined : RENAMED_TABS[route.id];
+  if (renamed !== undefined) {
+    return { tab: renamed, legacy: true };
   }
   const entry = SETTINGS_TABS.find((candidate) => candidate.id === route.id);
   return { tab: route.id, legacy: entry?.group === "admin" };

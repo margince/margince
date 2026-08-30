@@ -34,11 +34,15 @@ type ListUsersInput struct {
 	// the admin management view; the default active-only roster serves the
 	// share/assignee pickers. The server gates the widened view to admins.
 	IncludeInactive bool
-	// WithRoles reads each member's role keys. Admin-only, and the reason the
-	// read is optional at all: the pickers every other member uses this roster
-	// for never render a role, so they should not pay per row to fetch one.
-	// The wire mapping withholds the keys independently — this makes the
+	// WithRoles reads each user's role keys AND the teams they are in. Admin-only,
+	// and the reason the read is optional at all: the pickers every other user
+	// reads this roster for render neither, so they should not pay per row to
+	// fetch them. The wire mapping withholds both independently — this makes the
 	// non-admin page not even carry them out of the database.
+	//
+	// One flag for the two because they are disclosed together and to the same
+	// caller: an admin managing seats needs both, and nobody else may see either.
+	// Two flags would be two ways to spell one authorization decision.
 	WithRoles bool
 }
 
@@ -53,7 +57,13 @@ type userRow struct {
 	// those apart is what stops a caller that forgot the flag from reporting
 	// "holds no role" — a false statement about someone's privileges — and it
 	// is why the SQL returns NULL rather than '{}' on the unread path.
-	Roles     []string
+	Roles []string
+	// TeamIDs are the live teams this user belongs to. NIL and EMPTY carry the
+	// same distinction as Roles: not read, versus read and in no team. An
+	// archived team is absent — every reader of team_membership joins a live
+	// team, so a membership of an archived one resolves nothing and must not
+	// read as one that does.
+	TeamIDs   []ids.UUID
 	CreatedAt time.Time
 }
 
@@ -70,7 +80,18 @@ const roleKeys = `CASE WHEN $1::boolean THEN
 	     WHERE ra.user_id = app_user.id)
 	  ELSE NULL::text[] END`
 
-const userColumns = `id, email, display_name, status, is_agent, ` + roleKeys + `, created_at`
+// teamIDs aggregates the live teams the user belongs to, gated by the same $1
+// as roleKeys and correlated to the UNALIASED app_user the same way. It joins
+// `team` rather than reading team_membership alone: an archived team resolves
+// no scope and no share, so listing it here would show an admin a membership
+// that grants nothing and offer them a remove that changes nothing.
+const teamIDs = `CASE WHEN $1::boolean THEN
+	  (SELECT COALESCE(array_agg(tm.team_id ORDER BY t.name), '{}')
+	     FROM team_membership tm JOIN team t ON t.id = tm.team_id
+	     WHERE tm.user_id = app_user.id AND t.archived_at IS NULL)
+	  ELSE NULL::uuid[] END`
+
+const userColumns = `id, email, display_name, status, is_agent, ` + roleKeys + `, ` + teamIDs + `, created_at`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -116,7 +137,7 @@ const listUsersAllFilteredQuery = `
 
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
-	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.Roles, &u.CreatedAt)
+	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.Roles, &u.TeamIDs, &u.CreatedAt)
 	return u, err
 }
 

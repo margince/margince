@@ -23,7 +23,8 @@ import "github.com/margince/margince/backend/pkg/extension"
 // on its SQL and nothing else.
 func New() extension.Extension {
 	return extension.Extension{
-		Name:    "bad-overbudget-table",
-		Version: "1.0.0",
+		Name:        "bad-overbudget-table",
+		Version:     "1.0.0",
+		Description: "A fixture whose migration declares a table past the name budget.",
 	}
 }

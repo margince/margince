@@ -116,7 +116,7 @@ const CORE_SCREENS = [
   // module graph through Playwright's transform.
   "settings/data-model",
   "settings/integrations",
-  "settings/people",
+  "settings/users",
   "settings/voice",
   "settings/agents",
   "settings/connections",

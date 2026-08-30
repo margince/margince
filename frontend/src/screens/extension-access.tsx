@@ -14,7 +14,11 @@ import { type ReactNode, useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanMutate, useHoldsAdminRole } from "../app/capability";
-import { EXTENSION_SCREEN, findExtension } from "../app/extensions";
+import {
+  composedScreens,
+  EXTENSION_SCREEN,
+  findExtension,
+} from "../app/extensions";
 import { routeHash } from "../app/router";
 import {
   Badge,
@@ -361,7 +365,27 @@ function UnitCard({
   // are different facts, and an operator hunting a missing screen has to be
   // able to tell them apart — an absent link would leave them debugging the
   // grants below instead of the deploy.
-  const page = findExtension(unit.name);
+  // How much this unit contributes at all. A jurisdiction pack contributes
+  // none of the three: it supplies policy the core consults and registers no
+  // object, route or job, which is a complete answer rather than an empty card.
+  const brings =
+    unit.rbac_objects.length + unit.routes.length + unit.jobs.length;
+  const descriptor = findExtension(unit.name);
+  // A descriptor is not a page. `de` has one and publishes NO operations, so
+  // the generic fallback App.tsx renders for a unit without its own screen
+  // draws a heading over an empty list — a link that promises a page and opens
+  // nothing. The link is offered when the unit has something to show: its own
+  // screen, or at least one published operation for the fallback to list.
+  // Object.hasOwn, not a bare index: the generated registry is an object
+  // literal, so `composedScreens["constructor"]` answers from the prototype
+  // chain with Object itself — truthy, and the unit-name grammar admits
+  // `constructor`. App.tsx guards the same lookup the same way.
+  const page =
+    descriptor &&
+    (Object.hasOwn(composedScreens, descriptor.name) ||
+      descriptor.verbs.length > 0)
+      ? descriptor
+      : null;
   return (
     <Panel
       className="ext-unit"
@@ -390,7 +414,17 @@ function UnitCard({
       <PanelBody>
         {/* A whole sentence, so it stays in the body where the heading row holds
             only the link it stands in for. */}
-        {page ? null : (
+        {/* What this unit is for, from its own declaration. It reads before
+            everything else because it is what an operator deciding whether to
+            grant the switches below is actually missing: the unit name alone
+            leaves "de" meaning nothing. */}
+        <p className="t-small ext-unit-description">{unit.description}</p>
+        {/* Said, not silently omitted, and only where the two registries
+            DISAGREE: a unit the running binary composed whose descriptor this
+            bundle does not carry is a version skew an operator has to be able
+            to tell apart from a unit that simply has no page. A unit with a
+            descriptor and nothing to show is neither, and says nothing. */}
+        {descriptor ? null : (
           <p className="t-small ext-note ext-unit-nopage">
             <Info aria-hidden size={15} />
             {t("extAccess.noPage", { name: unit.name })}
@@ -441,10 +475,15 @@ function UnitCard({
           )}
           {/* What the unit brought, as the card's reference half: an operator
               opens this to check that the object they are granting is the one
-              the route they care about is gated on, not to decide anything. */}
-          <Disclosure summary={t("extAccess.brings.heading")}>
-            <UnitBrings unit={unit} />
-          </Disclosure>
+              the route they care about is gated on, not to decide anything.
+              A unit that brought NOTHING has no reference half — three rows
+              each reading "None" is a section that costs a reader an expand to
+              learn what the sentence above it already said. */}
+          {brings > 0 ? (
+            <Disclosure summary={t("extAccess.brings.heading")}>
+              <UnitBrings unit={unit} />
+            </Disclosure>
+          ) : null}
         </SettingList>
       </PanelBody>
     </Panel>

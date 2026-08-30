@@ -36,7 +36,8 @@ func mustDial(extension.ToolHandler) extension.ToolHandler { return nil }
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Tools: []extension.Tool{{
 			Name:   "t",
 			Handle: ` + handleExpr + `,
@@ -98,7 +99,7 @@ import "github.com/margince/margince/backend/pkg/extension"
 func init() {}
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `
 
@@ -128,7 +129,7 @@ var conn = mustDial()
 func mustDial() int { return 0 }
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `
 
@@ -155,7 +156,7 @@ import "github.com/margince/margince/backend/pkg/extension"
 var names = []string{"a", "b"}
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `
 	if _, err := deriveSynthetic(t, "x", src); err != nil {
@@ -180,7 +181,7 @@ func helper() int {
 func compute() int { return 1 }
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `
 	if _, err := deriveSynthetic(t, "x", src); err != nil {
@@ -209,7 +210,7 @@ import (
 )
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `,
 		// The blank import above is what would actually run this at
@@ -244,7 +245,7 @@ func TestUnbuiltCapabilityLayersStayExemptFromTheSubpackageWalk(t *testing.T) {
 import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `,
 				layer + "/placeholder.go": "package placeholder\n",

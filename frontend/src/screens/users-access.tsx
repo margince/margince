@@ -5,6 +5,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
+  Checkbox,
+  Disclosure,
   EmptyState,
   Field,
   Modal,
@@ -12,7 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { SettingList } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
@@ -28,6 +30,7 @@ import "./users-access.css";
 // role a second way.
 
 type AccessPreview = components["schemas"]["AccessPreview"];
+type Team = components["schemas"]["Team"];
 type Role = components["schemas"]["AccessPreviewRequest"]["role"];
 
 // The objects worth a line in the preview: the record kinds a rep works.
@@ -141,8 +144,6 @@ function teamName(
 export function TeamsCard() {
   const t = useT();
   const toast = useToast();
-  const plural = usePlural();
-  const { locale } = useLocale();
   const qc = useQueryClient();
   // The shared roster read, not a second query of this card's own. Both spell
   // the same list under the same cache key, so whichever mounted first decided
@@ -231,31 +232,18 @@ export function TeamsCard() {
                 <p className="t-small">{t("users.noTeamsYet")}</p>
               </EmptyState>
             ) : (
-              // One team per row: the name and how many people are in it on the
-              // left, the verb that archives it on the right, at the one x every
-              // answer in settings sits at.
+              // One team per row, and the row OPENS: the name and how many
+              // people are in it on the summary line, who those people are
+              // inside. A team's membership was previously fixed at invite —
+              // the two endpoints that change it existed and nothing in the
+              // product reached them.
               <SettingList>
                 {rows.map((team) => (
-                  <SettingRow
+                  <TeamRow
                     key={team.id}
-                    label={team.name}
-                    // The roster's own count copy, which has a singular — this
-                    // row said "1 members" for a team of one.
-                    value={plural("users.memberCount", team.member_count ?? 0, {
-                      count: formatNumber(team.member_count ?? 0, locale),
-                    })}
-                    control={
-                      <Button
-                        small
-                        variant="ghost"
-                        iconOnly
-                        aria-label={t("users.archiveTeam", { name: team.name })}
-                        disabled={archive.isPending}
-                        onClick={() => archive.mutate(team.id)}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
-                    }
+                    team={team}
+                    archiving={archive.isPending}
+                    onArchive={() => archive.mutate(team.id)}
                   />
                 ))}
               </SettingList>
@@ -267,6 +255,157 @@ export function TeamsCard() {
         <RosterPartialNote partial={teamsPartial} />
       </PanelBody>
     </Panel>
+  );
+}
+
+// One team, as a section that opens. Closed it says what the old flat row said —
+// the name and the size. Open it says WHO, and offers the two writes that change
+// that: remove a user who is in, add one who is not.
+//
+// The archive verb rides `action` rather than sitting inside the summary,
+// because a `<summary>` is itself the control that opens the section: a button
+// nested in one is `nested-interactive` to axe, and pressing it would also
+// collapse the list it acts on.
+function TeamRow({
+  team,
+  archiving,
+  onArchive,
+}: Readonly<{
+  team: Team;
+  archiving: boolean;
+  onArchive: () => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const count = team.member_count ?? 0;
+  return (
+    <Disclosure
+      className="users-team"
+      summary={
+        <span className="users-team-summary">
+          <span className="t-body">{team.name}</span>
+          {/* The TEAM's own count key, not the roster's: this counts members OF
+              a team, while the card above counts users of the installation.
+              One key for both made renaming either silently rewrite the other. */}
+          <span className="t-caption users-team-count">
+            {plural("users.teamMemberCount", count, {
+              count: formatNumber(count, locale),
+            })}
+          </span>
+        </span>
+      }
+      action={
+        <Button
+          small
+          variant="ghost"
+          iconOnly
+          aria-label={t("users.archiveTeam", { name: team.name })}
+          disabled={archiving}
+          onClick={onArchive}
+        >
+          <Trash2 aria-hidden />
+        </Button>
+      }
+    >
+      <TeamMembers team={team} />
+    </Disclosure>
+  );
+}
+
+// Who is in one team, and the two verbs that change it.
+//
+// The membership is read off the USER roster rather than a per-team endpoint:
+// an admin's roster carries each user's `team_ids`, so the members of a team are
+// a filter over a list this screen has already loaded. A second endpoint would
+// be a second answer to "who is in this team", and the two would disagree the
+// first time one of them was cached.
+function TeamMembers({ team }: Readonly<{ team: Team }>) {
+  const t = useT();
+  const qc = useQueryClient();
+  const users = useRoster("user", true);
+  const usersPartial = useRosterPartial("user", true);
+  // Both writes are the same endpoint under two methods, so they are one
+  // mutation with the membership as a variable — never a closure over the row
+  // being drawn, which react-query re-arms a render late.
+  const setMember = useMutation({
+    mutationFn: async ({
+      userId,
+      member,
+    }: {
+      userId: string;
+      member: boolean;
+    }) => {
+      const params = { params: { path: { id: team.id, userId } } };
+      const { error } = member
+        ? await api.PUT("/teams/{id}/members/{userId}", params)
+        : await api.DELETE("/teams/{id}/members/{userId}", params);
+      if (error) throwProblem(error);
+    },
+    onSuccess: () => {
+      // Both lists move: the roster carries the memberships, and the team list
+      // carries the count rendered on the summary above.
+      qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: ["teams"] });
+    },
+  });
+  return (
+    <QueryGate query={users}>
+      {(list) => {
+        // The roster serves users and teams alike, so narrow to the entries
+        // that carry an address rather than asserting the shape — and then to
+        // the seats the server will actually take. SetTeamMember refuses an
+        // agent seat outright and refuses a non-active seat on the way in, so
+        // offering either is offering a box that can only fail.
+        const people = list.flatMap((entry) =>
+          "email" in entry && !entry.is_agent && entry.status === "active"
+            ? [entry]
+            : [],
+        );
+        return (
+          <>
+            {setMember.isError && (
+              <Callout tone="danger" live="alert">
+                {problemMessageOf(setMember.error, t)}
+              </Callout>
+            )}
+            {people.length === 0 ? (
+              <EmptyState>
+                <p className="t-small">{t("users.teamNobodyToAdd")}</p>
+              </EmptyState>
+            ) : (
+              <fieldset className="users-team-members">
+                <legend className="t-caption">
+                  {t("users.teamMembersLabel")}
+                </legend>
+                {people.map((person) => {
+                  const member = (person.team_ids ?? []).includes(team.id);
+                  return (
+                    <Checkbox
+                      key={person.id}
+                      className="t-body"
+                      label={person.display_name}
+                      checked={member}
+                      disabled={setMember.isPending}
+                      onChange={(event) =>
+                        setMember.mutate({
+                          userId: person.id,
+                          member: event.target.checked,
+                        })
+                      }
+                    />
+                  );
+                })}
+              </fieldset>
+            )}
+            {/* The editor claims to list who may be added, so a walk that
+                stopped short of the end must say so rather than reading as
+                everybody. */}
+            <RosterPartialNote partial={usersPartial} />
+          </>
+        );
+      }}
+    </QueryGate>
   );
 }
 

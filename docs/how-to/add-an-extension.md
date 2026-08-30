@@ -61,6 +61,7 @@ tier owner's review.
    	return extension.Extension{
    		Name:          "fr",
    		Version:       "1.0.0",
+   		Description:   "French jurisdiction pack: statutory retention floors.",
    		Jurisdictions: []jurisdiction.Pack{pack{}},
    	}
    }

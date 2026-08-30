@@ -214,7 +214,7 @@ describe("UsersAdminCard", () => {
     // authenticated principal, and who is on the team is not an admin's private
     // question. So a rep reads the list.
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    expect(screen.getByRole("heading", { name: /^Members$/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /^Users$/ })).toBeTruthy();
 
     // A role they cannot change is a FACT, so it reads as text rather than as a
     // picker that could only be refused, and no row offers a verb at all — so
@@ -226,11 +226,9 @@ describe("UsersAdminCard", () => {
     // Inviting IS the admin's, and the card SAYS it is withheld rather than
     // simply dropping the verb: the page opens for every seat, so a roster with
     // no explanation reads as "this installation cannot add people".
-    expect(
-      screen.queryByRole("button", { name: /invite a member/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /invite a user/i })).toBeNull();
     expect(screen.getByText(/admins only/i)).toBeTruthy();
-    expect(screen.queryByLabelText(/new member's email/i)).toBeNull();
+    expect(screen.queryByLabelText(/new user's email/i)).toBeNull();
   });
 
   it("carries the roster count and the invite verb in one card's header", async () => {
@@ -242,11 +240,9 @@ describe("UsersAdminCard", () => {
     // whose title, whose only row's label and whose button all read "Invite a
     // member" — three copies of the same three words above the list a reader
     // came for.
-    expect(screen.getAllByRole("heading", { name: /^Members$/ })).toHaveLength(
-      1,
-    );
+    expect(screen.getAllByRole("heading", { name: /^Users$/ })).toHaveLength(1);
     const members = screen
-      .getByRole("heading", { name: /^Members$/ })
+      .getByRole("heading", { name: /^Users$/ })
       .closest("section");
     if (!(members instanceof HTMLElement)) {
       throw new Error("the roster is not a card of its own");
@@ -259,9 +255,9 @@ describe("UsersAdminCard", () => {
     if (!(header instanceof HTMLElement)) {
       throw new Error("the members card has no header band");
     }
-    expect(within(header).getByText("4 members")).toBeTruthy();
+    expect(within(header).getByText("4 users")).toBeTruthy();
     expect(
-      within(header).getByRole("button", { name: /invite a member/i }),
+      within(header).getByRole("button", { name: /invite a user/i }),
     ).toBeTruthy();
     // And the invite fields are not on the page until the dialog carries them.
     expect(
@@ -379,7 +375,7 @@ describe("UsersAdminCard", () => {
   // one ("Invite").
   const openInvite = async () => {
     await userEvent.click(
-      screen.getByRole("button", { name: /invite a member/i }),
+      screen.getByRole("button", { name: /invite a user/i }),
     );
     return screen.findByRole("dialog");
   };
@@ -389,20 +385,18 @@ describe("UsersAdminCard", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(screen.queryByLabelText("New member's email")).toBeNull();
+    expect(screen.queryByLabelText("New user's email")).toBeNull();
     const dialog = await openInvite();
     // The dialog's own submit reads the plain form of the verb, so the two are
     // tellable apart — for a reader and for `getByRole`.
     expect(
       within(dialog).getByRole("button", { name: /^invite$/i }),
     ).toBeTruthy();
-    expect(within(dialog).getByLabelText(/new member's email/i)).toBeTruthy();
-    expect(
-      within(dialog).getByLabelText(/new member's full name/i),
-    ).toBeTruthy();
+    expect(within(dialog).getByLabelText(/new user's email/i)).toBeTruthy();
+    expect(within(dialog).getByLabelText(/new user's full name/i)).toBeTruthy();
     expect(
       within(dialog).getByRole("combobox", {
-        name: /role for the new member/i,
+        name: /role for the new user/i,
       }),
     ).toBeTruthy();
   });
@@ -562,7 +556,7 @@ describe("UsersAdminCard", () => {
       "Admin",
       "Management",
       "Team Lead",
-      "Member",
+      "User",
       "Read-only",
       "Ops",
     ]);
@@ -697,7 +691,7 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "Member");
+    await pickOption(user, roleSelect(active, "ada active"), "User");
 
     await waitFor(() => expect(within(active).getByRole("alert")).toBeTruthy());
     expect(screen.getByText(/leave no admin/i)).toBeTruthy();
@@ -748,11 +742,11 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "Member");
+    await pickOption(user, roleSelect(active, "ada active"), "User");
     await waitFor(() => expect(patches).toHaveLength(1));
 
     // The SAME target again — the retry the operator would make.
-    await pickOption(user, roleSelect(active, "ada active"), "Member");
+    await pickOption(user, roleSelect(active, "ada active"), "User");
     await waitFor(() => expect(patches).toHaveLength(2));
   });
 

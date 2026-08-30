@@ -203,6 +203,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := e.Version.Validate(); err != nil {
 			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 		}
+		if err := e.Description.Validate(); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
 		if err := preflightJurisdictions(e, packCodes); err != nil {
 			return err
 		}

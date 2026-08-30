@@ -32,6 +32,17 @@ type Preview = {
 };
 
 type Team = { id: string; name: string; member_count?: number };
+// The roster row the membership editor reads. `team_ids` is the admin-only
+// field the server populates, and a fixture that omits it models a NON-admin
+// read — which is a different case, not a lighter one.
+type RosterUser = {
+  id: string;
+  email: string;
+  display_name: string;
+  status: string;
+  is_agent: boolean;
+  team_ids?: string[];
+};
 
 // Held in a constant rather than written inline: the prop is the seat's ROLE,
 // and a literal here reads to the a11y lint as an ARIA role on an element.
@@ -43,6 +54,8 @@ function backend(
   opts: Readonly<{
     preview?: Preview;
     teams?: Team[];
+    /** The user roster, which is where a team's membership is read from. */
+    users?: RosterUser[];
     /** Answers one write with a problem document, to drive the refusal arms. */
     refuse?: (call: Call) => boolean;
   }>,
@@ -59,8 +72,14 @@ function backend(
       calls.push({
         method: request.method,
         path,
+        // A membership write carries NO body — the ids are the path. Reading
+        // one unconditionally throws, and the mock would then answer the
+        // write as a network failure that looks exactly like a refusal.
         body:
-          request.method === "GET" ? undefined : await request.clone().json(),
+          request.method === "GET" ||
+          request.headers.get("content-type") === null
+            ? undefined
+            : await request.clone().json(),
       });
       if (opts.refuse?.(calls[calls.length - 1])) {
         return new Response(JSON.stringify({ detail: "the team was merged" }), {
@@ -71,10 +90,15 @@ function backend(
       // The teams list answers as the contract answers: a page, with the
       // cursor of the next one. Without `page` the roster walk has nothing to
       // read the end of the list from.
+      // Three reads answer here, and the roster two of them serve are
+      // DIFFERENT lists: a test that answered users with the team page would
+      // let a membership assertion pass against rows that carry no membership.
       const body = path.endsWith("/users/access-preview")
         ? (opts.preview ?? { row_scope: "own" })
         : {
-            data: opts.teams ?? [],
+            data: path.endsWith("/users")
+              ? (opts.users ?? [])
+              : (opts.teams ?? []),
             page: { next_cursor: null, has_more: false },
           };
       return new Response(JSON.stringify(body), {
@@ -360,5 +384,135 @@ describe("TeamsCard", () => {
     });
     // The dialog closes on the write that landed.
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});
+
+// Membership was fixed at invite until now: the two endpoints that change it
+// existed server-side and nothing in the product reached them. These pin both
+// directions, because a toggle that only ever adds looks identical to a working
+// one until somebody tries to remove.
+describe("TeamsCard membership", () => {
+  const ROSTER: RosterUser[] = [
+    {
+      id: "u-in",
+      email: "in@acme.test",
+      display_name: "Ada Inside",
+      status: "active",
+      is_agent: false,
+      team_ids: ["t-1"],
+    },
+    {
+      id: "u-out",
+      email: "out@acme.test",
+      display_name: "Bo Outside",
+      status: "active",
+      is_agent: false,
+      team_ids: [],
+    },
+  ];
+
+  async function openTeam() {
+    const user = userEvent.setup();
+    await screen.findByText("Nord");
+    await user.click(screen.getByText("Nord"));
+    return user;
+  }
+
+  it("ticks the users already in the team and leaves the others clear", async () => {
+    const { fetchMock } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    await openTeam();
+
+    expect(
+      (
+        await screen.findByRole("checkbox", { name: "Ada Inside" })
+      ).getAttribute("checked") !== null ||
+        (
+          screen.getByRole("checkbox", {
+            name: "Ada Inside",
+          }) as HTMLInputElement
+        ).checked,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("checkbox", { name: "Bo Outside" }) as HTMLInputElement)
+        .checked,
+    ).toBe(false);
+  });
+
+  it("adds a user to the team the row names", async () => {
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    const user = await openTeam();
+
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Bo Outside" }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PUT")).toBe(true),
+    );
+    const put = calls.find((call) => call.method === "PUT");
+    expect(put?.path).toBe("/v1/teams/t-1/members/u-out");
+  });
+
+  it("removes a user the team already holds", async () => {
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    const user = await openTeam();
+
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Ada Inside" }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "DELETE")).toBe(true),
+    );
+    const gone = calls.find((call) => call.method === "DELETE");
+    expect(gone?.path).toBe("/v1/teams/t-1/members/u-in");
+  });
+
+  it("says a refused membership write did not land", async () => {
+    const { fetchMock } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+      refuse: (call) => call.method === "PUT",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    const user = await openTeam();
+
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Bo Outside" }),
+    );
+
+    expect(await screen.findByText("the team was merged")).toBeTruthy();
   });
 });

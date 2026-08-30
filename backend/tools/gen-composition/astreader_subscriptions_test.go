@@ -24,7 +24,8 @@ func react(context.Context, extension.Runtime, extension.Delivery) error { retur
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Subscriptions: []extension.Subscription{
 ` + entries + `
 		},
@@ -115,7 +116,7 @@ import "github.com/margince/margince/backend/pkg/extension"
 func subs() []extension.Subscription { return nil }
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0", Subscriptions: subs()}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test.", Subscriptions: subs()}
 }
 `
 	_, err := deriveSynthetic(t, "x", src)

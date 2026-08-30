@@ -15632,6 +15632,9 @@ type CompanySiteReadSuggestedChangeField string
 
 // ComposedExtension One enabled extension unit and what it contributes to this binary.
 type ComposedExtension struct {
+	// Description One sentence from the unit's own declaration saying what it is for. The access screen lists every composed unit, and a name alone leaves an operator deciding what to grant to something called `de`; only the unit's author knows the answer, so the declaration is where it comes from. Required at boot — a unit without one does not compose.
+	Description string `json:"description"`
+
 	// Jobs The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted.
 	Jobs []string `json:"jobs"`
 
@@ -18682,14 +18685,14 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
-	// Role System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "Member"; `management` is the whole-organization seat that holds no admin power.
+	// Role System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-organization seat that holds no admin power.
 	Role InviteUserRequestRole `json:"role"`
 
 	// TeamIds The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 }
 
-// InviteUserRequestRole System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "Member"; `management` is the whole-organization seat that holds no admin power.
+// InviteUserRequestRole System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-organization seat that holds no admin power.
 type InviteUserRequestRole string
 
 // IssuePassportRequest defines model for IssuePassportRequest.
@@ -25910,6 +25913,9 @@ type User struct {
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles  *[]string  `json:"roles,omitempty"`
 	Status UserStatus `json:"status"`
+
+	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
+	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
 	// Timezone IANA name.
 	Timezone  *string    `json:"timezone,omitempty"`

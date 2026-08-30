@@ -98,16 +98,16 @@ type Identity struct {
 
 // systemRoles is the seeded default role set (data-model §2.4, ADR-0110);
 // custom roles beyond these are a code extension, not a runtime builder.
-// The keys are wire vocabulary and diverge from the product names on
-// purpose: `manager` is the Team Lead, `rep` the Member — renaming the keys
-// would churn the contract enum, every historical migration and three
-// locales to change a string the UI already indirects through i18n.
-// Migration 0268 carries the same names to installations seeded earlier.
+// The keys are wire vocabulary and diverge from the product names on purpose:
+// `manager` is the Team Lead, `rep` the User — renaming the keys would churn
+// the contract enum, every historical migration and three locales to change a
+// string the UI already indirects through i18n. A migration carries each rename
+// to installations seeded earlier: two surfaces render this name from the row.
 var systemRoles = []struct{ key, name string }{
 	{"admin", "Admin"},
 	{"management", "Management"},
 	{"manager", "Team Lead"},
-	{"rep", "Member"},
+	{"rep", "User"},
 	{"read_only", "Read-only"},
 	{"ops", "Ops / Integrations"},
 }

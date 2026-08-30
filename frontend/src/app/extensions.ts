@@ -3,6 +3,7 @@ import {
   type ExtensionVerbDescriptor,
   extensions,
 } from "@composition/extensions";
+import { extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
 import type { ExtensionRbacObject } from "./capability";
 
@@ -70,6 +71,18 @@ export const EXTENSION_SCREEN = "ext";
 
 /** The composed registry itself, for a caller that needs the whole set. */
 export const composedExtensions: readonly ExtensionDescriptor[] = extensions;
+
+/**
+ * The composed screen registry, annotated once.
+ *
+ * The generated file is emitted UNTYPED — it is written to two paths at
+ * different depths and must be byte-identical, so it can carry neither a
+ * relative type import nor a bare one. The annotation therefore lands at an
+ * import site, and there is exactly one: a second copy in another module would
+ * be a second place for a unit whose default export is not a component to slip
+ * through, and the two would eventually disagree about what the registry holds.
+ */
+export const composedScreens: ExtensionScreenRegistry = extensionScreens;
 
 /**
  * The two secret scopes a unit's settings entry can be placed by.

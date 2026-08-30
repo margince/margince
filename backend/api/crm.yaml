@@ -25782,6 +25782,15 @@ components:
             that render a single current role must still handle the empty and multi-key cases.
             Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one
             authority for the caller's own roles — the same fact spelled twice could disagree.
+        team_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: >
+            The live teams this user belongs to, ordered by team name. Present ONLY for an
+            admin caller, on the same terms as `roles`: the roster answers every authenticated
+            user because the share and assignee pickers read it, and who is in which team is
+            not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no
+            scope and no share, so listing one would describe access the user does not have.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -25799,7 +25808,7 @@ components:
           description: >-
             System role key (ADR-0110). Keys are wire vocabulary and diverge from
             the product names on purpose — `manager` displays as "Team Lead",
-            `rep` as "Member"; `management` is the whole-organization seat that
+            `rep` as "User"; `management` is the whole-organization seat that
             holds no admin power.
         team_ids:
           type: array
@@ -26250,7 +26259,7 @@ components:
     ComposedExtension:
       type: object
       additionalProperties: false
-      required: [name, version, rbac_objects, routes, jobs]
+      required: [name, version, description, rbac_objects, routes, jobs]
       description: One enabled extension unit and what it contributes to this binary.
       properties:
         name:
@@ -26259,6 +26268,13 @@ components:
             The unit name — its `extensions/<name>` directory, and the namespace token in
             `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry
             here to a grant in `Role.objects`.
+        description:
+          type: string
+          description: >-
+            One sentence from the unit's own declaration saying what it is for. The access screen
+            lists every composed unit, and a name alone leaves an operator deciding what to grant
+            to something called `de`; only the unit's author knows the answer, so the declaration
+            is where it comes from. Required at boot — a unit without one does not compose.
         version:
           type: string
           description: >-

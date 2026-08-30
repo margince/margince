@@ -52,7 +52,7 @@ the workspace but changes none of them.
 | `admin` | Admin | all |
 | `management` | Management | all |
 | `manager` | Team Lead | own |
-| `rep` | Member | own |
+| `rep` | User | own |
 | `read_only` | Read-only | all |
 | `ops` | Ops / Integrations | all |
 

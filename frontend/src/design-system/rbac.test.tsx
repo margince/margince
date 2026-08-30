@@ -32,7 +32,7 @@ describe("RoleBadge", () => {
         <RoleBadge roleKey="read_only" />
       </>,
     );
-    expect(screen.getByText("Mitglied")).toBeTruthy();
+    expect(screen.getByText("Benutzer")).toBeTruthy();
     expect(screen.getByText("Nur Lesen")).toBeTruthy();
   });
 
