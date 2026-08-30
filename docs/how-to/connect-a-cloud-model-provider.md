@@ -91,13 +91,17 @@ tiers:
 ## 3. Bind the embeddings lane separately
 
 The embedding lane is bound apart from the chat tiers so retrieval survives a
-chat-budget exhaustion. The shipped default is **gemini** (`gemini-embedding-001`,
-key from `GEMINI_API_KEY`) so the stack needs no local Ollama:
+chat-budget exhaustion. Bound apart does not mean bound elsewhere: the dev seed
+points it at the same broker the chat tiers use, so a stack needs ONE key rather
+than a second provider's purely for embeddings.
 
 ```yaml
-embeddings: { provider: gemini, model: gemini-embedding-001 }  # the default
-# embeddings: { provider: ollama, model: bge-m3 }              # fully-local alternative
-# embeddings: { provider: fake }                               # offline dev
+# the dev default — same broker and key as the chat tiers
+embeddings: { provider: openai_compatible, model: mistralai/mistral-embed-2312,
+              base_url: https://openrouter.ai/api, dimensions: 1024 }
+# embeddings: { provider: gemini, model: gemini-embedding-001 }  # native adapter, key from GEMINI_API_KEY
+# embeddings: { provider: ollama, model: bge-m3 }                # fully-local alternative
+# embeddings: { provider: fake }                                 # offline dev
 ```
 
 > The retrieval store's column is an unbounded **`vector`**, and `dimensions:`
