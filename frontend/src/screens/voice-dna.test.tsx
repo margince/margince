@@ -390,6 +390,87 @@ describe("a build that fails", () => {
     expect(screen.queryByText(/Cannot read properties/)).toBeNull();
   });
 
+  // The build the reader actually hits: the POST succeeds, the job runs, and
+  // the row comes back `failed` carrying the server's own explanation. That
+  // detail used to be dropped on the floor, leaving one fixed sentence to
+  // stand for a spending cap, an unreadable model answer and a broken
+  // provider alike — and it told the reader to "try again", which could not
+  // work for the first of those.
+  it("says what the finished build says, not a fixed sentence", async () => {
+    const detail =
+      "Our AI provider is out of budget, so the build never ran. Your previous version is unchanged.";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [BUILDABLE], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (path === "/voice-profiles/vp-1/builds") {
+          return jsonResponse({ id: "vb-1", status: "queued" }, 201);
+        }
+        if (path === "/voice-profiles/vp-1/builds/vb-1") {
+          return jsonResponse({
+            id: "vb-1",
+            status: "failed",
+            status_code: "model_unavailable",
+            status_detail: detail,
+          });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+
+    await pressRebuild();
+
+    expect(await screen.findByText(detail)).toBeTruthy();
+    // The old catch-all is gone, so a reader is never told to retry something
+    // that cannot succeed until somebody raises a spending limit.
+    expect(screen.queryByText(/The build didn't finish/)).toBeNull();
+  });
+
+  // An older server, or an outcome the server had nothing to add about, still
+  // gets a sentence rather than an empty line.
+  it("falls back to its own wording when the build carries no detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [BUILDABLE], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (path === "/voice-profiles/vp-1/builds") {
+          return jsonResponse({ id: "vb-1", status: "queued" }, 201);
+        }
+        if (path === "/voice-profiles/vp-1/builds/vb-1") {
+          return jsonResponse({
+            id: "vb-1",
+            status: "failed",
+            status_code: null,
+            status_detail: null,
+          });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+
+    await pressRebuild();
+
+    expect(await screen.findByText(/The build didn't finish/)).toBeTruthy();
+  });
+
   it("shows the server's own cause when the server composed one", async () => {
     stubBuild(() =>
       jsonResponse(

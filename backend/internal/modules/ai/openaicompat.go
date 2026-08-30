@@ -324,13 +324,13 @@ func openAICompatError(resp *http.Response) error {
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil {
 		if apiErr.Error.Message != "" {
-			return fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode)
+			return quotaWrapped(resp, fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Error.Type, apiErr.Error.Message, resp.StatusCode))
 		}
 		if apiErr.Message != "" {
-			return fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Type, apiErr.Message, resp.StatusCode)
+			return quotaWrapped(resp, fmt.Errorf("ai: openai-compat: %s: %s (http %d)", apiErr.Type, apiErr.Message, resp.StatusCode))
 		}
 	}
-	return fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode)
+	return quotaWrapped(resp, fmt.Errorf("ai: openai-compat: http %d", resp.StatusCode))
 }
 
 // openAICompatStream reads the OpenAI-compatible SSE stream: `data: {...}`

@@ -418,9 +418,9 @@ func geminiError(resp *http.Response) error {
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Status != "" {
-		return fmt.Errorf("ai: gemini: %s: %s (http %d)", apiErr.Error.Status, apiErr.Error.Message, resp.StatusCode)
+		return quotaWrapped(resp, fmt.Errorf("ai: gemini: %s: %s (http %d)", apiErr.Error.Status, apiErr.Error.Message, resp.StatusCode))
 	}
-	return fmt.Errorf("ai: gemini: http %d", resp.StatusCode)
+	return quotaWrapped(resp, fmt.Errorf("ai: gemini: http %d", resp.StatusCode))
 }
 
 // geminiStream reads the :streamGenerateContent?alt=sse stream. There is no

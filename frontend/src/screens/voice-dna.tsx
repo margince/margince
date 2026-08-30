@@ -622,6 +622,31 @@ function SourceRow({
   );
 }
 
+/** How a build ended, and the server's own words about it when it has any. */
+type BuildOutcome = Readonly<{
+  status: "succeeded" | "failed" | "deferred" | "pending";
+  /** `status_detail` from the build row: safe operator guidance, already
+   * written for a reader. Null when the server had nothing to add. */
+  detail?: string | null;
+}>;
+
+// What the reader is told a finished build did.
+//
+// The server's own sentence wins whenever it sent one, because only the server
+// knows WHY — a provider out of budget, a model answer it could not read, a
+// configuration that is missing. The local strings stay as the fallback for an
+// older server, and for the outcomes that carry no detail.
+function buildOutcomeText(
+  t: ReturnType<typeof useT>,
+  outcome: BuildOutcome,
+): string {
+  const detail = outcome.detail?.trim();
+  if (detail) {
+    return detail;
+  }
+  return t(`settings.voice.buildStatus.${outcome.status}`);
+}
+
 // Build creates a durable background build; poll to a terminal state. A slow or
 // budget-deferred build is honestly reported, not spun on forever.
 //
@@ -644,15 +669,17 @@ function BuildControls({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [status, setStatus] = useState<
-    "succeeded" | "failed" | "deferred" | "pending" | null
-  >(null);
+  // The outcome AND what the server said about it. A terminal build carries
+  // `status_detail` — safe operator guidance the server composed for exactly
+  // this moment — and dropping it left one fixed sentence standing in for
+  // every cause: a spending cap, an unreadable model answer and a broken
+  // provider all read as "the build didn't finish", so "try again" was advice
+  // that could not work.
+  const [outcome, setOutcome] = useState<BuildOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const build = useMutation({
-    mutationFn: async (): Promise<
-      "succeeded" | "failed" | "deferred" | "pending"
-    > => {
+    mutationFn: async (): Promise<BuildOutcome> => {
       const created = await api.POST("/voice-profiles/{id}/builds", {
         params: { path: { id: profile.id } },
         body: { reason: "manual" },
@@ -669,23 +696,27 @@ function BuildControls({
         if (err) {
           throwProblem(err);
         }
+        // Spelled as three comparisons rather than a set lookup: this is what
+        // proves to the compiler that the status is one a BuildOutcome may
+        // hold, so a new server state cannot be passed through untyped.
         if (
           data.status === "succeeded" ||
           data.status === "failed" ||
           data.status === "deferred"
         ) {
-          return data.status;
+          return { status: data.status, detail: data.status_detail };
         }
         await new Promise((resolve) => {
           globalThis.setTimeout(resolve, 1500);
         });
       }
       // Still queued/running after the poll budget — honestly "pending", not
-      // "deferred" (which specifically means the AI budget snoozed it).
-      return "pending";
+      // "deferred" (which specifically means the AI budget snoozed it). There
+      // is no detail to carry: nothing terminal happened to describe.
+      return { status: "pending", detail: null };
     },
-    onSuccess: (finalStatus) => {
-      setStatus(finalStatus);
+    onSuccess: (finalOutcome) => {
+      setOutcome(finalOutcome);
       setError(null);
       onBuilt();
     },
@@ -755,7 +786,7 @@ function BuildControls({
                 is not reliably announced, which would leave the one thing they
                 are waiting for arriving in silence. */}
             <p className="t-small" role="status">
-              {status ? t(`settings.voice.buildStatus.${status}`) : ""}
+              {outcome ? buildOutcomeText(t, outcome) : ""}
             </p>
             {error && (
               <p className="t-small" role="alert">

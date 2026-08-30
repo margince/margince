@@ -6,6 +6,10 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -206,5 +210,107 @@ func TestVoicePromptNamesTheValidSampleIDs(t *testing.T) {
 	}
 	if !strings.Contains(brain.prompt, "Valid sample ids: s-email, s-spoken") {
 		t.Fatal("the prompt must enumerate the exact ids the model may cite")
+	}
+}
+
+// The message a failed build shows its operator is the only thing they get, so
+// each cause has to be distinguishable in it. A provider that refused on
+// billing never ran the model, and saying otherwise sent an operator to audit
+// writing samples over a spending cap.
+func TestSafeVoiceBuildFailureNamesTheCause(t *testing.T) {
+	quota := fmt.Errorf("voice build model call: %w: ai: gemini: RESOURCE_EXHAUSTED: spending cap (http 429)", ErrProviderQuota)
+	message := SafeVoiceBuildFailure(quota)
+	if !strings.Contains(strings.ToLower(message), "budget") {
+		t.Fatalf("a provider out of budget says so: %q", message)
+	}
+	if strings.Contains(strings.ToLower(message), "could not produce") {
+		t.Fatalf("the model never ran, so nothing may claim it answered badly: %q", message)
+	}
+
+	// A model that DID answer, unreadably, keeps its own separate wording —
+	// otherwise one message covers two causes again.
+	unreadable := SafeVoiceBuildFailure(errors.New("voice build model call: ai: output rejected by the validator"))
+	if unreadable == message {
+		t.Fatal("a bad model answer and a billing refusal are different failures and read differently")
+	}
+
+	// Nothing leaks the provider's own payload to the operator.
+	for _, leak := range []string{"RESOURCE_EXHAUSTED", "http 429", "gemini"} {
+		if strings.Contains(message, leak) {
+			t.Fatalf("message leaks provider internals (%q): %q", leak, message)
+		}
+	}
+}
+
+// Every provider ADAPTER marks its own 429 — asserted through the real error
+// functions, not through the helper they share. Testing the helper alone let
+// three of four adapters drop their wrap with the suite still green.
+func TestEveryProviderAdapterMarksAQuotaRefusal(t *testing.T) {
+	// The body each vendor returns, so the adapter takes its structured path
+	// rather than its "could not parse" fallback.
+	adapters := []struct {
+		name string
+		body string
+		read func(*http.Response) error
+	}{
+		{"gemini", `{"error":{"status":"RESOURCE_EXHAUSTED","message":"cap reached"}}`, geminiError},
+		{"openai", `{"error":{"type":"insufficient_quota","message":"cap reached"}}`, openaiError},
+		{"anthropic", `{"error":{"type":"rate_limit_error","message":"cap reached"}}`, anthropicError},
+		{"openai-compat", `{"error":{"type":"insufficient_quota","message":"cap reached"}}`, openAICompatError},
+	}
+	for _, adapter := range adapters {
+		t.Run(adapter.name, func(t *testing.T) {
+			read := func(status int, body, retryAfter string) error {
+				resp := refusalResponse(status, body, retryAfter)
+				defer func() {
+					if closeErr := resp.Body.Close(); closeErr != nil {
+						t.Errorf("closing the provider response: %v", closeErr)
+					}
+				}()
+				return adapter.read(resp)
+			}
+
+			// An account with nothing left names no moment to come back at.
+			refusal := read(http.StatusTooManyRequests, adapter.body, "")
+			if !errors.Is(refusal, ErrProviderQuota) {
+				t.Fatalf("a 429 naming no retry moment is a quota refusal: %v", refusal)
+			}
+			if !strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", refusal)), "out of budget") {
+				t.Fatal("the build message names the account, not the model")
+			}
+
+			// A burst limit says when to return, and is not the same failure.
+			throttle := read(http.StatusTooManyRequests, adapter.body, "30")
+			if !errors.Is(throttle, ErrProviderThrottled) || errors.Is(throttle, ErrProviderQuota) {
+				t.Fatalf("Retry-After marks a throttle, not an empty account: %v", throttle)
+			}
+
+			// A body this adapter cannot parse still classifies by status:
+			// the fallback path is the one a vendor outage actually takes.
+			garbled := read(http.StatusTooManyRequests, "<html>gateway</html>", "")
+			if !errors.Is(garbled, ErrProviderQuota) {
+				t.Fatalf("an unparseable 429 body is still a refusal: %v", garbled)
+			}
+
+			// Any other status is an ordinary provider error. Dressing one up
+			// as a billing problem sends an operator to the wrong console.
+			other := read(http.StatusInternalServerError, adapter.body, "")
+			if errors.Is(other, ErrProviderQuota) || errors.Is(other, ErrProviderThrottled) {
+				t.Fatalf("only a 429 is a quota or throttle answer: %v", other)
+			}
+		})
+	}
+}
+
+// One provider response, as the adapters read it.
+func refusalResponse(status int, body, retryAfter string) *http.Response {
+	header := http.Header{"Content-Type": []string{"application/json"}}
+	if retryAfter != "" {
+		header.Set("Retry-After", retryAfter)
+	}
+	return &http.Response{
+		StatusCode: status,
+		Header:     header,
+		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 }
