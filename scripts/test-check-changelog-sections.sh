@@ -298,6 +298,23 @@ case_is "a mixed opening run is remembered by its own character" 1 "appears 2 ti
 - and this list is the second one, after the fence closed
 MD
 
+# Four leading spaces is an indented code BLOCK, not a fence. Treated as one it
+# opens a block nothing closes, and every heading below it goes unread —
+# including the duplicate this gate exists to catch.
+case_is "a four-space-indented backtick line is not a fence" 1 "appears 2 times" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- Indented four spaces, so this is code rather than a fence:
+
+    ```
+
+### Changed
+
+- and this second list is what a swallowed file would hide
+MD
+
 # A `##` heading that is not a release ends the release above it. Otherwise its
 # own children are counted as that release's sections.
 case_is "a non-release level-2 heading ends the release above it" 0 "OK: changelog-sections" <<'MD'

@@ -51,9 +51,12 @@ verdict=$(awk '
 	# The delimiter that OPENED the fence is what closes it. A ``` line inside a
 	# ~~~ block is content, and a scanner that closed on it would go on to read
 	# the quoted headings below as real ones — refusing a correct file.
-	/^[ \t]*(```|~~~)/ {
+	# Up to THREE leading spaces. Four is an indented code block, not a fence,
+	# so a four-space line that looked like one could open a block the file
+	# never closes and swallow every heading below it.
+	/^ {0,3}(```|~~~)/ {
 		run = $0
-		sub(/^[ \t]*/, "", run)
+		sub(/^ */, "", run)
 		marker = substr(run, 1, 1)
 		width = 0
 		while (substr(run, width + 1, 1) == marker) width++
