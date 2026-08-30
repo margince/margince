@@ -29,8 +29,9 @@ const migrationsLayer = "migrations"
 // this function's AST without compiling it.
 func New() extension.Extension {
 	return extension.Extension{
-		Name:    "openchannel",
-		Version: "1.0.0",
+		Name:        "openchannel",
+		Version:     "1.0.0",
+		Description: "An anonymous, signed endpoint an outside party can post to, with its own records and a job that drains arrivals into the CRM.",
 		Tools: []extension.Tool{
 			{Name: "openchannel_open", Handle: open},
 			{Name: "openchannel_read_endpoint", Handle: readEndpoint},

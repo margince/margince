@@ -71,6 +71,7 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 		out = append(out, crmcontracts.ComposedExtension{
 			Name:        string(e.Name),
 			Version:     string(e.Version),
+			Description: string(e.Description),
 			RbacObjects: unitRbacObjects(e.Name, verbs),
 			Routes:      unitRoutes(e.Name, verbs),
 			Jobs:        unitJobs(e.Name, jobs),

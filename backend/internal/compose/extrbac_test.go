@@ -82,9 +82,9 @@ func TestTwoUnitsDerivingOneRbacObjectAreRefusedByName(t *testing.T) {
 	// catches two units declaring one object they did not both DERIVE.
 	t.Cleanup(identity.ResetRbacObjectsForTest)
 	t.Cleanup(func() { setComposedTools(nil); setComposedVerbs(nil) })
-	bootErr := RegisterExtensions([]extension.Extension{
+	bootErr := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "crm", Version: "0.1.0"}, {Name: "crm-demo", Version: "0.1.0"},
-	}, []extension.Verb{crm, crmDemo}, nil)
+	}), []extension.Verb{crm, crmDemo}, nil)
 	if bootErr == nil || !strings.Contains(bootErr.Error(), "one opens the other") {
 		t.Fatalf("boot err = %v, want the overlapping-namespace refusal", bootErr)
 	}
@@ -116,7 +116,7 @@ func TestOverlappingUnitNamespacesAreRefused(t *testing.T) {
 			{Name: "crm-demo", Version: "0.1.0"}, {Name: "crm", Version: "0.1.0"},
 		},
 	} {
-		if err := RegisterExtensions(set, nil, nil); err == nil {
+		if err := RegisterExtensions(composableAll(set), nil, nil); err == nil {
 			t.Errorf("%s: the boot composed two units whose namespaces overlap", name)
 		}
 	}
@@ -124,9 +124,9 @@ func TestOverlappingUnitNamespacesAreRefused(t *testing.T) {
 	// Names that merely SHARE A PREFIX compose fine — `ext_crmdemo_x` can never
 	// be read as a table of `ext_crm`, because every derivation joins with an
 	// underscore. A refusal here would be this check overreaching.
-	if err := RegisterExtensions([]extension.Extension{
+	if err := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "crm", Version: "0.1.0"}, {Name: "crmdemo", Version: "0.1.0"},
-	}, nil, nil); err != nil {
+	}), nil, nil); err != nil {
 		t.Errorf("two units with distinct namespaces were refused: %v", err)
 	}
 }
@@ -174,7 +174,7 @@ func TestRegisterExtensionsRegistersTheDeclaredObjects(t *testing.T) {
 	gated := unitVerb("crm-demo", "demo_sync", extension.TierAutoExecute, extension.ScopeRead)
 	gated.RbacObject = "ext_crm_demo_widget"
 	gated.RbacAction = extension.RbacRead
-	if err := RegisterExtensions([]extension.Extension{{Name: "crm-demo", Version: "0.1.0"}}, []extension.Verb{gated}, nil); err != nil {
+	if err := RegisterExtensions(composableAll([]extension.Extension{{Name: "crm-demo", Version: "0.1.0"}}), []extension.Verb{gated}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if !identity.RBACObjectGrantable("ext_crm_demo_widget") {
@@ -199,7 +199,7 @@ func TestRegisterExtensionsRefusesAnObjectOutsideTheNamespace(t *testing.T) {
 	// purpose, and this is the case that proves the second one still runs.
 	squatting := unitVerb("crm-demo", "demo_sync", extension.TierAutoExecute, extension.ScopeRead)
 	squatting.RbacObject = "ext_crm_demo__widget"
-	if err := RegisterExtensions([]extension.Extension{{Name: "crm-demo", Version: "0.1.0"}}, []extension.Verb{squatting}, nil); err == nil {
+	if err := RegisterExtensions(composableAll([]extension.Extension{{Name: "crm-demo", Version: "0.1.0"}}), []extension.Verb{squatting}, nil); err == nil {
 		t.Fatal("the boot accepted an object the vocabulary refuses")
 	}
 	if len(ComposedVerbs()) != 0 {

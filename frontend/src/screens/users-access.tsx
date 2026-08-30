@@ -324,6 +324,7 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
   const t = useT();
   const qc = useQueryClient();
   const users = useRoster("user", true);
+  const usersPartial = useRosterPartial("user", true);
   // Both writes are the same endpoint under two methods, so they are one
   // mutation with the membership as a variable — never a closure over the row
   // being drawn, which react-query re-arms a render late.
@@ -351,10 +352,15 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
   return (
     <QueryGate query={users}>
       {(list) => {
-        // The roster serves users and teams alike, so narrow to the entries that
-        // carry an address rather than asserting the shape.
+        // The roster serves users and teams alike, so narrow to the entries
+        // that carry an address rather than asserting the shape — and then to
+        // the seats the server will actually take. SetTeamMember refuses an
+        // agent seat outright and refuses a non-active seat on the way in, so
+        // offering either is offering a box that can only fail.
         const people = list.flatMap((entry) =>
-          "email" in entry ? [entry] : [],
+          "email" in entry && !entry.is_agent && entry.status === "active"
+            ? [entry]
+            : [],
         );
         return (
           <>
@@ -392,6 +398,10 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
                 })}
               </fieldset>
             )}
+            {/* The editor claims to list who may be added, so a walk that
+                stopped short of the end must say so rather than reading as
+                everybody. */}
+            <RosterPartialNote partial={usersPartial} />
           </>
         );
       }}

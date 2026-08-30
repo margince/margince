@@ -7,6 +7,7 @@ import {
 import {
   Activity,
   BadgeCheck,
+  Blocks,
   BookOpen,
   Building2,
   ChevronDown,
@@ -237,6 +238,7 @@ export const SETTINGS_TABS = [
   { id: "general", icon: Building2, group: "admin" },
   { id: "users", icon: UsersRound, group: "admin" },
   { id: "integrations", icon: Webhook, group: "admin" },
+  { id: "extensions", icon: Blocks, group: "admin" },
   { id: "capture", icon: Mail, group: "admin" },
   { id: "data-model", icon: Database, group: "admin" },
   { id: "ai", icon: Sparkles, group: "admin" },
@@ -279,6 +281,13 @@ export function tabContent(id: SettingsTabId): ReactNode {
       return <AgentsTab />;
     case "general":
       return <GeneralTab />;
+    case "extensions":
+      // Its own entry rather than a third card under Users & teams: that page
+      // answers who holds which role, and this one answers what an installed
+      // unit may reach — a question about the installation's software, not
+      // about its people. They shared a page while the extension tier had one
+      // unit and no page of its own.
+      return <ExtensionAccessCard />;
     case "users":
       return (
         <>
@@ -288,10 +297,6 @@ export function tabContent(id: SettingsTabId): ReactNode {
               team-scoped — so this card sits below the roster rather than
               claiming to answer who may edit whose records. */}
           <TeamsCard />
-          {/* Beside the member list because it answers the same question one
-              level up: that card says which role a person holds, this one says
-              what a role may reach. */}
-          <ExtensionAccessCard />
         </>
       );
     case "connections":
@@ -643,6 +648,10 @@ export function useSettingsEntryVisibility(
     // their own authority, so an operator who is not an admin sees the roster
     // and none of the controls.
     users: true,
+    // `GET /extensions` is admin-only server-side, so the entry follows the
+    // role rather than a grant: an operator who is not an admin would open a
+    // page whose only read answers 403.
+    extensions: isAdmin,
     capture: captureSettings,
     // The installation's own outside wiring — the shared provider credential, the
     // outbound subscriptions, the incumbent mirror. Either read opens it, and the
@@ -722,6 +731,7 @@ export function useSettingsEntryVisibility(
     return {
       general: false,
       users: false,
+      extensions: false,
       capture: false,
       integrations: false,
       "data-model": false,

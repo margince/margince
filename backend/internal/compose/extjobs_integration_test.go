@@ -66,6 +66,7 @@ func composeJob(t *testing.T, decl extension.JobDeclaration, handle extension.Jo
 		[]extension.Extension{{
 			Name:           decl.Unit,
 			Version:        "0.1.0",
+			Description:    "A unit composed by a test.",
 			Jobs:           []extension.Job{{Name: decl.Job, Handle: handle}},
 			FailureClasses: classes,
 		}},
@@ -445,7 +446,7 @@ func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
 	decl := testJobDecl()
 	decl.Tier = extension.TierConfirmationRequired
 	err := RegisterExtensions(
-		[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Jobs: []extension.Job{{
+		[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Description: "A unit composed by a test.", Jobs: []extension.Job{{
 			Name: decl.Job, Handle: func(context.Context, extension.Runtime) error { return nil },
 		}}}},
 		nil, []extension.JobDeclaration{decl})
@@ -470,7 +471,7 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 			decl := testJobDecl()
 			decl.RequestedScope = scope
 			err := RegisterExtensions(
-				[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Jobs: []extension.Job{{
+				[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Description: "A unit composed by a test.", Jobs: []extension.Job{{
 					Name: decl.Job, Handle: func(context.Context, extension.Runtime) error { return nil },
 				}}}},
 				nil, []extension.JobDeclaration{decl})

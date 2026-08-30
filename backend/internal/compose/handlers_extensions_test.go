@@ -145,7 +145,7 @@ func TestExtensionInventoryOfAVanillaInstallationIsEmptyNotNull(t *testing.T) {
 // an installation that is not the one serving.
 func TestRegisterExtensionsRecordsTheSetTheInventoryReadsBack(t *testing.T) {
 	t.Cleanup(func() { setComposedExtensions(nil) })
-	if err := RegisterExtensions([]extension.Extension{{Name: "inv-unit", Version: "9.9.9"}}, nil, nil); err != nil {
+	if err := RegisterExtensions(composableAll([]extension.Extension{{Name: "inv-unit", Version: "9.9.9"}}), nil, nil); err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
 	got := ComposedExtensions()

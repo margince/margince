@@ -247,8 +247,18 @@ const EVERY_TAB = [...PERSONAL_TABS, ...ADMIN_TABS];
 // declared last — and the moment License landed beside it, the same slice
 // silently claimed a seat without the grant could reach the licensing page.
 const ADMIN_ONLY_TABS = [labelOf("license"), labelOf("maintenance")];
+
+// What an OPS seat cannot reach even holding every grant. `GET /extensions` is
+// auth.RequireAdmin, which admits the admin role alone — ops administers the
+// installation everywhere else and not here, so the entry follows the role and
+// this list is what tells the two seats apart.
+const ADMIN_ROLE_ONLY_TABS = [labelOf("extensions")];
+const EVERY_TAB_FOR_OPS = EVERY_TAB.filter(
+  (tab) => !ADMIN_ROLE_ONLY_TABS.includes(tab),
+);
 const SHARED_READ_TABS = EVERY_TAB.filter(
-  (tab) => !ADMIN_ONLY_TABS.includes(tab),
+  (tab) =>
+    !ADMIN_ONLY_TABS.includes(tab) && !ADMIN_ROLE_ONLY_TABS.includes(tab),
 );
 
 // What the operator SEAT alone buys: the ONE admin entry with no grant to ask
@@ -271,6 +281,17 @@ const OPERATOR_TABS_WITH_PRIVACY = [...OPERATOR_TABS, "Privacy & audit"];
 // edited role can hold without it. Both halves are asserted against this list.
 const OPERATOR_TABS_WITH_MAINTENANCE = [
   ...OPERATOR_TABS_WITH_PRIVACY,
+  "Maintenance",
+];
+
+// The same list for an ADMIN, who additionally reaches Extensions: that entry
+// follows the admin ROLE rather than the operator seat, because the read behind
+// it is auth.RequireAdmin. Named beside its ops-shaped sibling so the one
+// entry that tells the two seats apart is visible in both.
+const ADMIN_TABS_WITH_MAINTENANCE = [
+  ...OPERATOR_TABS,
+  labelOf("extensions"),
+  "Privacy & audit",
   "Maintenance",
 ];
 
@@ -569,7 +590,7 @@ describe("SettingsScreen Admin settings group", () => {
       }),
     );
     renderNav();
-    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB));
+    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB_FOR_OPS));
   });
 
   // The grant still decides INSIDE the group, which is what keeps the seat from
@@ -596,7 +617,7 @@ describe("SettingsScreen Admin settings group", () => {
       adminNavBackend({ roles: ["ops"], allow: SEEDED_OPS_READS }),
     );
     renderNav();
-    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB));
+    await waitFor(() => expect(navTabs()).toEqual(EVERY_TAB_FOR_OPS));
   });
 
   // An EDITED role, which is the case the seat gate must not swallow. This admin
@@ -629,7 +650,11 @@ describe("SettingsScreen Admin settings group", () => {
     vi.stubGlobal("fetch", adminNavBackend({ roles: ["admin"] }));
     renderNav();
     await waitFor(() =>
-      expect(navTabs()).toEqual([...OPERATOR_TABS, "Maintenance"]),
+      expect(navTabs()).toEqual([
+        ...OPERATOR_TABS,
+        labelOf("extensions"),
+        "Maintenance",
+      ]),
     );
   });
 
@@ -670,7 +695,7 @@ describe("SettingsScreen Admin settings group", () => {
     // are on screen — while the flag is still unanswered, because this test
     // holds the answer.
     await screen.findByRole("link", { name: "Maintenance" });
-    expect(navTabs()).toEqual(OPERATOR_TABS_WITH_MAINTENANCE);
+    expect(navTabs()).toEqual(ADMIN_TABS_WITH_MAINTENANCE);
 
     // Moment two: the answer is in the cache, which is the fact the emptiness
     // claim needs — the request having been SENT proves nothing about what the
@@ -681,6 +706,6 @@ describe("SettingsScreen Admin settings group", () => {
         client.getQueryState(companyContextCapabilitiesQueryKey)?.status,
       ).toBe("success"),
     );
-    expect(navTabs()).toEqual(OPERATOR_TABS_WITH_MAINTENANCE);
+    expect(navTabs()).toEqual(ADMIN_TABS_WITH_MAINTENANCE);
   });
 });

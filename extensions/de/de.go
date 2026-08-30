@@ -24,6 +24,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:          "de",
 		Version:       "1.0.0",
+		Description:   "German jurisdiction pack: the statutory retention floors (GoBD, §147 AO) the core retention engine applies. Registers no records, routes or jobs.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 	}
 }

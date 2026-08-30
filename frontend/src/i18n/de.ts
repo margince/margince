@@ -5195,6 +5195,7 @@ export const de = {
   "settings.tab.connections": "Verbindungen",
   "settings.tab.general": "Allgemein",
   "settings.tab.users": "Benutzer & Teams",
+  "settings.tab.extensions": "Erweiterungen",
   "settings.tab.integrations": "Integrationen",
   "settings.tab.capture": "Erfassung",
   "settings.tab.data-model": "Datenmodell",

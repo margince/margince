@@ -5144,6 +5144,7 @@ export const vi = {
   "settings.tab.connections": "Kết nối",
   "settings.tab.general": "Chung",
   "settings.tab.users": "Người dùng & nhóm",
+  "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Thu thập",
   "settings.tab.data-model": "Mô hình dữ liệu",

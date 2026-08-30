@@ -306,6 +306,13 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		m.Name, err = r.stringLit(kv.Value, "Name")
 	case "Version":
 		m.Version, err = r.stringLit(kv.Value, "Version")
+	case "Description":
+		// Read to prove it is a literal, then discarded: the manifest records
+		// what an OPERATOR must resolve, and a sentence describing the unit
+		// asks nothing of them. It still may not be computed, because a
+		// generator that cannot evaluate the expression would silently emit an
+		// empty one — so it goes through stringLit like every other literal.
+		_, err = r.stringLit(kv.Value, "Description")
 	case "Tools":
 		// The manifest's risk tiers are already set, from the merged contract.
 		// What the Go slice contributes is the join: behavior for a verb the
