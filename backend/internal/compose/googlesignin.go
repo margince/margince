@@ -78,6 +78,21 @@ func (cfg GoogleSignInConfig) MissingFields() []string {
 	return missing
 }
 
+// googleSignInMatchIdentity is the login flow's matchIdentity: the token's
+// audience must be the shared Gmail-capture client this deployment
+// configured. email_verified is checked by identity's own callback handler,
+// not here — the Pub/Sub push caller (oidcverify.go's other user of
+// googleOIDCVerifier) has no such requirement, so it is not baked into the
+// shared matchIdentity contract.
+func googleSignInMatchIdentity(clientID string) func(oidcClaims) error {
+	return func(c oidcClaims) error {
+		if c.Aud != clientID {
+			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
+		}
+		return nil
+	}
+}
+
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
 // compose-level googleOIDCVerifier (generalized in oidcverify.go).
 type googleOIDCVerifierAdapter struct{ v *googleOIDCVerifier }
@@ -125,17 +140,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		providers := map[string]identity.OIDCProviderConfig{
 			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, AuthURL: googleAuthURL, TokenURL: googleTokenURL},
 		}
-		matchIdentity := func(c oidcClaims) error {
-			if c.Aud != cfg.ClientID {
-				return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-			}
-			// email_verified is checked by identity's own callback handler, not
-			// the shared verifier: the Pub/Sub push caller (oidcverify.go's other
-			// user) has no such requirement, so it is not baked into the shared
-			// matchIdentity contract.
-			return nil
-		}
-		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier("", matchIdentity)}
+		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier("", googleSignInMatchIdentity(cfg.ClientID))}
 		exchanger := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}}
 		signer := loginStateSignerAdapter{s: newLoginStateSigner([]byte(cfg.StateKey))}
 

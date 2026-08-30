@@ -9,8 +9,10 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -62,6 +64,18 @@ func (f fixedStateSigner) Verify(string) (string, string, string, error) {
 	return f.provider, f.nonce, f.codeVerifier, nil
 }
 
+type erroringExchanger struct{}
+
+func (erroringExchanger) Exchange(context.Context, string, string, string) (string, error) {
+	return "", errors.New("token endpoint unreachable")
+}
+
+type unverifiedEmailVerifier struct{}
+
+func (unverifiedEmailVerifier) Verify(context.Context, string) (string, string, bool, error) {
+	return "carol@example.com", "sub-carol", false, nil
+}
+
 func oidcStrPtr(s string) *string { return &s }
 
 func callbackParams(code, state string) crmcontracts.OidcSignInCallbackParams {
@@ -77,6 +91,59 @@ func TestStartOidcSignInUnknownProviderIs404(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestStartOidcSignInRedirectsWithPKCEAndSetsStateCookie(t *testing.T) {
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {
+			Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth",
+		}},
+		map[string]OIDCVerifier{"google": stubVerifier{}},
+		map[string]OIDCExchanger{"google": stubExchanger{}},
+		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
+		"https://app.example.com", "/", "/#/login?oidc=failed",
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
+	rec := httptest.NewRecorder()
+
+	h.StartOidcSignIn(rec, req, "google")
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status = %d, want 302", rec.Code)
+	}
+	loc, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parse Location: %v", err)
+	}
+	if loc.Scheme+"://"+loc.Host+loc.Path != "https://accounts.google.com/o/oauth2/v2/auth" {
+		t.Fatalf("redirected to %q, want Google's consent screen", loc)
+	}
+	q := loc.Query()
+	if q.Get("client_id") != "cid" {
+		t.Fatalf("client_id = %q", q.Get("client_id"))
+	}
+	if q.Get("redirect_uri") != "https://app.example.com/auth/oidc/google/callback" {
+		t.Fatalf("redirect_uri = %q", q.Get("redirect_uri"))
+	}
+	if q.Get("response_type") != "code" || q.Get("code_challenge_method") != "S256" {
+		t.Fatalf("response_type=%q code_challenge_method=%q", q.Get("response_type"), q.Get("code_challenge_method"))
+	}
+	if q.Get("code_challenge") == "" || q.Get("state") == "" {
+		t.Fatal("expected a non-empty PKCE challenge and state nonce")
+	}
+
+	var stateCookie *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == oidcLoginCookie {
+			stateCookie = c
+		}
+	}
+	if stateCookie == nil || stateCookie.Value == "" {
+		t.Fatal("expected the one-shot oidc_login_state cookie to be set")
+	}
+	if !stateCookie.HttpOnly || !stateCookie.Secure || stateCookie.SameSite != http.SameSiteLaxMode {
+		t.Fatalf("state cookie attributes = %+v, want HttpOnly+Secure+SameSite=Lax", stateCookie)
 	}
 }
 
@@ -126,6 +193,44 @@ func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "wrong-nonce"))
+
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
+		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+func TestOidcSignInCallbackExchangeFailureIsRefused(t *testing.T) {
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {Key: "google"}},
+		map[string]OIDCVerifier{"google": stubVerifier{}},
+		map[string]OIDCExchanger{"google": erroringExchanger{}},
+		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
+		"https://app.example.com", "/", "/#/login?oidc=failed",
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant"})
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "n"))
+
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
+		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+func TestOidcSignInCallbackUnverifiedEmailIsRefused(t *testing.T) {
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {Key: "google"}},
+		map[string]OIDCVerifier{"google": unverifiedEmailVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused"}},
+		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
+		"https://app.example.com", "/", "/#/login?oidc=failed",
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant"})
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "n"))
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
 		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))

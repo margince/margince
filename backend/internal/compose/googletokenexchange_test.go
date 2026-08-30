@@ -61,3 +61,44 @@ func TestGoogleTokenExchangeRejectsNonOKStatus(t *testing.T) {
 		t.Fatal("expected an error for a non-200 response")
 	}
 }
+
+func TestGoogleTokenExchangeRejectsUnreachableEndpoint(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	url := srv.URL
+	srv.Close() // the endpoint is now unreachable; client.Do must fail
+
+	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: url, HTTPClient: srv.Client()}
+	if _, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb"); err == nil {
+		t.Fatal("expected an error for an unreachable token endpoint")
+	}
+}
+
+func TestGoogleTokenExchangeRejectsMalformedJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`not json`))
+	}))
+	defer srv.Close()
+
+	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
+	if _, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb"); err == nil {
+		t.Fatal("expected an error for a malformed response body")
+	}
+}
+
+func TestGoogleTokenExchangeDefaultsHTTPClientWhenNil(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id_token":"the.id.token"}`))
+	}))
+	defer srv.Close()
+
+	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL}
+	idToken, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb")
+	if err != nil {
+		t.Fatalf("Exchange: %v", err)
+	}
+	if idToken != "the.id.token" {
+		t.Fatalf("idToken = %q", idToken)
+	}
+}

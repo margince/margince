@@ -183,3 +183,33 @@ func TestOIDCSignInFullRoundTrip(t *testing.T) {
 		t.Fatalf("federated_identity rows = %d, want 1", count)
 	}
 }
+
+func TestOIDCSignInFullRoundTripRefusesUnknownEmail(t *testing.T) {
+	svc, _, _, _ := seedSSOEnv(t, "sso-round-trip-unknown-email")
+
+	h := Handlers{svc: svc}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {
+			Key: "google", ClientID: "cid", ClientSecret: "secret",
+			AuthURL: "https://accounts.google.com/o/oauth2/v2/auth", TokenURL: "https://oauth2.googleapis.com/token",
+		}},
+		map[string]OIDCVerifier{"google": fixedVerifier{email: "nobody@example.com", sub: "sub-nobody", emailVerified: true}},
+		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused-by-fixedVerifier"}},
+		fixedStateSigner{provider: "google", nonce: "n1", codeVerifier: "v1"},
+		"https://app.example.com", "/", "/#/login?oidc=failed",
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=c&state=n1", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", callbackParams("c", "n1"))
+
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
+		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookieName {
+			t.Fatal("a refused sign-in must never set the session cookie")
+		}
+	}
+}
