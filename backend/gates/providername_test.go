@@ -5,20 +5,28 @@
 
 package gates
 
-// The rule a provider name must satisfy is the CONTRACT's, spelled once.
+// The rule a REGISTERED NAME must satisfy is the contract's, on both surfaces
+// that have one.
 //
-// `Provider` is published as a pattern-constrained string rather than an enum,
-// because which providers exist is a deployment fact — what this binary
-// composed — and an enum would assert the legal set is identical everywhere.
-// A pattern in a schema is not enforcement, though: the registry admitted any
-// non-empty unique name, so an adapter called `Acme-Data` would register, write
-// rows, and be serialized into a response that violates the published schema.
+// `Provider` (a licensed data vendor) and `ProviderRef` (a messaging
+// transport) are both published as pattern-constrained strings rather than
+// enums, because which of either exists is a deployment fact — what this binary
+// composed — and an enum would assert the legal set is identical everywhere. A
+// pattern in a schema is not enforcement, though: each registry admitted any
+// non-empty unique name, so one called `Acme-Data` would register, write rows,
+// and be serialized into a response that violates the published schema.
 //
-// The registry checks it now, against a Go spelling of the same pattern. Two
+// Each registry checks its own now, against a Go spelling of the pattern. Two
 // spellings of one rule drift, and this drift would be silent in the direction
 // that matters: a Go pattern LOOSER than the contract admits names the schema
 // refuses, which is the defect the check exists to remove, and it would be
 // invisible until a client validated a response.
+//
+// TWO RULES, not one shared constant, because they are two schemas. The shapes
+// are identical today and a transport is not a data vendor: one of them can
+// gain a character the other must not, and a single constant would carry that
+// change to a surface nobody argued it for. What this gate holds is that each
+// matches ITS OWN schema.
 //
 // So the two are compared as text. The contract is parsed rather than
 // pattern-matched: rewriting the schema block-style changes nothing about it,
@@ -32,30 +40,44 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // providerNameContract is where the published rule lives.
 const providerNameContract = "api/crm.yaml"
 
-// TestTheProviderNameRuleIsTheContractsOwn is the parity check.
-func TestTheProviderNameRuleIsTheContractsOwn(t *testing.T) {
+// TestEveryRegisteredNameRuleIsTheContractsOwn is the parity check.
+func TestEveryRegisteredNameRuleIsTheContractsOwn(t *testing.T) {
 	t.Parallel()
-	pattern, maxLength := publishedProviderNameRule(t)
-	if pattern != provider.NamePattern {
-		t.Errorf("the contract publishes provider names as %s and the registry admits %s — a Go pattern looser than "+
-			"the contract registers an adapter whose name the schema refuses, and nothing says so until a client "+
-			"validates a response",
-			pattern, provider.NamePattern)
-	}
-	if maxLength != provider.NameMaxLength {
-		t.Errorf("the contract caps a provider name at %d characters and the registry at %d",
-			maxLength, provider.NameMaxLength)
+	for _, rule := range []struct {
+		schema    string
+		what      string
+		pattern   string
+		maxLength int
+	}{
+		{schema: "Provider", what: "a licensed data provider", pattern: provider.NamePattern, maxLength: provider.NameMaxLength},
+		{schema: "ProviderRef", what: "a messaging transport", pattern: connector.NamePattern, maxLength: connector.NameMaxLength},
+	} {
+		t.Run(rule.schema, func(t *testing.T) {
+			t.Parallel()
+			pattern, maxLength := publishedNameRule(t, rule.schema)
+			if pattern != rule.pattern {
+				t.Errorf("the contract publishes %s as %s and its registry admits %s — a Go pattern looser than "+
+					"the contract registers a name the schema refuses, and nothing says so until a client "+
+					"validates a response",
+					rule.what, pattern, rule.pattern)
+			}
+			if maxLength != rule.maxLength {
+				t.Errorf("the contract caps the name of %s at %d characters and its registry at %d",
+					rule.what, maxLength, rule.maxLength)
+			}
+		})
 	}
 }
 
-// publishedProviderNameRule reads the Provider schema's own constraints.
-func publishedProviderNameRule(t *testing.T) (pattern string, maxLength int) {
+// publishedNameRule reads one schema's own constraints.
+func publishedNameRule(t *testing.T, schemaName string) (pattern string, maxLength int) {
 	t.Helper()
 	document, err := os.ReadFile(providerNameContract)
 	if err != nil {
@@ -77,22 +99,23 @@ func publishedProviderNameRule(t *testing.T) (pattern string, maxLength int) {
 	if err := yaml.Unmarshal(document, &contract); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
-	schema, declared := contract.Components.Schemas["Provider"]
+	schema, declared := contract.Components.Schemas[schemaName]
 	if !declared {
-		t.Fatal("the contract declares no Provider schema: this gate compares the registry's name rule against " +
-			"that schema's own, so it now certifies nothing")
+		t.Fatalf("the contract declares no %s schema: this gate compares a registry's name rule against that "+
+			"schema's own, so it now certifies nothing", schemaName)
 	}
 	if schema.Pattern == "" || schema.MaxLength == 0 {
-		t.Fatalf("the Provider schema declares pattern %q and maxLength %d — a rule this gate cannot read is one "+
-			"it cannot hold the registry to, and an empty comparison passes",
-			schema.Pattern, schema.MaxLength)
+		t.Fatalf("the %s schema declares pattern %q and maxLength %d — a rule this gate cannot read is one it "+
+			"cannot hold a registry to, and an empty comparison passes",
+			schemaName, schema.Pattern, schema.MaxLength)
 	}
 	return schema.Pattern, schema.MaxLength
 }
 
-// TestTheProviderNameRuleAdmitsWhatTheContractDoes is the rule itself,
-// exercised on the shapes an extension author actually reaches for.
-func TestTheProviderNameRuleAdmitsWhatTheContractDoes(t *testing.T) {
+// TestARegisteredNameRuleAdmitsWhatTheContractDoes is the rule itself,
+// exercised on the shapes an extension author actually reaches for. Both
+// spellings are checked, so a change to one is not assumed of the other.
+func TestARegisteredNameRuleAdmitsWhatTheContractDoes(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		name    string
@@ -114,7 +137,10 @@ func TestTheProviderNameRuleAdmitsWhatTheContractDoes(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			if got := provider.ValidName(c.name); got != c.admits {
-				t.Errorf("ValidName(%q) = %v, want %v — %s", c.name, got, c.admits, c.because)
+				t.Errorf("provider.ValidName(%q) = %v, want %v — %s", c.name, got, c.admits, c.because)
+			}
+			if got := connector.ValidName(c.name); got != c.admits {
+				t.Errorf("connector.ValidName(%q) = %v, want %v — %s", c.name, got, c.admits, c.because)
 			}
 		})
 	}

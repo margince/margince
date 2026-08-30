@@ -29,6 +29,9 @@ func TestARegisteredProviderIsNamedTheWayTheContractPublishesIt(t *testing.T) {
 	}{
 		{name: "surfe", registers: true},
 		{name: "acme_data", registers: true},
+		{name: "vendor2", registers: true},
+		{name: strings.Repeat("a", provider.NameMaxLength), registers: true},
+		{name: "", registers: false},
 		{name: "Acme-Data", registers: false},
 		{name: "ACME", registers: false},
 		{name: "2vendor", registers: false},

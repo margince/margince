@@ -12,14 +12,12 @@ package provider
 // binary composed — and an enum would assert that the legal set is identical in
 // every installation.
 //
-// Nothing enforced it where a name ENTERS the system. The database CHECK that
-// pinned the value to one provider is gone so a second can exist, and the
-// registry asked only that the name be non-empty and unique — so an adapter
-// called `Acme-Data` or `ACME` would register, write rows, and be serialized
-// into a response that violates the schema the product publishes. The failure
-// surfaces at a client that validates, far from the author who chose the name.
+// A name the pattern refuses reaches a client as a response the schema refuses,
+// so the check belongs where a name ENTERS the system: an adapter with an
+// illegal name is one whose author is told now, rather than through a client
+// that validates and reports a breach far from the cause.
 //
-// Held by: TestTheProviderNameRuleIsTheContractsOwn
+// Held by: TestEveryRegisteredNameRuleIsTheContractsOwn
 // (backend/gates/providername_test.go)
 
 import "regexp"

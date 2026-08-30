@@ -108,9 +108,15 @@ func (r *Registry) WithProgressPacing(d time.Duration) *Registry {
 // Register adds one connector at composition time.
 func (r *Registry) Register(c connector.Connector) {
 	desc := c.Descriptor()
-	if desc.Name == "" {
+	// The name reaches a client as `ProviderRef`, which the contract publishes
+	// under a pattern. A transport whose name the schema refuses would capture
+	// activities, bind identities and be serialized into responses that fail
+	// validation — for an extension author, a unit that works locally and
+	// breaks for anybody who checks.
+	if !connector.ValidName(desc.Name) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-		panic("capture: registering a connector with no name")
+		panic(fmt.Sprintf("capture: connector name %q is not one the contract can carry (%s, at most %d characters): lower-case letters, digits and underscores, starting with a letter",
+			desc.Name, connector.NamePattern, connector.NameMaxLength))
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
