@@ -38,6 +38,38 @@ head="${2:?usage: check-dco.sh <base-sha> <head-sha>}"
 range="${base}..${head}"
 missing=0
 
+# WHAT THE RANGE COVERS, asserted before it is trusted.
+#
+# `git rev-list A..B` does not complain when A is not behind B — it answers with
+# whatever that range happens to mean, which for a base ahead of the head is
+# nothing at all. The loops below then run zero times, `missing` stays 0, and
+# this prints the same clean pass it prints for a fully signed branch. That is
+# the one way a gate must not break: it reads a smaller history, reports PASS,
+# and no assertion fails to say so.
+#
+# Held HERE rather than at each call site, because the required caller is the
+# one that had no guard: main-health.yml asserted its baseline's ancestry and
+# ci.yml — the job the `ci` fan-in makes required — called this bare. A
+# protection that lives in the advisory lane and not the blocking one protects
+# nothing.
+if ! git merge-base --is-ancestor "$base" "$head"; then
+	echo "DCO: ${base} is not an ancestor of ${head} — the range ${range} does not" >&2
+	echo "cover the commits it is meant to judge, and an empty one would read as a" >&2
+	echo "clean pass having examined nothing." >&2
+	exit 1
+fi
+
+# Merges included: this is what the range HOLDS, not what needs a trailer. A
+# range covering only merge commits is a real thing (a merge queue's own head),
+# and reporting it as zero examined would be the same silent pass one step
+# along, so the two counts are kept apart and both are printed.
+present="$(git rev-list "$range" | wc -l | tr -d '[:space:]')"
+if [ "$present" -eq 0 ]; then
+	echo "DCO: the range ${range} holds no commits — this gate would report a clean" >&2
+	echo "pass having read nothing. Check the base and head it was given." >&2
+	exit 1
+fi
+
 signed_off() {
 	git log -1 --format='%B' "$1" | grep -qiE '^Signed-off-by: .+ <.+@.+>'
 }
@@ -92,7 +124,9 @@ attested_by() {
 	done
 }
 
+judged=0
 for sha in $(git rev-list --no-merges "$range"); do
+	judged=$((judged + 1))
 	if signed_off "$sha"; then
 		continue
 	fi
@@ -117,4 +151,8 @@ if [ "$missing" -ne 0 ]; then
 	exit 1
 fi
 
-echo "DCO: all commits in ${range} are signed off"
+# The DENOMINATOR is the point of this line. "All commits are signed off" is
+# what a gate that read nothing says too, and a number cannot be misread that
+# way: a run reporting 0 of 0 says so where a run reporting 12 of 14 says
+# something else.
+echo "DCO: all ${judged} of ${present} commit(s) in ${range} are signed off ($((present - judged)) merge commit(s) need none)"
