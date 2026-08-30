@@ -26,7 +26,7 @@ import (
 //
 // It asserts NO response-header timeout, deliberately. A completion is sent with
 // stream:false, so the vendor holds its headers until generation finishes and a
-// header deadline would cut exactly the long answers requestTimeout is generous
+// header deadline would cut exactly the long answers CallCeiling is generous
 // for. The embed lane's own deadline is what bounds the calls whose duration is
 // actually known — see TestEmbedLaneBoundsOneCall.
 func TestOutboundClientKeepsItsConnectionsHonest(t *testing.T) {
@@ -54,8 +54,8 @@ func TestOutboundClientKeepsItsConnectionsHonest(t *testing.T) {
 		t.Fatalf("ResponseHeaderTimeout is %v, but a stream:false completion holds its headers until generation finishes — this cuts long answers short",
 			transport.ResponseHeaderTimeout)
 	}
-	if client.Timeout != requestTimeout {
-		t.Fatalf("the call ceiling is %v, want %v", client.Timeout, requestTimeout)
+	if client.Timeout != CallCeiling {
+		t.Fatalf("the call ceiling is %v, want %v", client.Timeout, CallCeiling)
 	}
 }
 
@@ -71,8 +71,8 @@ func TestOutboundClientKeepsItsConnectionsHonest(t *testing.T) {
 func TestEmbedLaneBoundsOneCall(t *testing.T) {
 	t.Parallel()
 
-	if EmbedCallTimeout <= 0 || EmbedCallTimeout >= requestTimeout {
-		t.Fatalf("EmbedCallTimeout is %v, which does not bound anything inside the %v ceiling", EmbedCallTimeout, requestTimeout)
+	if EmbedCallTimeout <= 0 || EmbedCallTimeout >= CallCeiling {
+		t.Fatalf("EmbedCallTimeout is %v, which does not bound anything inside the %v ceiling", EmbedCallTimeout, CallCeiling)
 	}
 
 	spy := &deadlineSpyEmbedder{}
@@ -192,8 +192,8 @@ func TestEveryCloudAdapterUsesTheHardenedTransport(t *testing.T) {
 			t.Fatalf("SelectBrain(%s): %v", provider, err)
 		}
 		httpClient := outboundHTTPClientOf(t, client)
-		if httpClient.Timeout != requestTimeout {
-			t.Errorf("%s: call timeout is %v, want %v", provider, httpClient.Timeout, requestTimeout)
+		if httpClient.Timeout != CallCeiling {
+			t.Errorf("%s: call timeout is %v, want %v", provider, httpClient.Timeout, CallCeiling)
 		}
 		transport, ok := httpClient.Transport.(*http.Transport)
 		if !ok {

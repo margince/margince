@@ -30,7 +30,7 @@ func (c *countingStarter) AnnounceRailStart(_ context.Context, call Call, lease 
 
 // The lease must outlast the work it covers, and the property that makes it a
 // derivation rather than a guess is that it grows with the ladder: a call may
-// spend a full requestTimeout on EVERY rung before the flush that settles it.
+// spend a full CallCeiling on EVERY rung before the flush that settles it.
 //
 // Stated as a strict inequality against the worst case rather than as the
 // formula, so the test fails for a constant. A fixed lease passes any
@@ -46,7 +46,7 @@ func TestTheLeaseOutlastsEveryRungTheLadderCanSpend(t *testing.T) {
 		// the same attempt — so the lease has to cover every walk or a
 		// structured call that legitimately retried renders stalled while it is
 		// still working.
-		worstCase := requestTimeout * time.Duration(rungs*maxLadderWalks)
+		worstCase := CallCeiling * time.Duration(rungs*maxLadderWalks)
 		if got := railLease(ladder); got <= worstCase {
 			t.Errorf("railLease over %d rungs = %s, which does not outlast the %s that %d walks of those rungs can spend — "+
 				"a healthy structured call would render stalled", rungs, got, worstCase, maxLadderWalks)

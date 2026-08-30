@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Timeouts bounding one outbound model call. requestTimeout is the ceiling on
+// Timeouts bounding one outbound model call. CallCeiling is the ceiling on
 // the whole call; the rest bound the legs that can stall while the ceiling is
 // still far away.
 //
@@ -20,11 +20,42 @@ import (
 // answer at all, and the sooner the caller hears so the sooner it retries on a
 // fresh one.
 const (
-	// requestTimeout bounds a single model call. Generous because premium
+	// CallCeiling bounds a single model call. Generous because premium
 	// completions on long context are legitimately slow — a streamed corpus
 	// extraction emits ten-thousand-token answers over minutes; per-call
 	// contexts tighten it where a caller has a real deadline.
-	requestTimeout = 300 * time.Second
+	//
+	// Exported because it is not this package's private business: an HTTP
+	// server that serves a synchronous model call must allow the response
+	// longer than this, or it cuts the connection on an answer the AI layer
+	// was still entitled to wait for. cmd/api reads it for exactly that, and a
+	// test holds the two together.
+	CallCeiling = 300 * time.Second
+
+	// RouteWriteDeadline is how long a handler that CALLS a model may take to
+	// write its response — set on that route alone, never on the server, whose
+	// short WriteTimeout protects every other endpoint from a slow reader.
+	//
+	// Sized for the whole logical call rather than one request: the router may
+	// spend CallCeiling on each rung of the ladder, and CompleteStructured may
+	// walk that ladder more than once for a single answer (the first try, the
+	// schema-invalid retry, the escalation). A deadline covering one call would
+	// cut a legitimate retry — the same defect one level down from the 30s
+	// server timeout that cut these responses in the first place.
+	//
+	// This is the same derivation railLease makes for its own lease; a round
+	// number here would be a guess that happens to look like a decision.
+	RouteWriteDeadline = CallCeiling*maxLadderRungs*maxLadderWalks + writeHeadroom
+
+	// maxLadderRungs is the longest ladder any task binds — cheap_cloud then
+	// premium today. Named rather than counted from a task, because this bound
+	// must hold for every task that reaches these routes.
+	maxLadderRungs = 2
+
+	// writeHeadroom is the work AROUND the model calls that shares the same
+	// response: assembling context, the write shape's transaction, serializing
+	// the answer.
+	writeHeadroom = 30 * time.Second
 
 	// EmbedCallTimeout bounds ONE embedding call, and is the reason there is no
 	// response-header timeout on the shared transport.
@@ -33,7 +64,7 @@ const (
 	// sent with stream:false (openai.go's Complete and every adapter beside it),
 	// so the vendor holds its status line until generation FINISHES — a slow
 	// reasoning model legitimately says nothing for minutes, and a header
-	// deadline would cut exactly the call requestTimeout is generous for. An
+	// deadline would cut exactly the call CallCeiling is generous for. An
 	// embedding is the opposite: it is one forward pass, it answers in about a
 	// second, and a minute of silence on one is never the model thinking.
 	//
@@ -48,7 +79,7 @@ const (
 	// itself may go unanswered before the connection is closed and its in-flight
 	// requests fail. Without these an h2 connection dropped by a NAT or a load
 	// balancer stays in the pool looking healthy, and every request handed to it
-	// waits out requestTimeout. Both vendors this reaches over h2 (Cloudflare
+	// waits out CallCeiling. Both vendors this reaches over h2 (Cloudflare
 	// fronts OpenRouter and Anthropic) drop idle connections well inside the
 	// minute.
 	http2PingAfterIdle = 20 * time.Second
@@ -75,5 +106,5 @@ func newOutboundClient() *http.Client {
 		SendPingTimeout: http2PingAfterIdle,
 		PingTimeout:     http2PingTimeout,
 	}
-	return &http.Client{Timeout: requestTimeout, Transport: transport}
+	return &http.Client{Timeout: CallCeiling, Transport: transport}
 }

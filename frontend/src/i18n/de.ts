@@ -628,6 +628,8 @@ export const de = {
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
+  "common.gatewayUnavailable":
+    "Der Server hat diese Anfrage nicht rechtzeitig abgeschlossen. Sie läuft möglicherweise noch — warte einen Moment, bevor du es erneut versuchst, sonst läuft dieselbe Arbeit zweimal.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Bitte einen Admin oder die Person, die diesen Datensatz mit dir geteilt hat, deinen Zugriff zu erweitern.",
   "common.seatReadOnly":

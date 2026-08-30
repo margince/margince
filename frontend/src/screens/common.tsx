@@ -540,6 +540,9 @@ function problemDetail(
   if (t && code === "unsupported_in_overlay_mode") {
     return t("overlay.filterUnsupported");
   }
+  if (t && code === "gateway_unavailable") {
+    return t("common.gatewayUnavailable");
+  }
   if (t && code === "permission_denied") {
     return t("common.permissionDenied");
   }

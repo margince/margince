@@ -800,6 +800,11 @@ describe("ComposeModal", () => {
   it("shows a draft error on a bodiless non-2xx without crashing the fill", async () => {
     // The old !error success path would fabricate an undefined draft and crash
     // onSuccess reading its fields; a bodiless 502 must surface an error only.
+    //
+    // On THIS route the error says what happened: a draft runs for tens of
+    // seconds, so a proxy giving up on one leaves work in flight, and a retry
+    // is a second model call rather than a repeat. Every other route keeps the
+    // generic sentence — see api/client.test.ts.
     stubRoutes({
       "POST /activities/act-1/draft-email": () => emptyResponse(502),
     });
@@ -817,7 +822,11 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    expect(await screen.findByText(/The request failed/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/did not finish this request in time/i),
+    ).toBeTruthy();
+    // And it warns before a retry, because the first call may still be running.
+    expect(screen.getByText(/may still be working/i)).toBeTruthy();
   });
 });
 

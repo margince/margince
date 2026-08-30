@@ -48,6 +48,18 @@ function problemStatusOf(error: unknown): number | null {
   return typeof problem.status === "number" ? problem.status : null;
 }
 
+// The RFC-7807 `code` a failure carries, on the same terms as the status above.
+function problemCodeOf(error: unknown): string | null {
+  if (!(error instanceof ProblemError)) {
+    return null;
+  }
+  const problem = error.problem;
+  if (typeof problem !== "object" || problem === null || !("code" in problem)) {
+    return null;
+  }
+  return typeof problem.code === "string" ? problem.code : null;
+}
+
 // FE-PARAM-2: retry a server error that the server may yet recover from —
 // never a client error, and never a refusal it has already settled.
 export function retryQuery(failureCount: number, error: Error): boolean {
@@ -60,9 +72,17 @@ export function retryQuery(failureCount: number, error: Error): boolean {
   // bug in a query function returns the same failure however often it is
   // asked. The error state that follows offers the reader a retry either way,
   // so nothing is lost but the silent second request.
+  // A gateway that gave up is NOT retried, and this is the one 5xx where a
+  // second request is worse than none: the proxy stopped waiting, but the work
+  // behind it — a model call that legitimately runs the better part of a
+  // minute — is very likely still running. Retrying twice more starts up to
+  // three of them, and the reader is told in the same breath that the first
+  // may still be working. Their own retry is a decision; this one is not.
+  const gaveUpWaiting = problemCodeOf(error) === "gateway_unavailable";
   return (
     status !== null &&
     status >= 500 &&
+    !gaveUpWaiting &&
     !SETTLED_SERVER_REFUSALS.has(status) &&
     failureCount < MAX_RETRIES
   );
