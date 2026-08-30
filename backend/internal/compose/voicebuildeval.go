@@ -144,8 +144,29 @@ func voiceDraftPromptBlock(personality, profileMD string, exemplars []ai.VoiceEx
 	}
 	fmt.Fprintf(&block, "\n\nStylometric guardrails — limits, NOT targets: mean sentence length ≈ %.0f words (do not write a wall of short sentences to hit it), em dashes per 100 words ≈ %.2f (at 0, treat them as forbidden).",
 		stats.MeanSentenceWords, stats.EmDashPer100Words)
+	block.WriteString("\n\n" + draftVocabularyRule)
 	return block.String()
 }
+
+// draftVocabularyRule keeps a draft in the words its author would actually
+// reach for.
+//
+// A model drafting in one language while thinking in another translates the
+// METAPHOR as well as the sentence, and invents a compound the language does
+// not use: German business mail says "Pipeline" and "Bottleneck", never
+// "Datenmeer" or "Verzögerungsmaschine". The result reads as a translation
+// rather than as the author, which is the one thing a voice draft may not do.
+//
+// It names NO language — not the corpus's and not the borrowed one. Nothing
+// here knows which language the samples are in, and a rule that said "keep the
+// English term" would be advice about a foreign language to an author already
+// writing in English. The samples above are the evidence; this only forbids
+// coining vocabulary inside whichever language they are written in. That is
+// also why it is not the promptlang rule the other prompts carry: it does not
+// choose a language.
+const draftVocabularyRule = "Vocabulary: use the words this author uses, including the terms they borrow from other languages. " +
+	"Keep a borrowed term in the form they write it — never translate a metaphor into a compound word native speakers do not say. " +
+	"When unsure a word is real in their language, use the plainer wording they would."
 
 // evalPromptFor derives one held-out drafting task: reply to the opening of
 // the reserved sample in its register. This is the label the evaluation record
