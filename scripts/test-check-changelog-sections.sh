@@ -60,6 +60,14 @@ case_is "one section per type passes" 0 "OK: changelog-sections" <<'MD'
 - another thing
 MD
 
+# The closing sentence fits every refusal class, so a maintainer acting on it is
+# never sent looking for sections to merge that were never split.
+case_is "the closing sentence does not claim a duplicate on a read-nothing refusal" 1 "does not present one section per change type per release" <<'MD'
+# Changelog
+
+Nothing here yet.
+MD
+
 case_is "the shape that shipped: a type split in two" 1 "### Changed appears 2 times under ## [Unreleased]" <<'MD'
 ## [Unreleased]
 
@@ -201,11 +209,44 @@ case_is "headings inside a fenced block are not sections" 0 "OK: changelog-secti
 
 - A gate now holds the file's shape. It refuses this:
 
-  ```
-  ## [Unreleased]
-  ### Changed
-  ### Changed
-  ```
+```
+## [Unreleased]
+### Changed
+### Changed
+```
+MD
+
+# The delimiter that opened a fence is what closes it. A ``` line inside a ~~~
+# block is content, and closing on it would expose the quoted headings below.
+case_is "a backtick line inside a tilde fence does not close it" 0 "OK: changelog-sections" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- A gate now holds the file's shape. It refuses this:
+
+~~~
+```
+### Changed
+### Changed
+```
+~~~
+MD
+
+# And the reverse, so the rule is not one-directional.
+case_is "a tilde line inside a backtick fence does not close it" 0 "OK: changelog-sections" <<'MD'
+## [Unreleased]
+
+### Changed
+
+- And this:
+
+```
+~~~
+### Changed
+### Changed
+~~~
+```
 MD
 
 # A `##` heading that is not a release ends the release above it. Otherwise its

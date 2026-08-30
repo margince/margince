@@ -48,8 +48,18 @@ verdict=$(awk '
 		release = ""; sections = 0
 		delete seen; delete count
 	}
-	/^[ \t]*(```|~~~)/ { fenced = !fenced; next }
-	fenced { next }
+	# The delimiter that OPENED the fence is what closes it. A ``` line inside a
+	# ~~~ block is content, and a scanner that closed on it would go on to read
+	# the quoted headings below as real ones — refusing a correct file.
+	/^[ \t]*(```|~~~)/ {
+		run = $0
+		sub(/^[ \t]*/, "", run)
+		sub(/[^`~].*$/, "", run)
+		if (fence == "") { fence = run }
+		else if (substr(run, 1, 1) == substr(fence, 1, 1) && length(run) >= length(fence)) { fence = "" }
+		next
+	}
+	fence != "" { next }
 	/^## / {
 		leaveRelease()
 		if ($0 ~ /^## \[/) { release = $0; releases++ }
@@ -77,7 +87,10 @@ verdict=$(awk '
 
 if [[ $status -ne 0 ]]; then
 	echo "$verdict" >&2
-	echo "FAIL: a change type is split across more than one section — merge them, so a reader finds one list per type" >&2
+	# One sentence for every refusal class. A duplicate-specific line printed
+	# over a read-nothing refusal sends a maintainer looking for sections to
+	# merge that were never split.
+	echo "FAIL: CHANGELOG.md does not present one section per change type per release — see the line(s) above" >&2
 	exit 1
 fi
 
