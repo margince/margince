@@ -190,7 +190,26 @@ var dueThreadsQuery = `
 			       -- read as open the moment one row's value went missing, which
 			       -- is why the sibling arms above coalesce and this one does
 			       -- not need to.
-			       bool_and(a.audience = 'workspace') AS every_message_open
+			       -- Over EVERY email on the conversation, which is why it is a
+			       -- correlated subquery rather than an aggregate: this CTE
+			       -- keeps only connector-captured mail, and the window read
+			       -- that follows is not connector-scoped. A hand-logged
+			       -- limited message on a captured thread is therefore one the
+			       -- offer would not see and the reading would.
+			       --
+			       -- Its body is excluded there, so no limited text reaches the
+			       -- model either way. What this refuses is the shape: a thread
+			       -- summarised while one of its messages is withheld from the
+			       -- summary's readers is a partial account presented as a
+			       -- whole one, and the reader cannot tell.
+			       --
+			       -- NOT EXISTS over the limited ones, never bool_and over the
+			       -- open ones: the two differ on a thread whose every message
+			       -- is somehow absent, and only this direction refuses it.
+			       NOT EXISTS (SELECT 1 FROM activity t
+			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
+			                      AND t.archived_at IS NULL
+			                      AND t.audience <> 'workspace') AS every_message_open
 			  FROM activity a
 			  LEFT JOIN (` + activities.OrgReachSet() + `) ro ON ro.activity_id = a.id
 			  -- Who may read this message, asked of the records it is filed

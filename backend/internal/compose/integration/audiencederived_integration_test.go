@@ -224,12 +224,18 @@ func TestASubjectAccessExportWithholdsARawOriginalNothingVouchesFor(t *testing.T
 			t.Fatal(err)
 		}
 	}
-	seedRaw("msg-open")
-	seedActivity("msg-open", "workspace")
-	seedRaw("msg-limited")
-	seedActivity("msg-limited", "participants")
+	// raw_capture carries UNIQUE (source_system, source_id), so the keys are
+	// per-run: a fixed one collides on the insert against a database this suite
+	// did not rebuild, and the test would then fail at a duplicate key rather
+	// than at an assertion about the audience.
+	run := ids.NewV7().String()
+	open, limited, orphan := "msg-open-"+run, "msg-limited-"+run, "msg-orphan-"+run
+	seedRaw(open)
+	seedActivity(open, "workspace")
+	seedRaw(limited)
+	seedActivity(limited, "participants")
 	// The orphan: an original with no activity at all.
-	seedRaw("msg-orphan")
+	seedRaw(orphan)
 
 	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](person))
 	if err != nil {
@@ -247,13 +253,13 @@ func TestASubjectAccessExportWithholdsARawOriginalNothingVouchesFor(t *testing.T
 	if len(payloads) != 3 {
 		t.Fatalf("the package listed %d originals, want all 3 — Art. 15 owes the FACT that an original is held even when its content is withheld", len(payloads))
 	}
-	if payloads["msg-open"] == nil {
+	if payloads[open] == nil {
 		t.Error("the open message's original was withheld — the fixture cannot tell a working gate from a broken query")
 	}
-	if payloads["msg-limited"] != nil {
+	if payloads[limited] != nil {
 		t.Error("a limited message's provider original was exported in full")
 	}
-	if payloads["msg-orphan"] != nil {
+	if payloads[orphan] != nil {
 		t.Error("an original with no activity to vouch for it was exported in full — absence of a limiting row is not permission")
 	}
 }

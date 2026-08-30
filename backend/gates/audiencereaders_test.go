@@ -84,7 +84,11 @@ var audienceScopeMarkers = []string{
 // withoutComments for this dimension) and the word alone no longer counts, so
 // the two ways to pass a census without doing anything are both closed.
 var audienceLiteralMarkers = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\baudience\b\s*(=|<>|!=|\bIS\b|\bIN\b)`),
+	// `IS` is deliberately absent. `audience IS NOT NULL` is a predicate that
+	// constrains nothing — the column is NOT NULL — so admitting it would let a
+	// reader satisfy the census with a test every row passes. Only a
+	// comparison against a VALUE counts.
+	regexp.MustCompile(`(?i)\baudience\b\s*(=|<>|!=|\bIN\b)`),
 	// The write side: a sink or a recompute naming the column in what it SETS
 	// or INSERTS is deciding the audience rather than reading past it.
 	regexp.MustCompile(`(?i)(SET|,)\s*audience\s*=`),

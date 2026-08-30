@@ -54,19 +54,24 @@ const leadColumns = `id, full_name, email, title, company_name, candidate_org_ke
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL),
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done),
-	-- The one content column this projection carries: the next open task's
-	-- own subject, shown on the lead card. Being a task is not by itself a
-	-- promise that it is workspace-readable — a task can be limited like any
-	-- other activity — so the audience is spelled here, and a limited task
-	-- shows the card no title rather than showing it to everyone. The sibling
-	-- subqueries beside it take a max, a count and a due date, which are
-	-- markers rather than content and owe nothing.
+	-- The next open task, as the pair it is: its title and its deadline
+	-- describe ONE task, so they select one row. The subject is content and
+	-- the due date is a marker, but splitting them by that distinction would
+	-- let the two subqueries land on different tasks — a limited task skipped
+	-- by one and taken by the other — and the card would show one task's title
+	-- beside another's deadline, which is worse than showing neither.
+	--
+	-- So both take the audience. A limited task is not the "next task" for a
+	-- lead card every seat reads; the card names the next one its reader may
+	-- actually open. The count and the max beside them are aggregate markers
+	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
 	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
 	(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done
+	     AND a.audience = 'workspace'
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (
