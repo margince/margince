@@ -20,6 +20,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 const googleTokenExchangeTimeout = 30 * time.Second
@@ -58,6 +60,7 @@ func (ex googleTokenExchanger) Exchange(ctx context.Context, code, codeVerifier,
 		return "", fmt.Errorf("oidc token exchange: build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", outbound.SignInHeader)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("oidc token exchange: %w", err)
