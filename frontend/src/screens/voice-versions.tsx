@@ -99,9 +99,13 @@ function reviewReasonText(
   const lowScore =
     /median voice score ([\d.]+) is below the ([\d.]+) floor/.exec(reason);
   if (lowScore) {
+    // Through the formatter, like every other figure on this page: the
+    // evaluator writes "0.56" because it writes for a log, and a German reader
+    // reads 0,56. A score handed straight to the sentence kept the log's
+    // notation in front of a reader who does not use it.
     return t("voice.candidate.reason.lowScore", {
-      score: lowScore[1] ?? "",
-      floor: lowScore[2] ?? "",
+      score: formatNumber(Number(lowScore[1] ?? 0), locale),
+      floor: formatNumber(Number(lowScore[2] ?? 0), locale),
     });
   }
   const hardFailures = /^(\d+) anti-AI hard failures survived/.exec(reason);

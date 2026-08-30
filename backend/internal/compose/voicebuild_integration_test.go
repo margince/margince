@@ -659,3 +659,111 @@ type brainFunc func(context.Context, model.Request) (model.Response, error)
 func (f brainFunc) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	return f(ctx, req)
 }
+
+// What a build tells its owner when the PROVIDER refuses, rather than when the
+// model answers badly. The two are different failures with different remedies,
+// and the scripted brain above cannot tell them apart: it returns well-formed
+// answers by construction, so every test that uses it passes through a space no
+// real provider occupies.
+//
+// Each case here is a refusal a real provider actually sent, reported from the
+// running product: a Gemini spending cap, an OpenRouter shared-pool throttle,
+// and a 429 whose cause nothing recognizes.
+func TestVoiceBuildTellsTheOwnerWhichProviderFailureItWas(t *testing.T) {
+	refusals := []struct {
+		name    string
+		err     error
+		says    string
+		saysNot string
+	}{
+		{
+			name:    "an account with nothing left",
+			err:     fmt.Errorf("%w: ai: gemini: RESOURCE_EXHAUSTED: Your project has exceeded its monthly spending cap. (http 429)", ai.ErrProviderQuota),
+			says:    "out of budget",
+			saysNot: "could not read",
+		},
+		{
+			name:    "a busy model behind a broker",
+			err:     fmt.Errorf("%w: ai: openai-compat: Mistral: temporarily rate-limited upstream (http 429)", ai.ErrProviderThrottled),
+			says:    "busy",
+			saysNot: "out of budget",
+		},
+	}
+	for _, refusal := range refusals {
+		t.Run(refusal.name, func(t *testing.T) {
+			env, build := seedVoiceBuild(t, "A quote the provider never sees.", 6)
+			worker := newVoiceBuildWorker(env.e.Pool, brainFunc(func(context.Context, model.Request) (model.Response, error) {
+				return model.Response{}, refusal.err
+			}), slog.New(slog.DiscardHandler))
+
+			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+				t.Fatalf("Work owns the failure on the row: %v", err)
+			}
+			finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if finished.Status != "failed" {
+				t.Fatalf("build = %+v, want failed", finished)
+			}
+			if finished.StatusDetail == nil {
+				t.Fatal("a failed build carries the sentence its owner reads")
+			}
+			detail := strings.ToLower(*finished.StatusDetail)
+			if !strings.Contains(detail, refusal.says) {
+				t.Fatalf("detail = %q, want it to name %q", detail, refusal.says)
+			}
+			// The wrong remedy is worse than a vague one: it sends the owner to
+			// a console where nothing is wrong.
+			if strings.Contains(detail, refusal.saysNot) {
+				t.Fatalf("detail = %q, must not say %q", detail, refusal.saysNot)
+			}
+			// The provider's own payload never reaches the owner — including
+			// the VENDOR's name, which the injected error carries and an
+			// earlier version of this list did not check for.
+			for _, internal := range []string{"http 429", "resource_exhausted", "openai-compat", "gemini", "mistral"} {
+				if strings.Contains(detail, internal) {
+					t.Fatalf("detail leaks provider internals (%q): %q", internal, detail)
+				}
+			}
+		})
+	}
+}
+
+// The build a reader waits on has to REACH a terminal state, whatever the model
+// does. A worker that returned early, hung, or left the row running would look
+// exactly like a slow build on the screen — and the screen polls, so nobody
+// finds out until they give up.
+func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
+	answers := map[string]string{
+		"prose instead of JSON":    "Sure! Here is the voice profile you asked for.",
+		"JSON truncated mid-way":   `{"identity_summary": "Direct and opera`,
+		"a JSON array, not object": `[{"identity_summary": "Direct."}]`,
+		"an empty answer":          "",
+	}
+	for name, answer := range answers {
+		t.Run(name, func(t *testing.T) {
+			env, build := seedVoiceBuild(t, "A quote the brain will not honor.", 6)
+			worker := newVoiceBuildWorker(env.e.Pool, brainFunc(func(context.Context, model.Request) (model.Response, error) {
+				return model.Response{Text: answer}, nil
+			}), slog.New(slog.DiscardHandler))
+
+			if err := worker.Work(context.Background(), voiceBuildJob(env, build)); err != nil {
+				t.Fatalf("Work owns the failure on the row: %v", err)
+			}
+			finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// An answer no parser can read is not a voice, so the only honest
+			// outcome is failure: letting it succeed would store nonsense and
+			// call it the owner's writing.
+			if finished.Status != "failed" {
+				t.Fatalf("build = %q on an unreadable answer, want failed", finished.Status)
+			}
+			if finished.StatusDetail == nil || len(strings.Fields(*finished.StatusDetail)) < 3 {
+				t.Fatalf("a failed build carries a sentence its owner can read, got %v", finished.StatusDetail)
+			}
+		})
+	}
+}

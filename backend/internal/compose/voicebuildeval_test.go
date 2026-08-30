@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -237,5 +238,52 @@ func TestEvaluateVoiceCandidatePropagatesBudgetExhaustion(t *testing.T) {
 		artifact, "", heldOut, nil)
 	if !errors.Is(err, ai.ErrBudgetDeferred) {
 		t.Fatalf("err = %v, want the budget sentinel to survive wrapping", err)
+	}
+}
+
+// A draft carries its author's own vocabulary, and BOTH prompts that write one
+// say so: the evaluation's held-out drafts and the reply drafts a member
+// actually sends share this block, so a rule added to one is a rule the other
+// must not miss.
+//
+// Reported from a German build: "Das Angebot liegt seit drei Wochen im
+// Datenmeer… ihr seid die Verzögerungsmaschine". Both compounds are English
+// metaphors translated word for word into German words nobody says; German
+// business mail keeps the English (Pipeline, Bottleneck).
+func TestADraftPromptKeepsTheAuthorsOwnVocabulary(t *testing.T) {
+	fence := promptfence.New()
+	block := voiceDraftPromptBlock(
+		"",
+		"# Voice DNA\n\n## How you think\n\nVerdict first.",
+		nil,
+		ai.VoiceStats{MeanSentenceWords: 12, EmDashPer100Words: 0},
+		fence,
+	)
+
+	if !strings.Contains(block, draftVocabularyRule) {
+		t.Fatalf("the draft prompt states the vocabulary rule:\n%s", block)
+	}
+	// The rule has to forbid the INVENTION, not name one language: nothing here
+	// knows which language the corpus is in.
+	for _, required := range []string{"borrowed term", "never translate a metaphor"} {
+		if !strings.Contains(draftVocabularyRule, required) {
+			t.Fatalf("the rule must say %q, or a model still coins a compound: %q", required, draftVocabularyRule)
+		}
+	}
+	// NO language is named — not the corpus's, and not the one terms are
+	// borrowed from. "Keep the English term" is advice about a foreign
+	// language to an author who already writes in English.
+	for _, language := range []string{"German", "Deutsch", "English", "Englisch"} {
+		if strings.Contains(draftVocabularyRule, language) {
+			t.Fatalf("the rule names %q, but the author's samples decide the language: %q", language, draftVocabularyRule)
+		}
+	}
+
+	// The same block reaches the reply drafts a member sends, so the rule
+	// cannot be an evaluation-only nicety.
+	sample := ai.VoiceSample{Register: "email", Text: "Moin, kurz zum Angebot."}
+	request := voiceEvalDraftRequest("", ai.VoiceArtifact{Markdown: "# Voice DNA"}, sample, 0)
+	if len(request.Messages) == 0 || !strings.Contains(request.Messages[0].Content, draftVocabularyRule) {
+		t.Fatal("the held-out drafting call carries the vocabulary rule")
 	}
 }
