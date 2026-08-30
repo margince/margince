@@ -41,11 +41,11 @@ var occurrenceTriggerKinds = map[string]string{
 // refuseUnmintableTriggerRef names a trigger ref no production path could have
 // put on a job.
 //
-// A fixture on a shape production has stopped minting certifies a window
-// nothing builds, and NOTHING FAILS when that happens: the suite reports PASS
-// about a different system, because a fixture that merely describes one has no
-// wrong answer to give. A non-empty check cannot see that, and neither can a
-// format restated here, which drifts the same way the fixture does.
+// When production stops minting a shape, a fixture still carrying it certifies
+// a window nothing builds — and nothing fails when it does: the suite reports
+// PASS about a different system, because a fixture that merely describes one
+// has no wrong answer to give. A non-empty check cannot see that, and neither
+// can a format restated here, which drifts the same way the fixture does.
 //
 // So the scheduled arm is DERIVED from the writer. AgentSpec.TriggerRef is
 // minted with a known day and seat, and the fixture is required to have the
