@@ -223,10 +223,25 @@ func TestTheCursorIsTheOneFilterThatCanBeRefused(t *testing.T) {
 		t.Error("an unreadable cursor was dropped rather than refused — the caller asked for a later page and would be handed the first")
 	}
 	// An EMPTY cursor is absent, not malformed: the handler passes the
-	// parameter through whether or not the caller sent one.
+	// parameter through whether or not the caller sent one, so an empty one
+	// must leave the read exactly as it found it.
+	//
+	// Against the EMPTY-FILTER clause, not merely against "no arguments". A
+	// predicate added for an empty cursor that binds nothing — `AND
+	// a.occurred_at <= now()`, say — narrows the page while every count agrees,
+	// and the first page a caller asked for comes back short.
+	base, baseArgs, err := buildAuditWhere(AuditFilter{})
+	if err != nil {
+		t.Fatalf("an empty filter: %v", err)
+	}
 	empty := ""
-	if _, args, err := buildAuditWhere(AuditFilter{Cursor: &empty}); err != nil || len(args) != 0 {
-		t.Errorf("an empty cursor bound %d argument(s) and answered %v; it means no cursor at all", len(args), err)
+	blank, args, err := buildAuditWhere(AuditFilter{Cursor: &empty})
+	if err != nil {
+		t.Errorf("an empty cursor answered %v; it means no cursor at all", err)
+	}
+	if blank != base || len(args) != len(baseArgs) {
+		t.Errorf("an empty cursor rendered %q with %d argument(s); the read without one is %q with %d — an empty cursor narrows nothing",
+			blank, len(args), base, len(baseArgs))
 	}
 }
 
