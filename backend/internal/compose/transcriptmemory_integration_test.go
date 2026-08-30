@@ -145,3 +145,36 @@ func TestAReadingWhoseStepsWereAllAnsweredSaysSo(t *testing.T) {
 		t.Errorf("the run claims %d proposals it did not raise", len(second.ProposalIDs))
 	}
 }
+
+// Two commitments made in one sentence are two proposals, not one.
+//
+// The identity is the transcript's own words, so two steps citing the SAME line
+// carry the same key — and identity staging supersedes a pending twin. If a
+// reading can produce that, one commitment silently replaces the other and the
+// rep never sees it.
+func TestTwoCommitmentsOnOneLineBothReachTheQueue(t *testing.T) {
+	e := setupTranscript(t)
+	both, err := json.Marshal(map[string]any{"proposals": []map[string]any{
+		{
+			"summary": "Send the revised pricing", "owner": "Priya",
+			"source_lines": []int{3}, "confidence": 0.9,
+		},
+		{
+			"summary": "Book the follow-up call", "owner": "Dana",
+			"source_lines": []int{3}, "confidence": 0.9,
+		},
+	}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+	read := e.read(t, cannedBrain{reply: string(both)})
+
+	if got := e.pendingProposals(t); got != 2 {
+		t.Errorf("one line stating two commitments left %d proposals waiting, want 2 — "+
+			"they share a cited quotation, so one has superseded the other and the rep "+
+			"will never see it", got)
+	}
+	if len(read.ProposalIDs) != 2 {
+		t.Errorf("the run recorded %d proposals, want 2", len(read.ProposalIDs))
+	}
+}

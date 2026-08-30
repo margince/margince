@@ -68,11 +68,14 @@ type TranscriptStepProposal struct {
 	Cited string `json:"cited"`
 }
 
-// transcriptIdentityCited is the payload key the staging identity is drawn from.
-// It and the struct tag above must spell the same thing — canonicalIdentity
-// refuses an identity field the payload does not carry, so a typo here is a
-// staging that fails when a rep reads a transcript rather than at compile time.
-const transcriptIdentityCited = "cited"
+// The payload keys the staging identity is drawn from. Each must spell exactly
+// what the struct tag above spells — canonicalIdentity refuses an identity field
+// the payload does not carry, so a typo here is a staging that fails when a rep
+// reads a transcript rather than at compile time.
+const (
+	transcriptIdentityCited = "cited"
+	transcriptIdentityOwner = "owner"
+)
 
 // UnmarshalTranscriptStepProposal reads back what was staged.
 func UnmarshalTranscriptStepProposal(raw json.RawMessage) (TranscriptStepProposal, error) {
@@ -209,12 +212,24 @@ func (p *TranscriptProposer) stage(
 		}
 		// A rep can read the same transcript again — the in-flight uniqueness
 		// index covers only a queued or running reading — so a refused step must
-		// not come straight back. The identity is the transcript's own words
-		// behind the step, against a target that already names the activity:
-		// those are what a rep answered, and they are what a second reading has
-		// in common with the first. The model's summary and its line citation
-		// both move between readings, so a diff hash remembers nothing.
-		identity, err := json.Marshal(map[string]string{transcriptIdentityCited: proposal.Cited})
+		// not come straight back. The identity is what the transcript itself
+		// says: the words behind the step, and who it names as promising them.
+		// Both hold still between readings of one document, where the model's
+		// summary and its line citation do not — so a diff hash remembers
+		// nothing.
+		//
+		// The owner is here to tell two commitments in ONE sentence apart. "I'll
+		// send pricing and Dana will book the call" cites one line twice, and on
+		// the quotation alone those are one identity: the second staging would
+		// supersede the first and a rep would see one of the two, with nothing
+		// saying the other existed. The owner is safe to key on for the same
+		// reason the quotation is — it is the party AS THE TRANSCRIPT NAMES
+		// THEM, carved out of the translation rule precisely because a
+		// translated name is a different person.
+		identity, err := json.Marshal(map[string]string{
+			transcriptIdentityCited: proposal.Cited,
+			transcriptIdentityOwner: proposal.Owner,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("compose: marshal transcript step identity: %w", err)
 		}
