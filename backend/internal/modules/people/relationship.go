@@ -51,15 +51,119 @@ func relationshipAnchor(kind string) (object, column string) {
 	}
 }
 
+// relationshipEndpoints is the set of records an edge hangs on, in the one
+// shape both of its writers already hold: the create input, and the stored row
+// an update or an archive names. It exists so the anchor rule below is asked
+// once for all three verbs — two spellings of "which record does this edge
+// annotate" would drift, and the half that drifted would be an ungated write.
+type relationshipEndpoints struct {
+	person  *ids.PersonID
+	org     *ids.OrganizationID
+	deal    *ids.DealID
+	project *ids.ProjectID
+}
+
+func (r relationshipRow) endpoints() relationshipEndpoints {
+	return relationshipEndpoints{person: r.PersonID, org: r.OrganizationID, deal: r.DealID, project: r.ProjectID}
+}
+
+func (in CreateRelationshipInput) endpoints() relationshipEndpoints {
+	return relationshipEndpoints{person: in.PersonID, org: in.OrganizationID, deal: in.DealID, project: in.ProjectID}
+}
+
+// relationshipAnchorRow names the ROW an edge's authority is taken on: the
+// anchor object of its kind, and the endpoint id identifying the record the
+// edge annotates.
+//
+// This is the ONLY place the four endpoint columns are mapped to their kinds.
+// The gate below, the audit subject and the reversal's edge facts all read the
+// anchor through it, because they used to spell the same switch three times —
+// and a rule about which record an edge belongs to, held in three places, is
+// how the gate came to reason about an anchor the writers had already chosen
+// differently.
+//
+// A nil id means the edge's endpoints do not match its kind; every kind's shape
+// CHECK (migration 0001, rel_*_shape) makes its anchor endpoint NOT NULL, so
+// callers treat it as the fault the database would have answered.
+func relationshipAnchorRow(kind string, e relationshipEndpoints) (object string, id *ids.UUID) {
+	anchor, _ := relationshipAnchor(kind)
+	switch anchor {
+	case anchorPerson:
+		return anchor, untypedPtr(e.person)
+	case anchorDeal:
+		return anchor, untypedPtr(e.deal)
+	case projectObjectName:
+		return anchor, untypedPtr(e.project)
+	default:
+		return anchor, untypedPtr(e.org)
+	}
+}
+
+// anchorIDOf names the record whose authority governs a STORED edge, and the
+// object it is. An edge with no anchor id is a row no kind's shape admits, and
+// answering about a record that is not there would put an audit row on nothing
+// and light a button on a write that cannot happen.
+//
+// It answers an internal fault where ensureRelationshipAnchorWritable answers
+// RelationshipShapeError on the same nil, and the difference is where the nil
+// CAME FROM rather than two minds about one rule. There the endpoints arrived
+// on a request and the caller can correct them. Here they came off a stored row
+// whose rel_*_shape CHECK already guarantees the anchor endpoint is NOT NULL —
+// so a nil is the database disagreeing with itself, and a refusal telling the
+// caller to fix a field they never sent would send them after the wrong thing.
+func anchorIDOf(row relationshipRow) (object string, id ids.UUID, err error) {
+	object, found := relationshipAnchorRow(row.Kind, row.endpoints())
+	if found == nil {
+		return object, ids.UUID{}, fmt.Errorf("people: %s edge %s names no %s to anchor on", row.Kind, row.ID, object)
+	}
+	return object, *found, nil
+}
+
+// ensureRelationshipAnchorWritable is the ROW half of the anchor gate, and the
+// half the generic surface used to leave out.
+//
+// auth.Require(anchor, update) says this seat may change PEOPLE — not that it
+// may change THIS person. Every anchor object is an identity table, read by
+// every seat in the workspace, so the endpoint probe an edge already takes is
+// existence-only for all of them and the write arm is the only thing that
+// scopes the record at all. Without this an ordinary seat could demote another
+// team's primary-employer edge, forge a partner edge on their company, or
+// staff their project, through POST/PATCH/DELETE /v1/relationships — reaching
+// past exactly the authority the dedicated verbs demand (ensureProjectWritable
+// on the stakeholder roster, auth.EnsureWritable in UpdatePerson).
+//
+// Live, not merely visible: an edge is something NEW on the anchor, and
+// archived means frozen.
+//
+// A nil id is an edge whose endpoints do not match its kind. Every kind's shape
+// CHECK makes its anchor endpoint NOT NULL, so that is the fault the database
+// would answer, refused here before the gate can silently not run.
+//
+// Held by: TestEveryGenericRelationshipVerbTakesTheAnchorRowGate
+// (backend/internal/modules/people/relationshipanchorgate_test.go)
+func ensureRelationshipAnchorWritable(
+	ctx context.Context, tx pgx.Tx, kind string, e relationshipEndpoints,
+) error {
+	object, anchorID := relationshipAnchorRow(kind, e)
+	if anchorID == nil {
+		return &RelationshipShapeError{Kind: kind}
+	}
+	return auth.EnsureWritableLive(ctx, tx, object, *anchorID)
+}
+
 // The kinds the GENERIC relationship surface admits.
 //
 // project_company is deliberately absent. A company's place on a project
-// carries two rules this surface cannot keep: the caller needs write authority
-// over the PROJECT ROW, not merely the project.update object grant this file
-// takes, and a project must keep at least one company. Both live on the
-// dedicated endpoints (projectcompany.go), so admitting the kind here would be
-// a side door around them — a caller could attach a company to a project they
-// cannot write, or archive the last one, through POST /v1/relationships.
+// carries a rule this surface cannot keep: a project must keep at least one
+// company, and only the dedicated endpoints (projectcompany.go) count them, so
+// admitting the kind here would let a caller archive the last one through
+// DELETE /v1/relationships.
+//
+// The other rule that used to keep it out — write authority over the project
+// ROW rather than the project.update object grant — is kept for every kind now,
+// by ensureRelationshipAnchorWritable. That is where it belonged: an anchor is
+// an anchor whatever the kind, and stating it per-kind is what let
+// project_stakeholder through the same door this paragraph closed.
 var relationshipKinds = map[string]bool{
 	employmentKind: true, "deal_stakeholder": true, "project_stakeholder": true,
 	"partner_of": true, "referred_by": true, "co_sell_with": true,
@@ -208,9 +312,14 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		if err := refuseGenericProjectCompany(current.Kind); err != nil {
 			return err
 		}
-		// Same rule as create: editing an edge is editing its anchor.
+		// Same rule as create: editing an edge is editing its anchor, so it
+		// takes both halves of the anchor's authority — the object grant, and
+		// the row.
 		anchorObject, _ := relationshipAnchor(current.Kind)
 		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+			return err
+		}
+		if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
 			return err
 		}
 		if in.IfVersion != nil && *in.IfVersion != current.Version {
@@ -282,7 +391,10 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 			return err
 		}
 		anchorObject, _ := relationshipAnchor(current.Kind)
-		return auth.Require(ctx, anchorObject, principal.ActionUpdate)
+		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+			return err
+		}
+		return ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints())
 	})
 }
 
@@ -318,9 +430,13 @@ func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID
 		if err := refuseGenericProjectCompany(current.Kind); err != nil {
 			return err
 		}
-		// Same rule as create: removing an edge is editing its anchor.
+		// Same rule as create: removing an edge is editing its anchor, and it
+		// owes the row half for the same reason the other two verbs do.
 		anchorObject, _ := relationshipAnchor(current.Kind)
 		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+			return err
+		}
+		if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
 			return err
 		}
 		p := storekit.NewPatch()

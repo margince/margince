@@ -125,7 +125,6 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// Writes that touch a shareable record's machinery without changing the
 	// record, or anything a share can speak about.
 	"internal/modules/consent:PreferenceTokenForEmail": "mints the unsubscribe capability the outbound message must carry (RFC 8058). The row is the RECIPIENT's own preference-centre credential, not a field of the person and not something a colleague's share grants or withholds; the send that mints it is gated on the activity it creates",
-	"internal/modules/integrations:QueueRun":           "an enrichment BUYS data about a person, which is why its object gate is person:READ by design and not update. The only row it writes is integrations' own run; a provider answer that later lands on a record goes through that record's own apply path, which takes the write-authority probe there",
 
 	// Refusal-disclosure clauses: rendered so a refusal may NAME the rows it
 	// collided with, and only the ones the caller could already read. The

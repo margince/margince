@@ -140,6 +140,13 @@ func writeRelationshipInTx(
 	if err := ensureRelationshipEndpoints(ctx, tx, in); err != nil {
 		return out, err
 	}
+	// The endpoint probe above answered which records the caller may SEE. This
+	// answers the narrower question the write owes on the one record the edge
+	// annotates: may they CHANGE it. Both entry points funnel through here, so
+	// the gate is taken once for the transaction-borrowing shape as well.
+	if err := ensureRelationshipAnchorWritable(ctx, tx, in.Kind, in.endpoints()); err != nil {
+		return out, err
+	}
 	// Both rules below read the person's OTHER employments and then write
 	// against what they read, so they are one unit per person or they are a
 	// race: two concurrent unmarked employments at different companies would

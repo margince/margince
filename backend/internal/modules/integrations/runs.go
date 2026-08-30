@@ -80,13 +80,18 @@ func (s *Store) WithSubmitEnqueue(fn EnqueueSubmitFunc) *Store {
 // the step that costs money, and the fingerprint is computed before the
 // duplicate check because the check is defined over it.
 func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.Run, error) {
-	// Queueing a run spends the customer's credits on a named person, so it is
-	// gated on seeing that person — the same grant that authorizes reading
-	// them. The object is `person` rather than `integrations` deliberately:
-	// `integrations` governs the CONNECTION (admin/ops configuration), while
-	// buying data about someone is a thing a rep does in the course of their
-	// own work, on records they can already see.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	// A run does not read a person: it BUYS facts about them and writes those
+	// facts onto their record (people.WriteProviderClaims, audited as
+	// update/person), spending the installation's credits on the way. So the
+	// grant it asks for is the one that authorizes that write. `person` rather
+	// than `integrations` deliberately: `integrations` governs the CONNECTION
+	// (admin/ops configuration), while enriching someone is a thing a rep does
+	// in the course of their own work, on records they may already change.
+	//
+	// Read was the wrong half of the pair, and read_only is what made that
+	// visible — a seat whose entire purpose is that it changes nothing passed
+	// this gate and left provider claims on a person.
+	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return provider.Run{}, err
 	}
 	if s.fence == nil || s.identifiers == nil {
@@ -114,12 +119,19 @@ func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.
 	var out provider.Run
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The ROW gate, not just the object gate. auth.Require above answers
-		// "may this role read people at all"; this answers "may this caller
-		// see THIS person". Without it a rep could name any person id and buy
-		// data on a record outside their scope — spending the installation's
-		// credits to create data they are not allowed to look at. Existence-
-		// hiding: an invisible subject answers 404, never 403.
-		if err := auth.EnsureVisible(ctx, tx, "person", uuidOf(&in.PersonID)); err != nil {
+		// "may this role change people at all"; this answers "may this caller
+		// change THIS person". Visibility is not enough and on this table it is
+		// nothing at all: person is an identity table, read by every seat, so
+		// the visibility arm renders TRUE for everyone and a rep could name any
+		// colleague's person id, spend the installation's credits, and land
+		// provider claims on a record outside their write scope.
+		//
+		// Live, because the run's claims are new rows on the subject and
+		// archived means frozen — including a subject an Art. 17 erasure has
+		// just cleared, which a run in flight would otherwise refill.
+		// Existence-hiding survives: an invisible subject still answers 404,
+		// and only a visible-but-not-writable one answers 403.
+		if err := auth.EnsureWritableLive(ctx, tx, "person", uuidOf(&in.PersonID)); err != nil {
 			return err
 		}
 		conn, err := s.admit(ctx, tx, name, in.Trigger)
