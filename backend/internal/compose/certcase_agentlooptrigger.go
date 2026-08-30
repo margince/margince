@@ -9,8 +9,8 @@ package compose
 // The agent_loop corpus is production-shaped on purpose: its whole value is
 // certifying the window the runner actually builds. A fixture whose trigger ref
 // drifts from what the scheduler puts on a job certifies a window nothing
-// builds, and there is no failing assertion when that happens — the suite
-// simply reports PASS about a different system.
+// builds, and no assertion fails when it does — the suite reports PASS about a
+// different system.
 
 import (
 	"fmt"
@@ -30,9 +30,9 @@ import (
 // point of having it here.
 //
 // Whoever adds that writer should delete this map and derive its arm the way
-// the scheduled arm below is derived. Until then this list is the seam, and
-// the reason it is short is that reaching ahead is only honest for a shape
-// somebody has actually argued for.
+// the scheduled arm below is derived. Until then this list is the seam, and it
+// is short because reaching ahead of production is only honest for a shape
+// somebody has argued for.
 var occurrenceTriggerKinds = map[string]string{
 	"manual":   "a run a person started by hand, which the corpus drives because a hand-started turn is the same window with a different name on it",
 	"calendar": "the occurrence-driven shape triggerProvenance names as the confusable one; certifying it before its writer exists is why the corpus carries it",
@@ -41,20 +41,17 @@ var occurrenceTriggerKinds = map[string]string{
 // refuseUnmintableTriggerRef names a trigger ref no production path could have
 // put on a job.
 //
-// The whole value of this corpus is that it is production-shaped: it certifies
-// the window the runner actually builds. A non-empty check was all this used to
-// do, so a fixture could drift arbitrarily far from production and stay
-// accepted — and one did. When the ref grew a seat segment
-// (`<spec>:<date>` → `<spec>:<date>:<seat digest>`) a fixture kept the old
-// two-segment value and every gate stayed green, because there is no failing
-// assertion when a fixture merely describes a different system. A reviewer
-// reading the diff found it.
+// A fixture on a shape production has stopped minting certifies a window
+// nothing builds, and NOTHING FAILS when that happens: the suite reports PASS
+// about a different system, because a fixture that merely describes one has no
+// wrong answer to give. A non-empty check cannot see that, and neither can a
+// format restated here, which drifts the same way the fixture does.
 //
 // So the scheduled arm is DERIVED from the writer. AgentSpec.TriggerRef is
-// minted here with a known day and seat, and the fixture is required to have
-// the same segment count and the same per-segment shape as what came back.
-// Nothing in this function restates the format, so the day TriggerRef grows a
-// fourth segment or moves the date, every stale fixture fails naming itself.
+// minted with a known day and seat, and the fixture is required to have the
+// same segment count and the same per-segment shape as what came back. Nothing
+// in this function states the format, so the day TriggerRef grows a segment or
+// moves the date, every stale fixture fails naming itself.
 func refuseUnmintableTriggerRef(ref string) error {
 	segments := strings.Split(ref, ":")
 	kind := segments[0]
@@ -114,9 +111,8 @@ var (
 // refuseDriftedFrom compares a fixture's ref against one production just minted,
 // segment by segment: the same count, and each segment the same length and drawn
 // from the same characters as the minted one's. That is as much as can be said
-// without re-spelling the format here, and it is enough — the drift that shipped
-// was a missing segment, and a digest of the wrong width or a date that is not a
-// date fails the same way.
+// without re-spelling the format here, and it is enough: a missing segment, a
+// digest of the wrong width and a date that is not a date all fail on it.
 func refuseDriftedFrom(minted, ref string) error {
 	want, got := strings.Split(minted, ":"), strings.Split(ref, ":")
 	if len(want) != len(got) {
