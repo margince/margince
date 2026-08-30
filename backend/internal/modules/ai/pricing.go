@@ -220,6 +220,14 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// sibling; 0 here is "no cache discount", and the uncached input rate
 		// is what a call actually pays.
 		rateOn(day, providerOpenAICompatible, "openai/gpt-oss-120b", 37_000, 170_000, 0, 0),
+		// Anthropic reached through the broker rather than its native adapter.
+		// The ids differ from the native rows above — the broker spells a vendor
+		// prefix and a dotted version where the native API takes a dated snapshot
+		// — so these are separate rows rather than duplicates: a call on this
+		// adapter reports the broker's id, and an id with no row prices as a
+		// visible unpriced count instead of a dollar figure.
+		rateOn(day, providerOpenAICompatible, "anthropic/claude-haiku-4.5", 1_000_000, 5_000_000, 100_000, 1_250_000),
+		rateOn(day, providerOpenAICompatible, "anthropic/claude-sonnet-4.5", 3_000_000, 15_000_000, 300_000, 3_750_000),
 		// Embedding lanes have no output and no cache — only input is nonzero.
 		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
 		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),
