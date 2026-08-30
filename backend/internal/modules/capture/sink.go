@@ -86,6 +86,27 @@ type MergeProposal struct {
 	Summary        string
 }
 
+// MergeAddress reads the address a merge proposal collided on out of its
+// payload, in the normalized form captureLead stores it.
+//
+// It lives here because this module owns what the payload is: the composition
+// root stages the proposal and needs one field of it for the rejection memory's
+// identity, and re-deriving that field there would be a second answer to "what
+// shape is a dedupe payload" sitting in a package that never builds one.
+//
+// An unreadable payload answers the empty string rather than an error. The
+// caller's use is an identity, and an identity that matches nothing costs a
+// duplicate card a rep has seen before; failing the staging would cost the
+// proposal entirely, and a collision nobody is told about is worse than one
+// they are told about twice.
+func MergeAddress(proposedChange json.RawMessage) string {
+	var fields LeadFields
+	if err := json.Unmarshal(proposedChange, &fields); err != nil {
+		return ""
+	}
+	return fields.Email
+}
+
 // NewSink binds the capture sink to the pool its writes run through.
 func NewSink(db *database.DB) *Sink {
 	return &Sink{db: db}
