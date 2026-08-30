@@ -21022,7 +21022,7 @@ export interface components {
              */
             organization_id: string;
             /**
-             * @description Functional role (A44/ADR-0034); implementation + dev are Gradion's turf.
+             * @description Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}
              */
             partner_role?: "hosting" | "consulting" | "strategic";

@@ -21979,7 +21979,7 @@ type Partner struct {
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
 	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
 
-	// PartnerRole Functional role (A44/ADR-0034); implementation + dev are Gradion's turf.
+	// PartnerRole Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
 	// RelationshipHealth Decimal-as-string 0..1 derived by formulas §16; basis for 30/60/90 partner dormancy flags.
@@ -22002,7 +22002,7 @@ type PartnerCertStatus string
 // PartnerMarginTier Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK).
 type PartnerMarginTier string
 
-// PartnerPartnerRole Functional role (A44/ADR-0034); implementation + dev are Gradion's turf.
+// PartnerPartnerRole Functional role (A44/ADR-0034); implementation + dev are Margince's turf.
 type PartnerPartnerRole string
 
 // PartnerRelationshipStage defines model for Partner.RelationshipStage.
