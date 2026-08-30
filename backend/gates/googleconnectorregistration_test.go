@@ -93,10 +93,10 @@ func TestOnlyOneFunctionRegistersTheGoogleConnectors(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		built, dotImported := googleConnectorsBuiltIn(file)
-		for _, hidden := range dotImported {
-			t.Errorf("%s: dot-imports %s, so a construction in this file reads as a bare New( ) with no package to match on and this census cannot see it. Import it with a qualifier — a reader that cannot see a registration is how the stored app became unreachable while every test passed",
-				walked, hidden)
+		built, unreadable := googleConnectorsBuiltIn(file)
+		for _, why := range unreadable {
+			t.Errorf("%s: %s. A reader that cannot tell what it is looking at is how the stored app became unreachable while every test passed",
+				walked, why)
 		}
 		for _, built := range built {
 			switch {
@@ -145,15 +145,76 @@ func hidden() any { return New(nil, nil) }
 	if err != nil {
 		t.Fatal(err)
 	}
-	builds, dotImported := googleConnectorsBuiltIn(file)
-	if len(dotImported) != 1 || !strings.HasSuffix(dotImported[0], "/gmail") {
-		t.Errorf("dot-imported = %v, want the gmail package reported: a construction this reader cannot see must be "+
-			"named, not skipped", dotImported)
+	builds, unreadable := googleConnectorsBuiltIn(file)
+	if len(unreadable) != 1 || !strings.Contains(unreadable[0], "/gmail") {
+		t.Errorf("unreadable = %v, want the gmail dot import reported: a construction this reader cannot see must be "+
+			"named, not skipped", unreadable)
 	}
 	if len(builds) != 0 {
 		t.Errorf("builds = %v, want none: there is no qualifier to attribute one to, which is the whole reason the "+
 			"import itself is reported", builds)
 	}
+}
+
+// shadowedIn names the governed qualifiers a file also BINDS: a variable, a
+// parameter, a field, a type or a function of the same name. Reported in a
+// settled order.
+func shadowedIn(file *ast.File, byQualifier map[string]string) []string {
+	var found []string
+	seen := map[string]bool{}
+	note := func(idents ...*ast.Ident) {
+		for _, id := range idents {
+			if id == nil || byQualifier[id.Name] == "" || seen[id.Name] {
+				continue
+			}
+			seen[id.Name] = true
+			found = append(found, id.Name)
+		}
+	}
+	fields := func(list *ast.FieldList) {
+		if list == nil {
+			return
+		}
+		for _, field := range list.List {
+			note(field.Names...)
+		}
+	}
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.ImportSpec:
+			// The import itself is the binding this census WANTS.
+			return false
+		case *ast.AssignStmt:
+			for _, lhs := range node.Lhs {
+				if id, isIdent := lhs.(*ast.Ident); isIdent {
+					note(id)
+				}
+			}
+		case *ast.ValueSpec:
+			note(node.Names...)
+		case *ast.TypeSpec:
+			note(node.Name)
+		case *ast.RangeStmt:
+			for _, key := range []ast.Expr{node.Key, node.Value} {
+				if id, isIdent := key.(*ast.Ident); isIdent {
+					note(id)
+				}
+			}
+		case *ast.FuncDecl:
+			note(node.Name)
+			fields(node.Recv)
+			fields(node.Type.Params)
+			fields(node.Type.Results)
+		case *ast.FuncLit:
+			fields(node.Type.Params)
+			fields(node.Type.Results)
+		case *ast.StructType:
+			fields(node.Fields)
+		}
+		return true
+	})
+	sort.Strings(found)
+	return found
 }
 
 // googleConnectorBuild is one construction and the function it sits in.
@@ -177,20 +238,32 @@ type googleConnectorBuild struct {
 // initializer is a construction like any other, and one attributed to package
 // scope can never be the registrar, so it fails — which is the right answer,
 // since a registry built at init time decides reachability the same way.
-func googleConnectorsBuiltIn(file *ast.File) (builds []googleConnectorBuild, dotImported []string) {
+func googleConnectorsBuiltIn(file *ast.File) (builds []googleConnectorBuild, unreadable []string) {
 	byQualifier := map[string]string{}
 	for _, importPath := range googleConnectorPackages {
 		qualifier, dot := gatekit.ImportedAs(file, importPath)
 		switch {
 		case dot:
-			dotImported = append(dotImported, importPath)
+			unreadable = append(unreadable, "dot-imports "+importPath+
+				", so a construction in this file reads as a bare New( ) with no package to match on")
 		case qualifier != "":
 			byQualifier[qualifier] = path.Base(importPath)
 		}
 		// A blank import is neither: it cannot be called through at all.
 	}
 	if len(byQualifier) == 0 {
-		return nil, dotImported
+		return nil, unreadable
+	}
+	// A local named after the package SHADOWS it, and this reader matches on
+	// identifier text rather than on resolved bindings. An unrelated New method
+	// on such a variable would satisfy the floor below while the real
+	// registration was missing — the census reporting a connector it never saw.
+	// Rather than resolve lexical scope, the shadowing itself is reported: it
+	// costs nothing today, and the alternative is a reader that answers
+	// confidently about the wrong thing.
+	for _, shadowed := range shadowedIn(file, byQualifier) {
+		unreadable = append(unreadable, "declares something named "+shadowed+
+			", which shadows the imported connector package this census matches on — rename it")
 	}
 	// packageScope is what a construction outside every function declaration is
 	// attributed to. It is spelled as prose rather than as an identifier so that
@@ -240,7 +313,7 @@ func googleConnectorsBuiltIn(file *ast.File) (builds []googleConnectorBuild, dot
 		}
 		return builds[i].connector < builds[j].connector
 	})
-	return builds, dotImported
+	return builds, unreadable
 }
 
 // functionName spells a method as Receiver.Name, so that two files declaring
