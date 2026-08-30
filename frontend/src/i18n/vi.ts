@@ -2322,11 +2322,8 @@ export const vi = {
   "decision.viaTool": "qua {verb}",
   "decision.approveEdited": "Duyệt bản đã sửa",
   "decision.reject": "Từ chối",
-  "decision.rejectReason": "Lý do",
   "decision.draftSubject": "Tiêu đề",
   "decision.draftBody": "Nội dung",
-  "decision.rejectReasonHint":
-    "Người mà mục này được xếp chờ duyệt cho sẽ thấy lý do này.",
   "decision.dismiss": "Bỏ qua",
   "decision.versionSkew":
     "Bản ghi đã thay đổi kể từ khi được xếp chờ duyệt — hãy xếp lại trước khi quyết định.",

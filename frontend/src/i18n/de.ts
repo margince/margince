@@ -2342,11 +2342,8 @@ export const de = {
   "decision.viaTool": "über {verb}",
   "decision.approveEdited": "Bearbeitet übernehmen",
   "decision.reject": "Ablehnen",
-  "decision.rejectReason": "Begründung",
   "decision.draftSubject": "Betreff",
   "decision.draftBody": "Nachricht",
-  "decision.rejectReasonHint":
-    "Wird mit der Person geteilt, für die dies vorgemerkt wurde.",
   "decision.dismiss": "Schließen",
   "decision.versionSkew":
     "Dieser Datensatz hat sich seit dem Vormerken geändert — bitte neu vormerken.",

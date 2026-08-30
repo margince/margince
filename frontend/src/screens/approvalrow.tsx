@@ -12,8 +12,7 @@ import {
 } from "../app/autonomy";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { navigate, type Route } from "../app/router";
-import { Button, Card, Field, Textarea } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { Button, Card } from "../design-system/atoms";
 import {
   DecisionCard,
   type DecisionCardLabels,
@@ -194,8 +193,6 @@ export function ApprovalRow({
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
-  const [rejecting, setRejecting] = useState(false);
-  const [reason, setReason] = useState("");
   const [detailOpen, setDetailOpen] = useState(false);
   // Only a live pending row with an expiry needs the per-second clock; a
   // read-only decided row (or one without expires_at) never shows a countdown,
@@ -242,7 +239,6 @@ export function ApprovalRow({
     mutationFn: async (input: {
       verdict: "approve" | "reject";
       editedPayload?: Record<string, unknown>;
-      reason?: string;
     }) => {
       const path =
         input.verdict === "approve"
@@ -252,9 +248,6 @@ export function ApprovalRow({
         params: { path: { id: approval.id } },
         ...(input.verdict === "approve" && input.editedPayload
           ? { body: { edited_payload: input.editedPayload } }
-          : {}),
-        ...(input.verdict === "reject"
-          ? { body: { reason: input.reason ?? "" } }
           : {}),
       });
       if (error) {
@@ -316,12 +309,6 @@ export function ApprovalRow({
       editedPayload: { ...change, ...draft },
     });
     setEditing(false);
-  };
-
-  const confirmReject = () => {
-    decide.mutate({ verdict: "reject", reason });
-    setRejecting(false);
-    setReason("");
   };
 
   const reRead = () => {
@@ -392,7 +379,10 @@ export function ApprovalRow({
       // write is in flight, so a press here during it left the reader inside a
       // form they could not leave until the request came back.
       onEdit={strings.length > 0 ? startEdit : undefined}
-      onReject={() => setRejecting(true)}
+      // One press, no reason form: a rejection discards a proposal and changes
+      // no record, so it carries the same weight as Accept and asks nothing
+      // extra. The contract's reason field stays for callers that have one.
+      onReject={() => decide.mutate({ verdict: "reject" })}
       notice={
         <DecideOutcome
           decide={decide}
@@ -402,28 +392,6 @@ export function ApprovalRow({
         />
       }
     >
-      <ConfirmModal
-        open={rejecting}
-        onClose={() => setRejecting(false)}
-        title={t("decision.reject")}
-        confirmLabel={t("decision.reject")}
-        confirmVariant="danger"
-        pending={decide.isPending}
-        onConfirm={confirmReject}
-      >
-        <Field
-          label={t("decision.rejectReason")}
-          hint={t("decision.rejectReasonHint")}
-        >
-          {(control) => (
-            <Textarea
-              {...control}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          )}
-        </Field>
-      </ConfirmModal>
       <ApprovalDetailModal
         approvalId={approval.id}
         open={detailOpen}

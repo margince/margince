@@ -2362,10 +2362,8 @@ export const en = {
   "decision.viaTool": "via {verb}",
   "decision.approveEdited": "Approve edited",
   "decision.reject": "Reject",
-  "decision.rejectReason": "Reason",
   "decision.draftSubject": "Subject",
   "decision.draftBody": "Message",
-  "decision.rejectReasonHint": "Shared with the person this was staged for.",
   "decision.dismiss": "Dismiss",
   "decision.versionSkew":
     "This record changed since it was staged — re-stage it before deciding.",

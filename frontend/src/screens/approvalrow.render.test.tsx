@@ -126,9 +126,8 @@ describe("the offer to put an approved change back", () => {
     vi.stubGlobal("fetch", fetched);
     render(<ApprovalRow approval={closeDateApproval()} />);
 
+    // One press rejects — no confirmation step, no reason form.
     await userEvent.click(screen.getByRole("button", { name: "Reject" }));
-    const confirm = await screen.findAllByRole("button", { name: "Reject" });
-    await userEvent.click(confirm[confirm.length - 1]);
 
     await waitFor(() => expect(rejectCalls(fetched)).toBe(1));
     expect(
