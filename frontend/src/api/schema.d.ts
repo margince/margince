@@ -1833,6 +1833,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/vat-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
+         * @description The verdict is the smaller half. A business treating a sale as intra-EU has to show it
+         *     verified its counterpart, and what a tax authority accepts is the CONSULTATION NUMBER
+         *     the register issues — the receipt, tied to the number consulted and the day it was
+         *     asked. A `valid` flag with no receipt proves nothing, which is why the receipt and the
+         *     date the register itself reported both travel here.
+         *
+         *     The name the register holds is returned beside the verdict because a number that
+         *     validates to a company nobody recognises is the finding: a copied imprint states
+         *     somebody else's VAT ID, and only the registered name exposes it.
+         *
+         *     404 when the number has never been consulted, which is the honest difference between
+         *     "never asked" and "asked and told no".
+         */
+        get: operations["getOrganizationVatCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/site-reads/latest": {
         parameters: {
             query?: never;
@@ -7146,6 +7180,48 @@ export interface paths {
          *     🟢 — an internal issuance; the confirmation send rides the outbound/consent gate like any message.
          */
         post: operations["issueDoubleOptIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{id}/consent/confirm-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+         * @description Mints the token behind `GET/POST /public/confirm/{token}` and mails the link. Both halves
+         *     happen here because a token nobody delivers is a link nobody can use, and the page it opens
+         *     is reachable no other way.
+         *
+         *     The address is NOT taken from the caller. It is derived from the person's own live primary
+         *     email, which is the security property rather than a convenience: a grant made through this
+         *     link completes with no second confirmation, on the claim that the link reached the subject's
+         *     own mailbox. A caller who could name the address could name somebody else's and produce a
+         *     consent that looks defensible against a mailbox the subject never held. A contact with no
+         *     live address is a 422 rather than a silent no-op.
+         *
+         *     The token is never returned. Unlike the double-opt-in token, which a rep pastes back in, this
+         *     one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
+         *     A fresh request supersedes any unspent earlier link for the same person.
+         *
+         *     `delivered` reports whether the mail actually left, and `sendable` says whether this
+         *     installation can send at all. Both, because they are different facts and a reader's next
+         *     move differs: configure a relay, or try again. An installation with no relay still mints
+         *     the token and answers 201, because the write happened and reporting it as a failure would
+         *     invite a second request that mints another token and supersedes the first.
+         */
+        post: operations["requestDetailsConfirmation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20428,6 +20504,64 @@ export interface components {
             status: "queued";
         };
         /**
+         * @description A confirm link that now exists, and what became of the attempt to deliver it. Three
+         *     outcomes rather than two, because a reader's next move differs: it went, this
+         *     installation cannot send at all, or the send was tried and failed.
+         */
+        ConfirmRequestIssued: {
+            /** @description The address the link was posted to — the person's own live primary email. */
+            delivered_to: string;
+            /** Format: date-time */
+            expires_at: string;
+            /**
+             * @description Whether the relay accepted the message. False while `sendable` is true means the send
+             *     was attempted and failed, which is a different fact from an installation that cannot
+             *     send at all.
+             */
+            delivered: boolean;
+            /**
+             * @description Whether this installation has an outbound relay and a link origin configured. False
+             *     means nothing was attempted — the link exists and must be passed on by hand.
+             */
+            sendable: boolean;
+        };
+        /**
+         * @description One company's current VAT standing, and the evidence for it. The row keeps only the
+         *     CURRENT consultation; what a re-check overwrote lives in the audit trail.
+         */
+        OrganizationVatCheck: {
+            /** Format: uuid */
+            organization_id: string;
+            /**
+             * @description The number AS CONSULTED, which is not necessarily the number on the profile today.
+             *     A receipt names the number it was issued for, so an edit made afterwards must not
+             *     silently inherit this proof.
+             */
+            vat_number: string;
+            /**
+             * @description `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
+             *     declining to answer, and is a fact about the lookup rather than about the company.
+             * @enum {string}
+             */
+            status: "valid" | "invalid" | "unavailable";
+            /**
+             * @description The register's receipt. Issued only for a check made under this installation's own
+             *     VAT ID, so it is absent when none is configured — the check still ran, it just
+             *     carries no proof a tax authority would accept.
+             */
+            consultation_number?: string | null;
+            /** @description Who the register says the number belongs to. Absent when it named nobody. */
+            registered_name?: string | null;
+            /** @description The address the register holds, when it returned one. */
+            registered_address?: string | null;
+            /**
+             * Format: date-time
+             * @description The day the REGISTER reported, not the day this installation recorded it. A receipt
+             *     attests to when the register was asked.
+             */
+            checked_at: string;
+        };
+        /**
          * @description What each public source last did for one account. Per lane rather than per run: the
          *     three fail independently, so one verdict would hide which of them is stale.
          */
@@ -26393,6 +26527,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TechnicalEnrichStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getOrganizationVatCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current standing, and the proof it was checked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationVatCheck"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -35611,6 +35771,41 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestDetailsConfirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link issued, and what became of the delivery. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmRequestIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The contact carries no live email address, so there is no mailbox a link could reach. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     recordQualifyingEvent: {

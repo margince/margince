@@ -46,3 +46,16 @@
   margin-top: 8px;
   margin-left: 4px;
 }
+
+/* The per-person ask, under the per-purpose rows. Ruled off above so it does
+   not read as one more row: it is a different question, asked once about the
+   whole record rather than about a purpose. */
+.consent-confirm-ask {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.consent-confirm-ask p {
+  margin-top: var(--space-2);
+}

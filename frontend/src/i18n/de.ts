@@ -887,6 +887,15 @@ export const de = {
   "consent.doubleOptIn": "Double-Opt-in anfordern",
   "consent.doiIssued": "Einmal-Token (nur einmal sichtbar):",
   "consent.doiExpires": "Läuft ab",
+  "consent.askToConfirm": "Um Bestätigung der Daten bitten",
+  "consent.askToConfirmWhat":
+    "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
+  "consent.askSent": "An {address} geschickt.",
+  "consent.askNotDelivered":
+    "Der Link wurde für {address} erstellt, aber diese Installation verschickt keine Mails — es hat ihn also niemand bekommen.",
+  "consent.askSendFailed":
+    "Der Link wurde für {address} erstellt, aber die Mail ist nicht rausgegangen. Versuch es nochmal — ein neuer Link ersetzt diesen.",
+  "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":
     "Diese Organisation erfasst noch keine Einwilligungszwecke.",
@@ -1759,6 +1768,22 @@ export const de = {
   "co.factField.email_security": "Mail-Authentifizierung",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Dienst",
+  "co.vat.title": "USt-IdNr.",
+  "co.vat.sub":
+    "Was das MIAS-Register der EU zur USt-IdNr. dieser Firma gesagt hat — und der Nachweis, dass gefragt wurde.",
+  "co.vat.verdict": "Antwort des Registers",
+  "co.vat.number": "Abgefragte Nummer",
+  "co.vat.registeredName": "Eingetragen auf",
+  "co.vat.registeredAddress": "Eingetragene Anschrift",
+  "co.vat.checkedAt": "Abgefragt am",
+  "co.vat.receipt": "Abfrage-Nummer",
+  "co.vat.status.valid": "Gültig",
+  "co.vat.status.invalid": "Nicht gültig",
+  "co.vat.status.unavailable": "Register hat nicht geantwortet",
+  "co.vat.noReceipt":
+    "Keine vergeben. Das Register vergibt eine Abfrage-Nummer nur für eine Abfrage unter eurer eigenen USt-IdNr. — trag sie in den Einstellungen ein, dann trägt die nächste Abfrage einen Nachweis, den ein Finanzamt akzeptiert.",
+  "co.vat.never":
+    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird.",
   "co.tech.title": "Technik",
   "co.tech.sub":
     "Was diese Firma öffentlich betreibt — gelesen aus ihren DNS-Einträgen, ihren Zertifikaten und ihrer eigenen Startseite.",
@@ -2560,6 +2585,19 @@ export const de = {
   "create.save": "Anlegen",
   "create.saving": "Wird angelegt…",
   "create.contact": "Neuer Kontakt",
+  "vcardImport.action": "Karten importieren",
+  "vcardImport.title": "Visitenkarten importieren",
+  "vcardImport.fileLabel": "Visitenkarten-Datei",
+  "vcardImport.whichFile":
+    "Eine .vcf-Datei — das Format, in dem jedes Telefon und jedes Mailprogramm Kontakte exportiert. Eine Karte, die dir jemand gegeben hat, gibt er dir bewusst, deshalb wird sie direkt geschrieben und nicht zur Freigabe gestellt.",
+  "vcardImport.choose": ".vcf-Datei auswählen",
+  "vcardImport.working": "Karten werden gelesen…",
+  "vcardImport.done": "Schließen",
+  "vcardImport.noCards": "In der Datei war keine Karte.",
+  "vcardImport.outcome.created": "Angelegt",
+  "vcardImport.outcome.updated": "Lücken gefüllt",
+  "vcardImport.outcome.needsReview": "Sieht aus wie jemand, den ihr schon habt",
+  "vcardImport.outcome.skipped": "Übersprungen",
   "create.quickCapture": "Schnellerfassung",
   "create.quickCaptureSaved": "{name} gespeichert",
   "create.company": "Neue Firma",

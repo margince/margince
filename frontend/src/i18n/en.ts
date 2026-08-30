@@ -916,6 +916,15 @@ export const en = {
   "consent.doubleOptIn": "Issue double opt-in",
   "consent.doiIssued": "One-time token (shown once):",
   "consent.doiExpires": "Expires",
+  "consent.askToConfirm": "Ask them to confirm their details",
+  "consent.askToConfirmWhat":
+    "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
+  "consent.askSent": "Sent to {address}.",
+  "consent.askNotDelivered":
+    "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
+  "consent.askSendFailed":
+    "The link was created for {address} but the mail did not go out. Try again — a new link replaces this one.",
+  "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This organization tracks no consent purposes yet.",
   "consent.defaultDeny":
@@ -1786,6 +1795,22 @@ export const en = {
   "co.factField.email_security": "Mail authentication",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Operated service",
+  "co.vat.title": "VAT registration",
+  "co.vat.sub":
+    "What the EU VAT register answered about this company's VAT ID, and the proof it was asked.",
+  "co.vat.verdict": "Register answer",
+  "co.vat.number": "Number consulted",
+  "co.vat.registeredName": "Registered to",
+  "co.vat.registeredAddress": "Registered address",
+  "co.vat.checkedAt": "Consulted on",
+  "co.vat.receipt": "Consultation number",
+  "co.vat.status.valid": "Valid",
+  "co.vat.status.invalid": "Not valid",
+  "co.vat.status.unavailable": "Register did not answer",
+  "co.vat.noReceipt":
+    "None issued. The register issues a receipt only for a check made under your own VAT ID — add yours in the settings and the next check carries proof a tax authority accepts.",
+  "co.vat.never":
+    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint.",
   "co.tech.title": "Technology",
   "co.tech.sub":
     "What this company publicly runs, read from its DNS records, its certificates and its own homepage.",
@@ -2588,6 +2613,19 @@ export const en = {
   // The fast path beside it: reading a profile in another window and typing
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
+  "vcardImport.action": "Import cards",
+  "vcardImport.title": "Import address cards",
+  "vcardImport.fileLabel": "Address card file",
+  "vcardImport.whichFile":
+    "A .vcf file, the format every phone and mail client exports contacts as. A card someone handed you is theirs to give, so these are written straight in rather than queued for approval.",
+  "vcardImport.choose": "Choose a .vcf file",
+  "vcardImport.working": "Reading the cards…",
+  "vcardImport.done": "Close",
+  "vcardImport.noCards": "That file held no cards.",
+  "vcardImport.outcome.created": "Added",
+  "vcardImport.outcome.updated": "Filled in the gaps",
+  "vcardImport.outcome.needsReview": "Looks like someone you already have",
+  "vcardImport.outcome.skipped": "Skipped",
   "create.quickCapture": "Quick capture",
   "create.quickCaptureSaved": "Saved {name}",
   "create.company": "New company",

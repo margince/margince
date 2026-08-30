@@ -867,6 +867,15 @@ export const vi = {
   "consent.doubleOptIn": "Phát hành xác nhận kép",
   "consent.doiIssued": "Token dùng một lần (chỉ hiện một lần):",
   "consent.doiExpires": "Hết hạn",
+  "consent.askToConfirm": "Đề nghị họ xác nhận thông tin",
+  "consent.askToConfirmWhat":
+    "Gửi cho liên hệ này một liên kết riêng để họ xem bạn đang lưu gì về họ, sửa lại nếu sai, và cho biết họ có muốn nhận tin từ bạn không. Liên kết chỉ đến địa chỉ đã lưu của họ; bạn không thể gửi đi nơi khác.",
+  "consent.askSent": "Đã gửi tới {address}.",
+  "consent.askNotDelivered":
+    "Liên kết đã được tạo cho {address} nhưng bản cài đặt này không gửi thư, nên chưa ai nhận được.",
+  "consent.askSendFailed":
+    "Liên kết đã được tạo cho {address} nhưng thư không gửi đi được. Hãy thử lại — liên kết mới sẽ thay thế liên kết này.",
+  "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Tổ chức này chưa theo dõi mục đích chấp thuận nào.",
   "consent.defaultDeny":
@@ -1745,6 +1754,22 @@ export const vi = {
   "co.factField.email_security": "Xác thực thư",
   "co.factField.hosting_provider": "Lưu trữ",
   "co.factField.operated_service": "Dịch vụ vận hành",
+  "co.vat.title": "Mã số thuế GTGT",
+  "co.vat.sub":
+    "Câu trả lời của sổ đăng ký thuế GTGT của EU về mã số thuế của công ty này, kèm bằng chứng đã tra cứu.",
+  "co.vat.verdict": "Câu trả lời của sổ đăng ký",
+  "co.vat.number": "Mã số đã tra cứu",
+  "co.vat.registeredName": "Đăng ký cho",
+  "co.vat.registeredAddress": "Địa chỉ đăng ký",
+  "co.vat.checkedAt": "Tra cứu ngày",
+  "co.vat.receipt": "Số tra cứu",
+  "co.vat.status.valid": "Hợp lệ",
+  "co.vat.status.invalid": "Không hợp lệ",
+  "co.vat.status.unavailable": "Sổ đăng ký không trả lời",
+  "co.vat.noReceipt":
+    "Chưa cấp. Sổ đăng ký chỉ cấp số tra cứu cho lần kiểm tra thực hiện dưới mã số thuế của chính bạn — hãy nhập mã số của bạn trong phần cài đặt, lần tra cứu tiếp theo sẽ có bằng chứng mà cơ quan thuế chấp nhận.",
+  "co.vat.never":
+    "Mã số thuế GTGT của công ty này chưa được tra cứu. Việc này diễn ra tự động khi mã số được đọc từ trang thông tin pháp lý của công ty.",
   "co.tech.title": "Công nghệ",
   "co.tech.sub":
     "Những gì công ty này công khai vận hành, đọc từ bản ghi DNS, chứng chỉ và trang chủ của họ.",
@@ -2535,6 +2560,19 @@ export const vi = {
   "create.save": "Tạo",
   "create.saving": "Đang tạo…",
   "create.contact": "Contact mới",
+  "vcardImport.action": "Nhập danh thiếp",
+  "vcardImport.title": "Nhập danh thiếp",
+  "vcardImport.fileLabel": "Tệp danh thiếp",
+  "vcardImport.whichFile":
+    "Tệp .vcf — định dạng mà mọi điện thoại và ứng dụng thư đều dùng để xuất danh bạ. Tấm danh thiếp ai đó đưa cho bạn là do họ chủ động trao, nên nó được ghi thẳng vào chứ không chờ phê duyệt.",
+  "vcardImport.choose": "Chọn tệp .vcf",
+  "vcardImport.working": "Đang đọc danh thiếp…",
+  "vcardImport.done": "Đóng",
+  "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
+  "vcardImport.outcome.created": "Đã thêm",
+  "vcardImport.outcome.updated": "Đã bổ sung chỗ còn thiếu",
+  "vcardImport.outcome.needsReview": "Trông giống người đã có trong hệ thống",
+  "vcardImport.outcome.skipped": "Đã bỏ qua",
   "create.quickCapture": "Ghi nhanh",
   "create.quickCaptureSaved": "Đã lưu {name}",
   "create.company": "Công ty mới",

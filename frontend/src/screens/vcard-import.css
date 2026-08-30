@@ -1,0 +1,34 @@
+/* One line per card, in the order the file listed them, so a reader checking
+   an import against the stack of cards on their desk can go down both at once.
+   The name leads because that is what they are looking for. */
+.vcard-import-report {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.vcard-import-report li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.vcard-import-report li:last-child {
+  border-bottom: 0;
+}
+
+.vcard-import-name {
+  font-weight: 500;
+}
+
+/* The one outcome that asks something of the reader. A card that merely
+   resembles somebody was written nowhere, and nothing else on this list needs
+   them to act. */
+.vcard-import-warn {
+  color: var(--warn);
+}

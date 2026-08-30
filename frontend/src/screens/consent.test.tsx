@@ -475,3 +475,143 @@ describe("ConsentSection", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// The link the confirm page has always been able to render, and that nothing
+// could send until now. What these hold is the difference between a link that
+// went out, a link that exists and reached nobody, and a caller aiming it.
+describe("asking a contact to confirm their details", () => {
+  const MAY_WRITE = {
+    user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
+    authorization: {
+      seat_type: "full",
+      objects: { person: { read: true, update: true } },
+    },
+  };
+
+  it("reports the address it went to, which the caller never chose", async () => {
+    const sent: Sent[] = [];
+    stubRoutes(
+      {
+        "GET /me": () => jsonResponse(MAY_WRITE),
+        "POST /people/person-1/consent/confirm-request": () =>
+          jsonResponse(
+            {
+              delivered_to: "ada@example.test",
+              expires_at: "2026-09-13T09:00:00Z",
+              delivered: true,
+              sendable: true,
+            },
+            201,
+          ),
+      },
+      sent,
+    );
+    render(<ConsentSection personId="person-1" />);
+
+    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+
+    expect(await screen.findByTestId("confirm-details-sent")).toHaveTextContent(
+      /ada@example\.test/,
+    );
+    // The request carries no address and no token: the server derives one and
+    // never hands back the other, which is what lets the answer stand as the
+    // subject's own.
+    const ask = sent.find((one) => one.key.includes("confirm-request"));
+    expect(ask?.body).toBeFalsy();
+  });
+
+  it("tells a failed send apart from an installation that cannot send", async () => {
+    stubRoutes({
+      "GET /me": () => jsonResponse(MAY_WRITE),
+      "POST /people/person-1/consent/confirm-request": () =>
+        jsonResponse(
+          {
+            delivered_to: "ada@example.test",
+            expires_at: "2026-09-13T09:00:00Z",
+            delivered: false,
+            // The relay exists and refused this one message. Telling a rep
+            // "this installation sends no mail" would send them to configure
+            // something that is already configured, and pressing again is what
+            // actually helps.
+            sendable: true,
+          },
+          201,
+        ),
+    });
+    render(<ConsentSection personId="person-1" />);
+
+    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+
+    const sent = await screen.findByTestId("confirm-details-sent");
+    expect(sent).toHaveTextContent(/did not go out/i);
+    expect(sent).not.toHaveTextContent(/sends no mail/i);
+  });
+
+  it("says plainly when the link exists but nobody was sent it", async () => {
+    stubRoutes({
+      "GET /me": () => jsonResponse(MAY_WRITE),
+      "POST /people/person-1/consent/confirm-request": () =>
+        jsonResponse(
+          {
+            delivered_to: "ada@example.test",
+            expires_at: "2026-09-13T09:00:00Z",
+            delivered: false,
+          },
+          201,
+        ),
+    });
+    render(<ConsentSection personId="person-1" />);
+
+    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+
+    // A rep who reads "sent" here would believe a contact was asked when they
+    // never were, and would stop waiting for an answer that cannot come.
+    expect(await screen.findByTestId("confirm-details-sent")).toHaveTextContent(
+      /sends no mail/i,
+    );
+  });
+
+  it("shows a contact with no address as a refusal", async () => {
+    stubRoutes({
+      "GET /me": () => jsonResponse(MAY_WRITE),
+      "POST /people/person-1/consent/confirm-request": () =>
+        jsonResponse(
+          {
+            title: "Unprocessable Entity",
+            detail:
+              "this contact carries no live email address, so there is no mailbox a confirm link could reach",
+            status: 422,
+          },
+          422,
+        ),
+    });
+    render(<ConsentSection personId="person-1" />);
+
+    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+
+    expect(await screen.findByText(/no live email address/i)).toBeVisible();
+    expect(
+      screen.queryByTestId("confirm-details-sent"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("is not offered to a caller who may not write the person", async () => {
+    stubRoutes({
+      "GET /me": () =>
+        jsonResponse({
+          user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
+          authorization: {
+            seat_type: "read",
+            objects: { person: { read: true } },
+          },
+        }),
+    });
+    render(<ConsentSection personId="person-1" />);
+
+    // Waited for rather than asserted immediately: the capability arrives
+    // asynchronously, so an absence checked too early passes for the wrong
+    // reason.
+    expect(await screen.findByText(/no record/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("confirm-details-ask")).not.toBeInTheDocument();
+  });
+});

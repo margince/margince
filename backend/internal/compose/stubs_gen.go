@@ -1279,6 +1279,10 @@ func (stubs) GetLatestTechnicalEnrich(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "GetLatestTechnicalEnrich")
 }
 
+func (stubs) GetOrganizationVatCheck(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOrganizationVatCheck")
+}
+
 func (stubs) AcknowledgeOrganizationView(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "AcknowledgeOrganizationView")
 }
@@ -1401,6 +1405,10 @@ func (stubs) GetPersonConsent(w nethttp.ResponseWriter, r *nethttp.Request, id c
 
 func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RecordConsentParams) {
 	httperr.NotImplemented(w, r, "RecordConsent")
+}
+
+func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestDetailsConfirmation")
 }
 
 func (stubs) IssueDoubleOptIn(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

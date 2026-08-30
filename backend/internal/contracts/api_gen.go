@@ -7120,6 +7120,27 @@ func (e OrganizationStrengthBucket) Valid() bool {
 	}
 }
 
+// Defines values for OrganizationVatCheckStatus.
+const (
+	OrganizationVatCheckStatusInvalid     OrganizationVatCheckStatus = "invalid"
+	OrganizationVatCheckStatusUnavailable OrganizationVatCheckStatus = "unavailable"
+	OrganizationVatCheckStatusValid       OrganizationVatCheckStatus = "valid"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationVatCheckStatus enum.
+func (e OrganizationVatCheckStatus) Valid() bool {
+	switch e {
+	case OrganizationVatCheckStatusInvalid:
+		return true
+	case OrganizationVatCheckStatusUnavailable:
+		return true
+	case OrganizationVatCheckStatusValid:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OverlayBudgetBand.
 const (
 	OverlayBudgetBandOk   OverlayBudgetBand = "ok"
@@ -15714,6 +15735,24 @@ type ConfirmFieldOrigin struct {
 	Source     string `json:"source"`
 }
 
+// ConfirmRequestIssued A confirm link that now exists, and what became of the attempt to deliver it. Three
+// outcomes rather than two, because a reader's next move differs: it went, this
+// installation cannot send at all, or the send was tried and failed.
+type ConfirmRequestIssued struct {
+	// Delivered Whether the relay accepted the message. False while `sendable` is true means the send
+	// was attempted and failed, which is a different fact from an installation that cannot
+	// send at all.
+	Delivered bool `json:"delivered"`
+
+	// DeliveredTo The address the link was posted to — the person's own live primary email.
+	DeliveredTo string    `json:"delivered_to"`
+	ExpiresAt   time.Time `json:"expires_at"`
+
+	// Sendable Whether this installation has an outbound relay and a link origin configured. False
+	// means nothing was attempted — the link exists and must be passed on by hand.
+	Sendable bool `json:"sendable"`
+}
+
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
 	// BotToken The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back.
@@ -21611,6 +21650,39 @@ type OrganizationStrength struct {
 
 // OrganizationStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 type OrganizationStrengthBucket string
+
+// OrganizationVatCheck One company's current VAT standing, and the evidence for it. The row keeps only the
+// CURRENT consultation; what a re-check overwrote lives in the audit trail.
+type OrganizationVatCheck struct {
+	// CheckedAt The day the REGISTER reported, not the day this installation recorded it. A receipt
+	// attests to when the register was asked.
+	CheckedAt time.Time `json:"checked_at"`
+
+	// ConsultationNumber The register's receipt. Issued only for a check made under this installation's own
+	// VAT ID, so it is absent when none is configured — the check still ran, it just
+	// carries no proof a tax authority would accept.
+	ConsultationNumber *string            `json:"consultation_number,omitempty"`
+	OrganizationId     openapi_types.UUID `json:"organization_id"`
+
+	// RegisteredAddress The address the register holds, when it returned one.
+	RegisteredAddress *string `json:"registered_address,omitempty"`
+
+	// RegisteredName Who the register says the number belongs to. Absent when it named nobody.
+	RegisteredName *string `json:"registered_name,omitempty"`
+
+	// Status `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
+	// declining to answer, and is a fact about the lookup rather than about the company.
+	Status OrganizationVatCheckStatus `json:"status"`
+
+	// VatNumber The number AS CONSULTED, which is not necessarily the number on the profile today.
+	// A receipt names the number it was issued for, so an edit made afterwards must not
+	// silently inherit this proof.
+	VatNumber string `json:"vat_number"`
+}
+
+// OrganizationVatCheckStatus `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
+// declining to answer, and is a fact about the lookup rather than about the company.
+type OrganizationVatCheckStatus string
 
 // OverlayBudget The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).
 type OverlayBudget struct {
@@ -39860,6 +39932,9 @@ type ServerInterface interface {
 	// What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
 	// (GET /organizations/{id}/technical-enrich/latest)
 	GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id)
+	// What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
+	// (GET /organizations/{id}/vat-check)
+	GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id Id)
 	// Record that the calling human has now seen this organization — the baseline `since_last_visit` counts from.
 	// (POST /organizations/{id}/view-ack)
 	AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request, id Id)
@@ -39953,6 +40028,9 @@ type ServerInterface interface {
 	// Grant or withdraw consent for one purpose — writes an append-only proof row.
 	// (POST /people/{id}/consent)
 	RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams)
+	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+	// (POST /people/{id}/consent/confirm-request)
+	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
 	// Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
 	// (POST /people/{id}/consent/double-opt-in)
 	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
@@ -42326,6 +42404,12 @@ func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
+// (GET /organizations/{id}/vat-check)
+func (_ Unimplemented) GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Record that the calling human has now seen this organization — the baseline `since_last_visit` counts from.
 // (POST /organizations/{id}/view-ack)
 func (_ Unimplemented) AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request, id Id) {
@@ -42509,6 +42593,12 @@ func (_ Unimplemented) GetPersonConsent(w http.ResponseWriter, r *http.Request, 
 // Grant or withdraw consent for one purpose — writes an append-only proof row.
 // (POST /people/{id}/consent)
 func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+// (POST /people/{id}/consent/confirm-request)
+func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57075,6 +57165,40 @@ func (siw *ServerInterfaceWrapper) GetLatestTechnicalEnrich(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// GetOrganizationVatCheck operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationVatCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AcknowledgeOrganizationView operation middleware
 func (siw *ServerInterfaceWrapper) AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request) {
 
@@ -58300,6 +58424,38 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordConsent(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestDetailsConfirmation operation middleware
+func (siw *ServerInterfaceWrapper) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDetailsConfirmation(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66904,6 +67060,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/organizations/{id}/technical-enrich/latest", wrapper.GetLatestTechnicalEnrich)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/vat-check", wrapper.GetOrganizationVatCheck)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/view-ack", wrapper.AcknowledgeOrganizationView)
 	})
 	r.Group(func(r chi.Router) {
@@ -66995,6 +67154,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent", wrapper.RecordConsent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/confirm-request", wrapper.RequestDetailsConfirmation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent/double-opt-in", wrapper.IssueDoubleOptIn)

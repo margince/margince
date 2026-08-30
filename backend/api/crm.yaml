@@ -2808,6 +2808,37 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /organizations/{id}/vat-check:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Organizations]
+      operationId: getOrganizationVatCheck
+      summary: What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
+      description: |
+        The verdict is the smaller half. A business treating a sale as intra-EU has to show it
+        verified its counterpart, and what a tax authority accepts is the CONSULTATION NUMBER
+        the register issues — the receipt, tied to the number consulted and the day it was
+        asked. A `valid` flag with no receipt proves nothing, which is why the receipt and the
+        date the register itself reported both travel here.
+
+        The name the register holds is returned beside the verdict because a number that
+        validates to a company nobody recognises is the finding: a copied imprint states
+        somebody else's VAT ID, and only the registered name exposes it.
+
+        404 when the number has never been consulted, which is the honest difference between
+        "never asked" and "asked and told no".
+      x-mcp-tool: { verb: read_record, record_type: organization, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The current standing, and the proof it was checked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationVatCheck' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /organizations/{id}/site-reads/latest:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -10687,6 +10718,51 @@ paths:
                   expires_at: { type: string, format: date-time }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /people/{id}/consent/confirm-request:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: requestDetailsConfirmation
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+      description: |
+        Mints the token behind `GET/POST /public/confirm/{token}` and mails the link. Both halves
+        happen here because a token nobody delivers is a link nobody can use, and the page it opens
+        is reachable no other way.
+
+        The address is NOT taken from the caller. It is derived from the person's own live primary
+        email, which is the security property rather than a convenience: a grant made through this
+        link completes with no second confirmation, on the claim that the link reached the subject's
+        own mailbox. A caller who could name the address could name somebody else's and produce a
+        consent that looks defensible against a mailbox the subject never held. A contact with no
+        live address is a 422 rather than a silent no-op.
+
+        The token is never returned. Unlike the double-opt-in token, which a rep pastes back in, this
+        one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
+        A fresh request supersedes any unspent earlier link for the same person.
+
+        `delivered` reports whether the mail actually left, and `sendable` says whether this
+        installation can send at all. Both, because they are different facts and a reader's next
+        move differs: configure a relay, or try again. An installation with no relay still mints
+        the token and answers 201, because the write happened and reporting it as a failure would
+        invite a second request that mints another token and supersedes the first.
+      responses:
+        '201':
+          description: Link issued, and what became of the delivery.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfirmRequestIssued' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: The contact carries no live email address, so there is no mailbox a link could reach.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /people/{id}/consent/qualifying-events:
     parameters:
@@ -27930,6 +28006,73 @@ components:
           # drops the type prefix from the OTHER one, renaming VoiceBuildStatus's
           # constants to a bare `Queued` that reads as nobody's.
           x-enum-varnames: [TechnicalEnrichStartedStatusQueued]
+
+    ConfirmRequestIssued:
+      type: object
+      description: |
+        A confirm link that now exists, and what became of the attempt to deliver it. Three
+        outcomes rather than two, because a reader's next move differs: it went, this
+        installation cannot send at all, or the send was tried and failed.
+      required: [delivered_to, expires_at, delivered, sendable]
+      properties:
+        delivered_to:
+          type: string
+          description: The address the link was posted to — the person's own live primary email.
+        expires_at: { type: string, format: date-time }
+        delivered:
+          type: boolean
+          description: |
+            Whether the relay accepted the message. False while `sendable` is true means the send
+            was attempted and failed, which is a different fact from an installation that cannot
+            send at all.
+        sendable:
+          type: boolean
+          description: |
+            Whether this installation has an outbound relay and a link origin configured. False
+            means nothing was attempted — the link exists and must be passed on by hand.
+
+    OrganizationVatCheck:
+      type: object
+      description: |
+        One company's current VAT standing, and the evidence for it. The row keeps only the
+        CURRENT consultation; what a re-check overwrote lives in the audit trail.
+      required: [organization_id, vat_number, status, checked_at]
+      properties:
+        organization_id: { type: string, format: uuid }
+        vat_number:
+          type: string
+          description: |
+            The number AS CONSULTED, which is not necessarily the number on the profile today.
+            A receipt names the number it was issued for, so an edit made afterwards must not
+            silently inherit this proof.
+        status:
+          type: string
+          enum: [valid, invalid, unavailable]
+          description: |
+            `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
+            declining to answer, and is a fact about the lookup rather than about the company.
+          # Pinned for the reason the lane enum above states: bare `Valid` and
+          # `Invalid` read as nobody's constants and collide with the next enum
+          # to use one of the words.
+          x-enum-varnames: [OrganizationVatCheckStatusValid, OrganizationVatCheckStatusInvalid, OrganizationVatCheckStatusUnavailable]
+        consultation_number:
+          type: [string, 'null']
+          description: |
+            The register's receipt. Issued only for a check made under this installation's own
+            VAT ID, so it is absent when none is configured — the check still ran, it just
+            carries no proof a tax authority would accept.
+        registered_name:
+          type: [string, 'null']
+          description: Who the register says the number belongs to. Absent when it named nobody.
+        registered_address:
+          type: [string, 'null']
+          description: The address the register holds, when it returned one.
+        checked_at:
+          type: string
+          format: date-time
+          description: |
+            The day the REGISTER reported, not the day this installation recorded it. A receipt
+            attests to when the register was asked.
 
     TechnicalEnrichStatus:
       type: object

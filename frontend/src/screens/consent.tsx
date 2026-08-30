@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -371,6 +372,92 @@ export function ConsentSection({ personId }: Readonly<{ personId: string }>) {
       sub={t("consent.defaultDeny")}
     >
       <QueryStates query={consentQuery}>{body}</QueryStates>
+      {/* Per PERSON rather than per purpose, so it sits under the rows instead
+          of inside one: the link opens everything held about them and asks the
+          marketing question once, which is not a fact about any single
+          purpose. */}
+      {/* Keyed on the person: a mutation result is about the record it was
+          asked for, and React would otherwise reuse this component across a
+          navigation between two cached contacts and leave the previous
+          contact's address sitting under the new record. */}
+      <ConfirmDetailsAction key={personId} personId={personId} />
     </Card>
+  );
+}
+
+/** What to say about a link that was just issued. The three outcomes are three
+ * different next moves for the reader, so each gets its own sentence. */
+function sentenceFor(
+  issued: components["schemas"]["ConfirmRequestIssued"],
+  t: ReturnType<typeof useT>,
+): string {
+  const address = issued.delivered_to;
+  if (issued.delivered) {
+    return t("consent.askSent", { address });
+  }
+  return issued.sendable
+    ? t("consent.askSendFailed", { address })
+    : t("consent.askNotDelivered", { address });
+}
+
+/**
+ * ConfirmDetailsAction mails the contact a link to see what is held about them,
+ * correct it, and answer on marketing.
+ *
+ * The address is never chosen here. The server derives it from the person's own
+ * live primary email, which is what lets a grant made through the link stand on
+ * its own: the answer came from the subject's mailbox. So this surface offers
+ * the act and reports where it went, and cannot aim it anywhere.
+ */
+function ConfirmDetailsAction({ personId }: Readonly<{ personId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const mayAsk = useCanWrite("person", "update");
+  const ask = useMutation({
+    // Keyed on the person, so a result belongs to the record it was asked
+    // about. React reuses this component across a navigation between two
+    // cached contacts, and without the key the previous contact's address sat
+    // under the new record's rows — naming somebody else's mailbox as the one
+    // this contact's link went to.
+    mutationKey: ["confirm-request", personId],
+    mutationFn: async (id: string) => {
+      const { data, error } = await api.POST(
+        "/people/{id}/consent/confirm-request",
+        { params: { path: { id } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  if (!mayAsk) {
+    return null;
+  }
+  return (
+    <div className="consent-confirm-ask">
+      <Button
+        small
+        disabled={ask.isPending}
+        data-testid="confirm-details-ask"
+        onClick={() => ask.mutate(personId)}
+      >
+        {t("consent.askToConfirm")}
+      </Button>
+      <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
+      {ask.isError && <MutationError error={ask.error} />}
+      {ask.data && (
+        <p className="t-caption" data-testid="confirm-details-sent">
+          {/* Three outcomes: it went, this installation cannot send at all,
+              or the send was tried and failed. The middle and the last ask
+              different things of the reader — configure a relay, or press
+              again — so they cannot share a sentence. */}
+          {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}
+          {formatDateTime(ask.data.expires_at, locale, zone)}
+        </p>
+      )}
+    </div>
   );
 }
