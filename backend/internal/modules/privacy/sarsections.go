@@ -189,15 +189,41 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// matches it — and the export would then hand over that whole thread.
 		// The row is still LISTED, because Art. 15 owes the fact that a raw
 		// original is held, and its content waits for a release.
+		//
+		// The test is a POSITIVE match on an open activity, never the absence of
+		// a limited one. A raw_capture row can outlive its activity — the sink
+		// stores the original before the activity exists, an erasure can destroy
+		// the activity and leave the original for its own retention rule, and a
+		// (source_system, source_id) pair need not join at all. Under a
+		// `NOT EXISTS (… audience <> 'workspace')` test every one of those cases
+		// reads exactly like permission, so the payload of a message with no
+		// surviving row to speak for it would be disclosed in full. Absence is
+		// not consent: an original nothing vouches for stays withheld.
+		//
+		// The join key is exact for MAIL and only for mail. capture/sinkraw.go
+		// stores the original under rec.NaturalKey.SourceID — the same key the
+		// activity row carries — so an email's original and its activity always
+		// correlate. Telegram does not: capture.InsertRawCaptureTx stores
+		// `bot:update_id` (the provider's redelivery key) while the activity's
+		// natural key is `bot:chat_id:message_id`, so the two never match and a
+		// Telegram original is withheld here whatever its activity says.
+		//
+		// Withholding is the right side to be wrong on, and it is not the end of
+		// the subject's Art. 15 access: the row is still listed, the Activities
+		// section above carries the message itself under its own audience test,
+		// and a release names the mailbox to ask. Disclosing instead would hand
+		// over an entire chat because two keys happened not to match. Making
+		// them correlate is a change to what Telegram stores, not a predicate to
+		// widen here.
 		{&pkg.RawCapture, `SELECT rc.source_system, rc.source_id, rc.received_at,
-		       NOT EXISTS (SELECT 1 FROM activity a
-		                    WHERE a.source_system = rc.source_system
-		                      AND a.source_id = rc.source_id
-		                      AND a.audience <> 'workspace') AS content_disclosed,
-		       CASE WHEN NOT EXISTS (SELECT 1 FROM activity a
-		                              WHERE a.source_system = rc.source_system
-		                                AND a.source_id = rc.source_id
-		                                AND a.audience <> 'workspace')
+		       EXISTS (SELECT 1 FROM activity a
+		                WHERE a.source_system = rc.source_system
+		                  AND a.source_id = rc.source_id
+		                  AND a.audience = 'workspace') AS content_disclosed,
+		       CASE WHEN EXISTS (SELECT 1 FROM activity a
+		                          WHERE a.source_system = rc.source_system
+		                            AND a.source_id = rc.source_id
+		                            AND a.audience = 'workspace')
 		            THEN rc.payload END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM person_email pe WHERE pe.person_id = $1

@@ -72,12 +72,23 @@ var audienceScopeMarkers = []string{
 	"visibleParentClause",
 }
 
-// audienceLiteralMarkers are the inline spellings. A reader that names the
-// column is deciding about the audience in its own statement — the capture
-// sink stamping it, the recompute writing it, a narrowing predicate selecting
-// on it — and the census's job is to notice a reader that names it nowhere.
+// audienceLiteralMarkers are the inline spellings that COMPARE the column, not
+// merely mention it. A reader satisfies the census by testing the audience —
+// `audience = 'workspace'`, `a.audience <> 'workspace'`, `audience IN (…)`, or
+// stamping it on a write — and a query that projects `a.audience` beside an
+// ungated body enforces nothing.
+//
+// The earlier spelling was a bare `\baudience\b`, which a SQL comment
+// satisfied: the census would have read this file's own explanatory comments as
+// enforcement. Comments are stripped before matching (matchesAny is fed through
+// withoutComments for this dimension) and the word alone no longer counts, so
+// the two ways to pass a census without doing anything are both closed.
 var audienceLiteralMarkers = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\baudience\b`),
+	regexp.MustCompile(`(?i)\baudience\b\s*(=|<>|!=|\bIS\b|\bIN\b)`),
+	// The write side: a sink or a recompute naming the column in what it SETS
+	// or INSERTS is deciding the audience rather than reading past it.
+	regexp.MustCompile(`(?i)(SET|,)\s*audience\s*=`),
+	regexp.MustCompile(`(?i)INSERT\s+INTO\s+activity\s*\([^)]*\baudience\b`),
 }
 
 // audienceReadersAdmitted ratifies the readers that serve activity rows
@@ -85,10 +96,9 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // covers one reader and not every reader added to that file afterwards.
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/participantreplay.go:selectReplayCandidates":            "the replay pass re-parses a stored provider original to fill in the participant rows an earlier capture missed, as the system principal, and every column it reads dies inside the transaction: the payload is handed to the mail parser and what SURVIVES is activity_participant rows — addresses and roles, never text. It cannot compose the audience because it is the pass that establishes who the participants ARE, which is one of the inputs the audience arm reads; gating it on the answer it computes would leave a message whose participants were missed permanently unreadable by the very people who were on it. The cost is that a limited message's stored original is parsed in-process by a system pass",
-	"internal/compose/signalextractwindow.go:threadWindow":                    "the window read is the second half of one pass whose FIRST half decides which conversations may be read at all (dueThreadsQuery in signalextractread.go, which now refuses a thread unless every message in it is workspace). Composing the audience again here would be a second answer to a question already answered, and the two would drift. The cost is that this function is safe only because of its caller, which is why it is named here rather than left to the walk — the call is through a stored field the graph does not follow",
 	"internal/modules/activities/capturenoise.go:Store.RedactCapturedNoiseTx": "the noise redaction reads subject, body and raw to answer ONE question — is there content left to destroy — and its only effect is to null them. A gate here would exempt limited mail from destruction, which is the opposite of what the audience protects: it would leave a colleague's held message stored forever because nobody may read it. The cost is nil; no column it reads reaches a caller",
 	"internal/modules/capture/pending.go:PendingStore.ClaimDue":               "the ledger claim joins activity to build the verdict prompt for ONE pending sender, inside the capture module, on behalf of the mailbox that captured the mail. The audience is not yet decided for these rows — the verdict is what decides it — so composing it would be circular: no thread would ever be judged, and every first-time sender would stay pending forever. The cost is that the sender-verdict model reads the message text of a not-yet-judged message, which is why capture_counterparty_verdict is local-only and no_payload",
-	"internal/modules/capture/sinkmailgates.go:Sink.correspondencePositiveTx": "the T1 correspondence gate reads the OWNER's own outbound subject and body to answer whether the workspace wrote to an address, inside the capture transaction, before the message has an audience at all. The text never leaves the function: what survives is one boolean about the address. The cost is that the owner's own sent mail is read by the sink that is storing it, which is the mailbox's own reading of its own mail",
+	"internal/modules/capture/sinkmailgates.go:Sink.correspondencePositiveTx": "the T1 correspondence gate asks whether THIS WORKSPACE has written to an address, and reads the subject and body of the attested outbound mail to answer it — the text is scanned for a decline and then dropped, so what survives the function is one boolean about the address. It is deliberately not per-mailbox: the question is the workspace's intent toward a counterparty, and the answer must be the same whichever seat is syncing when the address next appears, or the same address mints a record for one colleague and not another. The COST is real and stated rather than argued away: mailbox B's sink reads text from mailbox A's limited outbound, and A's limit is observable in B's result as a record that does or does not get created. Nothing of A's text reaches B — no subject, no body, no id — and the boolean would read the same for any decline-free outbound. Narrowing it to the acting mailbox is a product decision about what corresponded MEANS, not a fix to apply inside a waiver",
 })
 
 // activityContentColumn matches a projection of an activity's own content. The

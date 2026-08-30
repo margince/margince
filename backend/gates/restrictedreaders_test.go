@@ -270,7 +270,10 @@ func reachesAnExclusion(graph map[string]*graphFunc, key string, followCalls boo
 		return false
 	}
 	for _, statement := range entry.statements {
-		if matchesAny(statement, dim.literalMarkers) {
+		// Comments are stripped first. A census that matched inside them would
+		// read a sentence ABOUT the obligation as the obligation being met —
+		// and this file's own explanations are exactly such sentences.
+		if matchesAny(withoutComments(statement), dim.literalMarkers) {
 			return true
 		}
 	}

@@ -290,3 +290,61 @@ func TestReadingPipelineFactsTakesTheActivityGate(t *testing.T) {
 		t.Error("a caller with no activity grant read the pipeline facts")
 	}
 }
+
+// The classifier's write re-tests the audience, not only the backlog that
+// selected the row.
+//
+// The pass reads a batch, spends a model call per message and writes the
+// answers back. A human or a verdict can limit a message inside that window.
+// With the test only in the backlog query, the write lands after the narrowing
+// and re-labels a message whose text the worklist's readers may no longer open
+// — and nothing clears it a second time, because the narrowing already ran.
+func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing.T) {
+	e := setupFacts(t)
+	ctx := e.as()
+
+	open := e.seed(t, capturedRow{kind: "email"})
+	// The row is OFFERED, which is what makes the write below a race rather
+	// than a refusal that never had a chance. Asked of this row rather than of
+	// the backlog's size: the package shares one database, so a sibling test's
+	// rows are in it too and a count assertion would fail for their reason.
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, 200, 200)
+	if err != nil {
+		t.Fatalf("reading the backlog: %v", err)
+	}
+	offered := false
+	for _, row := range backlog {
+		if row.ID == open {
+			offered = true
+		}
+	}
+	if !offered {
+		t.Fatalf("the open message was not offered to the classifier — the fixture proves nothing about the race")
+	}
+
+	// The model call happens here, in production. The narrowing lands during it.
+	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, open)
+
+	applied, err := e.store.SetCaptureLabel(ctx, open, "commitment")
+	if err != nil {
+		t.Fatalf("writing the label: %v", err)
+	}
+	if applied {
+		t.Error("the classifier labelled a message limited while it was thinking — the label is that message's content on a worklist its audience excludes")
+	}
+	var label *string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT capture_label FROM activity WHERE id = $1`, open).Scan(&label); err != nil {
+		t.Fatal(err)
+	}
+	if label != nil {
+		t.Errorf("the limited message carries label %q", *label)
+	}
+
+	// An open message still gets its label: a re-check that refused everything
+	// would pass every assertion above and stop attention routing entirely.
+	stillOpen := e.seed(t, capturedRow{kind: "email"})
+	if wrote, err := e.store.SetCaptureLabel(ctx, stillOpen, "commitment"); err != nil || !wrote {
+		t.Errorf("an open message was not labelled (wrote=%v err=%v) — the re-check refuses more than the audience", wrote, err)
+	}
+}

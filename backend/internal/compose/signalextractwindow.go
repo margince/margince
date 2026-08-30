@@ -87,6 +87,19 @@ func threadWindow(
 		  FROM (SELECT id, direction, subject, body, occurred_at
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
+		           -- The audience, tested HERE and not only in the pass that
+		           -- offered this conversation. dueThreads runs in its own
+		           -- transaction and this window is read in a later one, so a
+		           -- thread cleared as open can be limited in between — by a
+		           -- human, or by a verdict — and under read-committed this
+		           -- statement is the first to see it. A window that trusted the
+		           -- earlier query would then send the limited body to the model.
+		           --
+		           -- It cuts the MESSAGE, not the thread: the offer already
+		           -- refuses a conversation any of whose messages is limited, so
+		           -- this arm only ever fires on a narrowing that landed inside
+		           -- the pass, and a short window is the right answer to it.
+		           AND audience = 'workspace'
 		           -- Null means no bound: the newest window, which is the
 		           -- ordinary case and the one a thread starts from.
 		           --

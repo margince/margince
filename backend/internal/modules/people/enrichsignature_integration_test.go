@@ -242,3 +242,59 @@ func TestSignatureCandidatesSkipALimitedMessage(t *testing.T) {
 			"their title, phone and employer would be written onto a workspace-readable record from a message those readers may not open", names)
 	}
 }
+
+// The apply path re-tests the SOURCE, not only the candidate query that
+// selected it.
+//
+// SignatureCandidates selects an open message, a model call runs, and a human
+// or a verdict can limit that message before the fields land. What lands is a
+// title, a phone and an employer on a person every seat reads, and the audience
+// rescope deliberately does not retract profile fields — so a field written
+// after the narrowing stays readable for good. That is the one outcome no later
+// correction reaches, which is why the test is at the write.
+func TestApplySignatureFieldsSkipsASourceLimitedWhileTheModelRan(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	apply := func(audience string) SignatureApplyResult {
+		t.Helper()
+		person, err := e.store.CreatePerson(ctx, CreatePersonInput{
+			FullName: "Signature Subject " + audience,
+			Source:   "connector:gmail",
+			Emails: []PersonEmailInput{{
+				Email: "sig-" + ids.NewV7().String() + "@seed.test", EmailType: emailTypeWork, IsPrimary: true,
+			}},
+		})
+		if err != nil {
+			t.Fatalf("seed person: %v", err)
+		}
+		personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
+		activityID := ids.NewV7()
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+				VALUES ($1, 'email', 'Regards, Dana | VP Finance', 'inbound', now(), 'gmail:seed', 'connector:gmail', $2)`,
+				activityID, audience)
+			return err
+		}); err != nil {
+			t.Fatalf("seed the source message: %v", err)
+		}
+		res, err := e.store.ApplySignatureFields(ctx, personID, activityID, []SignatureField{
+			{Name: "title", Value: "VP Finance", Evidence: "Regards, Dana | VP Finance", Confidence: 0.95},
+		})
+		if err != nil {
+			t.Fatalf("applying signature fields from %s mail: %v", audience, err)
+		}
+		return res
+	}
+
+	// The open case first: without it a re-check that refused everything would
+	// pass the assertion below and silently switch signature enrichment off.
+	if open := apply("workspace"); open.Applied != 1 {
+		t.Fatalf("an open source applied %d field(s), want 1 — the re-check refuses more than the audience", open.Applied)
+	}
+	if limited := apply("participants"); limited.Applied != 0 {
+		t.Errorf("a source limited while the model ran applied %d field(s) — a title read from a message its readers may not open, "+
+			"written onto a person every seat sees, and the audience rescope does not retract profile fields", limited.Applied)
+	}
+}

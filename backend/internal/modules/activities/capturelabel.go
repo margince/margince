@@ -69,9 +69,16 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int
 // earlier verdict stands, never an overwrite.
 func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) (applied bool, err error) {
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The audience is re-tested at WRITE time, not only in the backlog that
+		// selected this row. The classifier reads a batch, spends a model call
+		// per message and writes the answers back, and a human or a verdict can
+		// limit the message inside that window. Without this clause the write
+		// lands after the narrowing and re-labels a message whose text the
+		// worklist's readers may no longer open — and nothing would clear it a
+		// second time, because the narrowing already ran.
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET capture_label = $2, capture_labeled_at = now()
-			WHERE id = $1 AND capture_label IS NULL`, id, label)
+			WHERE id = $1 AND capture_label IS NULL AND audience = 'workspace'`, id, label)
 		if err != nil {
 			return fmt.Errorf("activities: setting capture label: %w", err)
 		}

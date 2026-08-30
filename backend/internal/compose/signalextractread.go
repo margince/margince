@@ -183,6 +183,13 @@ var dueThreadsQuery = `
 			       -- searchable restatement of it that outlives the message's
 			       -- own limit. There is no owner for whom extracting it is
 			       -- free, so the thread is not offered.
+			       --
+			       -- bool_and IGNORES nulls, so this is only a whole-thread test
+			       -- because activity.audience is NOT NULL with a 'workspace'
+			       -- default. A nullable audience would make a limited thread
+			       -- read as open the moment one row's value went missing, which
+			       -- is why the sibling arms above coalesce and this one does
+			       -- not need to.
 			       bool_and(a.audience = 'workspace') AS every_message_open
 			  FROM activity a
 			  LEFT JOIN (` + activities.OrgReachSet() + `) ro ON ro.activity_id = a.id

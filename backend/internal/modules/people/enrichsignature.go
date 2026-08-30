@@ -77,6 +77,38 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
+		// The SOURCE has the same window as the subject, and for the same
+		// reason: SignatureCandidates selected an open message, a model call
+		// ran, and a human or a verdict can limit that message before this
+		// lands. What this writes is a title, a phone and an employer onto a
+		// person every seat reads, and the audience rescope deliberately does
+		// not retract profile fields — so a field landed after the narrowing
+		// stays readable for good, which is the one outcome no later correction
+		// reaches.
+		//
+		// Nothing landed rather than an error: this is the same shape as a
+		// field somebody else had already filled, and the pass counts it a skip.
+		// A narrowed source is not a fault, it is an answer that arrived too
+		// late.
+		//
+		// The test is for a source that IS limited, not for the absence of an
+		// open one. A source row that is gone says nothing about an audience —
+		// it was erased, or the caller named a message this store never had —
+		// and refusing on absence would make the write depend on a row the
+		// contract never promised, which is a different rule wearing this one's
+		// clothes.
+		var sourceLimited bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM activity
+			                WHERE id = $1
+			                  AND (audience <> 'workspace' OR restricted_at IS NOT NULL))`,
+			sourceActivity).Scan(&sourceLimited); err != nil {
+			return fmt.Errorf("people: reading the signature's source message: %w", err)
+		}
+		if sourceLimited {
+			res.Skipped += len(fields)
+			return nil
+		}
 		var appliedFields []string
 		// Every field this pass landed, as it found it and as it left it —
 		// keyed by the field name, whether it is a column of the person or a
