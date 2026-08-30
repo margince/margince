@@ -321,7 +321,7 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		// audit row is precisely what a reversal reads to put the old rate back.
 		rateBefore, rateDateBefore := frozenBefore(current)
 		p.Set(fxRateColumn, rateBefore, nil)
-		p.Set(fxRateDateColumn, rateDateBefore, nil)
+		p.SetDate(fxRateDateColumn, rateDateBefore, nil)
 	}
 	return p, status, nil
 }
@@ -364,14 +364,9 @@ func (s *Store) FreezeRateAt(ctx context.Context, tx pgx.Tx, currency string, as
 
 // frozenBefore is a deal's currently frozen pair in the shape the patch records
 // it. The rate is already a decimal string; the date sheds the contract's Date
-// wrapper, because a `date` column is what the driver is being handed and a
-// wrapper it has to be taught about is a second place the column's type is
-// decided.
+// wrapper, which is what Patch.SetDate takes on both sides.
 func frozenBefore(deal crmcontracts.Deal) (rate *string, rateDate *time.Time) {
-	if deal.FxRateDate == nil {
-		return deal.FxRateToBase, nil
-	}
-	return deal.FxRateToBase, &deal.FxRateDate.Time
+	return deal.FxRateToBase, storekit.PlainDate(deal.FxRateDate)
 }
 
 // freezeBaseRate stamps a frozen conversion onto a patch: FreezeRateAt above
@@ -410,7 +405,7 @@ func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch
 		return err
 	}
 	p.Set(fxRateColumn, rateBefore, rate)
-	p.Set(fxRateDateColumn, rateDateBefore, rateDate)
+	p.SetDate(fxRateDateColumn, rateDateBefore, &rateDate)
 	return nil
 }
 

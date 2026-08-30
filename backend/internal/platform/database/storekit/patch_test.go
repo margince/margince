@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Two branches of one request can legitimately want the same column — an
@@ -200,5 +201,47 @@ func TestAChangeOfShapeCountsAsMoved(t *testing.T) {
 	p.Set("display_name", nil, &value)
 	if _, moved := p.Moved()["display_name"]; !moved {
 		t.Error("setting a value where there was none is not reported as moved")
+	}
+}
+
+// A `date` column's images are recorded the way Postgres renders one.
+//
+// `to_jsonb(row)` gives "2026-12-01" for a date column, while a Go time.Time
+// marshals as "2026-12-01T00:00:00Z". The undo path decides whether a field has
+// moved by comparing the audit image against the live row as JSON, so an image
+// in the second spelling reads as moved the instant it is written — and undo
+// refuses a change nobody has touched.
+func TestSetDateRecordsBothImagesTheWayPostgresRendersADate(t *testing.T) {
+	was := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2027, 3, 15, 0, 0, 0, 0, time.UTC)
+
+	p := NewPatch()
+	p.SetDate("expected_close_date", &was, &now)
+	if got := p.Before()["expected_close_date"]; got != "2026-12-01" {
+		t.Errorf("before = %#v, want the day as Postgres renders it", got)
+	}
+	if got := p.After()["expected_close_date"]; got != "2027-03-15" {
+		t.Errorf("after = %#v, want the day as Postgres renders it", got)
+	}
+	// And what is BOUND is that same text, so the value written and the value
+	// recorded cannot disagree.
+	if got := p.args[0]; got != "2027-03-15" {
+		t.Errorf("the bind value is %#v, want the same text the image carries", got)
+	}
+}
+
+// Absence stays absence. A cleared date must be a JSON null on both sides —
+// rendered as a zero day it would read as a change to the first of January.
+func TestSetDateKeepsAnAbsentDateAbsent(t *testing.T) {
+	held := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	p := NewPatch()
+	p.SetDate("wait_until", &held, nil)
+	if got := p.After()["wait_until"]; got != nil {
+		t.Errorf("clearing a date recorded %#v, want a null", got)
+	}
+	p2 := NewPatch()
+	p2.SetDate("wait_until", nil, &held)
+	if got := p2.Before()["wait_until"]; got != nil {
+		t.Errorf("a date that was absent recorded %#v as its before, want a null", got)
 	}
 }

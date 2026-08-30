@@ -89,7 +89,7 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		p := storekit.NewPatch()
 		p.Set("status", current.Status, "sent")
 		p.Set(fxRateColumn, current.FxRateToBase, rate)
-		p.Set(fxRateDateColumn, current.FxRateDate, rateDate)
+		p.SetDate(fxRateDateColumn, storekit.PlainDate(current.FxRateDate), &rateDate)
 		p.Set("buyer_snapshot", nil, storekit.JSONArg(buyer))
 		p.Set("issuer_snapshot", nil, storekit.JSONArg(issuer))
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, ifVersion); err != nil {

@@ -18,7 +18,6 @@ package deals
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -37,73 +36,6 @@ import (
 // first run against a migrated backlog drains over successive nights.
 const closeDateBatch = 200
 
-// CloseDateCorrectionKind is the approvals staging kind the 🟡/🔻 tiers
-// surface through; its decision grant lives in the approvals module and
-// its confirm effect is injected at the composition root.
-const CloseDateCorrectionKind = "close_date_correction"
-
-// CorrectionStager is the approvals seam the composition root fills
-// (a module never imports a sibling): stage a 🟡 confirm-the-real-date
-// proposal, and ask whether one is already pending so a nightly sweep —
-// whose proposed date moves with "today" — cannot stack duplicates.
-type CorrectionStager interface {
-	HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error)
-	StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal CloseDateCorrection) error
-}
-
-// QuietReviewReader reads one deal's correspondence UNDER ITS OWNER'S OWN
-// AUTHORITY, and that principal is the whole security argument for the
-// gone-quiet review.
-//
-// The sweep runs as a system principal, which auth.Require passes
-// unconditionally and which no row scope bounds. A counterparty resolved under
-// it is resolvable whoever they are — and the review writes that name into
-// proposed_change, where anyone holding deal:update on the target reads it
-// later. An unbounded read frozen into a stored payload is a disclosure no
-// read-side gate can undo, so the read runs as the person the card is for: the
-// deal's owner, resolved per deal.
-//
-// The composition root fills this because resolving an authority means reading
-// app_user, which this module may not do.
-//
-// Best-effort by contract. A deal with no owner, or one whose owner is no
-// longer live, yields no facts and the review falls back to a reason carrying
-// no name. Absence of authority is denial rather than empty permission, and a
-// deal's date hygiene is not a reason to fail the pass.
-type QuietReviewReader interface {
-	ReadForOwner(ctx context.Context, dealID ids.DealID) (QuietFacts, QuietNames, error)
-}
-
-// CloseDateCorrection is the staged proposed_change payload: everything
-// a human needs to confirm (or edit) the replacement date, and the
-// confirm effect needs to apply it.
-type CloseDateCorrection struct {
-	DealID ids.DealID `json:"deal_id"`
-	// ExpectedCloseDate is the proposed date, date-only wire form.
-	ExpectedCloseDate string          `json:"expected_close_date"`
-	PreviousCloseDate *string         `json:"previous_close_date"`
-	Flags             []CloseDateFlag `json:"flags"`
-	// Basis is the plain-language derivation of the proposed date — the
-	// "no mystery number" duty (P6) applied to a guess.
-	Basis string `json:"basis"`
-}
-
-// UnmarshalCloseDateCorrection decodes a staged (possibly human-edited)
-// proposal back into the typed form the confirm effect applies.
-func UnmarshalCloseDateCorrection(raw json.RawMessage) (CloseDateCorrection, error) {
-	var c CloseDateCorrection
-	if err := json.Unmarshal(raw, &c); err != nil {
-		return CloseDateCorrection{}, fmt.Errorf("close_date_correction payload: %w", err)
-	}
-	if c.DealID.IsZero() {
-		return CloseDateCorrection{}, errors.New("close_date_correction payload names no deal")
-	}
-	if _, err := time.Parse(time.DateOnly, c.ExpectedCloseDate); err != nil {
-		return CloseDateCorrection{}, fmt.Errorf("close_date_correction payload date: %w", err)
-	}
-	return c, nil
-}
-
 // CloseDateCorrector drives the sweep; the worker ticks it nightly.
 type CloseDateCorrector struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
@@ -111,8 +43,10 @@ type CloseDateCorrector struct {
 	stager   CorrectionStager
 	reviewer QuietReviewReader
 	log      *slog.Logger
-	// now is the corrector's clock so the fixed-clock invariant test
-	// ("no open deal survives the run with a past date") can pin a day.
+	// now is the corrector's clock. WithClock overrides it, and a test that
+	// asks what TOMORROW's pass does has no other way to get there: the
+	// proposed date is computed from "today", so two passes in one process
+	// otherwise always run on the same day.
 	now func() time.Time
 	// installation answers which zone this sweep computes its dates in. A
 	// close date is a DATE, so the zone decides which day a deal is late on.
@@ -129,6 +63,25 @@ func NewCloseDateCorrector(db *database.DB, stager CorrectionStager, reviewer Qu
 		db: db, stager: stager, reviewer: reviewer, log: log,
 		now: time.Now, installation: inst.orRefusing(),
 	}
+}
+
+// WithClock overrides the "today" this sweep computes its dates against
+// (tests only). Returns the corrector for chaining, like every other clock
+// seam in this module.
+//
+// Without it no test can state what the sweep does on a SECOND night, because
+// every pass in one process reads the same wall clock — and "the same question
+// tomorrow" is the whole of what the rejection memory promises.
+//
+// It moves the ASSESSMENT's today and not the candidate query's, which reads the
+// database clock. The two only have to agree to within the pre-filter's slack:
+// that query is a deliberate superset — anything dated within the stalled window
+// (60 days ahead), missing, or still provisional — so a clock ahead of the
+// database's by less than that window changes which deals are FLAGGED and never
+// which are looked at. A test crossing a day or two is well inside it.
+func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrector {
+	c.now = clock
+	return c
 }
 
 // SweepWorkspace is one close-date hygiene pass over the workspace already
@@ -305,7 +258,7 @@ func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
 	if before != nil && before.Equal(proposed) {
 		return
 	}
-	p.Set(closeDateField, before, proposed)
+	p.SetDate(closeDateField, before, &proposed)
 }
 
 // correct applies one deal's A6 tier. The write runs in its own audited
@@ -317,22 +270,27 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			// The date itself is clean (the sweep set it), but the human
 			// has not confirmed it yet: keep the 🟡 surface alive if the
 			// previous staging expired undecided.
-			return c.ensureStaged(ctx, cand.id, 0, cand.name, CloseDateCorrection{
-				DealID:            cand.id,
-				ExpectedCloseDate: cand.expectedClose.Format(time.DateOnly),
-				PreviousCloseDate: dateString(cand.expectedClose),
-				Basis:             quietHoldingBasis,
+			//
+			return c.ensureStaged(ctx, cand, 0, CloseDateCorrection{
+				DealID:              cand.id,
+				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
+				PreviousCloseDate:   dateString(cand.expectedClose),
+				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
+				Asking:              AskingIsThisDateRight,
+				Basis:               quietHoldingBasis,
 			})
 		}
 		return nil
 	}
 
 	proposal := CloseDateCorrection{
-		DealID:            cand.id,
-		ExpectedCloseDate: hygiene.ProposedClose.Format(time.DateOnly),
-		PreviousCloseDate: dateString(cand.expectedClose),
-		Flags:             hygiene.Flags,
-		Basis:             pacedBasis(max(1, cand.remainingOpen)),
+		DealID:              cand.id,
+		ExpectedCloseDate:   hygiene.ProposedClose.Format(time.DateOnly),
+		PreviousCloseDate:   dateString(cand.expectedClose),
+		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
+		Asking:              AskingIsThisDateRight,
+		Flags:               hygiene.Flags,
+		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
 	}
 
 	switch hygiene.Action {
@@ -355,7 +313,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if err != nil {
 			return err
 		}
-		return c.ensureStaged(ctx, cand.id, version, cand.name, proposal)
+		return c.ensureStaged(ctx, cand, version, proposal)
 
 	case CloseDateActionDowngradeAndReview:
 		notched := forecastDowngrade(category)
@@ -379,8 +337,11 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		// invariant did not force a re-date, which asked a human to confirm the
 		// date the deal already had — a card with nothing in it to approve.
 		review := proposal
+		// A different question from the 🟡 confirm, and the memory keys on which:
+		// a rep who said this date is fine has not said the deal is still alive.
+		review.Asking = AskingIsThisDealAlive
 		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
-		return c.ensureStaged(ctx, cand.id, version, cand.name, review)
+		return c.ensureStaged(ctx, cand, version, review)
 	}
 	return fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
 }
@@ -460,15 +421,33 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 	return version, err
 }
 
-// ensureStaged stages the 🟡 confirm-the-real-date proposal unless one
-// is already pending — the sweep's proposal moves with "today", so an
-// identity check on the exact diff would stack duplicates nightly.
-func (c *CloseDateCorrector) ensureStaged(ctx context.Context, dealID ids.DealID, targetVersion int64, name string, proposal CloseDateCorrection) error {
+// ensureStaged stages the 🟡 confirm-the-real-date proposal unless one is
+// already pending, or the rep has already refused this very date.
+//
+// TWO checks, because they answer different questions and each has a gap the
+// other fills. Pending stops the same live card multiplying. Refused stops a
+// decided one returning — and it is needed HERE, above the staging's own
+// memory, because the sweep writes its new date onto the deal before staging:
+// the standing date the identity is drawn from has already moved by the time
+// the proposal is built, so a refusal recorded last night matches nothing
+// tonight. Comparing the date being PROPOSED is what recognises it.
+//
+// Per date rather than per deal, so one "no" silences the date it was about
+// rather than ending close-date hygiene on that deal for good.
+func (c *CloseDateCorrector) ensureStaged(ctx context.Context, cand closeDateCandidate, targetVersion int64, proposal CloseDateCorrection) error {
+	dealID, name := cand.id, cand.name
 	pending, err := c.stager.HasPendingCorrection(ctx, dealID.UUID)
 	if err != nil {
 		return err
 	}
 	if pending {
+		return nil
+	}
+	refused, err := c.stager.RefusedCloseDate(ctx, dealID.UUID, ProbeFor(proposal, cand.expectedClose))
+	if err != nil {
+		return err
+	}
+	if refused {
 		return nil
 	}
 	if targetVersion == 0 {

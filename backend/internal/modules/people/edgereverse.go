@@ -241,14 +241,23 @@ func imageBool(image map[string]any, key string) (*bool, error) {
 	return &flag, nil
 }
 
+// imageTime reads a link's date out of an image, in EITHER spelling it may
+// carry.
+//
+// The columns are `date`, and today's writer records them as "2024-05-06" so the
+// undo path's JSON comparison against the live row agrees with itself. Images
+// written before that carry "2024-05-06T00:00:00Z", and they are already in every
+// deployed database — a decision a human made does not stop being reversible
+// because the spelling changed under it.
 func imageTime(image map[string]any, key string) (*time.Time, error) {
 	text, err := imageString(image, key)
 	if err != nil || text == nil {
 		return nil, err
 	}
-	parsed, err := time.Parse(time.RFC3339Nano, *text)
-	if err != nil {
-		return nil, fmt.Errorf("people: edge image %q is not a timestamp: %w", key, err)
+	for _, layout := range []string{time.DateOnly, time.RFC3339Nano} {
+		if parsed, err := time.Parse(layout, *text); err == nil {
+			return &parsed, nil
+		}
 	}
-	return &parsed, nil
+	return nil, fmt.Errorf("people: edge image %q is not a date: %q", key, *text)
 }

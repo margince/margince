@@ -44,6 +44,41 @@ func (s closeDateStager) HasPendingCorrection(ctx context.Context, dealID ids.UU
 	return s.svc.HasPendingKind(ctx, deals.CloseDateCorrectionKind, dealID)
 }
 
+// RefusedCloseDate answers the seam's question from the payloads the memory
+// stores.
+//
+// RejectedChangesFor hands back payloads rather than answering a containment
+// query because only the caller knows what makes two of its proposals the same
+// question. This walks them and lets the probe decide — the judgment is
+// RefusalProbe.SameQuestionAs, in the module that owns close dates, because it
+// is a fact about corrections rather than about staging.
+//
+// The read commits before the caller stages, so it can lose a race to a decision
+// landing in the gap. That costs one extra offer and never an unasked write —
+// what the caller goes on to do is stage, and staging re-checks under its own
+// lock.
+func (s closeDateStager) RefusedCloseDate(ctx context.Context, dealID ids.UUID, proposed deals.RefusalProbe) (bool, error) {
+	refused, err := s.svc.RejectedChangesFor(ctx, deals.CloseDateCorrectionKind, dealID)
+	if err != nil {
+		return false, err
+	}
+	for _, payload := range refused {
+		earlier, err := deals.UnmarshalCloseDateCorrection(payload)
+		if err != nil {
+			// A payload an older version of this stager wrote may not decode
+			// today, and a decision a human made does not expire because the
+			// shape moved. Reading it as "not this one" costs one card they
+			// have seen before; failing the sweep would cost every deal's
+			// date hygiene tonight.
+			continue
+		}
+		if proposed.SameQuestionAs(earlier) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal deals.CloseDateCorrection) error {
 	raw, err := json.Marshal(proposal)
 	if err != nil {
@@ -53,7 +88,23 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 	if err != nil {
 		return fmt.Errorf("compose: canonicalize close-date proposal: %w", err)
 	}
-	_, err = s.svc.Stage(ctx, approvals.StageInput{
+	// No Identity is declared, and that is deliberate rather than an omission.
+	//
+	// An Identity makes StageUnlessDeclined refuse on its own, by jsonb
+	// containment: same field, same value. What makes two close-date corrections
+	// the same question cannot be written that way — it compares TONIGHT's
+	// standing date against the date an EARLIER payload proposed, which is a
+	// relation between two different fields of two different rows. Declaring a
+	// containment identity anyway would give the memory a second, cruder
+	// enforcement point that silently wins: it would suppress a card
+	// RefusedCloseDate had already decided to raise, with nothing failing to say
+	// so. The judgment lives in exactly one place, in the module that owns close
+	// dates, and ensureStaged asks it before it gets here.
+	//
+	// Without an Identity the declined probe falls back to the whole-payload diff
+	// hash, which carries the proposed date and so changes nightly. It suppresses
+	// nothing, which is the right behaviour for a check that is not the memory.
+	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
 		Kind:           deals.CloseDateCorrectionKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -61,6 +112,7 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 		TargetID:       dealID,
 		TargetVersion:  &targetVersion,
 		Summary:        summary,
+		JoinPending:    true,
 	})
 	return err
 }
