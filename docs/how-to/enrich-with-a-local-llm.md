@@ -22,8 +22,9 @@ it too (`ollama pull mistral`) if enrich grounding is weak.
 
 ## 2. Point the AI lanes at Ollama
 
-A dev stack is bound to `gemini` on every tier (`seeds.ai_routing` in
-`config/margince.dev.yaml`), so **enrich needs one rebind**: point `local_small`
+A dev stack is bound to one broker over `openai_compatible` on every tier and on
+the embed lane (`seeds.ai_routing` in `config/margince.dev.yaml`), so **enrich
+needs one rebind**: point `local_small`
 — the first rung of `enrich`'s ladder (`local_small` → `cheap_cloud`) — at Ollama.
 
 On a running stack do it under **Settings → AI**, which takes effect immediately.
@@ -63,9 +64,10 @@ provider, not to leave one cloud tier unkeyed. Note the fake is a fallback: once
 the binding is servable it outranks the flag, so a stack that CAN reach its
 models never answers with canned text.
 
-The shipped default routing binds **gemini** on every tier, so out of the box you
-must either set `GEMINI_API_KEY`, or rebind the tiers you exercise to `ollama`
-(§2) for a fully local, no-key stack:
+The shipped dev routing binds every tier AND the embed lane to one broker over
+the `openai_compatible` adapter, so out of the box you must either set
+`OPENAI_COMPATIBLE_API_KEY`, or rebind the tiers you exercise to `ollama` (§2)
+for a fully local, no-key stack:
 
 ```sh
 make dev   # look for: "dev: the stored model binding serves the cold-start read-back (providers bound by …)"
