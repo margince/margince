@@ -18,6 +18,7 @@ package integrations
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -36,11 +38,16 @@ type runsEnv struct {
 	store *Store
 	ctx   context.Context
 	ws    ids.UUID
-	// mine is visible to the acting principal; theirs is another rep's
-	// capture-private contact, which no other seat can read.
+	// mine is visible AND writable by the acting principal; theirs is another
+	// rep's capture-private contact, which no other seat can read.
 	mine   ids.PersonID
 	theirs ids.PersonID
-	owner  *pgx.Conn
+	// theirsInBook is the subject the visibility probe could never refuse:
+	// another rep's PROMOTED contact. person is an identity table, so every
+	// seat reads it and only the write arm separates them — which is why a run
+	// gated on visibility was gated on nothing at all.
+	theirsInBook ids.PersonID
+	owner        *pgx.Conn
 	// enqueued counts durable hand-offs, so a test can prove one happened.
 	enqueued int
 	// vault and fake are the store's own instances, exposed so the execution
@@ -74,8 +81,12 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		t.Fatal(err)
 	}
 
-	e := &runsEnv{ws: ids.NewV7(), owner: owner,
-		mine: ids.New[ids.PersonKind](), theirs: ids.New[ids.PersonKind]()}
+	e := &runsEnv{
+		ws: ids.NewV7(), owner: owner,
+		mine:         ids.New[ids.PersonKind](),
+		theirs:       ids.New[ids.PersonKind](),
+		theirsInBook: ids.New[ids.PersonKind](),
+	}
 
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -101,7 +112,11 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		id         ids.PersonID
 		owner      *ids.UUID
 		visibility string
-	}{{e.mine, &actor, "workspace"}, {e.theirs, &stranger, "owner"}} {
+	}{
+		{e.mine, &actor, "workspace"},
+		{e.theirs, &stranger, "owner"},
+		{e.theirsInBook, &stranger, "workspace"},
+	} {
 		if _, err := owner.Exec(ctx, `
 			INSERT INTO person (id, owner_id, visibility, full_name, source, captured_by)
 			VALUES ($1, $2, $3, 'Anna Muster', 'manual', 'human:test')`,
@@ -183,7 +198,10 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		Type: principal.PrincipalHuman, ID: "human:" + actor.String(), UserID: actor,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true},
+				// Update, not Read: a run does not read the subject, it writes
+				// bought facts onto them. Read alone is the read_only seat, and
+				// what that seat must not do is exactly this.
+				"person": {Read: true, Update: true},
 				// What enrichment COSTS is readable by any seat that may see
 				// the connection — a rep asking "are we out of credits" is
 				// asking about the installation, not about a person.
@@ -231,6 +249,94 @@ func TestQueueRunRefusesASubjectTheCallerCannotSee(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("a visible subject was refused: %v", err)
 	}
+}
+
+// The subject a visibility probe can never refuse. person is an identity table,
+// so its owner arm renders TRUE for every seat: another rep's PROMOTED contact
+// is readable by the whole workspace, and a run gated on EnsureVisible admitted
+// it. The write arm is the only thing that separates two reps on that table, so
+// this is the case the old gate could not see — a rep spending the
+// installation's credits to land provider claims on a colleague's record.
+//
+// ErrPermissionDenied exactly, not "an error": the caller was already told this
+// person is theirs to read, so a 404 here would hide nothing and would send
+// them looking for a record that is plainly in their list.
+func TestQueueRunRefusesASubjectTheCallerMaySeeButNotChange(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+
+	_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+		PersonID: e.theirsInBook.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("queueing a run on a colleague's readable contact = %v, want ErrPermissionDenied", err)
+	}
+
+	// Nothing was bought and nothing was held: the refusal lands before the
+	// run row, so no credit is reserved against work nobody authorized.
+	if runs := e.runRows(t, e.theirsInBook); runs != 0 {
+		t.Errorf("%d run rows exist for a subject the caller cannot change", runs)
+	}
+	if e.enqueued != 0 {
+		t.Errorf("%d submit jobs enqueued for a refused run", e.enqueued)
+	}
+
+	// The positive control, and it is not the same as the one above: the caller
+	// may still enrich their OWN person, so the gate narrowed the write scope
+	// rather than closing the feature.
+	if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+	}); err != nil {
+		t.Fatalf("the caller's own subject was refused: %v", err)
+	}
+}
+
+// The seat whose entire purpose is that it changes nothing. read_only holds
+// person.read and not person.update, and the old object gate asked for read —
+// so the lowest seat in the product could spend the installation's credits and
+// land provider claims on a person. The row arm cannot catch this one: the
+// subject here is the caller's OWN record, and it is the ACTION that is wrong.
+func TestQueueRunRefusesASeatThatMayReadPeopleButNotChangeThem(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+
+	_, err := e.store.QueueRun(e.readOnlyCtx(), provider.QueueInput{
+		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a read-only seat queued a paid run = %v, want ErrPermissionDenied", err)
+	}
+	if runs := e.runRows(t, e.mine); runs != 0 {
+		t.Errorf("%d run rows exist for a seat that may not change the subject", runs)
+	}
+	if e.enqueued != 0 {
+		t.Errorf("%d submit jobs enqueued for a refused run", e.enqueued)
+	}
+}
+
+// readOnlyCtx is the acting principal with the update grant taken away —
+// the seeded read_only seat's shape, on the same user and workspace, so what
+// separates it from e.ctx is the one grant under test and nothing else.
+func (e *runsEnv) readOnlyCtx() context.Context {
+	actor, ok := principal.Actor(e.ctx)
+	if !ok {
+		panic("the runs environment has no actor to narrow")
+	}
+	actor.Permissions.Objects = map[string]principal.ObjectGrant{
+		"person":       {Read: true},
+		"integrations": {Read: true},
+	}
+	return principal.WithActor(e.ctx, actor)
+}
+
+// runRows counts the provider runs recorded for one subject, which is how each
+// refusal above proves it wrote nothing rather than merely answering an error.
+func (e *runsEnv) runRows(t *testing.T, person ids.PersonID) int {
+	t.Helper()
+	var runs int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM provider_run WHERE person_id = $1`, person).Scan(&runs); err != nil {
+		t.Fatal(err)
+	}
+	return runs
 }
 
 // The defect: pools were locked, checked and inserted in one pass, so a run
