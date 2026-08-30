@@ -100,9 +100,10 @@ Two cards.
 Invite, change role, deactivate, reactivate. Reading the roster is open to every
 user; managing it is administrators only.
 
-**Teams** — named groups you can share records with. Being in a team grants no
-access on its own: no shipped role is team-scoped, so a team matters when a
-record is shared with it.
+**Teams** — named groups you can share records with. Create one, archive it, and
+open a team to add or remove the users in it. Being in a team grants no access on
+its own: no shipped role is team-scoped, so a team matters when a record is
+shared with it.
 
 See [Seats, roles and who can see what](seats-roles-and-access.md).
 
@@ -116,6 +117,27 @@ What the installation is wired to, as opposed to what one person connected.
   chosen events." Deliveries can be inspected and replayed.
 - **HubSpot mirror** — connecting an existing HubSpot portal in read-and-sync
   mode, and the one-way switch to running natively.
+
+## Extensions
+
+Every extension unit this installation was built with, and what each may reach.
+
+A unit is software composed into the installation at build time, not something
+installed from inside the app — so this page reports what is there rather than
+offering anything to add or remove. Each unit says what it is for, the version it
+declares, and the permission objects it registered.
+
+Those permission objects are the reason the page exists. A unit that owns records
+gates them on names no seeded role has ever heard of, so until somebody grants a
+role read on them, every seat opens the unit's screen and sees nothing. The
+switches here are that grant.
+
+A unit that registers no permission objects — a jurisdiction pack, for instance,
+which only supplies retention policy the core consults — is listed with nothing to
+grant, which is the correct and common answer.
+
+Admin only, and the admin role specifically: Ops administers the rest of this
+half of settings and not this page.
 
 ## Capture
 
@@ -217,10 +239,11 @@ See [Seats, roles and who can see what](seats-roles-and-access.md#the-licence).
 
 | Page | Who |
 |---|---|
-| Account, Writing voice, Agents, Connections, Capture activity | every member |
+| Account, Writing voice, Agents, Connections, Capture activity | every user |
 | General, Users & teams, Integrations, Capture, Data model, AI, Knowledge, License, Maintenance | Admin or Ops |
 | Privacy & audit | Admin or Ops; the audit log and privacy inbox inside it are Admin only |
-| Job health, Reset data, member management, extension access | Admin only |
+| Extensions | Admin only — Ops does not reach it |
+| Job health, Reset data, user administration | Admin only |
 
 A few things sit outside the role system entirely and need the Admin role, full
 stop: user administration, privacy erasure, and reading the audit log.
