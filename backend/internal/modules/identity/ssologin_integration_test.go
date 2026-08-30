@@ -120,6 +120,28 @@ func TestResolveFederatedUserRefusesUnknownEmail(t *testing.T) {
 	}
 }
 
+// TestResolveFederatedUserRefusesADeactivatedLinkedSubject holds the
+// resolveFederatedUser doc comment's own promise: an already-linked
+// (provider, subject) must be refused exactly like an unrecognized password
+// login once the user behind it is no longer live, not resolved straight
+// from federated_identity with no LiveMemberSQL check at all.
+func TestResolveFederatedUserRefusesADeactivatedLinkedSubject(t *testing.T) {
+	svc, conn, userID, email := seedSSOEnv(t, "sso-deactivated-linked")
+	linkFederatedIdentityRow(t, conn, userID, "google", "sub-1", email)
+	if _, err := conn.Exec(context.Background(),
+		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, userID); err != nil {
+		t.Fatal(err)
+	}
+
+	err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
+		_, _, resolveErr := svc.resolveFederatedUser(context.Background(), tx, "google", "sub-1", email)
+		return resolveErr
+	})
+	if err == nil {
+		t.Fatal("expected a refusal for a linked subject whose user is no longer live")
+	}
+}
+
 func TestLoginViaFederatedIdentityRelinksOnSubjectChange(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-relink")
 	linkFederatedIdentityRow(t, conn, userID, "google", "sub-old", email)

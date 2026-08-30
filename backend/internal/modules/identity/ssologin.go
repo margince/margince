@@ -213,13 +213,19 @@ var ErrFederatedSignInRefused = errors.New("identity: federated sign-in refused"
 func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider, subject, email string) (userID ids.UserID, firstLink bool, err error) {
 	var linkedUser ids.UserID
 	err = tx.QueryRow(ctx,
-		`SELECT user_id FROM federated_identity WHERE provider = $1 AND subject = $2`,
+		`SELECT fi.user_id FROM federated_identity fi
+		 JOIN app_user u ON u.id = fi.user_id
+		 WHERE fi.provider = $1 AND fi.subject = $2 AND `+LiveMemberSQL("u"),
 		provider, subject).Scan(&linkedUser)
 	switch {
 	case err == nil:
 		return linkedUser, false, nil
 	case errors.Is(err, pgx.ErrNoRows):
-		// fall through to email resolution below
+		// Either genuinely unlinked, or linked to a user who is no longer
+		// live — both fall through to email resolution below, and both must
+		// land on the SAME refusal as an unrecognized password login: a
+		// suspended or archived account's still-valid link must not read as
+		// a successful sign-in just because the row exists.
 	default:
 		return ids.UserID{}, false, fmt.Errorf("identity: resolve federated identity: %w", err)
 	}
