@@ -28,6 +28,23 @@ describe("the query retry policy", () => {
     expect(retryQuery(2, problem(503))).toBe(false);
   });
 
+  it("never retries a refusal the server has settled, however early", () => {
+    // Both are classed as server errors and neither is a failure the server
+    // may recover from: 501 does not support what was asked, 505 will not
+    // speak this version. A build reaches 501 deliberately — httperr answers
+    // it for a surface the contract specifies and this build does not wire —
+    // so a retry here is three requests and three console errors for one
+    // settled answer, read first by an operator looking for a real fault.
+    for (const status of [501, 505]) {
+      expect(retryQuery(0, problem(status)), String(status)).toBe(false);
+    }
+    // And the neighbours are still retried, so the exclusion is these two
+    // rather than a range that swallowed them.
+    for (const status of [500, 502, 503, 504]) {
+      expect(retryQuery(0, problem(status)), String(status)).toBe(true);
+    }
+  });
+
   it("never retries a client error, however early the failure", () => {
     for (const status of [400, 401, 403, 404, 409, 422, 429]) {
       expect(retryQuery(0, problem(status)), String(status)).toBe(false);
