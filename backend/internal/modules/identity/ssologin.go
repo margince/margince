@@ -207,26 +207,28 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		state = *params.State
 	}
 
-	// The cookie/state check runs BEFORE the `error` check below, on
-	// purpose: this callback is a public GET, the cookie is SameSite=Lax
-	// (so it rides a cross-site top-level navigation), and `state` is
-	// attacker-suppliable. Checking `error` first — before proving the
-	// request actually carries THIS browser's signed nonce — would let an
-	// off-site link with `?error=x` clear and refuse a victim's unrelated,
-	// still-in-progress sign-in merely by being clicked. Verifying state
-	// first means only a request holding the real cookie ever reaches (and
-	// consumes) it.
+	// The cookie is read and VERIFIED before it is cleared, and before the
+	// `error` check below — both on purpose. This callback is a public GET,
+	// the cookie is SameSite=Lax (so it rides a cross-site top-level
+	// navigation), and `state`/`error` are both attacker-suppliable. Clearing
+	// on mere presence (the shape an earlier version of this code, and of
+	// the `error` check, both had) would let a forged cross-site link
+	// consume and cancel a victim's real, unrelated, still-in-progress
+	// sign-in merely by being clicked — their subsequent legitimate return
+	// from Google would then fail "no state cookie" for a flow they never
+	// abandoned. Only a request whose cookie decrypts to a genuinely
+	// matching provider+nonce ever reaches the clear.
 	cookie, err := r.Cookie(oidcLoginCookie)
 	if err != nil {
 		fail(ctx, "no state cookie", nil)
 		return
 	}
-	clearLoginStateCookie(w) // one-shot: consumed here whether verification below succeeds or not
 	stProvider, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
 	if err != nil || stProvider != provider || stNonce != state {
 		fail(ctx, "state verification", err)
 		return
 	}
+	clearLoginStateCookie(w) // one-shot: consumed now that the state has genuinely matched
 
 	// Google sends `error` instead of `code` when the user denies consent —
 	// e.g. access_denied. Checked here, now that the state above has proven

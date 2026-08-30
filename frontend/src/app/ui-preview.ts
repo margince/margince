@@ -245,9 +245,19 @@ const PREVIEW_UNAVAILABLE_PROVIDERS: ReadonlySet<string> = new Set([
  * illegal. What makes this legal is what it is: a design-review fixture in the
  * same class as a Storybook story, off unless a build-time var is set, never
  * reachable by a user of a shipped build.
+ *
+ * `served` is the same real capability answer `previewedOidcProviders` reads —
+ * a non-empty list means this installation genuinely serves at least one
+ * provider, and the preview marker must not fall on any of THOSE (a real
+ * `microsoft` button disabled by a build-time var an operator never asked
+ * about is the honest-functionality violation this fixture exists to avoid,
+ * not to commit).
  */
-export function previewedUnavailableProviders(): ReadonlySet<string> {
-  return uiPreviewOidcEnabled()
-    ? PREVIEW_UNAVAILABLE_PROVIDERS
-    : NO_UNAVAILABLE_PROVIDERS;
+export function previewedUnavailableProviders(
+  served: OidcProviders,
+): ReadonlySet<string> {
+  if (served.length > 0 || !uiPreviewOidcEnabled()) {
+    return NO_UNAVAILABLE_PROVIDERS;
+  }
+  return PREVIEW_UNAVAILABLE_PROVIDERS;
 }

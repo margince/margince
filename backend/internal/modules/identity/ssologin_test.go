@@ -256,6 +256,36 @@ func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 	}
 }
 
+// TestOidcSignInCallbackStateMismatchNeverClearsTheCookie closes a
+// cancellation-griefing gap a review found: the callback is a public GET
+// with a SameSite=Lax cookie, so a forged cross-site link carrying a
+// mismatched `state` can reach a victim's browser on a top-level navigation
+// while their real sign-in is still pending. If a state MISMATCH cleared the
+// cookie anyway, that forged link would cancel the victim's real flow — their
+// subsequent, legitimate return from Google would then fail "no state
+// cookie" for a request they never made wrong. The cookie must survive a
+// failed verification so the victim's real round trip can still complete.
+func TestOidcSignInCallbackStateMismatchNeverClearsTheCookie(t *testing.T) {
+	h := Handlers{}.WithOIDCProviders(
+		map[string]OIDCProviderConfig{"google": {Key: "google"}},
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		fixedStateSigner{provider: "google", nonce: "expected-nonce", codeVerifier: "v"},
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
+	)
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=wrong-nonce", nil)
+	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "the-victims-real-cookie"})
+	rec := httptest.NewRecorder()
+
+	h.OidcSignInCallback(rec, req, "google", callbackParams("x", "wrong-nonce"))
+
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == oidcLoginCookie {
+			t.Fatalf("a state mismatch must not clear the cookie — got %+v", c)
+		}
+	}
+}
+
 func TestOidcSignInCallbackExchangeFailureIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},

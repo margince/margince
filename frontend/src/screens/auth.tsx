@@ -235,6 +235,16 @@ export function AuthScreen({
     clearResetHash();
   };
 
+  const servedOidcProviders = capabilities.data?.oidc_providers ?? [];
+  // True only when previewedOidcProviders (below) actually invented the
+  // list this render draws — never merely because the preview build flag
+  // is set. An installation that genuinely serves OIDC providers keeps
+  // working buttons even under a preview build: the switch exists to
+  // stand in for a server with none configured, not to blanket-disable a
+  // real one.
+  const oidcProvidersSynthesized =
+    servedOidcProviders.length === 0 && uiPreviewOidcEnabled();
+
   return (
     <AuthExperience
       profile={assistantProfile.data}
@@ -264,7 +274,7 @@ export function AuthScreen({
                verbatim — the label callback included, which is never consulted
                on a served provider. */
             providers={previewedOidcProviders(
-              capabilities.data?.oidc_providers ?? [],
+              servedOidcProviders,
               (providerKey) =>
                 t("auth.continueWith", {
                   /* The key itself if we have no brand word for it: a preview
@@ -273,20 +283,15 @@ export function AuthScreen({
                   brand: providerBrandName(providerKey) ?? providerKey,
                 }),
             )}
-            /* True only when previewedOidcProviders ABOVE actually invented
-               the list this render draws — never merely because the preview
-               build flag is set. An installation that genuinely serves OIDC
-               providers keeps working buttons even under a preview build:
-               the switch exists to stand in for a server with none
-               configured, not to blanket-disable a real one. */
-            providersSynthesized={
-              (capabilities.data?.oidc_providers ?? []).length === 0 &&
-              uiPreviewOidcEnabled()
-            }
+            providersSynthesized={oidcProvidersSynthesized}
             /* Empty in the product, always: the capability carries no
                availability field, so only the preview layer can mark a provider
-               (app/ui-preview.ts). */
-            unavailableProviders={previewedUnavailableProviders()}
+               (app/ui-preview.ts). Gated on the same served list as `providers`
+               above, so the marker never falls on a provider this installation
+               genuinely serves. */
+            unavailableProviders={previewedUnavailableProviders(
+              servedOidcProviders,
+            )}
             onForgot={() => setView({ kind: "forgot" })}
           />
         </>
