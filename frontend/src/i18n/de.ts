@@ -5572,7 +5572,23 @@ export const de = {
     "KI-gest\u00fctzte Entw\u00fcrfe; jeder Versand bleibt eine menschliche Entscheidung.",
   "voice.insights.nextBestLabel": "So wird sie besser:",
   "voice.candidate.title":
-    "Eine neue Stimmen-Version (v{n}) wartet auf deine Pr\u00fcfung.",
+    "Eine neue Voice-Version (v{n}) ist fertig — lies sie, bevor du sie verwendest.",
+  "voice.candidate.whatItIs":
+    "Das hat der Build aus deinen Proben gelernt. Sie ist noch nicht im Einsatz: Es wird nichts in dieser Stimme entworfen, bevor du sie auswählst.",
+  "voice.candidate.reviewLabel":
+    "Was diese Version über deinen Schreibstil sagt",
+  "voice.candidate.concernsLabel":
+    "Warum sie auf dich wartet, statt von allein aktiv zu werden",
+  "voice.candidate.applyHint":
+    "Wenn sie sich nach dir liest, verwende sie. Wenn nicht, behalte deine aktuelle Stimme und füge mehr eigene Texte hinzu — der nächste Build lernt aus dem, was in deinem Korpus steht.",
+  "voice.candidate.reason.malformed":
+    "Die Prüfung, die eine neue Stimme bewertet, konnte einige der Beispielentwürfe nicht lesen. Die Bewertung beruht daher auf weniger Beispielen als üblich.",
+  "voice.candidate.reason.lowScore":
+    "Beispielentwürfe in dieser Stimme erreichten {score} im Vergleich zu deinen eigenen Texten — unter den {floor}, die diese Installation verlangt, um eine Stimme selbstständig zu aktivieren.",
+  "voice.candidate.reason.hardFailures":
+    "{n} Formulierungen, die diese Stimme vermeiden soll, sind in den Beispielentwürfen geblieben.",
+  "voice.candidate.reason.rulesRemoved":
+    "{n} Regeln darüber, was zu vermeiden ist, sind gegenüber deiner vorherigen Version weggefallen.",
   "voice.candidate.apply": "Diese Version verwenden",
   "voice.candidate.reject": "Meine aktuelle Stimme behalten",
   "voice.history.label": "Versionen und Lernen",
@@ -5642,6 +5658,8 @@ export const de = {
   "settings.voice.buildsTitle": "Builds",
   "settings.voice.buildRowLabel": "Aus deinen Proben bauen",
   "settings.voice.building": "Baue…",
+  "settings.voice.buildRunning":
+    "Deine Voice DNA wird gerade gebaut — das dauert etwa eine Minute. Du kannst die Seite verlassen, der Build läuft weiter.",
   "settings.voice.rebuild": "Voice DNA neu bauen",
   "settings.voice.buildFirst": "Meine Voice DNA bauen",
   "settings.voice.buildNeedsWords":

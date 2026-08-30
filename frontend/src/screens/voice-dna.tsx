@@ -630,6 +630,24 @@ type BuildOutcome = Readonly<{
   detail?: string | null;
 }>;
 
+// What the status line says at each point in a build's life: running, finished,
+// or never started. Named rather than nested in the JSX because the control
+// around it is already at the complexity ceiling, and a reader asking "what
+// does this line say while it builds?" should find one function that answers.
+function buildStatusLine(
+  t: ReturnType<typeof useT>,
+  running: boolean,
+  outcome: BuildOutcome | null,
+): string {
+  if (running) {
+    return t("settings.voice.buildRunning");
+  }
+  if (outcome) {
+    return buildOutcomeText(t, outcome);
+  }
+  return "";
+}
+
 // What the reader is told a finished build did.
 //
 // The server's own sentence wins whenever it sent one, because only the server
@@ -784,9 +802,17 @@ function BuildControls({
                 about a minute behind a poll, so the reader who started it has
                 looked away — and a live region inserted together with its text
                 is not reliably announced, which would leave the one thing they
-                are waiting for arriving in silence. */}
+                are waiting for arriving in silence.
+                
+                While it runs this says so IN WORDS. The button carries the
+                spinner and a visually-hidden busy label, which is the whole
+                story for a screen reader and none of it for a reader looking
+                at the page: a control that swallows a second press without
+                saying why invites the press again. It also says the wait can
+                be left, because a build outlives this page and a reader who
+                does not know that sits and watches it. */}
             <p className="t-small" role="status">
-              {outcome ? buildOutcomeText(t, outcome) : ""}
+              {buildStatusLine(t, build.isPending, outcome)}
             </p>
             {error && (
               <p className="t-small" role="alert">
