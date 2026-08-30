@@ -5157,7 +5157,7 @@ export const vi = {
   "cf.refuse.body":
     "Trình dựng này chỉ thêm trường đơn giản vào bản ghi sẵn có. Một đối tượng mới, một liên kết giữa các đối tượng, hay một số tổng hợp tính toán đều là thay đổi cấu trúc — thay đổi đó ra mắt trong một phiên bản mới của Margince sau khi được rà soát, do con người làm, chứ không phải sản phẩm tự sửa mã của chính mình.",
   "cf.refuse.route":
-    "Hãy đưa việc đó qua con đường phát triển — kỹ sư của chính bạn, một đối tác triển khai, hoặc dịch vụ của Gradion.",
+    "Hãy đưa việc đó qua con đường phát triển — kỹ sư của chính bạn, một đối tác triển khai, hoặc dịch vụ của Margince.",
   "cf.confirm": "Xác nhận và thêm trường",
   "cf.writing": "đang ghi…",
   "cf.added":

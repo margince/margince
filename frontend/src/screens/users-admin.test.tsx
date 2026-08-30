@@ -60,7 +60,7 @@ const ROSTER = {
     {
       id: "u-agent",
       email: "agent@acme.gradion.local",
-      display_name: "Gradion Agent",
+      display_name: "Margince Agent",
       status: "active",
       is_agent: true,
       roles: [],
@@ -318,9 +318,11 @@ describe("UsersAdminCard", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
-    await waitFor(() => expect(screen.getByText("Gradion Agent")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("Margince Agent")).toBeTruthy(),
+    );
 
-    const agent = rowFor("Gradion Agent");
+    const agent = rowFor("Margince Agent");
     expect(within(agent).getByText("Agent")).toBeTruthy();
     // No role control at all, not a disabled one: the seat's authority comes
     // from a passport and the person it names, never from a role of its own. The
@@ -332,7 +334,7 @@ describe("UsersAdminCard", () => {
     // No set-password link: the seat holds no password by construction, which
     // is what makes it a thing that signs in nowhere. Its menu still opens —
     // deactivating the seat is a posture an operator is entitled to take.
-    const agentVerbs = await rowMenu(user, "Gradion Agent");
+    const agentVerbs = await rowMenu(user, "Margince Agent");
     expect(agentVerbs.queryByText(/set-password link/i)).toBeNull();
     expect(agentVerbs.getByText("Deactivate")).toBeTruthy();
 
@@ -354,10 +356,12 @@ describe("UsersAdminCard", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
-    await waitFor(() => expect(screen.getByText("Gradion Agent")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("Margince Agent")).toBeTruthy(),
+    );
 
     await user.click(
-      (await rowMenu(user, "Gradion Agent")).getByRole("button", {
+      (await rowMenu(user, "Margince Agent")).getByRole("button", {
         name: /deactivate/i,
       }),
     );

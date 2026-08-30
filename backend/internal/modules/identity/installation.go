@@ -320,7 +320,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 func seedAgentSeat(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, boot BootstrapInput) error {
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO app_user (email, display_name, timezone, is_agent, seat_type, status)
-		 VALUES ($1, 'Gradion Agent', $2, true, 'full', 'active')`,
+		 VALUES ($1, 'Margince Agent', $2, true, 'full', 'active')`,
 		agentSeatEmail(boot.Slug), boot.Timezone); err != nil {
 		return fmt.Errorf("identity: seeding the agent seat: %w", err)
 	}

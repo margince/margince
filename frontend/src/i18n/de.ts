@@ -5207,7 +5207,7 @@ export const de = {
   "cf.refuse.body":
     "Dieser Builder fügt nur einfache Felder zu bestehenden Datensätzen hinzu. Ein neues Objekt, eine Verknüpfung zwischen Objekten oder ein berechneter Roll-up ist eine strukturelle Änderung — sie kommt als geprüfte Änderung an Margince in einer neuen Version, gemacht von Menschen, nicht vom Produkt, das seinen eigenen Code bearbeitet.",
   "cf.refuse.route":
-    "Leite es über den Entwicklungsweg — deine eigenen Entwickler, einen Implementierungspartner oder Gradion-Services.",
+    "Leite es über den Entwicklungsweg — deine eigenen Entwickler, einen Implementierungspartner oder Margince-Services.",
   "cf.confirm": "Bestätigen & Feld hinzufügen",
   "cf.writing": "wird geschrieben…",
   "cf.added":

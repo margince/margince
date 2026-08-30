@@ -5264,7 +5264,7 @@ export const en = {
   "cf.refuse.body":
     "This builder adds simple fields to existing records only. A new object, a link between objects, or a calculated roll-up is a structural change — it ships as a reviewed change to Margince in a new version, done by people, not by the product editing its own code.",
   "cf.refuse.route":
-    "Route it through the development path — your own engineers, an implementation partner, or Gradion services.",
+    "Route it through the development path — your own engineers, an implementation partner, or Margince services.",
   "cf.confirm": "Confirm & add field",
   "cf.writing": "writing…",
   "cf.added": 'Field "{label}" added — live on 360, filters, export & API',

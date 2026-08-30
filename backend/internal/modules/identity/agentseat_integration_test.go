@@ -111,9 +111,9 @@ func TestBootstrapMintsAnAgentSeatThatCarriesNoAuthorityOfItsOwn(t *testing.T) {
 	if want := agentSeatEmail(slug); seat.email != want {
 		t.Errorf("seat address = %q, want %q (seed-and-fixtures §1.5)", seat.email, want)
 	}
-	if seat.displayName != "Gradion Agent" {
+	if seat.displayName != "Margince Agent" {
 		t.Errorf("seat display name = %q, want %q — it is what a human reads beside a record the "+
-			"runner owns", seat.displayName, "Gradion Agent")
+			"runner owns", seat.displayName, "Margince Agent")
 	}
 	if seat.status != "active" || seat.archived {
 		t.Errorf("seat status = %q, archived = %v; the dispatcher resolves an initiator by "+

@@ -28578,7 +28578,7 @@ components:
       required: [organization_id, cert_status, created_at, updated_at]   # partner_role is nullable (data-model §4.3)
       properties:
         organization_id: { type: string, format: uuid, description: The org this partner record extends (PK = FK). }
-        partner_role: { type: string, enum: [hosting, consulting, strategic], description: Functional role (A44/ADR-0034); implementation + dev are Gradion's turf. }
+        partner_role: { type: string, enum: [hosting, consulting, strategic], description: Functional role (A44/ADR-0034); implementation + dev are Margince's turf. }
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], description: Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK). }
         gate_metrics: { type: [object, 'null'], additionalProperties: true, description: 'Program gate metrics (certified seats, CSAT, ...).' }
