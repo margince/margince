@@ -82,6 +82,7 @@ tasks:
     sites: [classify]
     company_context: none
     cost_unit: per_message
+    no_payload: true
 
   capture_counterparty_verdict:
     ladder: [local_small, cheap_cloud]
@@ -100,6 +101,7 @@ tasks:
     status: shipped
     sites: [thread_events]
     company_context: none
+    no_payload: true
     doc: "SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human."
 
   transcript_propose:

@@ -298,6 +298,7 @@ var piiTables = map[string]piiHandling{
 // below is what fails if one is forgotten.
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sar.go",
+	"internal/modules/privacy/sarsections.go",
 	"internal/modules/privacy/sarmessages.go",
 }
 

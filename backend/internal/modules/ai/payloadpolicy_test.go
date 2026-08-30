@@ -67,12 +67,15 @@ func TestAPinnedTaskIsRefusedCaptureEvenWithCaptureEnabled(t *testing.T) {
 	if enabled.CapturesPayload(TaskCaptureCounterpartyVerdict) {
 		t.Error("the verdict task captured payloads under an enabling posture — the pin must outrank the operator setting")
 	}
-	if !enabled.CapturesPayload(TaskCaptureClassify) {
+	// The other half needs a task that is genuinely unpinned, and the capture
+	// tasks are no longer that: everything that reads a captured message's text
+	// is pinned now, which is the point of the pin rather than a gap in it.
+	if !enabled.CapturesPayload(TaskSummarize) {
 		t.Error("an unpinned task was refused capture — the pin must be narrow, not a blanket off switch")
 	}
 
 	disabled := &Router{capturePayloads: false}
-	if disabled.CapturesPayload(TaskCaptureClassify) {
+	if disabled.CapturesPayload(TaskSummarize) {
 		t.Error("capture happened under a disabling posture — the operator setting still governs every unpinned task")
 	}
 }

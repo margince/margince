@@ -44,6 +44,16 @@ import (
 const ClassifyBacklogPredicate = `capture_label IS NULL
 	  AND captured_by LIKE 'connector:%' AND kind = 'email'
 	  AND archived_at IS NULL
+	  -- A limited message is not labelled. The label is derived from the
+	  -- message's subject and body and shown on a worklist the message's own
+	  -- audience does not bound, so labelling one is that message's content on
+	  -- the screen of a colleague excluded from it. audiencerescope clears the
+	  -- label of a row that narrows after it was labelled.
+	  AND audience = 'workspace'
+	  -- A row under a statutory hold is out of reach of every ordinary read
+	  -- path (A165/ADR-0114 §2), and the label pass is a model call over its
+	  -- text — precisely the further processing the hold bars.
+	  AND restricted_at IS NULL
 	  AND NOT EXISTS (
 	    SELECT 1 FROM capture_pending_counterparty p
 	     WHERE p.email = activity.counterparty_email
@@ -95,7 +105,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 		}
 		var label *string
 		var kind, capturedBy string
-		var archived, senderUndecided, eligible bool
+		var archived, audienceLimited, senderUndecided, eligible bool
 		row := tx.QueryRow(ctx, `
 			SELECT
 			  EXISTS (SELECT 1 FROM activity_link l
@@ -104,6 +114,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			  kind,
 			  captured_by,
 			  archived_at IS NOT NULL,
+			  audience <> 'workspace',
 			  EXISTS (SELECT 1 FROM capture_pending_counterparty p
 			           WHERE p.email = activity.counterparty_email
 			             AND p.status = ANY($2)),
@@ -111,7 +122,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			FROM activity
 			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses())
 		if err := row.Scan(&out.HasPersonLink, &label, &kind, &capturedBy,
-			&archived, &senderUndecided, &eligible); err != nil {
+			&archived, &audienceLimited, &senderUndecided, &eligible); err != nil {
 			return err
 		}
 		if label != nil {
@@ -120,7 +131,8 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 		out.ClassifyEligible = eligible
 		out.ClassifyReason = classifyReason(classifySubject{
 			label: out.CaptureLabel, kind: kind, capturedBy: capturedBy,
-			archived: archived, senderUndecided: senderUndecided,
+			archived: archived, audienceLimited: audienceLimited,
+			senderUndecided: senderUndecided,
 		})
 		return nil
 	})
@@ -143,6 +155,7 @@ type classifySubject struct {
 	kind            string
 	capturedBy      string
 	archived        bool
+	audienceLimited bool
 	senderUndecided bool
 }
 
@@ -163,6 +176,8 @@ func classifyReason(in classifySubject) pipelinetrace.Reason {
 		return pipelinetrace.ReasonTransportNotRead
 	case in.archived:
 		return pipelinetrace.ReasonArchived
+	case in.audienceLimited:
+		return pipelinetrace.ReasonAudienceLimited
 	case in.senderUndecided:
 		return pipelinetrace.ReasonSenderUndecided
 	default:

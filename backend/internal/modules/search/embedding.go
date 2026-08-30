@@ -107,16 +107,37 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 		// swap) already won — leave fresh=false rather than clobbering a
 		// row fresher than the one this call started from.
 		//
-		// The activity arm re-checks the RESTRICTION on write, not only on
-		// the read that produced the text: a worker that read the body just
-		// before an erasure held the row would otherwise reinsert a vector of
-		// hidden content after the erasure deleted it (A165/ADR-0114). The
-		// restriction commits before this statement runs or it does not; either
-		// way this statement sees the row as it is now.
+		// The activity arm re-checks the RESTRICTION and the AUDIENCE on write,
+		// not only on the read that produced the text: a worker that read the
+		// body just before an erasure held the row would otherwise reinsert a
+		// vector of hidden content after the erasure deleted it
+		// (A165/ADR-0114), and one that read it just before a human or a
+		// verdict limited the audience would reinsert it after the narrowing
+		// deleted it. Both windows are a model call wide.
+		//
+		// FOR SHARE, not the predicate alone. Read-committed evaluates the
+		// subquery against a snapshot taken when the statement begins, so a
+		// narrowing committing a moment later is invisible to it — and the
+		// retraction that follows the narrowing would then DELETE a vector this
+		// statement has not yet inserted, leaving the row indexed. The share
+		// lock makes the two order: the retraction takes FOR UPDATE on the same
+		// row, so either it waits for this insert and then deletes it, or this
+		// insert waits and re-evaluates against the narrowed row.
+		if entityType == entityActivity {
+			var locked ids.UUID
+			if err := tx.QueryRow(ctx,
+				`SELECT id FROM activity WHERE id = $1 FOR SHARE`, entityID).Scan(&locked); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil // erased since the text was read; nothing to index
+				}
+				return fmt.Errorf("search: locking the activity being embedded: %w", err)
+			}
+		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
 			SELECT $1, $2, 0, $3, $4, $5::vector
-			 WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE $1 = 'activity' AND a.id = $2 AND a.restricted_at IS NOT NULL)
+			 WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE $1 = 'activity' AND a.id = $2
+			                     AND (a.restricted_at IS NOT NULL OR a.audience <> 'workspace'))
 			ON CONFLICT (entity_type, entity_id, chunk_ix)
 			DO UPDATE SET chunk_hash = EXCLUDED.chunk_hash, model = EXCLUDED.model,
 			              embedding = EXCLUDED.embedding, created_at = now()

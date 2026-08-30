@@ -13,6 +13,7 @@ package people
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -74,8 +75,66 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// not cover the subject going mid-transaction — the writer's row lock
 		// serializes that, and this pass still reports it as a skip, which is
 		// the honest count for a field that did not land.
-		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		//
+		// HOLD rather than probe, because the source check below takes a lock of
+		// its own. The eraser is subject-first (privacy/erasure.go anonymizes
+		// the subject's rows before deleting what hangs off it), so the subject
+		// must be the first row this transaction holds or the two deadlock and
+		// an erasure fails when it loses.
+		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
+		}
+		// The SOURCE has the same window as the subject, and for the same
+		// reason: SignatureCandidates selected an open message, a model call
+		// ran, and a human or a verdict can limit that message before this
+		// lands. What this writes is a title, a phone and an employer onto a
+		// person every seat reads, and the audience rescope deliberately does
+		// not retract profile fields — so a field landed after the narrowing
+		// stays readable for good, which is the one outcome no later correction
+		// reaches.
+		//
+		// Nothing landed rather than an error: this is the same shape as a
+		// field somebody else had already filled, and the pass counts it a skip.
+		// A narrowed source is not a fault, it is an answer that arrived too
+		// late.
+		//
+		// Archived counts with the other two: the candidate query requires
+		// `a.archived_at IS NULL`, so a message archived during the model call
+		// is one this pass would no longer select, and copying its text onto a
+		// person afterwards outlives the archive that was meant to retire it.
+		//
+		// The test is for a source that IS limited, not for the absence of an
+		// open one. A source row that is gone says nothing about an audience —
+		// it was erased, or the caller named a message this store never had —
+		// and refusing on absence would make the write depend on a row the
+		// contract never promised, which is a different rule wearing this one's
+		// clothes.
+		// FOR SHARE, so the answer cannot go stale between this statement and
+		// the field writes below. Read-committed would otherwise let a
+		// narrowing commit in that gap and the fields land anyway — and these
+		// fields are the ones no later correction reaches, because the audience
+		// rescope does not retract them.
+		var sourceLimited bool
+		if err := tx.QueryRow(ctx, `
+			SELECT audience <> 'workspace'
+			       OR restricted_at IS NOT NULL
+			       OR archived_at IS NOT NULL
+			  FROM activity WHERE id = $1 FOR SHARE`,
+			sourceActivity).Scan(&sourceLimited); err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("people: reading the signature's source message: %w", err)
+			}
+			// No source row: nothing lands. The fields being applied were read
+			// OUT of that message, so a source that is gone — erased since the
+			// candidate was selected — means writing erased content onto a
+			// person every seat reads, into fields the audience rescope does
+			// not retract and an audit trail that is append-only. Absence is
+			// the one answer that cannot be checked, so it fails closed.
+			sourceLimited = true
+		}
+		if sourceLimited {
+			res.Skipped += len(fields)
+			return nil
 		}
 		var appliedFields []string
 		// Every field this pass landed, as it found it and as it left it —
@@ -365,6 +424,17 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 				JOIN activity a ON a.id = al.activity_id
 				WHERE al.person_id = p.id AND al.entity_type = 'person'
 				  AND a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+				  -- A limited message is not signature material. What this pass
+				  -- extracts — a title, a phone, an employer — is written onto a
+				  -- person every seat can read, so mining a message whose
+				  -- audience excludes those seats republishes its content in
+				  -- field form, and narrowing the mail afterwards does not take
+				  -- the field back. The candidate simply waits for open mail.
+				  AND a.audience = 'workspace'
+				  -- A row held under a statutory obligation is out of reach of
+				  -- every ordinary read (A165/ADR-0114 §2); the model call this
+				  -- feeds is processing, which is what the hold bars.
+				  AND a.restricted_at IS NULL
 				ORDER BY a.occurred_at DESC
 				LIMIT 1
 			) a ON true

@@ -116,6 +116,30 @@ func (e *dedupeEnv) as() context.Context {
 
 // seedEmployedPerson creates a person with the given email employed at a
 // fresh org that owns domain — the incumbent every case probes against.
+// openSignatureSource is a real inbound message for the apply path to read the
+// audience of.
+//
+// ApplySignatureFields re-tests its source at write time and fails closed on a
+// source it cannot find, because the fields it writes were read OUT of that
+// message: a missing one means writing content from a message that is gone onto
+// a person every seat can read. A fixture handing it a fabricated id is
+// therefore describing a refusal, not the apply — so the fixtures seed the
+// message the production caller always has.
+func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Regards, Dana | VP Finance', 'inbound', now(), 'gmail:seed', 'connector:gmail', 'workspace')`,
+			id)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the signature source: %v", err)
+	}
+	return id
+}
+
 func (e *dedupeEnv) seedEmployedPerson(ctx context.Context, t *testing.T, name, email, orgName, domain string) (ids.PersonID, ids.OrganizationID) {
 	t.Helper()
 	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
