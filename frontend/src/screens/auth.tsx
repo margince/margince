@@ -59,18 +59,46 @@ export type AuthNotice =
 // reload or a Back press cannot replay it.
 const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
+// Module-level, not component state: React (StrictMode, development only)
+// double-invokes a useState lazy initializer to surface impure ones, and
+// this one is impure by necessity (it mutates the address). Without a memo,
+// the first invocation clears the hash and answers true; the second sees the
+// already-cleared hash and answers false — and false is what would win,
+// silently dropping the notice on every dev-mode render. Memoizing the
+// answer on first read makes every later invocation, however many React
+// makes, agree with the first.
+let oidcFailureResolved: boolean | null = null;
+
 // oidcFailureNotice reads and clears the marker in one step — read-then-clear
 // rather than read-only, for the same reason takeHashCredential's callers
 // never re-derive from a stale address: a component that re-checked on every
 // render would re-show the notice after the reader dismissed it and the hash
 // had not yet caught up.
 function oidcFailureNotice(): boolean {
-  if (globalThis.location?.hash !== OIDC_FAILURE_HASH) {
-    return false;
+  if (oidcFailureResolved !== null) {
+    return oidcFailureResolved;
   }
-  const { pathname, search } = globalThis.location;
-  globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
-  return true;
+  oidcFailureResolved = globalThis.location?.hash === OIDC_FAILURE_HASH;
+  if (oidcFailureResolved) {
+    const { pathname, search } = globalThis.location;
+    globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
+  }
+  return oidcFailureResolved;
+}
+
+/**
+ * Test-only: puts the marker-read memo back to its pre-mount state.
+ *
+ * The memo above is scoped to the page's whole lifetime by design — a real
+ * page load only ever evaluates it once, so it never needs resetting outside
+ * a test runner, where one module instance is shared across every case in
+ * the file (the same reason `app/theme-reset.ts`'s `resetTheme` exists).
+ * Without this, the second `it()` to render `AuthScreen` in a suite would
+ * inherit the first case's already-resolved answer instead of reading its
+ * own hash.
+ */
+export function resetOidcFailureNoticeForTests(): void {
+  oidcFailureResolved = null;
 }
 
 // The installation's operational federated providers, exactly as

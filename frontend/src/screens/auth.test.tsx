@@ -12,7 +12,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { THEME_KEY } from "../app/theme";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, LocaleProvider, localeNameKey, translate } from "../i18n";
-import { AuthScreen, AvailabilityScreen, ProviderButtons } from "./auth";
+import {
+  AuthScreen,
+  AvailabilityScreen,
+  ProviderButtons,
+  resetOidcFailureNoticeForTests,
+} from "./auth";
 
 // The unauthenticated surface (A107/ADR-0061 §12): login is the default —
 // no signup mode, no workspace field, no tenant selector on the wire — and
@@ -23,8 +28,12 @@ const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 
 // The theme lives in one module-level store, so the case that presses the
 // toggle below would otherwise hand every later case a flipped document,
-// `localStorage` and store.
-beforeEach(resetTheme);
+// `localStorage` and store. The OIDC failure marker's read is memoized the
+// same way (auth.tsx's own comment says why), so it needs the same reset.
+beforeEach(() => {
+  resetTheme();
+  resetOidcFailureNoticeForTests();
+});
 
 afterEach(() => {
   cleanup();
