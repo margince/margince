@@ -158,6 +158,28 @@ func (c *client) patchGuarded(path string, version int, body jsonBody, out any) 
 	return c.do(req, out)
 }
 
+// postGuarded is post with an optimistic-concurrency precondition, for the
+// mutating endpoints that take one.
+//
+// The version goes in the If-Match HEADER, which is the only place these
+// endpoints read it, for the reason patchGuarded gives above. A version the
+// row no longer carries answers 409 version_skew and writes nothing, which is
+// what lets a reconciling caller act on a snapshot without acting on a row
+// somebody has moved since it read.
+func (c *client) postGuarded(path string, version int, body jsonBody, out any) error { //craft:ignore naked-any out is any JSON shape the caller declares; json.Decode's own contract
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("encoding request: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, c.base+path, bytes.NewReader(encoded))
+	if err != nil {
+		return fmt.Errorf("building request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("If-Match", strconv.Itoa(version))
+	return c.do(req, out)
+}
+
 // get decodes a GET into out. Query values are escaped here rather than by
 // the caller so a company name with an ampersand cannot build a broken URL.
 func (c *client) get(path string, query url.Values, out any) error { //craft:ignore naked-any out is any JSON shape the caller declares; json.Decode's own contract

@@ -39,6 +39,7 @@ func verifySeed(c *client, cfg demoConfig, mode runMode) error {
 		checkEverythingIsOwned,
 		checkPeopleAreEmployed,
 		checkActivitiesReachPeople,
+		checkConversationsNameTheRightPerson,
 		checkDealsHaveStakeholders,
 		checkLifecycleIsSet,
 		checkCoverage,
@@ -179,49 +180,6 @@ func checkPeopleAreEmployed(c *client, _ demoConfig) ([]verifyFinding, error) {
 	}}, nil
 }
 
-// checkActivitiesReachPeople catches correspondence filed against a company
-// and nobody: the company timeline fills, every person's stays empty, and a
-// rep opening a contact sees no history of talking to them.
-func checkActivitiesReachPeople(c *client, _ demoConfig) ([]verifyFinding, error) {
-	conversations, withPerson := 0, 0
-	err := c.getAll("/v1/activities", nil, func(raw json.RawMessage) error {
-		var rows []struct {
-			ID    string `json:"id"`
-			Kind  string `json:"kind"`
-			Links []struct {
-				EntityType string `json:"entity_type"`
-			} `json:"links"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, act := range rows {
-			// A note or a task is internal — about an account, not with anybody.
-			if act.Kind != "email" && act.Kind != "call" && act.Kind != "meeting" {
-				continue
-			}
-			conversations++
-			for _, link := range act.Links {
-				if link.EntityType == "person" {
-					withPerson++
-					break
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if conversations == 0 || withPerson > 0 {
-		return nil, nil
-	}
-	return []verifyFinding{{
-		Rule:   "conversations name a person",
-		Detail: fmt.Sprintf("%d mails/calls/meetings link to no person — every contact's timeline is empty", conversations),
-	}}, nil
-}
-
 // checkDealsHaveStakeholders catches the deal that is a number with nobody
 // attached: no champion, no economic buyer, nobody in the way.
 //
@@ -249,19 +207,7 @@ func checkDealsHaveStakeholders(c *client, _ demoConfig) ([]verifyFinding, error
 		return nil, err
 	}
 
-	hasStaff := map[string]bool{}
-	err = c.getAll("/v1/relationships", url.Values{"kind": {"employment"}}, func(raw json.RawMessage) error {
-		var rows []struct {
-			OrganizationID string `json:"organization_id"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			hasStaff[row.OrganizationID] = true
-		}
-		return nil
-	})
+	hasStaff, err := staffedOrganizations(c)
 	if err != nil {
 		return nil, err
 	}
