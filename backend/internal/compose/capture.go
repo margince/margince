@@ -308,15 +308,6 @@ func newGcalOAuth(c GmailConfig) gcal.OAuth {
 	})
 }
 
-// NewCaptureRegistryWithGmail builds the capture registry and, when the Google
-// OAuth app is configured, registers the read-only Google connectors — Gmail
-// and Google Calendar — so Registry.Connect (api) and SyncOnce (worker poller)
-// can resolve each by name. A deployment without the app configured gets a
-// plain registry (both absent by omission). Returns nil only if pool is nil.
-func NewCaptureRegistryWithGmail(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, cfg CaptureConfig) *capture.Registry {
-	return newCaptureRegistryWithGoogle(pool, vault, nil, c, cfg)
-}
-
 // newCaptureRegistryWithGoogle registers the Google connectors where the app
 // can be resolved from EITHER source: the stored setting this installation
 // wrote, or the pair the deployment composed.
@@ -349,17 +340,6 @@ func newCaptureRegistryWithGoogle(
 // declared 501: it looks configured and is not.
 func googleAppReachable(resolve googleAppResolver, c GmailConfig) bool {
 	return resolve != nil || c.canSync()
-}
-
-// GmailPollRegistry returns a Google-registered capture registry for the
-// worker's background poller (Gmail + Calendar), or nil when the Google app is
-// not configured — nil tells NewJobRunner to skip the polls entirely (no
-// connector, no job).
-func GmailPollRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, cfg CaptureConfig) *capture.Registry {
-	if !c.canSync() {
-		return nil
-	}
-	return NewCaptureRegistryWithGmail(pool, vault, c, cfg)
 }
 
 // CaptureSyncRegistry is the worker's sweep registry: always non-nil —
@@ -443,7 +423,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// here must be the mailbox the check asks about. WithKeyvault already
 		// wired this same call over the plain registry before this option ran;
 		// re-wiring it here is NOT redundant, because this registry is a
-		// different, richer object (NewCaptureRegistryWithGmail) — without this
+		// different, richer object (newCaptureRegistryWithGoogle) — without this
 		// line the mailbox half would keep answering off a registry with no
 		// Gmail connector. The channel half answers identically off either
 		// object: ChannelSendCapable is a pool query, not a connector lookup.

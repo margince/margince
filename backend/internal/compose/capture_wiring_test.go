@@ -8,44 +8,45 @@ package compose
 // all — the composition rules the process roles rely on at boot.
 
 import (
+	"context"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 func TestCaptureRegistryComposition(t *testing.T) {
 	gmailApp := GmailConfig{ClientID: "id", ClientSecret: "secret"}
 
-	t.Run("a configured gmail app registers the connector", func(t *testing.T) {
-		reg := NewCaptureRegistryWithGmail(nil, nil, gmailApp, CaptureConfig{})
-		names := map[string]bool{}
-		for _, d := range reg.Connectors() {
-			names[d.Name] = true
-		}
-		if !names["gmail"] {
-			t.Fatalf("connectors = %v, want gmail registered", names)
-		}
+	// EITHER source registers, and that is the whole rule. The registration
+	// used to require the deployment's pair, which made the stored app
+	// unusable rather than merely unread: the transport asks the registry
+	// whether a connector exists before it will run the consent flow, so an
+	// installation that set its app through Settings was sent to the declared
+	// 501 with no way to connect Gmail at all.
+	//
+	// Driven through newCaptureRegistryWithGoogle, which is the one
+	// constructor that ships. Two others used to stand in front of it — one
+	// gating on the environment alone — and a case driving those proved the
+	// rule of a function nothing called.
+	stored := func(context.Context) (string, string, bool, error) { return "id", "secret", true, nil }
+
+	t.Run("the deployment's pair registers the connector", func(t *testing.T) {
+		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, nil, gmailApp, CaptureConfig{}), "gmail", "gcal")
 	})
 
-	t.Run("an unconfigured app still carries standing imap, never gmail", func(t *testing.T) {
-		reg := NewCaptureRegistryWithGmail(nil, nil, GmailConfig{}, CaptureConfig{})
-		names := map[string]bool{}
-		for _, d := range reg.Connectors() {
-			names[d.Name] = true
-		}
+	t.Run("a stored app registers it with no pair composed", func(t *testing.T) {
+		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, stored, GmailConfig{}, CaptureConfig{}), "gmail", "gcal")
+	})
+
+	t.Run("neither source carries standing imap, never gmail", func(t *testing.T) {
+		reg := newCaptureRegistryWithGoogle(nil, nil, nil, GmailConfig{}, CaptureConfig{})
+		names := registered(reg)
 		if names["gmail"] {
-			t.Fatal("gmail must be absent without its OAuth app")
+			t.Fatal("gmail must be absent when neither the stored app nor the deployment's pair can supply one")
 		}
 		if !names["imap"] {
 			t.Fatal("the standing imap connector needs no app and must always register")
-		}
-	})
-
-	t.Run("the poll registry exists only with a syncable app", func(t *testing.T) {
-		if reg := GmailPollRegistry(nil, nil, GmailConfig{}, CaptureConfig{}); reg != nil {
-			t.Fatal("no app configured must mean no poll registry (the job stays absent)")
-		}
-		if reg := GmailPollRegistry(nil, nil, gmailApp, CaptureConfig{}); reg == nil {
-			t.Fatal("a syncable app must yield the poll registry")
 		}
 	})
 
@@ -127,5 +128,26 @@ func TestWithKeyvaultWiresTheSendPreflightWithNoGoogleApp(t *testing.T) {
 	}
 	if authority.grants != s.connectorHandlers.registry {
 		t.Fatal("the pre-flight must read the SAME registry the connect flow writes to, not a second construction")
+	}
+}
+
+// registered names the connectors a registry carries.
+func registered(reg *capture.Registry) map[string]bool {
+	names := map[string]bool{}
+	for _, d := range reg.Connectors() {
+		names[d.Name] = true
+	}
+	return names
+}
+
+// assertRegisters is the shape both reachability arms assert, so neither can
+// drift into checking less than the other.
+func assertRegisters(t *testing.T, reg *capture.Registry, want ...string) {
+	t.Helper()
+	names := registered(reg)
+	for _, name := range want {
+		if !names[name] {
+			t.Errorf("connectors = %v, want %s registered", names, name)
+		}
 	}
 }

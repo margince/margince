@@ -156,15 +156,6 @@ func TestGmailConfigGating(t *testing.T) {
 	}
 }
 
-func TestGmailPollRegistryNilWhenUnconfigured(t *testing.T) {
-	if reg := GmailPollRegistry(nil, nil, GmailConfig{}, CaptureConfig{}); reg != nil {
-		t.Errorf("unconfigured GmailPollRegistry = %v, want nil (poll skipped)", reg)
-	}
-	if reg := GmailPollRegistry(nil, nil, GmailConfig{ClientID: "id", ClientSecret: "sec"}, CaptureConfig{}); reg == nil {
-		t.Error("configured GmailPollRegistry returned nil, want a registry with gmail registered")
-	}
-}
-
 // The stored-app resolver SURVIVES the option order cmd/api uses.
 //
 // It did not. WithKeyvault installed it and WithGmailCapture then replaced the
