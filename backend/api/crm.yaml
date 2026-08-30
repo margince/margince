@@ -27527,6 +27527,34 @@ components:
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
         updated_at: { type: string, format: date-time }
 
+    TechnicalMailProvider:
+      type: string
+      description: |
+        Which system receives a company's mail, classified from its MX records. `other` is a
+        provider the classifier does not name rather than an absence: a company with no MX
+        records has no `mail_provider` fact at all.
+      enum: [google_workspace, microsoft365, self_hosted, other]
+      x-enum-varnames: [TechnicalMailProviderGoogleWorkspace, TechnicalMailProviderMicrosoft365, TechnicalMailProviderSelfHosted, TechnicalMailProviderOther]
+
+    TechnicalHostingProvider:
+      type: string
+      description: |
+        Where a company's website answers from, classified from its address, CNAME and reverse
+        DNS records. There is no `other`: a host the classifier does not recognise produces no
+        hosting fact at all, so the absence of a value is the answer rather than a catch-all.
+      enum: [hetzner, aws, cloudflare, ionos, strato, azure, google_cloud, ovh]
+      x-enum-varnames: [TechnicalHostingProviderHetzner, TechnicalHostingProviderAWS, TechnicalHostingProviderCloudflare, TechnicalHostingProviderIONOS, TechnicalHostingProviderStrato, TechnicalHostingProviderAzure, TechnicalHostingProviderGoogleCloud, TechnicalHostingProviderOVH]
+
+    TechnicalOperatedService:
+      type: string
+      description: |
+        A service a company demonstrably operates, proved by a subdomain in its certificate
+        history. The set is an ALLOWLIST: a certificate log publishes every hostname a company
+        ever held a certificate for, including people's names, and only labels naming a service
+        survive the classifier.
+      enum: [webshop, customer_portal, careers, api, vpn, mail_infrastructure, file_cloud, dev_infrastructure, status_page, support_site]
+      x-enum-varnames: [TechnicalOperatedServiceWebshop, TechnicalOperatedServiceCustomerPortal, TechnicalOperatedServiceCareers, TechnicalOperatedServiceAPI, TechnicalOperatedServiceVPN, TechnicalOperatedServiceMailInfrastructure, TechnicalOperatedServiceFileCloud, TechnicalOperatedServiceDevInfrastructure, TechnicalOperatedServiceStatusPage, TechnicalOperatedServiceSupportSite]
+
     OrganizationFact:
       type: object
       required: [id, category, field, value, value_key, source, captured_by, updated_at]

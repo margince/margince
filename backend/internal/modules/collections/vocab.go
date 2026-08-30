@@ -212,6 +212,22 @@ var (
 	forecastValues     = []string{"commit", "best_case", "pipeline", "omitted"}
 	leadStatusValues   = []string{"new", "contacted", "engaged", "promoted", "disqualified"}
 	projectPhaseValues = []string{"initiative", "pursuing", "delivering", "closed"}
+	// The technical vocabularies, mirroring platform/techprofile's classifiers
+	// and the contract enums that publish them. Kept in this list rather than
+	// imported from techprofile: collections may not import a platform
+	// classifier, and the contract is the shared statement of the set either
+	// way — corepicklistcontract_test holds these three to it.
+	mailProviderValues = []string{"google_workspace", "microsoft365", "self_hosted", "other"}
+	// No `other` here, unlike the mail set. The mail classifier EMITS
+	// `other` for a provider it does not name (techprofile.go), so a
+	// segment can select those accounts. The hosting classifier does not:
+	// an unrecognised host produces no hosting fact at all, so offering
+	// `other` would be a filter that always answers empty.
+	hostingProviderValues = []string{"hetzner", "aws", "cloudflare", "ionos", "strato", "azure", "google_cloud", "ovh"}
+	operatedServiceValues = []string{
+		"webshop", "customer_portal", "careers", "api", "vpn",
+		"mail_infrastructure", "file_cloud", "dev_infrastructure", "status_page", "support_site",
+	}
 )
 
 var segmentEngines = map[string]storekit.Query{
@@ -248,6 +264,14 @@ var segmentEngines = map[string]storekit.Query{
 			"relationship_type": relationshipTypeField,
 			domainFilterField:   domainField,
 			tagFilterField:      tagLinkFor("organization"),
+			// What the account demonstrably RUNS, read from public records
+			// rather than from anything they told us (vocabaccountleaves.go).
+			// This is what makes "every account with a webshop" and "every
+			// account on Microsoft 365" a segment rather than a spreadsheet.
+			"mail_provider":    mailProviderField,
+			"hosting_provider": hostingProviderField,
+			"operated_service": operatedServiceField,
+			"technology":       technologyField,
 		},
 	},
 	"deal": {

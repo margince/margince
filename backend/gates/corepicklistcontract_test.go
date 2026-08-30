@@ -70,6 +70,13 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	// different set from the field it reads is exactly the drift this catches.
 	"deal.organization_lifecycle": {"Organization", "lifecycle"},
 	"deal.organization_size_band": {"Organization", "size_band"},
+	// The technical leaves read `organization_fact.value_key`, which is a bare
+	// string on the fact schema and cannot carry three different enums. Each
+	// names the dedicated schema that publishes ITS set instead — which is what
+	// makes a client able to offer the values at all.
+	"organization.mail_provider":    {"TechnicalMailProvider", ""},
+	"organization.hosting_provider": {"TechnicalHostingProvider", ""},
+	"organization.operated_service": {"TechnicalOperatedService", ""},
 }
 
 func TestEveryOfferedPicklistMatchesTheContractsValues(t *testing.T) {
@@ -155,6 +162,16 @@ func vocabularyResources(t *testing.T, doc map[string]any) []string {
 // one a schema uses is not this gate's business.
 func contractEnum(t *testing.T, doc map[string]any, schema, property string) map[string]bool {
 	t.Helper()
+	// An empty property names a schema that IS the enum — the shape a set needs
+	// when the column publishing it is a bare string that several sets share.
+	if property == "" {
+		node := descendContract(t, doc, "components", "schemas", schema)
+		admitted := map[string]bool{}
+		for _, value := range enumStrings(t, node, schema) {
+			admitted[value] = true
+		}
+		return admitted
+	}
 	node := descendContract(t, doc, "components", "schemas", schema, "properties", property)
 	if _, direct := node["enum"]; !direct {
 		items, isMap := node["items"].(map[string]any)
