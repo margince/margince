@@ -43,7 +43,8 @@ import "github.com/margince/margince/backend/pkg/extension"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "j",
-		Version: "1.0.0",
+		Version:     "1.0.0",
+		Description: "A unit composed by a test.",
 		Jobs:    []extension.Job{{Name: "refresh", Handle: tick}},
 	}
 }

@@ -26,7 +26,8 @@ import "github.com/margince/margince/backend/pkg/extension"
 // be provoking a different one.
 func New() extension.Extension {
 	return extension.Extension{
-		Name:    "bad-unprefixed-table",
-		Version: "1.0.0",
+		Name:        "bad-unprefixed-table",
+		Version:     "1.0.0",
+		Description: "A fixture whose migration declares a table without the unit prefix.",
 	}
 }

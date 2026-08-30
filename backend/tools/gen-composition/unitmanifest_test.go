@@ -95,7 +95,7 @@ func TestDeriveUnitManifestIgnoresGoIgnoredFiles(t *testing.T) {
 	bogus := "package u\n\nimport \"github.com/margince/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"WRONG\", Version: \"9\"} }\n"
 	writeUnit(t, root, "u", map[string]string{
 		"go.mod": "module example.test/ext/u\n\ngo 1.26.5\n",
-		"u.go":   "package u\n\nimport \"github.com/margince/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"u\", Version: \"1.0.0\"} }\n",
+		"u.go":   "package u\n\nimport \"github.com/margince/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"u\", Version: \"1.0.0\", Description: \"A unit composed by a test.\"} }\n",
 		// Both go/build name-ignored forms carry a bogus New(); neither may
 		// feed the scan (else the multiple-New guard would trip).
 		"_scratch.go": bogus,
@@ -346,6 +346,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:          "hello",
 		Version:       "0.1.0",
+		Description:   "A unit composed by a test.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 	}
 }
@@ -387,8 +388,9 @@ var sql embed.FS
 
 func New() extension.Extension {
 	return extension.Extension{
-		Name:       "hello",
-		Version:    "0.1.0",
+		Name:        "hello",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Migrations: sql,
 	}
 }
@@ -430,7 +432,7 @@ func TestMigrationsMustEmbedTheLayerThatShipped(t *testing.T) {
 
 	unitSource := func(imports, vars, field string) string {
 		return "package hello\n\nimport (\n" + imports + "\n\t\"github.com/margince/margince/backend/pkg/extension\"\n)\n\n" +
-			vars + "\n\nfunc New() extension.Extension {\n\treturn extension.Extension{\n\t\tName:    \"hello\",\n\t\tVersion: \"0.1.0\",\n" + field + "\t}\n}\n"
+			vars + "\n\nfunc New() extension.Extension {\n\treturn extension.Extension{\n\t\tName:    \"hello\",\n\t\tVersion: \"0.1.0\",\n\t\tDescription: \"A unit composed by a test.\",\n" + field + "\t}\n}\n"
 	}
 
 	t.Run("absent", func(t *testing.T) {
@@ -503,7 +505,8 @@ import "github.com/margince/margince/backend/pkg/extension"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Tools: []extension.Tool{{
 ` + toolFields + `
 		}},
@@ -666,7 +669,7 @@ func TestBehaviorForAVerbNoContractDeclaresIsRefused(t *testing.T) {
 import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0"}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test."}
 }
 `
 	derived, err := deriveSynthetic(t, "x", noGoEntry, syntheticVerb("x", "inert_verb", "confirmation_required", "read"))
@@ -722,9 +725,21 @@ var nonLiteralCases = []struct {
 		wantErr: "field Future is not derivable",
 	},
 	{
-		name:    "name differing from the directory",
-		source:  nonLiteralNew("\t\tName: \"other\",\n\t\tVersion: \"1.0.0\","),
+		name: "name differing from the directory",
+		// Carries a description so the name mismatch is what this case
+		// actually reaches: every required-field refusal fires first.
+		source:  nonLiteralNew("\t\tName: \"other\",\n\t\tVersion: \"1.0.0\",\n\t\tDescription: \"A unit composed by a test.\","),
 		wantErr: "the directory name IS the unit name",
+	},
+	{
+		// The generator must refuse what the BOOT would refuse. A unit missing
+		// a required field that only the boot checked would pass the
+		// composition lane, ship, and die on deploy — and the first two units
+		// to hit exactly that were the tier's own fixtures, which CI copies
+		// into extensions/.
+		name:    "no description",
+		source:  nonLiteralNew("\t\tName: \"x\",\n\t\tVersion: \"1.0.0\","),
+		wantErr: "extension description is empty",
 	},
 	{
 		name:    "tool name is not a verb",
@@ -734,8 +749,8 @@ var nonLiteralCases = []struct {
 	{
 		name: "multiple New constructors",
 		source: nonLiteralHeader +
-			"func New() extension.Extension { return extension.Extension{Name: \"x\", Version: \"1.0.0\"} }\n" +
-			"func New() extension.Extension { return extension.Extension{Name: \"x\", Version: \"2.0.0\"} }\n",
+			"func New() extension.Extension { return extension.Extension{Name: \"x\", Version: \"1.0.0\", Description: \"A unit composed by a test.\"} }\n" +
+			"func New() extension.Extension { return extension.Extension{Name: \"x\", Version: \"2.0.0\", Description: \"A unit composed by a test.\"} }\n",
 		wantErr: "multiple New() constructors",
 	},
 	{
@@ -806,6 +821,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:           "hello",
 		Version:        "0.1.0",
+		Description:    "A unit composed by a test.",
 		FailureClasses: failureClasses,
 	}
 }

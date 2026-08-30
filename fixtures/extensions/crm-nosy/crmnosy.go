@@ -31,8 +31,9 @@ import "github.com/margince/margince/backend/pkg/extension"
 // New returns the unit's declaration.
 func New() extension.Extension {
 	return extension.Extension{
-		Name:    "crm-nosy",
-		Version: "0.1.0",
+		Name:        "crm-nosy",
+		Version:     "0.1.0",
+		Description: "A fixture that asks for a workspace-scoped secret it never reads.",
 		Secrets: []extension.SecretsRequest{
 			{Key: "signing", Scope: extension.SecretScopeWorkspace},
 		},

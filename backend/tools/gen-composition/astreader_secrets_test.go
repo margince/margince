@@ -18,7 +18,8 @@ import "github.com/margince/margince/backend/pkg/extension"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Secrets: []extension.SecretsRequest{
 ` + secretsFields + `
 		},
@@ -175,7 +176,7 @@ import "github.com/margince/margince/backend/pkg/extension"
 func secrets() []extension.SecretsRequest { return nil }
 
 func New() extension.Extension {
-	return extension.Extension{Name: "x", Version: "0.1.0", Secrets: secrets()}
+	return extension.Extension{Name: "x", Version: "0.1.0", Description: "A unit composed by a test.", Secrets: secrets()}
 }
 `
 	_, err := deriveSynthetic(t, "x", src)

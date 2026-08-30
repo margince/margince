@@ -143,6 +143,9 @@ type unitReader struct {
 	// sawMigrations records that the literal set Migrations at all, so an
 	// absent field on a unit that ships SQL is caught after the walk.
 	sawMigrations bool
+	// description is the unit's declared sentence, held here rather than on the
+	// manifest: it is validated after the walk and never emitted.
+	description string
 	// handlerAliases names, per published handler type ("ToolHandler",
 	// "JobHandler", "InboundHandler"), every package-local type alias of it —
 	// `type Handler = extension.InboundHandler` binds "Handler" under
@@ -279,6 +282,12 @@ func (r *unitReader) readExtension(fn *ast.FuncDecl, file *ast.File) (unitManife
 	if err := extension.Version(m.Version).Validate(); err != nil {
 		return unitManifest{}, r.errPos(lit, "%v", err)
 	}
+	// Absent reads as empty here, which is exactly what Validate refuses — so
+	// a unit that declares no Description at all fails the generator the same
+	// way one declaring an empty string does, and for the same reason.
+	if err := extension.Description(r.description).Validate(); err != nil {
+		return unitManifest{}, r.errPos(lit, "%v", err)
+	}
 	sort.Slice(m.RiskTiers, func(i, j int) bool { return m.RiskTiers[i].ID < m.RiskTiers[j].ID })
 	sort.Slice(m.Secrets, func(i, j int) bool {
 		if m.Secrets[i].Key != m.Secrets[j].Key {
@@ -307,12 +316,13 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 	case "Version":
 		m.Version, err = r.stringLit(kv.Value, "Version")
 	case "Description":
-		// Read to prove it is a literal, then discarded: the manifest records
-		// what an OPERATOR must resolve, and a sentence describing the unit
-		// asks nothing of them. It still may not be computed, because a
-		// generator that cannot evaluate the expression would silently emit an
-		// empty one — so it goes through stringLit like every other literal.
-		_, err = r.stringLit(kv.Value, "Description")
+		// Kept on the reader, not on the manifest: the manifest records what an
+		// OPERATOR must resolve, and a sentence describing the unit asks
+		// nothing of them. It is still READ and VALIDATED, because gen-time
+		// acceptance may not diverge from boot-time — a unit the generator
+		// admitted and the boot then refused would pass the composition lane
+		// and fail the deploy.
+		r.description, err = r.stringLit(kv.Value, "Description")
 	case "Tools":
 		// The manifest's risk tiers are already set, from the merged contract.
 		// What the Go slice contributes is the join: behavior for a verb the

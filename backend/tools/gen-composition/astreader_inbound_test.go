@@ -28,7 +28,8 @@ var _ = time.Minute
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Inbound: []extension.InboundEndpoint{
 ` + entries + `
 		},
@@ -111,7 +112,8 @@ var _ = t.Minute
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Inbound: []extension.InboundEndpoint{
 ` + entries + `
 		},
@@ -176,7 +178,8 @@ func receive(context.Context, time.Runtime, time.InboundRequest) (time.InboundOu
 func New() time.Extension {
 	return time.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Inbound: []time.InboundEndpoint{
 ` + entries + `
 		},
@@ -529,7 +532,8 @@ var _ = time.Minute
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Inbound: []extension.InboundEndpoint{
 ` + strings.Replace(wholeEndpoint, "Handle: receive,", "Handle: Handler(nil),", 1) + `
 		},
@@ -569,7 +573,8 @@ var _ = time.Minute
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "x",
-		Version: "0.1.0",
+		Version:     "0.1.0",
+		Description: "A unit composed by a test.",
 		Inbound: []extension.InboundEndpoint{
 ` + strings.Replace(wholeEndpoint, "Handle: receive,", "Handle: Handler2(nil),", 1) + `
 		},

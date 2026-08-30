@@ -376,9 +376,13 @@ function UnitCard({
   // draws a heading over an empty list — a link that promises a page and opens
   // nothing. The link is offered when the unit has something to show: its own
   // screen, or at least one published operation for the fallback to list.
+  // Object.hasOwn, not a bare index: the generated registry is an object
+  // literal, so `composedScreens["constructor"]` answers from the prototype
+  // chain with Object itself — truthy, and the unit-name grammar admits
+  // `constructor`. App.tsx guards the same lookup the same way.
   const page =
     descriptor &&
-    (composedScreens[descriptor.name] !== undefined ||
+    (Object.hasOwn(composedScreens, descriptor.name) ||
       descriptor.verbs.length > 0)
       ? descriptor
       : null;

@@ -77,6 +77,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
@@ -204,8 +205,10 @@ func (d Description) Validate() error {
 			return fmt.Errorf("extension description %q carries a non-printable character", string(d))
 		}
 	}
-	if len(d) > maxDescriptionLength {
-		return fmt.Errorf("extension description is %d characters — one sentence, capped at %d", len(d), maxDescriptionLength)
+	// Runes, not bytes: a German or Vietnamese sentence is well inside the
+	// bound and well past it in UTF-8, and the message says "characters".
+	if n := utf8.RuneCountInString(string(d)); n > maxDescriptionLength {
+		return fmt.Errorf("extension description is %d characters — one sentence, capped at %d", n, maxDescriptionLength)
 	}
 	return nil
 }
