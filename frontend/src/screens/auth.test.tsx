@@ -96,6 +96,31 @@ const ok = (status: number, body?: unknown) =>
     headers: { "Content-Type": "application/json" },
   });
 
+// stubLocationAssign swaps `window.location` for the duration of `run`, so a
+// test can observe `location.assign` calls without a real cross-origin
+// navigation. `Location.prototype.assign` is non-configurable in jsdom, so
+// `vi.spyOn` cannot touch it — the whole object has to move.
+async function stubLocationAssign(
+  run: (assign: ReturnType<typeof vi.fn>) => Promise<void>,
+) {
+  const originalLocation = window.location;
+  const assign = vi.fn();
+  Object.defineProperty(window, "location", {
+    value: { ...originalLocation, assign },
+    writable: true,
+    configurable: true,
+  });
+  try {
+    await run(assign);
+  } finally {
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+  }
+}
+
 describe("AuthScreen login", () => {
   it("introduces Margince as AI and renders the configured routing posture without claiming health", async () => {
     stubApi(
@@ -494,13 +519,20 @@ describe("federated sign-in", () => {
     expect(microsoft.disabled).toBe(true);
     expect(microsoft.classList.contains("btn-unavailable")).toBe(true);
     // Inert, and that is the point of the switch: it draws the design, it does
-    // not invent a redirect. Clicking must neither navigate nor hit the wire.
-    const calls = stubApi({ password: true, password_reset: true }, () =>
-      ok(200),
-    );
-    await userEvent.click(google);
-    expect(calls).toEqual([]);
-    expect(google).toBeTruthy();
+    // not invent a redirect. Clicking must neither navigate nor hit the wire —
+    // the navigate assertion is the one that actually matters once
+    // startFederatedSignIn performs a real `location.assign`: without the
+    // preview guard in front of it, this click would take the whole review
+    // tab to a route the preview build never mounts.
+    await stubLocationAssign(async (assign) => {
+      const calls = stubApi({ password: true, password_reset: true }, () =>
+        ok(200),
+      );
+      await userEvent.click(google);
+      expect(calls).toEqual([]);
+      expect(assign).not.toHaveBeenCalled();
+      expect(google).toBeTruthy();
+    });
   });
 
   // The product path, asserted as a property rather than assumed. A real server
@@ -604,6 +636,90 @@ describe("federated sign-in", () => {
       screen.getByRole("button", { name: "Anmeldung über Werk-IT" }),
     );
     expect(chosen).toEqual(["corp-sso"]);
+  });
+
+  // The real hand-off: a full-page navigation, never an XHR.
+  it("navigates to the provider's start URL on click", async () => {
+    await stubLocationAssign(async (assign) => {
+      stubApi(
+        {
+          password: true,
+          password_reset: true,
+          oidc_providers: [{ key: "google", label: "Continue with Google" }],
+        },
+        () => ok(200),
+      );
+      render(<AuthScreen onAuthed={vi.fn()} />);
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Continue with Google" }),
+      );
+
+      expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
+    });
+  });
+
+  // A real installation's own configured provider must keep a working
+  // button even if a preview build happens to run against it — the switch
+  // exists to stand in for a server with NO providers, not to disable a
+  // real one. Guarding on the global flag alone (rather than on whether
+  // `previewedOidcProviders` actually invented this button) would make
+  // this click a silent no-op on any deployment that combines the two.
+  it("still navigates a real served provider even when the UI-preview switch is on", async () => {
+    vi.stubEnv("VITE_UI_PREVIEW_OIDC", "1");
+    await stubLocationAssign(async (assign) => {
+      stubApi(
+        {
+          password: true,
+          password_reset: true,
+          oidc_providers: [{ key: "google", label: "Continue with Google" }],
+        },
+        () => ok(200),
+      );
+      render(<AuthScreen onAuthed={vi.fn()} />);
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Continue with Google" }),
+      );
+
+      expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
+    });
+  });
+});
+
+describe("OIDC failure notice", () => {
+  it("shows a neutral notice when the address carries the callback's failure marker, then scrubs it", async () => {
+    window.location.hash = "#/login?oidc=failed";
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    expect(window.location.hash).toBe("");
+  });
+
+  it("stays silent for an ordinary address", async () => {
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await screen.findByLabelText("Email");
+    expect(screen.queryByText(t("auth.noticeOidcFailed"))).toBeNull();
+  });
+
+  // A later, unrelated remount of AuthScreen within the same page — a
+  // session expiring and sending the reader back to login, say — must not
+  // replay a marker that was already consumed and scrubbed from the
+  // address. This is the exact case a page-lifetime memo would get wrong:
+  // it would keep answering the FIRST mount's verdict forever.
+  it("does not replay the notice on a later, unrelated mount", async () => {
+    window.location.hash = "#/login?oidc=failed";
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    const { unmount } = render(<AuthScreen onAuthed={vi.fn()} />);
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    unmount();
+
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await screen.findByLabelText("Email");
+    expect(screen.queryByText(t("auth.noticeOidcFailed"))).toBeNull();
   });
 });
 

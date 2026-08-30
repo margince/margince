@@ -79,12 +79,23 @@ describe("VITE_UI_PREVIEW_OIDC", () => {
   // assertion that matters: an empty set is what makes ProviderButtons' product
   // behaviour identical to what it was before the marker existed.
   it("marks no provider unavailable with the switch off", () => {
-    expect(previewedUnavailableProviders().size).toBe(0);
+    expect(previewedUnavailableProviders([]).size).toBe(0);
   });
 
-  it("marks exactly microsoft unavailable with the switch on", () => {
+  it("marks exactly microsoft unavailable with the switch on and no served providers", () => {
     vi.stubEnv("VITE_UI_PREVIEW_OIDC", "1");
-    expect([...previewedUnavailableProviders()]).toEqual(["microsoft"]);
+    expect([...previewedUnavailableProviders([])]).toEqual(["microsoft"]);
+  });
+
+  // The marker must never fall on a REAL provider: an installation that
+  // genuinely serves one keeps every one of its own buttons enabled, even
+  // under the preview switch — the fixture stands in for a server with none
+  // configured, not license to disable one that exists.
+  it("marks nothing unavailable once the installation serves at least one provider, switch on or off", () => {
+    const served = [{ key: "google", label: "Continue with Google" }];
+    expect(previewedUnavailableProviders(served).size).toBe(0);
+    vi.stubEnv("VITE_UI_PREVIEW_OIDC", "1");
+    expect(previewedUnavailableProviders(served).size).toBe(0);
   });
 });
 

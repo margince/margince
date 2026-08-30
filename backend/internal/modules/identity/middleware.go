@@ -63,7 +63,27 @@ func isConsentEntry(r *http.Request) bool {
 }
 
 func isPublicRequest(r *http.Request) bool {
-	return publicRequests[r.URL.Path][r.Method]
+	return publicRequests[r.URL.Path][r.Method] || (r.Method == http.MethodGet && isOIDCLoginRequest(r.URL.Path))
+}
+
+// isOIDCLoginRequest matches the Google-sign-in login routes,
+// /v1/auth/oidc/{provider}/start and /v1/auth/oidc/{provider}/callback — a
+// single provider segment, no deeper path, mirroring isConnectorOAuthCallback
+// for the same reason: a prefix test alone would also admit a deeper path.
+// PATH only, not method — isPublicRequest's own caller pairs this with the
+// GET check, the same shape publicRequests' per-path method map gives every
+// other entry.
+func isOIDCLoginRequest(path string) bool {
+	rest, ok := strings.CutPrefix(path, "/v1/auth/oidc/")
+	if !ok {
+		return false
+	}
+	for _, suffix := range []string{"/start", "/callback"} {
+		if provider, ok := strings.CutSuffix(rest, suffix); ok {
+			return provider != "" && !strings.Contains(provider, "/")
+		}
+	}
+	return false
 }
 
 // isConnectorOAuthCallback matches the capture-connector OAuth redirect

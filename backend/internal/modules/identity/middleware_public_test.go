@@ -36,3 +36,28 @@ func TestOnlyTheAuthorizeGetSurvivesWithoutASession(t *testing.T) {
 		t.Fatal("the authorize GET must not skip authentication — it needs the human when there is one")
 	}
 }
+
+func TestIsOIDCLoginRequest(t *testing.T) {
+	cases := []struct {
+		path string
+		want bool
+	}{
+		{"/v1/auth/oidc/google/start", true},
+		{"/v1/auth/oidc/google/callback", true},
+		{"/v1/auth/oidc/google/callback/extra", false},
+		{"/v1/auth/oidc//start", false},
+		{"/v1/auth/oidc/start", false},
+		{"/v1/auth/login", false},
+	}
+	for _, c := range cases {
+		if got := isOIDCLoginRequest(c.path); got != c.want {
+			t.Errorf("isOIDCLoginRequest(%q) = %v, want %v", c.path, got, c.want)
+		}
+	}
+	if !isPublicRequest(httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)) {
+		t.Fatal("the OIDC start route must be reachable without a session")
+	}
+	if isPublicRequest(httptest.NewRequest(http.MethodPost, "/v1/auth/oidc/google/start", nil)) {
+		t.Fatal("the OIDC routes are GET-only in the contract; POST must not bypass the session gate")
+	}
+}

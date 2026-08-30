@@ -277,6 +277,64 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /auth/oidc/{provider}/start:
+    get:
+      tags: [Identity]
+      operationId: startOidcSignIn
+      security: []   # pre-auth endpoint — no prior credential required
+      x-agent-access: auth-bootstrap
+      summary: Begin federated sign-in with a configured OIDC provider.
+      description: |
+        Redirects the browser to the provider's consent screen (authorization code +
+        PKCE S256). Sets a one-shot, `HttpOnly; Secure; SameSite=Lax` state cookie the
+        callback consumes. An unconfigured or unknown provider answers 404 — an
+        authentically absent flow, never a dead-ended redirect.
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [google] }
+      responses:
+        '302':
+          description: Redirect to the provider's consent screen.
+          headers:
+            Set-Cookie: { schema: { type: string } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /auth/oidc/{provider}/callback:
+    get:
+      tags: [Identity]
+      operationId: oidcSignInCallback
+      security: []   # pre-auth endpoint — the signed state cookie is the auth
+      x-agent-access: auth-bootstrap
+      summary: Complete federated sign-in; sets the session cookie on success.
+      description: |
+        Verifies the round trip, resolves the verified email/subject to an existing,
+        active member (no account creation — an unrecognized email is a neutral
+        failure, exactly like an unrecognized password), and mints a session. For a
+        configured provider, always redirects into the SPA: success to the configured
+        post-login route with `crm_session` set, refusal to the configured failure
+        route with a neutral marker, never a JSON error body — this route is reached
+        by a full-page browser navigation, not an API caller. An unconfigured or
+        unknown provider is the one exception: it answers 404, the same as `start`.
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [google] }
+        - { name: code, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+        - name: error
+          in: query
+          description: Set by the provider instead of `code` when the user denies consent.
+          schema: { type: string }
+      responses:
+        '302':
+          description: Session established (or a neutral failure); redirects into the SPA.
+          headers:
+            Set-Cookie: { schema: { type: string } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /auth/logout:
     post:
       tags: [Identity]

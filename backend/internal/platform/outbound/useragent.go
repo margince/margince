@@ -97,4 +97,12 @@ const (
 	// one they can only throttle by guessing.
 	MailboxProduct = "margince-mailbox"
 	MailboxVersion = version
+
+	// SignInProduct identifies the Google sign-in authorization-code exchange —
+	// a SEPARATE token from ClientMetadataProduct's OAuth-consent fetch, even
+	// though both are OAuth calls to Google: this one carries the shared Gmail
+	// app's client secret, so it is a credentialed call an operator diagnosing
+	// abuse must be able to tell apart from an anonymous metadata read.
+	SignInProduct = "margince-signin"
+	SignInHeader  = SignInProduct + "/" + version
 )

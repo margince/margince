@@ -13,6 +13,7 @@ import {
   previewedOidcProviders,
   previewedPasswordReset,
   previewedUnavailableProviders,
+  uiPreviewOidcEnabled,
 } from "../app/ui-preview";
 import wordmarkDark from "../assets/wordmark-dark.png";
 import wordmarkWhite from "../assets/wordmark-white.png";
@@ -38,9 +39,55 @@ import "./auth.css";
 // the server can complete it.
 
 // AuthNotice is the boundary's transient context for the login screen: a
-// deliberate sign-out or an expired session — informational, never danger
-// styling (§9.5: the user has nothing to correct).
-export type AuthNotice = "signed-out" | "session-expired" | null;
+// deliberate sign-out, an expired session, or a federated sign-in that did
+// not complete — informational, never danger styling (§9.5: the user has
+// nothing to correct). The first two arrive as a prop from App's own state;
+// "oidc-failed" is read from the address instead (see oidcFailureNotice
+// below) because it is the callback redirect's own doing, not something
+// App decided.
+export type AuthNotice =
+  | "signed-out"
+  | "session-expired"
+  | "oidc-failed"
+  | null;
+
+// The OIDC callback's neutral-failure redirect lands on this exact route
+// (cmd/api/googlesignin.go's FailureURL) — not a Screen this app routes to
+// (no "login" entry in app/router.tsx's SCREENS), because the unauthenticated
+// gate in App.tsx renders AuthScreen ahead of any route match regardless of
+// what the hash names. Consumed the same way clearResetHash below scrubs its
+// own marker: read once on mount, then rewritten out of the address so a
+// reload or a Back press cannot replay it.
+const OIDC_FAILURE_HASH = "#/login?oidc=failed";
+
+// isOidcFailureMarker is a PURE read — no mutation — so it is safe under
+// React's StrictMode (development only), which double-invokes a useState
+// lazy initializer to surface impure ones. An earlier version decided the
+// answer AND cleared the address in one impure step: the first invocation
+// cleared it and answered true, the second then saw the already-cleared
+// hash and answered false — and false is the call whose result actually
+// became the committed state, silently dropping the notice on every
+// dev-mode render. Splitting the read from the clear (below) removes the
+// impurity instead of working around it, so no double-invoke count changes
+// the answer.
+function isOidcFailureMarker(): boolean {
+  return globalThis.location?.hash === OIDC_FAILURE_HASH;
+}
+
+// clearOidcFailureMarker is the side effect, kept OUT of the initializer and
+// run from an effect instead — effects are also double-invoked in
+// StrictMode (mount, cleanup, mount again), but this one is idempotent: the
+// second call finds the marker already gone and does nothing. Guarding on
+// isOidcFailureMarker() first (rather than clearing unconditionally) is what
+// makes a later, unrelated remount of AuthScreen safe too — by then the
+// address has moved on and there is nothing here to touch.
+function clearOidcFailureMarker(): void {
+  if (!isOidcFailureMarker()) {
+    return;
+  }
+  const { pathname, search } = globalThis.location;
+  globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
+}
 
 // The installation's operational federated providers, exactly as
 // /auth/capabilities serves them. `label` is the SERVER's string — the contract
@@ -113,6 +160,19 @@ export function AuthScreen({
     const token = takeHashCredential(RESET_ROUTE);
     return token ? { kind: "reset", token } : { kind: "login" };
   });
+  // Read once, same instant as the reset token above: both are one-shot
+  // markers this screen's own mount is responsible for taking out of the
+  // address before anything else reads it. The read itself is pure — see
+  // isOidcFailureMarker's comment for why — the clear happens in the effect
+  // below.
+  const [oidcFailed] = useState(isOidcFailureMarker);
+  useEffect(() => {
+    if (oidcFailed) {
+      clearOidcFailureMarker();
+    }
+  }, [oidcFailed]);
+  const effectiveNotice: AuthNotice =
+    notice ?? (oidcFailed ? "oidc-failed" : null);
   // A link pasted into a tab already on this screen changes the hash and
   // nothing else — no remount, so the initializer above never runs again. The
   // one view that sends a reader off to ask for a fresh link leaves them on
@@ -175,6 +235,16 @@ export function AuthScreen({
     clearResetHash();
   };
 
+  const servedOidcProviders = capabilities.data?.oidc_providers ?? [];
+  // True only when previewedOidcProviders (below) actually invented the
+  // list this render draws — never merely because the preview build flag
+  // is set. An installation that genuinely serves OIDC providers keeps
+  // working buttons even under a preview build: the switch exists to
+  // stand in for a server with none configured, not to blanket-disable a
+  // real one.
+  const oidcProvidersSynthesized =
+    servedOidcProviders.length === 0 && uiPreviewOidcEnabled();
+
   return (
     <AuthExperience
       profile={assistantProfile.data}
@@ -183,12 +253,14 @@ export function AuthScreen({
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (
         <>
-          {notice && (
+          {effectiveNotice && (
             <p className="auth-notice" role="status">
               {t(
-                notice === "signed-out"
+                effectiveNotice === "signed-out"
                   ? "auth.noticeSignedOut"
-                  : "auth.noticeSessionExpired",
+                  : effectiveNotice === "session-expired"
+                    ? "auth.noticeSessionExpired"
+                    : "auth.noticeOidcFailed",
               )}
             </p>
           )}
@@ -202,7 +274,7 @@ export function AuthScreen({
                verbatim — the label callback included, which is never consulted
                on a served provider. */
             providers={previewedOidcProviders(
-              capabilities.data?.oidc_providers ?? [],
+              servedOidcProviders,
               (providerKey) =>
                 t("auth.continueWith", {
                   /* The key itself if we have no brand word for it: a preview
@@ -211,10 +283,15 @@ export function AuthScreen({
                   brand: providerBrandName(providerKey) ?? providerKey,
                 }),
             )}
+            providersSynthesized={oidcProvidersSynthesized}
             /* Empty in the product, always: the capability carries no
                availability field, so only the preview layer can mark a provider
-               (app/ui-preview.ts). */
-            unavailableProviders={previewedUnavailableProviders()}
+               (app/ui-preview.ts). Gated on the same served list as `providers`
+               above, so the marker never falls on a provider this installation
+               genuinely serves. */
+            unavailableProviders={previewedUnavailableProviders(
+              servedOidcProviders,
+            )}
             onForgot={() => setView({ kind: "forgot" })}
           />
         </>
@@ -387,11 +464,13 @@ function loginErrorKey(error: unknown): MessageKey {
  * **Renders nothing when the capability is empty**, and that is the §19
  * enforcement point rather than a convenience: `oidc_providers` is served by
  * `/auth/capabilities`, so a control for a flow this installation cannot
- * complete never reaches the screen. This build's server serves `[]` until the
- * OIDC flow ships, which is why no provider button appears at runtime today. Do
- * not "fix" this to render a disabled button, and do not seed a provider list
- * into the capability response — the empty list IS the gate, and this component
- * must keep asking only "did I get providers?".
+ * complete never reaches the screen. An installation with no Google OAuth app
+ * configured (or where the deployment's state-signing key/redirect base are
+ * incomplete) serves `[]`, and this component draws nothing for it — exactly
+ * as an installation with a configured app draws the button. Do not "fix"
+ * this to render a disabled button, and do not seed a provider list into the
+ * capability response — the empty list IS the gate, and this component must
+ * keep asking only "did I get providers?".
  *
  * The one thing that may put providers here without a server is
  * `app/ui-preview.ts`, and it is not an exception to the above: it substitutes
@@ -516,30 +595,33 @@ function ProviderLabel({
   );
 }
 
-// startFederatedSignIn is the hand-off itself, and today it is deliberately
-// inert.
+// startFederatedSignIn is the hand-off itself: a full-page navigation to
+// `/v1/auth/oidc/{provider}/start` (identity/ssologin.go), never an XHR — the
+// server's redirect chain to the provider's consent screen and back has to
+// carry the browser's whole address bar, not a fetch response this app could
+// read. `location.assign` (not a hash route) because the target is outside
+// this SPA's own address space entirely.
 //
-// The real flow is a full-page redirect to the provider and back to a callback
-// route. crm.yaml documents NEITHER path — `AuthCapabilities.oidc_providers`
-// ("empty until the OIDC flow ships") is the only OIDC thing in the contract —
-// so there is no endpoint to send the browser to, and composing a start URL out
-// of the provider key would be inventing a wire this build cannot honour.
-//
-// No USER reaches it in this build, and that is the honest part rather than a
-// loose end: the server serves `oidc_providers: []`, so `ProviderButtons`
-// renders nothing and no user can meet this (§19). The seeded story, the seeded
-// e2e case and the `VITE_UI_PREVIEW_OIDC` preview build are review fixtures for
-// the DESIGN — the preview draws the buttons and they land here, which is to say
-// they do nothing, deliberately and visibly. When the flow ships, this function
-// is the one thing that changes — the markup, the copy and the capability gate
-// are already right.
-function startFederatedSignIn(_providerKey: string): void {}
+// `synthesized` is the caller's answer to "did previewedOidcProviders invent
+// the button this click came from?" — NOT the global preview-build flag on
+// its own. An installation that genuinely serves OIDC providers must keep
+// working buttons even under a preview build; the flag alone would make
+// every real provider inert the moment someone enabled it against a real
+// backend. Only a button that stands in for a server with none configured
+// (app/ui-preview.ts's own reason for existing) has nowhere real to go.
+function startFederatedSignIn(providerKey: string, synthesized: boolean): void {
+  if (synthesized) {
+    return;
+  }
+  globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
+}
 
 function LoginForm({
   onAuthed,
   onPhase,
   resetAvailable,
   providers,
+  providersSynthesized,
   unavailableProviders,
   onForgot,
 }: Readonly<{
@@ -548,6 +630,9 @@ function LoginForm({
   resetAvailable: boolean;
   /** §11: served by /auth/capabilities. Empty means no federated block. */
   providers: OidcProviders;
+  /** True only when `providers` above was invented by the preview layer
+   * rather than served by the capability — see `startFederatedSignIn`. */
+  providersSynthesized: boolean;
   /** Preview-only; empty in the product. See `ProviderButtons`. */
   unavailableProviders: ReadonlySet<string>;
   onForgot: () => void;
@@ -630,7 +715,9 @@ function LoginForm({
         providers={providers}
         disabled={login.isPending}
         unavailable={unavailableProviders}
-        onSelect={startFederatedSignIn}
+        onSelect={(providerKey) =>
+          startFederatedSignIn(providerKey, providersSynthesized)
+        }
       />
       {/* Visible labels, which is a deliberate divergence from the reference
           artifact: it names its fields with a placeholder and an aria-label, and

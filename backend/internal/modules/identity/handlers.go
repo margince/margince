@@ -127,6 +127,29 @@ type Handlers struct {
 	// rotation — because a short-lived access token an hour-old rotation
 	// re-issues for 30 days is not short-lived.
 	oauthAccessTokenTTL time.Duration
+
+	// oidcProviders/oidcVerifiers/oidcExchangers/stateSigner/oidcRoutes wire
+	// /auth/oidc/{provider}/start and /callback (WithOIDCProviders). Absent
+	// from oidcProviders means unconfigured, and Start/Callback both 404 for
+	// it. oidcRoutes carries the fixed external base and SPA routes the flow
+	// redirects through — never derived from the request Host.
+	oidcProviders  map[string]OIDCProviderConfig
+	oidcVerifiers  map[string]OIDCVerifier
+	oidcExchangers map[string]OIDCExchanger
+	stateSigner    OIDCStateSigner
+	oidcRoutes     OIDCRoutes
+	// oidcPerIP throttles the two unauthenticated OIDC edges — an exchange
+	// failure on /callback still drives one outbound token-exchange POST
+	// carrying the shared Gmail-capture client credentials, so an uncapped
+	// caller can both burn sockets here and get that shared Google app
+	// throttled, which would take Gmail capture down with it.
+	oidcPerIP *ratelimit.Limiter // 30/min per client IP
+	// oidcCapabilitiesFn resolves the currently-configured provider list for
+	// GetAuthCapabilities, read fresh on every request rather than fixed at
+	// boot (WithOIDCCapabilitiesFn) — separate from oidcProviders above
+	// because a Settings-configured Google app can change after boot without
+	// a restart. Nil reports no providers.
+	oidcCapabilitiesFn func() []OIDCProviderConfig
 }
 
 // NewHandlers builds the identity transport surface over its service.
@@ -140,6 +163,7 @@ func NewHandlers(svc *Service) Handlers {
 		changeFailures:        ratelimit.New(10, time.Minute),
 		passwordLinkPerActor:  ratelimit.New(20, time.Hour),
 		passwordLinkPerTarget: ratelimit.New(5, time.Hour),
+		oidcPerIP:             ratelimit.New(30, time.Minute),
 	}
 }
 
@@ -154,7 +178,7 @@ func NewHandlers(svc *Service) Handlers {
 // is a reset handler whose panic would reach an operator as an opaque 500 on a
 // wipe that had otherwise finished.
 func (h *Handlers) ResetRateLimits() {
-	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures} {
+	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.oidcPerIP} {
 		if bucket != nil {
 			bucket.Reset()
 		}
@@ -262,6 +286,14 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 		Key   string `json:"key"`
 		Label string `json:"label"`
 	}, 0)
+	if h.oidcCapabilitiesFn != nil {
+		for _, p := range h.oidcCapabilitiesFn() {
+			caps.OidcProviders = append(caps.OidcProviders, struct {
+				Key   string `json:"key"`
+				Label string `json:"label"`
+			}{Key: p.Key, Label: p.Label})
+		}
+	}
 	// NO-STORE, and the release version is what makes it mandatory rather than
 	// tidy. This response is not per-principal, so a shared cache leaks nothing —
 	// but the SPA refuses to render at all when the release it reads here differs

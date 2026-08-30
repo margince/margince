@@ -1772,6 +1772,20 @@ public.extension_secret_workspace_key CREATE UNIQUE INDEX extension_secret_works
 public.extension_secret_workspace_user CREATE INDEX extension_secret_workspace_user ON public.extension_secret USING btree (user_id)
 public.f_fold_apostrophes(text) secdef=false cfg=- acl=- 
 public.f_unaccent(text) secdef=false cfg=- acl=- 
+public.federated_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.federated_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.federated_identity.email_at_link text NOT NULL gen=- def=-
+public.federated_identity.federated_identity_pkey PRIMARY KEY (id)
+public.federated_identity.federated_identity_provider_subject_key UNIQUE (provider, subject)
+public.federated_identity.federated_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.federated_identity.federated_identity_user_provider_key UNIQUE (user_id, provider)
+public.federated_identity.id uuid NOT NULL gen=- def=gen_random_uuid()
+public.federated_identity.provider text NOT NULL gen=- def=-
+public.federated_identity.subject text NOT NULL gen=- def=-
+public.federated_identity.user_id uuid NOT NULL gen=- def=-
+public.federated_identity_pkey CREATE UNIQUE INDEX federated_identity_pkey ON public.federated_identity USING btree (id)
+public.federated_identity_provider_subject_key CREATE UNIQUE INDEX federated_identity_provider_subject_key ON public.federated_identity USING btree (provider, subject)
+public.federated_identity_user_provider_key CREATE UNIQUE INDEX federated_identity_user_provider_key ON public.federated_identity USING btree (user_id, provider)
 public.field_mask acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.field_mask.condition text NOT NULL gen=- def=-
 public.field_mask.created_at timestamp with time zone NOT NULL gen=- def=now()

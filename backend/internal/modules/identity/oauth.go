@@ -420,9 +420,18 @@ func hashOAuthCode(code string) string {
 }
 
 func randomToken() (string, error) {
-	var buf [32]byte
-	if _, err := rand.Read(buf[:]); err != nil {
+	return randomTokenOfLength(32)
+}
+
+// randomTokenOfLength is randomToken's own recipe generalized by size, so a
+// caller needing a different byte count (ssologin.go's PKCE verifier, at
+// RFC 7636's recommended length) shares the one entropy-and-encoding path
+// every OAuth token in this module already goes through, rather than a
+// second copy of the same three lines.
+func randomTokenOfLength(n int) (string, error) {
+	buf := make([]byte, n)
+	if _, err := rand.Read(buf); err != nil {
 		return "", fmt.Errorf("oauth: entropy: %w", err)
 	}
-	return base64.RawURLEncoding.EncodeToString(buf[:]), nil
+	return base64.RawURLEncoding.EncodeToString(buf), nil
 }

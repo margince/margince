@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -115,8 +116,21 @@ func (r *oidcTestRig) mint(t *testing.T, kid, alg string, claims map[string]any)
 
 // newTestVerifier pins the verifier's clock to the rig's fixed base instant;
 // tests that exercise time behavior override it via withClock.
+func testMatchIdentity(c oidcClaims) error {
+	if c.Aud != testAud {
+		return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
+	}
+	if c.Email != testSA {
+		return fmt.Errorf("%w: email mismatch", errOIDCRejected)
+	}
+	if !c.EmailVerified {
+		return fmt.Errorf("%w: email not verified", errOIDCRejected)
+	}
+	return nil
+}
+
 func newTestVerifier(rig *oidcTestRig) *googleOIDCVerifier {
-	return newGoogleOIDCVerifier(rig.jwksURL(), testAud, testSA).
+	return newGoogleOIDCVerifier(rig.jwksURL(), testMatchIdentity).
 		withHTTPClient(rig.srv.Client()).
 		withClock(func() time.Time { return rig.base })
 }
@@ -124,8 +138,20 @@ func newTestVerifier(rig *oidcTestRig) *googleOIDCVerifier {
 func TestOIDCVerifyAcceptsValidToken(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	tok := rig.mint(t, testKID, "RS256", nil)
-	if err := newTestVerifier(rig).Verify(context.Background(), tok); err != nil {
+	if _, err := newTestVerifier(rig).Verify(context.Background(), tok); err != nil {
 		t.Fatalf("Verify(valid) = %v, want nil", err)
+	}
+}
+
+func TestOIDCVerifyReturnsClaims(t *testing.T) {
+	rig := newOIDCTestRig(t)
+	tok := rig.mint(t, testKID, "RS256", map[string]any{"sub": "1234567890"})
+	claims, err := newTestVerifier(rig).Verify(context.Background(), tok)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if claims.Sub != "1234567890" {
+		t.Fatalf("Sub = %q, want 1234567890", claims.Sub)
 	}
 }
 
@@ -166,7 +192,7 @@ func TestOIDCVerifyRejects(t *testing.T) {
 	v := newTestVerifier(rig)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := v.Verify(context.Background(), tc.tok()); err == nil {
+			if _, err := v.Verify(context.Background(), tc.tok()); err == nil {
 				t.Fatalf("Verify(%s) = nil, want an error", tc.name)
 			}
 		})
@@ -186,17 +212,17 @@ func TestOIDCVerifyHonorsInjectedClock(t *testing.T) {
 	})
 
 	atIssue := newTestVerifier(rig).withClock(func() time.Time { return iat })
-	if err := atIssue.Verify(context.Background(), tok); err != nil {
+	if _, err := atIssue.Verify(context.Background(), tok); err != nil {
 		t.Fatalf("Verify(at issue) = %v, want nil", err)
 	}
 
 	longAfterExpiry := newTestVerifier(rig).withClock(func() time.Time { return exp.Add(time.Hour) })
-	if err := longAfterExpiry.Verify(context.Background(), tok); err == nil {
+	if _, err := longAfterExpiry.Verify(context.Background(), tok); err == nil {
 		t.Fatal("Verify(long after exp) = nil, want an error")
 	}
 
 	longBeforeIssue := newTestVerifier(rig).withClock(func() time.Time { return iat.Add(-time.Hour) })
-	if err := longBeforeIssue.Verify(context.Background(), tok); err == nil {
+	if _, err := longBeforeIssue.Verify(context.Background(), tok); err == nil {
 		t.Fatal("Verify(long before iat) = nil, want an error")
 	}
 }
@@ -214,10 +240,10 @@ func TestOIDCVerifyThrottlesJWKSRefresh(t *testing.T) {
 	tok1 := rig.mint(t, "unknown-kid-1", "RS256", nil)
 	tok2 := rig.mint(t, "unknown-kid-2", "RS256", nil)
 
-	if err := v.Verify(context.Background(), tok1); err == nil {
+	if _, err := v.Verify(context.Background(), tok1); err == nil {
 		t.Fatal("Verify(unknown kid 1) = nil, want an error")
 	}
-	if err := v.Verify(context.Background(), tok2); err == nil {
+	if _, err := v.Verify(context.Background(), tok2); err == nil {
 		t.Fatal("Verify(unknown kid 2) = nil, want an error")
 	}
 	if got := rig.certsHitCount(); got != 1 {
@@ -228,7 +254,7 @@ func TestOIDCVerifyThrottlesJWKSRefresh(t *testing.T) {
 	// attempt must trigger a second fetch.
 	now = now.Add(jwksRefreshCooldown)
 	tok3 := rig.mint(t, "unknown-kid-3", "RS256", nil)
-	if err := v.Verify(context.Background(), tok3); err == nil {
+	if _, err := v.Verify(context.Background(), tok3); err == nil {
 		t.Fatal("Verify(unknown kid 3) = nil, want an error")
 	}
 	if got := rig.certsHitCount(); got != 2 {
@@ -237,7 +263,7 @@ func TestOIDCVerifyThrottlesJWKSRefresh(t *testing.T) {
 
 	// The accept path for a real, cached kid still works after all this.
 	valid := rig.mint(t, testKID, "RS256", nil)
-	if err := v.Verify(context.Background(), valid); err != nil {
+	if _, err := v.Verify(context.Background(), valid); err != nil {
 		t.Fatalf("Verify(valid) = %v, want nil", err)
 	}
 }
@@ -261,11 +287,11 @@ func TestOIDCVerifyCoalescesConcurrentJWKSRefresh(t *testing.T) {
 	tok := rig.mint(t, testKID, "RS256", nil)
 
 	errA := make(chan error, 1)
-	go func() { errA <- v.Verify(context.Background(), tok) }()
+	go func() { _, err := v.Verify(context.Background(), tok); errA <- err }()
 	// The first refresh is now registered and its fetch is held in flight.
 	<-entered
 	errB := make(chan error, 1)
-	go func() { errB <- v.Verify(context.Background(), tok) }()
+	go func() { _, err := v.Verify(context.Background(), tok); errB <- err }()
 	close(release)
 
 	if err := <-errA; err != nil {

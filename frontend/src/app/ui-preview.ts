@@ -30,11 +30,14 @@ const isOff = (value: unknown) => value === "0" || value === "false";
  * means the federated block, which IS designed and built, can only be seen in
  * Storybook. A UI/UX review of the login screen needs it on the login screen.
  *
- * What it does NOT do: it does not touch the wire, the query cache, or
- * `startFederatedSignIn`, which stays inert. The buttons render, take focus, and
- * do nothing when clicked — there is no OIDC endpoint in the contract to send a
- * browser to, and inventing one would be the exact lie this switch is written to
- * avoid.
+ * What it does NOT do: it does not touch the wire or the query cache, and it
+ * does not disable a REAL provider. `startFederatedSignIn` (screens/auth.tsx)
+ * stays inert only when `previewedOidcProviders` actually invented the button
+ * a click came from — an installation that genuinely serves OIDC providers
+ * keeps working buttons even under this switch. Only the synthesized case has
+ * nowhere real to go: the full-page navigation would be to an endpoint this
+ * preview build never mounts, taking the whole review tab to a 404 instead of
+ * drawing the design.
  *
  * Read at the call rather than at module load so a test can pin BOTH positions
  * of the switch without re-evaluating the module graph. `import.meta.env` is a
@@ -242,9 +245,19 @@ const PREVIEW_UNAVAILABLE_PROVIDERS: ReadonlySet<string> = new Set([
  * illegal. What makes this legal is what it is: a design-review fixture in the
  * same class as a Storybook story, off unless a build-time var is set, never
  * reachable by a user of a shipped build.
+ *
+ * `served` is the same real capability answer `previewedOidcProviders` reads —
+ * a non-empty list means this installation genuinely serves at least one
+ * provider, and the preview marker must not fall on any of THOSE (a real
+ * `microsoft` button disabled by a build-time var an operator never asked
+ * about is the honest-functionality violation this fixture exists to avoid,
+ * not to commit).
  */
-export function previewedUnavailableProviders(): ReadonlySet<string> {
-  return uiPreviewOidcEnabled()
-    ? PREVIEW_UNAVAILABLE_PROVIDERS
-    : NO_UNAVAILABLE_PROVIDERS;
+export function previewedUnavailableProviders(
+  served: OidcProviders,
+): ReadonlySet<string> {
+  if (served.length > 0 || !uiPreviewOidcEnabled()) {
+    return NO_UNAVAILABLE_PROVIDERS;
+  }
+  return PREVIEW_UNAVAILABLE_PROVIDERS;
 }
