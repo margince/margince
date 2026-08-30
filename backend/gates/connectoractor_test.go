@@ -32,7 +32,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -104,8 +103,21 @@ type writtenActorID struct {
 	id   string
 }
 
-// packageSource parses one directory's non-test Go and indexes the
-// package-level string constants it declares.
+// packageSource parses one directory's non-test Go and indexes every string
+// value it binds to a name — package constants and variables, const-block
+// repetitions, aliases of either, and function-local bindings alike.
+//
+// ALL of them, because the defect this gate exists to stop is a connector name
+// written down, and every one of those shapes is a name with a literal behind
+// it. A package-level const, a `vendor := "connector:surfe"` two lines above
+// the principal, and a const aliasing another const are the same thing at
+// different distances.
+//
+// Names are indexed per PACKAGE, not per scope, so two functions binding the
+// same name to different strings share an entry. That can only produce a false
+// POSITIVE — a literal reported at a site that did not use it — which is a
+// loud failure a reader resolves in a minute. The other direction is the one a
+// census may not have.
 func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]string) {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -113,7 +125,9 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 		t.Fatalf("reading %s: %v", dir, err)
 	}
 	files := map[string]*ast.File{}
-	constants := map[string]string{}
+	// bound is name → expression, resolved to text afterwards so an alias can
+	// name a constant declared later or in another file of the package.
+	bound := map[string]ast.Expr{}
 	for _, entry := range entries {
 		name := entry.Name()
 		path := filepath.ToSlash(filepath.Join(dir, name))
@@ -126,28 +140,69 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		files[path] = file
-		for _, decl := range file.Decls {
-			spec, isGen := decl.(*ast.GenDecl)
-			if !isGen || (spec.Tok != token.CONST && spec.Tok != token.VAR) {
+		indexBindings(file, bound)
+	}
+	// A fixpoint, because an alias resolves only once its target has: the
+	// first pass folds the literals, the next folds the names pointing at
+	// them, and so on until nothing new resolves. The bound is what ends a
+	// cycle the compiler would refuse but this reader does not typecheck.
+	constants := map[string]string{}
+	for pass := 0; pass < 8; pass++ {
+		progressed := false
+		for name, expr := range bound {
+			if _, done := constants[name]; done {
 				continue
 			}
-			for _, s := range spec.Specs {
-				value, isValue := s.(*ast.ValueSpec)
-				if !isValue {
-					continue
-				}
-				for i, ident := range value.Names {
-					if i >= len(value.Values) {
-						continue
-					}
-					if text, ok := stringValue(value.Values[i]); ok {
-						constants[ident.Name] = text
-					}
-				}
+			if text, ok := gatekit.StringExpr(expr, constants, gatekit.FoldStrict); ok {
+				constants[name] = text
+				progressed = true
 			}
+		}
+		if !progressed {
+			break
 		}
 	}
 	return files, constants
+}
+
+// indexBindings records every name a file binds to an expression, wherever it
+// binds it.
+func indexBindings(file *ast.File, bound map[string]ast.Expr) {
+	// A const block repeats the previous spec's values when a spec has none:
+	//	const ( vend = "connector:surfe"; alias )
+	// carries the same value, and reading only the specs with values would
+	// miss it.
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.GenDecl:
+			var carried []ast.Expr
+			for _, spec := range node.Specs {
+				value, isValue := spec.(*ast.ValueSpec)
+				if !isValue {
+					continue
+				}
+				values := value.Values
+				if len(values) == 0 {
+					values = carried
+				} else {
+					carried = values
+				}
+				for i, ident := range value.Names {
+					if i < len(values) {
+						bound[ident.Name] = values[i]
+					}
+				}
+			}
+		case *ast.AssignStmt:
+			for i, lhs := range node.Lhs {
+				ident, isIdent := lhs.(*ast.Ident)
+				if isIdent && i < len(node.Rhs) {
+					bound[ident.Name] = node.Rhs[i]
+				}
+			}
+		}
+		return true
+	})
 }
 
 // principalActorIDs names the ids a package's principals are built with.
@@ -156,9 +211,10 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 // provenance writers, in prefix tests and in SQL, and none of those binds an
 // actor. What this is about is who a piece of work is recorded as.
 //
-// An id given as an identifier is FOLDED through the package's own string
-// constants, because a constant is written down rather than read from
-// anywhere: moving the literal one line away does not make it derived.
+// An id given as an identifier is FOLDED through every string the package
+// binds to a name — a const, a var, a const-block repetition, an alias of any
+// of those, or a local two lines up. All of them are a connector name written
+// down, and moving the literal further away does not make it derived.
 //
 // An UNKEYED principal literal is refused outright. This reader matches the
 // field by name, and a positional one sets ID with nothing to match on —
@@ -195,33 +251,19 @@ func principalActorIDs(t *testing.T, files map[string]*ast.File, constants map[s
 				if key, isIdent := field.Key.(*ast.Ident); !isIdent || key.Name != "ID" {
 					continue
 				}
-				if text, ok := stringValue(field.Value); ok {
+				// FoldStrict: "is this DEFINITELY this string". Anything it
+				// cannot settle — a concatenation with a parameter in it, a
+				// call, a value read from a row — is the shape this gate is
+				// asking for, and reporting a guess about one would be worse
+				// than saying nothing.
+				if text, ok := gatekit.StringExpr(field.Value, constants, gatekit.FoldStrict); ok {
 					out = append(out, writtenActorID{file: path, id: text})
-					continue
 				}
-				if ident, isIdent := field.Value.(*ast.Ident); isIdent {
-					if text, declared := constants[ident.Name]; declared {
-						out = append(out, writtenActorID{file: path, id: text})
-					}
-				}
-				// Anything else — a concatenation, a call, a parameter — is a
-				// value the caller read from somewhere, which is the shape
-				// this gate is asking for.
 			}
 			return true
 		})
 	}
 	return out
-}
-
-// stringValue is the text of a string literal, or false for anything else.
-func stringValue(expr ast.Expr) (string, bool) {
-	lit, isLit := expr.(*ast.BasicLit)
-	if !isLit || lit.Kind != token.STRING {
-		return "", false
-	}
-	text, err := strconv.Unquote(lit.Value)
-	return text, err == nil
 }
 
 // namesAPrincipal reports whether a composite literal builds a principal,
