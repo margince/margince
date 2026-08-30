@@ -44,6 +44,11 @@ port="$1"
 # reached at all answers with no rows — indistinguishable, downstream, from a
 # stack that is simply not up. Telling a developer to run `make db-up` when the
 # daemon is stopped sends them to the wrong problem.
+#
+# `publish=` is the HOST port, which is the one the DSN names. Its sibling
+# `expose=` is the CONTAINER port, and reading this as that would match every
+# postgres on the machine — they all expose 5432 — which is the guess this
+# script exists to remove.
 if ! listed="$(docker ps \
   --filter "publish=${port}" \
   --filter "label=com.docker.compose.service=postgres" \
