@@ -94,17 +94,23 @@ describe("SignalsSection", () => {
       "https://brandt.example/news/series-b",
     );
     // Opened away from the app, and without handing the destination this
-    // record's address in a Referer.
+    // record's address in a Referer. Asserted as TOKENS rather than as a
+    // substring: "notnoreferrer" contains "noreferrer" and is not a relation
+    // any browser honours, so a substring check passes a mutation that
+    // restores both window.opener access and the Referer leak.
     expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+    const rel = (link.getAttribute("rel") ?? "").split(/\s+/);
+    expect(rel).toContain("noopener");
+    expect(rel).toContain("noreferrer");
   });
 
-  it("offers no source link when nothing was read off a page", async () => {
-    // A signal derived from this product's own records cites a row, not a web
-    // address. An "open the source" link pointing at an internal id would send
-    // a reader nowhere.
+  it("links only the row whose citation is a page", async () => {
+    // Both rows render together, so "no link here" is proved against a link
+    // that DOES appear in the same pass — otherwise the assertion passes just
+    // as well when the component is deleted outright.
     stubSignals([
       signal({
+        id: "s-internal",
         summary: "Two meetings booked and none held",
         evidence: [
           {
@@ -114,21 +120,80 @@ describe("SignalsSection", () => {
           },
         ],
       }),
+      signal({
+        id: "s-news",
+        summary: "Brandt Automotive raises a Series B",
+        evidence: [
+          {
+            snippet: "Brandt Automotive raises a Series B",
+            source_type: "page",
+            source_id: "https://brandt.example/news/series-b",
+          },
+        ],
+      }),
+    ]);
+
+    render(<SignalsSection orgId="o-1" />);
+
+    // Exactly one link, and it belongs to the row that cited a page.
+    const links = await screen.findAllByRole("link", {
+      name: "Read the announcement",
+    });
+    expect(links).toHaveLength(1);
+    const row = links[0].closest(".co-signal-row");
+    expect(row?.textContent).toContain("Brandt Automotive raises a Series B");
+    expect(row?.textContent).not.toContain("Two meetings booked");
+  });
+
+  it("reaches past a malformed citation to a usable one", async () => {
+    // `.find` stopping at the first entry that merely CLAIMS to be a page
+    // would hide the reachable address behind it, and the row would fall
+    // silently back to no link at all.
+    stubSignals([
+      signal({
+        evidence: [
+          {
+            snippet: "…",
+            source_type: "page",
+            source_id: "javascript:alert(1)",
+          },
+          {
+            snippet: "Brandt Automotive raises a Series B",
+            source_type: "page",
+            source_id: "https://brandt.example/news/series-b",
+          },
+        ],
+      }),
+    ]);
+
+    render(<SignalsSection orgId="o-1" />);
+
+    const link = await screen.findByRole("link", {
+      name: "Read the announcement",
+    });
+    expect(link.getAttribute("href")).toBe(
+      "https://brandt.example/news/series-b",
+    );
+  });
+
+  it("survives an evidence shape it cannot walk", async () => {
+    // The client validates no response body, so a server ahead of this tab can
+    // send a shape `.find` would throw on — and a throw here blanks the whole
+    // account page over one row's citation.
+    stubSignals([
+      signal({ summary: "Shape from a newer server", evidence: {} }),
     ]);
 
     render(<SignalsSection orgId="o-1" />);
 
     expect(
-      await screen.findByText("Two meetings booked and none held"),
+      await screen.findByText("Shape from a newer server"),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Read the announcement" }),
-    ).not.toBeInTheDocument();
   });
 
-  it("renders the headline as text when the cited address is not a web page", async () => {
-    // A stored value that is not an http(s) URL degrades to no link rather
-    // than to a dead anchor a reader would click.
+  it("draws no anchor at all when every citation is unusable", async () => {
+    // A scheme that would execute on click never reaches an href, and nothing
+    // is left in its place: an anchor with no destination is worse than none.
     stubSignals([
       signal({
         evidence: [
@@ -146,8 +211,6 @@ describe("SignalsSection", () => {
     expect(
       await screen.findByText("Brandt Automotive raises a Series B"),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Read the announcement" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Read the announcement")).not.toBeInTheDocument();
   });
 });

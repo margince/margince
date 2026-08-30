@@ -35,6 +35,7 @@ import {
 import { stable } from "../format/collate";
 import { formatDayMonth, formatNumber, relativeDays } from "../format/format";
 import { normalizeProfileUrl } from "../format/profileurl";
+import { linkedinUrl } from "../format/weburl";
 import {
   type Locale,
   type Translator,
@@ -336,7 +337,13 @@ function LinkedinRow({
             })
           }
         />
-        {linkedin ? (
+        {/* The address itself is shown in the row above, so a reader can
+            always see what is recorded. This VERB claims the destination is a
+            profile, and `social` is an open map a crawl or a connector can
+            write — so an address that is not LinkedIn's gets no verb rather
+            than one that would carry the reader somewhere the label did not
+            promise. */}
+        {linkedin && linkedinUrl(linkedin) ? (
           <OffsiteLink href={linkedin}>
             {t("person.page.openProfile")}
           </OffsiteLink>

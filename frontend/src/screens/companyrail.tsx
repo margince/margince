@@ -18,6 +18,7 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
+import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "./common";
 import { NewDealAction } from "./companyactions";
@@ -401,8 +402,18 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
  */
 function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
   const t = useT();
-  const page = (signal.evidence ?? []).find(
-    (cited) => cited.source_type === "page" && cited.source_id,
+  // Array-checked rather than `?? []`: the client validates no response body,
+  // so a server ahead of this tab could send a shape `.find` cannot walk, and
+  // the throw would take the whole account page down over one row's citation.
+  const cited = Array.isArray(signal.evidence) ? signal.evidence : [];
+  // The first citation that is actually reachable, not the first one CLAIMING
+  // to be a page: a malformed address in the first slot would otherwise hide a
+  // good one behind it, and the row would fall silently back to no link.
+  const page = cited.find(
+    (one) =>
+      one?.source_type === "page" &&
+      typeof one.source_id === "string" &&
+      webUrl(one.source_id) !== null,
   );
   if (!page?.source_id) {
     return null;

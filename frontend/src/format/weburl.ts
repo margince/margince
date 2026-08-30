@@ -29,3 +29,31 @@ export function webUrl(value: string): URL | null {
     ? parsed
     : null;
 }
+
+// The hosts a LinkedIn profile can honestly live on.
+const LINKEDIN_HOSTS = ["linkedin.com", "lnkd.in"];
+
+// Whether a stored profile address may be shown under the word "LinkedIn".
+//
+// A link's LABEL is a claim about where it goes, and these labels are fixed
+// words rather than the address itself. `social` is an open map on the wire and
+// a profile URL can be written by a crawl, a connector or a paste, so without a
+// host check a value of `https://attacker.example/login` renders as a link
+// reading "LinkedIn" inside the product's own chrome — which is a better
+// phishing surface than an email, because the reader already trusts the frame.
+//
+// A refused value is not hidden: the caller keeps the fact and drops the link,
+// the same way `webUrl` leaves an unparseable address as text. The fact that a
+// contact has SOMETHING recorded is still worth showing; the claim that it is
+// LinkedIn is what this withholds.
+export function linkedinUrl(value: string): URL | null {
+  const parsed = webUrl(value);
+  if (!parsed) {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase();
+  const onHost = LINKEDIN_HOSTS.some(
+    (allowed) => host === allowed || host.endsWith(`.${allowed}`),
+  );
+  return onHost ? parsed : null;
+}

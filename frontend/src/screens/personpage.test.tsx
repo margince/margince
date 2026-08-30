@@ -482,6 +482,11 @@ describe("the contact's LinkedIn on the header", () => {
       "https://www.linkedin.com/in/dana-buyer",
     );
     expect(link.getAttribute("target")).toBe("_blank");
+    // Tokens rather than a substring: "notnoreferrer" contains "noreferrer"
+    // and is not a relation any browser honours.
+    const rel = (link.getAttribute("rel") ?? "").split(/\s+/);
+    expect(rel).toContain("noopener");
+    expect(rel).toContain("noreferrer");
   });
 
   it("says nothing at all when no profile is recorded", async () => {
@@ -503,5 +508,42 @@ describe("the contact's LinkedIn on the header", () => {
     const header = await recordHeader();
     expect(within(header).getByText("LinkedIn")).toBeTruthy();
     expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
+  });
+
+  it("refuses to put another host under the word LinkedIn", async () => {
+    // The label is a fixed word, so it is a CLAIM about the destination — and
+    // this value can be written by a crawl or a connector. An arbitrary host
+    // under that word is a phishing link wearing the product's own chrome.
+    mount("overview", {
+      ...view,
+      person: {
+        ...view.person,
+        social: { linkedin: "https://attacker.example/login" },
+      },
+    });
+
+    const header = await recordHeader();
+    // The fact is kept — this contact HAS something recorded — and the claim
+    // that it is LinkedIn is what is withheld.
+    expect(within(header).getByText("LinkedIn")).toBeTruthy();
+    expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
+  });
+
+  it("accepts a regional LinkedIn subdomain", async () => {
+    // The check is on the host, not on an exact string: de.linkedin.com is
+    // LinkedIn, and refusing it would drop a working link for half of Europe.
+    mount("overview", {
+      ...view,
+      person: {
+        ...view.person,
+        social: { linkedin: "https://de.linkedin.com/in/dana-buyer" },
+      },
+    });
+
+    const header = await recordHeader();
+    const link = within(header).getByRole("link", { name: "LinkedIn" });
+    expect(link.getAttribute("href")).toBe(
+      "https://de.linkedin.com/in/dana-buyer",
+    );
   });
 });
