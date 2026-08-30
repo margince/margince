@@ -4,9 +4,9 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Card } from "../design-system/atoms";
+import { Badge, Button, Card, Disclosure } from "../design-system/atoms";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import "./voice-dna.css";
@@ -83,8 +83,49 @@ export function ActiveVoiceInsights({
   );
 }
 
+// The evaluator writes its reasons for an operator reading a log, and they
+// reached the owner verbatim: "median voice score 0.56 is below the 0.60 floor"
+// says nothing to the person being asked to decide. Each known shape is stated
+// again in words about THEIR voice and what to do about it.
+//
+// An unrecognized reason is shown as it came rather than dropped: a reason
+// nobody can read is bad, and a reason nobody can SEE is worse — it would let
+// a candidate be held back for a cause the owner is never told.
+function reviewReasonText(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  reason: string,
+): string {
+  const lowScore =
+    /median voice score ([\d.]+) is below the ([\d.]+) floor/.exec(reason);
+  if (lowScore) {
+    return t("voice.candidate.reason.lowScore", {
+      score: lowScore[1] ?? "",
+      floor: lowScore[2] ?? "",
+    });
+  }
+  const hardFailures = /^(\d+) anti-AI hard failures survived/.exec(reason);
+  if (hardFailures) {
+    return t("voice.candidate.reason.hardFailures", {
+      n: formatNumber(Number(hardFailures[1] ?? 0), locale),
+    });
+  }
+  const rulesRemoved =
+    /^(\d+) avoid and (\d+) register rules were removed/.exec(reason);
+  if (rulesRemoved) {
+    const dropped = Number(rulesRemoved[1] ?? 0) + Number(rulesRemoved[2] ?? 0);
+    return t("voice.candidate.reason.rulesRemoved", {
+      n: formatNumber(dropped, locale),
+    });
+  }
+  if (reason.includes("malformed drafts during evaluation")) {
+    return t("voice.candidate.reason.malformed");
+  }
+  return reason;
+}
+
 // A candidate never replaces the active voice silently: the owner applies
-// or rejects it, with the evaluator's reasons in view.
+// or rejects it, with the version itself and the evaluator's reasons in view.
 function CandidateBanner({
   profileId,
   candidate,
@@ -97,6 +138,7 @@ function CandidateBanner({
   onChanged: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const transition = useMutation({
     mutationFn: async (action: "apply" | "reject") => {
@@ -130,13 +172,32 @@ function CandidateBanner({
           n: identifierNumber(candidate.profile_version),
         })}
       </b>
+      <p className="t-small">{t("voice.candidate.whatItIs")}</p>
+      {/* The decision this card asks for cannot be taken without the thing it
+          is about. It used to show a title, the evaluator's raw sentences and
+          two buttons — so "Use this version" meant approving writing the
+          reader had never seen, and the only way to read it was to apply it
+          first. The version is already in hand here; the same insights view
+          the active voice uses renders it. */}
+      <Disclosure summary={t("voice.candidate.reviewLabel")} open>
+        <VoiceInsights
+          data={parseVoiceInsights(candidate)}
+          profileVersion={candidate.profile_version}
+        />
+      </Disclosure>
       {candidate.review_reasons.length > 0 && (
-        <ul className="vdna-reasons">
-          {candidate.review_reasons.map((reason) => (
-            <li key={reason}>{reason}</li>
-          ))}
-        </ul>
+        <>
+          <p className="t-small vdna-label">
+            {t("voice.candidate.concernsLabel")}
+          </p>
+          <ul className="vdna-reasons">
+            {candidate.review_reasons.map((reason) => (
+              <li key={reason}>{reviewReasonText(t, locale, reason)}</li>
+            ))}
+          </ul>
+        </>
       )}
+      <p className="t-small">{t("voice.candidate.applyHint")}</p>
       {error && (
         <p className="t-small" role="alert">
           {error}

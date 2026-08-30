@@ -5516,7 +5516,21 @@ export const vi = {
     "Bản nháp có AI hỗ trợ; mọi lượt gửi vẫn là quyết định của con người.",
   "voice.insights.nextBestLabel": "Để tốt hơn nữa:",
   "voice.candidate.title":
-    "Một phiên bản giọng văn mới (v{n}) đang chờ bạn rà soát.",
+    "Phiên bản giọng văn mới (v{n}) đã sẵn sàng — hãy đọc trước khi dùng.",
+  "voice.candidate.whatItIs":
+    "Đây là những gì bản dựng học được từ các mẫu của bạn. Nó chưa được sử dụng: không có bản nháp nào viết bằng giọng này cho đến khi bạn chọn nó.",
+  "voice.candidate.reviewLabel": "Phiên bản này nói gì về cách bạn viết",
+  "voice.candidate.concernsLabel": "Vì sao nó chờ bạn thay vì tự kích hoạt",
+  "voice.candidate.applyHint":
+    "Nếu đọc lên giống bạn, hãy dùng nó. Nếu không, hãy giữ giọng hiện tại và thêm văn bản của chính bạn — bản dựng tiếp theo sẽ học từ những gì có trong kho.",
+  "voice.candidate.reason.malformed":
+    "Bước kiểm tra chấm điểm giọng mới không đọc được một số bản nháp mẫu, nên điểm số dựa trên ít mẫu hơn bình thường.",
+  "voice.candidate.reason.lowScore":
+    "Các bản nháp mẫu viết bằng giọng này đạt {score} so với văn bản của chính bạn, dưới mức {floor} mà cài đặt này yêu cầu để tự kích hoạt một giọng.",
+  "voice.candidate.reason.hardFailures":
+    "{n} cụm từ mà giọng này lẽ ra phải tránh vẫn còn trong các bản nháp mẫu.",
+  "voice.candidate.reason.rulesRemoved":
+    "{n} quy tắc về những điều cần tránh đã bị bỏ so với phiên bản trước của bạn.",
   "voice.candidate.apply": "Dùng phiên bản này",
   "voice.candidate.reject": "Giữ giọng văn hiện tại",
   "voice.history.label": "Phiên bản và quá trình học",
@@ -5582,6 +5596,8 @@ export const vi = {
   "settings.voice.buildsTitle": "Bản dựng",
   "settings.voice.buildRowLabel": "Dựng từ mẫu văn của bạn",
   "settings.voice.building": "Đang dựng…",
+  "settings.voice.buildRunning":
+    "Đang xây dựng giọng văn của bạn — mất khoảng một phút. Bạn có thể rời trang này, quá trình vẫn tiếp tục chạy.",
   "settings.voice.rebuild": "Dựng lại Voice DNA",
   "settings.voice.buildFirst": "Xây dựng Voice DNA của tôi",
   "settings.voice.buildNeedsWords":

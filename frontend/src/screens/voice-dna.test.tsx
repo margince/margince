@@ -396,6 +396,57 @@ describe("a build that fails", () => {
   // stand for a spending cap, an unreadable model answer and a broken
   // provider alike — and it told the reader to "try again", which could not
   // work for the first of those.
+  // A build runs for about a minute behind a poll, and the button carries only
+  // a spinner and a visually-hidden label. A reader looking at the page was
+  // told nothing, so they pressed again — the press is swallowed, but a
+  // control that refuses input without saying why invites the next one.
+  it("says in words that a build is running, and starts only one", async () => {
+    let started = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [BUILDABLE], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (path === "/voice-profiles/vp-1/builds") {
+          started += 1;
+          return jsonResponse({ id: "vb-1", status: "queued" }, 201);
+        }
+        if (path === "/voice-profiles/vp-1/builds/vb-1") {
+          // Never terminal: the build is still running while the reader looks
+          // at the page, which is the state under test.
+          return jsonResponse({ id: "vb-1", status: "running" });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+
+    await pressRebuild();
+
+    const running = await screen.findByText(/Building your voice now/);
+    expect(running).toBeTruthy();
+    // The wait outlives this page, and a reader who does not know that sits
+    // and watches it.
+    expect(running.textContent).toMatch(/leave this page/);
+
+    // The button is not natively disabled — that would drop it out of the tab
+    // order mid-wait — but it announces itself busy and takes no second press.
+    const button = screen.getByRole("button", { name: /Build my Voice DNA/ });
+    expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.hasAttribute("disabled")).toBe(false);
+
+    await userEvent.click(button);
+    await userEvent.click(button);
+    expect(started).toBe(1);
+  });
+
   it("says what the finished build says, not a fixed sentence", async () => {
     const detail =
       "Our AI provider is out of budget, so the build never ran. Your previous version is unchanged.";
