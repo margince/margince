@@ -191,4 +191,5 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	"internal/modules/identity:system_log:lockout.go:Service.recordFailedLogin": "login and failed-login land in system_log but fire before/without an authenticated principal for storekit.LogSystem to stamp; identity appends the append-only rows itself",
 	"internal/modules/identity:system_log:reset.go:OperatorResetPassword":       "an operator reset writes its own ledger row: the operator acts out of band and is not an authenticated principal of this workspace, so storekit.LogSystem has nobody to stamp",
 	"internal/modules/identity:system_log:service.go:logAuthEvent":              "login and failed-login land in system_log but fire before/without an authenticated principal for storekit.LogSystem to stamp; identity appends the append-only rows itself",
+	"internal/modules/identity:system_log:ssologin.go:Handlers.logOidcFailure":  "a refused federated sign-in has no authenticated principal for storekit.LogSystem to stamp either — same posture as recordFailedLogin (lockout.go), just for the OIDC login path instead of the password one",
 })

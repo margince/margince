@@ -89,6 +89,12 @@ func (cfg GoogleSignInConfig) MissingFields() []string {
 	if cfg.RedirectBase == "" {
 		missing = append(missing, "redirect base URL")
 	}
+	if cfg.PostLoginURL == "" {
+		missing = append(missing, "post-login URL")
+	}
+	if cfg.FailureURL == "" {
+		missing = append(missing, "failure URL")
+	}
 	return missing
 }
 
@@ -152,9 +158,9 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			return
 		}
 		providers := map[string]identity.OIDCProviderConfig{
-			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, AuthURL: googleAuthURL, TokenURL: googleTokenURL},
+			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
 		}
-		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier("", googleSignInMatchIdentity(cfg.ClientID))}
+		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))}
 		exchanger := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}}
 		signer := loginStateSignerAdapter{s: newLoginStateSigner([]byte(cfg.StateKey))}
 
@@ -163,8 +169,11 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			map[string]identity.OIDCVerifier{googleProviderKey: verifier},
 			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
 			signer,
-			strings.TrimSuffix(cfg.RedirectBase, "/")+"/v1",
-			cfg.PostLoginURL, cfg.FailureURL,
+			identity.OIDCRoutes{
+				RedirectBase: strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1",
+				PostLoginURL: cfg.PostLoginURL,
+				FailureURL:   cfg.FailureURL,
+			},
 		)
 		s.authHandlers = s.WithOIDCCapabilitiesFn(func() []identity.OIDCProviderConfig {
 			return []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}

@@ -19,29 +19,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-type stubVerifier struct{}
-
-func (stubVerifier) Verify(context.Context, string) (string, string, bool, error) {
-	return "", "", false, nil
-}
-
-type stubExchanger struct{}
-
-func (stubExchanger) Exchange(context.Context, string, string, string) (string, error) {
-	return "", nil
-}
-
-type stubStateSigner struct{}
-
-func (stubStateSigner) Sign(string, string, string, time.Duration) string { return "" }
-func (stubStateSigner) Verify(string) (string, string, string, error) {
-	return "", "", "", nil
-}
-
 // fixedVerifier/fixedExchanger/fixedStateSigner satisfy the three injected
-// interfaces with values fixed at construction. Used here for the
-// state-mismatch edge case, and by ssologin_integration_test.go's full
-// callback round trip (which needs a real database but no real Google).
+// interfaces with values fixed at construction. Their zero values are the
+// stand-in for "never reached" (the tests that need one but never call it,
+// e.g. the missing-cookie case) — there is no separate stub* family for
+// that, since a zero fixedStateSigner{} already returns the same empty
+// values a dedicated stub would. Also used by ssologin_integration_test.go's
+// full callback round trip (which needs a real database but no real
+// Google).
 type fixedVerifier struct {
 	email, sub    string
 	emailVerified bool
@@ -99,10 +84,10 @@ func TestStartOidcSignInRedirectsWithPKCEAndSetsStateCookie(t *testing.T) {
 		map[string]OIDCProviderConfig{"google": {
 			Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth",
 		}},
-		map[string]OIDCVerifier{"google": stubVerifier{}},
-		map[string]OIDCExchanger{"google": stubExchanger{}},
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{}},
 		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
-		"https://app.example.com", "/", "/#/login?oidc=failed",
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	rec := httptest.NewRecorder()
@@ -162,10 +147,10 @@ func TestOidcSignInCallbackUnknownProviderIs404(t *testing.T) {
 func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": stubVerifier{}},
-		map[string]OIDCExchanger{"google": stubExchanger{}},
-		stubStateSigner{},
-		"https://app.example.com", "/", "/#/login?oidc=failed",
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{}},
+		fixedStateSigner{},
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=y", nil)
 	rec := httptest.NewRecorder()
@@ -183,10 +168,10 @@ func TestOidcSignInCallbackMissingCookieIsRefused(t *testing.T) {
 func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": stubVerifier{}},
-		map[string]OIDCExchanger{"google": stubExchanger{}},
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
+		map[string]OIDCExchanger{"google": fixedExchanger{}},
 		fixedStateSigner{provider: "google", nonce: "expected-nonce", codeVerifier: "v"},
-		"https://app.example.com", "/", "/#/login?oidc=failed",
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=wrong-nonce", nil)
 	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
@@ -202,10 +187,10 @@ func TestOidcSignInCallbackStateMismatchIsRefused(t *testing.T) {
 func TestOidcSignInCallbackExchangeFailureIsRefused(t *testing.T) {
 	h := Handlers{}.WithOIDCProviders(
 		map[string]OIDCProviderConfig{"google": {Key: "google"}},
-		map[string]OIDCVerifier{"google": stubVerifier{}},
+		map[string]OIDCVerifier{"google": fixedVerifier{}},
 		map[string]OIDCExchanger{"google": erroringExchanger{}},
 		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
-		"https://app.example.com", "/", "/#/login?oidc=failed",
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=n", nil)
 	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant"})
@@ -224,7 +209,7 @@ func TestOidcSignInCallbackUnverifiedEmailIsRefused(t *testing.T) {
 		map[string]OIDCVerifier{"google": unverifiedEmailVerifier{}},
 		map[string]OIDCExchanger{"google": fixedExchanger{idToken: "unused"}},
 		fixedStateSigner{provider: "google", nonce: "n", codeVerifier: "v"},
-		"https://app.example.com", "/", "/#/login?oidc=failed",
+		OIDCRoutes{RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed"},
 	)
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=n", nil)
 	req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant"})

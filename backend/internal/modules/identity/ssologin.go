@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -27,20 +28,24 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // OIDCProviderConfig is one configured external identity provider, injected
 // by compose. "google" is the only key today; the shape is generic so a
-// second provider is a config entry, not a refactor.
+// second provider is a config entry, not a refactor. It carries only what
+// ssologin.go itself reads (ClientID for the authorization request, AuthURL
+// to redirect to) — the client secret and token endpoint belong to the
+// OIDCExchanger compose injects separately (googleTokenExchanger), and this
+// struct is not a second place for them to live.
 type OIDCProviderConfig struct {
-	Key          string
-	Label        string
-	ClientID     string
-	ClientSecret string
-	AuthURL      string
-	TokenURL     string
+	Key      string
+	Label    string
+	ClientID string
+	AuthURL  string
 }
 
 // OIDCVerifier is what ssologin needs from an ID-token verifier — defined
@@ -64,10 +69,70 @@ type OIDCStateSigner interface {
 	Verify(token string) (provider, nonce, codeVerifier string, err error)
 }
 
+// OIDCRoutes is the fixed set of external URLs the OIDC login flow redirects
+// through — never derived from the request Host. A struct rather than three
+// positional string parameters: WithOIDCProviders took RedirectBase,
+// PostLoginURL, FailureURL positionally before this type existed, and a
+// transposed pair of same-typed arguments there compiles clean and ships a
+// login that lands every success on the failure page.
+type OIDCRoutes struct {
+	// RedirectBase is the api's own externally-reachable origin — where
+	// GOOGLE sends the browser back (the authorization request's
+	// redirect_uri).
+	RedirectBase string
+	// PostLoginURL is the SPA's origin — where the callback sends the
+	// browser on success.
+	PostLoginURL string
+	// FailureURL is the SPA's neutral failure marker — where the callback
+	// sends the browser on refusal.
+	FailureURL string
+}
+
+// callbackURI is the one place /auth/oidc/{provider}/callback's absolute URL
+// is built, so the authorization request (StartOidcSignIn) and the token
+// exchange (OidcSignInCallback) can never drift apart — Google requires the
+// two to be byte-identical, and a redirect_uri_mismatch from a future edit to
+// only one call site would explain itself to nobody.
+func (h Handlers) callbackURI(provider string) string {
+	return h.oidcRoutes.RedirectBase + "/auth/oidc/" + provider + "/callback"
+}
+
+// WithOIDCProviders injects the configured external identity providers and
+// their verifiers/exchangers for the /auth/oidc/{provider}/start and
+// /callback routes. Keyed by provider key ("google").
+func (h Handlers) WithOIDCProviders(
+	providers map[string]OIDCProviderConfig,
+	verifiers map[string]OIDCVerifier,
+	exchangers map[string]OIDCExchanger,
+	signer OIDCStateSigner,
+	routes OIDCRoutes,
+) Handlers {
+	h.oidcProviders = providers
+	h.oidcVerifiers = verifiers
+	h.oidcExchangers = exchangers
+	h.stateSigner = signer
+	h.oidcRoutes = routes
+	if h.oidcPerIP == nil {
+		h.oidcPerIP = ratelimit.New(30, time.Minute)
+	}
+	return h
+}
+
+// WithOIDCCapabilitiesFn injects how GetAuthCapabilities discovers the
+// currently-configured provider list. Separate from WithOIDCProviders on
+// purpose: that call wires the start/callback routes from a fixed provider
+// map; this one is read fresh on every request, so it can reflect a
+// Settings-configured Google app that changed after boot without requiring a
+// restart.
+func (h Handlers) WithOIDCCapabilitiesFn(fn func() []OIDCProviderConfig) Handlers {
+	h.oidcCapabilitiesFn = fn
+	return h
+}
+
 const (
 	oidcStateTTL        = 10 * time.Minute
 	oidcNonceBytes      = 32
-	oidcVerifierLen     = 64 // RFC 7636 recommends 43-128 chars; 64 is comfortably inside that.
+	oidcVerifierLen     = 64 // 64 bytes -> an 86-char base64url verifier, inside RFC 7636's 43-128 character range.
 	oidcLoginCookie     = "oidc_login_state"
 	oidcLoginCookiePath = "/v1/auth/oidc"
 )
@@ -103,6 +168,10 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
+	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
+		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		return
+	}
 	nonce, err := randomTokenOfLength(oidcNonceBytes)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -117,10 +186,9 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 	token := h.stateSigner.Sign(provider, nonce, verifier, oidcStateTTL)
 	setLoginStateCookie(w, token, oidcStateTTL)
 
-	redirectURI := h.oidcRedirectBase + "/auth/oidc/" + provider + "/callback"
 	q := url.Values{
 		"client_id":             {cfg.ClientID},
-		"redirect_uri":          {redirectURI},
+		"redirect_uri":          {h.callbackURI(provider)},
 		"response_type":         {oauthResponseTypeCode},
 		"scope":                 {"openid email profile"},
 		"state":                 {nonce},
@@ -136,12 +204,30 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 // is reached by a full-page browser navigation, not an API caller.
 func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, providerParam crmcontracts.OidcSignInCallbackParamsProvider, params crmcontracts.OidcSignInCallbackParams) {
 	provider := string(providerParam)
-	fail := func() {
-		http.Redirect(w, r, h.oidcFailureURL, http.StatusFound)
+	ctx := r.Context()
+	// fail redirects to the neutral marker and records the cause SERVER-SIDE
+	// only — never echoed to the client, same posture as errOIDCRejected's
+	// own doc comment. A state-verify failure, an exchange failure, a
+	// rejected ID token, an unrecognized email, and a genuine database
+	// failure are all rendered as the same redirect, but an operator
+	// debugging a broken Google app — or watching for a brute-force against
+	// this route — needs the reason, exactly like recordFailedLogin
+	// (lockout.go) exists to give one for the password path. Takes ctx
+	// explicitly (the request's, captured once above) rather than closing
+	// over r: the detached write inside logOidcFailure derives its own
+	// timeout from whichever ctx is handed to it, so this must be the same
+	// one every other step below already uses.
+	fail := func(ctx context.Context, reason string, cause error) {
+		h.logOidcFailure(ctx, provider, reason, cause)
+		http.Redirect(w, r, h.oidcRoutes.FailureURL, http.StatusFound)
 	}
 
 	if _, ok := h.oidcProviders[provider]; !ok {
 		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
+		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
 
@@ -155,35 +241,67 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 
 	cookie, err := r.Cookie(oidcLoginCookie)
 	if err != nil {
-		fail()
+		fail(ctx, "no state cookie", nil)
 		return
 	}
 	clearLoginStateCookie(w) // one-shot: consumed here whether verification below succeeds or not
 	stProvider, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
 	if err != nil || stProvider != provider || stNonce != state {
-		fail()
+		fail(ctx, "state verification", err)
 		return
 	}
 
-	idToken, err := h.oidcExchangers[provider].Exchange(r.Context(), code, codeVerifier,
-		h.oidcRedirectBase+"/auth/oidc/"+provider+"/callback")
+	idToken, err := h.oidcExchangers[provider].Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
 	if err != nil {
-		fail()
+		fail(ctx, "token exchange", err)
 		return
 	}
-	email, sub, emailVerified, err := h.oidcVerifiers[provider].Verify(r.Context(), idToken)
-	if err != nil || !emailVerified {
-		fail()
+	email, sub, emailVerified, err := h.oidcVerifiers[provider].Verify(ctx, idToken)
+	if err != nil {
+		fail(ctx, "id token verification", err)
+		return
+	}
+	if !emailVerified {
+		fail(ctx, "email not verified", nil)
 		return
 	}
 
-	token, err := h.svc.LoginViaFederatedIdentity(r.Context(), provider, sub, email)
+	token, err := h.svc.LoginViaFederatedIdentity(ctx, provider, sub, email)
 	if err != nil {
-		fail()
+		fail(ctx, "resolve/link account", err)
 		return
 	}
 	setSessionCookie(w, token)
-	http.Redirect(w, r, h.oidcPostLoginURL, http.StatusFound)
+	http.Redirect(w, r, h.oidcRoutes.PostLoginURL, http.StatusFound)
+}
+
+// logOidcFailure writes one system_log row for a refused/failed OIDC
+// sign-in, mirroring recordFailedLogin's shape (lockout.go): a login that
+// mutates no record belongs in the operational ledger, not audit_log, and an
+// invisible failure trail is exactly what a brute-force or a broken IdP
+// config both need to be caught by. Detached like recordFailedLogin — the
+// browser has already been told "refused" by the time this runs regardless
+// of outcome, so the write is the installation's record, not the client's to
+// cancel. Best-effort: a failure to write the trail must not turn an
+// already-refused sign-in into a 500 on top of it, so the write's own error
+// goes to the server log only.
+func (h Handlers) logOidcFailure(ctx context.Context, provider, reason string, cause error) {
+	slog.WarnContext(ctx, "oidc sign-in refused", "provider", provider, "reason", reason, "err", cause)
+	if h.svc == nil {
+		return
+	}
+	writeCtx, cancel := detachedForFailure(ctx)
+	defer cancel()
+	if err := h.svc.db.Tx(writeCtx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(writeCtx,
+			`INSERT INTO system_log (actor_type, actor_id, action, detail)
+			 VALUES ('human', 'human:unauthenticated', 'login',
+			         jsonb_build_object('outcome', 'failed'::text, 'provider', $1::text, 'reason', $2::text))`,
+			provider, reason)
+		return err
+	}); err != nil {
+		slog.ErrorContext(ctx, "recording a refused oidc sign-in", "err", err)
+	}
 }
 
 // ErrFederatedSignInRefused is the one neutral failure ssologin.go ever
@@ -197,33 +315,44 @@ var ErrFederatedSignInRefused = errors.New("identity: federated sign-in refused"
 // email) tuple belongs to, and whether this is the first time this provider
 // has been linked to that user. It tries (provider, subject) FIRST: an
 // already-linked identity resolves without touching email at all. Only an
-// UNLINKED subject falls back to email, through LiveMemberSQL — the same
-// "still works here" predicate the password path already uses
-// (lockout.go), so an unknown, suspended, or archived account is refused
-// exactly like an unrecognized password login.
+// UNLINKED subject falls back to email, through LiveMemberSQL AND
+// password_hash IS NOT NULL — the same pair checkCredentials (lockout.go)
+// and reset.go's forgot-password lookup already require. LiveMemberSQL alone
+// is not the password path's actual gate: an INVITED member is written
+// `status = 'active'` at invite time (there is no `invited` status — A97
+// specified one, ADR-0061 Amendment 1 dropped it as never built) and the
+// agent seat is seeded `active` too (installation.go's seedAgentSeat) — both
+// carry a NULL password_hash, which is what actually holds them out of
+// checkCredentials's decoy branch. Skipping that column here would let an
+// unredeemed or abandoned invite, or the agent seat, become reachable by
+// anyone who controls the invited address on the IdP, forever — no token,
+// no expiry, unlike the invite email itself.
 func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider, subject, email string) (userID ids.UserID, firstLink bool, err error) {
 	var linkedUser ids.UserID
 	err = tx.QueryRow(ctx,
 		`SELECT fi.user_id FROM federated_identity fi
 		 JOIN app_user u ON u.id = fi.user_id
-		 WHERE fi.provider = $1 AND fi.subject = $2 AND `+LiveMemberSQL("u"),
+		 WHERE fi.provider = $1 AND fi.subject = $2 AND `+LiveMemberSQL("u")+`
+		 AND u.password_hash IS NOT NULL AND NOT u.is_agent`,
 		provider, subject).Scan(&linkedUser)
 	switch {
 	case err == nil:
 		return linkedUser, false, nil
 	case errors.Is(err, pgx.ErrNoRows):
 		// Either genuinely unlinked, or linked to a user who is no longer
-		// live — both fall through to email resolution below, and both must
-		// land on the SAME refusal as an unrecognized password login: a
-		// suspended or archived account's still-valid link must not read as
-		// a successful sign-in just because the row exists.
+		// live/activated — both fall through to email resolution below, and
+		// both must land on the SAME refusal as an unrecognized password
+		// login: a suspended, archived, un-activated, or agent account's
+		// still-valid link must not read as a successful sign-in just
+		// because the row exists.
 	default:
 		return ids.UserID{}, false, fmt.Errorf("identity: resolve federated identity: %w", err)
 	}
 
 	var byEmail ids.UserID
 	err = tx.QueryRow(ctx,
-		`SELECT id FROM app_user WHERE `+LiveMemberSQL("")+` AND lower(email) = lower($1)`,
+		`SELECT id FROM app_user WHERE `+LiveMemberSQL("")+`
+		 AND password_hash IS NOT NULL AND NOT is_agent AND lower(email) = lower($1)`,
 		email).Scan(&byEmail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UserID{}, false, ErrFederatedSignInRefused
@@ -235,11 +364,24 @@ func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider,
 }
 
 // linkFederatedIdentity records the (provider, subject) -> user_id mapping.
-// ON CONFLICT (user_id, provider) means a SUBJECT CHANGE for an existing
-// link updates rather than errors — the email-recycling case, where a
-// different Google account now presents the same verified email an old link
-// used. That case is not silently indistinguishable from a normal login: the
-// caller passes a distinct audit detail for it (see LoginViaFederatedIdentity).
+// The table carries TWO unique constraints — (user_id, provider) and
+// (provider, subject) — and this function answers to both. ON CONFLICT
+// (user_id, provider) means a SUBJECT CHANGE for an existing link updates
+// rather than errors: the email-recycling case, where a different Google
+// account now presents the same verified email an old link used. That case
+// is not silently indistinguishable from a normal login: the caller passes a
+// distinct audit detail for it (see LoginViaFederatedIdentity).
+//
+// The DELETE before it answers the other constraint: the same (provider,
+// subject) can already be linked to a DIFFERENT user_id — the row
+// resolveFederatedUser found not live, not activated, or an agent seat, and
+// fell through past to resolve a different (live, activated) user by email.
+// That stale row still holds the (provider, subject) unique slot, so the
+// insert below would hit federated_identity_provider_subject_key instead of
+// the (user_id, provider) conflict target it's written for. Retiring it here
+// transfers the subject to the user the caller already decided to sign in,
+// rather than refusing a login on an internal constraint the caller never
+// sees.
 func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, subject, email string) (wasRelink bool, err error) {
 	var existingSubject string
 	scanErr := tx.QueryRow(ctx,
@@ -252,6 +394,12 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 		wasRelink = false
 	default:
 		return false, fmt.Errorf("identity: read existing federated identity: %w", scanErr)
+	}
+
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM federated_identity WHERE provider = $1 AND subject = $2 AND user_id <> $3`,
+		provider, subject, userID); err != nil {
+		return false, fmt.Errorf("identity: retire stale federated identity: %w", err)
 	}
 
 	_, err = tx.Exec(ctx,

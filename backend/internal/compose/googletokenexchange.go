@@ -39,9 +39,9 @@ type googleTokenResponse struct {
 }
 
 // Exchange redeems a PKCE-bound authorization code for the caller's ID token.
-// No refresh token is requested and none is read back — the login flow never
-// mints one (design §3.3.1: no access_type=offline on the authorization
-// request means Google issues none here either).
+// No refresh token is requested and none is read back: the authorization
+// request StartOidcSignIn builds asks for no access_type=offline, so Google
+// issues no refresh token here either, and this flow never mints one.
 func (ex googleTokenExchanger) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
 	client := ex.HTTPClient
 	if client == nil {

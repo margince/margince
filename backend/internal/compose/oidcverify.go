@@ -137,7 +137,14 @@ func (v *googleOIDCVerifier) Verify(ctx context.Context, bearer string) (oidcCla
 	if err != nil {
 		return oidcClaims{}, fmt.Errorf("%w: claims: %v", errOIDCRejected, err)
 	}
-	return claims, v.checkClaims(claims)
+	// A rejected token returns the zero value, never the claims it decoded
+	// but refused: a caller that checks err after claims — one careless
+	// read away given every caller here checks err first today — must not
+	// be handed an attacker-controlled email/sub on the rejection path.
+	if err := v.checkClaims(claims); err != nil {
+		return oidcClaims{}, err
+	}
+	return claims, nil
 }
 
 func (v *googleOIDCVerifier) checkClaims(c oidcClaims) error {
