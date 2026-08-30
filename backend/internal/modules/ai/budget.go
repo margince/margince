@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,29 +38,105 @@ var ErrProviderQuota = errors.New("ai: the configured AI provider refused the ca
 // console where nothing is wrong.
 var ErrProviderThrottled = errors.New("ai: the configured AI provider is rate limiting this installation")
 
-// quotaWrapped classifies a provider's 429, which every vendor here uses for
-// both an exhausted account and an ordinary burst limit.
+// errProviderRefused marks a 429 whose cause the provider did not make out —
+// no limit_source, no recognizable words, no Retry-After. It carries no claim
+// about WHY, only the fact that the model was never reached, which is the part
+// a caller must not get wrong: a refusal reported as a bad model answer sends
+// the operator to audit their own data.
+var errProviderRefused = errors.New("ai: the configured AI provider turned the call away")
+
+// providerRefusal classifies a provider's 429, which every vendor here uses for
+// both an exhausted account and an ordinary burst limit. The two want opposite
+// handling — an account is a human's to fix and every rung above bills to it,
+// a burst clears by itself — and telling an operator the wrong one sends them
+// to a console where nothing is wrong.
 //
-// Retry-After is what separates them: a throttle names the moment the caller
-// may return, because the provider expects it to. An account over its cap has
-// no such moment to name — nothing changes until a human raises the limit — so
-// a 429 that names no moment is read as the refusal it almost always is.
-// Reading it the wrong way is survivable in one direction only: a throttle
-// mistaken for a refusal costs one abandoned call, while a refusal mistaken
-// for a throttle burns every remaining tier against an account that cannot pay
-// for any of them.
+// What decides it is what the provider SAID, in this order:
 //
-// The header is read through the kernel's one reader, which knows both RFC
-// 9110 forms and answers zero for a header that is absent, unparseable, or
-// already past — all three of which name no moment to come back at.
-func quotaWrapped(resp *http.Response, err error) error {
+//  1. limit_source, when a broker names one. "upstream_provider_shared_pool"
+//     is a queue in front of a model, not a balance.
+//  2. The words in the error itself. Every vendor here says "quota", "credit",
+//     "billing" or "spending" for an account and "rate limit" for a burst.
+//  3. Retry-After. A throttle names a moment to come back because the provider
+//     expects the caller to return; an empty account has no such moment.
+//
+// Unclassifiable is a real answer and stays one: the refusal is marked without
+// a cause, so the caller says the provider turned the call away rather than
+// naming a reason invented here. Guessing "out of budget" from a bare 429 is
+// what told an operator with unspent credit to go raise a spending limit.
+//
+// EVERY branch carries errProviderRefused, so "did we reach the model?" is one
+// question with one answer whatever the cause turned out to be. A caller that
+// needs the cause asks for the specific sentinel on top.
+func providerRefusal(resp *http.Response, limitSource string, err error) error {
 	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
 		return err
 	}
-	if retryafter.Of(resp) > 0 {
-		return fmt.Errorf("%w: %w", ErrProviderThrottled, err)
+	refused := fmt.Errorf("%w: %w", errProviderRefused, err)
+	switch refusalKind(limitSource, err.Error(), retryafter.Of(resp)) {
+	case refusalQuota:
+		return fmt.Errorf("%w: %w", ErrProviderQuota, refused)
+	case refusalThrottle:
+		return fmt.Errorf("%w: %w", ErrProviderThrottled, refused)
+	default:
+		return refused
 	}
-	return fmt.Errorf("%w: %w", ErrProviderQuota, err)
+}
+
+// What a 429 turned out to be.
+type refusal int
+
+const (
+	refusalUnknown refusal = iota
+	refusalQuota
+	refusalThrottle
+)
+
+// refusalKind reads a 429 for what it is. Split from providerRefusal so the
+// decision can be stated against text and a header alone, which is how the
+// vendors' real answers are pinned in the tests.
+func refusalKind(limitSource, text string, retryAfter time.Duration) refusal {
+	// A broker names the limit it hit, and a shared pool in front of a model
+	// is a queue rather than a balance.
+	switch {
+	case strings.Contains(limitSource, "shared_pool"), strings.Contains(limitSource, "rate"), strings.Contains(limitSource, "retry"):
+		return refusalThrottle
+	case strings.Contains(limitSource, "credit"), strings.Contains(limitSource, "quota"), strings.Contains(limitSource, "balance"):
+		return refusalQuota
+	}
+	lowered := strings.ToLower(text)
+	// An invitation to come back is asked FIRST, and beats any word about an
+	// account. Gemini spends "quota" on a per-minute limit as freely as on an
+	// exhausted cap, so a message that says both "quota exceeded" and "retry
+	// in 45s" is the retryable one — a vendor does not offer a moment to
+	// return to an account that has nothing left to spend.
+	for _, phrase := range []string{"retry in", "try again in", "retry after", "try again later", "try again shortly", "retry shortly", "temporarily"} {
+		if strings.Contains(lowered, phrase) {
+			return refusalThrottle
+		}
+	}
+	// Then an account, which is the operator's to fix.
+	for _, phrase := range []string{"insufficient_quota", "credit", "billing", "spending", "payment", "spend cap", "exceeded your current quota"} {
+		if strings.Contains(lowered, phrase) {
+			return refusalQuota
+		}
+	}
+	// Then a plain burst limit.
+	for _, phrase := range []string{"rate-limit", "rate limit", "ratelimit", "too many requests", "overloaded"} {
+		if strings.Contains(lowered, phrase) {
+			return refusalThrottle
+		}
+	}
+	// "quota" alone is deliberately NOT here. It is the one word both causes
+	// use, and reading it as an empty account is what told an operator with
+	// unspent credit to go raise a limit. Unclassified is the honest answer.
+	// A moment to come back at is the last signal, and only ever evidence OF a
+	// throttle: an account with nothing left names none, but plenty of throttles
+	// do not name one either, so its absence proves nothing.
+	if retryAfter > 0 {
+		return refusalThrottle
+	}
+	return refusalUnknown
 }
 
 // BudgetDeferralError carries the exact retry boundary to a background task's

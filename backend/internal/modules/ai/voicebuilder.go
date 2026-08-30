@@ -52,7 +52,15 @@ func SafeVoiceBuildFailure(err error) string {
 	// and telling this operator to go raise a spending limit would send them
 	// to a console where nothing is wrong.
 	if errors.Is(err, ErrProviderThrottled) {
-		return "Our AI provider is rate limiting us right now, so the build did not run. Your previous version is unchanged; wait a minute and build again."
+		return "Our AI provider is busy right now and turned the call away, so the build did not run. Your previous version is unchanged; wait a minute and build again."
+	}
+	// A refusal neither sentinel claimed. It still did not reach the model, so
+	// it must not fall through to the message below, which describes an answer
+	// that was received — but nothing here knows WHY, and inventing a cause is
+	// what sent an operator with unspent credit to check their billing. The
+	// honest sentence is that the provider said no.
+	if errors.Is(err, errProviderRefused) {
+		return "Our AI provider turned the call away, so the build never ran. Your previous version is unchanged. Check the provider's status and account, then build again."
 	}
 	text := strings.ToLower(err.Error())
 	switch {

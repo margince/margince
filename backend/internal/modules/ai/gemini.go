@@ -407,22 +407,6 @@ func geminiSawStop(out geminiResponse) bool {
 	return false
 }
 
-// geminiError surfaces the API's error status and message only, so a logged
-// failure can never echo the request (or the key).
-func geminiError(resp *http.Response) error {
-	var apiErr struct {
-		Error struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if readErr == nil && json.Unmarshal(raw, &apiErr) == nil && apiErr.Error.Status != "" {
-		return quotaWrapped(resp, fmt.Errorf("ai: gemini: %s: %s (http %d)", apiErr.Error.Status, apiErr.Error.Message, resp.StatusCode))
-	}
-	return quotaWrapped(resp, fmt.Errorf("ai: gemini: http %d", resp.StatusCode))
-}
-
 // geminiStream reads the :streamGenerateContent?alt=sse stream. There is no
 // [DONE] sentinel — the final chunk carries finishReason STOP and then the
 // stream closes; text arrives at candidates[0].content.parts[].text on each
