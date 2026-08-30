@@ -20,10 +20,12 @@ package people
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -217,5 +219,77 @@ func TestTheSpendFenceClustersOnlyLiveTwins(t *testing.T) {
 	if got := cluster(incumbent); len(got) != 0 {
 		t.Errorf("an archived twin still clusters as %v — this record is being charged "+
 			"against a person nobody can open", got)
+	}
+}
+
+// A merged pair stays listable under status=merged.
+//
+// The liveness rule is about work still to DO. A decided pair is a record of
+// what somebody decided, and every merge archives the loser by definition — so
+// applying "both sides live" to the merged list would hide every row it exists
+// to show, and the contract advertises that filter.
+func TestAMergedPairIsStillListedAsMerged(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := asArchiver(e)
+	first, _ := seedOrgPair(ctx, t, e)
+	open := openCandidates(ctx, t, e, entityOrganization)
+	if len(open) != 1 {
+		t.Fatalf("the seed left %d open candidates, want 1", len(open))
+	}
+	if _, err := e.store.DisposeDedupeCandidate(ctx, open[0].ID, "merge", &first); err != nil {
+		t.Fatalf("merging the pair: %v", err)
+	}
+
+	merged, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{
+		EntityType: entityOrganization, Status: "merged",
+	})
+	if err != nil {
+		t.Fatalf("listing the merged pairs: %v", err)
+	}
+	if len(merged) != 1 {
+		t.Errorf("the merged list holds %d pairs, want 1 — a merge archives the loser, "+
+			"so a liveness rule applied here hides every row this filter serves", len(merged))
+	}
+}
+
+// An open decision about an archived record cannot be fetched or acted on.
+//
+// The queue no longer serves it, but the pair is addressable by id — the review
+// route is a plain GET and the dispose verbs enter through it. Left open, a
+// reader who kept the link, or a client that cached the row, can still open the
+// pair and read its evidence snapshot, which carries the names, addresses and
+// phone numbers that made the two look alike.
+//
+// Acting on it is worse than reading it. merge_organization.go already names
+// what happens to a pair whose side is archived: merging answers AlreadyMerged,
+// which reopens it — "a pair no human can ever dispose of".
+func TestAnOpenPairNamingAnArchivedRecordIsNotReadableOrActionable(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := asArchiver(e)
+	first, _ := seedOrgPair(ctx, t, e)
+	open := openCandidates(ctx, t, e, entityOrganization)
+	if len(open) != 1 {
+		t.Fatalf("the seed left %d open candidates, want 1", len(open))
+	}
+	pair := open[0].ID
+
+	// Readable while both sides are live — without this the assertions below
+	// would pass against a route that refuses everything.
+	if _, err := e.store.GetDedupeCandidate(ctx, pair); err != nil {
+		t.Fatalf("a live pair must be readable by id: %v", err)
+	}
+
+	if _, err := e.store.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](first), nil); err != nil {
+		t.Fatalf("archiving one side: %v", err)
+	}
+
+	// ErrNotFound rather than a refusal that names it: the pair is gone from
+	// this reader's world, and a distinct error would confirm it exists.
+	if _, err := e.store.GetDedupeCandidate(ctx, pair); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("reading a pair whose side is archived = %v, want ErrNotFound — its "+
+			"evidence names both records, and one of them is gone", err)
+	}
+	if _, err := e.store.DisposeDedupeCandidate(ctx, pair, "not_a_duplicate", nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("disposing a pair whose side is archived = %v, want ErrNotFound", err)
 	}
 }
