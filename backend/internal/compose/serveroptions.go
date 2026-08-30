@@ -54,6 +54,12 @@ type Option func(*Server, *pgxpool.Pool)
 func WithOperatorMail(m mailer.Mailer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithPasswordReset(m)
+		// The confirm-details link rides the same relay, and unlike the Deal
+		// Room invitation below it is wired here rather than held back: the
+		// screen it opens is served by the SPA today, so a recipient who
+		// follows it lands on their own record rather than on a not-found page
+		// having spent their one token getting there.
+		s.consentHandlers = s.WithConfirmMailer(m)
 	}
 }
 
@@ -381,6 +387,9 @@ func WithPublicBaseURL(base string) Option {
 		// A Deal Room invitation carries the same kind of credential and is
 		// bound to the same canonical origin for the same reason.
 		s.dealroomsHandlers = s.WithInviteLinkBase(base)
+		// So does the confirm-details link, which opens one person's own record
+		// to whoever holds it.
+		s.consentHandlers = s.WithConfirmLinkBase(base)
 		s.rebuildToolRegistry(pool)
 	}
 }

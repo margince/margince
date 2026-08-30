@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -371,6 +372,68 @@ export function ConsentSection({ personId }: Readonly<{ personId: string }>) {
       sub={t("consent.defaultDeny")}
     >
       <QueryStates query={consentQuery}>{body}</QueryStates>
+      {/* Per PERSON rather than per purpose, so it sits under the rows instead
+          of inside one: the link opens everything held about them and asks the
+          marketing question once, which is not a fact about any single
+          purpose. */}
+      <ConfirmDetailsAction personId={personId} />
     </Card>
+  );
+}
+
+/**
+ * ConfirmDetailsAction mails the contact a link to see what is held about them,
+ * correct it, and answer on marketing.
+ *
+ * The address is never chosen here. The server derives it from the person's own
+ * live primary email, which is what lets a grant made through the link stand on
+ * its own: the answer came from the subject's mailbox. So this surface offers
+ * the act and reports where it went, and cannot aim it anywhere.
+ */
+function ConfirmDetailsAction({ personId }: Readonly<{ personId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const mayAsk = useCanWrite("person", "update");
+  const ask = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await api.POST(
+        "/people/{id}/consent/confirm-request",
+        { params: { path: { id } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  if (!mayAsk) {
+    return null;
+  }
+  return (
+    <div className="consent-confirm-ask">
+      <Button
+        small
+        disabled={ask.isPending}
+        data-testid="confirm-details-ask"
+        onClick={() => ask.mutate(personId)}
+      >
+        {t("consent.askToConfirm")}
+      </Button>
+      <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
+      {ask.isError && <MutationError error={ask.error} />}
+      {ask.data && (
+        <p className="t-caption" data-testid="confirm-details-sent">
+          {ask.data.delivered
+            ? t("consent.askSent", { address: ask.data.delivered_to })
+            : t("consent.askNotDelivered", {
+                address: ask.data.delivered_to,
+              })}{" "}
+          {t("consent.askExpires")}:{" "}
+          {formatDateTime(ask.data.expires_at, locale, zone)}
+        </p>
+      )}
+    </div>
   );
 }

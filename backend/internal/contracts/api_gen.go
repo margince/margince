@@ -40010,6 +40010,9 @@ type ServerInterface interface {
 	// Grant or withdraw consent for one purpose — writes an append-only proof row.
 	// (POST /people/{id}/consent)
 	RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams)
+	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+	// (POST /people/{id}/consent/confirm-request)
+	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
 	// Mint + deliver a double-opt-in confirmation token (the issuance half of the DOI round-trip).
 	// (POST /people/{id}/consent/double-opt-in)
 	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
@@ -42572,6 +42575,12 @@ func (_ Unimplemented) GetPersonConsent(w http.ResponseWriter, r *http.Request, 
 // Grant or withdraw consent for one purpose — writes an append-only proof row.
 // (POST /people/{id}/consent)
 func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+// (POST /people/{id}/consent/confirm-request)
+func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58406,6 +58415,38 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// RequestDetailsConfirmation operation middleware
+func (siw *ServerInterfaceWrapper) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDetailsConfirmation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // IssueDoubleOptIn operation middleware
 func (siw *ServerInterfaceWrapper) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request) {
 
@@ -67095,6 +67136,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent", wrapper.RecordConsent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/confirm-request", wrapper.RequestDetailsConfirmation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent/double-opt-in", wrapper.IssueDoubleOptIn)

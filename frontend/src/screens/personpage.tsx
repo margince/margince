@@ -23,6 +23,7 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { ConsentSection } from "./consent";
 import {
   hasCommercial,
   hasCommitments,
@@ -387,6 +388,10 @@ export function PersonPageV2({
               <PersonMattersCard view={view.data} firstName={firstName} />
             )}
             <PersonMemory view={view.data} />
+            {/* What this person has agreed to, and the one way to ask them
+                directly. It renders on a thin record too: what you may send is
+                a live fact whether or not anyone has written to them yet. */}
+            <ConsentSection personId={id} />
           </div>
         )}
 

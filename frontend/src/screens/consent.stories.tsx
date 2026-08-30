@@ -132,3 +132,89 @@ export const LoadError: Story = {
       jsonResponse({ title: "internal error", status: 500 }, 500),
   }),
 };
+
+// The per-person ask, under the per-purpose rows. It is a MUTATING control, so
+// it is drawn only for a caller who may write the person — which is why every
+// story below states a seat and a grant rather than leaving /me to the default.
+const MAY_WRITE = {
+  user: { id: "u1", email: "rep@example.test", full_name: "A Rep" },
+  authorization: {
+    seat_type: "full",
+    objects: { person: { read: true, update: true } },
+  },
+};
+
+const ROWS: RouteMap = {
+  "GET /consent-purposes": () => jsonResponse(PURPOSES),
+  "GET /people/person-1/consent": () => jsonResponse(CONSENT),
+};
+
+// The link went out. The address is the one the SERVER derived from the
+// person's own record — this surface reports it and cannot choose it.
+export const ConfirmDetailsSent: Story = {
+  render: section({
+    ...ROWS,
+    "GET /me": () => jsonResponse(MAY_WRITE),
+    "POST /people/person-1/consent/confirm-request": () =>
+      jsonResponse(
+        {
+          delivered_to: "ada@example.test",
+          expires_at: "2026-09-13T09:00:00Z",
+          delivered: true,
+        },
+        201,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
+    await canvas.findByTestId("confirm-details-sent");
+  },
+};
+
+// The token exists and nobody was sent it, because this installation has no
+// outbound relay. A rep who read "sent" here would wait for an answer that
+// cannot come.
+export const ConfirmDetailsUndelivered: Story = {
+  render: section({
+    ...ROWS,
+    "GET /me": () => jsonResponse(MAY_WRITE),
+    "POST /people/person-1/consent/confirm-request": () =>
+      jsonResponse(
+        {
+          delivered_to: "ada@example.test",
+          expires_at: "2026-09-13T09:00:00Z",
+          delivered: false,
+        },
+        201,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
+    await canvas.findByTestId("confirm-details-sent");
+  },
+};
+
+// A contact with no live address. Refused rather than silently not sent, so a
+// rep learns there is no mailbox to ask rather than believing they asked.
+export const ConfirmDetailsRefused: Story = {
+  render: section({
+    ...ROWS,
+    "GET /me": () => jsonResponse(MAY_WRITE),
+    "POST /people/person-1/consent/confirm-request": () =>
+      jsonResponse(
+        {
+          title: "Unprocessable Entity",
+          detail:
+            "this contact carries no live email address, so there is no mailbox a confirm link could reach",
+          status: 422,
+        },
+        422,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
+  },
+};

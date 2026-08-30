@@ -916,6 +916,13 @@ export const en = {
   "consent.doubleOptIn": "Issue double opt-in",
   "consent.doiIssued": "One-time token (shown once):",
   "consent.doiExpires": "Expires",
+  "consent.askToConfirm": "Ask them to confirm their details",
+  "consent.askToConfirmWhat":
+    "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
+  "consent.askSent": "Sent to {address}.",
+  "consent.askNotDelivered":
+    "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
+  "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This organization tracks no consent purposes yet.",
   "consent.defaultDeny":

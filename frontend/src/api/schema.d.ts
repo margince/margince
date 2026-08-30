@@ -7186,6 +7186,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/consent/confirm-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
+         * @description Mints the token behind `GET/POST /public/confirm/{token}` and mails the link. Both halves
+         *     happen here because a token nobody delivers is a link nobody can use, and the page it opens
+         *     is reachable no other way.
+         *
+         *     The address is NOT taken from the caller. It is derived from the person's own live primary
+         *     email, which is the security property rather than a convenience: a grant made through this
+         *     link completes with no second confirmation, on the claim that the link reached the subject's
+         *     own mailbox. A caller who could name the address could name somebody else's and produce a
+         *     consent that looks defensible against a mailbox the subject never held. A contact with no
+         *     live address is a 422 rather than a silent no-op.
+         *
+         *     The token is never returned. Unlike the double-opt-in token, which a rep pastes back in, this
+         *     one is only ever mailed — returning it would defeat the mailbox-as-evidence property above.
+         *     A fresh request supersedes any unspent earlier link for the same person.
+         *
+         *     `delivered` reports whether the mail actually left. An installation with no outbound relay
+         *     configured still mints the token and answers 201 with `delivered: false`, because the write
+         *     happened and reporting it as a failure would invite a second one.
+         */
+        post: operations["requestDetailsConfirmation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/consent/qualifying-events": {
         parameters: {
             query?: never;
@@ -35707,6 +35747,48 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestDetailsConfirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link issued, and whether it reached the relay. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description The address the link was posted to — the person's own live primary email. */
+                        delivered_to: string;
+                        /** Format: date-time */
+                        expires_at: string;
+                        /** @description False when this installation has no outbound relay; the link exists but nobody was sent it. */
+                        delivered: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The contact carries no live email address, so there is no mailbox a link could reach. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     recordQualifyingEvent: {

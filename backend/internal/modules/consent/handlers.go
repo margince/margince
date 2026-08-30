@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,6 +23,11 @@ import (
 type Handlers struct {
 	store  *Store
 	eraser Eraser
+	// The confirm link's two halves, both injected by compose. Either one
+	// missing means the installation cannot deliver, which the send path
+	// reports rather than fails on.
+	confirmMailer mailer.Mailer
+	publicBaseURL string
 }
 
 // Eraser is the erase-path seam (compose injects the real one): DSR
