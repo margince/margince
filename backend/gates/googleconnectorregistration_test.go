@@ -156,9 +156,13 @@ func hidden() any { return New(nil, nil) }
 	}
 }
 
-// shadowedIn names the governed qualifiers a file also BINDS: a variable, a
-// parameter, a field, a type or a function of the same name. Reported in a
-// settled order.
+// shadowedIn names the governed qualifiers a file also BINDS IN LEXICAL SCOPE:
+// a variable, a parameter, a result, a range variable, a type, a type parameter
+// or a function of the same name. Reported in a settled order.
+//
+// Struct FIELDS are deliberately absent. A field named gmail is reached as
+// x.gmail and shadows nothing, so reporting one would refuse correct code for a
+// name it was entitled to use.
 func shadowedIn(file *ast.File, byQualifier map[string]string) []string {
 	var found []string
 	seen := map[string]bool{}
@@ -194,6 +198,7 @@ func shadowedIn(file *ast.File, byQualifier map[string]string) []string {
 			note(node.Names...)
 		case *ast.TypeSpec:
 			note(node.Name)
+			fields(node.TypeParams)
 		case *ast.RangeStmt:
 			for _, key := range []ast.Expr{node.Key, node.Value} {
 				if id, isIdent := key.(*ast.Ident); isIdent {
@@ -203,18 +208,81 @@ func shadowedIn(file *ast.File, byQualifier map[string]string) []string {
 		case *ast.FuncDecl:
 			note(node.Name)
 			fields(node.Recv)
+			fields(node.Type.TypeParams)
 			fields(node.Type.Params)
 			fields(node.Type.Results)
 		case *ast.FuncLit:
+			fields(node.Type.TypeParams)
 			fields(node.Type.Params)
 			fields(node.Type.Results)
-		case *ast.StructType:
-			fields(node.Fields)
 		}
 		return true
 	})
 	sort.Strings(found)
 	return found
+}
+
+// TestTheGoogleConnectorCensusFailsClosedOnAShadowedPackage proves the other
+// arm this tree cannot exercise.
+//
+// No file in internal/compose shadows gmail or gcal, and none should — so the
+// reporting arm would otherwise run against nothing and a hole in it would look
+// exactly like a clean sweep. That is the under-recognition failure this census
+// exists to forbid, so the reader is asked directly with a planted file.
+func TestTheGoogleConnectorCensusFailsClosedOnAShadowedPackage(t *testing.T) {
+	t.Parallel()
+	const planted = `package compose
+
+import "github.com/margince/margince/backend/internal/modules/capture/gmail"
+
+type stand struct{}
+
+func (stand) New(a, b any) any { return nil }
+
+func hidden() any {
+	gmail := stand{}
+	return gmail.New(nil, nil)
+}
+
+var _ = gmail.New
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	builds, unreadable := googleConnectorsBuiltIn(file)
+	if len(unreadable) != 1 || !strings.Contains(unreadable[0], "gmail") {
+		t.Errorf("unreadable = %v, want the shadowed gmail reported: a reader that cannot tell a package from a "+
+			"variable must say so", unreadable)
+	}
+	// It still reports the construction, because it cannot tell which one this
+	// is — and reporting one that turns out to be a local is the safe direction
+	// where missing a real one is not.
+	if len(builds) != 1 {
+		t.Errorf("builds = %v, want the construction still reported", builds)
+	}
+}
+
+// TestAStructFieldIsNotAShadowedPackage holds the other side: a field named
+// after a connector package is reached as x.gmail and shadows nothing, so
+// refusing it would reject correct code for a name it was entitled to use.
+func TestAStructFieldIsNotAShadowedPackage(t *testing.T) {
+	t.Parallel()
+	const planted = `package compose
+
+import "github.com/margince/margince/backend/internal/modules/capture/gmail"
+
+type wiring struct{ gmail string }
+
+func used(w wiring) any { return gmail.New(nil, nil) }
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, unreadable := googleConnectorsBuiltIn(file); len(unreadable) != 0 {
+		t.Errorf("unreadable = %v, want none: a struct field is not a lexical binding", unreadable)
+	}
 }
 
 // googleConnectorBuild is one construction and the function it sits in.
