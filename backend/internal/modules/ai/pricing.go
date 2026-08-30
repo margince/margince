@@ -198,8 +198,9 @@ func vendorSheetRates(day time.Time) []ModelRate {
 // per-token prices scaled by 1e12 — on 2026-07-31. Every model the example
 // names is here, the commented jurisdiction alternates included: the file
 // presents them as one-line swaps, and a swap must not silently turn the
-// cost report UNPRICED. No entry publishes a cache-WRITE price, so that
-// column is 0 throughout.
+// cost report UNPRICED. Only the two Anthropic rows publish a cache-WRITE
+// price; that column is 0 for every other entry, which is the vendor
+// declining to charge separately for the write rather than a gap here.
 //
 // These rows are keyed on the GENERIC provider name, because that is what a
 // call on this adapter reports. An operator who points openai_compatible at
@@ -220,6 +221,14 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// sibling; 0 here is "no cache discount", and the uncached input rate
 		// is what a call actually pays.
 		rateOn(day, providerOpenAICompatible, "openai/gpt-oss-120b", 37_000, 170_000, 0, 0),
+		// Anthropic reached through the broker rather than its native adapter.
+		// The ids differ from the native rows above — the broker spells a vendor
+		// prefix and a dotted version where the native API takes a dated snapshot
+		// — so these are separate rows rather than duplicates: a call on this
+		// adapter reports the broker's id, and an id with no row prices as a
+		// visible unpriced count instead of a dollar figure.
+		rateOn(day, providerOpenAICompatible, "anthropic/claude-haiku-4.5", 1_000_000, 5_000_000, 100_000, 1_250_000),
+		rateOn(day, providerOpenAICompatible, "anthropic/claude-sonnet-4.5", 3_000_000, 15_000_000, 300_000, 3_750_000),
 		// Embedding lanes have no output and no cache — only input is nonzero.
 		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
 		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),

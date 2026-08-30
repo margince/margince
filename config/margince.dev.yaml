@@ -44,10 +44,10 @@ seeds:
   ai_routing:
     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
     tiers:
-      local_small: { provider: gemini, model: gemini-3.1-flash-lite }
-      cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-      premium:     { provider: gemini, model: gemini-3.5-flash }
-      frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
+      local_small: { provider: openai_compatible, model: openai/gpt-oss-120b, base_url: https://openrouter.ai/api }
+      cheap_cloud: { provider: openai_compatible, model: openai/gpt-oss-120b, base_url: https://openrouter.ai/api }
+      premium:     { provider: openai_compatible, model: anthropic/claude-haiku-4.5, base_url: https://openrouter.ai/api }
+      frontier:    { provider: openai_compatible, model: anthropic/claude-sonnet-4.5, base_url: https://openrouter.ai/api }
     embeddings:
       provider: gemini
       model: gemini-embedding-001
