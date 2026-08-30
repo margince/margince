@@ -1792,12 +1792,8 @@ export const de = {
   "co.tech.web": "Website-Technik",
   "co.tech.services": "Dienste",
   "co.tech.hosting": "Hosting",
-  "co.tech.read": "Nachschauen",
-  "co.tech.reading": "Schaue nach…",
   "co.tech.empty":
-    "Noch nichts Technisches gelesen. Das füllt sich von selbst, sobald die Website der Firma gelesen wird, und frischt sich selbst auf — der Knopf ist nur da, wenn du nicht warten willst.",
-  "co.tech.unavailable": "Diese Installation macht keine technischen Abfragen.",
-  "co.tech.queued": "Die Abfrage läuft. Meist dauert das keine Minute.",
+    "Noch nichts Technisches gelesen. Das füllt sich von selbst, sobald die Website der Firma gelesen wird, und frischt sich selbst auf.",
   "co.tech.laneFailed":
     "{lane} hat nicht geantwortet — was von dort zuletzt kam, bleibt unverändert.",
   "co.tech.laneRefused": "Die Website möchte nicht gelesen werden.",

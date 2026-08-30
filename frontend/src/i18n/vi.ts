@@ -1778,12 +1778,8 @@ export const vi = {
   "co.tech.web": "Công nghệ website",
   "co.tech.services": "Dịch vụ",
   "co.tech.hosting": "Lưu trữ",
-  "co.tech.read": "Tra cứu",
-  "co.tech.reading": "Đang tra cứu…",
   "co.tech.empty":
-    "Chưa có dữ liệu kỹ thuật. Mục này tự điền khi website của công ty được đọc, và tự làm mới — nút bấm chỉ dành cho khi bạn không muốn chờ.",
-  "co.tech.unavailable": "Bản cài đặt này không thực hiện tra cứu kỹ thuật.",
-  "co.tech.queued": "Đã xếp hàng tra cứu. Thường mất chưa đến một phút.",
+    "Chưa có dữ liệu kỹ thuật. Mục này tự điền khi website của công ty được đọc, và tự làm mới.",
   "co.tech.laneFailed":
     "{lane} không trả lời — những gì đọc được lần trước vẫn giữ nguyên.",
   "co.tech.laneRefused": "Trang web từ chối được đọc.",

@@ -14,8 +14,8 @@ import {
 //
 // The states worth looking at are not the full card. They are the ones that
 // say something a reader has to act on: an account nobody has looked up yet,
-// an account where one SOURCE did not answer (so part of the card is older
-// than the rest), and a reader who may not start a lookup at all.
+// and an account where one SOURCE did not answer, so part of the card is
+// older than the rest.
 
 const meta: Meta = {
   title: "Records/Company 360/Technical profile",
@@ -122,13 +122,13 @@ function lanes(
   };
 }
 
-const CAN_ENRICH = meRoute({ organization: ["read", "update"] });
+const A_READER = meRoute({ organization: ["read", "update"] });
 
 /** Everything read: the state a rep sees on an account the lookup has covered. */
 export const Read: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () =>
         jsonResponse({ data: READ_FACTS }),
       [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
@@ -146,14 +146,14 @@ export const Read: Story = {
  * Not read yet — an account whose site nothing has crawled.
  *
  * The sentence carries the weight: an empty card with no sentence reads as
- * "this company runs nothing", and one that only offered a button would ask
- * for a press the reader does not owe. The reading arrives with the site read
- * and refreshes on a schedule; the button is the impatient path.
+ * "this company runs nothing", which is a different and false claim. The
+ * reading arrives with the site read and refreshes on a schedule, and the
+ * card says so rather than offering a control it does not have.
  */
 export const NotReadYet: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: [] }),
       [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
         jsonResponse({ title: "not found" }, 404),
@@ -176,7 +176,7 @@ export const NotReadYet: Story = {
 export const OneSourceDidNotAnswer: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () =>
         jsonResponse({
           data: READ_FACTS.filter((row) => row.field !== "operated_service"),
@@ -197,32 +197,13 @@ export const OneSourceDidNotAnswer: Story = {
 export const TheSiteDeclined: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () =>
         jsonResponse({
           data: READ_FACTS.filter((row) => row.field !== "technology"),
         }),
       [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
         jsonResponse(lanes({ homepage: "refused" })),
-    });
-    return (
-      <StoryProviders locale="de">
-        <TechnicalProfileCard orgId={ORG} />
-      </StoryProviders>
-    );
-  },
-};
-
-/** A reader who may not write the record sees the profile and no button: the
- * lookup writes to the company, so it is gated like any other write. */
-export const WithoutWriteAccess: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute({ organization: ["read"] }, { seat: "read" }),
-      [`GET /organizations/${ORG}/facts`]: () =>
-        jsonResponse({ data: READ_FACTS }),
-      [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
-        jsonResponse(lanes()),
     });
     return (
       <StoryProviders locale="de">
@@ -248,7 +229,7 @@ export const AfterAHumanCorrection: Story = {
         : row,
     );
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () =>
         jsonResponse({ data: corrected }),
       [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>

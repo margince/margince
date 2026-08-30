@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
-	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // gmailWatchConfig builds the Gmail push-watch maintenance config: the
@@ -317,7 +316,6 @@ func technicalEnricherFor(cfg workerConfig, pool *pgxpool.Pool) *compose.Technic
 	return compose.NewTechnicalEnricher(
 		dnsread.New(dnsread.NewPacer(dnsReadInterval)),
 		certlog.NewCrtSh(baseURL, nil),
-		webread.New(),
 		people.NewStore(compose.InstallationDB(pool)),
 		nil,
 	)

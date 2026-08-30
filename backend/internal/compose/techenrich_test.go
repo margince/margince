@@ -7,14 +7,12 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
-	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -71,18 +69,6 @@ func (s stubCertLog) Hostnames(context.Context, string) ([]string, bool, error) 
 	return s.hostnames, len(s.hostnames) > 0, nil
 }
 
-type stubPages struct {
-	page webread.Fingerprint
-	err  error
-}
-
-func (s stubPages) FetchFingerprint(context.Context, string) (webread.Fingerprint, error) {
-	if s.err != nil {
-		return webread.Fingerprint{}, s.err
-	}
-	return s.page, nil
-}
-
 // recordingCache remembers what was written, so a test can assert on what the
 // cache was asked to hold — which is where the privacy boundary is checked.
 type recordingCache struct {
@@ -124,14 +110,15 @@ func TestReadGathersEveryLane(t *testing.T) {
 			names: []string{"static.1.2.3.4.your-server.de"},
 		},
 		stubCertLog{hostnames: []string{"shop.example.de", "karriere.example.de"}},
-		stubPages{page: webread.Fingerprint{URL: "https://example.de", Generator: "Shopware 6"}},
 		newRecordingCache(), fixedClock(),
 	)
 
 	got, outcomes := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
 
-	if len(got.Completed) != 3 {
-		t.Fatalf("completed %d lanes, want 3: %v", len(got.Completed), outcomes)
+	// TWO, not three: the homepage lane belongs to the site read now, which
+	// matches every page it crawled rather than fetching one here.
+	if len(got.Completed) != 2 {
+		t.Fatalf("completed %d lanes, want 2: %v", len(got.Completed), outcomes)
 	}
 	if !got.ObservedAt.Equal(observedAt) {
 		t.Errorf("stamped %s, want the injected clock's %s", got.ObservedAt, observedAt)
@@ -142,7 +129,6 @@ func TestReadGathersEveryLane(t *testing.T) {
 		{people.FactHostingProvider, "hetzner"},
 		{people.FactOperatedService, "webshop"},
 		{people.FactOperatedService, "careers"},
-		{people.FactTechnology, "shopware"},
 	} {
 		if !observed(got, want.field, want.key) {
 			t.Errorf("did not read %s=%s; read %v", want.field, want.key, got.Observations)
@@ -163,7 +149,6 @@ func TestACertificateLogOutageCompletesNoLane(t *testing.T) {
 	enricher := NewTechnicalEnricher(
 		stubResolver{mx: []dnsread.MXHost{{Host: "aspmx.l.google.com"}}},
 		stubCertLog{err: errors.New("crt.sh is having a day")},
-		stubPages{page: webread.Fingerprint{URL: "https://example.de"}},
 		newRecordingCache(), fixedClock(),
 	)
 
@@ -174,29 +159,10 @@ func TestACertificateLogOutageCompletesNoLane(t *testing.T) {
 			t.Fatal("the certificate lane completed on a query that failed; its rows would be wiped")
 		}
 	}
-	if len(got.Completed) != 2 {
-		t.Errorf("one lane failing cost the others: completed %v", got.Completed)
-	}
-}
-
-func TestARobotsRefusalCompletesTheHomepageLane(t *testing.T) {
-	t.Parallel()
-	enricher := NewTechnicalEnricher(
-		stubResolver{}, stubCertLog{},
-		stubPages{err: webread.ErrRobotsDisallowed},
-		newRecordingCache(), fixedClock(),
-	)
-
-	got, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
-
-	var completed bool
-	for _, lane := range got.Completed {
-		if lane == people.LaneHomepage {
-			completed = true
-		}
-	}
-	if !completed {
-		t.Error("a site that refuses us is an ANSWER; the lane must complete and clear its claims")
+	// One survivor, because this engine now runs two lanes: DNS answered and
+	// the certificate log did not.
+	if len(got.Completed) != 1 {
+		t.Errorf("one lane failing cost the other: completed %v", got.Completed)
 	}
 }
 
@@ -204,7 +170,7 @@ func TestARobotsRefusalCompletesTheHomepageLane(t *testing.T) {
 // record must keep whatever that lane last wrote.
 func TestAnAbsentReaderCompletesNoLane(t *testing.T) {
 	t.Parallel()
-	enricher := NewTechnicalEnricher(nil, nil, nil, newRecordingCache(), fixedClock())
+	enricher := NewTechnicalEnricher(nil, nil, newRecordingCache(), fixedClock())
 
 	got, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
 
@@ -218,7 +184,7 @@ func TestAnEmptyDomainAsksNobody(t *testing.T) {
 	enricher := NewTechnicalEnricher(
 		stubResolver{mx: []dnsread.MXHost{{Host: "aspmx.l.google.com"}}},
 		stubCertLog{hostnames: []string{"shop.example.de"}},
-		stubPages{}, newRecordingCache(), fixedClock(),
+		newRecordingCache(), fixedClock(),
 	)
 
 	got, outcomes := enricher.Read(context.Background(), ids.OrganizationID{}, "   ")
@@ -240,7 +206,7 @@ func TestTheCacheNeverHoldsARawCertificateHostname(t *testing.T) {
 			"jan-mueller.example.de",
 			"anna.schmidt.example.de",
 		}},
-		stubPages{}, cache, fixedClock(),
+		cache, fixedClock(),
 	)
 
 	enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
@@ -260,7 +226,7 @@ func TestASecondReadIsAnsweredFromTheCache(t *testing.T) {
 	t.Parallel()
 	cache := newRecordingCache()
 	counting := &countingCertLog{inner: stubCertLog{hostnames: []string{"shop.example.de"}}}
-	enricher := NewTechnicalEnricher(stubResolver{}, counting, stubPages{}, cache, fixedClock())
+	enricher := NewTechnicalEnricher(stubResolver{}, counting, cache, fixedClock())
 
 	enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
 	second, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
@@ -281,24 +247,6 @@ type countingCertLog struct {
 func (c *countingCertLog) Hostnames(ctx context.Context, domain string) ([]string, bool, error) {
 	c.calls++
 	return c.inner.Hostnames(ctx, domain)
-}
-
-func TestTheHomepageLaneReadsWhatThePageDeclares(t *testing.T) {
-	t.Parallel()
-	enricher := NewTechnicalEnricher(nil, nil, stubPages{page: webread.Fingerprint{
-		URL:         "https://example.de",
-		Headers:     http.Header{"Server": []string{"nginx"}},
-		CookieNames: []string{"fe_typo_user"},
-		ScriptSrcs:  []string{"https://static.hotjar.com/c/hotjar.js"},
-	}}, newRecordingCache(), fixedClock())
-
-	got, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
-
-	for _, want := range []string{"nginx", "typo3", "hotjar"} {
-		if !observed(got, people.FactTechnology, want) {
-			t.Errorf("did not read %q; read %v", want, got.Observations)
-		}
-	}
 }
 
 func observed(in people.TechnicalEnrichment, field, key string) bool {

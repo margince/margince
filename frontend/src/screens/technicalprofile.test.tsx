@@ -3,7 +3,6 @@
 
 /** @vitest-environment jsdom */
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
@@ -33,7 +32,7 @@ function fact(field: string, valueKey: string, value: string) {
   };
 }
 
-const CAN_ENRICH = meRoute({ organization: ["read", "update"] });
+const A_READER = meRoute({ organization: ["read", "update"] });
 
 function laneState(outcome = "applied") {
   return {
@@ -65,7 +64,7 @@ describe("the technical profile card", () => {
 
   beforeEach(() => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () =>
         jsonResponse({
           data: [
@@ -86,36 +85,13 @@ describe("the technical profile card", () => {
     expect(screen.getByText("Dienste")).toBeTruthy();
   });
 
-  it("asks for a lookup when the reader presses the button", async () => {
-    const user = userEvent.setup();
-    let asked = 0;
-    installFetchStub({
-      "GET /me": CAN_ENRICH,
-      [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: [] }),
-      [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
-        jsonResponse({ title: "not found" }, 404),
-      [`POST /organizations/${ORG}/technical-enrich`]: () => {
-        asked += 1;
-        return jsonResponse({ organization_id: ORG, status: "queued" }, 202);
-      },
-    });
-    renderCard();
-
-    await user.click(
-      await screen.findByRole("button", { name: "Nachschauen" }),
-    );
-
-    expect(await screen.findByText(/Abfrage läuft/)).toBeTruthy();
-    expect(asked).toBe(1);
-  });
-
   // An empty card with no sentence reads as "this company runs nothing", which
   // is a different and false claim from "this has not been read yet". The
-  // sentence also has to say the reading happens on its own, or the card asks
-  // for a press it does not need.
+  // sentence also has to say the reading happens on its own, because the card
+  // offers no way to ask for one.
   it("says plainly that nothing has been read yet", async () => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: [] }),
       [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
         jsonResponse({ title: "not found" }, 404),
@@ -130,7 +106,7 @@ describe("the technical profile card", () => {
   // today" rather than "they have none".
   it("names a source that did not answer", async () => {
     installFetchStub({
-      "GET /me": CAN_ENRICH,
+      "GET /me": A_READER,
       [`GET /organizations/${ORG}/facts`]: () =>
         jsonResponse({
           data: [fact("mail_provider", "microsoft365", "Microsoft 365")],
@@ -142,7 +118,10 @@ describe("the technical profile card", () => {
     expect(await screen.findByText(/hat nicht geantwortet/)).toBeTruthy();
   });
 
-  it("offers no lookup to a reader who may not write the record", async () => {
+  // The card is a read. It has no button for anyone, so a reader who may not
+  // write the record sees exactly what a rep sees — and the absence of a
+  // control is not a permission decision the card has to make.
+  it("shows the same profile to a reader who may not write the record", async () => {
     installFetchStub({
       "GET /me": meRoute({ organization: ["read"] }, { seat: "read" }),
       [`GET /organizations/${ORG}/facts`]: () =>
@@ -154,7 +133,11 @@ describe("the technical profile card", () => {
     });
     renderCard();
     expect(await screen.findByText("Microsoft 365")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Nachschauen" })).toBeNull();
+    // Every button on this card is an evidence mark opening a row's provenance.
+    // A control that ASKS for anything would not be one.
+    for (const button of screen.queryAllByRole("button")) {
+      expect(button.className).toContain("evmark-trigger");
+    }
   });
 });
 

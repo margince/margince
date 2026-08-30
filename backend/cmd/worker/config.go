@@ -114,7 +114,7 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 		"how often to look for companies whose technical profile is missing or stale. Unlike "+
 			"geocoding there is no write to trigger on — a company's mail provider changes at the "+
 			"COMPANY — so this pass is the only thing that observes a move. Runs on start; 0 turns "+
-			"the sweep off and leaves the button working.")
+			"the sweep off and leaves the lookup to the site read that queues it.")
 	env.String(fs, &cfg.gmailClientID, "gmail-client-id", "MARGINCE_GMAIL_CLIENT_ID", "", "Google OAuth client id for the Gmail capture connector; enables the background Gmail sync poll")
 	env.String(fs, &cfg.gmailClientSecret, "gmail-client-secret", "MARGINCE_GMAIL_CLIENT_SECRET", "", "Google OAuth client secret for the Gmail capture connector")
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; enables its background sync poll")

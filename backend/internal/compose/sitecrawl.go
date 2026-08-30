@@ -44,6 +44,12 @@ type crawlPage struct {
 	// pipeline itself keys off Text alone.
 	Bytes    int
 	FetchDur time.Duration
+	// Fingerprint is what THIS page declared about the software serving it.
+	//
+	// Kept per page rather than for the seed alone: a shop system, a customer
+	// portal or a careers platform commonly announces itself on the one page
+	// that runs it, and a homepage-only read cannot see any of them.
+	Fingerprint webread.Fingerprint
 }
 
 type crawlSkip struct {
@@ -362,7 +368,7 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 		pacer:   pacer,
 		seedURL: seedURL,
 		crawl: siteCrawl{
-			Pages:      []crawlPage{{URL: seedURL, Kind: crmcontracts.SiteReadPageKindHome, Text: seedPage.Text, Bytes: seedPage.Bytes}},
+			Pages:      []crawlPage{{URL: seedURL, Kind: crmcontracts.SiteReadPageKindHome, Text: seedPage.Text, Bytes: seedPage.Bytes, Fingerprint: seedPage.Fingerprint}},
 			SeedAssets: declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons},
 			SeedURL:    seedURL,
 		},

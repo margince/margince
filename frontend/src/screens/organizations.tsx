@@ -3208,14 +3208,6 @@ function ReferenceDisclosures({
       <Disclosure summary={t("co.evidence.title")}>
         <FactsCard orgId={org.id} onOpenHistory={onOpenHistory} />
       </Disclosure>
-      {/* What the company RUNS, beside what it SAYS. Its own disclosure rather
-          than rows inside the evidence card above, because these are read from
-          public records the company never wrote for us — DNS, certificates,
-          the markup of their own homepage — and a reader deciding how far to
-          trust a claim is helped by knowing which of the two it is. */}
-      <Disclosure summary={t("co.tech.title")}>
-        <TechnicalProfileCard orgId={org.id} />
-      </Disclosure>
       {/* Who this account is connected to, and the account's own tools and
           configuration. Neither reads like an "overview" or a "deal" or a
           "task" — both are reference material about the RECORD itself, which
@@ -3232,6 +3224,13 @@ function ReferenceDisclosures({
             nothing on file meets the offer at the top of its own column, and
             two offers to research the same company is none. */}
         {!offerOnOverview && <DeepReadCard orgId={org.id} />}
+        {/* What the company RUNS, beside what it SAYS — read from public
+            records the company never wrote for us: DNS, certificates, the
+            markup of their own homepage. It sits under the read that produces
+            it rather than in a disclosure of its own, because the site read
+            above is what queues it and a reader who just started one looks
+            here for what it brought back. */}
+        <TechnicalProfileCard orgId={org.id} />
       </Disclosure>
     </>
   );

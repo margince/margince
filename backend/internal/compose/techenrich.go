@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/certlog"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
-	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -57,11 +56,6 @@ type certHostnameReader interface {
 	Hostnames(ctx context.Context, domain string) ([]string, bool, error)
 }
 
-// homepageReader reads one page's own declarations about its stack.
-type homepageReader interface {
-	FetchFingerprint(ctx context.Context, rawURL string) (webread.Fingerprint, error)
-}
-
 // technicalLookupCache is the remembered-answer surface. The people store
 // implements it; the engine holds the narrow shape so a test can substitute a
 // cache that forgets everything.
@@ -74,7 +68,6 @@ type technicalLookupCache interface {
 type TechnicalEnricher struct {
 	dns   technicalReader
 	certs certHostnameReader
-	pages homepageReader
 	cache technicalLookupCache
 	now   func() time.Time
 }
@@ -84,13 +77,13 @@ type TechnicalEnricher struct {
 // that lane last wrote rather than being cleared by a deployment that simply
 // does not run it.
 func NewTechnicalEnricher(
-	dns technicalReader, certs certHostnameReader, pages homepageReader,
+	dns technicalReader, certs certHostnameReader,
 	cache technicalLookupCache, now func() time.Time,
 ) *TechnicalEnricher {
 	if now == nil {
 		now = time.Now
 	}
-	return &TechnicalEnricher{dns: dns, certs: certs, pages: pages, cache: cache, now: now}
+	return &TechnicalEnricher{dns: dns, certs: certs, cache: cache, now: now}
 }
 
 // laneOutcome is what one lane did, for the attempt ledger and the log.
@@ -125,10 +118,15 @@ func (e *TechnicalEnricher) Read(
 	if domain == "" {
 		return result, nil
 	}
+	// TWO lanes, not three. The homepage lane is written by the SITE READ,
+	// which has already fetched the whole site: a shop system, a portal or a
+	// careers platform commonly announces itself on the one page that runs it,
+	// so a homepage-only fetch here would see less than the crawl already saw
+	// and would then reconcile the crawl's rows away as unobserved.
+	// technicalonsiteread.go carries that lane.
 	outcomes := []laneOutcome{
 		e.readDNS(ctx, domain, &result),
 		e.readCertLog(ctx, domain, &result),
-		e.readHomepage(ctx, domain, &result),
 	}
 	for _, outcome := range outcomes {
 		if outcome.Completed {
@@ -350,44 +348,6 @@ func (e *TechnicalEnricher) readCertLog(
 	sourceURL := certlog.PublicBaseURL + "/?q=%25." + domain
 	for _, service := range services {
 		result.Observations = append(result.Observations, observationOf(service, sourceURL))
-	}
-	outcome.Completed = true
-	return outcome
-}
-
-// readHomepage reads what the company's own homepage declares about its stack.
-func (e *TechnicalEnricher) readHomepage(
-	ctx context.Context, domain string, result *people.TechnicalEnrichment,
-) laneOutcome {
-	outcome := laneOutcome{Lane: people.LaneHomepage}
-	if e.pages == nil {
-		return outcome
-	}
-	page, err := e.pages.FetchFingerprint(ctx, "https://"+domain)
-	if err != nil {
-		if errors.Is(err, webread.ErrRobotsDisallowed) {
-			// The site said no. That is an ANSWER, and the lane completes with
-			// nothing rather than retrying against a refusal — which also
-			// clears any technology rows a previous read left, because we no
-			// longer have permission to claim them.
-			outcome.Completed = true
-			outcome.Refused = true
-			return outcome
-		}
-		return laneOutcome{Lane: people.LaneHomepage, Err: err}
-	}
-	found, err := techprofile.Technologies(techprofile.Evidence{
-		Headers:     page.Headers,
-		CookieNames: page.CookieNames,
-		ScriptSrcs:  page.ScriptSrcs,
-		Generator:   page.Generator,
-		Body:        page.Body,
-	})
-	if err != nil {
-		return laneOutcome{Lane: people.LaneHomepage, Err: err}
-	}
-	for _, technology := range found {
-		result.Observations = append(result.Observations, observationOf(technology, page.URL))
 	}
 	outcome.Completed = true
 	return outcome

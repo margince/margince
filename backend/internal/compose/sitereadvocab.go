@@ -49,8 +49,17 @@ var categoryGuidance = map[string]string{
 	"market": "served_industry, company_size, geography and language describe markets the company explicitly says it serves — one entry per grounded item, repeating the field name. " +
 		"company_size here is the size of the customers they sell TO (\"we work with mid-sized retailers\"), never their own headcount, which is employee_range under company.",
 	"signal": "certification names a held certification or standard; partner a named business partner; " +
-		"named_customer a customer the site names; technology a platform, product or stack the company says it " +
-		"works with or builds on; quantified_outcome preserves an exact measurable customer or case-study result " +
+		"named_customer a customer the site names; " +
+		"technology a named platform, product or stack the company states it USES, RUNS or BUILDS IN — its own " +
+		"stack, not its subject matter. The passage must assert this company's own use: \"built on X\", \"we run X\", " +
+		"\"our X-based platform\", \"migrating our shop to X\". A vendor merely NAMED, described, compared, offered as " +
+		"an integration or listed among options is not a technology fact, however much text the page spends on it — " +
+		"a page selling integrations names every vendor it integrates with, and none of them is a statement about " +
+		"what this company runs. NEVER an analyst firm, rating, report or award (Gartner, Forrester, a Magic " +
+		"Quadrant, a Wave) — those rate a company, they are not something it uses. NEVER a bare capability " +
+		"category (BI, CRM, ERP, PIM, e-commerce, cloud): a category is not a product. If the page does not say " +
+		"THIS company uses it, omit it. " +
+		"quantified_outcome preserves an exact measurable customer or case-study result " +
 		"without strengthening the claim — one entry per item, repeating the field name.",
 }
 

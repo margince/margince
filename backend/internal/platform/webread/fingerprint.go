@@ -81,16 +81,25 @@ func (f *Fetcher) FetchFingerprint(ctx context.Context, rawURL string) (Fingerpr
 	if final == nil {
 		final = parsed
 	}
-	body := string(got.body)
+	return fingerprintOf(got.header, string(got.body), final), nil
+}
+
+// fingerprintOf reads one fetched response for what it declares about its own
+// stack. Split out of FetchFingerprint so the CRAWLER can build the same
+// observation from the pages it already fetched: a shop system that only
+// announces itself on /shop is invisible to a homepage-only read, and asking
+// the site for those pages a second time to see headers the crawl already
+// received would spend a request the site does not owe us.
+func fingerprintOf(header http.Header, body string, final *url.URL) Fingerprint {
 	scripts, generator := extractStackMarkers(body, final)
 	return Fingerprint{
 		URL:         final.String(),
-		Headers:     withoutCookies(got.header),
-		CookieNames: cookieNames(got.header),
+		Headers:     withoutCookies(header),
+		CookieNames: cookieNames(header),
 		ScriptSrcs:  scripts,
 		Generator:   generator,
 		Body:        body,
-	}, nil
+	}
 }
 
 // withoutCookies copies the response header without Set-Cookie.
