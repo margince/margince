@@ -93,7 +93,12 @@ func TestOnlyOneFunctionRegistersTheGoogleConnectors(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		for _, built := range googleConnectorsBuiltIn(file) {
+		built, dotImported := googleConnectorsBuiltIn(file)
+		for _, hidden := range dotImported {
+			t.Errorf("%s: dot-imports %s, so a construction in this file reads as a bare New( ) with no package to match on and this census cannot see it. Import it with a qualifier — a reader that cannot see a registration is how the stored app became unreachable while every test passed",
+				walked, hidden)
+		}
+		for _, built := range built {
 			switch {
 			case built.function == googleConnectorRegistrar:
 				inRegistrar[built.connector] = true
@@ -120,6 +125,37 @@ func TestOnlyOneFunctionRegistersTheGoogleConnectors(t *testing.T) {
 	}
 }
 
+// TestTheGoogleConnectorCensusFailsClosedOnADotImport proves the arm the tree
+// cannot exercise.
+//
+// A dot import of gmail or gcal into package compose does not compile today —
+// `New` collides with compose's own — so the reader is asked directly, with a
+// planted file. The arm is not dead code for that: the collision is an accident
+// of two names, and a census whose blind spot is only closed by an accident is
+// a census nobody should trust.
+func TestTheGoogleConnectorCensusFailsClosedOnADotImport(t *testing.T) {
+	t.Parallel()
+	const planted = `package compose
+
+import . "github.com/margince/margince/backend/internal/modules/capture/gmail"
+
+func hidden() any { return New(nil, nil) }
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	builds, dotImported := googleConnectorsBuiltIn(file)
+	if len(dotImported) != 1 || !strings.HasSuffix(dotImported[0], "/gmail") {
+		t.Errorf("dot-imported = %v, want the gmail package reported: a construction this reader cannot see must be "+
+			"named, not skipped", dotImported)
+	}
+	if len(builds) != 0 {
+		t.Errorf("builds = %v, want none: there is no qualifier to attribute one to, which is the whole reason the "+
+			"import itself is reported", builds)
+	}
+}
+
 // googleConnectorBuild is one construction and the function it sits in.
 type googleConnectorBuild struct {
 	function  string
@@ -127,39 +163,53 @@ type googleConnectorBuild struct {
 }
 
 // googleConnectorsBuiltIn names the Google connectors a file constructs, with
-// the enclosing function of each. The qualifier comes from the file's own
-// import block rather than from the package's name, so an aliased import is
-// read as the connector it is.
-func googleConnectorsBuiltIn(file *ast.File) []googleConnectorBuild {
+// the enclosing function of each, and separately the governed packages the file
+// dot-imports.
+//
+// The qualifier comes from the file's own import block rather than from the
+// package's name, so an aliased import is read as the connector it is. A DOT
+// import has no qualifier at all — its construction reads as a bare `New(…)`
+// with nothing to match on — so it is reported rather than skipped: a reader
+// that cannot see a registration certifies nothing while reading exactly like
+// a clean one.
+//
+// It walks the WHOLE file, not just function bodies. A package-scope
+// initializer is a construction like any other, and one attributed to package
+// scope can never be the registrar, so it fails — which is the right answer,
+// since a registry built at init time decides reachability the same way.
+func googleConnectorsBuiltIn(file *ast.File) (builds []googleConnectorBuild, dotImported []string) {
 	byQualifier := map[string]string{}
 	for _, importPath := range googleConnectorPackages {
-		// A dot import has no qualifier to match on, and a blank one cannot be
-		// called through at all; ImportedAs reports both as an empty name.
-		if qualifier, _ := gatekit.ImportedAs(file, importPath); qualifier != "" {
+		qualifier, dot := gatekit.ImportedAs(file, importPath)
+		switch {
+		case dot:
+			dotImported = append(dotImported, importPath)
+		case qualifier != "":
 			byQualifier[qualifier] = path.Base(importPath)
 		}
+		// A blank import is neither: it cannot be called through at all.
 	}
 	if len(byQualifier) == 0 {
-		return nil
+		return nil, dotImported
 	}
-	var out []googleConnectorBuild
-	for _, decl := range file.Decls {
-		fn, isFunc := decl.(*ast.FuncDecl)
-		if !isFunc || fn.Body == nil {
-			continue
-		}
-		for _, connector := range googleConnectorsConstructedIn(fn.Body, byQualifier) {
-			out = append(out, googleConnectorBuild{function: functionName(fn), connector: connector})
-		}
-	}
-	return out
-}
-
-// googleConnectorsConstructedIn names the connectors a body builds, sorted so
-// that a function building both reports them in a settled order.
-func googleConnectorsConstructedIn(body *ast.BlockStmt, byQualifier map[string]string) []string {
+	// packageScope is what a construction outside every function declaration is
+	// attributed to. It is spelled as prose rather than as an identifier so that
+	// no function can be named it and inherit the registrar's licence.
+	const packageScope = "(package scope)"
+	enclosing := packageScope
 	seen := map[string]bool{}
-	ast.Inspect(body, func(n ast.Node) bool {
+	var walk func(ast.Node) bool
+	walk = func(n ast.Node) bool {
+		if fn, isFunc := n.(*ast.FuncDecl); isFunc {
+			if fn.Body == nil {
+				return false
+			}
+			before := enclosing
+			enclosing = functionName(fn)
+			ast.Inspect(fn.Body, walk)
+			enclosing = before
+			return false
+		}
 		call, isCall := n.(*ast.CallExpr)
 		if !isCall {
 			return true
@@ -168,17 +218,29 @@ func googleConnectorsConstructedIn(body *ast.BlockStmt, byQualifier map[string]s
 		if !isSel || sel.Sel.Name != "New" {
 			return true
 		}
-		if qualifier, isIdent := sel.X.(*ast.Ident); isIdent && byQualifier[qualifier.Name] != "" {
-			seen[byQualifier[qualifier.Name]] = true
+		qualifier, isIdent := sel.X.(*ast.Ident)
+		if !isIdent || byQualifier[qualifier.Name] == "" {
+			return true
+		}
+		// One entry per function per connector: a registrar building the same
+		// one twice is one decision, and reporting it twice reads as two.
+		key := enclosing + ":" + byQualifier[qualifier.Name]
+		if !seen[key] {
+			seen[key] = true
+			builds = append(builds, googleConnectorBuild{
+				function: enclosing, connector: byQualifier[qualifier.Name],
+			})
 		}
 		return true
-	})
-	var out []string
-	for connector := range seen {
-		out = append(out, connector)
 	}
-	sort.Strings(out)
-	return out
+	ast.Inspect(file, walk)
+	sort.Slice(builds, func(i, j int) bool {
+		if builds[i].function != builds[j].function {
+			return builds[i].function < builds[j].function
+		}
+		return builds[i].connector < builds[j].connector
+	})
+	return builds, dotImported
 }
 
 // functionName spells a method as Receiver.Name, so that two files declaring
