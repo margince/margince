@@ -254,3 +254,134 @@ func TestAThreadTheOwnerWroteFromAnAliasIsAboutTheCustomer(t *testing.T) {
 		t.Errorf("%d person(s) for the owner's own alias, want 0", n)
 	}
 }
+
+// The owner is never stamped at both ends of their own message.
+//
+// The participant rows are what the interaction graph reads as "who talked to
+// whom", and they take the connector's DERIVED counterparty rather than the
+// ladder's corrected subject — so a message the owner sent from an alias would
+// record the owner as the other end of their own exchange.
+//
+// Nothing promotes such a row to a person: the promotion needs a person_email,
+// and the gates above keep an alias from having one. What this prevents is a
+// durable falsehood about the exchange.
+func TestTheOwnersOwnAliasIsNeverTheOtherEndOfTheirMessage(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
+
+	env.syncSent(t, map[string]bool{"alias2@private.example": true},
+		emailCC(ownerAlias, "Lars Private", "alice@acme.example", captureOwner, "alias2@private.example"),
+	)
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM activity_participant WHERE address = '`+ownerAlias+`'`); n != 0 {
+		t.Errorf("%d participant row(s) name the owner's own alias as a party — "+
+			"the owner is recorded at both ends of their own message", n)
+	}
+	// The colleague's address IS still stamped, so the fixture can tell a
+	// working rule from a participant writer that stopped working.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM activity_participant WHERE address = 'alice@acme.example'`); n != 1 {
+		t.Errorf("%d participant row(s) for the customer, want 1 — the rule refuses more than the owner's own addresses", n)
+	}
+}
+
+// The connected mailbox's OWN address is part of the set, and nobody declares
+// it — the grant established it.
+//
+// Without it the gates protect a seat's aliases and leave their primary address
+// exposed. On a consumer mailbox the workspace's own domains do not cover that
+// address either, so a message between the owner's two addresses stands the
+// OWNER in as their own counterparty and the ladder is asked whether to create
+// a record for them.
+//
+// The fixture's mailbox is on the workspace's own domain, so the case is made
+// by claiming the alias and asserting the ladder never reaches the owner: with
+// the primary address absent from the set, standInSubject picks it.
+func TestTheConnectedMailboxsOwnAddressIsNeverTheLaddersSubject(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
+
+	// Alias → alias, with the owner's primary address Cc'd. Every party is the
+	// owner; nothing external is left for the ladder to be about.
+	env.syncSent(t, map[string]bool{"prim1@private.example": true},
+		emailCC(ownerAlias, "Lars Private", ownerAlias, captureOwner, "prim1@private.example"),
+	)
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty WHERE email = '`+captureOwner+`'`); n != 0 {
+		t.Errorf("the ladder is deciding about the mailbox's own address — a seat's primary address is " +
+			"part of who they are, and nobody declares it")
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = '`+captureOwner+`'`); n != 0 {
+		t.Errorf("%d person(s) for the mailbox's own address, want 0", n)
+	}
+}
+
+// A claim settles the seat's OWN open questions about that address.
+//
+// Without this the gates bind only mail that arrives from now on: an address
+// deferred moments before the claim keeps its pending row, a verdict lands on
+// it afterwards, and the seat's own address becomes a contact through exactly
+// the door the claim was made to close.
+func TestDeclaringAnIdentitySettlesTheOpenQuestionsAboutIt(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+
+	// An unattested first message from the alias defers: T1 has no evidence the
+	// workspace wrote to it, so the address waits on a verdict.
+	env.sync(t, email(ownerAlias, "Lars Private", captureOwner, "pend1@private.example", ""))
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE email = '`+ownerAlias+`' AND status IN ('pending', 'unsure')`); n != 1 {
+		t.Fatalf("%d open ledger row(s) for the alias, want 1 — the fixture never reaches the case under test", n)
+	}
+
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE email = '`+ownerAlias+`' AND status IN ('pending', 'unsure')`); n != 0 {
+		t.Errorf("%d open ledger row(s) survive the claim — a verdict landing on one of them mints the "+
+			"seat's own address as a contact", n)
+	}
+	// The row STAYS, settled: the Senders surface reads it, and a decision that
+	// vanished from it would be one nobody could see or reverse.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE email = '`+ownerAlias+`' AND status = 'suppressed'`); n != 1 {
+		t.Errorf("%d settled ledger row(s), want 1 — the answer must be visible, not absent", n)
+	}
+}
+
+// A colleague's open question about the same address is theirs. The ledger is
+// owner-scoped, and one seat claiming an address must not answer another seat's
+// pending decision about it.
+func TestAClaimSettlesNoColleaguesOpenQuestion(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+
+	env.sync(t, email(ownerAlias, "Lars Private", captureOwner, "pend2@private.example", ""))
+	// Re-own the pending row to a colleague, which is the state two connected
+	// mailboxes reach when both hear from the same sender.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_pending_counterparty SET owner_id = $1 WHERE email = $2`, e.Rep3, ownerAlias)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM capture_pending_counterparty
+		 WHERE email = '`+ownerAlias+`' AND status IN ('pending', 'unsure')`); n != 1 {
+		t.Errorf("Rep1's claim settled Rep3's open question — one seat's claim about their own address " +
+			"must not answer a colleague's pending decision")
+	}
+}

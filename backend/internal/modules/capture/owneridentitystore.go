@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The identity vocabulary, the Go spelling of the table's CHECKs. The kinds
@@ -71,14 +72,36 @@ func NewOwnerIdentityStore(db *database.DB) *OwnerIdentityStore {
 	return &OwnerIdentityStore{db: db}
 }
 
+// seatItself is the caller when they are a HUMAN seat acting for themselves,
+// and a refusal otherwise.
+//
+// auth.RequireHuman is not enough here, and deliberately so: it refuses an
+// agent and a buyer, and admits the connector and system principals — which is
+// right for the reads it guards, and wrong for this list. A connector
+// principal carries the granting seat's UserID, so under RequireHuman alone a
+// connector could list, add and withdraw that seat's private identities. The
+// list says which of a person's mail is theirs alone; nothing but that person
+// touches it.
+func seatItself(ctx context.Context) (principal.Principal, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return principal.Principal{}, err
+	}
+	actor, err := storekit.Actor(ctx)
+	if err != nil {
+		return principal.Principal{}, err
+	}
+	if actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+		return principal.Principal{}, fmt.Errorf(
+			"capture: an owner identity is a seat's own claim about themselves: %w", apperrors.ErrPermissionDenied)
+	}
+	return actor, nil
+}
+
 // List answers the caller's own identities and nobody else's. A colleague's
 // alias is not a workspace fact: it says which of their mail is private, which
 // is the thing this list exists to protect.
 func (s *OwnerIdentityStore) List(ctx context.Context) ([]OwnerIdentity, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return nil, err
-	}
-	actor, err := storekit.Actor(ctx)
+	actor, err := seatItself(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,10 +140,7 @@ func scanOwnerIdentity(row pgx.CollectableRow) (OwnerIdentity, error) {
 // claim binds only their own mail. Idempotent on the folded value, so re-adding
 // answers the existing row rather than refusing.
 func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerIdentity, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return OwnerIdentity{}, err
-	}
-	actor, err := storekit.Actor(ctx)
+	actor, err := seatItself(ctx)
 	if err != nil {
 		return OwnerIdentity{}, err
 	}
@@ -139,6 +159,16 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {
 			return fmt.Errorf("capture: adding an owner identity: %w", err)
 		}
+		// A claim about an address already WAITING on a verdict retires that
+		// question. Without this the gates only bind mail that arrives from
+		// now on: an address deferred moments before the claim keeps its
+		// pending row, a verdict lands on it afterwards, and the seat's own
+		// address becomes a contact through the door the claim was made to
+		// close. Only the claimant's own rows — the ledger is owner-scoped,
+		// and a colleague's verdict about the same address is theirs.
+		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
+			return err
+		}
 		// Audit-only, like the exclusion list and the own-domain list beside
 		// it: this is capture configuration, and the closed event catalog
 		// (events.md) carries no type for it.
@@ -154,10 +184,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 // exclusion list uses, and for the same reason: a refusal that distinguished
 // "not yours" from "not there" would confirm the colleague's alias exists.
 func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return err
-	}
-	actor, err := storekit.Actor(ctx)
+	actor, err := seatItself(ctx)
 	if err != nil {
 		return err
 	}
@@ -204,12 +231,28 @@ func ownerIdentityAuditImage(identity OwnerIdentity) map[string]any {
 // background sweep, a system principal). An empty set changes no decision: it
 // leaves every gate exactly where it was before a seat declared anything.
 func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
-	user := actorUserID(ctx)
+	// The MAILBOX OWNER, resolved the way the creation ladder resolves them:
+	// OnBehalfOf when a connector names one, else UserID. Reading UserID
+	// directly would load one seat's claims while ingesting and assigning
+	// records for another — the two fields agree in every principal the
+	// registry builds today, and a gate that depends on that agreement without
+	// asking for it is one refactor away from applying A's claims to B's mail.
+	_, user := capturePrincipal(ctx)
 	if user == ids.Nil {
 		return SelfSet{}, nil
 	}
+	// The connected mailbox's OWN address is part of the set, and it is not in
+	// the table: nobody declares it, the grant established it. Without it the
+	// gates protect a seat's aliases and leave their primary address exposed —
+	// on a consumer mailbox (owner@gmail.com) the workspace's own domains do
+	// not cover it either, so a message between the owner's two addresses would
+	// stand the OWNER in as its own counterparty. account_label is what every
+	// mail connector reports at grant, and capture_connection holds it per seat.
 	rows, err := tx.Query(ctx, `
-		SELECT kind, value FROM capture_owner_identity WHERE user_id = $1`, user)
+		SELECT kind, value FROM capture_owner_identity WHERE user_id = $1
+		 UNION ALL
+		SELECT 'address', lower(account_label) FROM capture_connection
+		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL`, user)
 	if err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 	}
@@ -230,4 +273,34 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 	}
 	return NewSelfSet(addresses, domains), nil
+}
+
+// retirePendingForIdentityTx settles the seat's own open questions about an
+// address they have just claimed as theirs.
+//
+// `suppressed` is the ledger's terminal answer for "this is not a counterparty",
+// which is exactly what the claim says. The rows are left in place rather than
+// deleted: the Senders surface reads them, and an address that silently
+// vanished from it would be a decision nobody could see or reverse.
+//
+// A DOMAIN claim retires every open row on that domain and its subdomains,
+// matched the way SelfSet matches so the ledger and the gates agree about what
+// the claim covers.
+func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, identity OwnerIdentity) error {
+	const settle = `
+		UPDATE capture_pending_counterparty
+		   SET status = 'suppressed', resolved_at = now()
+		 WHERE owner_id = $1 AND status IN ('pending', 'unsure')`
+	var err error
+	if identity.Kind == IdentityKindDomain {
+		_, err = tx.Exec(ctx, settle+`
+		   AND (split_part(email, '@', 2) = $2
+		        OR split_part(email, '@', 2) LIKE '%.' || $2)`, user, identity.Value)
+	} else {
+		_, err = tx.Exec(ctx, settle+` AND email = $2`, user, identity.Value)
+	}
+	if err != nil {
+		return fmt.Errorf("capture: retiring the open questions about a claimed address: %w", err)
+	}
+	return nil
 }

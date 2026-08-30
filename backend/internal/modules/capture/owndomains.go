@@ -258,19 +258,38 @@ type SelfSet struct {
 func NewSelfSet(addresses, domains []string) SelfSet {
 	set := SelfSet{addresses: make(map[string]struct{}, len(addresses)), domains: NewInternalDomains(domains)}
 	for _, address := range addresses {
-		folded := strings.ToLower(strings.TrimSpace(address))
-		if folded == "" {
-			continue
+		if folded := foldAddress(address); folded != "" {
+			set.addresses[folded] = struct{}{}
 		}
-		set.addresses[folded] = struct{}{}
 	}
 	return set
+}
+
+// foldAddress is one address in the form both sides of a comparison agree on:
+// lowercased, and its DOMAIN half normalized the way a claimed domain is, so a
+// unicode domain and its punycode form are one address rather than two.
+//
+// The local part is folded in case and otherwise left alone. Plus-addressing is
+// deliberately NOT stripped: `me+news@` is a different address, and treating it
+// as the same would silence mail to an address the seat never declared — the
+// direction that loses a message rather than keeping one.
+func foldAddress(address string) string {
+	folded := strings.ToLower(strings.TrimSpace(address))
+	at := strings.LastIndex(folded, "@")
+	if at < 0 {
+		return folded
+	}
+	domain := normalizeDomain(folded[at+1:])
+	if domain == "" {
+		return folded
+	}
+	return folded[:at+1] + domain
 }
 
 // Covers reports whether this address is one the seat declared as their own,
 // exactly or by one of their domains.
 func (s SelfSet) Covers(address string) bool {
-	folded := strings.ToLower(strings.TrimSpace(address))
+	folded := foldAddress(address)
 	if folded == "" {
 		return false
 	}

@@ -69,6 +69,12 @@ func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	if err != nil {
 		return false, err
 	}
+	// A capture whose mailbox owner cannot be named is not judged against
+	// anybody's claims — the set is empty, and this gate answers exactly as it
+	// did before the feature existed. The message is kept and the ladder
+	// refuses to create a record for it (derivationStart's no-granting-human
+	// arm), which is the same direction every other gate here fails in: toward
+	// keeping a message rather than acting on an owner nobody can name.
 	external := self.WithoutSelf(rec.Addresses)
 	if len(external) == 0 {
 		// Every party was the seat themselves. Internal by the same reasoning
