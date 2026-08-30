@@ -83,6 +83,12 @@ tier owner's review.
    	}
    }
    ```
+   **`Description` is required.** One sentence, at most 200 characters, saying what the unit is for.
+   The Extensions settings page lists every composed unit by it, and an admin deciding whether to
+   grant a unit's permissions has nothing else to go on — a card headed `de` and nothing more is what
+   this field exists to prevent. An empty or computed one fails `make gen`, not just the boot, so a
+   unit that omits it never reaches a deploy.
+
    **Import only `backend/pkg/**` packages carrying `//margince:extension-surface`** — `pkg/extension`,
    `pkg/extension/jurisdiction` and `pkg/extension/crm` today. Any import of `internal/**`, `cmd/**`, an
    unmarked `pkg` package, the composition module, or a sibling extension fails the arch test (the
@@ -402,7 +408,7 @@ Settings instead, on the page that already holds the kind of credential you aske
 
 | Your declaration | Where the unit is listed | What the page means |
 |---|---|---|
-| `Scope: extension.SecretScopeUser` | Settings → Connections | one member's own account somewhere; nobody else sees it |
+| `Scope: extension.SecretScopeUser` | Settings → Connections | one user's own account somewhere; nobody else sees it |
 | `Scope: extension.SecretScopeWorkspace` | Settings → Integrations | the installation's shared credential, curated by an operator |
 | no `Secrets` at all | nowhere | nothing to manage, so nothing to list; `#/ext/<name>` still routes |
 
