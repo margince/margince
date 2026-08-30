@@ -147,31 +147,34 @@ func TestASubjectAccessExportListsAHeldActivityWithoutItsText(t *testing.T) {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
 
-	rows := map[ids.UUID]map[string]any{}
+	// The package holds raw row maps, so the id arrives as the driver's own
+	// [16]byte rather than as ids.UUID. Keying on the string form is what lets
+	// the assertions name a specific message.
+	rows := map[string]map[string]any{}
 	for _, row := range pkg.Activities {
-		id, ok := row["id"].(ids.UUID)
+		raw, ok := row["id"].([16]byte)
 		if !ok {
 			t.Fatalf("an exported activity carries no id: %#v", row)
 		}
-		rows[id] = row
+		rows[ids.UUID(raw).String()] = row
 	}
 	if len(rows) != 2 {
 		t.Fatalf("the export carried %d activities, want both — a limited message is still HELD about the subject and Art. 15 owes its existence", len(rows))
 	}
 	// The open one proves the export discloses at all.
-	if got := rows[open]["subject"]; got != "ordinary order confirmation" {
+	if got := rows[open.String()]["subject"]; got != "ordinary order confirmation" {
 		t.Errorf("the open message's subject came back as %#v — the fixture cannot tell a working gate from a broken export", got)
 	}
-	if got := rows[held]["subject"]; got != nil {
+	if got := rows[held.String()]["subject"]; got != nil {
 		t.Errorf("the limited message's subject was exported as %#v — a colleague's private correspondence in a package the subject keeps a copy of", got)
 	}
-	if got := rows[held]["body"]; got != nil {
+	if got := rows[held.String()]["body"]; got != nil {
 		t.Errorf("the limited message's body was exported as %#v", got)
 	}
-	if got := rows[held]["content_disclosed"]; got != false {
+	if got := rows[held.String()]["content_disclosed"]; got != false {
 		t.Errorf("content_disclosed for the limited message = %#v, want false — the package must say the text was withheld rather than look like there was none", got)
 	}
-	if rows[held]["withheld_from_mailbox_of"] == nil {
+	if rows[held.String()]["withheld_from_mailbox_of"] == nil {
 		t.Error("the withheld row names no mailbox — the operator has nobody to ask for a release")
 	}
 }

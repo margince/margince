@@ -158,11 +158,28 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		e.seed(t, capturedRow{kind: "email", archived: true}):              pipelinetrace.ReasonArchived,
 		e.seed(t, capturedRow{kind: "email", capturedBy: "human:someone"}): pipelinetrace.ReasonNotConnectorCaptured,
 		e.seed(t, capturedRow{kind: "email", undecidedSender: true}):       pipelinetrace.ReasonSenderUndecided,
-		// A limited message is not labelled: the label is derived from subject
-		// and body and shown on a worklist the message's audience does not
-		// bound. Without its own reason the member would be told the batch
-		// simply has not reached it, and would wait forever.
-		e.seed(t, capturedRow{kind: "email", audience: "participants"}): pipelinetrace.ReasonAudienceLimited,
+	}
+	// The audience exclusion is asserted apart from the loop above, because the
+	// trace read is itself audience-gated: to a reader outside the audience the
+	// honest answer is "not found", and only the mailbox owner gets far enough
+	// to be told WHY the classifier skipped it. Seeded with this fixture's own
+	// user as the capturing mailbox so the read reaches the reason.
+	limited := e.seed(t, capturedRow{
+		kind: "email", audience: "participants",
+		capturedBy: "connector:gmail:" + e.user.String(),
+	})
+
+	limitedFacts, err := e.store.ReadPipelineFacts(ctx, limited)
+	if err != nil {
+		t.Fatalf("the mailbox owner could not read their own limited message's trace: %v", err)
+	}
+	if limitedFacts.ClassifyReason != pipelinetrace.ReasonAudienceLimited {
+		t.Errorf("reason for a limited message = %q, want %q — without its own reason the owner is told the batch "+
+			"simply has not reached it, and waits for a pass that will never run",
+			limitedFacts.ClassifyReason, pipelinetrace.ReasonAudienceLimited)
+	}
+	if limitedFacts.ClassifyEligible {
+		t.Error("a limited message reports eligible — the reader and the backlog disagree, so the shared predicate is no longer shared")
 	}
 
 	// Half one: the classifier's own backlog selects EXACTLY the eligible row.

@@ -350,14 +350,16 @@ func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
 	}
 }
 
-// The unbounded export and the audience. Row scope and audience are different
-// obligations: row scope says which RECORDS an admin may reach, and an admin
-// reaches all of them; the audience says who may read one message's CONTENT,
-// and it does not yield to row_scope=all. The attachment manifest and the audit
-// log both point at activities, so an export that spared the unbounded actor
-// the whole polymorphic clause handed over the attachment names and the
-// before-and-after images of every limited conversation in the workspace.
-func TestAnUnboundedExportCarriesNoHeldAttachmentOrAuditImage(t *testing.T) {
+// An admin's export carries no limited message's attachment name and no audit
+// image of one. The filename states what the message is about
+// (`Aufhebungsvertrag_Mueller.pdf`) and the audit image carries its
+// before-and-after, so both are that message's content reached by another
+// route than its body.
+//
+// The admin here holds row_scope=all, which is the strongest reader the product
+// has: audience does not yield to it (auth.ActivityContentClause), and this is
+// the test that says so for the bundle.
+func TestAnAdminExportCarriesNoHeldAttachmentOrAuditImage(t *testing.T) {
 	e := SetupSearch(t)
 	e.seedExportFixture(t)
 
@@ -414,4 +416,39 @@ func TestAnUnboundedExportCarriesNoHeldAttachmentOrAuditImage(t *testing.T) {
 	if activityImages != 1 {
 		t.Errorf("the admin bundle carried %d activity audit images, want 1 (the open message's) — an image of a limited message is that message's content in the compliance trail", activityImages)
 	}
+}
+
+// The own-trail arm of the audit scope, which is the route an audience test on
+// the entity arm alone does not cover: a colleague who TOUCHED a message before
+// it was limited would otherwise export its before-and-after image forever,
+// because `actor_id = me` admitted the row without asking about the activity.
+//
+// The rep here is bounded (row_scope=team) and is the actor on the audit row,
+// so the entity arm refuses the row and only the own-trail arm can admit it.
+func TestARepsOwnAuditTrailStopsAtALimitedMessage(t *testing.T) {
+	e := SetupSearch(t)
+	f := e.seedExportFixture(t)
+
+	limited := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, audience)
+		VALUES ($1, 'email', 'Aufhebungsvertrag', 'the body of it', now(), 'gmail', 'connector:gmail:'||$2::text, 'participants')`,
+		e.Rep3.String())
+	// Rep1 performed the change and is not in the audience: the message belongs
+	// to rep3's mailbox and rep1 is not a participant.
+	e.SeedID(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
+		VALUES ($1, 'human', $2, 'update', 'activity', $3)`, "human:"+e.Rep1.String(), limited)
+
+	var buf bytes.Buffer
+	if _, err := compose.NewExportWriter(e.Pool).WriteBundle(e.exportRep(e.Rep1, e.Team1), &buf); err != nil {
+		t.Fatal(err)
+	}
+	entries := BundleEntries(t, buf.Bytes())
+	for _, id := range CSVColumn(t, entries["audit_log.csv"], "entity_id") {
+		if id == limited.String() {
+			t.Error("a rep exported the audit image of a message whose audience excludes them, because they were the actor on it — " +
+				"having made a change is not permission to read what the message says")
+		}
+	}
+	_ = f
 }

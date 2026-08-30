@@ -153,14 +153,18 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 //
 // An actor unbounded over every RECORD arm is spared the record walk and is
 // NOT spared the activity arm. Row scope and audience are different
-// obligations: row scope says which records an admin may reach, and an
-// admin reaches all of them; audience says who may read one message's
-// content, and it does not yield to row_scope=all (auth.ActivityContentClause
-// — an admin reading a colleague's limited mail is the disclosure the limit
-// exists to prevent). An attachment's filename and an audit image's before
-// and after are that message's content, so an unbounded export that skipped
-// this arm handed over the attachment names of every held conversation in
-// the workspace.
+// obligations: row scope says which records a caller may reach, and audience
+// says who may read one message's content, which does not yield to
+// row_scope=all (auth.ActivityContentClause). An attachment's filename and an
+// audit image's before-and-after are that message's content.
+//
+// Today no HUMAN reaches the unbounded branch: person and organization are
+// owner-private (auth.ownerPrivateTables), so UnboundedFor is false for every
+// seat including an admin, and an admin export has always faced the audience
+// through the bounded arms below. The branch is the system principal's, and
+// composing the arm here rather than returning an empty clause is what keeps
+// that true if the owner-private set ever changes — the alternative is a
+// silent widening at a distance, in a file nobody would think to re-read.
 func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any) int) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
