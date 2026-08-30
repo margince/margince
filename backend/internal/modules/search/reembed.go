@@ -23,6 +23,19 @@ import (
 // actually needs is a NEW job enqueued under the CURRENT config.
 var ErrIdentityDrift = errors.New("search: embedder identity drifted from the job's target identity")
 
+// ReembedConsecutiveFailureLimit is how many entities in a row may fail before
+// a pass stops calling the provider at all.
+//
+// It separates the two things a failure can mean. Scattered bad rows — one
+// entity whose text a provider will not take — must not cost the corpus behind
+// them, which is why the loop collects rather than returns. A provider that has
+// stopped answering fails EVERY row, and carrying on then buys nothing: each
+// call waits out its own timeout, the run's attempt is spent regardless, and
+// the joined error grows one entry per entity. Twenty is comfortably more than
+// any run of genuinely bad rows this corpus has produced and small enough that
+// an outage costs seconds rather than hours.
+const ReembedConsecutiveFailureLimit = 20
+
 // ReembedPass is one workspace's slice of a run: the run it reports its progress
 // to, the identity it must still be re-embedding under, and the clock that
 // progress reporting is paced by.
@@ -48,9 +61,13 @@ type ReembedPass struct {
 // UpsertEmbedding for every live entity every time and lets that
 // skip-compare decide what actually needs a model call.
 //
-// Every UpsertEmbedding error propagates as-is (fail-loud): the job row
-// carrying this workspace fails and is retried, rather than this routine
-// silently leaving a partially re-embedded corpus behind a green pass.
+// Every UpsertEmbedding error is reported (fail-loud): the job row carrying
+// this workspace fails and is retried, rather than this routine silently
+// leaving a partially re-embedded corpus behind a green pass. The failures are
+// COLLECTED rather than returned at the first one, so a single entity a
+// provider will not embed costs its own row and not every entity behind it —
+// the reasoning is at the call site, and a cancelled context is the one fault
+// that still stops the pass where it stands.
 //
 // It also reports its own progress onto the run's marker as it goes, because a
 // pass this long is otherwise indistinguishable from one that died: nothing else
@@ -100,6 +117,22 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 		return nil
 	}
 
+	// Faults collected across the whole pass rather than returned at the first
+	// one, so a single unembeddable entity costs its own row and not the corpus
+	// behind it. The pass still FAILS if any entity failed — this changes what
+	// an attempt covers, never whether the run reports the fault.
+	//
+	// consecutive counts failures in a row, and is what tells one bad entity
+	// apart from a provider that has stopped answering. Carrying on through an
+	// OUTAGE would call the vendor once per remaining entity, each call waiting
+	// out its own timeout, so a large corpus could spend hours failing before
+	// River ever got to back off. The counter resets on every success, so a
+	// corpus with scattered bad rows still runs to the end.
+	var (
+		failures    []error
+		consecutive int
+	)
+
 	for entityType, src := range pendingSources {
 		// The marker is refreshed on BOTH sides of the scan, and the first of
 		// those notes is also the one that covers the start of the pass: nothing
@@ -109,20 +142,48 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 		// dominant leg looking dead. The note before the scan is what the scan's
 		// own duration is measured from; the note after it is where the embed
 		// loop's pacing restarts.
+		// Each of these returns joins what the pass has already collected: a
+		// scan or a marker write that fails LATER must not swallow the provider
+		// faults that explain why this run is in trouble in the first place.
 		if err := note(); err != nil {
-			return err
+			return errors.Join(err, errors.Join(failures...))
 		}
 		items, err := ws.liveEntitiesOf(wsCtx, entityType, src)
 		if err != nil {
-			return err
+			return errors.Join(err, errors.Join(failures...))
 		}
 		if err := note(); err != nil {
-			return err
+			return errors.Join(err, errors.Join(failures...))
 		}
 		for _, item := range items {
 			if _, err := ws.UpsertEmbedding(wsCtx, entityType, item.id, item.text, embedder); err != nil {
-				return fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err)
+				// A cancelled context stops the pass at once: the deadline that
+				// cancelled it applies to every entity after this one too, so
+				// carrying on would spend the rest of the corpus re-deriving the
+				// same answer, and the run's own shutdown is not a defect to
+				// collect per entity.
+				if wsCtx.Err() != nil {
+					return errors.Join(fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err), errors.Join(failures...))
+				}
+				// Otherwise the pass CONTINUES past the entity it could not
+				// embed, the way the knowledge corpus sweep does. Stopping here
+				// spent a whole River attempt on the entities AFTER the bad one,
+				// which is what a transient provider fault actually costs: one
+				// dropped connection nine hundred entities in ended the attempt,
+				// and the next attempt re-walked the corpus to reach the same
+				// place. The failures are joined and returned, so the row still
+				// fails and the operator still sees every reason; what changes is
+				// that one bad entity no longer hides the rest of the corpus
+				// behind it.
+				failures = append(failures, fmt.Errorf("search: reembedding %s %s: %w", entityType, item.id, err))
+				consecutive++
+				if consecutive >= ReembedConsecutiveFailureLimit {
+					return fmt.Errorf("search: reembedding gave up after %d consecutive failures (the embed provider is not answering): %w",
+						consecutive, errors.Join(failures...))
+				}
+				continue
 			}
+			consecutive = 0
 			// Paced by the clock and not by a count of entities: an entity is not a
 			// unit of time, so a count would have to be divided by the slowest an
 			// entity can be. This carries the one upsert in flight when the interval
@@ -130,12 +191,12 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 			// states and nothing here can cap.
 			if now().Sub(noted) >= ReembedProgressStaleness {
 				if err := note(); err != nil {
-					return err
+					return errors.Join(err, errors.Join(failures...))
 				}
 			}
 		}
 	}
-	return nil
+	return errors.Join(failures...)
 }
 
 // liveEntity is one row selected for re-embedding: an id plus the exact

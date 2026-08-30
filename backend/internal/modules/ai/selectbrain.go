@@ -5,9 +5,7 @@ package ai
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -65,12 +63,6 @@ const (
 // text.format all share this "json_schema" value).
 const jsonSchemaFormatType = "json_schema"
 
-// requestTimeout bounds a single model call. Generous because premium
-// completions on long context are legitimately slow — a streamed corpus
-// extraction emits ten-thousand-token answers over minutes; per-call
-// contexts tighten it where a caller has a real deadline.
-const requestTimeout = 300 * time.Second
-
 // Provider names — the vocabulary shared by the SelectBrain switch,
 // knownProviders, and the sovereign-eligible localProviders set. One spelling
 // each so a typo can't silently split "the switch accepts it" from "the config
@@ -123,7 +115,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerAnthropic)
 		}
 		return &anthropicClient{
-			http:            &http.Client{Timeout: requestTimeout},
+			http:            newOutboundClient(),
 			baseURL:         defaulted(cfg.BaseURL, defaultAnthropicBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
@@ -131,14 +123,14 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 		}, nil
 	case providerOllama:
 		return &ollamaClient{
-			http:            &http.Client{Timeout: requestTimeout},
+			http:            newOutboundClient(),
 			baseURL:         defaulted(cfg.BaseURL, defaultOllamaBaseURL),
 			defaultModel:    defaulted(cfg.Model, defaultOllamaModel),
 			attachmentMIMEs: narrowedCarriage(carriesImages, cfg.Input),
 		}, nil
 	case providerVLLM:
 		return &openAICompatClient{
-			http:            &http.Client{Timeout: requestTimeout},
+			http:            newOutboundClient(),
 			baseURL:         defaulted(cfg.BaseURL, defaultVLLMBaseURL),
 			apiKey:          "", // local vLLM: no auth
 			localOnly:       true,
@@ -154,7 +146,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, fmt.Errorf("ai: provider openai_compatible needs a base_url (the vendor host root — no version segment, the adapter adds /v1; e.g. https://api.mistral.ai)")
 		}
 		return &openAICompatClient{
-			http:            &http.Client{Timeout: requestTimeout},
+			http:            newOutboundClient(),
 			baseURL:         cfg.BaseURL,
 			apiKey:          key,
 			localOnly:       false,
@@ -167,7 +159,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerOpenAI)
 		}
 		return &openaiClient{
-			http:            &http.Client{Timeout: requestTimeout},
+			http:            newOutboundClient(),
 			baseURL:         defaulted(cfg.BaseURL, defaultOpenAIBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
@@ -179,7 +171,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			return nil, byokKeyRequired(providerGemini)
 		}
 		return &geminiClient{
-			http:            &http.Client{Timeout: requestTimeout},
+			http:            newOutboundClient(),
 			baseURL:         defaulted(cfg.BaseURL, defaultGeminiBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,

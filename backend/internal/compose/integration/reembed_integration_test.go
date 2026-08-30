@@ -18,6 +18,8 @@ package integration
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // TestReembedReembedsAllLiveEntitiesAndIsResumable seeds 3 people
@@ -167,6 +170,117 @@ func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
 		t.Fatal("a pass whose embedding writes could not land reported success — nothing records that the corpus was never rebuilt")
 	}
 }
+
+// TestReembedEmbedsEveryEntityPastOneItCannot proves a pass carries on past an
+// entity the provider refuses and still embeds the ones behind it, while
+// reporting the refusal.
+//
+// The defect this holds shut: the loop used to RETURN on the first
+// UpsertEmbedding error, so one transient provider fault — a dropped connection
+// partway through a corpus — ended the whole attempt, and every entity after
+// the bad one stayed on the old binding until a later attempt happened to walk
+// past it. A run has five attempts; a corpus reached the same bad entity in
+// each of them.
+//
+// The refusing embedder fails exactly one person by its text, so the assertion
+// is not "some rows survived" but "the row AFTER the failing one is current".
+func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	fake := ai.NewFakeClient()
+	inner := fakeEmbedderNamed(t, fake, "model-partial")
+	identity, _ := inner.EmbedIdentity()
+	if err := e.Store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+
+	// Three people, and the embedder refuses whichever it is asked for FIRST.
+	// Naming a fixed victim would leave the test at the mercy of scan order:
+	// liveEntitiesOf has no ORDER BY, so a refused row that happened to come
+	// last would let the old stop-at-first-failure code pass this test with
+	// nothing embedded after it. Refusing the first row asked for makes the
+	// two survivors the rows BEHIND the failure in every possible order.
+	for _, name := range []string{"Reachable One", "Reachable Two", "Reachable Three"} {
+		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
+	}
+
+	err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity},
+		&refusingEmbedder{inner: inner})
+	if err == nil {
+		t.Fatal("a pass that could not embed an entity reported success — the run would stamp an identity over a corpus it never finished")
+	}
+	if !strings.Contains(err.Error(), "refusing embedder") {
+		t.Fatalf("the reported fault does not carry the provider's own reason: %v", err)
+	}
+
+	var current int
+	if scanErr := e.Owner.QueryRow(ctx,
+		`SELECT count(*) FROM embedding em JOIN person p ON p.id = em.entity_id
+		  WHERE em.entity_type = 'person' AND em.model = $1 AND p.full_name LIKE 'Reachable %'`,
+		identity).Scan(&current); scanErr != nil {
+		t.Fatalf("counting embedded people: %v", scanErr)
+	}
+	if current != 2 {
+		t.Fatalf("%d of the 2 people behind the refused one are current under %s; a pass that stops at the first refusal leaves them stale", current, identity)
+	}
+}
+
+// TestReembedStopsCallingAProviderThatAnswersNothing proves the pass gives up
+// once failures stop looking like bad rows and start looking like an outage.
+//
+// Without the limit a dead provider costs one call per remaining entity, each
+// waiting out its own timeout, and the run's attempt is spent regardless — so
+// the corpus buys nothing for the hours it spends failing.
+func TestReembedStopsCallingAProviderThatAnswersNothing(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	fake := ai.NewFakeClient()
+	inner := fakeEmbedderNamed(t, fake, "model-outage")
+	identity, _ := inner.EmbedIdentity()
+	if err := e.Store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+
+	seeded := search.ReembedConsecutiveFailureLimit + 5
+	for i := range seeded {
+		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
+			fmt.Sprintf("Outage Person %d", i))
+	}
+
+	embedder := &refusingEmbedder{inner: inner, refuseEvery: true}
+	if err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity}, embedder); err == nil {
+		t.Fatal("a pass against a provider answering nothing reported success")
+	}
+	if embedder.calls > search.ReembedConsecutiveFailureLimit {
+		t.Fatalf("the provider was called %d times against a limit of %d; a dead provider is called once per entity",
+			embedder.calls, search.ReembedConsecutiveFailureLimit)
+	}
+}
+
+// refusingEmbedder fails the way a provider whose connection dropped does: its
+// FIRST call by default, or every call when refuseEvery is set. It delegates
+// the calls it does not refuse rather than answering vectors itself, so the
+// rows it writes go through the real embedder and are indistinguishable from a
+// healthy pass's.
+//
+// Refusing by call ORDER rather than by which entity it is asked about is what
+// makes the surviving rows provably the ones BEHIND the failure: the scan has
+// no ORDER BY, so no fixed victim can be relied on to come first.
+type refusingEmbedder struct {
+	inner       search.Embedder
+	refuseEvery bool
+	calls       int
+}
+
+func (r *refusingEmbedder) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
+	r.calls++
+	if r.refuseEvery || r.calls == 1 {
+		return model.Embeddings{}, errors.New("refusing embedder: connection reset by peer")
+	}
+	return r.inner.Embed(ctx, req)
+}
+
+func (r *refusingEmbedder) EmbedIdentity() (string, int) { return r.inner.EmbedIdentity() }
 
 // TestReembedIdentityDriftCancelsWithoutTouchingRows proves the
 // entry guard fires — and touches NOTHING — when the embedder compose
