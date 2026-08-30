@@ -90,7 +90,23 @@ type CloseDateCorrection struct {
 	// The approvals card never shows it: the kind declares its editable and its
 	// displayed fields explicitly, and this is in neither list.
 	RemainingOpenStages string `json:"remaining_open_stages"`
+	// Asking is WHICH question this card puts — "is this date right" or "is this
+	// deal still alive". They reach a rep as one approval kind, and they can meet
+	// at the same deal, the same stage count and the same date, so without this a
+	// refusal of one buries the other. A rep who says a date is fine has not said
+	// the deal is still alive.
+	Asking string `json:"asking"`
 }
+
+// The two questions a close-date card puts.
+const (
+	// AskingIsThisDateRight is the 🟡 confirm: the deal claims a date the sweep
+	// does not believe, and here is a better one.
+	AskingIsThisDateRight = "is_this_date_right"
+	// AskingIsThisDealAlive is the 🔻 review: the deal has gone quiet, and its
+	// forecast has been notched down while somebody says whether it is real.
+	AskingIsThisDealAlive = "is_this_deal_alive"
+)
 
 // StagesRemaining renders the stage distance in the form the payload carries.
 // It reads StagesToGo rather than the raw count so the memory's key and the
@@ -105,6 +121,8 @@ type RefusalProbe struct {
 	// RemainingOpenStages is the deal's distance from the end, spelled as the
 	// payload spells it so the comparison is against what was really stored.
 	RemainingOpenStages string
+	// Asking is which question this card puts.
+	Asking string
 	// StandingCloseDate is the date on the deal right now, before this pass
 	// writes anything. It is not compared against another probe's — it is
 	// compared against what the REFUSED proposal wanted to put there, which is
@@ -117,6 +135,7 @@ type RefusalProbe struct {
 func ProbeFor(proposal CloseDateCorrection, standing *time.Time) RefusalProbe {
 	return RefusalProbe{
 		RemainingOpenStages: proposal.RemainingOpenStages,
+		Asking:              proposal.Asking,
 		StandingCloseDate:   standingDate(standing),
 	}
 }
@@ -153,16 +172,24 @@ func standingDate(current *time.Time) string {
 // hygiene on that deal for good: the rep refuses a guess, puts their own date
 // on the deal, that one slips in turn, and nobody ever tells them.
 //
-// It asks whether the deal is still sitting where that refusal left it. The
-// sweep writes its proposal onto the deal before staging, so a deal nobody has
-// touched since stands at exactly the date the refused card offered — the
-// refusal still describes it. A deal standing anywhere else has been moved by a
-// person, and what they chose has not been asked about yet.
+// It asks whether the deal is still sitting where that refusal left it, and a
+// refusal leaves it in one of exactly two places. Most arms write the proposed
+// date onto the deal before staging, so the deal ends the night on
+// ExpectedCloseDate. The gone-quiet arm does not re-date a deal whose date is
+// still in the future — it only notches the forecast down — so that deal ends
+// the night on PreviousCloseDate, exactly where it started. Either is "nobody
+// has touched it since"; anywhere else is a date a person chose, and what they
+// chose has not been asked about yet.
 //
-// Note which two values that compares: TONIGHT's standing date against the
-// EARLIER proposal. Comparing two standing dates, or two proposed ones, is the
-// trap this went round twice — both move with the calendar, so the memory would
-// hold for exactly one night.
+// And it is the same QUESTION or it is not. "Is this date right" and "is this
+// deal still alive" reach a rep as one approval kind and can meet at the same
+// deal, stage count and date, so a rep who says the date is fine must still be
+// asked whether the deal is real when it later goes quiet.
+//
+// Note which values the standing-date term compares: TONIGHT's standing date
+// against the dates the EARLIER payload names. Comparing two standing dates, or two proposed ones, is
+// the trap this went round twice — both move with the calendar, so the memory
+// would hold for exactly one night.
 func (p RefusalProbe) SameQuestionAs(earlier CloseDateCorrection) bool {
 	if p.RemainingOpenStages == "" || earlier.RemainingOpenStages == "" {
 		// A payload staged before this key existed carries no stage count, and
@@ -170,8 +197,27 @@ func (p RefusalProbe) SameQuestionAs(earlier CloseDateCorrection) bool {
 		// refusal in the queue silence every deal that ever reaches it.
 		return false
 	}
-	return p.RemainingOpenStages == earlier.RemainingOpenStages &&
-		p.StandingCloseDate == earlier.ExpectedCloseDate
+	if p.Asking == "" || earlier.Asking == "" {
+		// Same reasoning as the stage count: a payload from before this key
+		// existed says nothing about which question it put, and guessing would
+		// let a refusal of one bury the other.
+		return false
+	}
+	if p.RemainingOpenStages != earlier.RemainingOpenStages || p.Asking != earlier.Asking {
+		return false
+	}
+	return p.StandingCloseDate == earlier.ExpectedCloseDate ||
+		p.StandingCloseDate == standingDateOf(earlier.PreviousCloseDate)
+}
+
+// standingDateOf renders the date a payload says the deal held, in the spelling
+// a probe's standing date carries. A payload naming no previous date describes a
+// deal that held none, which is the sentinel rather than a match-anything blank.
+func standingDateOf(previous *string) string {
+	if previous == nil {
+		return standingNoDate
+	}
+	return *previous
 }
 
 // UnmarshalCloseDateCorrection decodes a staged (possibly human-edited)

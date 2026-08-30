@@ -26,14 +26,20 @@ func onDate(t *testing.T, day string) *time.Time {
 
 func TestWhenTwoCloseDateCorrectionsAreTheSameQuestion(t *testing.T) {
 	t.Parallel()
-	// Last night the sweep offered to move a three-stages-out deal to Sep 13,
-	// wrote that date on provisionally, and the rep said no.
-	refused := CloseDateCorrection{ExpectedCloseDate: "2026-09-13", RemainingOpenStages: "3"}
+	// Last night the sweep offered to move a three-stages-out deal off Aug 19
+	// to Sep 13, wrote that date on provisionally, and the rep said no.
+	held := "2026-08-19"
+	refused := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-13", PreviousCloseDate: &held, RemainingOpenStages: "3",
+		Asking: AskingIsThisDateRight,
+	}
 	stillThere := onDate(t, "2026-09-13")
 
 	// Tonight's pass over the same untouched deal proposes a LATER date from the
 	// same reasoning, and the rep has answered the reasoning already.
-	tonight := CloseDateCorrection{ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3"}
+	tonight := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3", Asking: AskingIsThisDateRight,
+	}
 	if !ProbeFor(tonight, stillThere).SameQuestionAs(refused) {
 		t.Error("the same judgment raised again reads as a new question; the rep is " +
 			"asked what they already answered")
@@ -41,7 +47,9 @@ func TestWhenTwoCloseDateCorrectionsAreTheSameQuestion(t *testing.T) {
 
 	// The deal advanced: the guess is drawn from a genuinely different distance,
 	// so it is worth asking again.
-	nearer := CloseDateCorrection{ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "1"}
+	nearer := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "1", Asking: AskingIsThisDateRight,
+	}
 	if ProbeFor(nearer, stillThere).SameQuestionAs(refused) {
 		t.Error("a deal that advanced a stage is treated as already answered, so " +
 			"nobody is told its date went stale")
@@ -56,9 +64,91 @@ func TestWhenTwoCloseDateCorrectionsAreTheSameQuestion(t *testing.T) {
 			"they are never told it went stale")
 	}
 
-	// A deal holding no date at all is not standing on the refused one either.
+	// A deal holding no date at all is not standing where this refusal left it:
+	// that one was about a deal holding Aug 19.
 	if ProbeFor(tonight, nil).SameQuestionAs(refused) {
-		t.Error("a deal with no close date matches a refusal about a specific one")
+		t.Error("a deal with no close date matches a refusal about a deal that held one")
+	}
+}
+
+// The gone-quiet arm does not re-date a deal whose date is still ahead of it, so
+// such a deal ends the night exactly where it started. Recognising only the
+// PROPOSED date would forget every refusal on that arm by morning — the rep
+// would be asked whether the deal is still alive every single day.
+func TestARefusalOnADealThatWasNotReDatedIsStillRemembered(t *testing.T) {
+	t.Parallel()
+	held := "2026-11-30"
+	refused := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-13", PreviousCloseDate: &held, RemainingOpenStages: "3",
+		Asking: AskingIsThisDateRight,
+	}
+	// Tonight's guess has moved, and the deal is still on its own future date.
+	tonight := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3", Asking: AskingIsThisDateRight,
+	}
+	if !ProbeFor(tonight, onDate(t, held)).SameQuestionAs(refused) {
+		t.Error("a deal the sweep did not re-date reads as a new question every night")
+	}
+	// And a rep who then moves it somewhere of their own is asked again.
+	if ProbeFor(tonight, onDate(t, "2027-02-01")).SameQuestionAs(refused) {
+		t.Error("a date the rep chose is treated as the one they refused")
+	}
+}
+
+// Saying a date is fine is not saying the deal is alive.
+//
+// The two cards reach a rep as one approval kind, and they can meet at the same
+// deal, the same stage count and the same date. Without this term a refusal of
+// either buries the other — a rep who turned down a date correction would never
+// be told the deal had since gone quiet.
+func TestRefusingOneQuestionDoesNotAnswerTheOther(t *testing.T) {
+	t.Parallel()
+	held := "2026-08-19"
+	refusedTheDate := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-13", PreviousCloseDate: &held,
+		RemainingOpenStages: "3", Asking: AskingIsThisDateRight,
+	}
+	stillThere := onDate(t, "2026-09-13")
+
+	isItAlive := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3", Asking: AskingIsThisDealAlive,
+	}
+	if ProbeFor(isItAlive, stillThere).SameQuestionAs(refusedTheDate) {
+		t.Error("refusing a date correction silences the review asking whether the " +
+			"deal is still alive")
+	}
+	// And the same the other way round.
+	isTheDateRight := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3", Asking: AskingIsThisDateRight,
+	}
+	refusedAlive := refusedTheDate
+	refusedAlive.Asking = AskingIsThisDealAlive
+	if ProbeFor(isTheDateRight, stillThere).SameQuestionAs(refusedAlive) {
+		t.Error("refusing a gone-quiet review silences the date correction")
+	}
+	// The two labels have to be tellable apart, or this test proves nothing.
+	if AskingIsThisDateRight == AskingIsThisDealAlive {
+		t.Fatal("both questions carry the same label")
+	}
+}
+
+// A refusal about a deal holding NO date is remembered while it holds none, and
+// forgotten once somebody gives it one. The sentinel is what makes the first
+// half work: an absent key would match nothing at all.
+func TestARefusalAboutADatelessDealIsRememberedWhileItStaysDateless(t *testing.T) {
+	t.Parallel()
+	refused := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-13", PreviousCloseDate: nil, RemainingOpenStages: "3",
+		Asking: AskingIsThisDateRight,
+	}
+	tonight := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3", Asking: AskingIsThisDateRight,
+	}
+	if !ProbeFor(tonight, nil).SameQuestionAs(refused) {
+		t.Error("a deal that still has no date is asked about again every night")
+	}
+	if ProbeFor(tonight, onDate(t, "2026-12-01")).SameQuestionAs(refused) {
+		t.Error("a deal that has since been given a date is treated as still dateless")
 	}
 }
 
@@ -85,8 +175,14 @@ func TestAPayloadWithNoStageCountMatchesNothing(t *testing.T) {
 // second night on.
 func TestTheProbeComparesWhereTheDealIsAgainstWhatWasRefused(t *testing.T) {
 	t.Parallel()
-	refused := CloseDateCorrection{ExpectedCloseDate: "2026-09-13", RemainingOpenStages: "3"}
-	tonight := CloseDateCorrection{ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3"}
+	held := "2026-08-19"
+	refused := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-13", PreviousCloseDate: &held, RemainingOpenStages: "3",
+		Asking: AskingIsThisDateRight,
+	}
+	tonight := CloseDateCorrection{
+		ExpectedCloseDate: "2026-09-14", RemainingOpenStages: "3", Asking: AskingIsThisDateRight,
+	}
 
 	// Standing where the refusal put it: still the same question, even though
 	// neither proposed date matches the other.

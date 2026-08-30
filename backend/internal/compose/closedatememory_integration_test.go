@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -197,5 +198,79 @@ func TestADealThatAdvancesAStageIsCorrectedAgain(t *testing.T) {
 	if got := e.pendingCorrections(t, id); got != 1 {
 		t.Errorf("a deal that advanced a stage raised %d corrections, want 1 — "+
 			"a refusal made at one distance is silencing a question about another", got)
+	}
+}
+
+// A refused QUIET review is not raised again the next night either.
+//
+// The gone-quiet arm is the one that does not re-date the deal: a deal whose
+// date is still in the future keeps it, and only its forecast category is
+// notched down. So the deal does NOT end the night standing on what was
+// proposed — which is the state the other arms leave behind, and the state the
+// memory's second term recognises. Keyed on that alone, this arm forgets every
+// refusal by morning while the three above it work.
+func TestARejectedQuietReviewIsNotRaisedAgainTomorrow(t *testing.T) {
+	e := setupCloseDate(t)
+	// Quiet for longer than the stalled threshold, and a close date still in the
+	// future: nothing forces a date onto it, so the sweep downgrades and asks
+	// whether the deal is alive rather than re-dating it.
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"),
+		intp(deals.StalledThresholdDays/2), deals.StalledThresholdDays+10)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	if e.readSwept(t, id).provisional {
+		t.Fatal("the deal was re-dated; this is not the arm under test")
+	}
+	e.rejectCorrection(t, id)
+
+	e.nextDay()
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("after a rejection the next night staged %d quiet reviews, want 0 — "+
+			"the rep is asked every morning whether this deal is still alive", got)
+	}
+}
+
+// A deal that goes quiet AFTER its date was refused and then confirmed is still
+// asked about.
+//
+// The refusal and the later quiet review are different questions — one is "is
+// this date right", the other is "is this deal still alive" — and they can reach
+// the same stage count with the deal standing on the same day. The memory must
+// not let the first bury the second.
+func TestAQuietReviewIsStillRaisedAfterTheDateWasRefusedThenConfirmed(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Refused then confirmed", e.late, stringp("commit"), intp(-10), 3)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	proposed := e.proposedDateFor(t, id)
+	e.rejectCorrection(t, id)
+
+	// The rep then types that very date in themselves, which confirms it: the
+	// deal stops being provisional and stands on a date a person affirmed.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET expected_close_date = $2::date, close_date_provisional = false
+		  WHERE id = $1`, id, proposed); err != nil {
+		t.Fatalf("confirming the proposed date: %v", err)
+	}
+	// And then the deal goes quiet.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET last_activity_at = now() - make_interval(days => $2)
+		  WHERE id = $1`, id, deals.StalledThresholdDays+10); err != nil {
+		t.Fatalf("letting the deal go quiet: %v", err)
+	}
+
+	e.nextDay()
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingCorrections(t, id); got != 1 {
+		t.Errorf("a deal that went quiet after its date was settled raised %d reviews, "+
+			"want 1 — an old refusal about the DATE is burying a question about whether "+
+			"the deal is alive", got)
 	}
 }

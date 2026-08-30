@@ -72,6 +72,13 @@ func NewCloseDateCorrector(db *database.DB, stager CorrectionStager, reviewer Qu
 // Without it no test can state what the sweep does on a SECOND night, because
 // every pass in one process reads the same wall clock — and "the same question
 // tomorrow" is the whole of what the rejection memory promises.
+//
+// It moves the ASSESSMENT's today and not the candidate query's, which reads the
+// database clock. The two only have to agree to within the pre-filter's slack:
+// that query is a deliberate superset — anything dated within the stalled window
+// (60 days ahead), missing, or still provisional — so a clock ahead of the
+// database's by less than that window changes which deals are FLAGGED and never
+// which are looked at. A test crossing a day or two is well inside it.
 func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrector {
 	c.now = clock
 	return c
@@ -269,6 +276,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 				ExpectedCloseDate:   cand.expectedClose.Format(time.DateOnly),
 				PreviousCloseDate:   dateString(cand.expectedClose),
 				RemainingOpenStages: StagesRemaining(cand.remainingOpen),
+				Asking:              AskingIsThisDateRight,
 				Basis:               quietHoldingBasis,
 			})
 		}
@@ -280,6 +288,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		ExpectedCloseDate:   hygiene.ProposedClose.Format(time.DateOnly),
 		PreviousCloseDate:   dateString(cand.expectedClose),
 		RemainingOpenStages: StagesRemaining(cand.remainingOpen),
+		Asking:              AskingIsThisDateRight,
 		Flags:               hygiene.Flags,
 		Basis:               pacedBasis(StagesToGo(cand.remainingOpen)),
 	}
@@ -328,6 +337,9 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		// invariant did not force a re-date, which asked a human to confirm the
 		// date the deal already had — a card with nothing in it to approve.
 		review := proposal
+		// A different question from the 🟡 confirm, and the memory keys on which:
+		// a rep who said this date is fine has not said the deal is still alive.
+		review.Asking = AskingIsThisDealAlive
 		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
 		return c.ensureStaged(ctx, cand, version, review)
 	}

@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -48,10 +49,12 @@ var tablesUndoReads = []string{
 	"person", "organization", "deal", "lead", "project", "activity", "relationship",
 }
 
-// dateColumnFloor guards against the reader silently matching nothing. Under-
-// recognition is the one way this gate must not break: it would read a smaller
-// schema, report PASS, and leave no failing assertion to notice.
-const dateColumnFloor = 6
+// dateColumnFloor is what the schema holds today. Under-recognition is the one
+// way this gate must not break — it would read a smaller schema, report PASS,
+// and leave no failing assertion to notice — so this is the exact count rather
+// than a comfortable margin below it. Raise it when a date column is added, and
+// the raise is the moment somebody agrees the new column is covered.
+const dateColumnFloor = 8
 
 // undoReadableDateColumns derives, from the schema, every `date` column on a
 // table the undo path compares images for.
@@ -123,24 +126,79 @@ func assertWrittenAsADate(t *testing.T, sources map[string]string, table, column
 	}
 }
 
-// A column named through a constant escapes the literal scan above, so the
-// constants the deals module uses for its two date columns are checked by name.
-// Both are date columns on a table undo reads, and both were written through
-// Set until Undo was found to refuse every close-date change.
-func TestTheDateColumnConstantsAreWrittenAsDates(t *testing.T) {
+// A column named through a CONSTANT escapes a scan for its own text, and this is
+// not hypothetical — deals names both of its through one. So the names those
+// constants are bound to are resolved out of the module's own source and
+// scanned for as well, rather than kept as a hand-list here that a new constant
+// would silently fall outside of.
+func TestADateColumnNamedThroughAConstantIsWrittenAsADate(t *testing.T) {
+	t.Parallel()
+	for table, columns := range undoReadableDateColumns(t) {
+		owner, declared := tableOwners[table]
+		if !declared {
+			continue // reported by the test above
+		}
+		sources := goSourcesUnder(t, owner)
+		for _, column := range columns {
+			for _, name := range constantsNaming(sources, column) {
+				assertConstantWrittenAsADate(t, sources, table, column, name)
+			}
+		}
+	}
+}
+
+// constantBinding matches a Go constant bound to a string literal, capturing the
+// identifier and the text, e.g. `closeDateField = "expected_close_date"`.
+var constantBinding = regexp.MustCompile(`\b([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"([a-z_0-9]+)"`)
+
+// constantsNaming resolves every identifier bound to one column's name in a
+// module's own sources.
+func constantsNaming(sources map[string]string, column string) []string {
+	seen := map[string]bool{}
+	var names []string
+	for _, body := range sources {
+		for _, m := range constantBinding.FindAllStringSubmatch(body, -1) {
+			if m[2] != column || seen[m[1]] {
+				continue
+			}
+			seen[m[1]] = true
+			names = append(names, m[1])
+		}
+	}
+	return names
+}
+
+func assertConstantWrittenAsADate(t *testing.T, sources map[string]string, table, column, name string) {
+	t.Helper()
+	for path, body := range sources {
+		for _, line := range strings.Split(body, "\n") {
+			trimmed := strings.TrimSpace(line)
+			if !strings.Contains(trimmed, ".Set("+name+",") {
+				continue
+			}
+			t.Errorf("%s writes %s.%s (named through %s) through Set: %s\n"+
+				"a `date` column's image must be recorded the way Postgres renders one, "+
+				"or Undo refuses the change as superseded the instant it is written. "+
+				"Use storekit.SetDate (storekit.PlainDate sheds the contract's Date wrapper).",
+				path, table, column, name, trimmed)
+		}
+	}
+}
+
+// The constant resolver has to actually find something, or the test above is a
+// no-op that reports PASS. deals names both of its date columns through
+// constants, which is exactly the case that motivated it.
+func TestTheConstantResolverFindsTheNamesItRulesFrom(t *testing.T) {
 	t.Parallel()
 	sources := goSourcesUnder(t, tableOwners["deal"])
-	for _, constant := range []string{"closeDateField", "fxRateDateColumn"} {
-		for path, body := range sources {
-			for _, line := range strings.Split(body, "\n") {
-				trimmed := strings.TrimSpace(line)
-				if !strings.Contains(trimmed, "p.Set("+constant+",") {
-					continue
-				}
-				t.Errorf("%s writes the date column %s through Set: %s\n"+
-					"use storekit.SetDate, or Undo refuses the change as superseded",
-					path, constant, trimmed)
-			}
+	for column, want := range map[string]string{
+		"expected_close_date": "closeDateField",
+		"fx_rate_date":        "fxRateDateColumn",
+	} {
+		found := constantsNaming(sources, column)
+		if !slices.Contains(found, want) {
+			t.Errorf("the resolver found %v for %s and not %s, so a write through that "+
+				"constant would go unchecked", found, column, want)
 		}
 	}
 }
