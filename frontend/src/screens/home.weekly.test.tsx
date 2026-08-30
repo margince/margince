@@ -60,8 +60,8 @@ describe("HomeScreen — the weekly retrospective", () => {
     render(<HomeScreen />);
 
     // The label is what the deal was CALLED that week, served from the frozen
-    // row rather than looked up — which is why it renders with no deal in the
-    // deals payload at all.
+    // row rather than looked up — which is why it renders although the review's
+    // own deal is absent from the deals payload, where only Fleet retrofit is.
     await screen.findByText("Weber Rahmenvertrag");
     expect(screen.getByText(en["home.weekly.promised"])).toBeTruthy();
   });
