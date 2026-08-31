@@ -2665,14 +2665,24 @@ components:
           format: uuid
           description: The reactivated member.
         status:
-          type: string
-          enum: [invited, active]
-          description: The status the member was restored to.
+          $ref: '#/components/schemas/UserReactivatedStatus'
         by:
           type: string
           format: uuid
           description: The admin who reactivated the member.
       additionalProperties: false
+
+    UserReactivatedStatus:
+      type: string
+      enum: [invited, active]
+      description: >-
+        The status a reactivated member was restored to.
+
+        It is not always `active`, which is the whole reason it travels: a member deactivated
+        before redeeming their invitation comes back `invited`, because they still hold no password
+        and still sign in nowhere. A subscriber that read the event type alone would record
+        somebody as able to sign in who cannot.
+      x-extensible-enum: true
 
     PublicEventUserActivated:
       type: object

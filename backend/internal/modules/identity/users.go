@@ -143,7 +143,7 @@ func userReactivatedPayload(userID, by ids.UserID, status string) crmcontracts.P
 	return crmcontracts.PublicEventUserReactivated{
 		UserId: openapi_types.UUID(userID.UUID),
 		By:     openapi_types.UUID(by.UUID),
-		Status: crmcontracts.PublicEventUserReactivatedStatus(status),
+		Status: crmcontracts.UserReactivatedStatus(status),
 	}
 }
 

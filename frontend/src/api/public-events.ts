@@ -1194,17 +1194,19 @@ export interface components {
              * @description The reactivated member.
              */
             user_id: string;
-            /**
-             * @description The status the member was restored to.
-             * @enum {string}
-             */
-            status: "invited" | "active";
+            status: components["schemas"]["UserReactivatedStatus"];
             /**
              * Format: uuid
              * @description The admin who reactivated the member.
              */
             by: string;
         };
+        /**
+         * @description The status a reactivated member was restored to.
+         *     It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+         * @enum {string}
+         */
+        UserReactivatedStatus: "invited" | "active";
         /**
          * @description Payload for user.activated — an invited member redeemed their set-password link and became active (identity/reset.go's RedeemPasswordReset). This is the completion of `user.invited`: until it arrives the seat exists and holds its licence, but nobody can sign in as it.
          *     There is no `by`. Possession of the single-use token IS the authority on this path, so the member activated themselves and there is no admin actor to name — unlike user.reactivated, which an admin performs.
@@ -1442,7 +1444,7 @@ export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<co
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventCommsDeliveryBouncedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventCommsDeliveryBounced"]["kind"]> = ["hard", "soft"];
 export const publicEventRetentionRestrictedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionRestricted"]["action"]> = ["restrict", "release", "pin"];
-export const publicEventUserReactivatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventUserReactivated"]["status"]> = ["invited", "active"];
+export const userReactivatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UserReactivatedStatus"]> = ["invited", "active"];
 export const publicEventTeamChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventTeamChanged"]["change"]> = ["created", "renamed", "archived", "restored", "member_added", "member_removed"];
 export const publicEventApprovalDecidedVerdictValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventApprovalDecided"]["verdict"]> = ["approved", "rejected", "expired"];
 export type operations = Record<string, never>;

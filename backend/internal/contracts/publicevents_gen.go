@@ -120,24 +120,6 @@ func (e PublicEventTeamChangedChange) Valid() bool {
 	}
 }
 
-// Defines values for PublicEventUserReactivatedStatus.
-const (
-	Active  PublicEventUserReactivatedStatus = "active"
-	Invited PublicEventUserReactivatedStatus = "invited"
-)
-
-// Valid indicates whether the value is a known member of the PublicEventUserReactivatedStatus enum.
-func (e PublicEventUserReactivatedStatus) Valid() bool {
-	switch e {
-	case Active:
-		return true
-	case Invited:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SubscribableEventType.
 const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
@@ -450,6 +432,24 @@ func (e SubscribableEventType) Valid() bool {
 	case VoiceProfileUpdated:
 		return true
 	case VoiceVersionChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserReactivatedStatus.
+const (
+	Active  UserReactivatedStatus = "active"
+	Invited UserReactivatedStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the UserReactivatedStatus enum.
+func (e UserReactivatedStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Invited:
 		return true
 	default:
 		return false
@@ -1622,15 +1622,13 @@ type PublicEventUserReactivated struct {
 	// By The admin who reactivated the member.
 	By openapi_types.UUID `json:"by"`
 
-	// Status The status the member was restored to.
-	Status PublicEventUserReactivatedStatus `json:"status"`
+	// Status The status a reactivated member was restored to.
+	// It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+	Status UserReactivatedStatus `json:"status"`
 
 	// UserId The reactivated member.
 	UserId openapi_types.UUID `json:"user_id"`
 }
-
-// PublicEventUserReactivatedStatus The status the member was restored to.
-type PublicEventUserReactivatedStatus string
 
 // PublicEventVoiceBuildChanged Payload for voice.build_changed — a Voice DNA build was queued or an already-pending one was returned in place of a duplicate request (ai/voice_lifecycle.go's RequestBuild). stage/result_version/ status_code/next_attempt_at describe an in-flight or deferred build and are therefore absent on a freshly-queued one.
 type PublicEventVoiceBuildChanged struct {
@@ -1778,6 +1776,10 @@ type PublicEventVoiceVersionChanged struct {
 
 // SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
+
+// UserReactivatedStatus The status a reactivated member was restored to.
+// It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+type UserReactivatedStatus string
 
 func (PublicEventActivityArchived) EventType() string { return "activity.archived" }
 
