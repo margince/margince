@@ -567,11 +567,11 @@ function CompanyEditAction({
         })),
         ...cf.recordSlice(org),
       }}
-      update={async (values, rows) => {
+      update={async (values, rows, opened) => {
         const { data, error } = await api.PATCH("/organizations/{id}", {
           params: {
             path: { id: org.id },
-            ...ifMatch(requireVersion(org.version)),
+            ...ifMatch(requireVersion(opened?.version)),
           },
           body: {
             ...mapOrgUpdate(values, rows ?? {}, org.domains),
@@ -579,7 +579,7 @@ function CompanyEditAction({
             // prefilled from, so it is what "unchanged" is measured against —
             // a snapshot here sends `null` for every empty custom field, which
             // the API reads as an instruction to clear a column nobody touched.
-            ...cf.toPatch(values, cf.recordSlice(org)),
+            ...cf.toPatch(values, opened ?? {}),
           },
         });
         if (error) {

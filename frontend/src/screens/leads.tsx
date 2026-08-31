@@ -1424,18 +1424,18 @@ function LeadActions({
           company_name: lead.company_name ?? "",
           ...cf.recordSlice(lead),
         }}
-        update={async (values) => {
+        update={async (values, _rows, opened) => {
           const { data, error } = await api.PATCH("/leads/{id}", {
             params: {
               path: { id },
-              ...ifMatch(requireVersion(lead.version)),
+              ...ifMatch(requireVersion(opened?.version)),
             },
             body: {
               ...mapLeadUpdate(values),
               // A diff against what the form prefilled from: a snapshot sends
               // `null` for every empty custom field, and the API reads that as
               // clearing a column nobody touched.
-              ...cf.toPatch(values, cf.recordSlice(lead)),
+              ...cf.toPatch(values, opened ?? {}),
             },
           });
           if (error) {

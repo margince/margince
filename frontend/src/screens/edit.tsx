@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { Route } from "../app/router";
 import { Button, Modal } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
@@ -189,6 +189,7 @@ export function EditRecordModal({
   resolveExisting,
   onSubmit,
   onValuesChange,
+  onOpened,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -208,6 +209,19 @@ export function EditRecordModal({
   // from them — the narrowing optionsFor cannot do, because it is a pure
   // function of the values. See usePublishedValues (create.tsx).
   onValuesChange?: (values: Record<string, string>) => void;
+  // The record this open PREFILLED FROM, published once, at the moment the
+  // values were seeded.
+  //
+  // Everything the write compares against has to describe ONE reading: the
+  // values on screen, the baseline the diff is taken against, and the version
+  // the If-Match carries. `record` is recomputed on every render, so a
+  // background refetch mid-edit moves the last two while the first stays as
+  // the person left it — and then the diff reports somebody else's change as
+  // this person's edit, and the fresh version makes the server's concurrency
+  // check pass on the write that overwrites it.
+  onOpened?: (
+    record: Record<string, unknown> & { id: string; version?: number },
+  ) => void;
 }>) {
   const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -237,6 +251,7 @@ export function EditRecordModal({
       // previous attempt's leftovers.
       setValues(prefillFromRecord(fields, record));
       setRows(prefillRowsFromRecord(fields, record));
+      onOpened?.(record);
     }
   }
 
@@ -311,6 +326,10 @@ export function EditAction<Updated extends { id: string }>({
   update: (
     values: Record<string, unknown>,
     rows?: FormRows,
+    // The record as it was when this edit OPENED — the same reading the form
+    // prefilled from. The If-Match version and any diff baseline come from
+    // here, never from the live prop: see EditRecordModal's onOpened.
+    opened?: Record<string, unknown> & { id: string; version?: number },
   ) => Promise<Updated>;
   invalidate: string;
   recordKey: string;
@@ -326,8 +345,14 @@ export function EditAction<Updated extends { id: string }>({
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
-  const mutation = useUpdateRecord({
-    update,
+  // The reading this edit began from, held for as long as the dialog is open.
+  // A ref rather than state: nothing renders from it, and re-rendering on the
+  // open transition would only give the modal a second pass to seed from.
+  const opened = useRef<
+    (Record<string, unknown> & { id: string; version?: number }) | null
+  >(null);
+  const mutation = useUpdateRecord<Updated>({
+    update: (values, rows) => update(values, rows, opened.current ?? undefined),
     invalidate,
     recordKey,
     recordId: record.id,
@@ -389,6 +414,9 @@ export function EditAction<Updated extends { id: string }>({
         existing={existing}
         resolveExisting={resolveExisting}
         onValuesChange={onValuesChange}
+        onOpened={(reading) => {
+          opened.current = reading;
+        }}
         onSubmit={(values, rows) =>
           mutation.mutate({ values, rows: rows ?? {} })
         }

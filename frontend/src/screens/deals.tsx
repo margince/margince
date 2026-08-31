@@ -3192,7 +3192,7 @@ function DealActions({
           ...cf.formFields,
         ]}
         record={seeded}
-        update={async (values) => {
+        update={async (values, _rows, opened) => {
           // The company the form SUBMITS, not the one the deal had: a
           // project started here belongs to the company the save names.
           const submitted = stringValues(values);
@@ -3204,7 +3204,7 @@ function DealActions({
           const { data, error } = await api.PATCH("/deals/{id}", {
             params: {
               path: { id: deal.id },
-              ...ifMatch(requireVersion(deal.version)),
+              ...ifMatch(requireVersion(opened?.version)),
             },
             body: {
               ...mapDealUpdate(
@@ -3216,7 +3216,7 @@ function DealActions({
               // against the same baseline. A snapshot here reproduced the
               // reported defect exactly: `cf_*` columns are clearable through
               // no path, so one empty custom field refused every save.
-              ...cf.toPatch(values, seeded),
+              ...cf.toPatch(values, opened ?? {}),
             },
           });
           if (error) {

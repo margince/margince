@@ -241,3 +241,106 @@ describe("what a save says", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 });
+
+describe("what an edit is a reading of", () => {
+  // The guard this defeats is the whole reason the version column exists.
+  //
+  // A background refetch mid-edit — another person's save, a websocket
+  // invalidation, a window refocus — advances the record the screen renders
+  // from while the form's own values stay as the person left them. If the
+  // write takes its version from the LIVE record, the server's concurrency
+  // check compares the other person's version against itself and passes: the
+  // 409 that should have said "somebody changed this while you were editing"
+  // cannot fire, and the overwrite lands silently.
+  it("sends the version the form opened on, not the one that arrived while typing", async () => {
+    const versions: (number | undefined)[] = [];
+    function Screen() {
+      const [record, setRecord] = useState({
+        id: "p1",
+        version: 3,
+        full_name: "Alice",
+      });
+      return (
+        <>
+          <Button
+            onClick={() =>
+              // Somebody else's save landing under the open dialog.
+              setRecord({ id: "p1", version: 9, full_name: "Alice Cooper" })
+            }
+          >
+            refetch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fields}
+            record={record}
+            savedMessage="saved"
+            invalidate="people"
+            recordKey="person"
+            update={async (_values, _rows, opened) => {
+              versions.push(opened?.version);
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+
+    await waitFor(() => expect(versions).toHaveLength(1));
+    expect(versions[0]).toBe(3);
+  });
+
+  // The same reading has to be the diff baseline, or an untouched field whose
+  // value moved under the dialog reads as this person's edit and is sent —
+  // overwriting a change nobody here made.
+  it("compares against the values it prefilled, not the ones that arrived after", async () => {
+    const baselines: unknown[] = [];
+    function Screen() {
+      const [record, setRecord] = useState({
+        id: "p1",
+        version: 3,
+        full_name: "Alice",
+      });
+      return (
+        <>
+          <Button
+            onClick={() =>
+              setRecord({ id: "p1", version: 9, full_name: "Alice Cooper" })
+            }
+          >
+            refetch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fields}
+            record={record}
+            savedMessage="saved"
+            invalidate="people"
+            recordKey="person"
+            update={async (_values, _rows, opened) => {
+              baselines.push(opened?.full_name);
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+
+    await waitFor(() => expect(baselines).toHaveLength(1));
+    expect(baselines[0]).toBe("Alice");
+  });
+});
