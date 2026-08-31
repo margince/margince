@@ -193,11 +193,43 @@ func (c *Client) grantedScopes(scope string) []string {
 	return c.cfg.Scopes
 }
 
-// AccessToken redeems the stored refresh token for a short-lived access
-// token. A provider that rotates the refresh token on redemption (Microsoft)
-// leaves the stored one valid for its own lifetime, so the rotation need not
-// be persisted here.
+// TokenRefresh is what one redemption of a refresh token yielded: the
+// short-lived access token, and — from a provider that rotates on use — the
+// replacement refresh token.
+//
+// Rotated is EMPTY when the provider returned none, and empty means "keep the
+// one you have" rather than "you now have none". Conflating the two would let a
+// provider that simply omits the field erase a working credential.
+type TokenRefresh struct {
+	AccessToken string
+	Rotated     string
+}
+
+// AccessToken redeems the stored refresh token for a short-lived access token,
+// discarding any rotation. It is the shape for callers with nothing to persist
+// to — a health probe, a one-shot send — and it is deliberately still here
+// rather than folded into Refresh: most of this system's callers genuinely do
+// not care, and making them all handle a value they will drop is how the
+// handling gets copy-pasted wrong.
 func (c *Client) AccessToken(ctx context.Context, refreshToken string) (string, error) {
+	refreshed, err := c.Refresh(ctx, refreshToken)
+	if err != nil {
+		return "", err
+	}
+	return refreshed.AccessToken, nil
+}
+
+// Refresh redeems the stored refresh token and reports the rotation alongside
+// the access token.
+//
+// The rotation is reported even though the OLD token stays valid for its own
+// lifetime: that lifetime is a ceiling, not a guarantee (Microsoft expires an
+// idle confidential-client refresh token at 90 days, and a password change or
+// an admin revoke cuts it shorter), so a connection that never persists the
+// replacement ages out on a schedule nobody set. A caller that persists it
+// keeps the connection alive indefinitely; one that does not is exactly where
+// it was.
+func (c *Client) Refresh(ctx context.Context, refreshToken string) (TokenRefresh, error) {
 	form := url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {refreshToken},
@@ -207,12 +239,19 @@ func (c *Client) AccessToken(ctx context.Context, refreshToken string) (string, 
 	c.addScope(form)
 	tok, err := c.token(ctx, form)
 	if err != nil {
-		return "", err
+		return TokenRefresh{}, err
 	}
 	if tok.AccessToken == "" {
-		return "", fmt.Errorf("%s: token refresh returned no access token: %w", c.cfg.Provider, c.cfg.AuthRejected)
+		return TokenRefresh{}, fmt.Errorf("%s: token refresh returned no access token: %w", c.cfg.Provider, c.cfg.AuthRejected)
 	}
-	return tok.AccessToken, nil
+	rotated := tok.RefreshToken
+	if rotated == refreshToken {
+		// A provider that echoes the same token back has rotated nothing.
+		// Reporting it would make every sync re-seal the vault and retire a
+		// blob for no change.
+		rotated = ""
+	}
+	return TokenRefresh{AccessToken: tok.AccessToken, Rotated: rotated}, nil
 }
 
 func (c *Client) addScope(form url.Values) {

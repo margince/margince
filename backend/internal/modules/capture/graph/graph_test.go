@@ -24,6 +24,9 @@ import (
 type fakeOAuth struct {
 	refresh, access string
 	granted         []string
+	// rotated is what Microsoft hands back in place of the stored refresh
+	// token; empty means it rotated nothing this round.
+	rotated string
 }
 
 func (f fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
@@ -31,6 +34,10 @@ func (f fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGra
 	return oauthflow.TokenGrant{RefreshToken: f.refresh, Scopes: f.granted}, nil
 }
 func (f fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
+
+func (f fakeOAuth) Refresh(context.Context, string) (oauthflow.TokenRefresh, error) {
+	return oauthflow.TokenRefresh{AccessToken: f.access, Rotated: f.rotated}, nil
+}
 
 type fakeAPI struct {
 	email string

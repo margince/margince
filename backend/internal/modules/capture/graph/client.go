@@ -81,6 +81,10 @@ type OAuth interface {
 	AuthCodeURL(state, redirectURI string) string
 	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
 	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
+	// Refresh is AccessToken plus the rotation Microsoft performs on every
+	// redemption — the durable half, which Sync persists and the one-shot
+	// callers above have nowhere to put.
+	Refresh(ctx context.Context, refreshToken string) (oauthflow.TokenRefresh, error)
 }
 
 // API is the read-only Graph mail surface the connector uses. All calls take

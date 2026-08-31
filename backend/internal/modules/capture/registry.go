@@ -256,7 +256,14 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		return err
 	}
 
-	next, syncErr := c.Sync(runCtx, auth, connector.Cursor(cursor), r.sink)
+	// Bound per sync, never on the registered instance: one connector serves
+	// every connection the fleet pulls at once, and a sink held on it would
+	// carry one mailbox's replacement credential into another mailbox's
+	// re-seal. A provider whose credential is stable is returned unchanged.
+	syncer := connector.RotatingSyncer(c, rotationSink{
+		registry: r, connectionID: connectionID, generation: generation, log: slog.Default(),
+	})
+	next, syncErr := syncer.Sync(runCtx, auth, connector.Cursor(cursor), r.sink)
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
 		// state machine classifies, backs off, degrades to a daily probe at
