@@ -9,11 +9,15 @@ package integration
 // reaches it and a run exists for that person — admitted, fenced, frozen and
 // reserved, with the submit job committed beside it.
 //
-// WHO created the person decides which of the customer's two toggles governs
-// the purchase, and whether there is one at all. That is the subject of most
-// of these cases: the same event is emitted by four writers, and an agent
-// creating a contact must not reach through it what the REST policy denies
-// the agent at the door.
+// ONE installation-wide posture decides whether an automatic lookup happens at
+// all: integrations.automatic_lookup, in place of the per-connection switches
+// that used to ask which WRITER a purchase followed. An automatic run buys only
+// what the provider gives away, so that distinction stopped paying for itself.
+//
+// WHO created the person still decides whether there is an automatic trigger to
+// admit, and that is the subject of most of these cases: the same event is
+// emitted by four writers, and an agent creating a contact must not reach
+// through it what the REST policy denies the agent at the door.
 
 import (
 	"context"
