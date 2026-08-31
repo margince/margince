@@ -152,9 +152,9 @@ staging. Someone demoted to a read-only seat between writing a message and its
 going out is refused, whatever staged it. The message parks rather than retrying,
 because a demotion is an answer, not a hiccup.
 
-**The passport's scope.** Sending spends a `send` scope. A passport whose owner
-did not lend that scope cannot send at all, regardless of tier. Scopes are exact:
-holding `write` does not imply holding `send`.
+**The passport's scope.** Sending spends a `send` scope. A passport that was
+never granted that scope cannot send at all, regardless of tier. Scopes are
+exact: holding `write` does not imply holding `send`.
 
 **A hard ceiling on outward calls.** Each passport gets a fixed allowance of
 calls that leave the building per 24 hours. Unlike the read and write
@@ -318,27 +318,28 @@ Each passport gets a fixed allowance per 24-hour window: records read, changes
 made, outward calls, and total calls.
 
 Two of these behave differently when they run out. Reading and writing are
-**step-ups** — the agent is refused, and a card goes to the person who lent the
-passport, whose approval widens the window by one allowance. Outward calls and
-total calls are **hard stops**: no approval lifts them, and only the window
-ending clears them.
+**step-ups** — the agent is refused, and a card goes to the person who
+approved the connection, whose approval widens the window by one allowance.
+Outward calls and total calls are **hard stops**: no approval lifts them, and
+only the window ending clears them.
 
 The window is fixed, not rolling, so every allowance in an installation resets at
 the same moment. That is why a refusal says "when the window rolls" rather than
 naming a number of hours.
 
-Nobody but the person who lent the passport can answer a step-up. Not an
-administrator, not the owner of the organization. An agent's ceiling is its
-lender's authority.
+Nobody but the person who approved the connection can answer a step-up. Not an
+administrator, not the owner of the organization. An agent's ceiling is that
+person's own authority.
 
 The app's own summary: "Mint a passport in Settings and point any MCP-capable
 agent at your organization. It reads only what you can see."
 
-When an outside application asks to connect, you get an authorization screen
-that says plainly "{client} wants to act in Margince as you", names the host the
-authorization is sent back to, and asks you to lend it one of your passports.
-You can deny it. If you have no passport yet, it tells you so and offers to mint
-one rather than failing obscurely.
+When an outside application asks to connect, you get a consent screen that
+says plainly "{client} will be able to act in Margince as you, with the access
+checked below", names the host the authorization is sent back to, and shows
+`read draft write send enrich` as checkboxes, all ticked by default, for you
+to untick before approving. You can deny it. There is nothing to set up
+first: approving the screen is what creates the connection.
 
 ## One honest gap: attachments
 
