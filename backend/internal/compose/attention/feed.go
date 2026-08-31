@@ -87,6 +87,9 @@ type Service struct {
 	aiWork AIWork
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
+	// undelivered is OPTIONAL and per-user for the same reasons: mail that
+	// never left, beside mail that arrived and was refused.
+	undelivered Undelivered
 	// automations is OPTIONAL and role-withheld exactly as dsrs is.
 	automations AutomationHealth
 	// notices is OPTIONAL and per-user exactly as captureHealth is.
@@ -124,11 +127,11 @@ func (s *Service) forReader() *Service {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, p Undelivered, u AutomationHealth, e Notices, n Names, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
-		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
+		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, undelivered: p, automations: u, notices: e, names: n, now: now,
 	}
 }
 

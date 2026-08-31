@@ -1232,6 +1232,7 @@ public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
 public.comms_outbound.message_id text gen=- def=-
+public.comms_outbound.parked_at timestamp with time zone gen=- def=-
 public.comms_outbound.provider text NOT NULL gen=- def=-
 public.comms_outbound.provider_message_id text gen=- def=-
 public.comms_outbound.reason text gen=- def=-
@@ -2160,6 +2161,7 @@ public.idx_capture_sync_due CREATE INDEX idx_capture_sync_due ON public.capture_
 public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.capture_connection USING btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'::text))
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_org_id, status)
+public.idx_comms_outbound_parked CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)
 public.idx_consent_doi_token_person CREATE INDEX idx_consent_doi_token_person ON public.consent_doi_token USING btree (person_id, purpose_id)
 public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)
 public.idx_consent_event_person CREATE INDEX idx_consent_event_person ON public.consent_event USING btree (person_id, captured_at DESC)

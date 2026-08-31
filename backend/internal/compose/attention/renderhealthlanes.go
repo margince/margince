@@ -133,6 +133,33 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	return item
 }
 
+// parkedItem draws one send that was given up on. The subject line is the
+// headline and the dispatcher's own reason the supporting line, exactly as the
+// bounce card reads — the difference is in the verb the client writes, because
+// this message is still unsent and that one is not.
+func parkedItem(send ParkedSend) crmcontracts.AttentionItem {
+	occurred := send.ParkedAt
+	item := crmcontracts.AttentionItem{
+		Id:         send.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("undelivered"),
+		OccurredAt: &occurred,
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if send.Subject != "" {
+		subject := send.Subject
+		item.Title = &subject
+	}
+	if send.Reason != "" {
+		reason := send.Reason
+		item.Detail = &reason
+	}
+	if !send.PersonID.IsZero() {
+		item.Subject = subjectOf("person", send.PersonID)
+		item.Actions = append(item.Actions, actionOpen)
+	}
+	return item
+}
+
 // automationItem draws one troubled firing. The rule's own name is the
 // headline and the engine's recorded reason the supporting line; `kind` is
 // the closed failed/blocked vocabulary. No subject and no verbs: fixing the

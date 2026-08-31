@@ -7057,6 +7057,7 @@ export const vi = {
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
   "worklist.untitled.bounce": "Một email không đến nơi",
+  "worklist.untitled.undelivered": "Một email chưa từng được gửi",
   "worklist.untitled.automation_run": "Một quy tắc đã không chạy",
   "worklist.untitled.notice": "Một thông báo cho bạn",
   "worklist.verb.decide": "Quyết định",

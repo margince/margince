@@ -63,7 +63,7 @@ func TestACommitmentCarriesThePromiseAndTheWordsItWasReadFrom(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{promise("Referenzliste an Herrn Vogt schicken", due)}}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -104,7 +104,7 @@ func TestAnOverduePromiseSaysSoRatherThanLeavingTheReaderToCompareDates(t *testi
 			promise("Angebot nachfassen", readInstant.Add(-48*time.Hour)),
 			promise("Termin bestätigen", readInstant.Add(3*time.Hour)),
 		}}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -130,7 +130,7 @@ func TestBothDueDatedLanesStopAtTheSameEndOfDay(t *testing.T) {
 	tasks := &stubTasks{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		commitments, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		commitments, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(context.Background()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: apperrors.ErrPermissionDenied}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -179,7 +179,7 @@ func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 func TestAFeedWithNoClaimReaderSendsNoCommitmentLaneAtAll(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -198,7 +198,7 @@ func TestABrokenCommitmentReadFailsTheFeedRatherThanReadingAsAClearDay(t *testin
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: errors.New("the claim read fell over")}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a failed commitment read assembled a day, want the error surfaced")
@@ -246,7 +246,7 @@ func TestTheMeetingLaneAsksFromNowRatherThanFromTheStartOfTheDay(t *testing.T) {
 	meetings := &stubMeetings{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, meetings, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, meetings, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(context.Background()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
 	starts := readInstant.Add(90 * time.Minute)
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "Vogt — Angebotsbesprechung", StartsAt: starts}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "Vogt — Angebotsbesprechung", StartsAt: starts}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -294,7 +294,7 @@ func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
 func TestAWithheldMeetingLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		&stubMeetings{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		&stubMeetings{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

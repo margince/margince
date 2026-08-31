@@ -430,6 +430,34 @@ type TroubledRun struct {
 	OccurredAt   time.Time
 }
 
+// Undelivered is the reader's own sends that were GIVEN UP ON — the ladder ran
+// out, the mailbox would not transmit, the provider refused outright — read
+// from the stamp the dispatcher's own park leaves.
+//
+// The distinction from Bounces is the whole point of having both: a bounce is
+// mail that arrived somewhere and was refused, and this is mail that never
+// left. From the sender's chair the two look the same — a thread that goes
+// quiet — and today only one of them is ever reported.
+//
+// Per-user like the health lanes beside it: the read refuses a principal with
+// no human behind it, and the lane renders that refusal as withheld.
+type Undelivered interface {
+	ParkedSends(ctx context.Context, since time.Time, limit int) ([]ParkedSend, error)
+}
+
+// ParkedSend is one send that was given up on.
+type ParkedSend struct {
+	ID ids.UUID
+	// Subject is the send's own subject line — the name the reader knows it by.
+	Subject string
+	// Reason is the dispatcher's own words for giving up.
+	Reason   string
+	ParkedAt time.Time
+	// PersonID is the person the send's activity is filed under, zero when it
+	// is filed under none — the card then offers no open.
+	PersonID ids.UUID
+}
+
 // Bounces is the reader's own sends whose delivery reports came back hard —
 // read from the bounce stamp on the send's row, the same fact the timeline
 // shows, rather than from a second reading of the capture stream.
