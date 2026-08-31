@@ -195,6 +195,22 @@ func vcardCandidate(entry VCardEntry) PersonCandidate {
 	return candidate
 }
 
+// ValidateVCardContacts answers whether a reviewed card's addresses and
+// numbers are ones the create will accept, without writing anything.
+//
+// It asks by BUILDING the create's own input and running the create's own
+// parser over it, rather than restating the rules: a second copy of "what is
+// a valid number here" is the thing that drifts, and the whole point of
+// asking early is that the answer matches what the writer will say.
+//
+// Nothing is normalised for the caller. The parse mutates the input it is
+// given, and the input here is built fresh and thrown away — the proposal on
+// the row is left exactly as the reviewer sees it.
+func ValidateVCardContacts(entry VCardEntry) error {
+	person := personFromVCard(entry)
+	return parsePersonContacts(person.Emails, person.Phones)
+}
+
 func personFromVCard(entry VCardEntry) CreatePersonInput {
 	person := CreatePersonInput{
 		FullName: strings.TrimSpace(entry.FullName),
