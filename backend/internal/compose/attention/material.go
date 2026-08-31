@@ -60,5 +60,10 @@ func materialBarOf(day crmcontracts.Attention) materialBar {
 		return materialBar{}
 	}
 	sort.Slice(amounts, func(i, j int) bool { return amounts[i] < amounts[j] })
-	return materialBar{minor: amounts[len(amounts)/2], known: true}
+	// The LOWER median, so that "above the median" admits the upper half rather
+	// than excluding it. With an even count the upper-middle value is itself a
+	// deal, and taking it would leave the largest deal in a two-deal pipeline
+	// below the bar — which is how a €160k deal came back "below material" on a
+	// day it was the biggest thing the rep had.
+	return materialBar{minor: amounts[(len(amounts)-1)/2], known: true}
 }

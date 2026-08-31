@@ -368,3 +368,27 @@ func TestOnlyAnArrivedDateCountsAsDue(t *testing.T) {
 		t.Fatalf("counted %d due, wanted only the one whose date has passed", summary.Due)
 	}
 }
+
+// A two-deal pipeline still has a biggest deal, and it is the material one.
+// Taking the upper-middle value left the largest deal below its own median.
+func TestTheBiggerOfTwoDealsIsMaterial(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		AtRisk: lane(
+			item("small", "deal_at_risk", withDeal(2_000_00)),
+			item("big", "deal_at_risk", withDeal(160_100_00)),
+		),
+	}
+
+	rows := classifyDay(day, rankInstant)
+
+	for _, row := range rows {
+		want := levelAgreed
+		if row.item.Id == "big" {
+			want = levelMaterialRisk
+		}
+		if row.item.Level != want {
+			t.Fatalf("%q landed at level %d, wanted %d", row.item.Id, row.item.Level, want)
+		}
+	}
+}
