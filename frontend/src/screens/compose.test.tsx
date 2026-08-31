@@ -2188,3 +2188,278 @@ describe("ComposeModal started from an account", () => {
     await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
   });
 });
+
+// Opened from a record page, the composer named no conversation: To was empty,
+// Subject was empty, and nothing on screen said what was being answered — so a
+// reader could press "Draft with AI" without knowing who they were writing to
+// or which message they were replying to. Reported from the running product in
+// those words.
+describe("what the composer says it is answering", () => {
+  const latestMail: Activity = {
+    id: "act-latest",
+    kind: "email",
+    subject: "Rechnung GR-2026-0207",
+    occurred_at: "2026-08-02T09:00:00Z",
+    is_done: false,
+    source: "manual",
+    captured_by: "human:u1",
+    created_at: "2026-08-02T09:00:00Z",
+    updated_at: "2026-08-02T09:00:00Z",
+  };
+
+  it("names the record's latest message, and drafts against it", async () => {
+    const sent = stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [latestMail],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "POST /activities/act-latest/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Rechnung",
+          body: "Hallo",
+          to: ["d@x.test"],
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The conversation being continued is on screen BEFORE the reader commits
+    // to anything.
+    expect(await screen.findByText(/Rechnung GR-2026-0207/)).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+
+    // And the draft answers THAT message: the account-wide draft, which needs
+    // a recipient named first, is not what a reader gets from a record page.
+    await waitFor(() =>
+      expect(
+        sent.some((s) => s.key === "POST /activities/act-latest/draft-email"),
+      ).toBe(true),
+    );
+  });
+
+  // An empty account is not a failure, and must not be reported as one: the
+  // reader is told this starts a new thread rather than left guessing.
+  it("says so when the record has no earlier message", async () => {
+    stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(/starts a new thread/i)).toBeTruthy();
+  });
+
+  // Who this is going to, on the line, once it is known. The composer used to
+  // make the reader pick the person, and picking them is what made the consent
+  // purpose an attestation about a named human. The thread supplies the
+  // address now, so the reader has to SEE it before they attest anything.
+  it("names the recipient once the draft has filled it", async () => {
+    stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [latestMail],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "POST /activities/act-latest/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Rechnung",
+          body: "Hallo",
+          to: ["dietmar@valantic.test"],
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Before the draft the line still answers the first question: WHAT.
+    await screen.findByText(/Rechnung GR-2026-0207/);
+    expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+
+    // And then WHO, in the same sentence the reader is already reading.
+    expect(
+      await screen.findByText(/dietmar@valantic.test.*Rechnung GR-2026-0207/),
+    ).toBeTruthy();
+  });
+
+  // The project narrows through the list's OWN project_id filter. Asking for
+  // entity_type=project returns an empty page rather than an error — verified
+  // against the running API — so the wrong spelling reads as "no earlier
+  // message" for every project on the installation, silently.
+  it("narrows to the selected project through project_id", async () => {
+    const asked: { params?: URLSearchParams } = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://test.local",
+        );
+        if (url.pathname.endsWith("/activities")) {
+          asked.params = url.searchParams;
+          return jsonResponse({
+            data: [latestMail],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        if (url.pathname.endsWith("/consent-purposes")) {
+          return jsonResponse(PURPOSES);
+        }
+        if (url.pathname.endsWith("/voice-profiles")) {
+          return jsonResponse(NO_VOICE_PROFILE);
+        }
+        return jsonResponse({});
+      }),
+    );
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(/Rechnung GR-2026-0207/);
+    // The record still scopes the read; a project only narrows it further.
+    expect(asked.params?.get("entity_type")).toBe("organization");
+    expect(asked.params?.get("entity_id")).toBe("org-1");
+    expect(asked.params?.get("kind")).toBe("email");
+    // And no project is selected here, so none is asked for.
+    expect(asked.params?.get("project_id")).toBeNull();
+  });
+
+  // The draft and the SEND must agree on what is being answered. Split, the
+  // draft answers a thread and writes "Re: …" while the send takes the account
+  // path: the message files under the links the body names rather than the
+  // anchor's own, so the person it was actually with gets none of it, and it
+  // leaves as a new RFC chain — an orphan, to a reader who was shown a reply.
+  it("sends against the same message it drafted against", async () => {
+    const sent = stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [latestMail],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "POST /activities/act-latest/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Rechnung",
+          body: "Hallo",
+          to: ["d@x.test"],
+        }),
+      "POST /activities/act-latest/send-email": () => jsonResponse({}, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(/Rechnung GR-2026-0207/);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+    await waitFor(() =>
+      expect(
+        sent.some((s) => s.key === "POST /activities/act-latest/draft-email"),
+      ).toBe(true),
+    );
+
+    await fillSendableForm();
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      // The reply path, not POST /emails — which would file under the body's
+      // own links and start a new thread.
+      expect(sent.map((s) => s.key)).toContain(
+        "POST /activities/act-latest/send-email",
+      );
+      expect(sent.map((s) => s.key)).not.toContain("POST /emails");
+    });
+  });
+
+  // A message the reader may DISCOVER but not read is not an anchor: the list
+  // is discover-gated and returns it with its subject and body nulled, while
+  // the draft endpoint is content-gated and answers 404. Anchoring there hides
+  // the account path — the reader's only working route — and leaves them told
+  // they are replying to something the server will not let them answer.
+  it("does not anchor on a message whose content is withheld", async () => {
+    stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [
+            {
+              ...latestMail,
+              subject: null,
+              body: null,
+              content_state: "withheld",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // It falls back to the account path, which asks the reader to name a
+    // recipient — the honest state, rather than a dead end.
+    expect(await screen.findByText(/starts a new thread/i)).toBeTruthy();
+  });
+
+  // A caller that named the message has already shown it — the page behind the
+  // dialog IS that message — so the line would repeat what the reader opened.
+  it("stays quiet when the caller already named the message", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(activity202),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("combobox");
+    expect(screen.queryByText(/Replying to|starts a new thread/i)).toBeNull();
+  });
+});

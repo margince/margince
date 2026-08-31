@@ -271,3 +271,11 @@
 .compose-reasons .chips {
   margin: 0;
 }
+
+/* What this message answers, above the recipient it will go to. Meta ink and
+   the small size the rest of the dialog's secondary lines use: it is context
+   for the fields below, not a field of its own. */
+.mw-answering {
+  margin: 0 0 var(--space-2);
+  color: var(--textMeta);
+}

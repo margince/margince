@@ -2918,6 +2918,11 @@ export const en = {
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",
   "compose.intent": 'Steer the draft (optional), e.g. "polite follow-up"',
   "compose.to": "To",
+  "compose.answering": "Replying to “{subject}” · {when}",
+  "compose.answeringTo": "Replying to {who} · “{subject}” · {when}",
+  "compose.answeringNoSubject": "Replying to the message of {when}",
+  "compose.answeringNothing":
+    "No earlier message here — this starts a new thread.",
   "compose.cc": "Cc",
   "compose.subject": "Subject",
   "compose.noGroundableRecipient":

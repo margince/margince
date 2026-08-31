@@ -446,6 +446,117 @@ function ProjectFiling({
 }
 
 /**
+ * The message this composer should answer, when the caller did not name one.
+ *
+ * Opened from a record page there is no anchor: the dialog asked the reader to
+ * authorise a draft with an empty To, an empty Subject, and nothing on screen
+ * saying what was being replied to. The reader could press "Draft with AI"
+ * without knowing who they were writing to or which message they were
+ * answering — reported from the running product in exactly those words.
+ *
+ * The latest message on the record is the answer, and the PROJECT narrows it:
+ * a reader who has picked a project is working inside that project, so the
+ * conversation to continue is that project's own last message rather than the
+ * account's. Changing the selection changes the answer, which is why this is a
+ * query keyed on both rather than a value read once when the dialog opened.
+ *
+ * `kind: email` because this composer sends mail: the last CALL on an account
+ * is not a message anyone can reply to, and offering it as one would put a
+ * recipient in the To field that the call never had.
+ */
+function useLatestMessage(
+  entityType: RelinkKind,
+  entityId: string,
+  projectId: string,
+  enabled: boolean,
+): { activity?: Activity; settled: boolean } {
+  // A project narrows through the list's OWN project_id filter, not through
+  // entity_type — a project is not one of the entity kinds that filter takes,
+  // and asking for one returns an empty page rather than an error, which reads
+  // as "no earlier message" for every project on the installation.
+  const query = useQuery({
+    queryKey: ["compose-latest-message", entityType, entityId, projectId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/activities", {
+        params: {
+          query: {
+            entity_type: entityType,
+            entity_id: entityId,
+            ...(projectId ? { project_id: projectId } : {}),
+            kind: "email",
+            limit: 1,
+          },
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    enabled,
+  });
+  // A row whose content is WITHHELD is not an anchor. The list is
+  // discover-gated, so a limited-audience message on this account comes back
+  // with its subject and body nulled — and the draft endpoint, which is
+  // content-gated, answers 404 for it. Anchoring there strands the composer:
+  // the account path is hidden because an anchor exists, the draft cannot run,
+  // and the reader is told they are replying to a message the server will not
+  // let them answer. Falling back to the account path is the honest outcome.
+  const newest = query.data?.data?.[0];
+  return {
+    // The list is ordered newest first (occurred_at DESC), so one row is the
+    // latest — asked for as one row rather than fetched and sorted here.
+    activity: newest?.content_state === "withheld" ? undefined : newest,
+    // A read that has not answered, or failed, is not "no message": the
+    // composer says nothing rather than claiming this is a fresh thread.
+    settled: query.isSuccess,
+  };
+}
+
+/**
+ * What the composer says it is answering, or null while it does not yet know.
+ *
+ * A caller that named an activity has already told the reader what they opened
+ * — the message is on the page behind this dialog — so the line is for the
+ * case that had nothing: opened from a record, where the conversation being
+ * continued was decided here and shown nowhere.
+ */
+function answeringSentence(
+  latest: { activity?: Activity; settled: boolean },
+  callerAnchor: string | undefined,
+  recipients: readonly string[],
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+): string | null {
+  if (callerAnchor !== undefined || !latest.settled) {
+    return null;
+  }
+  const answering = latest.activity;
+  if (!answering) {
+    return t("compose.answeringNothing");
+  }
+  const when = formatDateTime(answering.occurred_at, locale, zone);
+  const subject = answering.subject?.trim();
+  // WHO, as soon as it is known. The composer used to ask the reader to pick
+  // the person, and picking them is what made the consent purpose beneath an
+  // attestation about a named human. Now the thread supplies the address, so
+  // the line has to name it — a purpose chosen against a recipient the reader
+  // never saw is a weaker attestation than the one this replaced.
+  //
+  // The activity list does not carry the recipient, so this fills in when the
+  // draft does. Before that the line still says what is being answered, which
+  // is the question the reader had first.
+  const who = recipients.join(", ");
+  if (who && subject) {
+    return t("compose.answeringTo", { who, subject, when });
+  }
+  return subject
+    ? t("compose.answering", { subject, when })
+    : t("compose.answeringNoSubject", { when });
+}
+
+/**
  * The project link a reply's own thread already carries, if any.
  *
  * Read from the anchor activity rather than assumed, because the thread is the
@@ -1401,6 +1512,7 @@ function MailOnlyFields({
   subject,
   onSubjectChange,
   rejectionInFlight,
+  answering,
 }: Readonly<{
   intent: string;
   onIntentChange: (next: string) => void;
@@ -1416,6 +1528,9 @@ function MailOnlyFields({
   subject: string;
   onSubjectChange: (next: string) => void;
   rejectionInFlight: boolean;
+  /** What this message answers, in the reader's own words. Null while the
+   * lookup is unsettled — an unanswered read is not "no earlier message". */
+  answering: string | null;
 }>) {
   const t = useT();
   const offer = (
@@ -1438,6 +1553,13 @@ function MailOnlyFields({
         </DraftBand>
       ) : (
         offer
+      )}
+      {/* WHAT is being answered, above the recipient — the first thing a
+          reader looks for and the thing this dialog used to leave out. Opened
+          from a record page it named no conversation at all, so a reader could
+          press "Draft with AI" without knowing who they were writing to. */}
+      {answering !== null && (
+        <p className="t-small mw-answering">{answering}</p>
       )}
       <MailRow label={t("compose.to")}>
         <RecipientField
@@ -2012,8 +2134,39 @@ export function ComposeModal({
   // Whether this composer can ground a draft in an account: an account-started
   // message on a company page, over mail. A channel reply resolves its
   // recipient server-side and has no draft endpoint at all.
+  // What this composer is answering. The caller names it when the reader opened
+  // a specific message; opened from a record page it does not, and the reader
+  // was then asked to authorise a draft against a conversation nothing on
+  // screen identified. The project narrows it, so switching projects switches
+  // the conversation being continued.
+  const latest = useLatestMessage(
+    entityType,
+    entityId,
+    account.grounding.projectId,
+    open && !activityId,
+  );
+  const answering = activityId ?? latest.activity?.id;
+  // The sentence the reader reads. Null while the lookup is unsettled: an
+  // unanswered read is not "no earlier message", and saying so would tell them
+  // this starts a new thread when it may continue one.
+  const answeringLine = answeringSentence(
+    latest,
+    activityId,
+    to,
+    t,
+    locale,
+    zone,
+  );
+
+  // The account-started path: no conversation to continue, so the reader names
+  // the recipient and the draft is grounded in the account itself.
+  //
+  // Keyed on the RESOLVED anchor, not the caller's. A record with earlier mail
+  // has a message to answer, and answering it is what a reader opening the
+  // composer there means — the account path asked them to name a recipient the
+  // thread already knows, in front of a To field the draft would have filled.
   const groundable =
-    !activityId && entityType === "organization" && !isChannelReply;
+    !answering && entityType === "organization" && !isChannelReply;
   // Where this send files, and the subject tag that travels with it. The
   // account path keeps its own picker (it chooses a project rather than
   // inheriting one), so this covers the anchored sends: a reply, and a message
@@ -2030,7 +2183,7 @@ export function ComposeModal({
       : undefined,
   );
   const projectFiling = useProjectFiling({
-    activityId,
+    activityId: answering,
     anchorProjectId: anchorProject.projectId,
     anchorSettled: anchorProject.settled,
     projects: reachableProjects,
@@ -2055,7 +2208,7 @@ export function ComposeModal({
   };
 
   const draft = useDraftMutation({
-    activityId,
+    activityId: answering,
     entityType,
     entityId,
     intent,
@@ -2147,7 +2300,14 @@ export function ComposeModal({
         ...scheduleFields(sendAt),
       };
       const { data, error, response } = await sendFrom({
-        activityId,
+        // The SAME anchor the draft used. Split, these disagree in the worst
+        // possible way: the draft answers a thread and writes "Re: …", and the
+        // send then takes the account path — which files under the links the
+        // body names rather than the anchor's own (the person the mail was
+        // with gets none, so the message is missing from their timeline), and
+        // starts a new RFC message-id chain, so what the reader was shown as a
+        // reply reaches the recipient as an orphan.
+        activityId: answering,
         isChannelReply,
         mail,
         channelBody: { body, consent_purpose: purpose },
@@ -2359,6 +2519,7 @@ export function ComposeModal({
             the draft controls nor the To/Cc/Subject fields apply to it. */}
           {!isChannelReply && (
             <MailOnlyFields
+              answering={answeringLine}
               intent={intent}
               onIntentChange={setIntent}
               draft={draftControl}

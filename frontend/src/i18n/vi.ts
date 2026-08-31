@@ -2869,6 +2869,11 @@ export const vi = {
   "compose.intent":
     'Định hướng bản nháp (không bắt buộc), ví dụ "thư nhắc lịch sự"',
   "compose.to": "Đến",
+  "compose.answering": "Trả lời “{subject}” · {when}",
+  "compose.answeringTo": "Trả lời {who} · “{subject}” · {when}",
+  "compose.answeringNoSubject": "Trả lời tin nhắn ngày {when}",
+  "compose.answeringNothing":
+    "Chưa có tin nhắn nào trước đó — đây sẽ mở một chuỗi mới.",
   "compose.cc": "Cc",
   "compose.subject": "Tiêu đề",
   "compose.noGroundableRecipient":
