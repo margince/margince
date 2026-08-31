@@ -5,6 +5,8 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -138,7 +140,7 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailDraft{
 		Subject:             result.Subject,
 		Body:                result.Body,
-		To:                  h.replyAddresses(ctx, ids.UUID(id)),
+		To:                  h.replyAddresses(ctx, ids.From[ids.ActivityKind](ids.UUID(id))),
 		InReplyToActivityId: &replyTo,
 		AiGenerated:         &result.AIGenerated,
 		AiDisclosure:        result.AIDisclosure,
@@ -150,8 +152,22 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 // GetReplyRecipient answers who a reply to this message would go to, without
 // drafting one. A composer opening on a thread shows the recipient straight
 // away rather than after a model call that takes tens of seconds.
+//
+// The name and the address come from two resolvers because they answer two
+// questions. The greeting names whoever the message was WITH; the address must
+// be a counterparty and never one of our own, so on our own outbound mail the
+// sender we greet is us and the address we answer is the addressee's.
+// ReplyAddressFor owns that distinction, and this asks it rather than keeping
+// a second opinion about who may be written to.
 func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	recipient, err := h.store.ReplyRecipientFor(r.Context(), ids.From[ids.ActivityKind](ids.UUID(id)))
+	ctx := r.Context()
+	anchor := ids.From[ids.ActivityKind](ids.UUID(id))
+	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	address, err := h.replyAddress(ctx, anchor)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -159,28 +175,54 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReplyRecipient{
 		FullName:  recipient.FullName,
 		FirstName: recipient.FirstName,
-		Address:   recipient.Address,
+		Address:   address,
 	})
 }
 
-// replyAddresses names where a reply to this anchor is sent, or nil.
+// replyAddress is the counterparty address for this anchor, empty when the
+// thread carries none to answer.
 //
-// It resolves through the same gated statement that names the person the
-// draft GREETS, so the address on the response and the name in the body are
-// one person rather than two answers. A caller whose scope withholds the
-// person gets neither.
+// A thread with nobody outside the company to write to is an ANSWER, not a
+// fault: ReplyAddressFor refuses it as NoReplyAddressError, and a composer
+// that shows an empty field there is telling the truth. Every other failure
+// is the caller's to see.
+func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (string, error) {
+	if h.colleagues == nil {
+		return "", nil
+	}
+	covers, err := h.colleagues.Covers(ctx)
+	if err != nil {
+		return "", err
+	}
+	address, err := h.store.ReplyAddressFor(ctx, anchor, covers)
+	var none *NoReplyAddressError
+	if errors.As(err, &none) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return address, nil
+}
+
+// replyAddresses names where a draft's reply is sent, or nil.
 //
-// Nil on any failure and on a person with no live address: drafting is the
-// caller's request and addressing is a convenience on top of it, so a draft
-// that cannot name its recipient is still served with the field left for the
-// reader to fill. The send path re-resolves and gates independently — this
-// only saves typing an address the record already holds.
-func (h Handlers) replyAddresses(ctx context.Context, anchor ids.UUID) *[]openapi_types.Email {
-	recipient, err := h.store.ReplyRecipientFor(ctx, ids.From[ids.ActivityKind](anchor))
-	if err != nil || recipient.Address == "" {
+// Nil on any failure: drafting is the caller's request and addressing is a
+// convenience on top of it, so a draft whose recipient cannot be resolved is
+// still served with the field left for the reader to fill. The reason is
+// logged rather than swallowed — a permission failure and a thread with no
+// counterparty produce the same empty field, and only the log tells them
+// apart afterwards.
+func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]openapi_types.Email {
+	address, err := h.replyAddress(ctx, anchor)
+	if err != nil {
+		slog.WarnContext(ctx, "reply address unavailable; drafting without a recipient", "err", err)
 		return nil
 	}
-	return &[]openapi_types.Email{openapi_types.Email(recipient.Address)}
+	if address == "" {
+		return nil
+	}
+	return &[]openapi_types.Email{openapi_types.Email(address)}
 }
 
 func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, intent string) (DraftResult, error) {

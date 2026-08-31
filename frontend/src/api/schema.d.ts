@@ -3091,17 +3091,24 @@ export interface paths {
         };
         /**
          * Who a reply to this message would be addressed to.
-         * @description The same resolution `draft_email` uses to address and greet its draft, asked
-         *     without drafting: a composer can show the recipient when it opens rather than
-         *     after a model call. Both read one gated statement, so what the reader sees before
-         *     drafting and what the draft carries are one answer.
+         * @description Asked without drafting, so a composer can show the recipient when it opens
+         *     rather than after a model call. `address` is resolved by the same reply-address
+         *     rule the automation reply path uses, so the address offered here is one that
+         *     path would also compose to.
          *
-         *     The counterparty is read from the message's participants by role — the sender of
-         *     an inbound message first, then an addressee — falling back to the activity link.
-         *     Every field may be empty: a message linked to nobody, a person this caller cannot
-         *     read, or a contact with no live address all answer the empty recipient rather than
-         *     guessing one. Sending still requires `to` on the send request and gates consent
-         *     independently; this only saves typing an address the record already holds.
+         *     `address` and the two name fields answer DIFFERENT questions, and on our own
+         *     outbound mail they name different people. The names are whoever the message was
+         *     with — the sender of an inbound message, an addressee on our own outbound. The
+         *     address must be a COUNTERPARTY: one of this installation's own people, whether
+         *     by seat or by email domain, is never offered, because a reply composed to a
+         *     colleague is a message to ourselves.
+         *
+         *     Every field may be empty, and empty is an answer rather than a failure: a
+         *     message linked to nobody, a person this caller cannot read, a contact with no
+         *     live address, and a thread whose every participant is a colleague all answer
+         *     empty rather than guessing. Sending still requires `to` on the send request and
+         *     gates consent independently; this only saves typing an address the record
+         *     already holds.
          */
         get: operations["getReplyRecipient"];
         put?: never;
@@ -17724,7 +17731,7 @@ export interface components {
             full_name: string;
             /** @description What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call. */
             first_name: string;
-            /** @description Where the reply is sent — their primary live address. Empty for a contact with no address on record, which the reader fills in themselves. */
+            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own people. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
             address: string;
         };
         /**

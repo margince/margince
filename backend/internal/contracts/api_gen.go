@@ -24748,7 +24748,7 @@ type ReplaceChannelTokenRequest struct {
 // One person rather than a list. A reply is written to somebody, and a group
 // thread degrades to the most likely counterparty rather than to nobody.
 type ReplyRecipient struct {
-	// Address Where the reply is sent — their primary live address. Empty for a contact with no address on record, which the reader fills in themselves.
+	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own people. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
 	Address string `json:"address"`
 
 	// FirstName What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
