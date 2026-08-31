@@ -197,6 +197,12 @@ function stackColumn(
 ): number {
   let y = PAD;
   for (const lane of lanes) {
+    // A lane with nobody in it draws nothing. A heading over empty space reads
+    // as a section that failed to load rather than as a role nobody holds —
+    // the caller says THAT with a gap node.
+    if (lane.nodeIds.length === 0) {
+      continue;
+    }
     const shown = expanded.has(lane.id)
       ? lane.nodeIds
       : lane.nodeIds.slice(0, LANE_CAP);

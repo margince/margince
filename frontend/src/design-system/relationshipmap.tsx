@@ -72,20 +72,51 @@ export function RelationshipMap({
     [model],
   );
   const litEdges = new Set(route?.edgeIds ?? []);
+  // A focus the model no longer holds fades NOTHING. routeFor already answers
+  // "nothing is related" for a stale id, and fading on the raw prop instead
+  // would push the whole account back for a selection that is not there.
+  const dimming = focusId !== null && related.size > 0;
 
   // One tab stop for the whole picture, then the arrow keys walk it. A map of
   // thirty nodes that took thirty tab stops would be a reason to skip the tab
   // rather than a way through it.
+  //
+  // The cursor is an ID, not an index. An index into the placed list is stale
+  // the moment a lane expands — the row the reader was standing on is replaced
+  // by the people it was hiding — and an index that survives into a different
+  // list silently points at somebody else.
   const order = placement.placed.map((node) => node.id);
-  const [cursor, setCursor] = useState(0);
-  const focused = order[Math.min(cursor, Math.max(order.length - 1, 0))];
-  const boxRef = useRef<HTMLDivElement>(null);
+  const [cursorId, setCursorId] = useState<string | null>(null);
+  const focused = cursorId && order.includes(cursorId) ? cursorId : order[0];
+  const svgRef = useRef<SVGSVGElement>(null);
+  // What the cursor was when this render drew, so the effect below can tell a
+  // keyboard move from a re-render and only chase the former.
+  const moved = useRef(false);
 
+  // The selection follows the caller: a focus set from outside (a row pressed
+  // in the list beside this map) puts the cursor on that node. It does NOT run
+  // on every render — `order` is a new array each time, and an effect keyed on
+  // it snapped the cursor back to the selection on every arrow press, so a
+  // reader could never walk away from what was selected.
   useEffect(() => {
-    if (focusId && order.includes(focusId)) {
-      setCursor(order.indexOf(focusId));
+    if (focusId) {
+      setCursorId(focusId);
     }
-  }, [focusId, order]);
+  }, [focusId]);
+
+  // Focus FOLLOWS the cursor. Moving only the tabindex leaves the ring, the
+  // screen reader and Enter all pointing at the node the reader walked away
+  // from — the arrow keys look like they work and activate the wrong person.
+  useEffect(() => {
+    if (!moved.current || !focused) {
+      return;
+    }
+    moved.current = false;
+    const node = svgRef.current?.querySelector<SVGGElement>(
+      `[data-node-id="${CSS.escape(focused)}"]`,
+    );
+    node?.focus();
+  }, [focused]);
 
   if (model.nodes.length === 0) {
     return (
@@ -96,10 +127,24 @@ export function RelationshipMap({
     );
   }
 
+  const openLane = (id: string) => {
+    const lane = id.slice("more:".length);
+    // The row the reader is standing on is about to be replaced by the people
+    // it was hiding, so the cursor moves to the first of them — otherwise
+    // focus falls out of the map entirely.
+    const firstHidden = model.lanes
+      .find((candidate) => candidate.id === lane)
+      ?.nodeIds.find((nodeId) => !order.includes(nodeId));
+    setExpanded((prev) => new Set([...prev, lane]));
+    if (firstHidden) {
+      moved.current = true;
+      setCursorId(firstHidden);
+    }
+  };
+
   const press = (id: string) => {
     if (id.startsWith("more:")) {
-      const lane = id.slice("more:".length);
-      setExpanded((prev) => new Set([...prev, lane]));
+      openLane(id);
       return;
     }
     // Pressing the focused node again clears it: the way out is the way in,
@@ -112,15 +157,13 @@ export function RelationshipMap({
       onFocus(null);
       return;
     }
-    const step =
-      event.key === "ArrowDown" || event.key === "ArrowRight"
-        ? 1
-        : event.key === "ArrowUp" || event.key === "ArrowLeft"
-          ? -1
-          : 0;
+    const step = stepFor(event.key);
     if (step !== 0) {
       event.preventDefault();
-      setCursor((prev) => Math.min(Math.max(prev + step, 0), order.length - 1));
+      const at = focused ? order.indexOf(focused) : 0;
+      const next = Math.min(Math.max(at + step, 0), order.length - 1);
+      moved.current = true;
+      setCursorId(order[next] ?? null);
       return;
     }
     if (event.key === "Enter" || event.key === " ") {
@@ -131,11 +174,12 @@ export function RelationshipMap({
 
   return (
     <div className="rmap" data-motion={still ? "none" : "in"}>
-      <div className="rmap-scroll" ref={boxRef}>
+      <div className="rmap-scroll">
         {/* biome-ignore lint/a11y/useSemanticElements: the rule suggests
             <fieldset>, which cannot live inside an SVG. role="group" with a
             label is how an SVG names itself to a reader who cannot see it. */}
         <svg
+          ref={svgRef}
           className="rmap-svg"
           viewBox={`0 0 ${placement.width} ${placement.height}`}
           width={placement.width}
@@ -161,7 +205,7 @@ export function RelationshipMap({
                 edge={edge}
                 placement={placement}
                 lit={litEdges.has(edge.id)}
-                faded={focusId !== null && !litEdges.has(edge.id)}
+                faded={dimming && !litEdges.has(edge.id)}
               />
             ))}
           </g>
@@ -184,7 +228,7 @@ export function RelationshipMap({
               lane={placement.heads.find((head) => head.id === node.laneId)}
               focused={focusId === node.id}
               related={related.has(node.id)}
-              faded={focusId !== null && !related.has(node.id)}
+              faded={dimming && !related.has(node.id)}
               tabbable={node.id === focused}
               onPress={press}
             />
@@ -205,6 +249,23 @@ export function RelationshipMap({
       </div>
     </div>
   );
+}
+
+/**
+ * stepFor is which way an arrow walks the map.
+ *
+ * Both axes move along the same one-dimensional order rather than in the
+ * direction they point: the walk is lane by lane, and a reader pressing right
+ * at the end of a lane wants the next lane, not nothing.
+ */
+function stepFor(key: string): number {
+  if (key === "ArrowDown" || key === "ArrowRight") {
+    return 1;
+  }
+  if (key === "ArrowUp" || key === "ArrowLeft") {
+    return -1;
+  }
+  return 0;
 }
 
 function Edge({
@@ -353,9 +414,15 @@ function Panel({
   const best = route
     ? model.edges.find((e) => e.id === route.edgeIds[0])
     : null;
+  // A route runs colleague → person, so which END is the reader's depends on
+  // which they selected. Reading it one way round printed "Lars Meyer → Lars
+  // Meyer" for a colleague focus and listed none of their other routes.
+  const fromColleague = node.kind === "user";
   const others = model.edges.filter(
     (edge) =>
-      edge.kind === "route" && edge.to === focusId && edge.id !== best?.id,
+      edge.kind === "route" &&
+      (fromColleague ? edge.from === focusId : edge.to === focusId) &&
+      edge.id !== best?.id,
   );
   const nameOf = (id: string) =>
     model.nodes.find((candidate) => candidate.id === id)?.label ?? id;
@@ -366,7 +433,8 @@ function Panel({
       <p className="rmap-panel-label t-eyebrow">{labels.bestRoute}</p>
       {best ? (
         <p className="rmap-panel-line">
-          {nameOf(best.from)} → {node.label} ·{" "}
+          {fromColleague ? node.label : nameOf(best.from)} →{" "}
+          {fromColleague ? nameOf(best.to) : node.label} ·{" "}
           {labels.band[best.band ?? "cold"]} · {best.words}
         </p>
       ) : (
@@ -377,8 +445,8 @@ function Panel({
           <p className="rmap-panel-label t-eyebrow">{labels.alternatives}</p>
           {others.map((edge) => (
             <p key={edge.id} className="rmap-panel-alt">
-              {nameOf(edge.from)} · {labels.band[edge.band ?? "cold"]} ·{" "}
-              {edge.words}
+              {nameOf(fromColleague ? edge.to : edge.from)} ·{" "}
+              {labels.band[edge.band ?? "cold"]} · {edge.words}
             </p>
           ))}
         </>

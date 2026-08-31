@@ -205,13 +205,74 @@ test("holds exactly one tab stop and walks with the arrow keys", async () => {
   expect(tabbable).toHaveLength(1);
 
   await user.tab();
+  const first = document.activeElement?.getAttribute("data-node-id");
   await user.keyboard("{ArrowDown}");
-  const after = screen
-    .getAllByRole("button")
-    .filter((node) => node.getAttribute("tabindex") === "0");
-  expect(after[0]?.getAttribute("data-node-id")).not.toBe(
-    tabbable[0]?.getAttribute("data-node-id"),
+  // FOCUS moves, not just the tabindex. Moving the attribute alone leaves the
+  // ring, the screen reader and Enter all pointing at the node the reader
+  // walked away from — the arrows look like they work and act on the wrong
+  // person.
+  expect(document.activeElement?.getAttribute("data-node-id")).not.toBe(first);
+  expect(document.activeElement?.getAttribute("tabindex")).toBe("0");
+});
+
+// A selection set from outside must not pin the cursor to it: the effect that
+// followed the prop ran on every render and snapped the cursor back, so a
+// reader could never walk away from whatever was selected.
+test("walks away from a node the caller selected", async () => {
+  const user = userEvent.setup();
+  draw({ focusId: "p-1" });
+  await user.tab();
+  const start = document.activeElement?.getAttribute("data-node-id");
+  await user.keyboard("{ArrowDown}");
+  expect(document.activeElement?.getAttribute("data-node-id")).not.toBe(start);
+});
+
+// Expanding a lane replaces the row the reader is standing on with the people
+// it was hiding. Focus has to land on one of them rather than falling out of
+// the map.
+test("keeps the reader inside the map when a lane opens", async () => {
+  const user = userEvent.setup();
+  const many = Array.from({ length: 11 }, (_, i) => `x-${i}`);
+  render(
+    <RelationshipMap
+      model={{
+        nodes: many.map((id) => ({ id, kind: "person" as const, label: id })),
+        lanes: [
+          {
+            id: "influencer",
+            column: "right",
+            label: "Influencers",
+            nodeIds: many,
+          },
+        ],
+        edges: [],
+      }}
+      focusId={null}
+      onFocus={() => {}}
+      completenessText=""
+      labels={LABELS}
+    />,
   );
+  const more = screen.getByRole("button", { name: "Show 3 more" });
+  await user.click(more);
+  expect(document.activeElement?.getAttribute("data-node-id")).toBe("x-8");
+});
+
+// A focus the model no longer holds must not push the whole account back.
+test("does not fade the map for a selection that is not there", () => {
+  draw({ focusId: "p-gone" });
+  for (const node of screen.getAllByRole("button")) {
+    expect(node.getAttribute("data-faded")).toBeNull();
+  }
+});
+
+test("reads a colleague's route in the direction they asked", () => {
+  draw({ focusId: "u-1" });
+  // Not "Sofia Meier → Sofia Meier": the reader selected our side, so the
+  // other end is the person they can reach.
+  const line = document.querySelector(".rmap-panel-line")?.textContent ?? "";
+  expect(line).toContain("Sofia Meier → Philipp Königs");
+  expect(line).not.toContain("Sofia Meier → Sofia Meier");
 });
 
 test("Escape clears the focus", async () => {
