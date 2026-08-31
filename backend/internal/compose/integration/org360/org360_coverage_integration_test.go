@@ -216,3 +216,45 @@ func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
 			got.Committee.Gaps)
 	}
 }
+
+// A reader without the deal grant learns nothing about the deals.
+//
+// Row scope answers WHICH deals, never WHETHER this caller may ask: a caller
+// holding organization, person and relationship but not deal was being served
+// deal names and the committee on them, because the read reached for
+// scopeClause and never for the object grant behind it.
+func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
+	e := integration.Setup(t)
+	svc := org360Service(e)
+
+	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	pipeline, openStage, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
+	e.WsExec(t, `UPDATE deal SET organization_id = $1 WHERE id = $2`, org, deal)
+	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, buyer, org, "Procurement")
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
+
+	got, err := svc.Coverage(e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoDealPerms),
+		ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("the read failed rather than withholding: %v", err)
+	}
+	if len(got.Deals) != 0 {
+		t.Fatalf("named %d deal(s) to a reader with no deal grant: %+v",
+			len(got.Deals), got.Deals)
+	}
+	if got.Committee != nil {
+		t.Fatal("served a committee to a reader who may not read the deal it sits on")
+	}
+	if got.Completeness.CommitteeRead {
+		t.Fatal("claimed the committee was read when the caller may not read deals")
+	}
+	// The rest of the account still answers: a withheld section is not a
+	// refused page.
+	if got.Summary.ContactsTotal != 1 {
+		t.Fatalf("contacts_total = %d, want the roster to survive the withholding",
+			got.Summary.ContactsTotal)
+	}
+}

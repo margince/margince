@@ -27,11 +27,13 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Coverage reads the account's coverage for the company People tab.
@@ -228,6 +230,14 @@ func (s *Service) wireCommittee(
 func (s *Service) visibleOpenDeals(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 ) ([]crmcontracts.OrganizationCoverageDeal, error) {
+	// The OBJECT grant first, and separately from the row scope: scope answers
+	// WHICH deals this caller may see, never WHETHER they may ask. A caller
+	// holding organization, person and relationship but not deal was being
+	// served deal names and the committee sitting on them, because the read
+	// reached for the scope clause and never for the grant behind it.
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	orgPos := arg(orgID)
@@ -261,13 +271,26 @@ func (s *Service) visibleOpenDeals(
 // Deliberately unscoped, and the only place in this read that is: the count
 // answers "is the committee bigger than what you were shown", which is exactly
 // the question the scoped read cannot answer about itself. It discloses a
-// number and never a name.
+// number and never a name — not which person, not which seat, and never a
+// pair. What it can tell a reader is that the committee is bigger than the
+// list they were given, which is the fact the page needs in order NOT to
+// print "nobody is champion" over a committee it could not read whole.
+//
+// The alternative is worse in the direction that matters: suppressing the
+// number as well would leave the page unable to tell an empty committee from
+// a partial one, and it would then have to either name a gap that may not
+// exist or never name one at all.
+//
+// It excludes EXACTLY what the scoped read excludes — archived seats and
+// nothing else. Filtering more here (an ended_at arm the stakeholder read does
+// not carry) makes the total smaller than the slice it is compared against, and
+// unlisted_seats goes negative on a seat that has ended but not been archived.
 func seatCount(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (int, error) {
 	var total int
 	err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM relationship
 		 WHERE kind = 'deal_stakeholder' AND deal_id = $1
-		   AND archived_at IS NULL AND ended_at IS NULL`, dealID).Scan(&total)
+		   AND archived_at IS NULL`, dealID).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("org360: counting the deal's seats: %w", err)
 	}
