@@ -25,9 +25,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// userStatusActive is the app_user.status an invited/reactivated member holds;
-// userAuditKeyStatus is the audit before/after image key for that column.
+// The app_user.status values this module writes, and the audit before/after
+// image key for that column.
+//
+// userStatusInvited is a seat that exists and has never been entered: it holds a
+// licensed seat and appears in the roster, but carries no password and no linked
+// identity, so it signs in nowhere. Redeeming the invitation is what makes it
+// active, and active is the only status that may sign in — which is why
+// LiveMemberSQL excludes invited and ActivatableMemberSQL admits it.
 const (
+	userStatusInvited     = "invited"
 	userStatusActive      = "active"
 	userStatusDeactivated = "deactivated"
 	userAuditKeyStatus    = "status"
@@ -69,11 +76,17 @@ type InviteUserInput struct {
 	TeamIDs []ids.UUID
 }
 
-// InviteUser provisions a new active member with the one target system role and
+// InviteUser provisions a new INVITED member with the one target system role and
 // no password, mints a single-use set-password token, and returns the raw token
 // so the caller can deliver the invite link. Admin-only. The whole thing — the
 // user row, the role grant, the token, the audit row and the user.invited event
 // — commits in ONE transaction. A duplicate email answers ErrConflict.
+//
+// Invited and not active, because the row cannot sign in yet: it has no password
+// and no federated identity, so writing it active would state in the roster that
+// somebody can enter who cannot. RedeemPasswordReset performs the transition.
+// The seat is charged from this moment regardless — an invitation occupies a
+// licensed seat, which is what refuseWhenNoSeatIsLeft below is enforcing.
 func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserInput) (ids.UserID, string, error) {
 	if !actor.hasRole(roleAdmin) {
 		return ids.UserID{}, "", apperrors.ErrPermissionDenied
@@ -107,7 +120,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		}
 		insErr := tx.QueryRow(ctx,
 			`INSERT INTO app_user (email, password_hash, display_name, status)
-			 VALUES (lower($1), NULL, $2, 'active') RETURNING id`,
+			 VALUES (lower($1), NULL, $2, 'invited') RETURNING id`,
 			in.Email, in.DisplayName).Scan(&newUserID)
 		if storekit.IsUniqueViolation(insErr) {
 			return errEmailTaken
@@ -130,7 +143,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
-			nil, map[string]any{"email": in.Email, "role": in.Role, "team_ids": in.TeamIDs, userAuditKeyStatus: userStatusActive})
+			nil, map[string]any{"email": in.Email, "role": in.Role, "team_ids": in.TeamIDs, userAuditKeyStatus: userStatusInvited})
 		if err != nil {
 			return err
 		}
@@ -180,12 +193,22 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE app_user SET status = 'active' WHERE id = $1`, userID); err != nil {
+		// Back to INVITED when they never set a password, not to active. A member
+		// deactivated before redeeming their invitation still cannot sign in, so
+		// returning them to active would restate in the roster the very
+		// falsehood this status exists to remove — and their invitation link,
+		// which redemption admits either way, is still the route in.
+		// RETURNING carries the NEW status, which is what the audit image below
+		// needs, so the branch is decided once in SQL rather than recomputed in
+		// Go from a column this function would otherwise have to re-read.
+		var restored string
+		if err := tx.QueryRow(ctx,
+			`UPDATE app_user SET status = CASE WHEN password_hash IS NULL THEN 'invited' ELSE 'active' END
+			 WHERE id = $1 RETURNING status`, userID).Scan(&restored); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", userID.UUID,
-			map[string]any{userAuditKeyStatus: status}, map[string]any{userAuditKeyStatus: userStatusActive})
+			map[string]any{userAuditKeyStatus: status}, map[string]any{userAuditKeyStatus: restored})
 		if err != nil {
 			return err
 		}

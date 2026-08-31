@@ -110,6 +110,7 @@ components:
         - voice.version_changed
         - voice.draft_outcome_recorded
         - user.invited
+        - user.activated
         - user.password_link_issued
         - user.deactivated
         - user.reactivated
@@ -2660,6 +2661,33 @@ components:
           type: string
           format: uuid
           description: The admin who reactivated the member.
+      additionalProperties: false
+
+    PublicEventUserActivated:
+      type: object
+      x-event-type: user.activated
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user.activated — an invited member redeemed their
+        set-password link and became active (identity/reset.go's
+        RedeemPasswordReset). This is the completion of `user.invited`: until it
+        arrives the seat exists and holds its licence, but nobody can sign in as
+        it.
+
+        There is no `by`. Possession of the single-use token IS the authority on
+        this path, so the member activated themselves and there is no admin
+        actor to name — unlike user.reactivated, which an admin performs.
+
+        A member resetting a FORGOTTEN password does not emit this: they were
+        already active, and nothing transitioned.
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: The member who became active.
       additionalProperties: false
 
     PublicEventTeamChanged:

@@ -32,8 +32,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -283,10 +286,38 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		// subject chose this password themselves, so the question the flag
 		// answers is now settled. Leaving it raised would refuse every route
 		// to someone holding a credential only they have ever known.
+		// ActivatableMemberSQL and not LiveMemberSQL: an INVITED member is
+		// precisely who this path exists to reach, and the active member
+		// resetting a forgotten password is the other half of the same set.
+		// A suspended or deactivated one is still refused — the neutral
+		// ErrNotFound below — so the token cannot be spent on an account the
+		// installation has withdrawn.
+		//
+		// `status = 'active'` is the transition itself, and it is a no-op for
+		// the forgotten-password caller who was already active. That is what
+		// keeps ONE statement serving both flows: an invitation redeemed and a
+		// password reset differ in the row they start from, not in what they do
+		// to it.
+		// The status is read BEFORE the update and under the row's own lock,
+		// because the update cannot report it: RETURNING yields the new row, so
+		// it would say 'active' for every caller and the activation event would
+		// never fire. The lock is what makes the pair one decision — without it
+		// a concurrent deactivation could land between the read and the write.
+		var priorStatus string
+		statusErr := tx.QueryRow(ctx,
+			`SELECT status FROM app_user WHERE id = $1 AND `+ActivatableMemberSQL("")+` FOR UPDATE`,
+			userID).Scan(&priorStatus)
+		if errors.Is(statusErr, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if statusErr != nil {
+			return statusErr
+		}
 		tag, err := tx.Exec(ctx,
-			`UPDATE app_user SET password_hash = $2, failed_login_count = 0, locked_until = NULL,
+			`UPDATE app_user SET password_hash = $2, status = 'active',
+			        failed_login_count = 0, locked_until = NULL,
 			        must_change_password = false
-			 WHERE id = $1 AND `+LiveMemberSQL("")+``, userID, hash)
+			 WHERE id = $1 AND `+ActivatableMemberSQL("")+``, userID, hash)
 		if err != nil {
 			return err
 		}
@@ -307,8 +338,39 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		if err := endCredentialAuthority(passwordOwnerCtx(ctx, userID), tx, userID, passwordResetRevokeReason); err != nil {
 			return err
 		}
-		return logAuthEvent(ctx, tx, userID, "password_reset", "password reset completed; every borrowed credential revoked")
+		if err := logAuthEvent(ctx, tx, userID, "password_reset", "password reset completed; every borrowed credential revoked"); err != nil {
+			return err
+		}
+		// An invited member becoming active is a roster-visible STATUS CHANGE,
+		// and every other status change in this module (DeactivateUser,
+		// ReactivateUser) commits its audit row and its event in the same
+		// transaction as the row. system_log alone is the right record for a
+		// password reset, which changes a credential and no domain state — but
+		// it is not the record for this, and a subscriber holding user.invited
+		// would otherwise never learn the invitation completed.
+		//
+		// Only on the transition. The forgotten-password caller was already
+		// active, nothing moved, and emitting there would announce an
+		// activation that did not happen.
+		if priorStatus != userStatusInvited {
+			return nil
+		}
+		auditID, err := storekit.Audit(passwordOwnerCtx(ctx, userID), tx, "update", "user", userID.UUID,
+			map[string]any{userAuditKeyStatus: priorStatus},
+			map[string]any{userAuditKeyStatus: userStatusActive})
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEvent(passwordOwnerCtx(ctx, userID), tx, auditID, userID.UUID,
+			userActivatedPayload(userID))
 	})
+}
+
+// userActivatedPayload builds user.activated's typed payload. No `by`:
+// possession of the single-use token is the authority on this path, so the
+// member activated themselves and there is no admin actor to name.
+func userActivatedPayload(userID ids.UserID) crmcontracts.PublicEventUserActivated {
+	return crmcontracts.PublicEventUserActivated{UserId: openapi_types.UUID(userID.UUID)}
 }
 
 // workspaceFrom narrows the context's workspace binding to the typed id

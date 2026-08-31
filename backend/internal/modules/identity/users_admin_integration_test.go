@@ -6,9 +6,10 @@
 package identity
 
 // Admin user administration over a real migrated Postgres: an invite creates an
-// active, passwordless member with the one target role and a single-use
+// invited, passwordless member with the one target role and a single-use
 // set-password token and emits user.invited; a reactivate returns a deactivated
-// member to active and emits user.reactivated. Both are admin-only.
+// member to the status their credential justifies and emits user.reactivated.
+// Both are admin-only.
 
 import (
 	"context"
@@ -119,7 +120,7 @@ func TestReactivateRefusalNamesEveryStateItCanBeReachedFrom(t *testing.T) {
 	}
 }
 
-func TestInviteUserCreatesActiveMemberWithRoleTokenAndEvent(t *testing.T) {
+func TestInviteUserCreatesInvitedMemberWithRoleTokenAndEvent(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-user")
 
 	userID, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -136,8 +137,11 @@ func TestInviteUserCreatesActiveMemberWithRoleTokenAndEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get invited member: %v", err)
 	}
-	if member.Status != "active" || member.Email != "newbie@acme.test" {
-		t.Fatalf("invited member = %+v; want active + lowercased email", member)
+	// INVITED, not active: the row has no password and no linked identity, so
+	// it signs in nowhere, and reporting it active would tell the roster that
+	// somebody can enter who cannot.
+	if member.Status != "invited" || member.Email != "newbie@acme.test" {
+		t.Fatalf("invited member = %+v; want invited + lowercased email", member)
 	}
 	// The member read carries the assigned role keys — the admin card renders
 	// the current role from them, so the aggregate must survive the round trip
@@ -366,5 +370,146 @@ func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheOrganization(t *testing
 		t.Fatalf("deactivating the only human administrator returned %v, want the last-admin refusal. "+
 			"The agent seat administers nothing — it carries no password and signs in nowhere — so "+
 			"counting it leaves the organization with no way back into user administration at all", err)
+	}
+}
+
+// An invitation is a seat that cannot yet be entered, and redeeming its link is
+// what makes it enterable. The transition is the thing under test: the status
+// moves, and — unlike a password reset, which changes a credential and no domain
+// state — it carries the audit row and the event every other status change in
+// this module commits.
+func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-activation")
+
+	userID, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "pending@acme.test", DisplayName: "Pending Person", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+
+	// Before redemption the seat is charged and the member signs in nowhere.
+	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "pending@acme.test", "whatever-they-guess"); err == nil {
+		t.Fatal("an invited member signed in with a password they never set")
+	}
+	var seatsBefore int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM app_user WHERE seat_type = 'full' AND status NOT IN ('suspended', 'deactivated')`).
+		Scan(&seatsBefore); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.svc.RedeemPasswordReset(e.wsCtx(e.admin), rawToken, "a-password-they-chose-1"); err != nil {
+		t.Fatalf("redeem invitation: %v", err)
+	}
+
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	if err != nil {
+		t.Fatalf("get member: %v", err)
+	}
+	if member.Status != "active" {
+		t.Fatalf("after redemption status = %q, want active", member.Status)
+	}
+	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "pending@acme.test", "a-password-they-chose-1"); err != nil {
+		t.Fatalf("activated member cannot sign in: %v", err)
+	}
+
+	// The seat count does not move: an invitation already held it.
+	var seatsAfter int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM app_user WHERE seat_type = 'full' AND status NOT IN ('suspended', 'deactivated')`).
+		Scan(&seatsAfter); err != nil {
+		t.Fatal(err)
+	}
+	if seatsAfter != seatsBefore {
+		t.Errorf("licensed seats in use moved %d -> %d across an activation; an invitation already holds its seat", seatsBefore, seatsAfter)
+	}
+
+	envs := e.identityEvents(t, "user.activated", userID.UUID)
+	if len(envs) != 1 {
+		t.Fatalf("user.activated staged %d times, want once", len(envs))
+	}
+	if envs[0].Trace.AuditLogID.IsZero() {
+		t.Error("user.activated carries no audit_log_id — the write shape demands the linked audit row")
+	}
+}
+
+// The recovery path for an invitation nobody redeemed in time. Without it the
+// account is unenterable by any route: it has no password, so the self-service
+// reset refuses it, and the admin-issued link is the only way back.
+func TestAnExpiredInvitationIsRecoveredByAnAdminIssuedLink(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-expired-recovery")
+
+	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "stale@acme.test", DisplayName: "Stale Invite", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE auth_token SET expires_at = now() - interval '1 day' WHERE user_id = $1`, userID); err != nil {
+		t.Fatal(err)
+	}
+
+	token, _, err := e.svc.IssuePasswordLink(e.wsCtx(e.admin), e.admin, userID)
+	if err != nil {
+		t.Fatalf("an admin cannot re-issue a set-password link to an invited member, so the account is stranded: %v", err)
+	}
+	if err := e.svc.RedeemPasswordReset(e.wsCtx(e.admin), token, "recovered-password-9"); err != nil {
+		t.Fatalf("redeem re-issued link: %v", err)
+	}
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if member.Status != "active" {
+		t.Errorf("after recovery status = %q, want active", member.Status)
+	}
+}
+
+// InviteUser puts a member on teams at invite time, so an admin correcting that
+// choice before redemption must not be refused.
+func TestAnInvitedMemberJoinsATeam(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-team-join")
+
+	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "teamless@acme.test", DisplayName: "Teamless", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+	team, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "Late Additions")
+	if err != nil {
+		t.Fatalf("create team: %v", err)
+	}
+	if err := e.svc.SetTeamMember(e.wsCtx(e.admin), e.admin, team.ID, userID.UUID, true); err != nil {
+		t.Fatalf("an admin cannot fix the teams on an unredeemed invitation: %v", err)
+	}
+}
+
+// Reactivating someone who never set a password returns them to INVITED. Sending
+// them to active would restate the falsehood this status exists to remove: the
+// row still has no credential and still signs in nowhere.
+func TestReactivatingAMemberWhoNeverSetAPasswordReturnsThemToInvited(t *testing.T) {
+	e := setupRevocationEnv(t, "reactivate-unredeemed")
+
+	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "revoked@acme.test", DisplayName: "Revoked Invite", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("invite: %v", err)
+	}
+	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: userID}); err != nil {
+		t.Fatalf("deactivate an unredeemed invitation: %v", err)
+	}
+	if err := e.svc.ReactivateUser(e.wsCtx(e.admin), e.admin, userID); err != nil {
+		t.Fatalf("reactivate: %v", err)
+	}
+	member, err := e.svc.GetUser(e.wsCtx(e.admin), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if member.Status != "invited" {
+		t.Errorf("reactivated status = %q, want invited — this member has no password and can still sign in nowhere", member.Status)
 	}
 }

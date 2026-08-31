@@ -211,6 +211,7 @@ const (
 	StageCreated                          SubscribableEventType = "stage.created"
 	StageUpdated                          SubscribableEventType = "stage.updated"
 	TeamChanged                           SubscribableEventType = "team.changed"
+	UserActivated                         SubscribableEventType = "user.activated"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
@@ -405,6 +406,8 @@ func (e SubscribableEventType) Valid() bool {
 	case StageUpdated:
 		return true
 	case TeamChanged:
+		return true
+	case UserActivated:
 		return true
 	case UserDeactivated:
 		return true
@@ -1542,6 +1545,14 @@ type PublicEventTeamChanged struct {
 // PublicEventTeamChangedChange defines model for PublicEventTeamChanged.Change.
 type PublicEventTeamChangedChange string
 
+// PublicEventUserActivated Payload for user.activated — an invited member redeemed their set-password link and became active (identity/reset.go's RedeemPasswordReset). This is the completion of `user.invited`: until it arrives the seat exists and holds its licence, but nobody can sign in as it.
+// There is no `by`. Possession of the single-use token IS the authority on this path, so the member activated themselves and there is no admin actor to name — unlike user.reactivated, which an admin performs.
+// A member resetting a FORGOTTEN password does not emit this: they were already active, and nothing transitioned.
+type PublicEventUserActivated struct {
+	// UserId The member who became active.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // PublicEventUserDeactivated Payload for user.deactivated — a member's sessions and passports were hard-revoked (identity/users.go's DeactivateUser). reason is the operator-supplied free text, absent when none was given.
 type PublicEventUserDeactivated struct {
 	// By The admin who deactivated the member.
@@ -2105,6 +2116,10 @@ func (PublicEventTeamChanged) EventType() string { return "team.changed" }
 
 func (PublicEventTeamChanged) EntityType() string { return "team" }
 
+func (PublicEventUserActivated) EventType() string { return "user.activated" }
+
+func (PublicEventUserActivated) EntityType() string { return "user" }
+
 func (PublicEventUserDeactivated) EventType() string { return "user.deactivated" }
 
 func (PublicEventUserDeactivated) EntityType() string { return "user" }
@@ -2248,6 +2263,7 @@ var PublicEventVersions = map[string]int{
 	"stage.created":                             1,
 	"stage.updated":                             1,
 	"team.changed":                              1,
+	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
 	"user.password_link_issued":                 1,

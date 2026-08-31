@@ -75,7 +75,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"read":               true,
 		"read_back_proposed": true, "detected": true, "resolved": true,
 		"deactivated": true, "revoked": true, "restricted": true,
-		"invited": true, "reactivated": true,
+		"invited": true, "activated": true, "reactivated": true,
 		// The Deal Room lifecycle. `published` is the human act that makes a
 		// release buyer-visible; `closed` freezes content while access
 		// continues, which is why it is not `archived`.

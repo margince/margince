@@ -162,8 +162,13 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 		if isAgent {
 			return errAgentSeatHoldsNoRole
 		}
-		if on && status != userStatusActive {
-			return fmt.Errorf("%w: only an active member joins a team; reactivate them first", apperrors.ErrConflict)
+		// An invited member joins: InviteUser itself puts one on teams at invite
+		// time (joinTeamsTx), so refusing an admin the correction afterwards
+		// would let a mis-typed invitation stand until the member redeems it.
+		// A suspended or deactivated member is still refused — their access is
+		// withdrawn, and a team grants record scope.
+		if on && status != userStatusActive && status != userStatusInvited {
+			return fmt.Errorf("%w: a suspended or deactivated member does not join a team; reactivate them first", apperrors.ErrConflict)
 		}
 		var tag pgconn.CommandTag
 		change := "member_removed"
