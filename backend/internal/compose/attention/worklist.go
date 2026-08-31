@@ -126,11 +126,11 @@ func (s *Service) waitingCustomers(ctx context.Context) ([]WaitingCustomer, *crm
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return nil, &crmcontracts.WorklistSourceUnavailable{
-			Source: "customer_waiting", Reason: crmcontracts.Withheld,
+			Source: sourceWaiting, Reason: crmcontracts.Withheld,
 		}
 	case err != nil:
 		return nil, &crmcontracts.WorklistSourceUnavailable{
-			Source: "customer_waiting", Reason: crmcontracts.Failed,
+			Source: sourceWaiting, Reason: crmcontracts.Failed,
 		}
 	default:
 		return rows, nil

@@ -177,3 +177,19 @@ func TestTheAssigneeClauseStaysExact(t *testing.T) {
 		t.Fatalf("the exact-assignee clause %q now admits unassigned work", clause)
 	}
 }
+
+// An unthreaded message is excluded, not matched loosely.
+//
+// `IS NOT DISTINCT FROM` joins every NULL to every other NULL, so one
+// unthreaded outbound would silence every unthreaded question in the
+// workspace. Plain equality never joins two NULLs, so the rows would all
+// survive and each would be its own thread. Neither is right, so they are
+// excluded — which under-reports by a row rather than by a customer.
+func TestTheWaitingQueryExcludesUnthreadedMessages(t *testing.T) {
+	if !strings.Contains(waitingRepliesSQL, "a.thread_key IS NOT NULL") {
+		t.Fatal("the waiting query admits unthreaded messages, which cross-suppress each other")
+	}
+	if strings.Contains(waitingRepliesSQL, "IS NOT DISTINCT FROM") {
+		t.Fatal("the waiting query matches NULL thread keys to each other")
+	}
+}

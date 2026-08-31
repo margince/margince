@@ -21,6 +21,16 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+// sourceWaiting names the who-is-waiting producer. A named constant rather
+// than the literal at each site: the classifier, the dedupe and the
+// source-unavailable report all reach for it, and a typo in any of them would
+// produce a lane nothing joins up — silently, because each half would still
+// compile.
+const sourceWaiting = "customer_waiting"
+
+// subjectDeal is the subject type a deal-shaped row names.
+const subjectDeal = "deal"
+
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
@@ -255,8 +265,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	row := crmcontracts.WorklistItem{
 		Id:          waiting.ActivityID.String(),
-		Source:      "customer_waiting",
-		Category:    "customer_waiting",
+		Source:      sourceWaiting,
+		Category:    sourceWaiting,
 		Level:       levelWaiting,
 		Consequence: "buyer_waits",
 		Because: []crmcontracts.WorklistReason{
@@ -265,14 +275,19 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
 	}
-	if subject != "" {
+	// The subject line is CONTENT. A reader admitted to know that somebody is
+	// waiting is not thereby admitted to read what they wrote, so a withheld
+	// message travels without its words and the client names it generically.
+	// `readable` is the same arm the timeline applies; this only refuses to
+	// undo it.
+	if subject != "" && waiting.Readable {
 		row.Title = &subject
 	}
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
 	switch {
 	case !waiting.DealID.IsZero():
-		row.Subject = subjectOf("deal", waiting.DealID)
+		row.Subject = subjectOf(subjectDeal, waiting.DealID)
 	case !waiting.PersonID.IsZero():
 		row.Subject = subjectOf("person", waiting.PersonID)
 	case !waiting.OrganizationID.IsZero():
@@ -296,8 +311,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 	waitingDeals := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == "customer_waiting" && row.item.Subject != nil &&
-			row.item.Subject.Type == "deal" {
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectDeal {
 			waitingDeals[row.item.Subject.Id.String()] = true
 		}
 	}
