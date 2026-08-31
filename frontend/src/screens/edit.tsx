@@ -342,7 +342,8 @@ export function EditAction<Updated extends { id: string }>({
     rows?: FormRows,
     // The record as it was when this edit OPENED — the same reading the form
     // prefilled from. The If-Match version and any diff baseline come from
-    // here, never from the live prop: see EditRecordModal's onOpened.
+    // here, never from the live prop: it is taken as the `opened` argument on
+    // EditRecordModal's onSubmit.
     opened?: Record<string, unknown> & { id: string; version?: number },
   ) => Promise<Updated>;
   invalidate: string;
