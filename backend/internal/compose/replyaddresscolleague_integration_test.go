@@ -50,4 +50,14 @@ func TestAReplyIsNeverAddressedToAColleagueOnTheOwnDomain(t *testing.T) {
 	if err != nil || got != "dana@client.example" {
 		t.Fatalf("ReplyAddress → (%q, %v), want the guest", got, err)
 	}
+
+	// A colleague who ranks first must not hide the guest behind them.
+	anchor := seedMeetingWith(t, e, "dana@client.example")
+	e.WsExec(t, `
+		INSERT INTO activity_participant (id, activity_id, role, address)
+		VALUES ($1, $2, 'to', 'colleague@ourcompany.test')`, ids.NewV7(), anchor)
+	got, err = comms.ReplyAddress(e.Admin(), anchor)
+	if err != nil || got != "dana@client.example" {
+		t.Fatalf("ReplyAddress with a colleague ranked ahead → (%q, %v), want the guest", got, err)
+	}
 }

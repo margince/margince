@@ -60,7 +60,7 @@ func TestAReplyIsAddressedToTheCounterpartyWhoWroteIn(t *testing.T) {
 		replyParty{role: "to", address: "rep@ourcompany.test", ours: true},
 	)
 
-	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor)
+	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyAddressFor → %v, want the counterparty's address", err)
 	}
@@ -78,7 +78,7 @@ func TestAReplyToOurOwnOutboundGoesToTheAddresseeNotOurselves(t *testing.T) {
 		replyParty{role: "to", address: "anna@example.com"},
 	)
 
-	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor)
+	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyAddressFor → %v, want the addressee", err)
 	}
@@ -110,7 +110,7 @@ func TestAParticipantWithNoAddressFallsBackToThePrimaryEmail(t *testing.T) {
 		replyParty{role: "from", person: &person},
 	)
 
-	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor)
+	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyAddressFor → %v, want the primary email", err)
 	}
@@ -128,7 +128,7 @@ func TestAThreadWithNoCounterpartyRefusesRatherThanGuessing(t *testing.T) {
 		replyParty{role: "from", address: "rep@ourcompany.test", ours: true},
 	)
 
-	_, err := e.Activities.ReplyAddressFor(e.Admin(), anchor)
+	_, err := e.Activities.ReplyAddressFor(e.Admin(), anchor, nil)
 	var refusal *activities.NoReplyAddressError
 	if !errors.As(err, &refusal) {
 		t.Fatalf("ReplyAddressFor → %v, want NoReplyAddressError", err)

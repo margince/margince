@@ -315,30 +315,36 @@ func assertOwnDomainAudited(ctx context.Context, t *testing.T, db *database.DB, 
 	}
 }
 
-// Whether an address is one of ours is read off every registered domain, the
-// company's own included, and off nothing when none is registered.
-func TestInternalRecognisesTheRegisteredDomainsAndNothingElse(t *testing.T) {
+// Which addresses are ours is read off the trusted domains — an
+// administrator's and the company's own — and off nothing when none is
+// registered. A mailbox-seeded candidate that nobody vouched for is not one.
+func TestColleaguesAreTheTrustedDomainsAndNothingElse(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
 	store := capture.NewOwnDomainStore(db)
 
-	internal, err := store.Internal(ctx, "peer@acme.com")
-	if err != nil || internal {
-		t.Fatalf("Internal before any registration = (%v, %v), want false: nobody is a colleague yet", internal, err)
+	own, err := store.Colleagues(ctx)
+	if err != nil || own.Covers("peer@acme.com") {
+		t.Fatalf("Colleagues before any registration covers peer@acme.com (%v): nobody is a colleague yet", err)
+	}
+	if _, err := db.Pool().Exec(ctx, `INSERT INTO workspace_email_domain (domain, source, verified)
+		VALUES ('customer.io', 'mailbox', false)`); err != nil {
+		t.Fatalf("seeding an unverified mailbox domain: %v", err)
 	}
 	if _, err := store.Add(ctx, "acme.com"); err != nil {
 		t.Fatalf("Add: %v", err)
+	}
+	own, err = store.Colleagues(ctx)
+	if err != nil {
+		t.Fatalf("Colleagues: %v", err)
 	}
 	for address, want := range map[string]bool{
 		"peer@acme.com":      true,
 		"Peer@Mail.ACME.com": true,
 		"dana@client.io":     false,
+		"rep@customer.io":    false,
 	} {
-		internal, err := store.Internal(ctx, address)
-		if err != nil {
-			t.Fatalf("Internal(%q): %v", address, err)
-		}
-		if internal != want {
-			t.Errorf("Internal(%q) = %v, want %v", address, internal, want)
+		if got := own.Covers(address); got != want {
+			t.Errorf("Covers(%q) = %v, want %v", address, got, want)
 		}
 	}
 }

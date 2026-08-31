@@ -20,8 +20,8 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -79,7 +79,14 @@ func (e *NoReplyAddressError) FieldFault() (field, code, message string) {
 // declines to model, and answering all of them is a different product decision
 // from answering the counterparty — this addresses the most likely one and a
 // human sees it before anything sends.
-func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID) (string, error) {
+//
+// colleague names the addresses that are ours by domain rather than by seat —
+// a co-worker without a login. The candidates are walked in rank order and
+// the first one that is not a colleague is the answer, so a stand-up with a
+// colleague AND a guest is answered to the guest whatever the header order.
+// A nil predicate treats nobody as a colleague. When every candidate is one,
+// the refusal says so.
+func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (string, error) {
 	// Reaching a person's address is a person read, exactly as reaching their
 	// name is: a caller who may read activities but not people must not be told
 	// through this door what the people surface withholds.
@@ -150,27 +157,46 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID) (string,
 		}
 		q += `
 			) ranked
-			 ORDER BY rank, source, primary_first DESC, position, created_at, id, addr
-			 LIMIT 1`
+			 ORDER BY rank, source, primary_first DESC, position, created_at, id, addr`
 
-		err = tx.QueryRow(ctx, q, args...).Scan(&address)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return &NoReplyAddressError{}
-		}
+		rows, err := tx.Query(ctx, q, args...)
 		if err != nil {
 			return fmt.Errorf("resolve the address a reply answers: %w", err)
 		}
-		return nil
+		defer rows.Close()
+		address, err = firstOutside(rows, colleague)
+		return err
 	})
 	if err != nil {
 		return "", err
 	}
-	if address == "" {
-		// Belt and braces against a row that satisfies the predicate with
-		// whitespace: an empty addressee reaches the send's own refusal, but it
-		// would arrive there as "no recipients" rather than as the honest
-		// answer that this thread has no counterparty to answer.
-		return "", &NoReplyAddressError{}
-	}
 	return address, nil
+}
+
+// firstOutside walks the ranked candidates and answers the first that is not
+// a colleague. No candidate at all is the plain refusal; candidates that are
+// all colleagues is the refusal that names why.
+func firstOutside(rows pgx.Rows, colleague func(address string) bool) (string, error) {
+	sawColleague := false
+	for rows.Next() {
+		var address string
+		if err := rows.Scan(&address); err != nil {
+			return "", fmt.Errorf("resolve the address a reply answers: %w", err)
+		}
+		// A row that satisfies the predicate with whitespace is no addressee:
+		// it would reach the send as "no recipients" rather than as the honest
+		// answer that this thread has no counterparty to answer.
+		if strings.TrimSpace(address) == "" {
+			continue
+		}
+		if colleague != nil && colleague(address) {
+			sawColleague = true
+			continue
+		}
+		return address, nil
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("resolve the address a reply answers: %w", err)
+	}
+	return "", &NoReplyAddressError{Colleague: sawColleague}
 }

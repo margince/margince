@@ -73,24 +73,18 @@ var _ automation.Comms = commsAdapter{}
 // wired: who a reply is TO is a fact about the record, and a routed drafter
 // must not be able to change it.
 //
-// A colleague is refused here the way an empty thread is refused by the store.
-// A message whose only addressee is on the workspace's own domain — a stand-up
-// with a colleague who has no seat, a hand-off, a message captured before the
-// domain was registered — has nobody outside the company to answer, and an
-// automation must not compose one for a human to wave through.
+// The store is told who counts as a colleague by domain, because it excludes
+// only seats on its own. A message whose every addressee is on the workspace's
+// own domains — a stand-up with a colleague who has no seat, a hand-off, a
+// message captured before the domain was registered — has nobody outside the
+// company to answer, and an automation must not compose one for a human to
+// wave through.
 func (c commsAdapter) ReplyAddress(ctx context.Context, anchor ids.UUID) (string, error) {
-	to, err := c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor))
+	own, err := c.own.Colleagues(ctx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("compose: reading who counts as a colleague: %w", err)
 	}
-	internal, err := c.own.Internal(ctx, to)
-	if err != nil {
-		return "", fmt.Errorf("compose: deciding whether the addressee is a colleague: %w", err)
-	}
-	if internal {
-		return "", &activities.NoReplyAddressError{Colleague: true}
-	}
-	return to, nil
+	return c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor), own.Covers)
 }
 
 func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {

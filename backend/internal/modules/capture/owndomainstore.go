@@ -96,32 +96,29 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 	return out, err
 }
 
-// Internal reports whether an address belongs to the workspace itself: a
-// colleague rather than a counterparty. It reads the registered set the same
-// way contact creation does — every registered domain, verified or not, plus
-// the company's own — because the question here is whether to answer
-// somebody, and declining to draft a reply to a colleague is safe on the
-// weaker evidence. A workspace with no domain registered has no colleagues
-// this can name, so the answer is false rather than a guess.
+// Colleagues answers which addresses belong to the workspace itself, so a
+// caller composing a reply can tell a co-worker without a seat from a
+// counterparty. It reads the TRUSTED set — domains an administrator vouched
+// for plus the company's own — and not the mailbox-seeded candidates: a
+// contractor who connects a mailbox at a customer must not turn that whole
+// customer into colleagues nobody may answer. A workspace with nothing
+// registered has no colleagues this can name.
 //
 // Gated as a person read, not a settings read: whether somebody is a
 // colleague is a fact about them, asked by a caller who already holds their
 // address, and the same grant that let them reach the address answers it. A
 // rep composing a reply holds no settings authority and must not need one.
-func (s *OwnDomainStore) Internal(ctx context.Context, address string) (bool, error) {
+func (s *OwnDomainStore) Colleagues(ctx context.Context) (InternalDomains, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
-		return false, err
+		return InternalDomains{}, err
 	}
-	var internal bool
+	var own InternalDomains
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		own, err := ownDomainsTx(ctx, tx)
-		if err != nil {
-			return err
-		}
-		internal = own.Covers(address)
-		return nil
+		var err error
+		own, err = trustedOwnDomainsTx(ctx, tx)
+		return err
 	})
-	return internal, err
+	return own, err
 }
 
 // Add registers a domain as the workspace's own, verified.
