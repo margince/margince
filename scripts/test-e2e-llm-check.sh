@@ -89,6 +89,15 @@ case_is "a run that happened and answered wrongly is not excused" 0 "" <<'JSONL'
 {"type":"result","subtype":"success","is_error":false,"result":"I could not find anything."}
 JSONL
 
+# A number that merely CONTAINS a refusal code is not one. A bare substring
+# search finds 401 inside 4011, and reading that as "never reached" discards a
+# real finding and abandons the lane after it.
+case_is "an error code containing 401 is not a refusal" 0 "" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"result","subtype":"error","is_error":true,"result":"upstream returned HTTP 4011 after the tool call"}
+JSONL
+
 # A run that reached the model and then ran out of turns is a FINDING, not a
 # harness fault. The lane sets --max-turns 20, so this shape is reachable, and
 # excusing it would be this defect inverted: a real answer thrown away and the
@@ -167,9 +176,11 @@ for required in ("HARNESS: the model was never reached", "$why", "exit 2"):
     if required not in body:
         print(f"the stop block does not carry {required!r}")
         sys.exit(1)
-# And it must sit BEFORE the scoring call, or a refused run is scored anyway.
-if lane.index(block.group(0)) > lane.index('--check "$scenario" "$transcript"'):
-    print("the stop block runs after the scoring call")
+# Its EXIT must sit before the scoring call, not merely its opening line: a
+# check that scored the run on its way to exiting would satisfy a comparison
+# against the block's start.
+if block.end() > lane.index('--check "$scenario" "$transcript"'):
+    print("the lane can reach the scoring call without having exited")
     sys.exit(1)
 PYEOF
 then

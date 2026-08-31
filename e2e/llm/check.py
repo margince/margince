@@ -145,7 +145,22 @@ def read_transcript(path):
 # answered badly. Matched on the message because the transport reports both the
 # same way — `is_error` on the terminal result — and only the message says which
 # happened.
-_REFUSALS = ("401", "403", "api key", "authenticate", "authentication", "unauthorized")
+#
+# WORD BOUNDARIES on the numeric codes, because a bare substring finds `401`
+# inside `4011` and `1401`. A run that reached the model and then failed with a
+# number that happens to contain one would be reported as never having happened,
+# which is this defect inverted: a real finding discarded and the rest of the
+# lane abandoned with it.
+#
+# The family is deliberately NARROW, and the cost is stated rather than fixed: a
+# refusal whose message names no marker — a bare "Permission denied" — is scored
+# as a scenario failure. That is the safe direction. Widening the family to
+# catch it would also catch a mid-run tool permission error, which IS a finding,
+# and excusing one of those is worse than reading one credential problem as a
+# bad answer.
+_REFUSALS = re.compile(
+    r"\b(?:401|403)\b|api key|authenticate|authentication|unauthorized", re.IGNORECASE
+)
 
 
 def unrun(path):
@@ -181,8 +196,7 @@ def unrun(path):
             failure = str(event.get("result") or "")
     if not saw_assistant:
         return "the transcript carries no assistant turn: the model was never reached"
-    lowered = failure.lower()
-    if failure and any(mark in lowered for mark in _REFUSALS):
+    if failure and _REFUSALS.search(failure):
         return failure
     return ""
 
