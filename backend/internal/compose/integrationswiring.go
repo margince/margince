@@ -94,6 +94,7 @@ func bindProviderDomain(store *integrations.Store) *integrations.Store {
 		WithSubjectHold(providerSubjectHold).
 		WithStoredClaimApplier(providerStoredClaimApplier).
 		WithClaimWriter(providerClaimWriter).
+		WithFillReverter(providerFillReverter()).
 		WithClaimDeleter(providerClaimDeleter)
 }
 
@@ -136,6 +137,19 @@ func providerClaimWriter(ctx context.Context, tx pgx.Tx, w integrations.ClaimWri
 // the record, for the catch-up sweep.
 func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID string) error {
 	return people.ApplyStoredProviderClaims(ctx, tx, personID, runID)
+}
+
+// providerFillReverter is the domain half of taking a purchase back off the
+// records it filled — the other half of the delete-data action, which until now
+// removed the claims and left the values standing.
+func providerFillReverter() integrations.RevertFillsFunc {
+	return integrations.RevertFillsFunc{
+		Subjects: people.SubjectsWithProviderFills,
+		RevertOne: func(ctx context.Context, tx pgx.Tx, providerName string, subject ids.UUID) ([]string, error) {
+			reverted, err := people.RevertProviderFills(ctx, tx, providerName, subject)
+			return reverted.Fields, err
+		},
+	}
 }
 
 // providerClaimDeleter is the domain half of the delete-data action.

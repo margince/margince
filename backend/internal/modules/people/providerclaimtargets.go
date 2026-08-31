@@ -27,15 +27,20 @@ import (
 // transaction — ApplyLinkedInMatch through HoldWritableLive, the provider
 // hand-off through the holding fence — and re-taking it here would be the
 // ordering the eraser deadlocks against.
-func insertSocialHandle(ctx context.Context, tx pgx.Tx, personID ids.UUID, platform, handle string) (bool, error) {
-	tag, err := tx.Exec(ctx, `
+func insertSocialHandle(ctx context.Context, tx pgx.Tx, personID ids.UUID, platform, handle string) (ids.UUID, bool, error) {
+	var rowID ids.UUID
+	err := tx.QueryRow(ctx, `
 		INSERT INTO person_social (person_id, platform, handle)
 		VALUES ($1, $3, $2)
-		ON CONFLICT (person_id, platform) DO NOTHING`, personID, handle, platform)
-	if err != nil {
-		return false, fmt.Errorf("people: writing a contact's %s handle: %w", platform, err)
+		ON CONFLICT (person_id, platform) DO NOTHING
+		RETURNING id`, personID, handle, platform).Scan(&rowID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, nil
 	}
-	return tag.RowsAffected() > 0, nil
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("people: writing a contact's %s handle: %w", platform, err)
+	}
+	return rowID, true, nil
 }
 
 // organizationByDomain answers which company owns a domain, and whether one
