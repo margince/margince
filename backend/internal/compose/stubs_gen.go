@@ -403,6 +403,10 @@ func (stubs) DeleteCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "DeleteCaptureExclusion")
 }
 
+func (stubs) PurgeCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PurgeCaptureExclusionParams) {
+	httperr.NotImplemented(w, r, "PurgeCaptureExclusion")
+}
+
 func (stubs) ListCaptureOwnerIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCaptureOwnerIdentities")
 }

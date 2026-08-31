@@ -15744,6 +15744,29 @@ type CaptureOwnerIdentityListResponse struct {
 // scope the connection grant does not request.
 type CaptureOwnerIdentitySource string
 
+// CapturePurgeOutcome What a purge destroyed, or what a preview says it would. The four counts are disjoint and
+// together they are every message the rule matched, so a reader can tell "nothing matched"
+// from "everything was somebody else's".
+type CapturePurgeOutcome struct {
+	// Anonymised Contacts stripped of their identifying columns — only those your mail is the sole reason
+	// the CRM knows.
+	Anonymised int `json:"anonymised"`
+
+	// Destroyed Messages gone entirely — text, original, attachments, vectors, delivery copies.
+	Destroyed int `json:"destroyed"`
+
+	// Preview True when nothing was actually done.
+	Preview bool `json:"preview"`
+
+	// Released Messages a colleague also imported. Your import of them is gone; the message stayed, for
+	// them.
+	Released int `json:"released"`
+
+	// Skipped Messages under a statutory hold or an open erasure request. Untouched, and reported
+	// rather than passed over in silence.
+	Skipped int `json:"skipped"`
+}
+
 // CaptureSettings The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
 // changed only by admin/ops.
 type CaptureSettings struct {
@@ -28933,6 +28956,12 @@ type ListConsumerMailBaselineParams struct {
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
 
+// PurgeCaptureExclusionParams defines parameters for PurgeCaptureExclusion.
+type PurgeCaptureExclusionParams struct {
+	// Preview Report what would be destroyed and change nothing.
+	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
 // ListCommissionEntriesParams defines parameters for ListCommissionEntries.
 type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -41236,6 +41265,9 @@ type ServerInterface interface {
 	// Lift an exclusion.
 	// (DELETE /capture/exclusions/{id})
 	DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id)
+	// Destroy the mail one of your own rules matched.
+	// (POST /capture/exclusions/{id}/purge)
+	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
 	// The caller's own other email addresses.
 	// (GET /capture/owner-identities)
 	ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request)
@@ -43105,6 +43137,12 @@ func (_ Unimplemented) CreateCaptureExclusion(w http.ResponseWriter, r *http.Req
 // Lift an exclusion.
 // (DELETE /capture/exclusions/{id})
 func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Destroy the mail one of your own rules matched.
+// (POST /capture/exclusions/{id}/purge)
+func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49381,6 +49419,54 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureExclusion(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureExclusion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PurgeCaptureExclusion operation middleware
+func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PurgeCaptureExclusionParams
+
+	// ------------- Optional query parameter "preview" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "preview", r.URL.Query(), &params.Preview, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "preview"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "preview", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PurgeCaptureExclusion(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69328,6 +69414,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/exclusions/{id}", wrapper.DeleteCaptureExclusion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/exclusions/{id}/purge", wrapper.PurgeCaptureExclusion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/owner-identities", wrapper.ListCaptureOwnerIdentities)

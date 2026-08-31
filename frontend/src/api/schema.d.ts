@@ -5483,6 +5483,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/exclusions/{id}/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Destroy the mail one of your own rules matched.
+         * @description An exclusion stops FUTURE mail. This destroys what already arrived: the message text, the
+         *     provider original, the attachments and their blobs, the embeddings, the delivery copies and
+         *     everything derived from them. It is not reversible and there is no undo — the preview exists
+         *     so the counts are seen before that is true.
+         *
+         *     Only mail your own connection brought in. A message a colleague also imported keeps their
+         *     copy: your import of it is released, theirs stands, and the message stays on their timeline.
+         *     A message under a statutory hold or an open erasure request survives both and is reported as
+         *     skipped, because an owner told their mail is gone must not find it still there.
+         *
+         *     Contacts go too, but only the ones your mail is the sole reason this CRM knows them: a
+         *     person with an address outside the rule, a deal against their name, or mail another
+         *     colleague also imported is somebody the workspace knows independently, and destroying that
+         *     record would take away work somebody did. Those that do go are anonymised rather than
+         *     deleted, so a colleague's records that reference them do not break.
+         *
+         *     Your own rules only. A workspace rule belongs to the workspace, and destroying every
+         *     colleague's matching mail is not one person's act.
+         */
+        post: operations["purgeCaptureExclusion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/counterparty-holds": {
         parameters: {
             query?: never;
@@ -12328,6 +12368,32 @@ export interface components {
             verified: boolean;
             /** Format: date-time */
             created_at?: string;
+        };
+        /**
+         * @description What a purge destroyed, or what a preview says it would. The four counts are disjoint and
+         *     together they are every message the rule matched, so a reader can tell "nothing matched"
+         *     from "everything was somebody else's".
+         */
+        CapturePurgeOutcome: {
+            /** @description Messages gone entirely — text, original, attachments, vectors, delivery copies. */
+            destroyed: number;
+            /**
+             * @description Messages a colleague also imported. Your import of them is gone; the message stayed, for
+             *     them.
+             */
+            released: number;
+            /**
+             * @description Messages under a statutory hold or an open erasure request. Untouched, and reported
+             *     rather than passed over in silence.
+             */
+            skipped: number;
+            /**
+             * @description Contacts stripped of their identifying columns — only those your mail is the sole reason
+             *     the CRM knows.
+             */
+            anonymised: number;
+            /** @description True when nothing was actually done. */
+            preview: boolean;
         };
         CaptureExclusion: {
             /** Format: uuid */
@@ -34744,6 +34810,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    purgeCaptureExclusion: {
+        parameters: {
+            query?: {
+                /** @description Report what would be destroyed and change nothing. */
+                preview?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What was destroyed, or what would be. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapturePurgeOutcome"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
