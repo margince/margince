@@ -16,10 +16,24 @@ import (
 
 func rules(body string) []string {
 	out := []string{}
-	for _, finding := range draftcheck.Body(body, textlang.German, convstate.BandWeeks, true) {
+	for _, finding := range draftcheck.Formatting(body) {
 		out = append(out, finding.Rule)
 	}
 	return out
+}
+
+// A provenance chip is never asked to have paragraphs.
+//
+// Reasoning runs every chip through the phrasing rules, and a chip is a label:
+// no greeting, no paragraph, nothing a break would improve. A shape finding
+// there would spend the single correction retry on the wrong subject.
+func TestAProvenanceChipIsNotAskedForParagraphs(t *testing.T) {
+	long := strings.TrimSpace(strings.Repeat("die offene Frage zu Michael Grodd und dem Angebot ", 6))
+	for _, finding := range draftcheck.Reasoning([]string{long}, textlang.German, convstate.BandWeeks) {
+		if finding.Rule == "unbroken-block" {
+			t.Errorf("a reasoning chip was told to add paragraphs: %q", long)
+		}
+	}
 }
 
 // flagsUnbrokenBlock reports whether the checks fired the unbroken-block rule.

@@ -25,28 +25,17 @@ func personNamed(full string, first, last *string) crmcontracts.Person {
 
 func ptr(s string) *string { return &s }
 
-// The STORED first name wins over splitting the display name.
-//
-// A display name is whatever a mail header carried, and capture writes plenty
-// that are not "Given Family": "Pg Philipp" is one real record, and splitting
-// it greets a person called Philipp as "Pg". The record already knew better —
-// the first name sat in its own column, which this greeting did not read.
-func TestTheGreetingPrefersTheStoredFirstName(t *testing.T) {
-	in := persondraft.FromView(
-		viewOf(personNamed("Pg Philipp", ptr("Philipp"), ptr("Pg"))),
-		persondraft.Request{},
-	)
-	if in.Recipient.FirstName != "Philipp" {
-		t.Errorf("greeting name = %q, want the stored first name: the split reads a display "+
-			"name as if it were always Given Family", in.Recipient.FirstName)
-	}
-}
-
 // With no stored first name, the display name is still split.
 //
 // Most of what capture writes carries a full name and nothing else, so the
 // fallback is the common path rather than a corner.
-func TestTheGreetingFallsBackToSplittingTheDisplayName(t *testing.T) {
+// The stored first name is what a familiar greeting uses.
+//
+// Not a regression test — recipientOf already preferred the stored name before
+// this file existed, by overwriting the split further down. What is pinned here
+// is that the preference survives the two being merged into one function, so a
+// later reader cannot delete the "redundant" half and reintroduce the split.
+func TestTheGreetingUsesTheStoredFirstName(t *testing.T) {
 	in := persondraft.FromView(
 		viewOf(personNamed("Marcus Greven", nil, nil)),
 		persondraft.Request{},

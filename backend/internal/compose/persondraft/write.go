@@ -253,8 +253,11 @@ func ParseDraft(raw string, in Input) (Draft, error) {
 	// The greeting break is restored here rather than trusted to the prompt:
 	// the same request returns the run-on and the two-line form about equally
 	// often, and the composer renders exactly the breaks it is handed.
+	// Both names, because the register decides which one opens the message:
+	// the familiar greeting takes the first name and the formal one the
+	// surname, and the repair must recognise whichever the model wrote.
 	body := strings.TrimSpace(draftfloor.SplitGreetingLine(
-		ai.PlainText(out.Body), in.Recipient.FirstName))
+		ai.PlainText(out.Body), in.Recipient.FirstName, in.Recipient.LastName))
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("person draft response: empty subject or body")
 	}

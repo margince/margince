@@ -83,6 +83,74 @@ func TestTheSplitChangesNoWords(t *testing.T) {
 	}
 }
 
+// A lowercased greeting is the same greeting, and the same run-on line.
+//
+// The body keeps the spelling the model chose: only the match is relaxed, so
+// the repair still moves a break and rewrites nothing.
+func TestALowercasedGreetingIsSplitAndKeepsItsSpelling(t *testing.T) {
+	got := draftfloor.SplitGreetingLine("greven, kurz und schmerzlos. Was ist der Stand?", "Greven")
+	want := "greven,\n\nkurz und schmerzlos. Was ist der Stand?"
+	if got != want {
+		t.Errorf("got %q, want the greeting split with the model's own capitalisation", got)
+	}
+}
+
+// A name carrying non-ASCII letters splits at the right place.
+//
+// The separator is read as the byte after the name, and a multi-byte name
+// would put that index inside a rune if the length were counted in characters
+// rather than bytes.
+func TestANameWithUmlautsIsSplit(t *testing.T) {
+	got := draftfloor.SplitGreetingLine("Jörg, wie ist der Stand?", "Jörg")
+	want := "Jörg,\n\nwie ist der Stand?"
+	if got != want {
+		t.Errorf("got %q, want the split to land after the name", got)
+	}
+}
+
+// A name that already contains a full stop is not cut at its own title.
+func TestANameContainingAFullStopSplitsAfterTheWholeName(t *testing.T) {
+	got := draftfloor.SplitGreetingLine("Dr. Meier, wir haben die Frage offen.", "Dr. Meier")
+	want := "Dr. Meier,\n\nwir haben die Frage offen."
+	if got != want {
+		t.Errorf("got %q, want the split after the whole name rather than inside it", got)
+	}
+}
+
+// A FORMAL greeting opens on the surname, and is repaired too.
+//
+// Which name opens the message is the register's choice — the shared rules
+// send the formal form to the surname — so a repair that knew only the first
+// name left every formal draft running on.
+func TestAFormalGreetingOnTheSurnameIsSplit(t *testing.T) {
+	got := draftfloor.SplitGreetingLine("Greven, wir haben die Frage offen.", "Marcus", "Greven")
+	want := "Greven,\n\nwir haben die Frage offen."
+	if got != want {
+		t.Errorf("got %q, want the formal greeting on its own line", got)
+	}
+}
+
+// The first name is tried first, so a familiar greeting is unaffected by the
+// surname also being offered.
+func TestTheFirstNameStillWinsWhenBothAreOffered(t *testing.T) {
+	got := draftfloor.SplitGreetingLine("Marcus, wir haben die Frage offen.", "Marcus", "Greven")
+	want := "Marcus,\n\nwir haben die Frage offen."
+	if got != want {
+		t.Errorf("got %q, want the familiar greeting on its own line", got)
+	}
+}
+
+// A body already broken with CRLF is left alone.
+//
+// Windows line endings are still line endings. Treating them as unbroken
+// inserts a second break in front of the first and stacks blank lines.
+func TestACRLFBodyIsRecognisedAsAlreadyBroken(t *testing.T) {
+	const body = "Greven,\r\n\r\nwir haben die Frage offen."
+	if got := draftfloor.SplitGreetingLine(body, "Greven"); got != body {
+		t.Errorf("got %q, want the body unchanged", got)
+	}
+}
+
 // squeeze removes every space and newline, leaving only the characters that
 // carry meaning.
 func squeeze(s string) string {

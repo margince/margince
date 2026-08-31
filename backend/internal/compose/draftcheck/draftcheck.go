@@ -286,17 +286,26 @@ func Body(body string, lang textlang.Lang, band convstate.Band, threaded bool) [
 		})
 	}
 
-	if unbrokenBlock(body) {
-		findings = append(findings, Finding{
-			Rule:   "unbroken-block",
-			Phrase: "the whole message on one line",
-			Why: "the greeting and the message run together as a single block, which " +
-				"reads as a wall of text in every mail client — put the greeting on its " +
-				"own line and separate the paragraphs with a blank line",
-		})
-	}
-
 	return append(findings, bandGated(lowered, lang, band)...)
+}
+
+// Formatting reports what is wrong with the SHAPE of a message body.
+//
+// Separate from Body because Reasoning runs each provenance chip through Body,
+// and a chip is a label rather than a message: it has no greeting, wants no
+// paragraph break, and a finding telling the model to add one would spend the
+// single correction retry on feedback about the wrong thing entirely.
+func Formatting(body string) []Finding {
+	if !unbrokenBlock(body) {
+		return nil
+	}
+	return []Finding{{
+		Rule:   "unbroken-block",
+		Phrase: "the whole message on one line",
+		Why: "the greeting and the message run together as a single block, which " +
+			"reads as a wall of text in every mail client — put the greeting on its " +
+			"own line and separate the paragraphs with a blank line",
+	}}
 }
 
 // unbrokenBlock reports a body written as one run of text.

@@ -103,6 +103,9 @@ func Findings[D any](
 	}
 	findings := append(draftcheck.Body(body, lang, band, threaded),
 		draftcheck.Reasoning(reasoning, lang, band)...)
+	// Shape is asked of the BODY alone. Reasoning chips travel through the same
+	// phrasing rules but are labels, not messages.
+	findings = append(findings, draftcheck.Formatting(body)...)
 	if subjectOf != nil {
 		findings = append(findings, draftcheck.Subject(subject, lang, band, threaded)...)
 	}

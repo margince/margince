@@ -22,33 +22,59 @@ import "strings"
 // continues on the same line. A greeting already on its own line is left
 // alone, and so is a body that opens with anything else, because a break
 // inserted at the wrong place is worse than the run-on it was meant to fix.
-func SplitGreetingLine(body, recipient string) string {
+func SplitGreetingLine(body string, names ...string) string {
+	for _, candidate := range names {
+		if split, ok := splitOn(body, candidate); ok {
+			return split
+		}
+	}
+	return body
+}
+
+// splitOn attempts the repair for ONE candidate name, reporting whether it
+// applied. Several are tried because the greeting register decides which name
+// opens the message: the familiar form takes the first name, the formal form
+// the surname, and the repair has to recognise whichever the model wrote.
+func splitOn(body, recipient string) (string, bool) {
 	name := strings.TrimSpace(recipient)
 	if name == "" {
-		return body
+		return body, false
 	}
 	trimmed := strings.TrimLeft(body, " \t")
-	if !strings.HasPrefix(trimmed, name) {
-		return body
+	// Case-insensitively, because a model that lowercases the opening
+	// ("greven, kurz und schmerzlos") wrote the same greeting and the rep sees
+	// the same run-on line. The body keeps ITS spelling — only the match is
+	// relaxed, so nothing the model wrote is rewritten.
+	if !strings.HasPrefix(strings.ToLower(trimmed), strings.ToLower(name)) {
+		return body, false
+	}
+	// Sliced off the BODY by the name's byte length, so the greeting keeps the
+	// capitalisation the model chose. ToLower can change a string's length in
+	// general, so the two are compared above and never mixed here.
+	if len(trimmed) < len(name) {
+		return body, false
 	}
 	rest := trimmed[len(name):]
+	greeting := trimmed[:len(name)]
 	if rest == "" {
-		return body
+		return body, false
 	}
 	// The separator the greeting ends on. A comma is the ordinary one; a full
 	// stop is what the terser registers produce ("Greven. Wir haben…").
 	separator := rest[0]
 	if separator != ',' && separator != '.' {
-		return body
+		return body, false
 	}
 	after := rest[1:]
 	// Already broken: the greeting owns its line and there is nothing to move.
-	if strings.HasPrefix(after, "\n") {
-		return body
+	// CRLF counts — a body that arrives with Windows line endings is already
+	// formatted, and inserting a break in front of them stacks blank lines.
+	if strings.HasPrefix(after, "\n") || strings.HasPrefix(after, "\r\n") {
+		return body, false
 	}
 	message := strings.TrimLeft(after, " \t")
 	if message == "" {
-		return body
+		return body, false
 	}
-	return name + string(separator) + "\n\n" + message
+	return greeting + string(separator) + "\n\n" + message, true
 }
