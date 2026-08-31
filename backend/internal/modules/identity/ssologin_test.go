@@ -367,11 +367,18 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 		t.Errorf("start for a disabled provider = %d, want 404 — indistinguishable from one that was never configured", start.Code)
 	}
 
+	// The callback REDIRECTS rather than answering 404, and the difference is
+	// not cosmetic: this route is reached by a full-page browser navigation
+	// back from the consent screen, so a JSON refusal renders as raw text. What
+	// matters is that the flow does not complete.
 	callback := httptest.NewRecorder()
 	h.OidcSignInCallback(callback, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=x&state=y", nil),
 		"google", crmcontracts.OidcSignInCallbackParams{})
-	if callback.Code != http.StatusNotFound {
-		t.Errorf("callback for a disabled provider = %d, want 404 — a flow in flight must not complete after the provider is turned off", callback.Code)
+	if callback.Code != http.StatusFound {
+		t.Errorf("callback for a disabled provider = %d, want a redirect to the neutral failure page", callback.Code)
+	}
+	if cookie := callback.Header().Get("Set-Cookie"); strings.Contains(cookie, "session") {
+		t.Error("a disabled provider's callback minted a session; the flow completed after the provider was turned off")
 	}
 }
 
@@ -380,10 +387,10 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 // operator to debug a configuration that is perfectly fine.
 //
 // This holds the START route, which can answer a caller directly. The CALLBACK
-// cannot: it is a browser redirect target, so every refusal there — including
-// this one — lands on the neutral failure page, and what distinguishes an
-// outage from a genuine refusal is the system_log reason the fail() path
-// writes ("provider policy"), not the response.
+// cannot: it is a browser redirect target, so every refusal there lands on the
+// neutral failure page, and what distinguishes an outage ("provider policy")
+// from a provider the admin turned off ("provider disabled") is the reason the
+// fail() path writes to system_log, not the response.
 func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	h := Handlers{
 		oidcProviders: map[string]OIDCProviderConfig{

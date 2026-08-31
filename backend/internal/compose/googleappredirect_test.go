@@ -97,14 +97,15 @@ func TestNoSignInRedirectIsAdvertisedWithoutABase(t *testing.T) {
 	}
 }
 
-// Every connector this Google app backs is advertised, under the key its own
-// route is served on.
+// Every connector this Google app backs is advertised, on the path its own route
+// is served under, and the three URLs are distinct.
 //
-// The earlier version of this test compared the advertised URI against the same
-// builder that produced it, which is a tautology — it passed while the URI named
-// provider `google`, a path no route answers. It now asserts against the
-// PROVIDER KEYS ConnectConnector actually dispatches on, so a key that drifts
-// from a route fails here.
+// What this holds is the PATH TEMPLATE and the distinctness — not that the key
+// matches the dispatch switch, which it cannot: both sides read the same
+// constants, so they move together. Comparing an advertised URI against the
+// builder that produced it would hold nothing at all, which is how an earlier
+// shape of this test passed while every mailbox URI named a path no route
+// answers.
 func TestEveryGoogleBackedConnectorIsAdvertisedUnderItsOwnRouteKey(t *testing.T) {
 	var s Server
 	WithGmailCapture(GmailConfig{
@@ -112,10 +113,10 @@ func TestEveryGoogleBackedConnectorIsAdvertisedUnderItsOwnRouteKey(t *testing.T)
 		APIBaseURL:    "https://api.example.com",
 	}, CaptureConfig{})(&s, nil)
 
-	for purpose, provider := range map[crmcontracts.GoogleAppRedirectUriPurpose]string{
-		crmcontracts.MailboxConnect:  providerGmail,
-		crmcontracts.CalendarConnect: providerGcal,
-	} {
+	// The same ordered list the wiring reads, so a connector added there without
+	// a URI shows up here rather than being silently unadvertised.
+	for _, connector := range googleBackedConnectors {
+		purpose, provider := connector.purpose, connector.provider
 		shown, ok := advertised(s.redirectURIs, purpose)
 		if !ok {
 			t.Errorf("%s is not advertised, so that half of the OAuth client stays unregistered", purpose)

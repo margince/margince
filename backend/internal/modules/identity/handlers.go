@@ -151,6 +151,13 @@ type Handlers struct {
 	// because a Settings-configured Google app can change after boot without
 	// a restart. Nil reports no providers.
 	oidcProvidersEnabledFn func(context.Context) ([]OIDCProviderConfig, error)
+	// capabilitiesPerIP bounds the ANONYMOUS capabilities probe, which reaches
+	// the database once the provider policy is wired: a pool connection, a
+	// transaction and a row per request, for a caller with no cookie and no
+	// body. The setup surface (compose/handlers_setup.go) carries the same
+	// limiter for the same reason, and the OIDC routes spend theirs before the
+	// identical read.
+	capabilitiesPerIP *ratelimit.Limiter
 }
 
 // NewHandlers builds the identity transport surface over its service.
@@ -165,6 +172,7 @@ func NewHandlers(svc *Service) Handlers {
 		passwordLinkPerActor:  ratelimit.New(20, time.Hour),
 		passwordLinkPerTarget: ratelimit.New(5, time.Hour),
 		oidcPerIP:             ratelimit.New(30, time.Minute),
+		capabilitiesPerIP:     ratelimit.New(60, time.Minute),
 	}
 }
 
@@ -179,7 +187,7 @@ func NewHandlers(svc *Service) Handlers {
 // is a reset handler whose panic would reach an operator as an opaque 500 on a
 // wipe that had otherwise finished.
 func (h *Handlers) ResetRateLimits() {
-	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.oidcPerIP} {
+	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.oidcPerIP, h.capabilitiesPerIP} {
 		if bucket != nil {
 			bucket.Reset()
 		}
@@ -287,7 +295,7 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 		Key   string `json:"key"`
 		Label string `json:"label"`
 	}, 0)
-	if h.oidcProvidersEnabledFn != nil {
+	if h.oidcProvidersEnabledFn != nil && h.capabilitiesAllowed(r) {
 		// A failed read reports NO providers rather than refusing the request.
 		// This endpoint is what the login screen renders from, so an error here
 		// must degrade to the method every installation always has — password —
@@ -315,6 +323,24 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	// what an intermediary assigns heuristic freshness to.
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, caps)
+}
+
+// capabilitiesAllowed spends this caller's capabilities budget, and reports
+// whether the provider policy may be read for them.
+//
+// Exceeding it withholds the PROVIDER list rather than refusing the request:
+// the login screen still has to render, and password is the method that always
+// remains. A flood therefore costs an attacker the buttons and costs the
+// installation no pool connection — which is the whole point, since this route
+// is anonymous and the read behind it is a transaction.
+//
+// An unwired limiter allows, so a handler set built outside NewHandlers keeps
+// working exactly as it did.
+func (h Handlers) capabilitiesAllowed(r *http.Request) bool {
+	if h.capabilitiesPerIP == nil {
+		return true
+	}
+	return h.capabilitiesPerIP.Allow(httpserver.ClientIP(r))
 }
 
 // Login implements (POST /auth/login). The route is public; the singleton

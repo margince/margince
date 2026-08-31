@@ -141,15 +141,22 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 // set, and this screen has to apply it too or it would show an operator a
 // provider list their login page does not serve.
 func (h installationSettingsHandlers) signInProviders(chosen []string) []crmcontracts.SignInProvider {
+	// The SAME resolver the login screen is served from, so this screen cannot
+	// answer a different question. Both encode one rule — configured ∩ chosen,
+	// with a nil choice meaning all — and spelling it twice is how a settings
+	// page comes to show a provider as offered that the login page does not
+	// offer, with nothing failing in between.
+	offered := make(map[string]bool)
+	for _, p := range offeredProviders(h.configuredProviders, chosen) {
+		offered[p.Key] = true
+	}
 	out := make([]crmcontracts.SignInProvider, 0, len(h.configuredProviders))
 	for _, p := range h.configuredProviders {
-		enabled := chosen == nil
-		for _, key := range chosen {
-			if key == p.Key {
-				enabled = true
-			}
-		}
-		out = append(out, crmcontracts.SignInProvider{Enabled: enabled, Key: p.Key, Label: p.Label})
+		out = append(out, crmcontracts.SignInProvider{
+			Enabled: offered[p.Key],
+			Key:     p.Key,
+			Label:   p.Label,
+		})
 	}
 	return out
 }

@@ -211,7 +211,13 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// The Google app rides the same reasoning: its client SECRET is sealed,
 		// so the surface exists only where there is somewhere to seal it.
 		googleApp := capture.NewGoogleAppStore(NewSettingsStore(pool), vault, s.log)
-		s.googleAppHandlers = googleAppHandlers{store: googleApp}
+		// The FIELD this option owns, not the whole struct. Replacing the struct
+		// would zero the environment client id and the redirect URIs that
+		// WithGmailCapture and WithGoogleSignIn set, leaving the operator a card
+		// reporting no app and no URLs to register — and it would do so only on
+		// the option orders where keyvault happens to run last, which nothing
+		// holds.
+		s.googleAppHandlers.store = googleApp
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is

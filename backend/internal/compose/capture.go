@@ -377,6 +377,17 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 // at transmission, where only an operator sees it. The CHANNEL half — a reply on
 // a channel this workspace bound no bot for — does not depend on this option;
 // WithKeyvault installs it unconditionally (comment below).
+// googleBackedConnectors are the connect flows one Google OAuth app serves, in
+// the order an operator registers them. Each is a SEPARATE route under its own
+// provider key, so registering one does not cover the other.
+var googleBackedConnectors = []struct {
+	purpose  crmcontracts.GoogleAppRedirectUriPurpose
+	provider string
+}{
+	{crmcontracts.MailboxConnect, providerGmail},
+	{crmcontracts.CalendarConnect, providerGcal},
+}
+
 func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.gmailAppConfigured = c.canSync() // the send pre-flight's fact, recorded before the gate below
@@ -389,7 +400,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// fact that there is one: an operator checking their console against what
 		// this installation actually uses needs the value, and it is not a secret
 		// — it rides in every authorization redirect.
-		if c.canSync() {
+		if s.gmailAppConfigured {
 			s.envClientID = c.ClientID
 		}
 		// Published BEFORE the vault gate below, and for the same reason the
@@ -403,13 +414,13 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// and Calendar are separate flows sharing one Google app, so an operator
 		// who registers only one gets redirect_uri_mismatch on the other — and
 		// the key is `gmail`/`gcal`, never the `google` the sign-in route uses.
-		for purpose, provider := range map[crmcontracts.GoogleAppRedirectUriPurpose]string{
-			crmcontracts.MailboxConnect:  providerGmail,
-			crmcontracts.CalendarConnect: providerGcal,
-		} {
-			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, provider); uri != "" {
+		// A SLICE, not a map: this list is a contract array an operator reads
+		// top to bottom, and Go randomizes map iteration — the two connector
+		// rows would swap places between boots of the same binary.
+		for _, connector := range googleBackedConnectors {
+			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, connector.provider); uri != "" {
 				s.redirectURIs = append(s.redirectURIs,
-					crmcontracts.GoogleAppRedirectUri{Purpose: purpose, Url: uri})
+					crmcontracts.GoogleAppRedirectUri{Purpose: connector.purpose, Url: uri})
 			}
 		}
 		// Without a vault the connect flow can't seal the refresh token, so

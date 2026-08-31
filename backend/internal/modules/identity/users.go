@@ -105,8 +105,13 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		// Back to INVITED when they never set a password, not to active. A member
 		// deactivated before redeeming their invitation still cannot sign in, so
 		// returning them to active would restate in the roster the very
-		// falsehood this status exists to remove — and their invitation link,
-		// which redemption admits either way, is still the route in.
+		// falsehood this status exists to remove.
+		//
+		// Their original invitation link is NOT still live: deactivation
+		// consumed every unused set-password token on the way through
+		// (endCredentialAuthority). The route back in is an admin issuing a new
+		// link, which is why issuance admits an invited member at all —
+		// self-service reset refuses them, having no password to reset.
 		//
 		// EXCEPT the agent seat, which carries a NULL password_hash by
 		// construction and is never invited to anything: it holds no credential

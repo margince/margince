@@ -150,9 +150,18 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 	}
 	// A failed policy read is NOT the 404: reporting an outage as absence would
 	// send an operator to debug a configuration that is fine.
+	//
+	// The cause is logged and NOT written. This route is anonymous, and the
+	// error arrives wrapped from a settings read — an unregistered key wraps
+	// apperrors.ErrNotFound, which httperr would answer as a 404 carrying the
+	// setting's name in the detail: both the status this comment forbids and a
+	// disclosure of internals to a stranger. Writing a bare error instead
+	// classifies as a 500 with nothing borrowed from the cause.
 	enabled, policyErr := h.oidcProviderEnabled(r.Context(), provider)
 	if policyErr != nil {
-		httperr.Write(w, r, policyErr)
+		slog.ErrorContext(r.Context(), "reading the sign-in provider policy",
+			"provider", provider, "err", policyErr)
+		httperr.Write(w, r, errors.New("identity: the sign-in provider policy could not be read"))
 		return
 	}
 	if !enabled {
@@ -228,7 +237,14 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 	if !enabled {
-		httperr.Write(w, r, apperrors.ErrNotFound)
+		// Through fail() and not a JSON 404, because this arm is the one a real
+		// BROWSER reaches: the admin turned the provider off while the reader
+		// was away at the consent screen, and what comes back is a full-page
+		// navigation. A problem+json document would render as raw text where
+		// the neutral failure page belongs. The reason still reaches the
+		// operator, in system_log, which is where every other refusal on this
+		// route explains itself.
+		fail(ctx, "provider disabled", nil)
 		return
 	}
 

@@ -17329,7 +17329,10 @@ components:
             once and re-means no stored row.
         enabled_oidc_providers:
           type: array
-          items: { type: string }
+          maxItems: 32
+          items:
+            type: string
+            maxLength: 64
           description: |
             The provider keys the login screen may offer, of those this deployment configured.
             Sending a key the deployment has no credentials for enables nothing: the effective

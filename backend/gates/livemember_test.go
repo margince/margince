@@ -801,14 +801,14 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + other.ActivatableMemberSQL("status IN ('invited', 'active') AND archived_at IS NULL")
 }`},
-	// A THIRD status pair is not this shape and must not be absorbed by it: it
-	// still reads as a half, which is the honest answer for a set nobody named.
 	// The org360 shape, for the second predicate: a bare declaration naming no
 	// table, consumed elsewhere by name. Invisible to a table-keyed walk from
 	// both ends, which is exactly why it needs its own recogniser.
 	{"the activatable pair spelled into a bare declaration", "activatable-copy", "", `
 const activatableWhere = ` + "`" + `status IN ('invited', 'active') AND archived_at IS NULL` + "`" + `
 `},
+	// A THIRD status pair is not this shape and must not be absorbed by it: it
+	// still reads as a half, which is the honest answer for a set nobody named.
 	{"a third status pair is still a half, not an activatable copy", "half", "", `
 func read() string {
 	return ` + "`" + `SELECT id FROM app_user WHERE status IN ('suspended', 'active') AND archived_at IS NULL` + "`" + `

@@ -114,3 +114,41 @@ func TestGetAuthCapabilitiesReportsPasswordWhenTheProviderPolicyCannotBeRead(t *
 		t.Errorf("oidc_providers = %v on a failed policy read, want none", body.OidcProviders)
 	}
 }
+
+// The capabilities probe is anonymous and, once the provider policy is wired,
+// reaches the database on every call. A flood must therefore cost the caller
+// their buttons rather than costing the installation a pool connection each
+// time — and password, the method that always remains, still has to render.
+func TestGetAuthCapabilitiesStopsReadingTheProviderPolicyUnderAFlood(t *testing.T) {
+	reads := 0
+	h := NewHandlers(nil).WithOIDCProvidersEnabledFn(
+		func(context.Context) ([]OIDCProviderConfig, error) {
+			reads++
+			return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
+		},
+	)
+
+	var lastBody []byte
+	for range 200 {
+		rec := httptest.NewRecorder()
+		h.GetAuthCapabilities(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/capabilities", nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("capabilities answered %d under load; the login screen must still render", rec.Code)
+		}
+		lastBody = rec.Body.Bytes()
+	}
+	if reads >= 200 {
+		t.Errorf("the policy was read %d times in 200 anonymous requests; the budget bounds nothing", reads)
+	}
+
+	var body struct {
+		Password      bool                          `json:"password"`
+		OidcProviders []struct{ Key, Label string } `json:"oidc_providers"`
+	}
+	if err := json.Unmarshal(lastBody, &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !body.Password {
+		t.Error("password sign-in was withheld from a throttled caller; it is the method that always remains")
+	}
+}
