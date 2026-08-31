@@ -14,6 +14,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -71,15 +72,48 @@ func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftv
 // somebody we have never written to — and score as an improvement while being
 // a regression a reader would notice first.
 //
-// Phrasing must not get WORSE rather than having to be perfect: the draft that
-// reaches here is usually clean, but the loop serves its better attempt rather
-// than a spotless one, and demanding zero would discard a genuine voice fix
-// over a finding the first draft carried too.
+// The phrasing test is a SUBSET, not a count. Findings are not
+// interchangeable: a false "Re:" claims a message nobody sent us, where a
+// wellbeing opener is filler, and counting them equal would let a retry trade
+// the second for the first and be served. So the retry may carry only findings
+// the draft it replaces already carried.
+//
+// It is a subset rather than emptiness because the loop serves its better
+// attempt rather than a spotless one. Demanding zero findings would discard a
+// genuine voice fix over a phrasing finding the incumbent carried too — and the
+// incumbent is what we would keep instead, findings and all.
 func improves(in Input, current, retried Draft, violations []ai.VoiceViolation) bool {
 	if len(draftvoice.Violations(retried.Subject, retried.Body)) >= len(violations) {
 		return false
 	}
-	return phrasingFindings(in, retried) <= phrasingFindings(in, current)
+	return noNewPhrasingFindings(phrasingFindings(in, current), phrasingFindings(in, retried))
+}
+
+// noNewPhrasingFindings reports whether every finding against the retry was
+// already a finding against the draft it would replace.
+//
+// A multiset: two of the same finding is worse than one, so the incumbent's
+// copies are consumed as they are matched. Rule and Phrase together identify
+// one — Why is the same sentence for every finding of a rule, so it adds
+// nothing to the comparison.
+func noNewPhrasingFindings(current, retried []draftcheck.Finding) bool {
+	remaining := make(map[draftcheck.Finding]int, len(current))
+	for _, finding := range current {
+		remaining[identity(finding)]++
+	}
+	for _, finding := range retried {
+		key := identity(finding)
+		if remaining[key] == 0 {
+			return false
+		}
+		remaining[key]--
+	}
+	return true
+}
+
+// identity is the part of a finding that says WHICH finding it is.
+func identity(finding draftcheck.Finding) draftcheck.Finding {
+	return draftcheck.Finding{Rule: finding.Rule, Phrase: finding.Phrase}
 }
 
 // servable reports whether a draft is still one the contract can carry. The

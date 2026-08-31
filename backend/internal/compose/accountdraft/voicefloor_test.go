@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -144,5 +145,65 @@ func TestAnUnvoicedDraftRunsNoVoiceRetry(t *testing.T) {
 	}
 	if lane.calls != 1 {
 		t.Errorf("an unvoiced draft made %d model calls; it must make exactly one", lane.calls)
+	}
+}
+
+// A retry that fixes the voice and adds no phrasing finding IS served.
+//
+// The acceptance case, and the one that keeps the three rejection tests
+// honest: without it, an improves() hardwired to false would leave every other
+// test in this file green while the floor's retry became dead code.
+func TestARetryThatFixesTheVoiceIsServed(t *testing.T) {
+	// One voice violation, no phrasing finding.
+	const first = `{"subject":"Rollout","body":"Hi Sarah,\n\nThe rollout — Phase 2 — is ready. Shall we pick this up?"}`
+	// The dash is gone and nothing else is wrong.
+	const retry = `{"subject":"Rollout","body":"Hi Sarah,\n\nPhase 2 of the rollout is ready. Shall we pick this up?"}`
+	lane := &sequencedLane{answers: []string{first, retry}}
+
+	draft, by, err := Write(context.Background(), lane, sampleInput(), voiced())
+	if err != nil {
+		t.Fatalf("the voiced draft failed: %v", err)
+	}
+	if lane.calls != 2 {
+		t.Fatalf("the floor made %d model calls; a violation earns exactly one retry", lane.calls)
+	}
+	if by != crmcontracts.Model {
+		t.Errorf("generated_by = %v, want the model: the floor degraded a served draft", by)
+	}
+	if !strings.Contains(draft.Body, "Phase 2 of the rollout is ready") {
+		t.Errorf("the floor discarded a retry that fixed the voice and broke nothing; body = %q", draft.Body)
+	}
+}
+
+// A retry may not trade one phrasing finding for a DIFFERENT one of equal count.
+//
+// Findings are not interchangeable. A false "Re:" claims a message nobody sent
+// us; a wellbeing opener is filler. Counting them equal would let the retry
+// swap the second for the first and be served.
+func TestARetryThatSwapsOnePhrasingFindingForAnotherIsDiscarded(t *testing.T) {
+	// Three answers, because two retries run in sequence and only the second
+	// is this floor's.
+	//
+	// The first draft carries a wellbeing opener, so draftcore.CorrectOnce
+	// spends its own retry on it. That retry (the second answer) clears the
+	// opener but keeps an em dash, which is a voice violation and no phrasing
+	// finding — so the loop serves it and THIS floor gets it. The floor's own
+	// retry is the third answer: it clears the dash, and claims a thread
+	// nobody started in exchange.
+	//
+	// Both drafts the floor compares therefore carry exactly ONE phrasing
+	// finding, and they are different rules. A floor comparing counts would
+	// serve the "Re:"; one comparing which findings fired keeps the incumbent.
+	const first = `{"subject":"Rollout","body":"Hi Sarah,\n\nI hope this finds you well. Phase 2 is ready."}`
+	const loopRetry = `{"subject":"Rollout","body":"Hi Sarah,\n\nI hope this finds you well. The rollout — Phase 2 — is ready."}`
+	const floorRetry = `{"subject":"Re: Rollout","body":"Hi Sarah,\n\nPhase 2 of the rollout is ready."}`
+	lane := &sequencedLane{answers: []string{first, loopRetry, floorRetry}}
+
+	draft, _, err := Write(context.Background(), lane, sampleInput(), voiced())
+	if err != nil {
+		t.Fatalf("the voiced draft failed: %v", err)
+	}
+	if strings.HasPrefix(draft.Subject, "Re:") {
+		t.Errorf("the floor served a retry claiming a thread nobody started; subject = %q", draft.Subject)
 	}
 }

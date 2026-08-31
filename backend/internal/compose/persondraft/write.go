@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
@@ -161,9 +162,9 @@ func draftSubject(in Input) func(Draft) (string, bool) {
 }
 
 // phrasingFindings is what the shared phrasing rules say is wrong with a draft.
-func phrasingFindings(in Input, draft Draft) int {
-	return len(draftcore.Findings(draft, in.Envelope.Lang(), in.Envelope.Band(),
-		draftText, draftSubject(in)))
+func phrasingFindings(in Input, draft Draft) []draftcheck.Finding {
+	return draftcore.Findings(draft, in.Envelope.Lang(), in.Envelope.Band(),
+		draftText, draftSubject(in))
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, correction string) (Draft, error) {
