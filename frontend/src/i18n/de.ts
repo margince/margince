@@ -6091,10 +6091,10 @@ export const de = {
   "installationSettings.save": "Speichern",
   "googleApp.title": "Google-App",
   "googleApp.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen, nicht mit unseren.",
+    "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",
   "googleApp.configured": "In Verwendung: {clientId}",
   "googleApp.absent":
-    "Keine App hinterlegt. Gmail und Kalender lassen sich erst danach verbinden.",
+    "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
   "googleApp.replaceHint":
     "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
   "googleApp.store": "App hinterlegen",
@@ -6103,6 +6103,15 @@ export const de = {
   "googleApp.removeConfirmBody":
     "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
   "googleApp.remove": "App entfernen",
+  "googleApp.redirectCopied": "Kopiert",
+  "googleApp.redirectCopy": "URI für {purpose} kopieren",
+  "googleApp.redirect.mailbox_connect": "Postfach und Kalender",
+  "googleApp.redirect.sign_in": "Anmeldung",
+  "googleApp.redirectSub":
+    "Tragen Sie jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine, scheitert die Zustimmung mit redirect_uri_mismatch, ohne zu nennen, welche URI falsch war.",
+  "googleApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
+  "googleApp.fromEnvironment":
+    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":

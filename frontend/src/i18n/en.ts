@@ -6130,10 +6130,10 @@ export const en = {
   "installationSettings.save": "Save",
   "googleApp.title": "Google app",
   "googleApp.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials rather than ours.",
+    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",
   "googleApp.configured": "In use: {clientId}",
   "googleApp.absent":
-    "No app stored. Gmail and Calendar cannot be connected until one is.",
+    "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
   "googleApp.replaceHint":
     "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
   "googleApp.store": "Store app",
@@ -6142,6 +6142,15 @@ export const en = {
   "googleApp.removeConfirmBody":
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "googleApp.remove": "Remove app",
+  "googleApp.redirectCopied": "Copied",
+  "googleApp.redirectCopy": "Copy {purpose} URI",
+  "googleApp.redirect.mailbox_connect": "Mailbox and calendar",
+  "googleApp.redirect.sign_in": "Sign-in",
+  "googleApp.redirectSub":
+    "Register every URI below on the OAuth client in the Google console. A missing one fails at the consent screen with redirect_uri_mismatch, which does not say which URI was wrong.",
+  "googleApp.redirectTitle": "Authorized redirect URIs",
+  "googleApp.fromEnvironment":
+    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":

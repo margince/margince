@@ -6027,10 +6027,10 @@ export const vi = {
   "installationSettings.save": "Lưu",
   "googleApp.title": "Ứng dụng Google",
   "googleApp.sub":
-    "Hộp thư được kết nối qua ứng dụng Google OAuth của bạn, nên thư được đọc bằng thông tin xác thực của tổ chức bạn chứ không phải của chúng tôi.",
+    "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
   "googleApp.configured": "Đang dùng: {clientId}",
   "googleApp.absent":
-    "Chưa lưu ứng dụng nào. Chưa thể kết nối Gmail và Lịch cho tới khi có.",
+    "Không có ứng dụng nào từ bất kỳ nguồn nào. Không thể kết nối Gmail và Lịch, và không thể cung cấp đăng nhập bằng Google.",
   "googleApp.replaceHint":
     "Nhập cặp mới sẽ thay thế cặp đã lưu. Các kết nối đã tạo vẫn chạy cho tới khi kết nối lại.",
   "googleApp.store": "Lưu ứng dụng",
@@ -6039,6 +6039,15 @@ export const vi = {
   "googleApp.removeConfirmBody":
     "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này. Hộp thư Microsoft và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
   "googleApp.remove": "Xoá ứng dụng",
+  "googleApp.redirectCopied": "Đã sao chép",
+  "googleApp.redirectCopy": "Sao chép URI {purpose}",
+  "googleApp.redirect.mailbox_connect": "Hộp thư và lịch",
+  "googleApp.redirect.sign_in": "Đăng nhập",
+  "googleApp.redirectSub":
+    "Hãy đăng ký mọi URI bên dưới cho OAuth client trong Google console. Thiếu một URI sẽ khiến màn hình đồng ý báo redirect_uri_mismatch mà không nói URI nào sai.",
+  "googleApp.redirectTitle": "URI chuyển hướng được uỷ quyền",
+  "googleApp.fromEnvironment":
+    "Đang dùng từ cấu hình triển khai này: {clientId}. Lưu một ứng dụng tại đây sẽ thay thế nó trong thời gian còn lưu.",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
