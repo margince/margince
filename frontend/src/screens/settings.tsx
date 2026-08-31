@@ -91,6 +91,7 @@ import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
 import { CaptureActivityTab } from "./capture-activity";
 import { CaptureExclusionsCard } from "./capture-exclusions";
+import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
 import {
   LoadMoreButton,
@@ -411,6 +412,11 @@ function ConnectionsTab() {
           connection below. */}
       <MailSharingCard />
       <ConnectorsCard />
+      {/* Under the mailboxes, because it is what those mailboxes DID: every
+          address they brought in, and what the classifier concluded about each.
+          The posture rows above say what may be read; this says what was
+          decided, which is the half a reader audits. */}
+      <CaptureSendersCard />
       {/* Directly under the mailboxes, because it is the same decision seen
           from the other side: those cards say what Margince may READ, this one
           says whether it may act on it overnight while nobody is watching. The
