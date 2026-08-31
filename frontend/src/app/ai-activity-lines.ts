@@ -145,6 +145,7 @@ export const ACTIVITY_LINE: Readonly<
   },
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
+  capture_confidentiality_verdict: SYSTEM_SWEEP,
   capture_counterparty_verdict: SYSTEM_SWEEP,
   capture_confidentiality_verdict: SYSTEM_SWEEP,
   enrich: notDisplayed(

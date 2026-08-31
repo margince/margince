@@ -205,6 +205,12 @@ func (s *Service) worklistFrom(
 	if mineOnly(scope) {
 		rows = keepReadersOwn(ctx, rows)
 	}
+	// Held before the category narrowing, so a filtered-out source still
+	// reports what it had. Counting after it erased those sources from reach
+	// entirely — a rep narrowing to meetings would read "no tasks" rather than
+	// "tasks, not shown", and a filtered-out source that hit its bound took its
+	// more_available signal out with it.
+	considered := rows
 	narrowed := filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll)
 	if narrowed {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
@@ -222,12 +228,17 @@ func (s *Service) worklistFrom(
 	// then slicing left the last returned row comparing itself against a row the
 	// caller never received, and the summary describing a queue longer than the
 	// one on screen.
-	ordered := rankAll(page(rows, limit))
+	shown := page(rows, limit)
+	ordered := rankAll(shown)
 	out := crmcontracts.Worklist{
 		AsOf:               day.AsOf,
 		Queue:              ordered,
 		Summary:            summarize(ordered),
 		SourcesUnavailable: unavailable(day),
+		// `considered` is every candidate this read weighed, `shown` what
+		// survived folding and the cut. Both are already in hand, so no figure
+		// here costs a query that could disagree with the page it describes.
+		Reach: reachOf(considered, shown, boundedSources(day)),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
@@ -241,6 +252,62 @@ func (s *Service) worklistFrom(
 // Read off the assembled day rather than queried again: the at-risk lane has
 // already returned the deals under the reader's own scope, so this is the
 // answer that surface already has rather than a second opinion about it.
+// boundedSources names the lanes that came back exactly at their own work
+// bound, and therefore may have had more behind them.
+//
+// A lane read to its limit cannot tell a reader how many it did not see: the
+// bound is a limit on work, not a count. So the source is marked as having more
+// rather than reporting a total it does not know.
+//
+// Under-reporting is the one way this must not fail. A source silently marked
+// complete tells a rep there is no more work of that kind, and there is no
+// failing row to notice — which is why every lane with a bound appears here and
+// `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
+// The bounds of the two lanes whose limit lives behind their seam, where this
+// package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
+// `compose.decayCandidateCap` are the real numbers, and
+// `backend/gates/worklistbounds_test.go` fails in both directions when either
+// side moves, because a mirror nobody checks is a wrong number waiting.
+const (
+	quietDealBound = 50
+	decayBound     = 40
+)
+
+func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
+	bounded := map[crmcontracts.WorklistItemSource]bool{}
+	// A lane the read never asked for is absent; a lane it asked and found
+	// empty is present and false. That distinction is the difference between
+	// "nothing today" and "this source was not read", and a reader cannot
+	// recover it from an absence.
+	atCap := func(source crmcontracts.WorklistItemSource, lane *[]crmcontracts.AttentionItem, bound int) {
+		if lane == nil {
+			return
+		}
+		bounded[source] = len(*lane) >= bound
+	}
+	// The health and receipt lanes share one bound.
+	atCap("failed_approval", day.DidNotRun, doneCap)
+	atCap("dsr", day.Dsr, doneCap)
+	atCap("ai_work_health", day.AiWorkHealth, doneCap)
+	atCap("notice", day.Notices, doneCap)
+	atCap("automation_run", day.AutomationHealth, doneCap)
+	atCap("bounce", day.Bounces, doneCap)
+	// Each of these carries its own, declared where the lane is read.
+	atCap("task", &day.Planned, plannedCap)
+	atCap("deal_at_risk", day.AtRisk, quietDealBound)
+	atCap("relationship_decay", day.RelationshipDecay, decayBound)
+	atCap("conversation_claim", day.Commitments, doneCap)
+	// The decision lane is read deeper than the rest, because a batch row
+	// counts a pile and a count taken from a page of ten would report ten over
+	// a hundred and fifty. Approvals and duplicate pairs share that ONE bound,
+	// so filling it says the LANE was truncated and neither source can claim to
+	// be complete — the conservative reading, since the alternative is telling a
+	// rep there are no more of a kind when there are.
+	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
+	bounded["dedupe_candidate"] = bounded["approval"]
+	return bounded
+}
+
 func ownedDealsIn(ctx context.Context, day crmcontracts.Attention, scope string) map[ids.UUID]bool {
 	owned := map[ids.UUID]bool{}
 	if !mineOnly(scope) || day.AtRisk == nil {

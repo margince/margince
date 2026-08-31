@@ -32,6 +32,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   // and the reader's own past writing. In every case the agent is taking
   // something in that it did not have a moment ago.
   capture_classify: "ingest",
+  capture_confidentiality_verdict: "ingest",
   capture_counterparty_verdict: "ingest",
   capture_confidentiality_verdict: "ingest",
   cold_start: "ingest",

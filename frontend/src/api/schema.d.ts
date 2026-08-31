@@ -24446,6 +24446,43 @@ export interface components {
             queue: components["schemas"]["WorklistItem"][];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+            /**
+             * @description How much of each source the queue actually looked at. A source is read up to a
+             *     work bound, so a page can be a page rather than everything there is, and this
+             *     is where the queue says which. Empty only when no source was read at all.
+             */
+            reach: components["schemas"]["WorklistReach"][];
+        };
+        /**
+         * @description What one source contributed, in numbers that say what they counted.
+         *
+         *     `considered` is how many candidates were read and ranked. It is NOT a total: when
+         *     `more_available` is true there are candidates past the bound that this read never
+         *     saw, and no field here claims to know how many. A reader who needs the rest
+         *     narrows the queue or opens that source's own screen, which pages its own data.
+         *
+         *     `shown` is how many of those candidates survived filtering and the page cut, so
+         *     `shown` under `considered` means the rest were folded, filtered or below the cut —
+         *     not lost.
+         */
+        WorklistReach: {
+            /**
+             * @description Which producer these numbers are about. The same vocabulary as an item source.
+             * @enum {string}
+             */
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "batch";
+            /** @description How many candidates from this source were read and ranked. */
+            considered: number;
+            /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
+            shown: number;
+            /**
+             * @description True when this source was read to its work bound, so candidates MAY exist past what
+             *     was considered. A lane that came back exactly full cannot tell a full page from a
+             *     page that stopped one short of more, and it says the cautious thing rather than
+             *     claiming a source is complete when it is not. The client renders `considered` as
+             *     "200+" rather than "200".
+             */
+            more_available: boolean;
         };
         /**
          * @description The day in figures, for the one line above the queue. Each count is of items the

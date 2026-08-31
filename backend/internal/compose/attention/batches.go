@@ -248,6 +248,10 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		category = categorySystem
 	}
 	count := len(members)
+	from := make([]crmcontracts.WorklistItemSource, 0, count)
+	for _, member := range members {
+		from = append(from, member.item.Source)
+	}
 	row := crmcontracts.WorklistItem{
 		// The key and its cause ARE the id: one row per kind per cause per read,
 		// so a client that re-reads finds the same row rather than a new one,
@@ -279,5 +283,5 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			occurred = member.occurredAt
 		}
 	}
-	return ranked{item: row, occurredAt: occurred}
+	return ranked{item: row, foldedFrom: from, occurredAt: occurred}
 }
