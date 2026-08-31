@@ -1375,6 +1375,7 @@ const (
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
+	AttentionItemSourceCustomerWaiting   AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceDsr               AttentionItemSource = "dsr"
@@ -1402,6 +1403,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceCaptureHealth:
 		return true
 	case AttentionItemSourceConversationClaim:
+		return true
+	case AttentionItemSourceCustomerWaiting:
 		return true
 	case AttentionItemSourceDealAtRisk:
 		return true
@@ -11404,6 +11407,7 @@ const (
 	WorklistItemSourceBriefItem         WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth     WorklistItemSource = "capture_health"
 	WorklistItemSourceConversationClaim WorklistItemSource = "conversation_claim"
+	WorklistItemSourceCustomerWaiting   WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk        WorklistItemSource = "deal_at_risk"
 	WorklistItemSourceDedupeCandidate   WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDsr               WorklistItemSource = "dsr"
@@ -11431,6 +11435,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCaptureHealth:
 		return true
 	case WorklistItemSourceConversationClaim:
+		return true
+	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
 		return true
@@ -12693,22 +12699,22 @@ func (e ListProjectsParamsPhase) Valid() bool {
 
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
-	Email    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
-	FullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
-	Phone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
-	Title    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
 )
 
 // Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyCorrectionsField enum.
 func (e SubmitConfirmDetailsJSONBodyCorrectionsField) Valid() bool {
 	switch e {
-	case Email:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail:
 		return true
-	case FullName:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName:
 		return true
-	case Phone:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone:
 		return true
-	case Title:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle:
 		return true
 	default:
 		return false

@@ -238,6 +238,34 @@ func quietRelationships(
 	return lapsed
 }
 
+// attentionWaiting binds the who-is-waiting lane to the activities module's
+// own gated read. The thread walk, the discover gate and the audience arm all
+// live there; nothing about who may see what is decided here.
+type attentionWaiting struct {
+	store *activities.Store
+	now   attention.Clock
+}
+
+func (w attentionWaiting) Unanswered(ctx context.Context) ([]attention.WaitingCustomer, error) {
+	rows, err := w.store.WaitingReplies(ctx, w.now())
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.WaitingCustomer, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, attention.WaitingCustomer{
+			ActivityID:     row.ActivityID,
+			Subject:        row.Subject,
+			Since:          row.OccurredAt,
+			Readable:       row.Readable,
+			PersonID:       row.PersonID,
+			OrganizationID: row.OrganizationID,
+			DealID:         row.DealID,
+		})
+	}
+	return out, nil
+}
+
 // attentionMeetings reads today's remaining meetings through the activities
 // store — the same gated list every other activity surface reads.
 //

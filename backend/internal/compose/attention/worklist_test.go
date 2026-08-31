@@ -15,6 +15,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func item(id string, source crmcontracts.AttentionItemSource, opts ...func(*crmcontracts.AttentionItem)) crmcontracts.AttentionItem {
@@ -321,7 +322,7 @@ func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3, nil)
 
 	if out.Summary.Total != len(out.Queue) {
 		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))
@@ -388,5 +389,71 @@ func TestTheBiggerOfTwoDealsIsMaterial(t *testing.T) {
 		if row.item.Level != want {
 			t.Fatalf("%q landed at level %d, wanted %d", row.item.Id, row.item.Level, want)
 		}
+	}
+}
+
+// Somebody waiting on a reply is the top of the day, above every decision and
+// every drifting deal. It is the one thing here whose cost of inaction falls on
+// somebody else.
+func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:     rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{item("decision", "approval", withKind("send_email"))},
+		AtRisk:   lane(item("drifting", "deal_at_risk", withDeal(500_000_00))),
+	}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000aaaa"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-83 * 24 * time.Hour),
+		Readable:   true,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Source != "customer_waiting" {
+		t.Fatalf("the day led with %q, not the customer who is waiting", out.Queue[0].Source)
+	}
+	if out.Queue[0].Consequence != "buyer_waits" {
+		t.Fatalf("a waiting customer says %q happens if ignored", out.Queue[0].Consequence)
+	}
+}
+
+// One unanswered message is ONE row. The deal it belongs to must not also
+// appear as drifting, or the rep is asked twice for the same reply.
+func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
+	deal := ids.MustParse("01a05500-0000-7000-8000-00000000bbbb")
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item(deal.String(), "deal_at_risk", withDeal(160_100_00))),
+	}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000cccc"),
+		Since:      rankInstant.Add(-3 * 24 * time.Hour),
+		Readable:   true,
+		DealID:     deal,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
+
+	if len(out.Queue) != 1 {
+		t.Fatalf("one unanswered message produced %d rows", len(out.Queue))
+	}
+	if out.Queue[0].Source != "customer_waiting" {
+		t.Fatalf("the surviving row was %q, wanted the waiting one", out.Queue[0].Source)
+	}
+}
+
+// The longer somebody has waited, the higher they sit — among people who are
+// all waiting, the forgotten one is the one at risk.
+func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
+	waiting := []WaitingCustomer{
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000a"), Since: rankInstant.Add(-2 * 24 * time.Hour), Readable: true},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-83 * 24 * time.Hour), Readable: true},
+	}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Id != "01a05500-0000-7000-8000-00000000000b" {
+		t.Fatal("the two-day wait outranked the eighty-three-day one")
 	}
 }
