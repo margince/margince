@@ -26,7 +26,6 @@ import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import { SectionSummary, sectionAnswered } from "./companyrailshared";
 import { TagsSection } from "./companyrailtags";
-import { byReach } from "./coverage";
 import { roleOf } from "./provider-status";
 import { signalKindLabel, signalTone } from "./record360";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
@@ -288,7 +287,12 @@ function PeopleSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const contacts = [...(view?.people?.data ?? [])].sort(byReach);
+  // Already ranked. The server orders the people section by engagement, then
+  // relationship strength, then id (people.RankContacts) BEFORE it cuts to
+  // twenty-five, so re-sorting here would be a second spelling of that rule —
+  // and the copy that drifts, since only one of the two is what chose which
+  // twenty-five arrived.
+  const contacts = view?.people?.data ?? [];
   const state = sectionState(
     view,
     "people",

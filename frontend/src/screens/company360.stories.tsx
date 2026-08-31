@@ -7,7 +7,6 @@ import {
   CommercialPanel,
   DealsCard,
   NextSteps,
-  PeopleCard,
   RecentActivityPanel,
   StateStrip,
 } from "./company360";
@@ -368,7 +367,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
           extra={<CompanyContractState view={view} />}
         />
         <RecentActivityPanel view={view} />
-        <PeopleCard view={view} writable orgId="o-1" />
         <DealsCard view={view} />
         <NextSteps view={view} />
       </div>

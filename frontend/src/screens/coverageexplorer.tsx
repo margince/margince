@@ -1,5 +1,4 @@
 import { useId, useMemo, useState } from "react";
-import type { components } from "../api/schema";
 import { usePublishSelection } from "../app/attention";
 import {
   Badge,
@@ -14,7 +13,7 @@ import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type StrengthBucket, useOrganizationGraph } from "./connections";
+import { type StrengthBucket, useOrganizationGraph } from "./organizationgraph";
 import { incompleteGraph } from "./record360";
 
 // Comparing a chosen few colleagues against the account's contacts.
@@ -35,7 +34,13 @@ import { incompleteGraph } from "./record360";
 // says so, because "no connection" and "the read was capped before it got here"
 // are different claims and only one of them means nobody has tried.
 
-type Contact = components["schemas"]["Organization360Contact"];
+// The two fields this surface actually reads, rather than a whole 360 contact.
+//
+// Narrowed because the caller changed: the roster card this used to sit inside
+// is gone, and the account's contact list feeds it now. Naming the fields makes
+// both shapes fit and stops a future field on the 360 card reading as a
+// dependency this comparison does not have.
+type Contact = Readonly<{ person_id: string; full_name: string }>;
 
 // How many colleagues can stand in the grid at once. Beyond this the columns
 // stop being scannable, which is the failure the whole surface exists to avoid.

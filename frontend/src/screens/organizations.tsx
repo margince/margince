@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWriteRecord } from "../app/capability";
+import { useCan } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
@@ -56,7 +56,6 @@ import {
   DealsCard,
   NextSteps,
   type Org360Result,
-  PeopleCard,
   recordNamesIn,
   StateStrip,
   type SuggestionAction,
@@ -105,7 +104,6 @@ import {
   sinceLastVisitFooter,
 } from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
-import { ConnectionsCard } from "./connections";
 import {
   CreateAction,
   type CreateField,
@@ -2314,7 +2312,6 @@ function CompanyRecordBody({
   // company is read-only for everyone, but a LIVE company somebody else owns is
   // read-only too, and the page had no way to know that until the record
   // started carrying the answer.
-  const orgWritable = useCanWriteRecord("organization", org);
   // The meeting whose brief is open. "Prepare meeting" used to open the
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
@@ -2408,30 +2405,13 @@ function CompanyRecordBody({
           side, is the duplication this page's own rule forbids. */}
       {tab === "people" && (
         <div className="co-panel-stack">
-          {/* The list first: a rep opens this tab to choose somebody to write
-              to, and the ranked list over the WHOLE account is what answers
-              that. The card below still summarises the roster.
-
-              Not in overlay mode, and not when the 360 already said the people
-              section is withheld. Both are reads that can only fail — the
-              mirror does not hold these edges, and a reader refused the roster
-              is refused this too — and a failed table under a notice explaining
-              the refusal replaces an honest empty state with an error. */}
+          {/* The account's people, ranked and paged. One representation, not
+              three: the roster card, the connections card and its diagram all
+              answered "who works here" again in a different shape, and the
+              reader's question is which of them to write to. */}
           {!overlay && !view?.sections_omitted?.includes("people") && (
             <CompanyPeopleList orgId={org.id} />
           )}
-          <PeopleCard
-            view={view}
-            writable={orgWritable}
-            orgId={org.id}
-            loading={loading}
-          />
-          {/* The connection map under the roster: who here deals with the
-              account, who there is to deal with, and — expanded — the diagram
-              with the contact-to-contact lines. The roster answers "who works
-              there"; this answers "who talks to whom", and the People tab is
-              where a reader asks both. */}
-          <ConnectionsCard orgId={org.id} />
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
