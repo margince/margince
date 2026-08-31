@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
@@ -108,6 +109,11 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// The workspace capture-settings surface (CAP-WIRE-7, ADR-0072):
 	// read the auto-enrich posture (all roles), toggle it (admin/ops).
 	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool))}
+	// Whether contacts are looked up automatically for the details the provider
+	// charges nothing for. Always wired, including where no provider is
+	// connected: the posture is the installation's answer, not the
+	// connection's, and an operator must be able to set it before connecting.
+	s.integrationsSettingsHandlers = integrationsSettingsHandlers{store: integrations.NewSettings(NewSettingsStore(pool))}
 	// The tier→model binding (ai-operational-spec §1.4): read it, replace it
 	// without a restart. Always wired, including on an installation that has
 	// bound nothing — an operator binding models for the first time reaches it
