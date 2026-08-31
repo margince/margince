@@ -9,10 +9,11 @@ package identity
 // able to renew it, and the client, the human, and the audience the consent
 // covered were recoverable only from the passport's label.
 //
-// A grant is one act of consent, not one connection: re-consenting mints
-// another grant for the same client. So a client an operator switches off has
-// as many connections beneath it as the human consented to, and each one ends
-// through the same cascade below.
+// A grant is one connection per CLIENT REGISTRATION: re-consenting from an
+// already-connected client supersedes its earlier grant
+// (supersedePriorGrants) rather than adding a row beside it. client_id is a
+// REGISTRATION, not a product — a laptop and a desktop install of one
+// client are two connections this does not fold together.
 
 import (
 	"context"
@@ -107,6 +108,10 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	if err := requireLiveConsentingUser(ctx, tx, in); err != nil {
 		return ids.Nil, "", err
 	}
+	auditCtx := actorCtx(ctx, Identity{UserID: in.UserID, WorkspaceID: in.WorkspaceID})
+	if err := supersedePriorGrants(auditCtx, tx, in.UserID, in.ClientID); err != nil {
+		return ids.Nil, "", err
+	}
 	// oauth_grant.lent_passport_id and oauth_authorization_code.lent_passport_id
 	// are dead columns kept by the additive-only migration rule. Nothing writes
 	// them and nothing reads them: a connection's authority is the scopes its
@@ -123,7 +128,6 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	// own records is audited as its own fact, separate from the passport
 	// minted under it: the consent outlives every passport it issues and is
 	// what an admin later disables.
-	auditCtx := actorCtx(ctx, Identity{UserID: in.UserID, WorkspaceID: in.WorkspaceID})
 	if _, err := storekit.Audit(auditCtx, tx, "create", "oauth_grant", grantID, nil,
 		map[string]any{
 			auditFieldClientID:       in.ClientID,
@@ -173,6 +177,34 @@ const passportRevokedReason = "the passport issued under the grant was revoked"
 // deactivatedUserRevokeReason is what the audit row says when the connection
 // died because the human whose authority it borrows lost their own access.
 const deactivatedUserRevokeReason = "the human who consented was deactivated"
+
+// supersededRevokeReason is what the audit row says when the human consented
+// again from the same client and the earlier connection made way for it.
+const supersededRevokeReason = "superseded by a later consent from the same client"
+
+// supersedePriorGrants ends this human's earlier connections for the SAME
+// client registration (file header: why client_id, not product). The lock
+// story needs nothing new — issueGrant already holds app_user FOR UPDATE
+// (requireLiveConsentingUser) and revokeGrantTx takes the grant lock first,
+// so entering through it preserves the cascade's existing lock order.
+func supersedePriorGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID, clientID string) error {
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM oauth_grant
+		WHERE user_id = $1 AND client_id = $2 AND revoked_at IS NULL`, userID, clientID)
+	if err != nil {
+		return err
+	}
+	prior, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return err
+	}
+	for _, grantID := range prior {
+		if err := revokeGrantTx(ctx, tx, grantID, supersededRevokeReason); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // The LOCK ORDER for a connection's rows, obeyed by every path that touches
 // more than one of them: oauth_grant first, then oauth_refresh_token, then
