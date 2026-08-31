@@ -15,13 +15,14 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (53)
+## Parity (54)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `accountreachcopies_test.go` | H2 | "Which activities belong to this account" has ONE answer, spelled twice. |
 | `agenttoolcatalogtiers_test.go` | H2 | The tool catalog's Tier column says what the contract says. |
 | `aiactivitycatalogparity_test.go` | H3 | The AI-activity contract must name exactly the work that can reach it, and cap exactly what the read caps. |
+| `aiegressdoc_test.go` | H2 | The egress page and the routing table say the same thing. |
 | `airoutingschema_test.go` | H3 | What the EDITOR accepts, checked against what the parser accepts. |
 | `aitaskparity_test.go` | H3 | Every ai\_task an emitter writes into the AI-activity projection must be a task the AI contract declares. |
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
