@@ -116,6 +116,13 @@ func greetingName(person crmcontracts.Person) string {
 // follows the given name in the display name. A one-word name has no surname,
 // and empty is the answer that keeps the greeting familiar rather than
 // producing a formal one addressed to a first name.
+//
+// The recorded column is preferred over the split for the reason the split is
+// only a fallback: "Dr. Anne Weiss" splits to "Anne Weiss", and no rule over
+// display names gets every name right. accountdraft.lastName is the same
+// question asked of an input that carries no name columns at all, so it has
+// only the split — the two are not shared because their inputs differ, not
+// because the answer does.
 func surname(person crmcontracts.Person) string {
 	if person.LastName != nil && strings.TrimSpace(*person.LastName) != "" {
 		return strings.TrimSpace(*person.LastName)

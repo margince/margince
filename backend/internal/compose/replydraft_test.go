@@ -280,7 +280,7 @@ func TestTheDraftIsGivenBothNamesAGreetingCanTake(t *testing.T) {
 	// The rule that says which name goes with which register travels with
 	// every drafting surface, so a prompt carrying the names and not the rule
 	// leaves the model to guess the pairing.
-	if !strings.Contains(req.System, "recipient_last_name") {
+	if !strings.Contains(req.System, "A formal greeting takes the recipient's SURNAME") {
 		t.Error("the system prompt does not say which greeting takes the surname")
 	}
 }
@@ -294,7 +294,7 @@ func TestAVoicedDraftIsToldTheGreetingRuleToo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("replyDraftRequest: %v", err)
 	}
-	if !strings.Contains(req.System, "recipient_last_name") {
+	if !strings.Contains(req.System, "A formal greeting takes the recipient's SURNAME") {
 		t.Error("the voiced system prompt does not carry the greeting rule")
 	}
 	if !strings.Contains(req.System, "plain text") {

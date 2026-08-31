@@ -93,7 +93,7 @@ type RecipientIn struct {
 	// different names, and a formal opening built from a first name is wrong
 	// in every language that has the distinction — so the prompt is given both
 	// and told which is which rather than left to guess one from the other.
-	LastName string `json:"recipient_last_name,omitempty"`
+	LastName string `json:"last_name,omitempty"`
 	Title    string `json:"title,omitempty"`
 	Employer string `json:"employer,omitempty"`
 	Email    string `json:"email,omitempty"`

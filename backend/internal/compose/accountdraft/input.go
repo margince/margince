@@ -74,7 +74,7 @@ type RecipientIn struct {
 	// different names, and a formal opening built from a first name is wrong
 	// in every language that has the distinction — so the prompt is given both
 	// and told which is which rather than left to guess one from the other.
-	LastName string `json:"recipient_last_name,omitempty"`
+	LastName string `json:"last_name,omitempty"`
 	Title    string `json:"title,omitempty"`
 	Email    string `json:"email,omitempty"`
 	// Bucket is the relationship's own reading (strong/moderate/weak/none),
@@ -302,10 +302,23 @@ func firstName(full string) string {
 	return strings.TrimSpace(full)
 }
 
-// lastName is firstName's mirror: what remains after the given name, which is
-// what a formal greeting takes. A single-word name has no surname to offer,
-// and empty is the answer that sends the greeting to the familiar form rather
-// than to a formal one addressed to a first name.
+// lastName is what follows the FIRST space in the display name, which is the
+// surname for a two-word name and not always one otherwise: "Dr. Anne Weiss"
+// yields "Anne Weiss", a given name inside the result. No rule over display
+// names gets every name right, and this input carries no name columns to
+// consult — the 360 contact it folds has a full name and nothing else.
+//
+// A single-word name yields empty, which sends the greeting to the familiar
+// form rather than to a formal one addressed to a first name.
+//
+// persondraft.surname answers the same question from a Person record and
+// prefers that record's own last_name, which is the better answer where it
+// exists. The two are not shared because their INPUTS differ, not their
+// answer: unifying them would mean passing a Person into a fold that has none.
+//
+// The prompt rule is what protects the output where this is wrong: a formal
+// greeting is used only where a surname was given, and the model is told never
+// to complete or invent one.
 func lastName(full string) string {
 	if _, rest, found := strings.Cut(strings.TrimSpace(full), " "); found {
 		return strings.TrimSpace(rest)
