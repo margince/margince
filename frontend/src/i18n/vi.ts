@@ -6067,6 +6067,8 @@ export const vi = {
     "Không có gì để nhập ở đây. App Microsoft là cấu hình triển khai: người vận hành server đặt MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET và MARGINCE_GRAPH_TENANT trước khi khởi động.",
   "firstRun.platform.otherOperator":
     "Không có gì để nhập ở đây. Hộp thư IMAP tự mang host, user và mật khẩu của nó, và những giá trị đó được nhập trên chính hộp thư ở Cài đặt → Tích hợp.",
+  "firstRun.platform.googleSignInCaveat":
+    "Lưu app bên dưới sẽ kết nối thư và lịch. Đăng nhập bằng tài khoản Google cần thêm một bước: người vận hành server export đúng cặp đó thành MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại. Phần đăng nhập đọc chúng lúc khởi động, không đọc từ những gì lưu ở đây.",
   "firstRun.platform.stillNeedsGoogle":
     "Lần chạy đầu vẫn hỏi một app Google bất kể bạn chọn gì ở trên, nên hướng này chưa hoàn tất được. Hoặc dán một app Google bên dưới, hoặc để người vận hành server export MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",

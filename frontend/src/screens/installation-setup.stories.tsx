@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { InstallationSetup } from "./installation-setup";
 import {
   installFetchStub,
@@ -111,8 +112,10 @@ export const NoPricesOnFile: Story = {
 };
 
 // One step later. The model is bound, so the room is lit for the rest of first
-// run and for everything after it.
-export const ConnectingGoogle: Story = {
+// run and for everything after it. The platform question opens on Google, and
+// its notice says the part the form cannot do: saving the app connects mail and
+// calendar, while sign-in reads the same pair from the environment at startup.
+export const ChoosingThePlatform: Story = {
   render: () => {
     installFetchStub(
       setup([
@@ -124,6 +127,32 @@ export const ConnectingGoogle: Story = {
       <StoryProviders>
         <InstallationSetup />
       </StoryProviders>
+    );
+  },
+};
+
+// The answer that needs no Google app here, which is where the honest awkwardness
+// lives: the operator work is somebody else's and named, and first run still
+// cannot finish, because `google_app` blocks whatever this answer is. The fields
+// stay usable, because pasting an app is the only way past that step today.
+export const OnMicrosoft: Story = {
+  ...ChoosingThePlatform,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("radio", { name: /Microsoft 365/ }),
+    );
+  },
+};
+
+// Neither platform: IMAP mailboxes carrying their own credentials, entered on
+// the mailbox rather than here.
+export const OnNeither: Story = {
+  ...ChoosingThePlatform,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("radio", { name: /Neither/ }),
     );
   },
 };

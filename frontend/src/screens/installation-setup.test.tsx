@@ -253,6 +253,55 @@ describe("the first-run setup gate", () => {
     });
   });
 
+  // The platform answer is one question covering mail AND sign-in, and what it
+  // changes on screen is which gap the reader is told about. Every answer has
+  // one: the two that need no Google app here cannot finish first run, and the
+  // one that does still does not turn the login door on. A screen that names two
+  // of the three reads as a guarantee for the third.
+  describe("what each platform answer says it still leaves undone", () => {
+    // Reads the notices as the reader sees them — by their words rather than by
+    // a live-region role, so which of the two announces stays the surface's
+    // decision and not something this test pins.
+    async function choose(label: string): Promise<void> {
+      const user = userEvent.setup();
+      mount(setupReport(true, false));
+      await screen.findByText("What does your organization run on?");
+      await user.click(screen.getByRole("radio", { name: new RegExp(label) }));
+    }
+
+    const STUCK = /cannot finish yet/;
+
+    it("tells the Google path that saving the app does not enable sign-in", async () => {
+      await choose("Google Workspace");
+      expect(screen.getByText(/MARGINCE_GMAIL_CLIENT_ID/)).toBeTruthy();
+      // And does NOT claim first run is stuck: this path can finish.
+      expect(screen.queryByText(STUCK)).toBeNull();
+    });
+
+    it("sends the Microsoft path to whoever runs the server, and says it cannot finish", async () => {
+      await choose("Microsoft 365");
+      expect(screen.getByText(/MARGINCE_GRAPH_CLIENT_ID/)).toBeTruthy();
+      expect(screen.getByText(STUCK)).toBeTruthy();
+    });
+
+    it("tells the IMAP path the credentials live on the mailbox", async () => {
+      await choose("Neither");
+      expect(
+        screen.getByText(/IMAP mailbox carries its own host/),
+      ).toBeTruthy();
+      expect(screen.getByText(STUCK)).toBeTruthy();
+    });
+
+    // The fields stay usable on every answer, because pasting an app is the only
+    // way past the blocking step — hiding them on the two paths that do not need
+    // one would leave a reader with a refusal and no way to answer it.
+    it("keeps the app fields usable whichever platform is chosen", async () => {
+      await choose("Microsoft 365");
+      expect(screen.getByLabelText("Client ID")).toBeTruthy();
+      expect(screen.getByLabelText("Client secret")).toBeTruthy();
+    });
+  });
+
   // A first-time admin should not have to know a model id by heart. The sheet
   // the installation was seeded with is what it can price, so it is what the
   // field offers — per lane, because an embedder cannot serve a chat tier.

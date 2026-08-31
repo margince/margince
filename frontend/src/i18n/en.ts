@@ -6197,6 +6197,14 @@ export const en = {
   // requires a Google app whatever the answer above, so the two paths that need
   // none are held here — and a refusal that says why beats a Continue that
   // fails with a validation error from the server.
+  // The Google path's own gap, and it has to be here because the option above
+  // promises sign-in. Saving the app below makes mail and calendar work; it does
+  // NOT turn the login door on, because sign-in reads the pair from the process
+  // environment when the server starts rather than from what is stored. An
+  // operator who finished this screen and then looked for the button would find
+  // nothing and nothing telling them why.
+  "firstRun.platform.googleSignInCaveat":
+    "Saving the app below connects mail and calendar. Signing in with a Google account needs one more thing: whoever runs the server exports the same pair as MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restarts it. Sign-in reads them at startup, not from what is saved here.",
   "firstRun.platform.stillNeedsGoogle":
     "First run still asks for a Google app whatever you answer here, so this path cannot finish yet. Either paste a Google app below, or have whoever runs the server export MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restart it.",
   "firstRun.google.clientIdPlaceholder":

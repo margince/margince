@@ -521,9 +521,17 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
           {/* What the two answers that need no app HERE still need, and where.
               It is not this screen's work to do, so the reader is told whose it
               is rather than left with an empty form. */}
-          {operatorWork === undefined ? null : (
-            <Callout tone="info">{t(operatorWork)}</Callout>
-          )}
+          {/* Every answer carries what it still leaves undone, the Google one
+              included — its option promises sign-in, and saving the app below
+              does not turn the login door on. A screen that states two paths'
+              gaps and hides the third's is worse than one that states none: it
+              reads as a guarantee for the path it says nothing about. */}
+          <Callout tone="info" live="status">
+            {t(operatorWork ?? "firstRun.platform.googleSignInCaveat")}
+          </Callout>
+          {/* And what the two answers that need no app here run into anyway.
+              Silent rather than a second live region: both change on the same
+              press, and two regions announcing together read the news twice. */}
           {/* The gap, stated. `google_app` is blocking on the server whatever
               the answer above, so these two paths cannot finish first run — and
               saying so beside the fields that CAN finish it is the only honest

@@ -6131,6 +6131,8 @@ export const de = {
     "Hier ist nichts einzutragen. Die Microsoft-App ist Deployment-Konfiguration: wer den Server betreibt, setzt MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET und MARGINCE_GRAPH_TENANT vor dem Start.",
   "firstRun.platform.otherOperator":
     "Hier ist nichts einzutragen. Ein IMAP-Postfach bringt Host, Benutzer und Passwort selbst mit, und die werden am Postfach selbst unter Einstellungen → Integrationen eingegeben.",
+  "firstRun.platform.googleSignInCaveat":
+    "Das Speichern der App unten verbindet Mail und Kalender. Die Anmeldung mit einem Google-Konto braucht noch einen Schritt: wer den Server betreibt, exportiert dasselbe Paar als MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu. Die Anmeldung liest sie beim Start, nicht aus dem hier Gespeicherten.",
   "firstRun.platform.stillNeedsGoogle":
     "Der Erststart fragt unabhängig von dieser Antwort weiterhin nach einer Google-App, dieser Weg lässt sich also noch nicht abschließen. Entweder unten eine Google-App einfügen, oder wer den Server betreibt exportiert MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
