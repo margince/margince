@@ -5717,6 +5717,7 @@ export const vi = {
   "users.deactivate": "Vô hiệu hoá",
   "users.reactivate": "Kích hoạt lại",
   "users.status.active": "Đang hoạt động",
+  "users.status.invited": "Đã mời",
   "users.status.deactivated": "Đã vô hiệu hoá",
   "users.status.suspended": "Đã tạm khoá",
   "users.link.action": "Lấy liên kết đặt mật khẩu",

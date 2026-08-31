@@ -46,6 +46,16 @@ const ROSTER = {
       is_agent: false,
       roles: ["read_only"],
     },
+    // An invitation nobody has redeemed: it holds a licensed seat and appears
+    // in the roster, but signs in nowhere until the link is used.
+    {
+      id: "u-invited",
+      email: "ivy@acme.test",
+      display_name: "Ivy Invited",
+      status: "invited",
+      is_agent: false,
+      roles: ["rep"],
+    },
     {
       id: "u-none",
       email: "nora@acme.test",
@@ -255,7 +265,7 @@ describe("UsersAdminCard", () => {
     if (!(header instanceof HTMLElement)) {
       throw new Error("the members card has no header band");
     }
-    expect(within(header).getByText("4 users")).toBeTruthy();
+    expect(within(header).getByText("5 users")).toBeTruthy();
     expect(
       within(header).getByRole("button", { name: /invite a user/i }),
     ).toBeTruthy();
@@ -883,5 +893,27 @@ describe("UsersAdminCard", () => {
     await waitFor(() =>
       expect(screen.getByText(/already exists/i)).toBeTruthy(),
     );
+  });
+
+  it("shows an unredeemed invitation as invited, and keeps both ways out of it open", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<UsersAdminCard />);
+
+    const row = await screen.findByTestId("member-u-invited");
+    expect(within(row).getByText("Invited")).toBeTruthy();
+
+    // Both verbs stay reachable, and each closes a different hole. The link is
+    // the ONLY route back for an invitation whose token expired — that member
+    // has no password, so the self-service reset refuses them. Deactivating is
+    // what releases the licensed seat an invitation sent to the wrong address
+    // is still holding.
+    const user = userEvent.setup();
+    await user.click(
+      within(row).getByRole("button", { name: /actions for Ivy Invited/i }),
+    );
+    expect(
+      await screen.findByRole("button", { name: /get set-password link/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^deactivate$/i })).toBeTruthy();
   });
 });

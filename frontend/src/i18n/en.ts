@@ -5824,6 +5824,7 @@ export const en = {
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
+  "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
   "users.link.action": "Get set-password link",
