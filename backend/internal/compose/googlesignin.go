@@ -267,19 +267,32 @@ func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured 
 		if err != nil {
 			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)
 		}
-		if chosen == nil {
-			return configured, nil
-		}
-		allowed := make(map[string]bool, len(chosen))
-		for _, key := range chosen {
-			allowed[key] = true
-		}
-		enabled := make([]identity.OIDCProviderConfig, 0, len(configured))
-		for _, p := range configured {
-			if allowed[p.Key] {
-				enabled = append(enabled, p)
-			}
-		}
-		return enabled, nil
+		return offeredProviders(configured, chosen), nil
 	}
+}
+
+// offeredProviders is the intersection itself, split from the read around it so
+// the rule can be examined without a database: what an admin chose can only
+// ever NARROW what the deployment composed, because a key nobody holds
+// credentials for enables nothing.
+//
+// A nil chosen list is "never chosen", which is every configured provider — an
+// installation that upgrades into this setting keeps the login screen it had.
+// An EMPTY list is a choice and means none, which is why the two cannot be
+// collapsed into a length check.
+func offeredProviders(configured []identity.OIDCProviderConfig, chosen []string) []identity.OIDCProviderConfig {
+	if chosen == nil {
+		return configured
+	}
+	allowed := make(map[string]bool, len(chosen))
+	for _, key := range chosen {
+		allowed[key] = true
+	}
+	enabled := make([]identity.OIDCProviderConfig, 0, len(configured))
+	for _, p := range configured {
+		if allowed[p.Key] {
+			enabled = append(enabled, p)
+		}
+	}
+	return enabled
 }

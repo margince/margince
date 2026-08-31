@@ -112,11 +112,16 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
 function RedirectUris({
   uris,
 }: Readonly<{
-  uris: readonly { purpose: string; url: string }[];
+  uris: readonly { purpose: string; url: string }[] | undefined;
 }>) {
   const t = useT();
   const [copied, setCopied] = useState("");
-  if (uris.length === 0) {
+  // Absent and empty are the same answer here — nothing to register — and the
+  // field is contract-required, but a body that lost one hands over `undefined`
+  // anyway. This card shares a screen with the installation's own settings, so
+  // reading a length off nothing would take that whole page down over a list
+  // the reader could not have acted on.
+  if (!uris || uris.length === 0) {
     return null;
   }
   return (

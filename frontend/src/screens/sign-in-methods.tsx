@@ -70,7 +70,12 @@ export function SignInMethodsCard() {
         <p className="t-body">{t("signInMethods.sub")}</p>
         <QueryGate query={settings}>
           {(current) => {
-            const providers = current.sign_in_providers;
+            // Defaulted, not asserted. The field is contract-required, but a
+            // body that lost one hands over `undefined` anyway, and this card
+            // sits on the settings screen — dereferencing it would take the
+            // whole page down over a list nobody could act on. The same reading
+            // Switch's own `checked` prop documents.
+            const providers = current.sign_in_providers ?? [];
             const enabledKeys = providers
               .filter((provider) => provider.enabled)
               .map((provider) => provider.key);

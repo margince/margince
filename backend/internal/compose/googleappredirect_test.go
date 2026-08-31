@@ -123,3 +123,48 @@ func TestTheConnectorRedirectIsAdvertisedAndIsNotTheSignInOne(t *testing.T) {
 		t.Error("the two purposes advertise the same URL, so one of them is wrong on a split deployment")
 	}
 }
+
+// The three sources the surface has to tell apart, and the one it used to get
+// wrong: an app the DEPLOYMENT supplies is neither a stored app nor the absence
+// of one, and reporting it as absent told operators Gmail could not be
+// connected on installations where it demonstrably could.
+func TestGoogleAppReportsWhichSourceTheConnectorWillActuallyUse(t *testing.T) {
+	for name, tc := range map[string]struct {
+		stored      bool
+		storedID    string
+		envClientID string
+		wantSource  crmcontracts.GoogleAppSource
+		wantID      string
+		wantUsable  bool
+	}{
+		"nothing anywhere": {
+			wantSource: crmcontracts.GoogleAppSourceNone, wantUsable: false,
+		},
+		"the deployment supplies one": {
+			envClientID: "env-id", wantSource: crmcontracts.GoogleAppSourceEnvironment,
+			wantID: "env-id", wantUsable: true,
+		},
+		// Stored wins, exactly as it does at the moment of a connect — anything
+		// else would describe a resolution the connector does not perform.
+		"a stored app wins over the deployment's": {
+			stored: true, storedID: "stored-id", envClientID: "env-id",
+			wantSource: crmcontracts.GoogleAppSourceStored, wantID: "stored-id", wantUsable: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			app := googleAppView(tc.stored, tc.storedID, tc.envClientID, nil)
+			if app.Source != tc.wantSource {
+				t.Errorf("source = %q, want %q", app.Source, tc.wantSource)
+			}
+			if app.ClientId != tc.wantID {
+				t.Errorf("client id = %q, want %q", app.ClientId, tc.wantID)
+			}
+			if app.Configured != tc.wantUsable {
+				t.Errorf("configured = %v, want %v — it answers whether Gmail can be connected at all", app.Configured, tc.wantUsable)
+			}
+			if app.RedirectUris == nil {
+				t.Error("redirect_uris is null rather than an empty list; the field is contract-required")
+			}
+		})
+	}
+}

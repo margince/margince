@@ -57,28 +57,8 @@ func (h googleAppHandlers) GetGoogleApp(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
-	// The stored app wins, exactly as it does at the moment of a connect, and
-	// the environment is the fallback rather than an alternative: reporting
-	// anything else here would describe a resolution the connector does not
-	// perform.
-	app := crmcontracts.GoogleApp{
-		Configured:   status.Configured,
-		ClientId:     status.ClientID,
-		Source:       crmcontracts.GoogleAppSourceNone,
-		RedirectUris: h.redirectURIs,
-	}
-	switch {
-	case status.Configured:
-		app.Source = crmcontracts.GoogleAppSourceStored
-	case h.envClientID != "":
-		app.Source = crmcontracts.GoogleAppSourceEnvironment
-		app.Configured = true
-		app.ClientId = h.envClientID
-	}
-	if app.RedirectUris == nil {
-		app.RedirectUris = []crmcontracts.GoogleAppRedirectUri{}
-	}
-	httperr.WriteJSON(w, http.StatusOK, app)
+	httperr.WriteJSON(w, http.StatusOK,
+		googleAppView(status.Configured, status.ClientID, h.envClientID, h.redirectURIs))
 }
 
 // SetGoogleApp implements (PUT /installation/google-app).
@@ -149,4 +129,42 @@ func sentSecret(sent *string) string {
 		return ""
 	}
 	return *sent
+}
+
+// googleAppView answers WHICH app this installation will actually use, split
+// from the transport so the rule can be read and tested on its own.
+//
+// The stored app wins, exactly as it does at the moment of a connect, and the
+// environment is the fallback rather than an alternative — reporting anything
+// else would describe a resolution the connector does not perform.
+//
+// `configured` answers "can Gmail be connected at all", which is a different
+// question from where the app came from: it is true for both sources, and the
+// surface used to conflate them and tell an operator that mail could not be
+// connected on an installation where it could.
+func googleAppView(
+	stored bool,
+	storedClientID, envClientID string,
+	redirectURIs []crmcontracts.GoogleAppRedirectUri,
+) crmcontracts.GoogleApp {
+	app := crmcontracts.GoogleApp{
+		Configured:   stored,
+		ClientId:     storedClientID,
+		Source:       crmcontracts.GoogleAppSourceNone,
+		RedirectUris: redirectURIs,
+	}
+	switch {
+	case stored:
+		app.Source = crmcontracts.GoogleAppSourceStored
+	case envClientID != "":
+		app.Source = crmcontracts.GoogleAppSourceEnvironment
+		app.Configured = true
+		app.ClientId = envClientID
+	}
+	// An empty LIST and not null: the field is contract-required, and a client
+	// that has to test for null before iterating is one the contract lied to.
+	if app.RedirectUris == nil {
+		app.RedirectUris = []crmcontracts.GoogleAppRedirectUri{}
+	}
+	return app
 }
