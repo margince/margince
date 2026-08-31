@@ -2896,6 +2896,11 @@ export const de = {
     "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",
   "compose.intent": 'Entwurf steuern (optional), z. B. "höfliche Nachfrage"',
   "compose.to": "An",
+  "compose.answering": "Antwort auf „{subject}“ · {when}",
+  "compose.answeringTo": "Antwort an {who} · „{subject}“ · {when}",
+  "compose.answeringNoSubject": "Antwort auf die Nachricht vom {when}",
+  "compose.answeringNothing":
+    "Hier gibt es keine frühere Nachricht — das beginnt einen neuen Verlauf.",
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
   "compose.noGroundableRecipient":
