@@ -830,3 +830,43 @@ func TestAnIncidentIsNotFiledAsRoutineTidying(t *testing.T) {
 		t.Fatal("a broken mailbox says the records drift, which is not what it costs")
 	}
 }
+
+// A bounced email is a customer CONSEQUENCE, not a system condition. Three
+// bounces are three customers who did not get their message, and folding them
+// by the provider's reason would hide two of them.
+func TestBouncesAreNeverFoldedIntoAnIncident(t *testing.T) {
+	bounces := []crmcontracts.AttentionItem{}
+	for i := 0; i < 4; i++ {
+		bounces = append(bounces, item("b"+string(rune('a'+i)), "bounce", withKind("hard")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, Bounces: &bounces}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 4 {
+		t.Fatalf("four bounced customers drew %d rows — some were hidden", len(got))
+	}
+}
+
+// WHICH field names the cause depends on the producer. An AI run's title is
+// its own summary, written per run, so grouping on it would draw a hundred and
+// sixty-three incidents for one broken task — the workspace's real number.
+func TestAIFailuresGroupByWhatRanNotByEachRunsOwnWords(t *testing.T) {
+	failures := []crmcontracts.AttentionItem{}
+	for i := 0; i < 5; i++ {
+		row := item("r"+string(rune('a'+i)), "ai_work_health", withKind("site_triage"))
+		summary := "reading acme" + string(rune('a'+i)) + ".com failed"
+		row.Title = &summary
+		failures = append(failures, row)
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 1 {
+		t.Fatalf("five failures of one task drew %d incidents", len(got))
+	}
+	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "site_triage" {
+		t.Fatalf("the incident names %v, wanted the task that broke", got[0].Batch.Cause)
+	}
+}

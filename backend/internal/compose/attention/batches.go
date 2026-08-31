@@ -104,19 +104,36 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 // would put a failing mailbox and a failing rule in one row, which tells the
 // reader two things are broken and names neither.
 func systemCause(row ranked) (string, bool) {
-	if row.item.Category != categorySystem || row.item.Source == "notice" {
+	if row.item.Category != categorySystem {
 		return "", false
 	}
-	// The NAME of the thing that broke, where the producer sends one: an
-	// automation's own title is the rule ("Post-meeting recap draft"), and
-	// eight failures of it are one broken rule. Its `kind` is the outcome —
-	// "failed" — which every broken rule shares, so grouping on that would put
-	// a failing mailbox and a failing rule under one heading.
-	if row.item.Title != nil && *row.item.Title != "" {
+	switch row.item.Source {
+	case "notice":
+		// A notice is addressed to one person about one thing. Two of them are
+		// two messages, not one condition.
+		return "", false
+	case "bounce":
+		// A bounced email is a CUSTOMER CONSEQUENCE, not a system condition:
+		// this customer did not get this message, and somebody has to fix that
+		// address. Three bounces are three customers, and grouping them by
+		// their provider's reason would hide two of them behind one row —
+		// which is the distinction the whole incident rule rests on.
+		return "", false
+	}
+	// WHICH field names the cause depends on the producer, and getting this
+	// wrong is the difference between one incident and a hundred.
+	//
+	// An automation's title IS the rule ("Post-meeting recap draft"), stable
+	// across every firing, so eight failures of it are one broken rule. Its
+	// `kind` is the outcome — "failed" — which every broken thing shares, so
+	// grouping on that would file a dead mailbox under the same heading.
+	//
+	// An AI run's title is its own SUMMARY, written per run: grouping on it
+	// would draw a hundred and sixty-three incidents for one broken task. Its
+	// `kind` is what ran, which is the thing that is broken.
+	if row.item.Source == "automation_run" && row.item.Title != nil && *row.item.Title != "" {
 		return *row.item.Title, true
 	}
-	// Otherwise the producer's sub-type: an AI task's kind IS what ran, and a
-	// mailbox concern's kind is the condition.
 	if row.item.Kind == nil || *row.item.Kind == "" {
 		return "", false
 	}
