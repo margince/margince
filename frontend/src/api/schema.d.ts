@@ -24144,6 +24144,17 @@ export interface components {
             title?: string;
             /** @description One supporting line: what changed, or what the evidence said. */
             detail?: string;
+            /**
+             * @description Which underlying CONDITION this row reports, for a surface that groups repeated
+             *     failures of one thing into one row. Two failures of one broken automation carry
+             *     the same value; a failure of a different rule carries a different one.
+             *
+             *     It is an opaque identity, not display text: never rendered, and never parsed for
+             *     meaning. A row that reports no shared condition omits it. Present only on the
+             *     system-health sources, where "the same thing broke again" is a question a reader
+             *     has.
+             */
+            cause_ref?: string;
             /** @description Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first. */
             rank?: number;
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
@@ -24367,6 +24378,12 @@ export interface components {
             kind?: string;
             /** @description The server's own sentence for this item, where it has one. */
             title?: string;
+            /**
+             * @description Which underlying CONDITION this row reports, so a surface can group repeated
+             *     failures of one thing into one row. Opaque identity, never rendered and never
+             *     parsed. Absent on a row that reports no shared condition.
+             */
+            cause_ref?: string;
             /** @description One supporting line. */
             detail?: string;
             /** @description The facts that put this item at this level, in the order they were weighed. */
@@ -24408,7 +24425,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "legal_deadline" | "meeting_soon";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -24496,9 +24513,15 @@ export interface components {
              *     `company_match` are addresses whose domain already names a company we know;
              *     `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
              *     `held_draft` are messages waiting to be released.
+             *
+             *     `system_incident` is the one that is not a decision: alike failures of one
+             *     CAUSE — the same rule, the same AI task, the same mailbox — reported once
+             *     with the count. Eight rows saying a recap did not generate are one thing that
+             *     is broken, and repeating it eight times is aggregation failure rather than
+             *     urgency.
              * @enum {string}
              */
-            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft";
+            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft" | "system_incident";
             /** @description How many decisions this row stands for. */
             count: number;
             /**
@@ -24509,6 +24532,12 @@ export interface components {
             at_least?: boolean;
             /** @description A few members, named, so the group can be checked before it is answered. */
             sample?: string[];
+            /**
+             * @description What the members have in common, for a `system_incident`: the rule's name,
+             *     the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
+             *     rather than only how often.
+             */
+            cause?: string;
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is

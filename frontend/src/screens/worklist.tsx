@@ -51,6 +51,16 @@ const FILTERS: readonly WorklistFilter[] = [
   "system",
 ];
 
+// Which narrowing actually CONTAINS this group's members.
+//
+// Every group used to send the reader to `decisions`, which excludes system
+// rows — so pressing Review on a broken automation filtered its own failures
+// out of view and drew an empty page. A verb that hides what it promises to
+// show is worse than no verb.
+function reviewFilter(item: WorklistItem): WorklistFilter {
+  return item.category === "system" ? "system" : "decisions";
+}
+
 // One row.
 //
 // The rank number leads because the whole promise of the page is an order; the
@@ -385,7 +395,7 @@ function WorklistBody({
                 <WorklistRow
                   item={item}
                   position={index + 1}
-                  onReview={() => onFilter("decisions")}
+                  onReview={() => onFilter(reviewFilter(item))}
                 />
               </li>
             ))}

@@ -7136,6 +7136,7 @@ export const en = {
   "worklist.because.approved_and_failed": "you approved it and it did not run",
   "worklist.because.blocks_customer_work": "a customer is held up",
   "worklist.because.routine": "routine tidying",
+  "worklist.because.repeated_failure": "the same thing keeps failing",
   "worklist.because.legal_deadline": "a legal deadline is running",
   "worklist.because.meeting_soon": "starting shortly",
   "worklist.above.pin": "Above the next because you pinned it.",
@@ -7205,6 +7206,8 @@ export const en = {
   "worklist.verb.review_batch": "Review",
   "worklist.verb.draft_reply": "Open to reply",
   "worklist.deal.closes": "closes {date}",
+  "worklist.batch.system_incident": "{cause} failed {count} times",
+  "worklist.batch.unnamedCause": "Something",
 } as const;
 
 export type MessageKey = keyof typeof en;

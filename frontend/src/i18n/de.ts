@@ -7047,6 +7047,7 @@ export const de = {
     "du hast zugestimmt, es lief aber nicht",
   "worklist.because.blocks_customer_work": "ein Kunde wartet darauf",
   "worklist.because.routine": "Routinepflege",
+  "worklist.because.repeated_failure": "dasselbe schlägt immer wieder fehl",
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
@@ -7120,4 +7121,6 @@ export const de = {
   "worklist.verb.review_batch": "Durchsehen",
   "worklist.verb.draft_reply": "Zum Antworten öffnen",
   "worklist.deal.closes": "Abschluss {date}",
+  "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
+  "worklist.batch.unnamedCause": "Etwas",
 } as const satisfies Record<MessageKey, string>;

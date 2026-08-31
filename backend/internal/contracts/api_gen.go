@@ -11398,6 +11398,7 @@ const (
 	Duplicates       WorklistBatchKey = "duplicates"
 	HeldDraft        WorklistBatchKey = "held_draft"
 	LikelyAutomated  WorklistBatchKey = "likely_automated"
+	SystemIncident   WorklistBatchKey = "system_incident"
 	UncertainContact WorklistBatchKey = "uncertain_contact"
 )
 
@@ -11411,6 +11412,8 @@ func (e WorklistBatchKey) Valid() bool {
 	case HeldDraft:
 		return true
 	case LikelyAutomated:
+		return true
+	case SystemIncident:
 		return true
 	case UncertainContact:
 		return true
@@ -11670,6 +11673,7 @@ const (
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
+	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
 	WorklistReasonKindRoutine            WorklistReasonKind = "routine"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
 )
@@ -11706,6 +11710,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindPromised:
 		return true
 	case WorklistReasonKindQuietDays:
+		return true
+	case WorklistReasonKindRepeatedFailure:
 		return true
 	case WorklistReasonKindRoutine:
 		return true
@@ -14788,6 +14794,16 @@ type AttentionItem struct {
 	// suggestion until later in the day. One word for both would make a client that
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
+
+	// CauseRef Which underlying CONDITION this row reports, for a surface that groups repeated
+	// failures of one thing into one row. Two failures of one broken automation carry
+	// the same value; a failure of a different rule carries a different one.
+	//
+	// It is an opaque identity, not display text: never rendered, and never parsed for
+	// meaning. A row that reports no shared condition omits it. Present only on the
+	// system-health sources, where "the same thing broke again" is a question a reader
+	// has.
+	CauseRef *string `json:"cause_ref,omitempty"`
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
@@ -27668,6 +27684,11 @@ type WorklistBatch struct {
 	// bound printed as a total is a wrong number rather than a bounded one.
 	AtLeast *bool `json:"at_least,omitempty"`
 
+	// Cause What the members have in common, for a `system_incident`: the rule's name,
+	// the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
+	// rather than only how often.
+	Cause *string `json:"cause,omitempty"`
+
 	// Count How many decisions this row stands for.
 	Count int `json:"count"`
 
@@ -27676,6 +27697,12 @@ type WorklistBatch struct {
 	// `company_match` are addresses whose domain already names a company we know;
 	// `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
 	// `held_draft` are messages waiting to be released.
+	//
+	// `system_incident` is the one that is not a decision: alike failures of one
+	// CAUSE — the same rule, the same AI task, the same mailbox — reported once
+	// with the count. Eight rows saying a recap did not generate are one thing that
+	// is broken, and repeating it eight times is aggregation failure rather than
+	// urgency.
 	Key WorklistBatchKey `json:"key"`
 
 	// Sample A few members, named, so the group can be checked before it is answered.
@@ -27687,6 +27714,12 @@ type WorklistBatch struct {
 // `company_match` are addresses whose domain already names a company we know;
 // `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
 // `held_draft` are messages waiting to be released.
+//
+// `system_incident` is the one that is not a decision: alike failures of one
+// CAUSE — the same rule, the same AI task, the same mailbox — reported once
+// with the count. Eight rows saying a recap did not generate are one thing that
+// is broken, and repeating it eight times is aggregation failure rather than
+// urgency.
 type WorklistBatchKey string
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
@@ -27762,6 +27795,11 @@ type WorklistItem struct {
 
 	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 	Category WorklistItemCategory `json:"category"`
+
+	// CauseRef Which underlying CONDITION this row reports, so a surface can group repeated
+	// failures of one thing into one row. Opaque identity, never rendered and never
+	// parsed. Absent on a row that reports no shared condition.
+	CauseRef *string `json:"cause_ref,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close

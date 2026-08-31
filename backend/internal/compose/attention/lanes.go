@@ -418,7 +418,10 @@ type AIWork interface {
 
 // TroubledRun is one AI run that went wrong for this reader.
 type TroubledRun struct {
-	ID    ids.UUID
+	ID ids.UUID
+	// Kind is which task ran — the identity two failures of one broken task
+	// share. The run's own summary is written per run and cannot group.
+	Kind  string
 	State string
 	// Summary is the run's own recorded sentence, when it has one.
 	Summary string
@@ -463,8 +466,11 @@ type AutomationHealth interface {
 
 // TroubledAutomationRun is one firing that did not do its work.
 type TroubledAutomationRun struct {
-	ID   ids.UUID
-	Name string
+	ID ids.UUID
+	// AutomationID is the RULE, not this firing of it: the identity two
+	// failures of one broken rule share, and which a rename does not move.
+	AutomationID ids.AutomationID
+	Name         string
 	// Outcome is the contract's failed/blocked vocabulary.
 	Outcome string
 	// Reason is the engine's own recorded why, when it left one.
