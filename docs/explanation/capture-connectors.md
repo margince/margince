@@ -166,7 +166,7 @@ refresh token (see below).
 ## The connectors
 
 All five register in `internal/compose/capture.go`; every one produces `activity` on the way in, and
-two of them can also transmit. The differences that matter:
+three of them can also transmit. The differences that matter:
 
 | | **Gmail** | **IMAP** | **Graph** (Outlook) | **Calendar** (gcal) | **Telegram** |
 |---|---|---|---|---|---|

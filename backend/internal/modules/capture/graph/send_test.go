@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,7 +39,7 @@ func TestSendTransmitsTheRenderedMessageAndReportsTheFiledIdentity(t *testing.T)
 		sentByID: map[string]string{"outbound-1@margince.test": "AAMk-sent-1"},
 		raws:     map[string][]byte{"AAMk-sent-1": rawMsg("outbound-1@margince.test", owner)},
 	}
-	c := New(fakeOAuth{access: "a"}, api)
+	c := New(&fakeOAuth{access: "a"}, api)
 
 	receipt, err := c.SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage())
 	if err != nil {
@@ -77,7 +78,7 @@ func TestARetryThatFindsAPriorSendDoesNotMailAgain(t *testing.T) {
 	msg := sendableMessage()
 	msg.Attempt = 1
 
-	receipt, err := New(fakeOAuth{access: "a"}, api).
+	receipt, err := New(&fakeOAuth{access: "a"}, api).
 		SendEmail(context.Background(), sendableAuth(t, SendScope), msg)
 	if err != nil {
 		t.Fatalf("SendEmail: %v", err)
@@ -99,7 +100,7 @@ func TestARetryThatFindsAPriorSendDoesNotMailAgain(t *testing.T) {
 // and the call would be a round trip per message for nothing.
 func TestAFirstAttemptDoesNotRunThePriorSendLookupBeforeSending(t *testing.T) {
 	api := &fakeAPI{email: owner, sentByID: map[string]string{}}
-	if _, err := New(fakeOAuth{access: "a"}, api).
+	if _, err := New(&fakeOAuth{access: "a"}, api).
 		SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage()); err != nil {
 		t.Fatalf("SendEmail: %v", err)
 	}
@@ -117,7 +118,7 @@ func TestALookupFailureOnARetryStopsRatherThanSending(t *testing.T) {
 	msg := sendableMessage()
 	msg.Attempt = 2
 
-	_, err := New(fakeOAuth{access: "a"}, api).SendEmail(context.Background(), sendableAuth(t, SendScope), msg)
+	_, err := New(&fakeOAuth{access: "a"}, api).SendEmail(context.Background(), sendableAuth(t, SendScope), msg)
 	if !errors.Is(err, connector.ErrUnreachable) {
 		t.Fatalf("SendEmail = %v, want the lookup failure surfaced", err)
 	}
@@ -132,7 +133,7 @@ func TestSendRefusesAMailboxWhoseGrantCarriesNoSendPermission(t *testing.T) {
 	// send permission landed has.
 	auth := sendableAuth(t, "offline_access", "User.Read", "Mail.Read")
 
-	_, err := New(fakeOAuth{access: "a"}, api).SendEmail(context.Background(), auth, sendableMessage())
+	_, err := New(&fakeOAuth{access: "a"}, api).SendEmail(context.Background(), auth, sendableMessage())
 	if !errors.Is(err, ErrSendScopeMissing) {
 		t.Fatalf("SendEmail = %v, want the ungranted-permission refusal", err)
 	}
@@ -158,7 +159,7 @@ func TestSendRefusesAMessageWithNoUsableIdentityBeforeAnyProviderCall(t *testing
 		t.Run(name, func(t *testing.T) {
 			msg := sendableMessage()
 			msg.MessageID = id
-			_, err := New(fakeOAuth{access: "a"}, api).
+			_, err := New(&fakeOAuth{access: "a"}, api).
 				SendEmail(context.Background(), sendableAuth(t, SendScope), msg)
 			if !errors.Is(err, connector.ErrInvalidMessageID) {
 				t.Fatalf("SendEmail(%q) = %v, want the identity refusal", id, err)
@@ -185,7 +186,7 @@ func TestSendSucceedsWithNoIdentityWhenTheReadBackFails(t *testing.T) {
 	}
 	for name, api := range cases {
 		t.Run(name, func(t *testing.T) {
-			receipt, err := New(fakeOAuth{access: "a"}, api).
+			receipt, err := New(&fakeOAuth{access: "a"}, api).
 				SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage())
 			if err != nil {
 				t.Fatalf("SendEmail = %v, want success: the message is already gone", err)
@@ -204,7 +205,7 @@ func TestSendSucceedsWithNoIdentityWhenTheReadBackFails(t *testing.T) {
 // delivery must not be recorded as sent.
 func TestASubmissionMicrosoftRefusesIsReportedAsAFailure(t *testing.T) {
 	api := &fakeAPI{email: owner, sendErr: ErrUnreachable}
-	_, err := New(fakeOAuth{access: "a"}, api).
+	_, err := New(&fakeOAuth{access: "a"}, api).
 		SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage())
 	if !errors.Is(err, connector.ErrUnreachable) {
 		t.Fatalf("SendEmail = %v, want the submission failure surfaced", err)
@@ -214,7 +215,7 @@ func TestASubmissionMicrosoftRefusesIsReportedAsAFailure(t *testing.T) {
 // The carriage declaration is what the dispatcher parks an over-large message
 // against, so its numbers have to be Microsoft's rather than Gmail's.
 func TestCarriageDeclaresMicrosoftsOwnCeiling(t *testing.T) {
-	got := New(fakeOAuth{}, &fakeAPI{}).Carriage()
+	got := New(&fakeOAuth{}, &fakeAPI{}).Carriage()
 	if !got.Carries {
 		t.Fatal("Carries = false; a message with files would park against a connector that can carry them")
 	}
@@ -223,5 +224,42 @@ func TestCarriageDeclaresMicrosoftsOwnCeiling(t *testing.T) {
 	}
 	if got.MaxBytesPerFile != maxSendableFileBytes {
 		t.Errorf("MaxBytesPerFile = %d, want Microsoft's %d — Gmail's larger cap would leave over-large mail to an opaque refusal", got.MaxBytesPerFile, maxSendableFileBytes)
+	}
+}
+
+// THE REGRESSION THIS SEAM EXISTS FOR.
+//
+// A mailbox connected before Mail.Send shipped holds a read-only grant.
+// Refreshing it against the DEPLOYMENT's configured scope list asks Microsoft
+// for a permission that grant never carried, and Microsoft answers by refusing
+// the REFRESH — so the mailbox stops CAPTURING rather than merely declining to
+// send. Every standing path must refresh for what the grant holds.
+func TestAnOlderGrantRefreshesForItsOwnScopesNotTheDeploymentsList(t *testing.T) {
+	readOnly := []string{"offline_access", "User.Read", "Mail.Read"}
+	auth := sendableAuth(t, readOnly...)
+
+	for name, run := range map[string]func(*fakeOAuth) error{
+		"sync": func(o *fakeOAuth) error {
+			_, err := New(o, &fakeAPI{email: owner, initDelta: "d"}).
+				Sync(context.Background(), auth, nil, &recordingSink{})
+			return err
+		},
+		"health check": func(o *fakeOAuth) error {
+			return New(o, &fakeAPI{email: owner}).HealthCheck(context.Background(), auth)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			oauth := &fakeOAuth{access: "a"}
+			if err := run(oauth); err != nil {
+				t.Fatalf("%s: %v", name, err)
+			}
+			if !slices.Equal(oauth.askedFor, readOnly) {
+				t.Fatalf("the refresh asked for %v, want the grant's own %v — asking for more stops this mailbox capturing",
+					oauth.askedFor, readOnly)
+			}
+			if slices.Contains(oauth.askedFor, SendScope) {
+				t.Error("the refresh asked an unconsented grant for the send permission")
+			}
+		})
 	}
 }

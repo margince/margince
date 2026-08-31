@@ -29,10 +29,11 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return 0, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
 		return 0, err
 	}
+	access := refreshed.AccessToken
 	return c.api.EstimateAfter(ctx, access, after)
 }
 
@@ -45,10 +46,11 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillPageResult{}, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
+	access := refreshed.AccessToken
 	// The backfill walks the whole mailbox, Sent Items included — unlike the
 	// incremental delta, which is inbox-only — so this is where the T1
 	// correspondence evidence (ADR-0072 §1) is available to collect. Resolved

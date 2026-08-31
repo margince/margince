@@ -83,10 +83,16 @@ type OAuth interface {
 	AuthCodeURL(state, redirectURI string) string
 	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
 	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
-	// Refresh is AccessToken plus the rotation Microsoft performs on every
-	// redemption — the durable half, which Sync persists and the one-shot
-	// callers above have nowhere to put.
-	Refresh(ctx context.Context, refreshToken string) (oauthflow.TokenRefresh, error)
+	// Refresh redeems the stored refresh token asking for exactly the scopes
+	// THIS connection holds, and reports the rotation Microsoft performs on
+	// every redemption.
+	//
+	// Both halves matter and neither is optional. Asking with the deployment's
+	// configured list instead would stop an older mailbox CAPTURING the day a
+	// scope is added — Microsoft refuses a refresh that names a permission the
+	// grant never carried — and dropping the rotation ages the connection out
+	// on Microsoft's own 90-day idle clock.
+	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
 }
 
 // API is the Graph mail surface the connector uses — read-only but for the two

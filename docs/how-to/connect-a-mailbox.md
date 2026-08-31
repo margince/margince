@@ -20,30 +20,30 @@ Two entry points, both hitting the same API:
 
 - **Settings → Integrations** (`ConnectorsCard`) — the standing-connection roster: each live connection
   with a status badge (`connected` / `reauth_required` / `error`) and last-synced time, a **reconnect**
-  action for a `reauth_required` OAuth connection, and a confirm-gated **disconnect**. Below the roster
-  (or in its place, when nothing is connected yet) sits an always-present **"Add a connection"**
-  affordance offering whichever of **Gmail**, **Google Calendar**, **Microsoft 365**, and **IMAP** aren't
-  already connected. Picking an OAuth provider (Gmail / Calendar / Microsoft) redirects straight to that
-  provider's consent screen from Settings — no detour through onboarding; picking IMAP opens the inline
-  connect form right there. If a provider's backend app isn't configured, the button click surfaces
-  **"{provider} isn't configured in this deployment"** instead of a raw error.
-- **Onboarding → connect step** — the same connect step, reached on a fresh install (or via the
-  `onboarding / connect` command): chips for **Google**, **Microsoft**, and **IMAP** (Google Calendar has
-  no onboarding chip — add it from Settings). All three chips are live; Microsoft opens the same Graph
-  OAuth redirect Settings does.
+  action for a `reauth_required` OAuth connection, and a confirm-gated **disconnect**. Below it (or in
+  its place, when nothing is connected) an always-present **"Add a connection"** offers whichever
+  providers aren't connected yet. An OAuth pick redirects straight to that provider's consent screen;
+  IMAP opens the inline form. A provider whose backend app isn't configured answers **"{provider} isn't
+  configured in this deployment"** rather than a raw error.
+- **Onboarding → connect step** — the same step on a fresh install (or via the `onboarding / connect`
+  command): live chips for **Google**, **Microsoft** and **IMAP**. Google Calendar has no onboarding
+  chip — add it from Settings.
 
 > **Restart after backend config.** The api is a compiled binary — changing an OAuth env var (below)
 > needs `make dev` again to take effect; Vite hot-reloads the SPA but not the Go api.
 
 ## Which path do I want?
 
-| Provider | Path | Credential custody | Background sync + backfill | What you need |
-|---|---|---|---|---|
-| **Gmail** | OAuth standing connection | refresh token sealed in the vault, destroyed on disconnect | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
-| **Gmail** | IMAP standing connection | app-password sealed in the vault, destroyed on disconnect | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
-| **Outlook / M365** | IMAP standing connection | app-password sealed in the vault, destroyed on disconnect | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
-| **Outlook / M365** | Graph OAuth standing connection | refresh token sealed in the vault, destroyed on disconnect | Sync + backfill (poll-only) | a Microsoft Entra app + the vault key |
-| **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | refresh token sealed in the vault, destroyed on disconnect | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
+**Custody is the same on every row**: the credential — refresh token or app-password — is
+sealed in the vault, never written to the connection row, and **destroyed on disconnect**.
+
+| Provider | Path | Background sync + backfill | What you need |
+|---|---|---|---|
+| **Gmail** | OAuth standing connection | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
+| **Gmail** | IMAP standing connection | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
+| **Outlook / M365** | IMAP standing connection | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
+| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (poll-only) | a Microsoft Entra app + the vault key |
+| **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
 
 Start with **IMAP** if you just want to see capture work against a real mailbox from the UI — it needs no
 OAuth app registration, only the vault key every connect path requires. Use **Gmail OAuth** to exercise
@@ -255,7 +255,9 @@ by name until it is reconnected.
 
 1. Either click the **Microsoft** chip on the onboarding connect step, or go to **Settings →
    Integrations** and click **Microsoft** in the **Add a connection** footer (or empty state).
-2. The page redirects to Microsoft — sign in and consent to `offline_access User.Read Mail.Read`.
+2. The page redirects to Microsoft — sign in and consent to `offline_access User.Read Mail.Read
+   Mail.Send`. Consenting without `Mail.Send` gives a capture-only mailbox that refuses every send
+   until it is reconnected: Microsoft will not add a permission to a refresh token it already issued.
 3. Microsoft returns you to the app; **Settings → Integrations** shows a `graph` row with a **connected**
    badge, reconnect/disconnect actions, and the backfill panel.
 
@@ -339,12 +341,10 @@ curl -X POST http://localhost:8080/v1/connectors/gcal/connect \
 
 ## Current UI gaps
 
-The connect UI is now live for all five connectors. Gmail, Google Calendar, Graph, and IMAP each have a
-first-connect affordance from **Settings → Integrations**, and Gmail, Microsoft, and IMAP have one from
-**onboarding** too (Google Calendar is Settings-only — there's no onboarding chip for it). The fifth is
-**Telegram**, which sits in its own Settings card rather than the *Add a connection* footer — a bot is a
-workspace-wide binding, not one human's grant ([connect-telegram.md](connect-telegram.md)). The roster and
-backfill panel, though, don't apply everywhere: IMAP and Google Calendar have no backfill, so both sync
-forward from connect time only (see the [Calendar section](#d2-connect-from-the-ui) above). See
+Every mail and calendar connector has a first-connect affordance in **Settings → Integrations**; Gmail,
+Microsoft and IMAP additionally have an onboarding chip, and Google Calendar does not. **Telegram** sits
+in its own Settings card rather than the *Add a connection* footer — a bot is a workspace-wide binding,
+not one human's grant ([connect-telegram.md](connect-telegram.md)). Backfill does not apply everywhere:
+IMAP and Google Calendar sync forward from connect time only. See
 [explanation/capture-connectors.md → Honest limitations](../explanation/capture-connectors.md#honest-limitations)
-for what's still scoped out of the pipeline overall.
+for what's still scoped out.

@@ -29,7 +29,7 @@ func (r *recordingRotations) Rotated(_ context.Context, auth connector.Auth) err
 	return nil
 }
 
-func rotatingConnector(t *testing.T, oauth fakeOAuth, api API, sink connector.CredentialSink) connector.Connector {
+func rotatingConnector(t *testing.T, oauth *fakeOAuth, api API, sink connector.CredentialSink) connector.Connector {
 	t.Helper()
 	return New(oauth, api).WithCredentialSink(sink)
 }
@@ -37,7 +37,7 @@ func rotatingConnector(t *testing.T, oauth fakeOAuth, api API, sink connector.Cr
 func TestASyncReportsTheReplacementCredentialWithTheRestOfTheBundleIntact(t *testing.T) {
 	sink := &recordingRotations{}
 	api := &fakeAPI{email: owner, initDelta: "https://graph/delta?$1"}
-	c := rotatingConnector(t, fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
+	c := rotatingConnector(t, &fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
 
 	if _, err := c.Sync(context.Background(), sealedAuth(t), nil, &recordingSink{}); err != nil {
 		t.Fatalf("Sync: %v", err)
@@ -69,7 +69,7 @@ func TestASyncReportsTheReplacementCredentialWithTheRestOfTheBundleIntact(t *tes
 func TestASyncThatRotatesNothingReportsNothing(t *testing.T) {
 	sink := &recordingRotations{}
 	api := &fakeAPI{email: owner, initDelta: "https://graph/delta?$1"}
-	c := rotatingConnector(t, fakeOAuth{access: "a"}, api, sink)
+	c := rotatingConnector(t, &fakeOAuth{access: "a"}, api, sink)
 
 	if _, err := c.Sync(context.Background(), sealedAuth(t), nil, &recordingSink{}); err != nil {
 		t.Fatalf("Sync: %v", err)
@@ -85,7 +85,7 @@ func TestASyncThatRotatesNothingReportsNothing(t *testing.T) {
 func TestARotationThatCannotBeRecordedDoesNotFailTheSync(t *testing.T) {
 	sink := &recordingRotations{err: errors.New("the vault is unreachable")}
 	api := &fakeAPI{email: owner, initDelta: "https://graph/delta?$1"}
-	c := rotatingConnector(t, fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
+	c := rotatingConnector(t, &fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
 
 	cur, err := c.Sync(context.Background(), sealedAuth(t), nil, &recordingSink{})
 	if err != nil {
@@ -104,7 +104,7 @@ func TestARotationThatCannotBeRecordedDoesNotFailTheSync(t *testing.T) {
 func TestARotationIsReportedEvenWhenThePullThenFails(t *testing.T) {
 	sink := &recordingRotations{}
 	api := &fakeAPI{email: owner, deltaErr: ErrUnreachable}
-	c := rotatingConnector(t, fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
+	c := rotatingConnector(t, &fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
 
 	prior := marshalCursor("https://graph/delta?stale", owner)
 	if _, err := c.Sync(context.Background(), sealedAuth(t), prior, &recordingSink{}); err == nil {
@@ -119,7 +119,7 @@ func TestARotationIsReportedEvenWhenThePullThenFails(t *testing.T) {
 // connection the fleet pulls at once, and a field set in place would send one
 // mailbox's replacement credential to another mailbox's re-seal.
 func TestBindingASinkLeavesTheRegisteredConnectorAlone(t *testing.T) {
-	registered := New(fakeOAuth{access: "a", rotated: "r-2"}, &fakeAPI{email: owner, initDelta: "d"})
+	registered := New(&fakeOAuth{access: "a", rotated: "r-2"}, &fakeAPI{email: owner, initDelta: "d"})
 	mine := &recordingRotations{}
 	bound := registered.WithCredentialSink(mine)
 

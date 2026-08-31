@@ -58,12 +58,17 @@ const maxSendableFiles = 10
 
 // maxSendableFileBytes is what survives Microsoft's MIME submit ceiling.
 //
-// Graph accepts 4 MB of base64 for a sendMail, and base64 costs a third — so
-// the raw budget for one message is about 3 MiB, and a single file may not
-// exceed it. Stated as the file bound because that is the seam the dispatcher
-// enforces; a message carrying several smaller files can still exceed the
-// whole-message ceiling, and Microsoft refuses that one.
-const maxSendableFileBytes = 3 << 20
+// The encoding is applied TWICE, which is the part that is easy to get wrong
+// and was: mailwire.Build renders each attachment as base64 INSIDE the message,
+// and SendMIME then base64-encodes the whole message again for the wire. A file
+// of N bytes therefore costs roughly N × 4/3 × 4/3 ≈ 1.8N against a 4 MB
+// request limit, before headers, boundaries and the covering text.
+//
+// 2 MiB leaves real headroom under that. It is an EARLY, legible refusal rather
+// than the bound that matters — several files each under it can still exceed
+// the whole-message ceiling, which is why SendMIME checks the rendered message
+// too rather than trusting this.
+const maxSendableFileBytes = 2 << 20
 
 // SendEmail transmits one message as the connected mailbox owner.
 //
@@ -100,10 +105,11 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 	if !slices.Contains(st.Granted, SendScope) {
 		return connector.SendReceipt{}, ErrSendScopeMissing
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
 		return connector.SendReceipt{}, err
 	}
+	access := refreshed.AccessToken
 	if msg.Attempt > 0 {
 		id, found, findErr := c.api.FindSentByMessageID(ctx, access, msg.MessageID)
 		if findErr != nil {
@@ -133,13 +139,13 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 // envelope mailwire.Build renders — nothing is uploaded separately and nothing
 // is linked.
 //
-// The per-file limit is MICROSOFT'S, not this system's, and it is lower than
+// The per-file limit is MICROSOFT'S, not this system's, and it is far lower than
 // Gmail's — the one place the two providers genuinely differ on what they can
-// carry. Graph's MIME submit ceiling is 4 MB of BASE64, which is about 3 MiB of
-// actual bytes, where Gmail takes the full inbound 25 MiB. Declaring the real
-// number is what makes an over-large message PARK with an honest reason instead
-// of leaving as a request Microsoft answers with an opaque refusal that a retry
-// can never get under.
+// carry. Graph caps a sendMail request at 4 MB and the payload is base64-encoded
+// twice on the way there (see maxSendableFileBytes), where Gmail takes the full
+// inbound 25 MiB. Declaring the real number is what makes an over-large message
+// PARK with an honest reason instead of leaving as a request Microsoft answers
+// with an opaque refusal that no retry can get under.
 func (c *Connector) Carriage() connector.Carriage {
 	return connector.Carriage{
 		Carries:         true,

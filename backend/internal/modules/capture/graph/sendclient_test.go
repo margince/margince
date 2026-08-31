@@ -173,3 +173,42 @@ func TestFindSentByMessageIDMapsARefusalOntoTheSharedVocabulary(t *testing.T) {
 		t.Fatalf("a 401 = %v, want the auth rejection", err)
 	}
 }
+
+// Several files each inside the per-file cap can still add up past Microsoft's
+// whole-request limit, and no gate above this one can see that combination. The
+// refusal must PARK the delivery rather than retry it: the message will be
+// exactly this size every time.
+func TestAMessageOverTheRequestCeilingIsRefusedRatherThanSent(t *testing.T) {
+	var reached bool
+	stub := newSendStub(t, func(w http.ResponseWriter, _ *http.Request) {
+		reached = true
+		w.WriteHeader(http.StatusAccepted)
+	})
+	// Just over the ceiling once base64 has grown it by a third.
+	oversized := make([]byte, maxSubmitBytes)
+
+	err := NewAPI(stub.srv.Client(), stub.srv.URL).SendMIME(context.Background(), "tok", oversized)
+	if !errors.Is(err, connector.ErrFilesNotCarried) {
+		t.Fatalf("SendMIME(oversized) = %v, want the sentinel the dispatcher parks on", err)
+	}
+	if reached {
+		t.Error("a message Microsoft would refuse with a 413 was sent anyway")
+	}
+	// A message inside the ceiling still goes.
+	if err := NewAPI(stub.srv.Client(), stub.srv.URL).
+		SendMIME(context.Background(), "tok", []byte("From: a@b\r\n\r\nhi")); err != nil {
+		t.Fatalf("an ordinary message was refused: %v", err)
+	}
+}
+
+// The per-file cap has to leave room for BOTH encodings — the attachment's
+// base64 inside the message, and the message's base64 on the wire.
+func TestThePerFileCapLeavesRoomForBothEncodings(t *testing.T) {
+	// A single maximum-size file, rendered and then submitted, must fit.
+	const doubleEncoded = maxSendableFileBytes * 4 / 3 * 4 / 3
+	if doubleEncoded >= maxSubmitBytes {
+		t.Fatalf("one %d-byte file becomes ~%d bytes on the wire, at or over the %d-byte ceiling — "+
+			"a single maximum-size attachment could never be sent",
+			maxSendableFileBytes, doubleEncoded, maxSubmitBytes)
+	}
+}

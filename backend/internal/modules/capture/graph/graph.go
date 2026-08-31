@@ -227,7 +227,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}
 	owner := st.Owner // local — never stored on the shared instance
 
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken)
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
 		return nil, err
 	}
@@ -363,10 +363,11 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
 		return err
 	}
+	access := refreshed.AccessToken
 	if _, err := c.api.Profile(ctx, access); err != nil {
 		return err
 	}

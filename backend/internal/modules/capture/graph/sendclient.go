@@ -17,6 +17,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // sendMIMEPath is Microsoft's submit endpoint. It takes the whole RFC822
@@ -24,18 +26,37 @@ import (
 // convention for "the body IS the MIME", not a mislabelling on our part.
 const sendMIMEPath = "/me/sendMail"
 
+// maxSubmitBytes is Microsoft's 4 MB write-request ceiling, read as the size of
+// the BASE64 body actually sent — which is what the limit applies to and what
+// a 413 is measured against.
+//
+// Stated in decimal MB rather than MiB deliberately: Microsoft documents "4 MB"
+// without an exact byte value, so the smaller reading is the one that cannot be
+// wrong.
+const maxSubmitBytes = 4_000_000
+
 // SendMIME transmits one complete RFC822 message as the signed-in user.
 //
 // Microsoft answers 202 Accepted with NO BODY: it names no message id at
 // submission, which is why the caller resolves the sent copy afterwards by the
 // identity the message carries rather than by an id this call could return.
 func (a *httpAPI) SendMIME(ctx context.Context, accessToken string, rfc822 []byte) error {
-	// The message's SIZE is bounded upstream, by what Carriage declares this
-	// connector can carry — the dispatcher parks an over-large one rather than
-	// handing it here. Nothing is re-checked at this depth, because a second
-	// bound would be a second answer and the one that mattered would be
-	// whichever ran first.
 	encoded := base64.StdEncoding.EncodeToString(rfc822)
+	if len(encoded) > maxSubmitBytes {
+		// Refused HERE and not only by Carriage, because Carriage bounds ONE
+		// FILE and this bounds the whole request: several attachments each
+		// inside the per-file cap still add up past Microsoft's limit, and
+		// that combination is invisible to every gate above this one.
+		//
+		// ErrFilesNotCarried is the sentinel the dispatcher PARKS on. A message
+		// this size will be exactly this size on every retry, so the retry
+		// ladder can only exhaust itself and park under "the ladder ran out",
+		// which names no cause. The byte count and the bound go to the operator
+		// in the log the dispatcher writes; the sender gets a reason they can
+		// act on.
+		return fmt.Errorf("graph: the message is %d encoded bytes against Microsoft's %d-byte sendMail limit: %w",
+			len(encoded), maxSubmitBytes, connector.ErrFilesNotCarried)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.base+sendMIMEPath, strings.NewReader(encoded))
 	if err != nil {
 		return fmt.Errorf("graph: building send request: %w", err)
