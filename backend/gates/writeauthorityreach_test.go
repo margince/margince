@@ -53,10 +53,11 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// leave every other subject's record untouched — for retention that is the
 	// storage-limitation failure the pass exists to prevent, and for the rest it
 	// would make a hygiene pass silently partial.
-	"internal/modules/privacy:anonymizePerson": "the retention engine anonymizes a person in place because their retention clock expired, under a policy that names the table. The subject is chosen by age; there is no caller asking for this row and no authority to test beyond the policy itself",
-	"internal/modules/privacy:anonymizeLead":   "the lead half of the same retention pass, chosen the same way",
-	"internal/modules/privacy:archiveDeal":     "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",
-	"internal/modules/deals:SweepWorkspace":    "the close-date hygiene pass reads every open deal in the workspace and corrects or stages the ones whose expected close has gone stale. It runs as the workspace's own system principal with no human behind it, and narrowing it to one seat's rows would leave every other rep's forecast uncorrected while the sweep reported success",
+	"internal/modules/privacy:anonymizePerson":         "the retention engine anonymizes a person in place because their retention clock expired, under a policy that names the table. The subject is chosen by age; there is no caller asking for this row and no authority to test beyond the policy itself",
+	"internal/modules/privacy:anonymizeLead":           "the lead half of the same retention pass, chosen the same way",
+	"internal/modules/privacy:archiveDeal":             "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",
+	"internal/modules/people:promoteIfWorkspaceScoped": "a row probe here would refuse the write it exists to make. The row is owner-scoped, which platform/auth reads as capture privacy — invisible to every principal but its owner, an admin included — so EnsureWritable answers no for exactly the rows this promotes. What decides the promotion is not the caller's authority over the row but the verdict that judged its sender a business counterparty, and the surrounding ensurePerson already takes auth.Require(person, create) for the caller who may mint one at all. The write is one-directional and idempotent: it moves owner to workspace and never back",
+	"internal/modules/deals:SweepWorkspace":            "the close-date hygiene pass reads every open deal in the workspace and corrects or stages the ones whose expected close has gone stale. It runs as the workspace's own system principal with no human behind it, and narrowing it to one seat's rows would leave every other rep's forecast uncorrected while the sweep reported success",
 
 	// The shared fill, probed by BOTH of its callers rather than by itself.
 	// ApplySitePersonFields takes EnsureWritableLive and SKIPS an out-of-scope

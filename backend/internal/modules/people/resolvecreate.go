@@ -39,11 +39,28 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// visibilityWorkspace is the row visibility every create path writes: a
-// captured contact belongs to the workspace the moment it exists. The column
-// still admits 'owner' (capture privacy, read by platform/auth) for rows
-// minted before this was the rule; no create path writes it any more.
-const visibilityWorkspace = "workspace"
+// The two row visibilities a create path writes.
+//
+// A person a HUMAN creates belongs to the workspace the moment they exist —
+// somebody typed them in, and that is the decision. A person CAPTURE mints from
+// a message nothing has judged yet belongs to the mailbox owner until something
+// does: a mailbox with a year of history names correspondents the workspace has
+// no business reading, and one email is not a reason to publish a contact.
+//
+// platform/auth reads `owner` as capture privacy, so an owner-scoped row is
+// invisible to colleagues, an admin included.
+const (
+	visibilityWorkspace = "workspace"
+	visibilityOwner     = "owner"
+)
+
+// visibilityFor answers which of the two a create path writes.
+func visibilityFor(ownerScoped bool) string {
+	if ownerScoped {
+		return visibilityOwner
+	}
+	return visibilityWorkspace
+}
 
 // ownerFromUUID adapts the storage-level owner id the capture and triage paths
 // carry to the typed one the specs take.
