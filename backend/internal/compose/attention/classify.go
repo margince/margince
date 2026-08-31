@@ -18,6 +18,8 @@ package attention
 import (
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -296,6 +298,15 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	occurred := waiting.Since
 	row.OccurredAt = &occurred
+	// The message IS the row's id, so the move needs nothing this row does not
+	// already carry. The product knew the buyer had written and knew nobody had
+	// answered; naming the step is the difference between a page that reports
+	// and a page a rep can work from.
+	activity := openapi_types.UUID(waiting.ActivityID)
+	row.Move = &crmcontracts.WorklistMove{
+		Action:     "draft_reply",
+		ActivityId: &activity,
+	}
 	return ranked{item: row, waitingDays: days, occurredAt: waiting.Since}
 }
 
@@ -317,10 +328,22 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 	if len(waitingDeals) == 0 {
 		return rows
 	}
+	// The deal's own facts ride onto the waiting row that absorbed it: a reader
+	// told a customer is waiting still wants to know the deal is worth €160k.
+	facts := map[string]*crmcontracts.WorklistDealFacts{}
+	for _, row := range rows {
+		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+			facts[row.item.Id] = row.item.Deal
+		}
+	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
 		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
 			continue
+		}
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectDeal && row.item.Deal == nil {
+			row.item.Deal = facts[row.item.Subject.Id.String()]
 		}
 		kept = append(kept, row)
 	}

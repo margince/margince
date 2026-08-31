@@ -701,3 +701,62 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 		}
 	}
 }
+
+// The concept's clearest complaint: the product knew the buyer had written,
+// knew nobody had answered, and knew the answer was to draft a reply — and the
+// page said only "no contact for 83 days".
+func TestAWaitingRowNamesTheMessageAReplyWouldAnswer(t *testing.T) {
+	message := ids.NewV7()
+	waiting := []WaitingCustomer{{
+		ActivityID: message,
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-83 * 24 * time.Hour),
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(),
+		crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
+
+	move := out.Queue[0].Move
+	if move == nil {
+		t.Fatal("the row reports a wait and names no next step")
+	}
+	if move.Action != "draft_reply" {
+		t.Fatalf("the move is %q, wanted the reply", move.Action)
+	}
+	if move.ActivityId == nil || ids.UUID(*move.ActivityId) != message {
+		t.Fatal("the move names no message, so a draft would have nothing to answer")
+	}
+}
+
+// And the deal's money rides onto the row that absorbed it. A reader told a
+// customer is waiting still wants to know the deal is worth six figures.
+func TestAnAbsorbedDealKeepsItsMoneyOnTheWaitingRow(t *testing.T) {
+	deal := ids.NewV7()
+	amount := int64(160_100_00)
+	dealID := openapi_types.UUID(deal)
+	at := []crmcontracts.AttentionItem{{
+		Id:      deal.String(),
+		Source:  "deal_at_risk",
+		Subject: &crmcontracts.AttentionSubject{Type: "deal", Id: dealID},
+		Deal:    &crmcontracts.AttentionDealFacts{AmountMinor: &amount},
+		Actions: []crmcontracts.AttentionItemActions{},
+	}}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.NewV7(),
+		Since:      rankInstant.Add(-3 * 24 * time.Hour),
+		DealID:     deal,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
+
+	if len(out.Queue) != 1 {
+		t.Fatalf("one message about one deal produced %d rows", len(out.Queue))
+	}
+	if out.Queue[0].Deal == nil || out.Queue[0].Deal.AmountMinor == nil {
+		t.Fatal("the deal's money was lost when its row was absorbed")
+	}
+	if *out.Queue[0].Deal.AmountMinor != amount {
+		t.Fatalf("the row says %d, wanted the deal's own amount", *out.Queue[0].Deal.AmountMinor)
+	}
+}

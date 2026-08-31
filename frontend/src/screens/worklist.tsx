@@ -11,7 +11,9 @@ import { ApprovalRow } from "./approvalrow";
 import {
   comparisonText,
   consequenceText,
+  dealFactsText,
   itemTitle,
+  moveHref,
   reasonText,
   sourceUnavailableText,
   subjectHref,
@@ -68,6 +70,7 @@ function WorklistRow({
   const zone = viewerZone();
   const href = subjectHref(item);
   const title = itemTitle(item, t, locale);
+  const facts = dealFactsText(item, t, locale);
   const because = item.because
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)
@@ -101,6 +104,7 @@ function WorklistRow({
             {item.batch.sample.join(" · ")}
           </p>
         )}
+        {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
         {because && <p className="t-caption worklist-row-because">{because}</p>}
         {/* What it costs to do nothing. The question a queue exists to answer,
             and the one the lane feed had no field for. */}
@@ -114,7 +118,7 @@ function WorklistRow({
       {item.batch ? (
         <BatchVerb onReview={onReview} />
       ) : (
-        <RowVerbs item={item} href={href} />
+        <RowVerbs item={item} href={href} move={moveHref(item)} />
       )}
       {decidable(item) && <RowDecision item={item} />}
     </PanelRow>
@@ -183,7 +187,12 @@ function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
 function RowVerbs({
   item,
   href,
-}: Readonly<{ item: WorklistItem; href: string | undefined }>) {
+  move,
+}: Readonly<{
+  item: WorklistItem;
+  href: string | undefined;
+  move: string | undefined;
+}>) {
   const t = useT();
   const drawn = new Set<string>();
   const verbs = item.actions.flatMap((action) => {
@@ -207,11 +216,18 @@ function RowVerbs({
     drawn.add(key);
     return [{ action, destination }];
   });
-  if (verbs.length === 0) {
+  if (verbs.length === 0 && !move) {
     return null;
   }
   return (
     <div className="worklist-row-verbs">
+      {/* The step the product already worked out, offered where the reader is
+          standing rather than on a screen they have to go and find. */}
+      {move && (
+        <a className="worklist-row-verb" href={move}>
+          {t("worklist.verb.draft_reply")}
+        </a>
+      )}
       {verbs.map(({ action, destination }) => (
         <a key={action} className="worklist-row-verb" href={destination}>
           {VERB_LABEL[action](t)}

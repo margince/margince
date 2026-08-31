@@ -206,6 +206,43 @@ export function consequenceText(item: WorklistItem, t: T): string | null {
   return t(`worklist.consequence.${item.consequence}` as const);
 }
 
+// The deal's own figures, in one line: what it is worth, and when it closes.
+//
+// The concept's sharpest example was a €160,100 deal reduced to "no contact for
+// 83 days". The money was on the wire the whole time; only the row discarded it.
+export function dealFactsText(
+  item: WorklistItem,
+  t: T,
+  locale: Locale,
+): string | null {
+  const deal = item.deal;
+  if (!deal) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (deal.amount_minor != null && deal.currency) {
+    parts.push(formatMoney(deal.amount_minor, deal.currency, locale));
+  }
+  if (deal.expected_close_date) {
+    parts.push(
+      t("worklist.deal.closes", { date: String(deal.expected_close_date) }),
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+// Where the row's suggested step leads.
+//
+// A draft is composed on the message it answers, which is the endpoint that
+// owns drafting — this row adds no second way to write a reply. A move naming
+// no message offers nothing rather than a control that goes nowhere.
+export function moveHref(item: WorklistItem): string | undefined {
+  if (item.move?.action !== "draft_reply" || !item.move.activity_id) {
+    return undefined;
+  }
+  return `#/activities/${item.move.activity_id}`;
+}
+
 // One item's headline.
 //
 // The server sends a sentence where it HAS one — an approval summary composed

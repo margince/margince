@@ -270,6 +270,34 @@ describe("what the ranked queue tells a reader", () => {
     });
   });
 
+  it("states the money and offers the reply the product already worked out", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "Re: pricing for the retrofit",
+            source: "customer_waiting",
+            category: "customer_waiting",
+            level: 1,
+            consequence: "buyer_waits",
+            deal: { amount_minor: 16010000, currency: "EUR" },
+            move: {
+              action: "draft_reply",
+              activity_id: "01a05500-0000-7000-8000-00000000aaaa",
+            },
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The concept's sharpest example: a €160,100 deal reduced to "no contact
+    // for 83 days". The money was on the wire the whole time.
+    expect(await screen.findByText(/160,100/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Draft the reply" })).toBeTruthy();
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({
