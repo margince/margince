@@ -51,11 +51,6 @@ type issueGrantInput struct {
 	Scopes         []string
 	RefreshAllowed bool
 	Resource       *string
-	// LentPassportID is the passport the human lent, carried from the
-	// authorization code purely so the Settings list can name it. Nothing reads
-	// it to decide anything; see oauth_lend.go on why a lend outlives the
-	// passport it came from.
-	LentPassportID *ids.PassportID
 }
 
 // errConsentingUserInactive refuses a consent whose human is no longer live.
@@ -112,12 +107,15 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	if err := requireLiveConsentingUser(ctx, tx, in); err != nil {
 		return ids.Nil, "", err
 	}
+	// oauth_grant.lent_passport_id and oauth_authorization_code.lent_passport_id
+	// are dead columns kept by the additive-only migration rule. Nothing writes
+	// them and nothing reads them: a connection's authority is the scopes its
+	// human ticked, and there is no second passport standing behind it.
 	err = tx.QueryRow(ctx, `
-		INSERT INTO oauth_grant (client_id, user_id, scopes, refresh_allowed, resource, lent_passport_id)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO oauth_grant (client_id, user_id, scopes, refresh_allowed, resource)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
-		in.ClientID, in.UserID, in.Scopes, in.RefreshAllowed, in.Resource,
-		in.LentPassportID).Scan(&grantID)
+		in.ClientID, in.UserID, in.Scopes, in.RefreshAllowed, in.Resource).Scan(&grantID)
 	if err != nil {
 		return ids.Nil, "", err
 	}
