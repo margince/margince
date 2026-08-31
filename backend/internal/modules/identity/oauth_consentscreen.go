@@ -66,8 +66,8 @@ var authorizeScreenParams = []string{
 // would reflect arbitrary attacker-chosen keys into the screen's own state.
 //
 // The nonce is not among them because it is not part of the REQUEST: it is the
-// credential half of the double-submit pair, added back only in recovery
-// scenarios where the authorization remains usable.
+// credential half of the double-submit pair, added back only by
+// consentHandoffParams, below, at the initial GET hand-off.
 func consentScreenParams(src url.Values) url.Values {
 	params := url.Values{}
 	for _, name := range authorizeScreenParams {
