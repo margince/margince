@@ -1572,6 +1572,21 @@ export const vi = {
   "co.people.map.scopePartial":
     "{count} trong nhóm · {hidden} người khác bạn không thấy.",
   "co.people.board.readFromMessages": "Đọc từ tin nhắn của họ",
+  "co.intro.title": "Nhờ giới thiệu",
+  "co.intro.who": "Nhờ {colleague} giới thiệu bạn với {contact}.",
+  "co.intro.write": "Viết tin nhắn",
+  "co.intro.writing": "Đang viết",
+  "co.intro.fromTemplate":
+    "Được viết từ mẫu — bản cài đặt này chưa cấu hình mô hình nào.",
+  "co.intro.subject": "Tiêu đề",
+  "co.intro.body": "Tin nhắn",
+  "co.intro.basedOn": "Dựa trên",
+  "co.intro.copy": "Sao chép",
+  "co.intro.copyFailed":
+    "Trình duyệt không cho phép trang sao chép. Hãy chọn tin nhắn và tự sao chép.",
+  "co.intro.copied": "Đã sao chép",
+  "co.intro.openMail": "Mở trong ứng dụng email",
+  "co.map.askIntro": "Nhờ giới thiệu",
   "co.people.board.suggest": "Đề xuất vai trò",
   "co.people.board.suggesting": "Đang đọc tin nhắn của họ",
   "co.people.board.suggestNoDeal":

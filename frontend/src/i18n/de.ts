@@ -1578,6 +1578,21 @@ export const de = {
   "co.people.map.scopePartial":
     "{count} im Buying-Team · {hidden} weitere für dich nicht sichtbar.",
   "co.people.board.readFromMessages": "Aus ihren Nachrichten gelesen",
+  "co.intro.title": "Um eine Vorstellung bitten",
+  "co.intro.who": "{colleague} wird gebeten, Sie {contact} vorzustellen.",
+  "co.intro.write": "Nachricht schreiben",
+  "co.intro.writing": "Wird geschrieben",
+  "co.intro.fromTemplate":
+    "Aus einer Vorlage geschrieben — in dieser Installation ist kein Modell eingerichtet.",
+  "co.intro.subject": "Betreff",
+  "co.intro.body": "Nachricht",
+  "co.intro.basedOn": "Grundlage",
+  "co.intro.copy": "Kopieren",
+  "co.intro.copyFailed":
+    "Der Browser hat das Kopieren nicht zugelassen. Markieren Sie die Nachricht und kopieren Sie sie selbst.",
+  "co.intro.copied": "Kopiert",
+  "co.intro.openMail": "Im E-Mail-Programm öffnen",
+  "co.map.askIntro": "Um Vorstellung bitten",
   "co.people.board.suggest": "Rollen vorschlagen",
   "co.people.board.suggesting": "Nachrichten werden gelesen",
   "co.people.board.suggestNoDeal":

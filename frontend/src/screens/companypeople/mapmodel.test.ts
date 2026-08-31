@@ -3,7 +3,7 @@
 
 import { expect, test } from "vitest";
 import type { components } from "../../api/schema";
-import { type MapCopy, mapModelFromCoverage } from "./mapmodel";
+import { introTargetFor, type MapCopy, mapModelFromCoverage } from "./mapmodel";
 
 type Coverage = components["schemas"]["OrganizationCoverage"];
 
@@ -30,6 +30,7 @@ const COPY: MapCopy = {
   theyReplied: "they replied",
   neverWritten: "never written to",
   onDeal: "on the deal",
+  askIntro: "Ask for an intro",
 };
 
 function coverage(over: Partial<Coverage> = {}): Coverage {
@@ -308,4 +309,61 @@ test("joins an unrecognised role to the deal like every other seat", () => {
       (edge) => edge.kind === "membership" && edge.from === "p:p-9",
     ),
   ).toBeDefined();
+});
+
+// The verb goes ONLY on somebody who can actually be reached. Offering it on a
+// contact with no route sends the reader to a dialog that can only refuse: the
+// endpoint requires a recorded route and answers 404 without one.
+test("offers the intro verb only where a route exists", () => {
+  const reachable = mapModelFromCoverage(coverage(), "Brandt GmbH", COPY);
+  expect(
+    reachable.nodes.find((node) => node.id === "p:p-1")?.actions?.[0]?.id,
+  ).toBe("ask_intro");
+
+  const unreachable = mapModelFromCoverage(
+    coverage({
+      committee: {
+        seats: [
+          {
+            person_id: "p-1",
+            full_name: "Philipp Königs",
+            role: "economic_buyer",
+            engagement: "untried",
+            routes: { top: [], remainder: 0, untried: true },
+          },
+        ],
+        gaps: [],
+        unlisted_seats: 0,
+      },
+    } as Partial<Coverage>),
+    "Brandt GmbH",
+    COPY,
+  );
+  expect(
+    unreachable.nodes.find((node) => node.id === "p:p-1")?.actions,
+  ).toBeUndefined();
+});
+
+// The dialog asks the COLLEAGUE to introduce the reader to the CONTACT, and a
+// route edge runs colleague → person. Reading the ends the other way round
+// would ask the customer's own CFO to introduce us to our colleague.
+test("names the colleague to ask and the contact to be met, in that order", () => {
+  const model = mapModelFromCoverage(coverage(), "Brandt GmbH", COPY);
+  expect(introTargetFor(model, "p:p-1")).toEqual({
+    personId: "p-1",
+    personName: "Philipp Königs",
+    viaUserId: "u-1",
+    viaName: "Sofia Meier",
+  });
+});
+
+// A route edge points one way, so which end is the colleague depends on which
+// end was selected. Asked about a COLLEAGUE, this must refuse rather than read
+// the edge backwards — today nothing calls it that way, and a function correct
+// only because of where it happens to be called is one the next caller breaks.
+test("refuses a node that is not a person", () => {
+  const model = mapModelFromCoverage(coverage(), "Brandt GmbH", COPY);
+  for (const id of ["u:u-1", "org", "d:d-1", "gap:champion", "p:missing"]) {
+    expect(introTargetFor(model, id)).toBeNull();
+  }
 });

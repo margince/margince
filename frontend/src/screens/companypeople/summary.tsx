@@ -25,7 +25,8 @@ import {
   throwProblem,
 } from "../common";
 import { EntityRef } from "../entityref";
-import { mapModelFromCoverage } from "./mapmodel";
+import { IntroRequestModal, type IntroTarget } from "./introrequest";
+import { ASK_INTRO, introTargetFor, mapModelFromCoverage } from "./mapmodel";
 import "./companypeople.css";
 
 // What the account looks like before the reader picks anybody.
@@ -296,6 +297,10 @@ function CommitteeBoard({
       confirming={writes.confirming}
     />
   );
+  // Who the reader is asking about, or null when the dialog is closed. Held
+  // here rather than in the map: the map is data-only by design, and a dialog
+  // that fetched would make it a screen.
+  const [asking, setAsking] = useState<IntroTarget | null>(null);
   const model = useMemo(
     () => mapModelFromCoverage(coverage, accountName, mapCopy(t)),
     [coverage, accountName, t],
@@ -379,7 +384,26 @@ function CommitteeBoard({
                 })
           }
           labels={mapLabels(t, locale)}
+          onAction={(nodeId, actionId) => {
+            if (actionId === ASK_INTRO) {
+              setAsking(introTargetFor(model, nodeId));
+            }
+          }}
         />
+        {/* KEYED ON WHO IS BEING ASKED ABOUT. The dialog holds a draft and the
+         * reader's edits, and React reuses a component across prop changes —
+         * so without this, drafting for one contact and then opening another
+         * showed the FIRST contact's message under the second one's name, and
+         * a slow reply could land in a dialog about somebody else. */}
+        {asking && (
+          <IntroRequestModal
+            key={`${asking.personId}:${asking.viaUserId}`}
+            orgId={orgId}
+            target={asking}
+            dealId={coverage.selected_deal_id}
+            onClose={() => setAsking(null)}
+          />
+        )}
       </>
     );
   }
@@ -451,6 +475,7 @@ function mapCopy(t: ReturnType<typeof useT>) {
     theyReplied: t("co.people.map.replied"),
     neverWritten: t("co.people.map.never"),
     onDeal: t("co.people.map.onDeal"),
+    askIntro: t("co.map.askIntro"),
   };
 }
 
