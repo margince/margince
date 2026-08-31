@@ -137,7 +137,7 @@ func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3)
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, nil)
 
 	if len(out.Queue) != 3 {
 		t.Fatalf("a reader with three of their own rows got a page of %d", len(out.Queue))

@@ -17,9 +17,11 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"sort"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -56,7 +58,14 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	out := s.worklistFrom(ctx, day, resolved, filter, limit)
+	// Read beside the assembled day rather than inside it: /attention has its
+	// own fourteen-lane promise and this source is not one of its lanes. A
+	// refused read is named, never folded into an empty answer.
+	waiting, waitingErr := s.waitingCustomers(ctx)
+	out := s.worklistFrom(ctx, day, resolved, filter, limit, waiting)
+	if waitingErr != nil {
+		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
+	}
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	return out, nil
@@ -103,8 +112,34 @@ func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
 
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
+// waitingCustomers reads who is waiting, or names why it could not.
+//
+// A refusal is reported as a withheld source; any other failure as a failed
+// one. Neither takes the rest of the day down with it — a page that answered
+// nothing because one source stumbled is less useful than a page that says
+// which part it could not read.
+func (s *Service) waitingCustomers(ctx context.Context) ([]WaitingCustomer, *crmcontracts.WorklistSourceUnavailable) {
+	if s.waiting == nil {
+		return nil, nil
+	}
+	rows, err := s.waiting.Unanswered(ctx)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return nil, &crmcontracts.WorklistSourceUnavailable{
+			Source: "customer_waiting", Reason: crmcontracts.Withheld,
+		}
+	case err != nil:
+		return nil, &crmcontracts.WorklistSourceUnavailable{
+			Source: "customer_waiting", Reason: crmcontracts.Failed,
+		}
+	default:
+		return rows, nil
+	}
+}
+
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
+	waiting []WaitingCustomer,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -113,6 +148,12 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
+	for _, customer := range waiting {
+		rows = append(rows, classifyWaiting(customer, day.AsOf))
+	}
+	// One unanswered message is one row: the deal it belongs to does not also
+	// appear as drifting.
+	rows = dropDealsAlreadyWaiting(rows)
 	if mineOnly(scope) {
 		rows = keepReadersOwn(ctx, rows)
 	}

@@ -475,5 +475,5 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 			projects:   projects.NewStore(db),
 		},
 		now,
-	)
+	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now})
 }
