@@ -281,6 +281,11 @@ describe("what the ranked queue tells a reader", () => {
             level: 1,
             consequence: "buyer_waits",
             deal: { amount_minor: 16010000, currency: "EUR" },
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-00000000bbbb",
+              label: "Acme Expansion",
+            },
             move: {
               action: "draft_reply",
               activity_id: "01a05500-0000-7000-8000-00000000aaaa",

@@ -233,14 +233,18 @@ export function dealFactsText(
 
 // Where the row's suggested step leads.
 //
-// A draft is composed on the message it answers, which is the endpoint that
-// owns drafting — this row adds no second way to write a reply. A move naming
-// no message offers nothing rather than a control that goes nowhere.
+// The RECORD the thread belongs to, not the message: an activity is a timeline
+// entry with no page of its own — `app/entity.ts` says so in as many words —
+// and a link to `#/activities/<id>` would be a control that goes nowhere. The
+// draft is composed from the person or deal the conversation is filed under,
+// which is where the composer lives.
+//
+// A move on a row that names no record offers nothing rather than a dead link.
 export function moveHref(item: WorklistItem): string | undefined {
-  if (item.move?.action !== "draft_reply" || !item.move.activity_id) {
+  if (item.move?.action !== "draft_reply") {
     return undefined;
   }
-  return `#/activities/${item.move.activity_id}`;
+  return subjectHref(item);
 }
 
 // One item's headline.
