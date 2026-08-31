@@ -272,3 +272,31 @@ func importCount(t *testing.T, e *integration.Env, activityID, user ids.UUID) in
 	}
 	return n
 }
+
+func TestADomainRuleDoesNotReachALookalikeDomain(t *testing.T) {
+	// `kanzlei.example` must reach `mail.kanzlei.example` and must NOT reach
+	// `evil-kanzlei.example`. The leading `@` and `.` in the LIKE pattern are
+	// the whole difference: without them a rule would match any domain ENDING
+	// in the named one, and an attacker who registered a lookalike could have
+	// somebody else's correspondence destroyed by their own rule.
+	e := integration.Setup(t)
+	named := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "genannt", e.Rep1)
+	sub := seedPurgeableMail(t, e, "anwalt@mail.kanzlei.example", "unterdomain", e.Rep1)
+	lookalike := seedPurgeableMail(t, e, "anwalt@evil-kanzlei.example", "nachgemacht", e.Rep1)
+
+	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
+	outcome := runPurge(t, e, e.Rep1, rule, false)
+
+	if outcome.Destroyed != 2 {
+		t.Fatalf("destroyed=%d, want 2 — the domain and its subdomain, and nothing else", outcome.Destroyed)
+	}
+	if body := activityBody(t, e, named); body != "" {
+		t.Error("the named domain's message survived")
+	}
+	if body := activityBody(t, e, sub); body != "" {
+		t.Error("a subdomain of the named domain survived; a rule covers what sits under it")
+	}
+	if body := activityBody(t, e, lookalike); body == "" {
+		t.Fatal("a lookalike domain's message was destroyed — the rule named kanzlei.example, not everything ending in it")
+	}
+}

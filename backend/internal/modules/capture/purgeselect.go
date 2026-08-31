@@ -106,10 +106,31 @@ func SelectPurgeSubjectTx(
 // everything under it.
 func purgeMatchClause(user ids.UUID, kind, value string) (string, []any) {
 	if kind == ExclusionKindDomain {
-		return `(a.counterparty_email LIKE '%@' || $2 OR a.counterparty_email LIKE '%.' || $2)`,
-			[]any{user, value}
+		// ESCAPE '\' and the value escaped to match: a rule value reaches a
+		// LIKE pattern here, and `%` or `_` inside one matches far more than
+		// the domain somebody named. ValidOwnDomain refuses both characters
+		// today, so this escapes nothing in practice — it is here because the
+		// safety would otherwise be a property of a validator in another file,
+		// and a purge is not the place to inherit that quietly.
+		//
+		// The leading `@` and `.` are what keep `example.test` from matching
+		// `evil-example.test`: an address either ends at the domain or at a
+		// subdomain of it, never mid-label.
+		return `(a.counterparty_email LIKE '%@' || $2 ESCAPE '\'
+		      OR a.counterparty_email LIKE '%.' || $2 ESCAPE '\')`,
+			[]any{user, escapeLikeValue(value)}
 	}
+	// An address matches exactly, so no pattern and nothing to escape. A `%`
+	// in a local part is legal and stays a literal here.
 	return `a.counterparty_email = $2`, []any{user, value}
+}
+
+// escapeLikeValue neutralises the LIKE metacharacters, so a rule value is
+// matched as the text somebody typed.
+func escapeLikeValue(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, "%", `\%`)
+	return strings.ReplaceAll(value, "_", `\_`)
 }
 
 // ReleaseImportTx drops this seat's claim on a message a colleague also
