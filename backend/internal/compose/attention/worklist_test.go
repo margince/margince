@@ -223,3 +223,148 @@ func TestADecisionsExpiryIsNotCountedAsWorkDue(t *testing.T) {
 		t.Fatalf("counted %d due, wanted only the task — a proposal's expiry is not the reader's deadline", summary.Due)
 	}
 }
+
+func withDeal(minor int64) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		amount := minor
+		i.Deal = &crmcontracts.AttentionDealFacts{AmountMinor: &amount}
+	}
+}
+
+func withOverdue(past bool) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) { i.Overdue = &past }
+}
+
+// The deal's own figures have to reach the row, or the client reads a second
+// endpoint per line to draw a card this one could have completed.
+func TestARiskRowCarriesTheDealsFigures(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item("d", "deal_at_risk", withDeal(160_100_00))),
+	}
+
+	rows := classifyDay(day, rankInstant)
+
+	if rows[0].item.Deal == nil || rows[0].item.Deal.AmountMinor == nil {
+		t.Fatal("the deal facts the lane feed resolved never reached the queue row")
+	}
+}
+
+// Material revenue interrupts the day; a smaller deal drifting is agreed work.
+// The bar is the pipeline's own median, so a one-euro deal cannot claim the
+// band reserved for revenue worth stopping for.
+func TestOnlyADealAboveTheMedianReachesTheMaterialBand(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		AtRisk: lane(
+			item("tiny", "deal_at_risk", withDeal(1_00)),
+			item("small", "deal_at_risk", withDeal(2_00)),
+			item("big", "deal_at_risk", withDeal(160_100_00)),
+		),
+	}
+
+	rows := classifyDay(day, rankInstant)
+
+	for _, row := range rows {
+		want := levelAgreed
+		if row.item.Id == "big" {
+			want = levelMaterialRisk
+		}
+		if row.item.Level != want {
+			t.Fatalf("%q landed at level %d, wanted %d", row.item.Id, row.item.Level, want)
+		}
+	}
+}
+
+// A deal past the date the customer agreed to outranks one merely quiet for
+// longer. Without the close date on the row the lane compared idle days alone,
+// and the deal with the real deadline lost.
+func TestADealPastItsCloseDateOutranksAQuieterOne(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		AtRisk: lane(
+			item("quiet-longer", "deal_at_risk", withDetail("20")),
+			item("past-close", "deal_at_risk", withKind("close_overdue"),
+				withDue(rankInstant.Add(-24*time.Hour)), withOverdue(true), withDetail("1")),
+		),
+	}
+
+	got := rankAll(classifyDay(day, rankInstant))
+
+	assertOrder(t, got, "past-close", "quiet-longer")
+}
+
+// The night's ranked work belongs ON the queue. A lane the ranking never sees
+// is a lane the reader was told to read separately, which is the arrangement
+// this endpoint exists to end.
+func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:        rankInstant,
+		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item")},
+	}
+
+	rows := classifyDay(day, rankInstant)
+
+	if len(rows) != 1 || rows[0].item.Source != "brief_item" {
+		t.Fatalf("the briefing lane produced %d queue rows, wanted one", len(rows))
+	}
+}
+
+// The summary and the last row must describe the page the caller RECEIVED.
+// Ranking the whole set and slicing afterwards left the final row comparing
+// itself against a row nobody got, and a total longer than the list.
+func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
+	tasks := []crmcontracts.AttentionItem{}
+	for i := 0; i < 5; i++ {
+		tasks = append(tasks, item(string(rune('a'+i)), "task", withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
+
+	out, err := (&Service{}).worklistFrom(day, "", 3)
+	if err != nil {
+		t.Fatalf("assembling the page: %v", err)
+	}
+
+	if out.Summary.Total != len(out.Queue) {
+		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))
+	}
+	if out.Queue[len(out.Queue)-1].AboveNext != nil {
+		t.Fatal("the last row on the page compares itself with a row the caller never received")
+	}
+}
+
+// An outbound send blocks a customer whichever door staged it. Treating one
+// spelling as urgent and another as hygiene is how the same act ends up in two
+// places in the queue.
+func TestEveryOutboundSendKindBlocksCustomerWork(t *testing.T) {
+	for _, kind := range []string{"send_email", "send_account_email", "send_message", "book_meeting"} {
+		day := crmcontracts.Attention{
+			AsOf:     rankInstant,
+			NeedsYou: []crmcontracts.AttentionItem{item("a", "approval", withKind(kind))},
+		}
+
+		rows := classifyDay(day, rankInstant)
+
+		if rows[0].item.Level != levelBlocking {
+			t.Fatalf("%q landed at level %d, wanted the blocking band", kind, rows[0].item.Level)
+		}
+	}
+}
+
+// "Due" means a date that has arrived. A task due later today is agreed work
+// the reader has not missed, and counting it told them they were behind.
+func TestOnlyAnArrivedDateCountsAsDue(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		Planned: []crmcontracts.AttentionItem{
+			item("late", "task", withDue(rankInstant.Add(-time.Hour))),
+			item("later-today", "task", withDue(rankInstant.Add(6*time.Hour))),
+		},
+	}
+
+	summary := summarize(rankAll(classifyDay(day, rankInstant)))
+
+	if summary.Due != 1 {
+		t.Fatalf("counted %d due, wanted only the one whose date has passed", summary.Due)
+	}
+}

@@ -17,12 +17,18 @@ package attention
 
 import (
 	"context"
+	"sort"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // worklistPage is how many ranked items one read carries by default.
 const worklistPage = 25
+
+// worklistMaxPage is the ceiling the contract publishes. A larger ask is
+// clamped rather than refused: the number is a request for how much to draw,
+// and answering the most that can be drawn is more useful than an error.
+const worklistMaxPage = 100
 
 // Worklist answers the ranked day.
 //
@@ -34,17 +40,30 @@ func (s *Service) Worklist(ctx context.Context, filter string, limit int) (crmco
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	if limit <= 0 || limit > 100 {
+	return s.worklistFrom(day, filter, limit)
+}
+
+// worklistFrom projects an already-assembled day, so a test can drive the
+// ranking, the paging and the summary without standing up every lane's reader.
+func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit int) (crmcontracts.Worklist, error) {
+	if limit <= 0 {
 		limit = worklistPage
+	}
+	if limit > worklistMaxPage {
+		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
 	if filter != "" && filter != string(crmcontracts.All) {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
 	}
-	ordered := rankAll(rows)
+	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
+	// then slicing left the last returned row comparing itself against a row the
+	// caller never received, and the summary describing a queue longer than the
+	// one on screen.
+	ordered := rankAll(page(rows, limit))
 	out := crmcontracts.Worklist{
 		AsOf:               day.AsOf,
-		Queue:              page(ordered, limit),
+		Queue:              ordered,
 		Summary:            summarize(ordered),
 		SourcesUnavailable: unavailable(day),
 	}
@@ -55,29 +74,18 @@ func (s *Service) Worklist(ctx context.Context, filter string, limit int) (crmco
 	return out, nil
 }
 
-// page cuts the ranked list to what one read carries. The order is already
-// decided, so this is a slice and never a second sort.
-func page(items []crmcontracts.WorklistItem, limit int) []crmcontracts.WorklistItem {
-	if len(items) > limit {
-		return items[:limit]
-	}
-	// Never nil: the contract declares an array, and a null would break a
-	// generated client that iterates what the schema promised was a list.
-	if items == nil {
-		return []crmcontracts.WorklistItem{}
-	}
-	return items
-}
-
-// owesADate reports whether this item's date is something the READER owes.
+// page cuts the candidates to what one read carries.
 //
-// Not every `due_at` is a deadline for the reader. A staged decision carries
-// its own EXPIRY there — the moment the proposal lapses if nobody answers — and
-// counting those as work due today told a rep eleven things were due when two
-// were. The `overdue` flag is the tell: the producers that mean a deadline
-// resolve it server-side, and the ones that mean an expiry leave it unset.
-func owesADate(item crmcontracts.WorklistItem) bool {
-	return item.Overdue != nil
+// It runs BEFORE the ranking is drawn, so the comparison each row publishes is
+// against a row the caller actually received. The cut itself is by score, so
+// this sorts first and then slices — taking the best `limit`, never the first
+// `limit` the producers happened to return.
+func page(rows []ranked, limit int) []ranked {
+	sort.SliceStable(rows, func(i, j int) bool { return less(rows[i], rows[j]) })
+	if len(rows) > limit {
+		return rows[:limit]
+	}
+	return rows
 }
 
 func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {
@@ -104,10 +112,10 @@ func summarize(items []crmcontracts.WorklistItem) crmcontracts.WorklistSummary {
 		switch {
 		case item.Level <= levelPromise:
 			summary.Urgent++
-		case item.Level >= levelBlocking:
+		case item.Level >= levelRoutine:
 			summary.LowerPriority++
 		}
-		if owesADate(item) {
+		if item.Overdue != nil && *item.Overdue {
 			summary.Due++
 		}
 	}
@@ -130,6 +138,12 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 		// privacy admin, permanently and by design. Naming it would put "part
 		// of your day is hidden" on every rep's page forever, which drowns the
 		// warning this list exists to give.
+		//
+		// This suppression is WIDER than it should be, and the difference is
+		// worth stating rather than hiding: the DSR read also refuses a reader
+		// who has the admin role but lost `person:read`, and that refusal is
+		// real news this list swallows. Telling the two apart needs a reason on
+		// the refusal, which the lane contract does not carry — issue filed.
 		if lane == laneDSR {
 			continue
 		}

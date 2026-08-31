@@ -175,6 +175,9 @@ func nearDeadline(r ranked) bool {
 // values. It walks the same steps as less(), in the same order, so a row can
 // never claim a reason that did not decide it.
 func compare(a, b ranked) crmcontracts.WorklistComparison {
+	// A pin is a level difference, and less() treats it as one — but naming it
+	// "level" would hide the only override a reader has. Same decision, the
+	// word that means something to them.
 	if a.item.Level == levelPinned && b.item.Level != levelPinned {
 		return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorPin}
 	}
@@ -211,6 +214,17 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 			Comparator: crmcontracts.WorklistComparisonComparatorRelationship,
 		}
 	}
+	// Occurrence decides before the ids do, and less() orders on it — so it has
+	// to be named here too. The contract's `order` means every comparator tied,
+	// and a row that reported it while occurrence had actually decided would be
+	// telling the reader something false about its own position.
+	if !a.occurredAt.Equal(b.occurredAt) {
+		return crmcontracts.WorklistComparison{
+			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
+			Mine:       occurredValue(a),
+			Theirs:     occurredValue(b),
+		}
+	}
 	// Everything tied and the ids broke it. Saying so honestly is better than
 	// naming a comparator that decided nothing; the client draws no reason line
 	// for this case.
@@ -236,6 +250,11 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 	}
 	minor := r.expectedBase
 	return &crmcontracts.WorklistValue{Kind: "money", Minor: &minor}
+}
+
+func occurredValue(r ranked) *crmcontracts.WorklistValue {
+	at := r.occurredAt
+	return &crmcontracts.WorklistValue{Kind: "date", Date: &at}
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

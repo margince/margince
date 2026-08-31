@@ -27,11 +27,15 @@ import (
 // are walked in whatever order reads clearest here.
 func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
 	rows := make([]ranked, 0, 64)
+	bar := materialBarOf(day)
 	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
+	rows = appendLane(rows, &day.ThisMorning, asOf, classifyBriefItem)
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
 	rows = appendLane(rows, day.DidNotRun, asOf, classifyFailedApproval)
 	rows = appendLane(rows, day.Dsr, asOf, classifyDSR)
-	rows = appendLane(rows, day.AtRisk, asOf, classifyRisk)
+	rows = appendLane(rows, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
+		return classifyRisk(item, at, bar)
+	})
 	rows = appendLane(rows, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
@@ -79,6 +83,7 @@ func base(
 		Title:       item.Title,
 		Detail:      item.Detail,
 		Subject:     item.Subject,
+		Deal:        dealFactsOf(item),
 		DueAt:       item.DueAt,
 		Overdue:     item.Overdue,
 		OccurredAt:  item.OccurredAt,
@@ -157,17 +162,89 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // classifyRisk: a deal drifting. Whether it is worth interrupting the day for
 // is decided against the pipeline's own median rather than a number somebody
 // typed once, so "material" tracks the business as it changes.
-func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar) ranked {
 	consequence := crmcontracts.WorklistItemConsequence("deal_drifts")
 	if item.Kind != nil && *item.Kind == "close_overdue" {
 		consequence = "deal_slips_past_close"
 	}
-	row := base(item, levelAgreed, "deals_at_risk", consequence)
+	expected, known := expectedRevenue(item)
+	// Material revenue interrupts the day; a smaller deal drifting is agreed
+	// work like any other. The bar is the pipeline's own median rather than a
+	// number somebody typed once, so "material" tracks the business as it
+	// moves — and a deal whose value nobody recorded is not assumed large.
+	level := levelAgreed
+	if known && bar.material(expected) {
+		level = levelMaterialRisk
+	}
+	row := base(item, level, "deals_at_risk", consequence)
+	if level == levelMaterialRisk {
+		row.Because = append(row.Because, reason("material", moneyOf(expected)))
+	} else if known {
+		row.Because = append(row.Because, reason("below_material", moneyOf(expected)))
+	}
 	quiet := quietDaysOf(item)
 	if quiet > 0 {
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
 	}
-	return ranked{item: row, waitingDays: quiet, occurredAt: occurredOf(item, asOf)}
+	// The close date is a deadline the customer agreed to, so it ranks like
+	// one. Without this the risk lane compared on idle days alone, and a deal
+	// already past its date lost to one merely quiet for longer.
+	if item.DueAt != nil {
+		row.Because = append(row.Because, reason("closing_soon", nil))
+	}
+	return ranked{
+		item:         row,
+		deadlineAt:   deadlineOf(item.DueAt),
+		overdue:      item.Overdue != nil && *item.Overdue,
+		expectedBase: expected,
+		hasExpected:  known,
+		waitingDays:  quiet,
+		occurredAt:   occurredOf(item, asOf),
+	}
+}
+
+// dealFactsOf carries the deal's own figures onto the queue row. The lane feed
+// already resolved them; dropping them here would make the client read a second
+// endpoint per row to draw a card this one could have completed.
+func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFacts {
+	if item.Deal == nil {
+		return nil
+	}
+	return &crmcontracts.WorklistDealFacts{
+		StageId:     item.Deal.StageId,
+		OwnerId:     item.Deal.OwnerId,
+		AmountMinor: item.Deal.AmountMinor,
+		Currency:    item.Deal.Currency,
+	}
+}
+
+// expectedRevenue is what the deal is worth times how likely it is to land.
+//
+// The win probability lives on the stage rather than the deal, and this feed
+// does not read stages — so until that read exists the amount stands in for the
+// expectation. Naming that here rather than silently multiplying by one: the
+// figure is comparable between deals in one currency, which is what the
+// ordering needs, and it will get more accurate rather than change meaning.
+func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
+	if item.Deal == nil || item.Deal.AmountMinor == nil {
+		return 0, false
+	}
+	return *item.Deal.AmountMinor, true
+}
+
+func moneyOf(minor int64) *crmcontracts.WorklistValue {
+	value := minor
+	return &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
+}
+
+// classifyBriefItem: what the overnight run put at the top of the day. It is a
+// suggestion about where to start rather than something waiting on the reader,
+// so it sits with agreed work — but it belongs ON the queue, because a lane the
+// ranking never sees is a lane the reader was told to read separately, which is
+// the arrangement this endpoint exists to end.
+func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
+	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
@@ -226,7 +303,10 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 		return false
 	}
 	switch *item.Kind {
-	case "send_email", "scheduled_send_held", "held_draft", "deal_follow_up", "site_lead":
+	case "send_email", "send_account_email", "send_message",
+		"scheduled_send_held", "held_draft",
+		"book_meeting",
+		"deal_follow_up", "transcript_proposal", "site_lead":
 		return true
 	default:
 		return false
