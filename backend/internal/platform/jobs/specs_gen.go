@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "eaa14a4a8ca5488a56db88d9fc26312a86c7ce4fcac48f4fb2a9da23341e186a"
+const JobContractHash = "b7f838c9a2c45adc1d1592e4fed24493cd81202fad971af93e20bd34dfd4b804"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -272,7 +272,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VatChecker"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Requested", Scalar: true, Reason: "whether a person asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the organization the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no person, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
 	},
 	"close_date_sweep": {
 		Kind:       "close_date_sweep",

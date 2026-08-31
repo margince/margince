@@ -41034,6 +41034,9 @@ type ServerInterface interface {
 	// What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
 	// (GET /organizations/{id}/vat-check)
 	GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask the register again about the number this company states.
+	// (POST /organizations/{id}/vat-check)
+	RequestOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id Id)
 	// Record that the calling human has now seen this organization — the baseline `since_last_visit` counts from.
 	// (POST /organizations/{id}/view-ack)
 	AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request, id Id)
@@ -43563,6 +43566,12 @@ func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.R
 // What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
 // (GET /organizations/{id}/vat-check)
 func (_ Unimplemented) GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the register again about the number this company states.
+// (POST /organizations/{id}/vat-check)
+func (_ Unimplemented) RequestOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58703,6 +58712,40 @@ func (siw *ServerInterfaceWrapper) GetOrganizationVatCheck(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// RequestOrganizationVatCheck operation middleware
+func (siw *ServerInterfaceWrapper) RequestOrganizationVatCheck(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestOrganizationVatCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AcknowledgeOrganizationView operation middleware
 func (siw *ServerInterfaceWrapper) AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request) {
 
@@ -68659,6 +68702,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/vat-check", wrapper.GetOrganizationVatCheck)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/vat-check", wrapper.RequestOrganizationVatCheck)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/view-ack", wrapper.AcknowledgeOrganizationView)

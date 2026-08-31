@@ -1786,7 +1786,11 @@ export const de = {
   "co.vat.noReceipt":
     "Keine vergeben. Das Register vergibt eine Abfrage-Nummer nur für eine Abfrage unter eurer eigenen USt-IdNr. — trag sie in den Einstellungen ein, dann trägt die nächste Abfrage einen Nachweis, den ein Finanzamt akzeptiert.",
   "co.vat.never":
-    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird.",
+    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird — oder Sie fragen jetzt beim Register nach.",
+  "co.vat.askNow": "Beim Register abfragen",
+  "co.vat.askAgain": "Erneut abfragen",
+  "co.vat.asked":
+    "Angefragt. Die Antwort des Registers erscheint hier, sobald sie vorliegt.",
   "co.tech.title": "Technik",
   "co.tech.sub":
     "Was diese Firma öffentlich betreibt — gelesen aus ihren DNS-Einträgen, ihren Zertifikaten und ihrer eigenen Startseite.",

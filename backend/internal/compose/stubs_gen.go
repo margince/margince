@@ -1319,6 +1319,10 @@ func (stubs) GetOrganizationVatCheck(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetOrganizationVatCheck")
 }
 
+func (stubs) RequestOrganizationVatCheck(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestOrganizationVatCheck")
+}
+
 func (stubs) AcknowledgeOrganizationView(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "AcknowledgeOrganizationView")
 }

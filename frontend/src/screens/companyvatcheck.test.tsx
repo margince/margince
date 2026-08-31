@@ -2,9 +2,16 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { VatCheckCard } from "./companyvatcheck";
 
@@ -33,11 +40,33 @@ function render(ui: ReactNode) {
   );
 }
 
+// The card's own read, plus the grant read the ask button gates on. Without a
+// /me answer every viewer reads as unable to write, and the button this suite is
+// about would be absent for the correct reason — which is how a test can pass
+// while proving nothing.
 function answerWith(body: unknown, status = 200) {
+  return stubFetch(async (request) =>
+    new URL(request.url).pathname.endsWith("/me")
+      ? jsonResponse(meFixture({ allow: { organization: ["read", "update"] } }))
+      : jsonResponse(body, status),
+  );
+}
+
+// Every call this card made, so a test can assert the METHOD and the PATH
+// rather than that something happened.
+function stubFetch(answer: (request: Request) => Promise<Response>) {
+  const calls: { method: string; pathname: string }[] = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse(body, status)),
+    vi.fn(async (request: Request) => {
+      calls.push({
+        method: request.method,
+        pathname: new URL(request.url).pathname,
+      });
+      return answer(request);
+    }),
   );
+  return calls;
 }
 
 describe("VatCheckCard", () => {
@@ -144,5 +173,146 @@ describe("VatCheckCard", () => {
     // The rest of the consultation still reads, because none of it depended
     // on recognising the verdict.
     expect(screen.getByText("WAPIAAAAXk3rN2p9")).toBeInTheDocument();
+  });
+
+  it("asks the register when a person presses the button", async () => {
+    const user = userEvent.setup();
+    const calls = answerWith({
+      organization_id: ORG_ID,
+      vat_number: "DE811907980",
+      status: "valid",
+      consultation_number: "WAPIAAAAXk3rN2p9",
+      checked_at: "2026-08-14T09:12:00Z",
+    });
+    render(<VatCheckCard orgId={ORG_ID} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Check again" }),
+    );
+
+    // The POST is the whole feature: nothing else in the product re-asks about
+    // a number that has not changed.
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (one) =>
+            one.method === "POST" &&
+            one.pathname === `/v1/organizations/${ORG_ID}/vat-check`,
+        ),
+      ).toBe(true);
+    });
+    expect(
+      await screen.findByText(/answer appears here once it replies/),
+    ).toBeInTheDocument();
+  });
+
+  it("offers the ask on a company nobody has consulted", async () => {
+    // The state the button matters in most: a number the crawl never checked
+    // read "never consulted" with no way to change that.
+    answerWith({}, 404);
+
+    render(<VatCheckCard orgId={ORG_ID} />);
+
+    expect(
+      await screen.findByRole("button", { name: "Check with the register" }),
+    ).toBeInTheDocument();
+  });
+
+  it("tells a reader to wait rather than that something broke", async () => {
+    const user = userEvent.setup();
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Too Many Requests",
+            status: 429,
+            detail: "this number was consulted less than 5m0s ago",
+          },
+          429,
+        );
+      }
+      return jsonResponse({
+        organization_id: ORG_ID,
+        vat_number: "DE811907980",
+        status: "valid",
+        checked_at: "2026-08-14T09:12:00Z",
+      });
+    });
+    render(<VatCheckCard orgId={ORG_ID} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Check again" }),
+    );
+
+    // The register's own words, not a generic failure: "wait a moment" and
+    // "something is wrong" send a reader to do different things.
+    expect(
+      await screen.findByText(/consulted less than 5m0s ago/),
+    ).toBeInTheDocument();
+    // The answer already on the card still stands, so it stays on screen.
+    expect(screen.getByText("DE811907980")).toBeInTheDocument();
+  });
+
+  it("does not report a refused request as asked", async () => {
+    const user = userEvent.setup();
+    // 403 with NO BODY, which is the shape that matters: openapi-fetch has
+    // nothing to parse, so `error` comes back falsy and a handler checking it
+    // alone renders a refusal as success. The endpoint's own happy answer is a
+    // bodiless 202, so this is the same shape one status apart.
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        return new Response(null, { status: 403 });
+      }
+      return jsonResponse({
+        organization_id: ORG_ID,
+        vat_number: "DE811907980",
+        status: "valid",
+        checked_at: "2026-08-14T09:12:00Z",
+      });
+    });
+    render(<VatCheckCard orgId={ORG_ID} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Check again" }),
+    );
+
+    // A reader told "asked" waits for an answer nobody requested.
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/answer appears here once it replies/),
+      ).toBeNull();
+    });
+  });
+
+  it("offers no ask to a reader who cannot change the company", async () => {
+    stubFetch(async (request) =>
+      new URL(request.url).pathname.endsWith("/me")
+        ? jsonResponse(meFixture({ allow: { organization: ["read"] } }))
+        : jsonResponse({
+            organization_id: ORG_ID,
+            vat_number: "DE811907980",
+            status: "valid",
+            checked_at: "2026-08-14T09:12:00Z",
+          }),
+    );
+    render(<VatCheckCard orgId={ORG_ID} />);
+
+    // The verdict is readable — withholding the ask is not withholding the
+    // record — and the ask is not offered.
+    expect(await screen.findByText("DE811907980")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Check/ })).toBeNull();
   });
 });

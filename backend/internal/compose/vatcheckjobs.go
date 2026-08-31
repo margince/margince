@@ -46,6 +46,19 @@ import (
 type CheckOrganizationVatArgs struct {
 	Workspace      ids.UUID `json:"workspace_id"`
 	OrganizationID ids.UUID `json:"organization_id"`
+	// Requested marks a consultation a PERSON asked for, and it does two things
+	// that both matter.
+	//
+	// It tells the worker to ask even when the stored answer already names this
+	// number: the automatic lanes ask only about a number they have not seen,
+	// because nothing re-reads a website on a schedule either, but a person
+	// pressing the button has said the stored answer is not good enough.
+	//
+	// It also makes the args DIFFER from a write-queued job's, which is what
+	// lets the request through the by-args dedupe below. Without it a request
+	// arriving while an automatic consultation was pending would be swallowed
+	// and the reader would watch a button do nothing.
+	Requested bool `json:"requested,omitempty"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -78,7 +91,7 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 	if enqueue == nil {
 		return nil
 	}
-	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, requested bool) error {
 		ws, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			// No tenant bound means no job that could ever be worked: River
@@ -89,6 +102,7 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 		return enqueue.EnqueueTx(ctx, tx, CheckOrganizationVatArgs{
 			Workspace:      ws,
 			OrganizationID: orgID.UUID,
+			Requested:      requested,
 		}, vatCheckInsertOpts())
 	}
 }
@@ -166,6 +180,13 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 	number, ok, err := store.VatNumberForCheck(wsCtx, orgID)
 	if err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
+	}
+	// A person who pressed the button asked for THIS consultation, so the only
+	// thing that stops it is the company stating no number at all. The staleness
+	// rule the automatic lanes obey is about not spending the installation's
+	// shared rate on questions nobody asked; this one was asked.
+	if args.Requested && number != "" {
+		ok = true
 	}
 	if !ok {
 		// Nothing to ask about: the company states no VAT number, or the one it

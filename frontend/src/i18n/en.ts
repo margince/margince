@@ -1813,7 +1813,10 @@ export const en = {
   "co.vat.noReceipt":
     "None issued. The register issues a receipt only for a check made under your own VAT ID — add yours in the settings and the next check carries proof a tax authority accepts.",
   "co.vat.never":
-    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint.",
+    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint, and you can ask the register now.",
+  "co.vat.askNow": "Check with the register",
+  "co.vat.askAgain": "Check again",
+  "co.vat.asked": "Asked. The register's answer appears here once it replies.",
   "co.tech.title": "Technology",
   "co.tech.sub":
     "What this company publicly runs, read from its DNS records, its certificates and its own homepage.",

@@ -130,7 +130,10 @@ func TestStatingAVatNumberQueuesItsConsultation(t *testing.T) {
 	orgID := bareOrg(ctx, t, e)
 
 	var queued []ids.OrganizationID
-	e.store.WithVatCheckEnqueue(func(_ context.Context, _ pgx.Tx, id ids.OrganizationID) error {
+	e.store.WithVatCheckEnqueue(func(_ context.Context, _ pgx.Tx, id ids.OrganizationID, requested bool) error {
+		if requested {
+			t.Error("a write's own consultation was marked as a person's request")
+		}
 		queued = append(queued, id)
 		return nil
 	})

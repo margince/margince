@@ -1335,6 +1335,16 @@ kinds:
     args:
       Workspace: id
       OrganizationID: id
+      Requested:
+        scalar: true
+        reason: >-
+          whether a person asked for this consultation, rather than a write
+          having earned it. It decides whether the worker asks about a number
+          the register has already answered, so it cannot be resolved from the
+          organization the job names — the row says what the number is, never
+          who wanted it re-checked. A bare true/false carrying no subject data:
+          it names no person, and erasing the contact who pressed the button
+          leaves nothing here to erase.
     reason: >-
       One number, one consultation, plus the write — and the ceiling is set by
       what the job can WAIT for. The pacer may hold it for the full interval
