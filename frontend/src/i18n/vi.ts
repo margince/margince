@@ -6655,6 +6655,7 @@ export const vi = {
   "provider.profile.neverRun": "Chưa ai tra cứu liên hệ này.",
   "provider.profile.queued": "Trong hàng đợi",
   "provider.profile.inProgress": "Đang tra cứu…",
+  "provider.profile.working": "Đang hỏi {provider}. Việc này mất tới một phút.",
   "provider.profile.completed": "Đã tìm thấy",
   "provider.profile.noMatch": "Nhà cung cấp không có gì về liên hệ này.",
   "provider.profile.stale":
@@ -6666,7 +6667,7 @@ export const vi = {
   "provider.profile.rateLimited":
     "Không mua: nhà cung cấp yêu cầu chúng ta chậm lại.",
   "provider.profile.providerError":
-    "Lần gọi gần nhất tới nhà cung cấp đã thất bại, nên các lượt tra cứu tự động đang bị giữ lại. Hãy nhấn nút kiểm tra miễn phí bên dưới — một lượt thành công sẽ tự gỡ trạng thái này.",
+    "Lần gọi gần nhất tới nhà cung cấp đã thất bại. Tra cứu tự động đang tạm dừng; một lượt kiểm tra miễn phí thành công sẽ tiếp tục chúng.",
   "provider.profile.submissionUnknown":
     "Chúng ta không bao giờ biết lượt tra cứu này kết thúc ra sao. Nó có thể đã bị tính phí.",
   "provider.profile.claimsUnwritten":
@@ -6689,8 +6690,7 @@ export const vi = {
   "provider.profile.location": "Địa điểm",
   "provider.profile.departments": "Bộ phận",
   "provider.profile.seniorities": "Cấp bậc",
-  "provider.profile.notRequested":
-    "Không hỏi tới: {categories}. Chỗ trống ở đây nghĩa là không ai mua, chứ không phải nhà cung cấp không có.",
+  "provider.profile.notRequested": "Chưa bao giờ hỏi tới: {categories}.",
   "provider.profile.buy": "Mua {category} · {credits} tín dụng",
   "provider.freeTier.hint":
     "Hồ sơ LinkedIn, vai trò hiện tại và quá trình làm việc không tốn tín dụng. Nên bật: mọi liên hệ mới đều có chúng mà không ai phải quyết định.",
@@ -6699,8 +6699,7 @@ export const vi = {
   "provider.profile.receiptAt": "Tra cứu ngày {at}.",
   "provider.profile.receipt":
     "Tra cứu ngày {at} · đã hỏi {asked} thông tin, nhận về {answered}.",
-  "provider.profile.noAnswer":
-    "Đã hỏi nhưng không tìm thấy: {categories}. Nhà cung cấp đã được hỏi và không có gì về liên hệ này.",
+  "provider.profile.noAnswer": "Đã hỏi, không có: {categories}.",
   "provider.category.professionalEmail": "email công việc",
   "provider.category.personalEmail": "email cá nhân",
   "provider.category.mobile": "số di động",

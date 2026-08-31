@@ -6728,6 +6728,8 @@ export const de = {
     "Diesen Kontakt hat noch niemand nachgeschlagen.",
   "provider.profile.queued": "In der Warteschlange",
   "provider.profile.inProgress": "Wird nachgeschlagen …",
+  "provider.profile.working":
+    "{provider} wird gefragt. Das dauert bis zu einer Minute.",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hatte nichts zu diesem Kontakt.",
   "provider.profile.stale":
@@ -6739,7 +6741,7 @@ export const de = {
   "provider.profile.rateLimited":
     "Nicht gekauft: der Anbieter hat uns gebremst.",
   "provider.profile.providerError":
-    "Der letzte Aufruf beim Anbieter ist fehlgeschlagen, deshalb werden automatische Abfragen zurückgehalten. Drücken Sie unten die kostenlose Prüfung — eine, die durchkommt, hebt das von selbst auf.",
+    "Der letzte Aufruf beim Anbieter ist fehlgeschlagen. Automatische Abfragen pausieren; eine kostenlose Prüfung, die durchkommt, setzt sie fort.",
   "provider.profile.submissionUnknown":
     "Wie diese Abfrage ausgegangen ist, haben wir nie erfahren. Sie kann berechnet worden sein.",
   "provider.profile.claimsUnwritten":
@@ -6762,8 +6764,7 @@ export const de = {
   "provider.profile.location": "Standort",
   "provider.profile.departments": "Bereiche",
   "provider.profile.seniorities": "Ebene",
-  "provider.profile.notRequested":
-    "Nicht angefragt: {categories}. Eine Lücke heißt hier, dass niemand danach gekauft hat — nicht, dass der Anbieter nichts hatte.",
+  "provider.profile.notRequested": "Nie angefragt: {categories}.",
   "provider.profile.buy": "{category} kaufen · {credits} Credit",
   "provider.freeTier.hint":
     "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
@@ -6772,8 +6773,7 @@ export const de = {
   "provider.profile.receiptAt": "Abgefragt am {at}.",
   "provider.profile.receipt":
     "Abgefragt am {at} · {asked} Angaben angefragt, {answered} zurückbekommen.",
-  "provider.profile.noAnswer":
-    "Angefragt und nicht gefunden: {categories}. Der Anbieter wurde gefragt und hatte zu diesem Kontakt nichts.",
+  "provider.profile.noAnswer": "Angefragt, nichts gefunden: {categories}.",
   "provider.category.professionalEmail": "geschäftliche E-Mail",
   "provider.category.personalEmail": "private E-Mail",
   "provider.category.mobile": "Mobilnummer",
