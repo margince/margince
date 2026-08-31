@@ -6,7 +6,7 @@
 package agentaccess
 
 // The consent screen's read model (GET /oauth/consent-request): the fixed
-// scope vocabulary every client is offered (Task 2's consentRequestPayload —
+// scope vocabulary every client is offered (consentRequestPayload —
 // unit-tested at identity's TestConsentPayloadOffersTheWholeVocabulary), and
 // the deployment switch it follows like every other /oauth/ path. The old
 // per-human passport-selection read model this endpoint used to serve is gone

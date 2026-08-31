@@ -128,6 +128,18 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	// own records is audited as its own fact, separate from the passport
 	// minted under it: the consent outlives every passport it issues and is
 	// what an admin later disables.
+	//
+	// This call is audit-ONLY: issuing a grant publishes nothing of its own —
+	// events.md's closed catalog defines no oauth_grant.* creation verb — and
+	// the only reason writeshape_test.go's auditOnlyWrites gate does not flag
+	// this function is that supersedePriorGrants above happens to reach an
+	// Emit when it revokes an earlier grant for the same client
+	// (revokeGrantTx → revokeGrantPassportsTx → passport.revoked), which does
+	// not run on a first-time consent. A future change to
+	// supersedePriorGrants that stops emitting there — or a path that calls
+	// this without ever superseding anything — would make this ungated again
+	// with no test catching it. This comment is the record until a real
+	// waiver entry or an oauth_grant creation event exists.
 	if _, err := storekit.Audit(auditCtx, tx, "create", "oauth_grant", grantID, nil,
 		map[string]any{
 			auditFieldClientID:       in.ClientID,
