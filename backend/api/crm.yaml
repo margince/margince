@@ -29191,6 +29191,16 @@ components:
           description: |
             The day the REGISTER reported, not the day this installation recorded it. A receipt
             attests to when the register was asked.
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: |
+            When this installation WROTE the consultation, on its own clock. Distinct from
+            `checked_at` on purpose, and the distinction is load-bearing: VIES answers with a
+            date and no time, so two consultations on one day carry the same `checked_at`. A
+            client waiting for a re-check to land would wait forever on that field, and the
+            server's own rate floor reads this one for the same reason.
 
     TechnicalEnrichStatus:
       type: object

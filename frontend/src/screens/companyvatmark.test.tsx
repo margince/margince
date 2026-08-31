@@ -37,6 +37,7 @@ const CHECKED = {
   consultation_number: "WAPIAAAAXk3rN2p9",
   registered_name: "Muster Handels GmbH",
   checked_at: "2026-08-14T09:12:00Z",
+  recorded_at: "2026-08-14T09:12:31Z",
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -423,8 +424,13 @@ describe("the VAT mark beside the number", () => {
         ...CHECKED,
         status: verdict,
         // The date MOVES with the answer, which is the signal the wait reads.
-        checked_at:
-          verdict === "valid" ? "2026-08-15T10:00:00Z" : CHECKED.checked_at,
+        // checked_at deliberately does NOT move: VIES answers with a date and
+        // no time, so a same-day re-check carries the one it already had. Only
+        // recorded_at moves, and a wait reading the wrong field would hang here
+        // exactly as it would in front of a reader.
+        checked_at: CHECKED.checked_at,
+        recorded_at:
+          verdict === "valid" ? "2026-08-14T09:20:00Z" : CHECKED.recorded_at,
       });
     });
     render(mark());

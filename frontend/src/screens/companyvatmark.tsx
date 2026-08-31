@@ -217,7 +217,7 @@ export function VatMark({
         <AskTheRegister
           orgId={orgId}
           consulted={answer !== null}
-          answeredAt={answer?.checked_at ?? null}
+          answeredAt={answer?.recorded_at ?? null}
         />
         {/* The number this mark answers for, last: a receipt names what it was
             issued for, and the row above the mark can be edited after a check
@@ -312,9 +312,14 @@ function AskTheRegister({
 }: Readonly<{
   orgId: string;
   consulted: boolean;
-  // When the consultation on record was last written. The wait ends when this
-  // MOVES: that is the register having replied, and it is the only signal the
-  // client gets — the answer arrives out of band, in a worker.
+  // When the consultation on record was last WRITTEN, on this installation's
+  // clock. The wait ends when it moves, which is the register having replied —
+  // the answer arrives out of band, in a worker, so there is no other signal.
+  //
+  // Deliberately not `checked_at`: that is the REGISTER's date, and VIES sends
+  // a date with no time. Two consultations on one day carry the same one, so a
+  // wait reading it would never end for a re-check made the same afternoon —
+  // exactly the case this button is for.
   answeredAt: string | null;
 }>): ReactNode {
   const t = useT();

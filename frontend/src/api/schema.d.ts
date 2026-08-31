@@ -21418,6 +21418,15 @@ export interface components {
              *     attests to when the register was asked.
              */
             checked_at: string;
+            /**
+             * Format: date-time
+             * @description When this installation WROTE the consultation, on its own clock. Distinct from
+             *     `checked_at` on purpose, and the distinction is load-bearing: VIES answers with a
+             *     date and no time, so two consultations on one day carry the same `checked_at`. A
+             *     client waiting for a re-check to land would wait forever on that field, and the
+             *     server's own rate floor reads this one for the same reason.
+             */
+            readonly recorded_at?: string;
         };
         /**
          * @description What each public source last did for one account. Per lane rather than per run: the
