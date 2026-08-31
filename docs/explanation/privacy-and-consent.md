@@ -2,9 +2,9 @@
 
 How Margince meets data-subject obligations: the **consent suppression gate** that guards every
 outbound send, and the **privacy engines** (erasure, subject-access, retention) that a fulfilled
-request executes. Why the product refuses scraping-based enrichment in the first place — the legal
-position behind these engines, for the EU and Vietnam — is the whitepaper
-[data-enrichment-position.md](data-enrichment-position.md). Two modules cooperate — `consent` owns the gate and the case queue, `privacy` owns
+request executes. The product refuses scraping-based enrichment in the first place; the legal
+position behind that, for the EU and Vietnam, is a whitepaper kept with the company's business
+material rather than in this tree. Two modules cooperate — `consent` owns the gate and the case queue, `privacy` owns
 the machinery — and they are stitched together at the composition root, never by a sibling import.
 
 ## The default-deny suppression gate (`consent`)
