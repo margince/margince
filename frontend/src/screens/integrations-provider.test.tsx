@@ -26,8 +26,18 @@ const CONNECTION: ProviderConnection = {
     preset: "full",
     automatic_individual_create: true,
     automatic_import: false,
-    categories: { professional: true },
+    // The work email OFF and the free profile link ON, which is what a fresh
+    // connection resolves to. A fixture with the paid one already on could not
+    // tell a switch that writes from one rendered off a constant.
+    categories: { linkedin_profile: true, professional_email: false },
   },
+  // Both halves, because the card treats them differently: the free set is what
+  // the automatic lookup takes and carries no switch of its own, and the priced
+  // set is what an admin may allow somebody to buy per contact.
+  catalog: [
+    { category: "linkedin_profile", free: true, cost: {} },
+    { category: "professional_email", free: false, cost: { email: 1 } },
+  ],
   credits: { pools: { email: 120 } },
   version: 4,
   created_at: "2026-01-05T09:00:00Z",
@@ -281,6 +291,78 @@ describe("ProviderCard write posture", () => {
     // Two waiters, not one: the card has to settle before the switch exists,
     // and the write it sends is awaited after. The ceiling covers the sum, or
     // the second can still be inside its own budget when the test is killed.
+    WRITE_TEST_MS,
+  );
+
+  // Allowing a purchase is not making one. The switch decides which buy buttons
+  // a rep is offered on a contact; every spend is still somebody pressing a
+  // priced button on one named record. Without this pair the card had no
+  // control at all for the paid half — the buy buttons existed on the contact
+  // page and nothing on any screen could switch their categories on, so an
+  // installation could see the price list and never reach it.
+  it(
+    "offers a switch per PRICED category, and none for the free ones",
+    async () => {
+      await renderAs(ME_OPERATOR);
+
+      expect(
+        screen.getByRole("switch", { name: "Allow buying work email" }),
+      ).toBeTruthy();
+      // The free set carries no switch: it is what the automatic lookup takes,
+      // the installation switch above already governs it as ONE decision, and a
+      // second control able to turn one of them off would half-disable that
+      // feature with nothing on screen explaining the difference.
+      expect(
+        screen.queryByRole("switch", { name: "Allow buying LinkedIn profile" }),
+      ).toBeNull();
+      // Counted, not just named. Asserting the absence of one spelling passes
+      // when the label is anything else — and it did, silently, until the
+      // filter was mutated away and this case stayed green over a card
+      // rendering a switch for every category the provider sells.
+      expect(
+        screen.getAllByRole("switch", { name: /^Allow buying / }),
+      ).toHaveLength(1);
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "sends the WHOLE selection when one priced category is switched on",
+    async () => {
+      const user = userEvent.setup();
+      const fetch = await renderAs(ME_OPERATOR);
+
+      const buyEmail = screen.getByRole("switch", {
+        name: "Allow buying work email",
+      });
+      expect(buyEmail.getAttribute("aria-checked")).toBe("false");
+      await user.click(buyEmail);
+
+      const patched = () =>
+        fetch.mock.calls
+          .map(([input]) => (input instanceof Request ? input : undefined))
+          .find((request) => request?.method === "PATCH");
+      await waitFor(() => expect(patched()).toBeTruthy(), {
+        timeout: SETTLE_MS,
+      });
+      const request = patched() as Request;
+      expect(new URL(request.url).pathname).toBe(
+        "/v1/provider-connections/surfe",
+      );
+      // The free category rides along UNCHANGED. The patch replaces the map
+      // rather than merging into it, so a body carrying only the pressed pair
+      // would switch off every category not named — including the ones the
+      // automatic lookup runs on, silently stopping it from the paid tier's
+      // control.
+      expect(await request.clone().json()).toEqual({
+        configuration: {
+          categories: { linkedin_profile: true, professional_email: true },
+        },
+      });
+      // The version the card was rendered from, so two admins deciding what the
+      // installation may spend on cannot lose each other's write.
+      expect(request.headers.get("If-Match")).toBe("4");
+    },
     WRITE_TEST_MS,
   );
 

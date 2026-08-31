@@ -6678,6 +6678,9 @@ export const en = {
     "Every contact is looked up once for whatever the connection selects that the provider charges nothing for — typically the professional profile link, the current role and employer, and the work history. Email addresses and mobile numbers are never bought this way: those cost credits and stay a decision you make per contact.",
   "provider.automaticLookupJurisdiction":
     "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
+  "provider.buyable": "Allow buying {category}",
+  "provider.buyableHint":
+    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
   "provider.backlog": "Still to look up",
   "provider.backlogRemaining_one": "{count} contact",
   "provider.backlogRemaining_other": "{count} contacts",
@@ -6730,7 +6733,8 @@ export const en = {
     "We never learned how this lookup ended. It may have been charged for.",
   "provider.profile.claimsUnwritten":
     "Paid for, but the details never reached this record. Nobody has to hunt for them — this is the gap.",
-  "provider.profile.enrichNow": "Look this contact up",
+  "provider.profile.enrichNow": "Look this contact up · free",
+  "provider.profile.recheck": "Check again · free",
   "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
   "provider.profile.emptyTitle": "Nothing bought for this contact yet",
   "provider.profile.emptyBody":

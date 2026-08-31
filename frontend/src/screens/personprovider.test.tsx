@@ -163,9 +163,17 @@ describe("a contact whose data was already bought", () => {
     expect(
       screen.queryByText("Nothing bought for this contact yet"),
     ).toBeNull();
+    // "Check again", not "look this contact up": this contact HAS been looked
+    // up, and the button offers the same free details a second time in case a
+    // job changed. The first-lookup wording on a record already showing a
+    // lookup reads as the control that fetches the email — the one thing this
+    // button never does, because that costs credits and has its own.
     expect(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Check again/ }),
     ).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: /Look this contact up/ }),
+    ).toBeNull();
   });
 
   // A merge cancels the losing side's queued run and relinks the claims both
@@ -474,8 +482,11 @@ describe("the details that cost credits", () => {
       queuedRun,
     );
 
+    // A run that completed, so the button offers a re-check rather than a
+    // first lookup. Either wording drives the same press; what this case pins
+    // is WHAT it sends.
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Check again/ }),
     );
 
     // The FREE set, named. Sending no categories asks for the connection's
