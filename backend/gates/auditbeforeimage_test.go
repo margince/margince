@@ -116,6 +116,8 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/people/linkedinmatchapply.go:auditLinkedInMatch": "the confirmed handle lands in person_social and no column of the person moves, so what the contact gained is the whole of what this write has to record",
 
+	"internal/modules/capture/senderoverride.go:Set":     "the settings row has no column for a sender decision; the write records one seat's answer about one address, and the image names the decision and the kind it overruled — the prior state a reader wants is what the MACHINE had said, which the image carries",
+	"internal/modules/capture/senderoverride.go:Remove":  "the same decision withdrawn: what it had been is in the row this deletes, and the image names that it was withdrawn",
 	"internal/modules/capture/exclusionstore.go:Add":     "the settings row has no column for a rule; the write inserts one exclusion into a list, and the image names the rule that now applies",
 	"internal/modules/capture/owneridentitystore.go:Add": "the settings row has no column for a seat's own addresses; the write inserts one claim into a per-seat list. The image names the claim's id and kind and deliberately NOT its value — an owner identity is one person's private address, and the audit log is where nothing erases it and every admin reads it",
 

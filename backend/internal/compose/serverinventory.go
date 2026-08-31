@@ -102,6 +102,7 @@ type Server struct {
 	installationSetupHandlers
 	consumerMailDomainHandlers
 	blockedDomainHandlers
+	captureSenderHandlers
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers

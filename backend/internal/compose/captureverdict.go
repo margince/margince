@@ -223,6 +223,18 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(ctx context.Context, claimed []
 // floor. An answer still below the floor retires the row to `unsure` for a human
 // rather than spending another attempt on a question this model cannot answer.
 func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.PendingCounterparty) (int, error) {
+	// The OWNER's own decision first, and no model call at all when there is
+	// one. A person who told this product what a sender is has answered the
+	// question; asking anyway would spend a call to be told something we then
+	// have to discard, and a machine that could overturn them would make every
+	// correction temporary.
+	decided, kind, err := e.ownerDecided(ctx, row)
+	if err != nil {
+		return 0, err
+	}
+	if decided {
+		return e.applyOwnerDecision(ctx, row, kind)
+	}
 	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
@@ -249,10 +261,26 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	return 1, nil
 }
 
+// applyOwnerDecision commits what a PERSON said about a sender.
+//
+// Split from applyJudged rather than sharing a bool at the call site, so the
+// two authorities are visible as two entry points: a reader asking "what can an
+// owner's click do" finds one function and the answer beside it.
+func (e *CounterpartyVerdictEngine) applyOwnerDecision(ctx context.Context, row capture.PendingCounterparty, kind string) (int, error) {
+	done, err := e.apply(ctx, row, kind, true)
+	if err != nil {
+		return 0, err
+	}
+	if done {
+		return 1, nil
+	}
+	return 0, nil
+}
+
 // applyJudged commits one above-floor answer and reports whether this caller was
 // the one that resolved the row.
 func (e *CounterpartyVerdictEngine) applyJudged(ctx context.Context, row capture.PendingCounterparty, verdict string) (int, error) {
-	done, err := e.apply(ctx, row, verdict)
+	done, err := e.apply(ctx, row, verdict, false)
 	if err != nil {
 		return 0, err
 	}
@@ -269,7 +297,7 @@ func (e *CounterpartyVerdictEngine) applyJudged(ctx context.Context, row capture
 // Resolve's compare-and-set decides who acts: only the caller that actually
 // closed the row runs the effect, which makes a replayed job or a raced sibling
 // a no-op rather than a second creation.
-func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.PendingCounterparty, kind string) (bool, error) {
+func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.PendingCounterparty, kind string, ownerSaidSo bool) (bool, error) {
 	verdict, known := statusForKind(kind)
 	if !known {
 		return false, fmt.Errorf("verdict: %q is not a sender kind", kind)
@@ -296,8 +324,22 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 			// visible; no contact is invented for a mailbox nobody owns.
 			return nil
 		case capture.KindNewsletter, capture.KindTransactional, capture.KindSpam:
-			if err := e.suppressSenderDomain(ctx, tx, row, kind); err != nil {
-				return err
+			// A seat's own `keep out` does NOT suppress the domain. The two
+			// statements are different sizes: the classifier calling a sender
+			// noise is a judgement about the sender, and suppressing their
+			// domain workspace-wide follows from it; a person saying "keep this
+			// out of my mail" is a statement about their own mailbox, and one
+			// rep who once received mail from a partner could otherwise refuse
+			// that company to every colleague — with a per-record person grant
+			// and no capture-settings grant at all.
+			//
+			// The mail hide still runs: it is what "keep out" means, and the
+			// noise scope already excludes anything a colleague corresponded
+			// with.
+			if !ownerSaidSo {
+				if err := e.suppressSenderDomain(ctx, tx, row, kind); err != nil {
+					return err
+				}
 			}
 			return e.hideNoise(ctx, tx, row)
 		case capture.KindAdvisor:
@@ -400,4 +442,31 @@ func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx
 	}
 	return e.people.SuppressBulkSenderDomainTx(ctx, tx, row.Domain,
 		"mail from this domain was judged "+kind+", so it is not a company this business works with")
+}
+
+// ownerDecided answers whether the mailbox owner already settled this sender,
+// and which kind their decision amounts to.
+//
+// `business` becomes `person`: the owner is saying this is somebody the CRM
+// should hold, which is the one kind that creates a record. `keep_out` becomes
+// `spam`, the noise kind whose effects — hide the mail, suppress the domain —
+// are what "keep this out for good" means. Neither invents a new kind: the
+// ledger's vocabulary is closed: a decision spelled outside it would sit in a
+// column every downstream reader parses against a fixed set, and be skipped.
+func (e *CounterpartyVerdictEngine) ownerDecided(ctx context.Context, row capture.PendingCounterparty) (bool, string, error) {
+	var decision string
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		decision, err = capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
+		return err
+	}); err != nil {
+		return false, "", err
+	}
+	switch decision {
+	case capture.OverrideBusiness:
+		return true, capture.KindPerson, nil
+	case capture.OverrideKeepOut:
+		return true, capture.KindSpam, nil
+	}
+	return false, "", nil
 }
