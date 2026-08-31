@@ -152,7 +152,7 @@ func TestAConsentPostThatFailsValidationComesBackToTheScreen(t *testing.T) {
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	armed := form.Get("consent")
-	form.Set("passport_id", o.mintPassport(t, "lendable", []string{"read", "write"}))
+	form.Set("scopes", "read")
 	// The OAuth 2.1 downgrade validateAuthorize refuses: S256 is mandatory.
 	form.Set("code_challenge_method", "plain")
 
@@ -162,6 +162,50 @@ func TestAConsentPostThatFailsValidationComesBackToTheScreen(t *testing.T) {
 		t.Fatalf("error = %q, want invalid_request: %q", got, location)
 	}
 	assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_authorization_code`)
+}
+
+// A consent POST that ticks nothing at all cannot come from a screen this
+// server rendered — every checkbox defaults ticked — so it is a hand-built
+// form or a bug, and the refusal is TERMINAL rather than a second chance.
+// mintConsentedAuthorizationCode refuses with apperrors.ErrInvalidArgument,
+// and oauth.go's consent handler turns that into the same invalid_request the
+// screen shows for any other malformed POST.
+func TestAConsentPostWithNoScopesTickedComesBackToTheScreen(t *testing.T) {
+	o := setupOAuth(t)
+	form := o.armConsent(t, nil)
+	armed := form.Get("consent")
+	form.Set("scopes", "")
+
+	status, location, _ := o.postConsent(t, form)
+
+	if got := consentScreenRefusal(t, status, location, armed); got != "invalid_request" {
+		t.Fatalf("error = %q, want invalid_request: %q", got, location)
+	}
+	// Nothing durable exists for a scope list this server would never have
+	// rendered: no code to redeem later, no audit row naming a grant that
+	// never happened.
+	assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_authorization_code`)
+	assertOwnerCount(t, o, 0,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'oauth_authorization_code'`)
+}
+
+// A scope outside the closed read|draft|write|send|enrich vocabulary is the
+// same case as no scopes at all: this server rendered five checkboxes over a
+// fixed vocabulary, so a POST naming a sixth did not come from that screen.
+func TestAConsentPostWithAnOutOfVocabularyScopeComesBackToTheScreen(t *testing.T) {
+	o := setupOAuth(t)
+	form := o.armConsent(t, nil)
+	armed := form.Get("consent")
+	form.Set("scopes", "read admin")
+
+	status, location, _ := o.postConsent(t, form)
+
+	if got := consentScreenRefusal(t, status, location, armed); got != "invalid_request" {
+		t.Fatalf("error = %q, want invalid_request: %q", got, location)
+	}
+	assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_authorization_code`)
+	assertOwnerCount(t, o, 0,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'oauth_authorization_code'`)
 }
 
 // A human arriving from `claude mcp add` in a fresh browser has no session, and
