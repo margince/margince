@@ -33,6 +33,7 @@ func adminOwnDomainContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"capture_settings": {Read: true, Update: true},
+				"person":           {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -311,5 +312,33 @@ func assertOwnDomainAudited(ctx context.Context, t *testing.T, db *database.DB, 
 	}
 	if rows != 1 {
 		t.Errorf("audit rows for %s %s = %d, want exactly 1 — audit_log is the only record this write leaves", want.action, want.domain, rows)
+	}
+}
+
+// Whether an address is one of ours is read off every registered domain, the
+// company's own included, and off nothing when none is registered.
+func TestInternalRecognisesTheRegisteredDomainsAndNothingElse(t *testing.T) {
+	ctx, db := ownDomainWorkspace(t)
+	store := capture.NewOwnDomainStore(db)
+
+	internal, err := store.Internal(ctx, "peer@acme.com")
+	if err != nil || internal {
+		t.Fatalf("Internal before any registration = (%v, %v), want false: nobody is a colleague yet", internal, err)
+	}
+	if _, err := store.Add(ctx, "acme.com"); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	for address, want := range map[string]bool{
+		"peer@acme.com":      true,
+		"Peer@Mail.ACME.com": true,
+		"dana@client.io":     false,
+	} {
+		internal, err := store.Internal(ctx, address)
+		if err != nil {
+			t.Fatalf("Internal(%q): %v", address, err)
+		}
+		if internal != want {
+			t.Errorf("Internal(%q) = %v, want %v", address, internal, want)
+		}
 	}
 }

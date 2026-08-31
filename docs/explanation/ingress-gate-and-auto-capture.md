@@ -141,6 +141,11 @@ Steps, in order:
 > kept. An empty address list therefore does not *skip* the check, it *disables* it, and internal
 > chatter gets stored. `Counterparty.Domain` behaves the same way: if it is missing, the suppression
 > rules below read the message as "keep".
+>
+> The list names people, not things. A booked meeting room or device on a calendar event
+> (`…@resource.calendar.google.com`, or an attendee Google flags as a resource) is left out by the
+> calendar connector: it is on nobody's own domain, so counting it would turn every colleagues-only
+> meeting held in a room into a customer touch.
 
 ## 3. The tier ladder: create a contact or not?
 

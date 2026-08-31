@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,6 +50,10 @@ type commsAdapter struct {
 	// defer, exactly as it does on the HTTP transport: an agent must not be
 	// able to promise a moment nothing will wake at.
 	timer activities.ScheduleTimer
+	// own answers whether an addressee is one of the workspace's own people.
+	// The activities store excludes participants with a seat; a colleague
+	// without one is only recognisable by domain, and that set is capture's.
+	own *capture.OwnDomainStore
 }
 
 var _ agents.Comms = commsAdapter{}
@@ -67,8 +72,25 @@ var _ automation.Comms = commsAdapter{}
 // It asks the store rather than the drafter even when a model drafting lane is
 // wired: who a reply is TO is a fact about the record, and a routed drafter
 // must not be able to change it.
+//
+// A colleague is refused here the way an empty thread is refused by the store.
+// A message whose only addressee is on the workspace's own domain — a stand-up
+// with a colleague who has no seat, a hand-off, a message captured before the
+// domain was registered — has nobody outside the company to answer, and an
+// automation must not compose one for a human to wave through.
 func (c commsAdapter) ReplyAddress(ctx context.Context, anchor ids.UUID) (string, error) {
-	return c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor))
+	to, err := c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor))
+	if err != nil {
+		return "", err
+	}
+	internal, err := c.own.Internal(ctx, to)
+	if err != nil {
+		return "", fmt.Errorf("compose: deciding whether the addressee is a colleague: %w", err)
+	}
+	if internal {
+		return "", &activities.NoReplyAddressError{Colleague: true}
+	}
+	return to, nil
 }
 
 func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {

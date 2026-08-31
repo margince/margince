@@ -251,3 +251,62 @@ func mustRecord(t *testing.T, raw []byte) connector.NormalizedRecord {
 	t.Helper()
 	return mustParse(t, raw).ToRecord("gcal", raw)
 }
+
+// roomEventJSON is eventJSON with one booked room on the attendee list: the
+// address Google homes every room under, carrying the resource flag when
+// flagged is set and only the address otherwise.
+func roomEventJSON(t *testing.T, id string, flagged bool, attendees ...string) []byte {
+	t.Helper()
+	att := make([]map[string]any, 0, len(attendees)+1)
+	for _, a := range attendees {
+		att = append(att, map[string]any{"email": a})
+	}
+	att = append(att, map[string]any{
+		"email":    "c_1888abc@resource.calendar.google.com",
+		"resource": flagged,
+	})
+	b, err := json.Marshal(map[string]any{
+		"id":        id,
+		"status":    "confirmed",
+		"summary":   "Daily stand-up",
+		"start":     map[string]string{"dateTime": "2026-07-16T09:00:00Z"},
+		"organizer": map[string]string{"email": gcalOwner},
+		"attendees": att,
+	})
+	if err != nil {
+		t.Fatalf("marshal event: %v", err)
+	}
+	return b
+}
+
+// The room a colleagues-only meeting was booked in is not an outside guest.
+// Before this held, every stand-up held in a meeting room was captured as a
+// customer touch and drafted a recap to a colleague.
+func TestABookedRoomDoesNotMakeAColleaguesOnlyMeetingExternal(t *testing.T) {
+	for _, flagged := range []bool{true, false} {
+		raw := roomEventJSON(t, "evt-room", flagged, gcalOwner, "peer@myco.com")
+		reason, skip := mustParse(t, raw).SkipReason()
+		if !skip || reason != "no party outside the owner's domain" {
+			t.Errorf("resource flag %v: got (%q, skip=%v), want the owner-domain floor to drop it", flagged, reason, skip)
+		}
+	}
+}
+
+// The room is not a party at all: it is neither an address the writer judges
+// internal-vs-external over nor a participant on the interaction graph.
+func TestABookedRoomIsNeitherAnAddressNorAParticipant(t *testing.T) {
+	raw := roomEventJSON(t, "evt-room-2", true, gcalOwner, "client@acme.com")
+	rec := mustParse(t, raw).ToRecord("gcal", raw)
+	wantAddresses := []string{gcalOwner, "client@acme.com"}
+	if !slices.Equal(rec.Addresses, wantAddresses) {
+		t.Errorf("Addresses = %v, want %v", rec.Addresses, wantAddresses)
+	}
+	for _, p := range rec.Participants {
+		if strings.HasSuffix(p.Email, "resource.calendar.google.com") {
+			t.Errorf("participants list the room %q", p.Email)
+		}
+	}
+	if len(rec.Participants) != 1 || rec.Participants[0].Email != "client@acme.com" {
+		t.Errorf("Participants = %+v, want the one guest", rec.Participants)
+	}
+}

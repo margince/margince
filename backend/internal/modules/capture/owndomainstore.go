@@ -96,6 +96,34 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 	return out, err
 }
 
+// Internal reports whether an address belongs to the workspace itself: a
+// colleague rather than a counterparty. It reads the registered set the same
+// way contact creation does — every registered domain, verified or not, plus
+// the company's own — because the question here is whether to answer
+// somebody, and declining to draft a reply to a colleague is safe on the
+// weaker evidence. A workspace with no domain registered has no colleagues
+// this can name, so the answer is false rather than a guess.
+//
+// Gated as a person read, not a settings read: whether somebody is a
+// colleague is a fact about them, asked by a caller who already holds their
+// address, and the same grant that let them reach the address answers it. A
+// rep composing a reply holds no settings authority and must not need one.
+func (s *OwnDomainStore) Internal(ctx context.Context, address string) (bool, error) {
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return false, err
+	}
+	var internal bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		own, err := ownDomainsTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		internal = own.Covers(address)
+		return nil
+	})
+	return internal, err
+}
+
 // Add registers a domain as the workspace's own, verified.
 //
 // An administrator entering a domain IS the human vouching for it — there is no

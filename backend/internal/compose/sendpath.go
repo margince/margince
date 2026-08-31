@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -249,5 +250,6 @@ func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send S
 		stager:        send.Delivery,
 		channelStager: send.Delivery,
 		timer:         send.ScheduleTimer,
+		own:           capture.NewOwnDomainStore(InstallationDB(pool)),
 	}
 }

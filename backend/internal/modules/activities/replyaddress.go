@@ -38,9 +38,20 @@ import (
 // a manually logged call, or a thread whose participants were never captured.
 // An automation instance pointed at such a record is misconfigured, and the
 // operator can act on that.
-type NoReplyAddressError struct{}
+//
+// Colleague marks the other way a thread can have nobody to answer: the only
+// addressee left is on the workspace's own domain. The store cannot tell that
+// (the own-domain set is capture's), so the caller that can sets it, and the
+// refusal reads the same to everyone that handles this error.
+type NoReplyAddressError struct {
+	Colleague bool
+}
 
 func (e *NoReplyAddressError) Error() string {
+	if e.Colleague {
+		return "the message being replied to is with a colleague on the workspace's own domain; " +
+			"a reply is composed only to a counterparty outside it"
+	}
 	return "the message being replied to records no counterparty address to answer; " +
 		"a reply can only be composed for a thread that carries one"
 }
