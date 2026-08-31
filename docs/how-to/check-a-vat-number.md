@@ -81,9 +81,13 @@ The shield beside the number carries it. Open it for the whole receipt.
 | Verdict | What it means |
 |---|---|
 | **Valid** | The register recognises the number. **Read Registered to before you trust it** — see below. |
-| **Not valid** | The register does not recognise it. A typo, a number that has been deregistered, or one that was never real. |
-| **Register did not answer** | A fact about the **lookup**, never about the company. A member state's register was offline, or the number was not VAT-ID shaped so no request was made. |
+| **Not valid** | The number does not hold up. A typo, a value that is not VAT-ID shaped at all, a number since deregistered, or one that was never real. |
 | *(grey, "not checked yet")* | Nobody has asked. Distinct from having asked and been told no. |
+
+Three states, and deliberately no fourth. A number the register rejects and a
+number it was never asked about — because the value cannot be a VAT ID — are the
+same problem on your record, and what you do about either is identical: fix the
+field. Splitting them would ask you to interpret a distinction you cannot act on.
 
 **Valid does not mean "belongs to this company."** A VAT ID copied from another company's imprint — a
 template reused, a subsidiary's number left in place — is a *real* number, so the register returns
@@ -175,9 +179,10 @@ psql "$DSN" -c "SELECT state, attempt FROM river_job
                  WHERE kind = 'check_organization_vat' ORDER BY id DESC LIMIT 3;"
 ```
 
-**The answer is always "Register did not answer".** Check the number's shape. A VAT ID starts with a
-two-letter country code — `122323235` is not one, and no request is made for a value that cannot be a VAT
-ID. Recorded as unanswered rather than invalid, because the register said nothing.
+**A number I know is real reads Not valid.** Check its shape first. A VAT ID starts with a two-letter
+country code — `122323235sdf` is not one, so no request is made and the answer is **Not valid** without
+the register ever being asked. Then check **Registered to**: a real number belonging to somebody else
+answers **Valid**, and only the name exposes it.
 
 **The shield shows a grey question mark I can press.** The check could not be **read** — a network or
 server fault, not a fact about the company. Pressing it reads again.

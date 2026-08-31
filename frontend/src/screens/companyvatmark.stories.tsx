@@ -103,9 +103,12 @@ export const Invalid: Story = {
   },
 };
 
-/** The register declined to answer. A fact about the lookup, never about the
- * company — so it is stated without a warning tone. */
-export const RegisterSilent: Story = {
+/** A row an older build left behind, carrying `unavailable`. Nothing writes
+ * that status now — a value that is not VAT-ID shaped is recorded as invalid,
+ * and a register that declines is retried rather than written — so this is the
+ * version-skew case: it reads as NOT VALID, because three states is what a
+ * reader can act on and a fourth word would only ask them to interpret it. */
+export const StatusFromAnOlderBuild: Story = {
   render: () => {
     installFetchStub({
       "GET /me": CAN_WRITE,

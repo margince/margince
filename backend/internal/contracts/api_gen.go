@@ -22827,8 +22827,16 @@ type OrganizationVatCheck struct {
 	// RegisteredName Who the register says the number belongs to. Absent when it named nobody.
 	RegisteredName *string `json:"registered_name,omitempty"`
 
-	// Status `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
-	// declining to answer, and is a fact about the lookup rather than about the company.
+	// Status `valid` and `invalid` are answers ABOUT the number, and `invalid` covers both a
+	// number the register rejected and one that was never asked about because it is not
+	// VAT-ID shaped: no request is made for a value that cannot be a VAT ID, and a reader
+	// fixes their own field either way.
+	//
+	// `unavailable` is no longer written. It meant the register declining to answer, but a
+	// register that declines is snoozed or retried rather than recorded, so the only thing
+	// that ever produced it was a malformed number — which now reads as what it is. The
+	// value stays in the enum because rows written by older builds still carry it, and a
+	// client reads it as `invalid`.
 	Status OrganizationVatCheckStatus `json:"status"`
 
 	// VatNumber The number AS CONSULTED, which is not necessarily the number on the profile today.
@@ -22837,8 +22845,16 @@ type OrganizationVatCheck struct {
 	VatNumber string `json:"vat_number"`
 }
 
-// OrganizationVatCheckStatus `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
-// declining to answer, and is a fact about the lookup rather than about the company.
+// OrganizationVatCheckStatus `valid` and `invalid` are answers ABOUT the number, and `invalid` covers both a
+// number the register rejected and one that was never asked about because it is not
+// VAT-ID shaped: no request is made for a value that cannot be a VAT ID, and a reader
+// fixes their own field either way.
+//
+// `unavailable` is no longer written. It meant the register declining to answer, but a
+// register that declines is snoozed or retried rather than recorded, so the only thing
+// that ever produced it was a malformed number — which now reads as what it is. The
+// value stays in the enum because rows written by older builds still carry it, and a
+// client reads it as `invalid`.
 type OrganizationVatCheckStatus string
 
 // OverlayBudget The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).

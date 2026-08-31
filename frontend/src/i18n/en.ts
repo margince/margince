@@ -1670,7 +1670,6 @@ export const en = {
   "co.vat.receipt": "Consultation number",
   "co.vat.status.valid": "Valid",
   "co.vat.status.invalid": "Not valid",
-  "co.vat.status.unavailable": "Register did not answer",
   "co.vat.noReceipt":
     "None issued. The register issues a receipt only for a check made under your own VAT ID — add yours in the settings and the next check carries proof a tax authority accepts.",
   "co.vat.never":

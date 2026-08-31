@@ -1624,7 +1624,6 @@ export const vi = {
   "co.vat.receipt": "Số tra cứu",
   "co.vat.status.valid": "Hợp lệ",
   "co.vat.status.invalid": "Không hợp lệ",
-  "co.vat.status.unavailable": "Sổ đăng ký không trả lời",
   "co.vat.noReceipt":
     "Chưa cấp. Sổ đăng ký chỉ cấp số tra cứu cho lần kiểm tra thực hiện dưới mã số thuế của chính bạn — hãy nhập mã số của bạn trong phần cài đặt, lần tra cứu tiếp theo sẽ có bằng chứng mà cơ quan thuế chấp nhận.",
   "co.vat.never":
