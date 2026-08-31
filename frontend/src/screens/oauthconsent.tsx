@@ -5,16 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  clearPendingAuthorize,
-  stashPendingAuthorize,
-} from "../app/pendingauthorize";
 import { navigate } from "../app/router";
-import { Button, Card, EmptyState } from "../design-system/atoms";
-import { PassportSelect, ScopeChips } from "../design-system/passportselect";
-import { formatDate } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { Button, Card, Checkbox, EmptyState } from "../design-system/atoms";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
 
@@ -31,10 +24,11 @@ import { QueryGate, throwProblem, useMe } from "./common";
 //
 // A refused POST comes back here with `error=<marker>`, and whether the nonce
 // comes back with it is the server's statement about what is left to do: a
-// refusal the human's next choice fixes (unlendable_passport) keeps the armed
-// pair alive and returns the nonce, so this screen can offer the choice again;
-// a terminal one hands back the request alone. Hence the rule this screen
-// keeps: a submittable form is rendered only where a nonce is actually held.
+// terminal one hands back the request alone, and there is no recoverable
+// refusal that carries a nonce back any more — every scope the client could
+// ask for is offered here, ticked, so there is nothing left to retry with a
+// narrower choice. Hence the rule this screen keeps: a submittable form is
+// rendered only where a nonce is actually held.
 const AUTHORIZE_PARAMS = [
   "response_type",
   "client_id",
@@ -50,11 +44,10 @@ function fragmentParams(): URLSearchParams {
   return new URLSearchParams(globalThis.location.hash.split("?")[1] ?? "");
 }
 
-// The un-consented authorize query the human returns to after minting a
-// passport — every fragment param EXCEPT the nonce. Replaying the nonce
-// would defeat the point of it being single-use and cookie-bound: the mint
-// trip navigates away from /oauth/authorize entirely, so re-entering it is
-// the only way to arm a fresh one.
+// The un-consented authorize query — every fragment param EXCEPT the nonce.
+// Replaying the nonce would defeat the point of it being single-use and
+// cookie-bound, so a fresh re-entry into /oauth/authorize is the only way to
+// arm one.
 function reauthorizeUrl(params: URLSearchParams): string {
   const carried = new URLSearchParams();
   for (const key of AUTHORIZE_PARAMS) {
@@ -86,20 +79,7 @@ function HiddenAuthorizeFields({
 }
 
 type ConsentRequest = components["schemas"]["ConsentRequest"];
-
-// A passport may carry no label at all (the server maps a NULL column to ""
-// rather than failing the read) — on the one screen where knowing which
-// credential you are about to lend is the entire point, a blank <option>
-// makes two such passports indistinguishable. The id fragment is not
-// decorative: it is the only thing left that still tells them apart.
-function passportLabel(
-  option: Readonly<{ id: string; label: string }>,
-  t: ReturnType<typeof useT>,
-): string {
-  return option.label.trim() === ""
-    ? t("consent.unnamedPassport", { id: option.id.slice(0, 8) })
-    : option.label;
-}
+type Scope = ConsentRequest["scopes"][number];
 
 // A refusal with no forward action of its own — the recovery lives back at
 // the client, not on this screen — so it gets the one thing every other
@@ -127,155 +107,84 @@ function ConsentErrorCard({
   );
 }
 
-// I7: a guide, not a disabled button — there is no approve control at all
-// to disable. The CTA is the only way forward, so no exit is offered here.
-function ConsentGuide({
-  clientName,
-  params,
-}: Readonly<{ clientName: string; params: URLSearchParams }>) {
-  const t = useT();
-  return (
-    <Card>
-      <h1>{t("consent.emptyTitle")}</h1>
-      <p>{t("consent.emptyBody", { client: clientName })}</p>
-      <Button
-        variant="primary"
-        onClick={() => {
-          // I8: stash the re-entry URL (fresh nonce on return), not the
-          // current one — the nonce this screen holds is spent the moment
-          // the human leaves to mint a passport.
-          stashPendingAuthorize({
-            url: reauthorizeUrl(params),
-            clientName,
-          });
-          navigate({ screen: "settings", id: "agents" });
-        }}
-      >
-        {t("consent.emptyCta")}
-      </Button>
-    </Card>
-  );
+// Toggling one scope in or out of the granted set. A plain ternary expression
+// statement reads as two ideas on one line (which branch, and the mutation
+// itself); this keeps the toggle to the one idea it is.
+function toggled(current: ReadonlySet<Scope>, scope: Scope): Set<Scope> {
+  const next = new Set(current);
+  if (next.has(scope)) {
+    next.delete(scope);
+  } else {
+    next.add(scope);
+  }
+  return next;
 }
 
-// The ordinary path: a passport list to lend from. Its own component (rather
-// than an inline branch) so it can hold the one hook the I9 stash-clearing
-// fix needs — a plain function called mid-render cannot.
-//
+// The ordinary path: every scope the client could ask for, ticked by default.
 // `consent` is a real nonce here, never "": OAuthConsent renders this only past
-// its own no-nonce guard. That is what makes the two forms below honest — a
-// selector whose submission the double-submit check must refuse is a worse
-// answer than no selector at all, because it looks actionable.
-
+// its own no-nonce guard.
 function ConsentSelector({
   data,
   params,
   consent,
-  errorCode,
-  passportId,
-  setPassportId,
 }: Readonly<{
   data: ConsentRequest;
   params: URLSearchParams;
   consent: string;
-  errorCode: string | null;
-  passportId: string;
-  setPassportId: (id: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  // A credential's lifetime is a personal deadline, not a reporting-period
-  // label (format.ts zone-by-purpose): the human deciding how long to lend
-  // reads the date on their own calendar. A fixed zone shows the wrong
-  // calendar day to everyone outside it.
-  const zone = viewerZone();
-
-  // I9: the stash exists only to survive the round trip to mint a passport.
-  // Reaching this screen with a usable list means that detour, if there was
-  // one, is over — the stash must not outlive the request it represents, or
-  // Settings goes on offering to "finish" a connection already decided.
-  useEffect(() => {
-    clearPendingAuthorize();
-  }, []);
-
-  const options = data.passports.map((option) => ({
-    ...option,
-    label: passportLabel(option, t),
-  }));
-  const selected =
-    options.find((option) => option.id === passportId) ?? options[0];
-  // The id the screen DISPLAYS is the id it posts — one value, never two.
-  // A chosen passport can leave the list between renders (revoked in another
-  // tab, dropped by a refetch), and a posted id that no longer names the
-  // passport on screen would let the human approve one credential while
-  // lending another.
-  const effectiveId = selected.id;
+  // Ticked by default: a connection that can only read is not what someone
+  // connecting an assistant is asking for, and the first thing they try would
+  // fail in a way that reads as the product being broken.
+  const [granted, setGranted] = useState<ReadonlySet<Scope>>(
+    () => new Set(data.scopes),
+  );
+  const scopeList = data.scopes.filter((scope) => granted.has(scope)).join(" ");
 
   return (
     <Card>
       <h1>{t("consent.title")}</h1>
       <p>{t("consent.asks", { client: data.client_name })}</p>
       <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
-      {errorCode === "unlendable_passport" && (
-        <Card as="div" inset>
-          <strong>{t("consent.unlendableTitle")}</strong>
-          <p className="t-small">
-            {t("consent.unlendableBody", { client: data.client_name })}
-          </p>
-        </Card>
-      )}
-      <p>{t("consent.lend")}</p>
-      <PassportSelect
-        options={options}
-        value={effectiveId}
-        onChange={setPassportId}
-      />
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-1)",
-          flexWrap: "wrap",
-          marginTop: "var(--space-2)",
-        }}
-      >
-        {/* Every chip is the grant: the connection receives this passport's
-            scopes, so there is no narrower subset to distinguish and nothing
-            the client asked for that changes them. */}
-        <ScopeChips scopes={selected.scopes} />
-      </div>
-      <p className="t-small">{t("consent.grantedNote")}</p>
-      <p className="t-small">
-        {t("consent.expires", {
-          date: formatDate(selected.expires_at, locale, zone),
-        })}
-      </p>
+      {data.scopes.map((scope) => (
+        <Checkbox
+          key={scope}
+          checked={granted.has(scope)}
+          onChange={() => setGranted((current) => toggled(current, scope))}
+          label={
+            <>
+              <strong>{t(`passport.scope.${scope}`)}</strong>{" "}
+              <span className="t-small">{t(`consent.scopeNote.${scope}`)}</span>
+            </>
+          }
+        />
+      ))}
+      <p className="t-small">{t("consent.ceiling")}</p>
       {data.offline && <p>{t("consent.offline")}</p>}
       <div
         style={{
           display: "flex",
           gap: "var(--space-2)",
           marginTop: "var(--space-3)",
+          alignItems: "center",
+          flexWrap: "wrap",
         }}
       >
-        <form
-          method="post"
-          action="/oauth/authorize"
-          onSubmit={() => clearPendingAuthorize()}
-        >
+        <form method="post" action="/oauth/authorize">
           <HiddenAuthorizeFields params={params} consent={consent} />
-          <input type="hidden" name="passport_id" value={effectiveId} />
-          <Button type="submit" variant="primary">
+          <input type="hidden" name="scopes" value={scopeList} />
+          <Button type="submit" variant="primary" disabled={granted.size === 0}>
             {t("consent.approve")}
           </Button>
         </form>
-        <form
-          method="post"
-          action="/oauth/authorize"
-          onSubmit={() => clearPendingAuthorize()}
-        >
+        <form method="post" action="/oauth/authorize">
           <HiddenAuthorizeFields params={params} consent={consent} />
           <input type="hidden" name="deny" value="1" />
           <Button type="submit">{t("consent.deny")}</Button>
         </form>
+        {granted.size === 0 && (
+          <p className="t-small">{t("consent.pickOne")}</p>
+        )}
       </div>
     </Card>
   );
@@ -291,14 +200,13 @@ export function OAuthConsent() {
   const consent = params.get("consent") ?? "";
   const errorCode = params.get("error");
   const me = useMe();
-  const [passportId, setPassportId] = useState("");
 
   const query = useQuery({
     queryKey: ["oauth-consent-request", clientId, scope],
     // Only a render that can actually offer the human a decision needs the
-    // passport list, and that is exactly the render holding a nonce. The
-    // states below without one — the re-entry detour and the terminal
-    // refusals — return before this query is ever read.
+    // scope list, and that is exactly the render holding a nonce. The states
+    // below without one — the re-entry detour and the terminal refusals —
+    // return before this query is ever read.
     enabled: Boolean(consent),
     queryFn: async () => {
       const { data, error } = await api.GET("/oauth/consent-request", {
@@ -363,10 +271,7 @@ export function OAuthConsent() {
   // stale_consent says outright that the request is spent — and ANY arrival
   // without a nonce is the same fact, whatever marker it carries: the POST
   // requires cookie and body to agree, so a selector rendered here could only
-  // offer a submission the server must refuse. The recoverable refusal
-  // (unlendable_passport) carries its nonce back precisely so it never lands
-  // here, and the empty-passport guide already sets the standard: a state with
-  // no working action presents none.
+  // offer a submission the server must refuse.
   if (errorCode === "stale_consent" || !consent) {
     return (
       <div className="wrap narrow">
@@ -381,23 +286,9 @@ export function OAuthConsent() {
   return (
     <div className="wrap narrow">
       <QueryGate query={query}>
-        {(data) => {
-          if (data.passports.length === 0) {
-            return (
-              <ConsentGuide clientName={data.client_name} params={params} />
-            );
-          }
-          return (
-            <ConsentSelector
-              data={data}
-              params={params}
-              consent={consent}
-              errorCode={errorCode}
-              passportId={passportId}
-              setPassportId={setPassportId}
-            />
-          );
-        }}
+        {(data) => (
+          <ConsentSelector data={data} params={params} consent={consent} />
+        )}
       </QueryGate>
     </div>
   );

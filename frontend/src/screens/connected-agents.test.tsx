@@ -92,8 +92,6 @@ const CONNECTED = {
     client_name: "Claude Code",
     connected_at: "2026-07-02T09:00:00Z",
     renewable: false,
-    lent_passport_id: "pp-minted",
-    lent_passport_label: "full test",
   },
 };
 
@@ -189,9 +187,6 @@ describe("ConnectedAgentsCard", () => {
     render(<ConnectedAgentsCard />);
     await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
     expect(screen.queryByText(CONNECTED.label)).toBeNull();
-    // The provenance answers "which of my passports did this come from?" —
-    // the question a human revoking things actually asks.
-    expect(screen.getByText("lent from “full test”")).toBeTruthy();
     // The grant's age, not the current credential's: the passport was minted
     // on the 20th, the connection made on the 2nd.
     expect(screen.getByText(/connected 02\/07\/2026/)).toBeTruthy();

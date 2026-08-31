@@ -2952,7 +2952,7 @@ export const vi = {
   "passport.select": "Passport",
   "passport.noneOption": "Không dùng passport",
   "settings.passportsLendHint":
-    "Đây là những passport của bạn để cho mượn. Kết nối một client MCP, nó sẽ hỏi bạn trao passport nào — kết nối đó sau đó mang đúng các phạm vi của passport ấy.",
+    "Thông tin xác thực bạn đã tạo cho script và tích hợp. Kết nối một client MCP không dùng những passport này — nó tạo kết nối riêng của nó, liệt kê bên dưới.",
   "settings.passportLabel": "Tên Agent",
   "settings.mint": "Tạo passport",
   "settings.minting": "Đang tạo…",
@@ -3055,7 +3055,6 @@ export const vi = {
     "Các client MCP giữ thông tin xác thực của riêng mình, sinh ra từ một passport bạn cho mượn",
   "agents.noneConnected": "Chưa có Agent nào kết nối.",
   "agents.connectedOn": "kết nối {date}",
-  "agents.lentFrom": "cho mượn từ “{label}”",
   "agents.disconnect": "Ngắt kết nối",
   "agents.disconnectOpen": "Ngắt kết nối",
   "agents.disconnectNamed": "Ngắt kết nối {client}",
@@ -3067,7 +3066,7 @@ export const vi = {
   "agents.revokeGrantOpen": "Kết thúc kết nối",
   "agents.revokeGrantNamed": "Kết thúc kết nối tới {client}",
   "agents.disconnectConfirm":
-    "Việc này kết thúc toàn bộ kết nối, không chỉ một thông tin xác thực: Agent mất quyền truy cập ở lần gọi kế tiếp và không gia hạn được. Muốn kết nối lại thì phải cho mượn passport lần nữa.",
+    "Việc này kết thúc toàn bộ kết nối, không chỉ một thông tin xác thực: Agent mất quyền truy cập ở lần gọi kế tiếp và không gia hạn được. Muốn kết nối lại thì phải cấp quyền truy cập lần nữa.",
   "agents.connectHow": "Kết nối một Agent",
   "agents.connectSteps":
     "Hãy tạo một passport ở trên, rồi chạy một trong các lệnh sau. Client sẽ tự đăng ký và đưa bạn quay lại đây để chọn passport cho mượn.",
@@ -6358,27 +6357,23 @@ export const vi = {
 
   "consent.title": "Cho phép truy cập",
   "consent.asks":
-    "{client} muốn hành động trong Margince với danh nghĩa của bạn.",
+    "{client} sẽ có thể hành động trong Margince với danh nghĩa của bạn, với quyền truy cập được đánh dấu bên dưới.",
   "consent.redirectsTo": "Margince sẽ gửi ủy quyền trở lại {host}.",
   "consent.redirectsToLoopback":
     "Đó là địa chỉ trên chính máy này, và kết nối này không thể chứng minh chương trình nào đang lắng nghe ở đó.",
-  "consent.lend": "Cho nó mượn một passport Agent của bạn",
-  "consent.grantedNote":
-    "Kết nối này nhận đúng những phạm vi hiển thị ở đây — đúng những gì passport này mang.",
+  "consent.scopeNote.read": "xem những gì bạn xem được",
+  "consent.scopeNote.draft": "soạn thư để bạn xem lại",
+  "consent.scopeNote.write": "tạo, sửa và lưu trữ hồ sơ với danh nghĩa của bạn",
+  "consent.scopeNote.send": "gửi thư với danh nghĩa của bạn, không hỏi trước",
+  "consent.scopeNote.enrich":
+    "tiêu điểm tín dụng làm giàu dữ liệu — mỗi lần mua vẫn hỏi bạn trước",
+  "consent.ceiling":
+    "Không bao giờ vượt quá quyền của chính bạn. Bạn có thể ngắt kết nối bất cứ lúc nào tại Cài đặt → AI & quyền tự chủ.",
+  "consent.pickOne": "Chọn ít nhất một, hoặc từ chối.",
   "consent.offline":
     "Nó sẽ giữ kết nối mà không hỏi lại, tự gia hạn quyền truy cập cho đến khi bạn thu hồi.",
   "consent.approve": "Cho phép",
   "consent.deny": "Từ chối truy cập",
-  "consent.emptyTitle": "Bạn cần có một passport Agent trước đã",
-  "consent.emptyBody":
-    "Passport là quyền hạn bạn cho một Agent mượn — nó không bao giờ vượt quá quyền của chính bạn, và bạn thu hồi được bất cứ lúc nào. Hãy tạo một passport, chúng tôi sẽ đưa bạn quay lại đây để hoàn tất kết nối {client}.",
-  "consent.emptyCta": "Tạo một passport",
-  "consent.expires": "hết hạn {date}",
-  "consent.resumeTitle": "Hoàn tất kết nối {client}",
-  "consent.resumeBody":
-    "Bạn tới đây để tạo một passport cho {client}. Có rồi thì tiếp tục từ chỗ đang dở.",
-  "consent.resume": "Tiếp tục kết nối",
-  "consent.resumeDismiss": "Huỷ kết nối này",
   "consent.reentering": "Đang kết nối lại…",
   "consent.backToApp": "Quay lại Margince",
   "consent.staleTitle": "Yêu cầu này đã hết hạn",
@@ -6386,13 +6381,9 @@ export const vi = {
   // client's name is not available to name here.
   "consent.staleBody":
     "Yêu cầu kết nối không còn hiệu lực. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại — tải lại trang này không giúp được gì.",
-  "consent.unlendableTitle": "Passport đó không cho mượn được nữa",
-  "consent.unlendableBody":
-    "Passport bạn chọn cho {client} đã bị thu hồi, đã hết hạn, hoặc đang gắn với một kết nối khác. Hãy chọn passport khác bên dưới.",
   "consent.invalidTitle": "Không hoàn tất được yêu cầu kết nối này",
   "consent.invalidBody":
     "Bản cài đặt này sẽ không cho phép yêu cầu ở dạng hiện tại — có thể ứng dụng không còn được đăng ký ở đây. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại.",
-  "consent.unnamedPassport": "Passport chưa đặt tên ({id})",
   "person.thin.title": "Những gì đã biết đến giờ",
   "person.thin.known":
     "Đã có {what} của {name}, nhưng chưa ai bên mình ghi nhận trao đổi với họ.",

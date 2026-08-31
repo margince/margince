@@ -45,7 +45,6 @@ import { isEntityKind } from "../app/entity";
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
 import { useRecordZone } from "../app/recordzone";
-import { ResumeConnectBanner } from "../app/resumeconnectbanner";
 import { navigateReplacing, type Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
@@ -920,7 +919,6 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // all of them, so there is nothing here to branch on.
   return (
     <div className="wrap">
-      <ResumeConnectBanner />
       {/* Unsaved drafts in here are held by the guard above the routed screen
           (App.tsx), not by this screen. A guard installed HERE could only see
           moves between settings entries: it unmounts with the screen, so a draft

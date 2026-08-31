@@ -335,15 +335,6 @@ function ConnectionFacts({
         className={state.ended ? "agents-facts agents-ended" : "agents-facts"}
       >
         <span>{t("agents.connectedOn", { date: connected })}</span>
-        {/* Omitted, never guessed: a connection made before the provenance was
-            recorded has no answer to give. */}
-        {passport.connection.lent_passport_label && (
-          <span>
-            {t("agents.lentFrom", {
-              label: passport.connection.lent_passport_label,
-            })}
-          </span>
-        )}
         {deadline && <span>{deadline}</span>}
       </span>
       <span className="agents-scopes">
