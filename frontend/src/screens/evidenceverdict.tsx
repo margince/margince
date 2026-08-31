@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
@@ -57,7 +58,12 @@ export function profileFieldClaim(
     confirmPath: async () => {
       const { error } = await api.POST(
         "/organizations/{id}/profile-fields/{field}/confirm",
-        { params: { path: { id: orgId, field: field.field } } },
+        {
+          params: {
+            path: { id: orgId, field: field.field },
+            ...ifMatch(requireVersion(field.version)),
+          },
+        },
       );
       if (error) {
         throwProblem(error);
@@ -67,7 +73,14 @@ export function profileFieldClaim(
       const { error } = await api.PATCH(
         "/organizations/{id}/profile-fields/{field}",
         {
-          params: { path: { id: orgId, field: field.field } },
+          params: {
+            path: { id: orgId, field: field.field },
+            // Both verbs pin the row they answer for. A confirmation is a human
+            // agreeing with a value they READ, so it is the verb a stale version
+            // damages most: agreeing with a claim that has since been corrected
+            // stamps a person's name on a value they never saw.
+            ...ifMatch(requireVersion(field.version)),
+          },
           body: { value },
         },
       );

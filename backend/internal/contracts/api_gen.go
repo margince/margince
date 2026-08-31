@@ -15913,6 +15913,9 @@ type CompanyProfileField struct {
 
 	// VerifiedBy The human who confirmed the claim. Server-stamped, never accepted from a request body.
 	VerifiedBy *string `json:"verified_by,omitempty"`
+
+	// Version The row's version, for the `If-Match` a correction sends. The write path has always honoured the precondition; without the version on the read, no client could supply one, and two people correcting the same claim overwrote each other with no conflict and no trace.
+	Version *int64 `json:"version,omitempty"`
 }
 
 // CompanyProfileFieldField defines model for CompanyProfileField.Field.

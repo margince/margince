@@ -20336,6 +20336,11 @@ export interface components {
             confidence?: number | null;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: int64
+             * @description The row's version, for the `If-Match` a correction sends. The write path has always honoured the precondition; without the version on the read, no client could supply one, and two people correcting the same claim overwrote each other with no conflict and no trace.
+             */
+            readonly version?: number;
         };
         /**
          * @description Which system receives a company's mail, classified from its MX records. `other` is a

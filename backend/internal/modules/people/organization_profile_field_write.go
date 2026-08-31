@@ -147,7 +147,7 @@ func (s *Store) writeProfileField(
 		value:      in.Value,
 		ifVersion:  in.IfVersion,
 		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, error) {
-			return readProfileFieldRow(ctx, tx, orgID, field)
+			return readProfileFieldRowForWrite(ctx, tx, orgID, field, in.Value)
 		},
 		readAfter: func(ctx context.Context, tx pgx.Tx) (crmcontracts.CompanyProfileField, error) {
 			return readProfileFieldWire(ctx, tx, orgID, field)
@@ -259,6 +259,61 @@ func writeCanonicalOrgColumn(
 	return recheckOrgNameForDuplicates(ctx, tx, orgID, editor)
 }
 
+// readProfileFieldRowForWrite locates the row a write is about to patch, and
+// for a CORRECTION creates it first when the field has none.
+//
+// A correction is a person stating what the company's VAT number or registry
+// address IS, and most of this vocabulary is never proposed by a machine: a
+// crawl reads a legal notice or it reads nothing, so a rep who knows the number
+// had no way to record it and the field stayed empty forever. Creating here
+// rather than in a second writer keeps one path: the same audit before-image,
+// the same event, and the same canonical hook that queues the VAT consultation.
+//
+// A CONFIRMATION still reads 404 on an absent field, which is why this takes
+// the value rather than a bare flag. Agreeing with a claim nobody made is not
+// an act the product has, and inventing an empty row to agree with would record
+// a human verdict on a value no one ever proposed.
+func readProfileFieldRowForWrite(
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field string, value *string,
+) (evidenceRow, error) {
+	row, err := readProfileFieldRow(ctx, tx, orgID, field)
+	if !errors.Is(err, apperrors.ErrNotFound) || value == nil {
+		return row, err
+	}
+	if err := insertHumanProfileField(ctx, tx, orgID, field); err != nil {
+		return row, err
+	}
+	return readProfileFieldRow(ctx, tx, orgID, field)
+}
+
+// insertHumanProfileField creates the empty row a first correction then fills.
+//
+// The value is deliberately NOT written here: writeEvidence's guarded patch is
+// what sets it, so the created row travels the same audit and event path as any
+// other correction and the before-image honestly reads empty. source='human'
+// with no snippet is the same shape the company form writes — on this path the
+// person IS the evidence, which is also what satisfies org_profile_site_evidence.
+func insertHumanProfileField(
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field string,
+) error {
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	// ON CONFLICT DO NOTHING rather than a bare INSERT: two corrections racing
+	// on one empty field would otherwise have the loser fail on the unique
+	// index, and both are asking for the same row to exist.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO organization_profile_field
+		       (organization_id, field, value, source, captured_by)
+		VALUES ($1, $2, '', 'human', $3)
+		ON CONFLICT (organization_id, field) DO NOTHING`,
+		orgID, field, capturedBy); err != nil {
+		return fmt.Errorf("create organization profile field: %w", err)
+	}
+	return nil
+}
+
 func readProfileFieldRow(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field string,
 ) (evidenceRow, error) {
@@ -289,12 +344,12 @@ func readProfileFieldWire(
 	)
 	err := tx.QueryRow(ctx, `
 		SELECT id, field, value, source, captured_by, evidence_snippet, source_url, confidence,
-		       retrieved_at, verified_at, verified_by, updated_at
+		       retrieved_at, verified_at, verified_by, updated_at, version
 		  FROM organization_profile_field
 		 WHERE organization_id = $1 AND field = $2`,
 		orgID, field,
 	).Scan(&rowID, &fieldV, &pf.Value, &srcV, &pf.CapturedBy, &pf.EvidenceSnippet, &pf.SourceUrl,
-		&pf.Confidence, &pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy, &pf.UpdatedAt)
+		&pf.Confidence, &pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy, &pf.UpdatedAt, &pf.Version)
 	if err != nil {
 		return pf, fmt.Errorf("re-read organization profile field: %w", err)
 	}

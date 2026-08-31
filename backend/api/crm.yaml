@@ -27826,6 +27826,15 @@ components:
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
         updated_at: { type: string, format: date-time }
+        version:
+          type: integer
+          format: int64
+          readOnly: true
+          description: >-
+            The row's version, for the `If-Match` a correction sends. The write path has
+            always honoured the precondition; without the version on the read, no client
+            could supply one, and two people correcting the same claim overwrote each
+            other with no conflict and no trace.
 
     TechnicalMailProvider:
       type: string

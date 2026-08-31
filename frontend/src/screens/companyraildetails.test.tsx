@@ -2,7 +2,8 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
@@ -23,6 +24,7 @@ import { DetailsGrid } from "./companyraildetails";
 // shows the reader all six.
 
 type Organization = components["schemas"]["Organization"];
+type ProfileField = components["schemas"]["CompanyProfileField"];
 
 // A COMPLETE Organization, not a cast one: a fixture asserted into the contract
 // type can drop a required field and still compile, so the test would go on
@@ -67,23 +69,61 @@ afterEach(() => {
 // The grant is what makes the rows editable, which is the state the collapse is
 // about: a viewer who may not write sees values, and an empty address draws no
 // invitation to hide in the first place.
-function stub() {
+function stub(
+  profileFields: readonly ProfileField[] = [],
+  answers: { patch?: () => Response } = {},
+) {
+  const calls: { method: string; pathname: string; body: string }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
       const { pathname } = new URL(request.url);
-      const body = pathname.endsWith("/me")
-        ? meFixture({ allow: { organization: ["read", "update"] } })
-        : {
-            data: [{ id: "u-1", display_name: "Mira Voss" }],
-            page: { has_more: false, next_cursor: null },
-          };
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "content-type": "application/json" },
+      calls.push({
+        method: request.method,
+        pathname,
+        // Read here rather than in the assertion: the body stream is consumed
+        // once, and a later read would come back empty.
+        body: request.method === "GET" ? "" : await request.text(),
+      });
+      if (pathname.endsWith("/me")) {
+        return json(meFixture({ allow: { organization: ["read", "update"] } }));
+      }
+      if (pathname.endsWith("/profile-fields")) {
+        return json({ data: profileFields });
+      }
+      if (request.method === "PATCH") {
+        return answers.patch?.() ?? json({});
+      }
+      return json({
+        data: [{ id: "u-1", display_name: "Mira Voss" }],
+        page: { has_more: false, next_cursor: null },
       });
     }),
   );
+  return calls;
+}
+
+function json(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+// A sidecar claim as the wire carries it. Complete rather than cast, for the
+// same reason ORG is: a fixture missing a required field still compiles.
+function profileField(
+  field: ProfileField["field"],
+  value: string,
+): ProfileField {
+  return {
+    id: `pf-${field}`,
+    field,
+    value,
+    source: "site_read",
+    captured_by: "agent:deepread",
+    updated_at: "2026-06-01T08:00:00Z",
+  };
 }
 
 function renderGrid(organization: Organization) {
@@ -103,11 +143,110 @@ function renderGrid(organization: Organization) {
 // which is a different rendering of the same record and not the one under test.
 // The industry row is the anchor because it sits outside the disclosure and
 // carries a value in every fixture here.
-async function renderSettledGrid(organization: Organization) {
-  stub();
+async function renderSettledGrid(
+  organization: Organization,
+  profileFields: readonly ProfileField[] = [],
+  answers: { patch?: () => Response } = {},
+) {
+  const calls = stub(profileFields, answers);
   renderGrid(organization);
   await screen.findByRole("button", { name: "Change Industry" });
+  return calls;
 }
+
+// The two legal-identity fields that live only in the evidence sidecar. Before
+// these rows a rep could read a VAT number the crawl had found and could not
+// state one it had missed — and most sites print no imprint at all, so the
+// field a person most often knows was the field they could never record.
+describe("the legal identity a person can state", () => {
+  it("invites a VAT number and a registry address on a record carrying neither", async () => {
+    await renderSettledGrid(ORG);
+
+    // Visible, not merely present: these sit in the identity grid beside the
+    // legal name, never inside the address disclosure, which is closed here.
+    expect(screen.getByText("Add VAT ID")).toBeVisible();
+    expect(screen.getByText("Add registered address")).toBeVisible();
+    expect(screen.getByText("Register / VAT ID")).toBeVisible();
+    expect(screen.getByText("Registered address")).toBeVisible();
+  });
+
+  it("reads back the values the crawl already found", async () => {
+    await renderSettledGrid(ORG, [
+      profileField("register_vat", "DE811907980"),
+      profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
+    ]);
+
+    expect(await screen.findByText("DE811907980")).toBeVisible();
+    expect(screen.getByText("Kaiserdamm 1, 14057 Berlin")).toBeVisible();
+    expect(screen.queryByText("Add VAT ID")).toBeNull();
+  });
+
+  it("states a typed VAT number through the profile-field correction", async () => {
+    const user = userEvent.setup();
+    const calls = await renderSettledGrid(ORG);
+
+    await user.click(
+      screen.getByRole("button", { name: "Change Register / VAT ID" }),
+    );
+    await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
+    await user.keyboard("{Enter}");
+
+    // The endpoint matters as much as the value: this is the write that queues
+    // the VAT consultation, and PATCH /organizations/{id} would not.
+    const written = await waitFor(() => {
+      const call = calls.find((one) => one.method === "PATCH");
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(written?.pathname).toBe(
+      "/v1/organizations/o-1/profile-fields/register_vat",
+    );
+    expect(JSON.parse(written?.body ?? "{}")).toEqual({
+      value: "DE811907980",
+    });
+  });
+
+  // Clearing a stated value is the reader asking to unsay it, and the
+  // correction path has no delete — it writes a value or it refuses. The
+  // server's own `minLength: 1` is what refuses, so the reader is told rather
+  // than left looking at a field that silently kept its old value.
+  it("shows the refusal when a stated value is cleared", async () => {
+    const user = userEvent.setup();
+    await renderSettledGrid(
+      ORG,
+      [profileField("register_vat", "DE811907980")],
+      {
+        patch: () =>
+          new Response(
+            JSON.stringify({
+              type: "about:blank",
+              title: "Validation failed",
+              status: 422,
+              detail: "value must be at least 1 character",
+            }),
+            {
+              status: 422,
+              headers: { "content-type": "application/problem+json" },
+            },
+          ),
+      },
+    );
+    await screen.findByText("DE811907980");
+
+    await user.click(
+      screen.getByRole("button", { name: "Change Register / VAT ID" }),
+    );
+    await user.clear(screen.getByLabelText("Register / VAT ID"));
+    await user.keyboard("{Enter}");
+
+    expect(
+      await screen.findByText("value must be at least 1 character"),
+    ).toBeVisible();
+    // The refused write left the claim standing, so the draft is still there to
+    // correct rather than the row having gone blank under the reader.
+    expect(screen.getByLabelText("Register / VAT ID")).toBeVisible();
+  });
+});
 
 describe("the postal address, behind one line until it has something in it", () => {
   it("holds the six parts behind one line that invites the first of them", async () => {
