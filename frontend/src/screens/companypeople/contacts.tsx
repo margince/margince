@@ -121,15 +121,7 @@ export function CompanyPeopleList({ orgId }: { readonly orgId: string }) {
       // The colleague-by-contact comparison, kept as the diagnostic it is
       // rather than a headline: it answers "where are we thin across the
       // team", which a reader asks after choosing somebody, not before.
-      tools={
-        <CoverageExplorer
-          orgId={orgId}
-          contacts={state.rows.map((row) => ({
-            person_id: row.person_id,
-            full_name: row.full_name,
-          }))}
-        />
-      }
+      tools={<CoverageExplorer orgId={orgId} />}
       chips={[
         {
           key: "status",

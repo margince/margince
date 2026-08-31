@@ -53,10 +53,7 @@ const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
   none: "co.routeIn.band.unknown",
 };
 
-export function CoverageExplorer({
-  orgId,
-  contacts,
-}: Readonly<{ orgId: string; contacts: readonly Contact[] }>) {
+export function CoverageExplorer({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const titleId = useId();
@@ -74,7 +71,7 @@ export function CoverageExplorer({
           <h2 id={titleId} className="t-h2 modal-title">
             {t("acctCoverage.title")}
           </h2>
-          <CoverageGrid orgId={orgId} contacts={contacts} />
+          <CoverageGrid orgId={orgId} />
         </Modal>
       )}
     </>
@@ -88,10 +85,7 @@ type ColleagueCoverage = {
   bands: Map<string, StrengthBucket>;
 };
 
-function CoverageGrid({
-  orgId,
-  contacts,
-}: Readonly<{ orgId: string; contacts: readonly Contact[] }>) {
+function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   // Read only when somebody opens the explorer: a graph query on every company
@@ -105,8 +99,8 @@ function CoverageGrid({
   usePublishSelection(selected.length);
 
   const colleagues = useMemo(
-    () => colleaguesFrom(graph, contacts, locale),
-    [graph, contacts, locale],
+    () => colleaguesFrom(graph, locale),
+    [graph, locale],
   );
 
   if (query.isPending) {
@@ -132,7 +126,12 @@ function CoverageGrid({
   }
 
   const shown = selected.length > 0 ? selected : defaultSelection(colleagues);
-  const rows = contacts.filter((contact) =>
+  // The account's contacts as the GRAPH knows them, narrowed by this grid's own
+  // search box. Not the caller's rows: the People tab's list is filtered and
+  // paged, and a coverage comparison built from a page reports the team as
+  // covering nobody the moment a reader narrows the list — a false claim, not
+  // a smaller one.
+  const rows = accountContacts(graph).filter((contact) =>
     contact.full_name
       .toLowerCase()
       .includes(contactFilter.trim().toLowerCase()),
@@ -262,15 +261,33 @@ function CoverageGrid({
 // Only colleagues with at least one edge to a contact ON THIS ACCOUNT appear: an
 // empty column is a name the reader has to rule out, and the default is to hide
 // what has nothing to say.
+/** accountContacts is every person the account's graph names. */
+function accountContacts(
+  graph: ReturnType<typeof useOrganizationGraph>["data"],
+): Contact[] {
+  if (!graph || !Array.isArray(graph.nodes)) {
+    return [];
+  }
+  return graph.nodes
+    .filter((node) => node.kind === "person")
+    .map((node) => ({ person_id: node.id, full_name: node.label }));
+}
+
 function colleaguesFrom(
   graph: ReturnType<typeof useOrganizationGraph>["data"],
-  contacts: readonly Contact[],
   locale: Locale,
 ): ColleagueCoverage[] {
   if (!graph || !Array.isArray(graph.nodes)) {
     return [];
   }
-  const onAccount = new Set(contacts.map((contact) => contact.person_id));
+  // The account's contacts, taken from the GRAPH rather than from whatever the
+  // caller had loaded. The caller is now a filtered, paged list, and a coverage
+  // comparison built from a page answers a question nobody asked: filter the
+  // list to one person and the grid would report the whole team as covering
+  // nobody, which is a false claim rather than a narrower one.
+  const onAccount = new Set(
+    accountContacts(graph).map((contact) => contact.person_id),
+  );
   const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
   const byColleague = new Map<string, ColleagueCoverage>();
   for (const edge of graph.edges) {

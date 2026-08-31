@@ -4,7 +4,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { CoverageExplorer } from "./coverageexplorer";
 
@@ -16,25 +15,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-type Contact = components["schemas"]["Organization360Contact"];
-
-const CONTACTS = [
-  {
-    person_id: "p-1",
-    full_name: "Dana Buyer",
-    strength: {},
-    deal_roles: [],
-    consent: {},
-  },
-  {
-    person_id: "p-2",
-    full_name: "Sam Silent",
-    strength: {},
-    deal_roles: [],
-    consent: {},
-  },
-] as unknown as Contact[];
-
 function stubGraph(dropped = 0) {
   vi.stubGlobal(
     "fetch",
@@ -45,6 +25,10 @@ function stubGraph(dropped = 0) {
             nodes: [
               { id: "u-1", kind: "user", label: "Mira", root: false },
               { id: "p-1", kind: "person", label: "Dana Buyer", root: false },
+              // No edge names Sam: an account contact nobody has written to is
+              // the case the grid exists to show, and the graph is where the
+              // account's contacts come from now.
+              { id: "p-2", kind: "person", label: "Sam Silent", root: false },
             ],
             edges: [
               {
@@ -86,7 +70,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("reads a cell with no connection as Untried, not as a blank", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    show(<CoverageExplorer orgId="o-1" />);
     await open(user);
 
     // Sam Silent has no edge. "Untried" says nobody has written to them, which
@@ -103,7 +87,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("carries each column's colleague on the cell, so a narrow layout can label it", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    show(<CoverageExplorer orgId="o-1" />);
     await open(user);
     await screen.findByText("Sam Silent");
 
@@ -122,7 +106,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("offers only colleagues who have actually reached this account", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    show(<CoverageExplorer orgId="o-1" />);
     await open(user);
 
     // A column the reader has to rule out is worse than no column, so a
@@ -134,7 +118,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("says a grid built from a capped read may be short", async () => {
     const user = userEvent.setup();
     stubGraph(7);
-    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    show(<CoverageExplorer orgId="o-1" />);
     await open(user);
 
     // "No connection" and "the read stopped short" are different claims, and a
@@ -145,7 +129,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("filters the contact rows without touching the columns", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    show(<CoverageExplorer orgId="o-1" />);
     await open(user);
     await screen.findByText("Dana Buyer");
 
@@ -165,7 +149,7 @@ describe("comparing the colleagues a reader chooses", () => {
   it("draws the matrix inside the shared scroll box", async () => {
     const user = userEvent.setup();
     stubGraph();
-    show(<CoverageExplorer orgId="o-1" contacts={CONTACTS} />);
+    show(<CoverageExplorer orgId="o-1" />);
     await open(user);
     await screen.findByText("Sam Silent");
 
