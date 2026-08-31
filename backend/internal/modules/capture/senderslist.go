@@ -52,11 +52,20 @@ func (d SenderDecision) Overruled() bool { return d.Decision != "" }
 // SendersFor lists every sender this seat's mailbox has produced a decision
 // about, the owner's own corrections included.
 //
-// A FULL OUTER JOIN in effect, because the two halves do not cover each other:
-// the ledger holds senders nobody has corrected, and the override table holds
-// addresses the classifier never reached — including senders whose ledger row a
-// purge already deleted, which is exactly the case an owner most needs to still
-// see. A list built from either alone would quietly omit one of them.
+// A FULL OUTER JOIN, because the two halves do not cover each other: the ledger
+// holds senders nobody has corrected, and the override table holds addresses
+// the classifier never reached — including senders whose ledger row a purge
+// already deleted, which is exactly the case an owner most needs to still see.
+// A list built from either alone would quietly omit one of them.
+//
+// EACH SIDE IS FILTERED BEFORE THE JOIN, and that placement is the whole
+// isolation. Filtering in the ON clause or the WHERE instead lets one side
+// widen the other: an override row of the caller's own matches EVERY seat's
+// ledger row for that address, the joined row then satisfies the WHERE through
+// the caller's own half, and the colleague's `kind` is emitted. A caller could
+// write an override for any address they can guess and read back what the
+// classifier privately concluded about a colleague's correspondence with it —
+// `advisor` among them, which exists to hide that somebody has a lawyer.
 func SendersFor(ctx context.Context, db *database.DB) ([]SenderDecision, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, err
@@ -77,11 +86,18 @@ func SendersFor(ctx context.Context, db *database.DB) ([]SenderDecision, error) 
 			         SELECT 1 FROM person_email pe
 			           JOIN person pr ON pr.id = pe.person_id AND pr.archived_at IS NULL
 			          WHERE pe.email = coalesce(p.email, o.address)
-			            AND pe.archived_at IS NULL) AS record_exists
-			  FROM capture_pending_counterparty p
-			  FULL OUTER JOIN capture_sender_override o
-			    ON o.address = p.email AND o.user_id = $1
-			 WHERE p.owner_id = $1 OR o.user_id = $1
+			            AND pe.archived_at IS NULL
+			            -- The visibility rule, not just existence. A person
+			            -- capture minted from somebody else's mailbox is
+			            -- owner-scoped precisely so nobody else learns they
+			            -- exist, and the address here is one the CALLER
+			            -- supplied — so an unscoped EXISTS would answer "does
+			            -- your colleague know this person" for any address a
+			            -- seat cares to guess.
+			            AND (pr.visibility <> 'owner' OR pr.owner_id = $1)) AS record_exists
+			  FROM (SELECT * FROM capture_pending_counterparty WHERE owner_id = $1) p
+			  FULL OUTER JOIN (SELECT * FROM capture_sender_override WHERE user_id = $1) o
+			    ON o.address = p.email
 			 ORDER BY address`, actor.UserID)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)

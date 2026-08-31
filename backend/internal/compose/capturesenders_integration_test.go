@@ -139,3 +139,55 @@ func dispositionKind(t *testing.T, e *integration.Env, id ids.UUID) string {
 	}
 	return kind
 }
+
+func TestAnOverrideDoesNotRevealAColleaguesVerdict(t *testing.T) {
+	// The leak the earlier isolation test could not see, because it gave the
+	// colleague no override row — which is the only precondition.
+	//
+	// A FULL OUTER JOIN filtered in its ON clause lets one side widen the
+	// other: the caller's own override matches EVERY seat's ledger row for that
+	// address, and the joined row satisfies the WHERE through the caller's own
+	// half. What comes back is the classifier's private conclusion about a
+	// colleague's correspondence — `advisor` among them, which exists to hide
+	// that somebody has a lawyer.
+	//
+	// The address is caller-supplied, so this would be a free oracle over any
+	// address a seat cares to guess.
+	e := integration.Setup(t)
+	const sender = "kanzlei@privat.example"
+	activityID := seedCapturedMail(t, e, sender, "Vertraulich")
+	// Rep1's ledger row: the classifier judged this sender their advisor.
+	dispositionID := seedPendingDisposition(t, e, sender, "privat.example", activityID)
+	setDispositionOutcome(t, e, dispositionID, capture.KindAdvisor, "real")
+
+	// Rep2 writes an override for the same address — their own row, always
+	// permitted — and reads their page.
+	setDecision(t, e, e.Rep2, sender, capture.OverrideBusiness)
+	list, err := capture.SendersFor(purgeCtx(e, e.Rep2), InstallationDB(e.Pool))
+	if err != nil {
+		t.Fatalf("listing senders: %v", err)
+	}
+	for _, d := range list {
+		if d.Address != sender {
+			continue
+		}
+		if d.Kind != "" || d.Status != "" {
+			t.Fatalf("a colleague's page shows kind=%q status=%q for a sender only the other seat's "+
+				"mailbox produced — that is the classifier's private conclusion about their correspondence",
+				d.Kind, d.Status)
+		}
+	}
+}
+
+// setDispositionOutcome writes what the classifier concluded about a sender.
+func setDispositionOutcome(t *testing.T, e *integration.Env, id ids.UUID, kind, status string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_pending_counterparty SET kind = $2, status = $3 WHERE id = $1`,
+			id, kind, status)
+		return err
+	}); err != nil {
+		t.Fatalf("setting the disposition outcome: %v", err)
+	}
+}
