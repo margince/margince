@@ -49,9 +49,30 @@ type eventDateTime struct {
 }
 
 // eventActor is one organizer/attendee: the email is all this mapping needs to
-// resolve the counterparty and the internal-vs-external classification.
+// resolve the counterparty and the internal-vs-external classification, plus
+// Google's resource flag, which marks a booked room or device rather than a
+// person.
 type eventActor struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Resource bool   `json:"resource"`
+}
+
+// roomResourceDomain is where Google Calendar homes every booked room and
+// device. An event stored before the resource flag was read carries the
+// address alone, so the domain is recognised as well as the flag.
+const roomResourceDomain = "resource.calendar.google.com"
+
+// isRoom reports whether this attendee is a booked room or device rather than
+// a person. A room is not a party to a meeting: it cannot be a counterparty,
+// it cannot be answered, and — the case that matters — it is on no
+// workspace's own domain, so counting it would make every all-colleague
+// meeting held in a booked room look like it had an outside guest.
+func (a eventActor) isRoom() bool {
+	if a.Resource {
+		return true
+	}
+	dom := domainOf(a.Email)
+	return dom == roomResourceDomain || strings.HasSuffix(dom, "."+roomResourceDomain)
 }
 
 // meeting is the pure, classified result of reading one calendar event against
@@ -145,6 +166,9 @@ func meetingParties(ev rawEvent, ownerLower string) []connector.MessageParticipa
 	}
 	add(ev.Organizer.Email, connector.ParticipantRoleOrganizer)
 	for _, a := range ev.Attendees {
+		if a.isRoom() {
+			continue
+		}
 		add(a.Email, connector.ParticipantRoleAttendee)
 	}
 
@@ -221,11 +245,11 @@ func (m meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 // attendees whose domain differs from the owner's — the external signal behind
 // the all-internal skip. An attendee with no parseable domain is treated as
 // external (unknown ≠ internal): capturing a possibly-external touch beats
-// silently dropping it.
+// silently dropping it. A booked room is not an attendee at all.
 func classifyAttendees(attendees []eventActor, ownerDom string) (emails []string, external int) {
 	for _, a := range attendees {
 		email := strings.TrimSpace(a.Email)
-		if email == "" {
+		if email == "" || a.isRoom() {
 			continue
 		}
 		emails = append(emails, email)
@@ -323,6 +347,9 @@ func eventAddresses(ev rawEvent, owner string) []string {
 	}
 	add(ev.Organizer.Email)
 	for _, a := range ev.Attendees {
+		if a.isRoom() {
+			continue
+		}
 		add(a.Email)
 	}
 	add(owner)

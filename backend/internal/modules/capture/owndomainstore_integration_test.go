@@ -33,6 +33,7 @@ func adminOwnDomainContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"capture_settings": {Read: true, Update: true},
+				"person":           {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -311,5 +312,39 @@ func assertOwnDomainAudited(ctx context.Context, t *testing.T, db *database.DB, 
 	}
 	if rows != 1 {
 		t.Errorf("audit rows for %s %s = %d, want exactly 1 — audit_log is the only record this write leaves", want.action, want.domain, rows)
+	}
+}
+
+// Which addresses are ours is read off the trusted domains — an
+// administrator's and the company's own — and off nothing when none is
+// registered. A mailbox-seeded candidate that nobody vouched for is not one.
+func TestColleaguesAreTheTrustedDomainsAndNothingElse(t *testing.T) {
+	ctx, db := ownDomainWorkspace(t)
+	store := capture.NewOwnDomainStore(db)
+
+	own, err := store.Colleagues(ctx)
+	if err != nil || own.Covers("peer@acme.com") {
+		t.Fatalf("Colleagues before any registration covers peer@acme.com (%v): nobody is a colleague yet", err)
+	}
+	if _, err := db.Pool().Exec(ctx, `INSERT INTO workspace_email_domain (domain, source, verified)
+		VALUES ('customer.io', 'mailbox', false)`); err != nil {
+		t.Fatalf("seeding an unverified mailbox domain: %v", err)
+	}
+	if _, err := store.Add(ctx, "acme.com"); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	own, err = store.Colleagues(ctx)
+	if err != nil {
+		t.Fatalf("Colleagues: %v", err)
+	}
+	for address, want := range map[string]bool{
+		"peer@acme.com":      true,
+		"Peer@Mail.ACME.com": true,
+		"dana@client.io":     false,
+		"rep@customer.io":    false,
+	} {
+		if got := own.Covers(address); got != want {
+			t.Errorf("Covers(%q) = %v, want %v", address, got, want)
+		}
 	}
 }

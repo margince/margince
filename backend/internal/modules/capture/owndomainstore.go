@@ -96,6 +96,31 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 	return out, err
 }
 
+// Colleagues answers which addresses belong to the workspace itself, so a
+// caller composing a reply can tell a co-worker without a seat from a
+// counterparty. It reads the TRUSTED set — domains an administrator vouched
+// for plus the company's own — and not the mailbox-seeded candidates: a
+// contractor who connects a mailbox at a customer must not turn that whole
+// customer into colleagues nobody may answer. A workspace with nothing
+// registered has no colleagues this can name.
+//
+// Gated as a person read, not a settings read: whether somebody is a
+// colleague is a fact about them, asked by a caller who already holds their
+// address, and the same grant that let them reach the address answers it. A
+// rep composing a reply holds no settings authority and must not need one.
+func (s *OwnDomainStore) Colleagues(ctx context.Context) (InternalDomains, error) {
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return InternalDomains{}, err
+	}
+	var own InternalDomains
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		own, err = trustedOwnDomainsTx(ctx, tx)
+		return err
+	})
+	return own, err
+}
+
 // Add registers a domain as the workspace's own, verified.
 //
 // An administrator entering a domain IS the human vouching for it — there is no
