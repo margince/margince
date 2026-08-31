@@ -3209,7 +3209,10 @@ function DealActions({
             body: {
               ...mapDealUpdate(
                 { ...values, project_id: projectId ?? "" },
-                seeded,
+                // The reading the form opened on, not the live one: `seeded`
+                // is rebuilt on every render, so a refetch mid-edit would make
+                // somebody else's change read as this person's.
+                opened ?? seeded,
                 masked,
               ),
               // The other half of the same body, diffed the same way and

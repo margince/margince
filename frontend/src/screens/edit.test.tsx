@@ -252,9 +252,13 @@ describe("what an edit is a reading of", () => {
   // check compares the other person's version against itself and passes: the
   // 409 that should have said "somebody changed this while you were editing"
   // cannot fire, and the overwrite lands silently.
-  it("sends the version the form opened on, not the one that arrived while typing", async () => {
-    const versions: (number | undefined)[] = [];
-    function Screen() {
+  //
+  // Both readings are recorded on purpose. Asserting only the frozen one would
+  // pass against an implementation that reads the live record, because if the
+  // refetch never landed the two are the same — the test has to SEE them
+  // differ, or it is not about the race at all.
+  function raceScreen(seen: { opened?: unknown; live?: unknown }[]) {
+    return function Screen() {
       const [record, setRecord] = useState({
         id: "p1",
         version: 3,
@@ -278,69 +282,54 @@ describe("what an edit is a reading of", () => {
             invalidate="people"
             recordKey="person"
             update={async (_values, _rows, opened) => {
-              versions.push(opened?.version);
+              seen.push({ opened, live: record });
               return { id: "p1" };
             }}
           />
         </>
       );
-    }
+    };
+  }
 
+  async function editThroughARefetch(
+    seen: { opened?: unknown; live?: unknown }[],
+  ) {
+    const Screen = raceScreen(seen);
     render(<Screen />);
     await userEvent.click(screen.getByTestId("edit-record"));
     await userEvent.click(screen.getByRole("button", { name: "refetch" }));
     await userEvent.click(
       screen.getByRole("button", { name: en["record.save"] }),
     );
+    await waitFor(() => expect(seen).toHaveLength(1));
+  }
 
-    await waitFor(() => expect(versions).toHaveLength(1));
-    expect(versions[0]).toBe(3);
+  it("sends the version the form opened on, not the one that arrived while typing", async () => {
+    const seen: { opened?: unknown; live?: unknown }[] = [];
+    await editThroughARefetch(seen);
+
+    const { opened, live } = seen[0] as {
+      opened: { version?: number };
+      live: { version?: number };
+    };
+    // The refetch really landed, so the two readings really do disagree —
+    // without this the assertion below could hold for the wrong reason.
+    expect(live.version).toBe(9);
+    expect(opened.version).toBe(3);
   });
 
   // The same reading has to be the diff baseline, or an untouched field whose
   // value moved under the dialog reads as this person's edit and is sent —
   // overwriting a change nobody here made.
   it("compares against the values it prefilled, not the ones that arrived after", async () => {
-    const baselines: unknown[] = [];
-    function Screen() {
-      const [record, setRecord] = useState({
-        id: "p1",
-        version: 3,
-        full_name: "Alice",
-      });
-      return (
-        <>
-          <Button
-            onClick={() =>
-              setRecord({ id: "p1", version: 9, full_name: "Alice Cooper" })
-            }
-          >
-            refetch
-          </Button>
-          <EditAction<{ id: string }>
-            label="Edit"
-            fields={fields}
-            record={record}
-            savedMessage="saved"
-            invalidate="people"
-            recordKey="person"
-            update={async (_values, _rows, opened) => {
-              baselines.push(opened?.full_name);
-              return { id: "p1" };
-            }}
-          />
-        </>
-      );
-    }
+    const seen: { opened?: unknown; live?: unknown }[] = [];
+    await editThroughARefetch(seen);
 
-    render(<Screen />);
-    await userEvent.click(screen.getByTestId("edit-record"));
-    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
-    await userEvent.click(
-      screen.getByRole("button", { name: en["record.save"] }),
-    );
-
-    await waitFor(() => expect(baselines).toHaveLength(1));
-    expect(baselines[0]).toBe("Alice");
+    const { opened, live } = seen[0] as {
+      opened: { full_name?: string };
+      live: { full_name?: string };
+    };
+    expect(live.full_name).toBe("Alice Cooper");
+    expect(opened.full_name).toBe("Alice");
   });
 });

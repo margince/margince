@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import type { Route } from "../app/router";
 import { Button, Modal } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
@@ -47,6 +47,7 @@ export function useUpdateRecord<Updated extends { id: string }>({
   update: (
     values: Record<string, unknown>,
     rows?: FormRows,
+    opened?: Record<string, unknown> & { id: string; version?: number },
   ) => Promise<Updated>;
   invalidate: string;
   recordKey: string;
@@ -82,10 +83,14 @@ export function useUpdateRecord<Updated extends { id: string }>({
     mutationFn: ({
       values,
       rows,
+      opened,
     }: {
       values: Record<string, unknown>;
       rows: FormRows;
-    }) => update(values, rows),
+      // The reading the form prefilled from, carried through the mutation so
+      // the write's baseline and version are the ones the person saw.
+      opened?: Record<string, unknown> & { id: string; version?: number };
+    }) => update(values, rows, opened),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       queryClient.invalidateQueries({ queryKey: [recordKey, updated.id] });
@@ -189,7 +194,6 @@ export function EditRecordModal({
   resolveExisting,
   onSubmit,
   onValuesChange,
-  onOpened,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -204,13 +208,7 @@ export function EditRecordModal({
   error: string | null;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
-  onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
-  // The form's live answers, published so a caller can drive a SERVER read
-  // from them — the narrowing optionsFor cannot do, because it is a pure
-  // function of the values. See usePublishedValues (create.tsx).
-  onValuesChange?: (values: Record<string, string>) => void;
-  // The record this open PREFILLED FROM, published once, at the moment the
-  // values were seeded.
+  // The form's answers, and the record they were PREFILLED FROM.
   //
   // Everything the write compares against has to describe ONE reading: the
   // values on screen, the baseline the diff is taken against, and the version
@@ -219,9 +217,19 @@ export function EditRecordModal({
   // the person left it — and then the diff reports somebody else's change as
   // this person's edit, and the fresh version makes the server's concurrency
   // check pass on the write that overwrites it.
-  onOpened?: (
-    record: Record<string, unknown> & { id: string; version?: number },
+  //
+  // Carried ON the submit rather than published when it is taken, so it is
+  // never a side effect of rendering: a render React discards or replays must
+  // not be able to hand a caller a reading the form never showed.
+  onSubmit: (
+    values: Record<string, string>,
+    rows: FormRows | undefined,
+    opened: Record<string, unknown> & { id: string; version?: number },
   ) => void;
+  // The form's live answers, published so a caller can drive a SERVER read
+  // from them — the narrowing optionsFor cannot do, because it is a pure
+  // function of the values. See usePublishedValues (create.tsx).
+  onValuesChange?: (values: Record<string, string>) => void;
 }>) {
   const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -244,6 +252,10 @@ export function EditRecordModal({
   // what this keys off, so a re-render never wipes what the user is typing.
   // Starts false, not `open`: a modal mounted already open still has to seed.
   const [seededOpen, setSeededOpen] = useState(false);
+  // The reading the values were taken from, kept for the write. Set in the
+  // same transition as they are, so the three cannot describe different
+  // moments of the record.
+  const [opened, setOpened] = useState(record);
   if (open !== seededOpen) {
     setSeededOpen(open);
     if (open) {
@@ -251,7 +263,7 @@ export function EditRecordModal({
       // previous attempt's leftovers.
       setValues(prefillFromRecord(fields, record));
       setRows(prefillRowsFromRecord(fields, record));
-      onOpened?.(record);
+      setOpened(record);
     }
   }
 
@@ -275,7 +287,9 @@ export function EditRecordModal({
         error={error}
         existing={existing}
         resolveExisting={resolveExisting}
-        onSubmit={onSubmit}
+        onSubmit={(submitted, submittedRows) =>
+          onSubmit(submitted, submittedRows, opened)
+        }
         onClose={onClose}
         submitLabelKey="record.save"
       />
@@ -345,14 +359,8 @@ export function EditAction<Updated extends { id: string }>({
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
-  // The reading this edit began from, held for as long as the dialog is open.
-  // A ref rather than state: nothing renders from it, and re-rendering on the
-  // open transition would only give the modal a second pass to seed from.
-  const opened = useRef<
-    (Record<string, unknown> & { id: string; version?: number }) | null
-  >(null);
   const mutation = useUpdateRecord<Updated>({
-    update: (values, rows) => update(values, rows, opened.current ?? undefined),
+    update: (values, rows, opened) => update(values, rows, opened),
     invalidate,
     recordKey,
     recordId: record.id,
@@ -414,11 +422,8 @@ export function EditAction<Updated extends { id: string }>({
         existing={existing}
         resolveExisting={resolveExisting}
         onValuesChange={onValuesChange}
-        onOpened={(reading) => {
-          opened.current = reading;
-        }}
-        onSubmit={(values, rows) =>
-          mutation.mutate({ values, rows: rows ?? {} })
+        onSubmit={(values, rows, opened) =>
+          mutation.mutate({ values, rows: rows ?? {}, opened })
         }
       />
     </>
