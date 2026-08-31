@@ -359,6 +359,60 @@ stray=$(grep -rlE '^[^#]*\.tmp/dev' "$root/scripts" 2>/dev/null \
 check "" "$stray" \
       "no script composes .tmp/dev itself — the state home comes from lib-devstate.sh"
 
+echo "dev.sh: a stack's servers are findable when the state file no longer names them"
+
+# The defect: the state file records ONE worker pid and every `make dev`
+# overwrites it. An earlier run's worker then belonged to no record, and since a
+# worker binds no port, the port backstop that catches the api could not see it
+# either — so `make dev-stop` reported success over a worker it left running.
+# Four accumulated against one database. They share a River leader election, and
+# the leader is what inserts the periodic jobs: the oldest one held the lease and
+# scheduled only the job kinds its own binary knew, so a job kind added later was
+# never enqueued once. Every other lane kept running, which is what made it read
+# as a broken feature rather than as a process nobody had stopped.
+#
+# Lifted, so these checks exercise the matcher production calls.
+lift stack_server_pids
+
+# Real processes with real command lines: the matcher reads `ps`, so a stub would
+# prove only that the stub matches itself. `exec -a` renames a `sleep` into an
+# argv shaped like a worker's, which is the cheapest honest subject.
+# Started in THIS shell, not through a command substitution: `pid=$(fake …)`
+# runs the function in a subshell, and the background child is reparented and
+# lost the moment that subshell exits. The pid then names nothing and every
+# check below reads as "no match" — which is why the liveness check above is the
+# first assertion rather than an afterthought.
+fake_server() { # dsn redis — sets REPLY to the pid
+    bash -c 'exec -a "./bin/worker --dsn '"$1"' --redis '"$2"'" sleep 30' &
+    REPLY=$!
+}
+mine_dsn="postgres://margince_app:pw@localhost:15432/margince"
+theirs_dsn="postgres://margince_app:pw@localhost:15432/margince_dev_band"
+fake_server "$mine_dsn" "localhost:16379/0";    mine=$REPLY
+fake_server "$theirs_dsn" "localhost:16379/64"; theirs=$REPLY
+# The exec'd argv has to be visible to ps before the matcher reads it. Poll for
+# it rather than sleeping a guessed interval.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    [ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ] && break
+    sleep 0.1
+done
+check "1" "$([ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ] && echo 1 || echo 0)" \
+      "the fake worker is running — without this the four checks below would pass on an empty machine"
+
+check "$mine" "$(stack_server_pids "$mine_dsn" "localhost:16379/0" | sort -u)" \
+      "this stack's worker is found by its database and its logical Redis database, with no pid on file"
+check "" "$(stack_server_pids "$mine_dsn" "localhost:16379/0" | grep -x "$theirs" || true)" \
+      "a parallel worktree's worker is NOT swept — it holds a different database and a different logical database"
+check "$theirs" "$(stack_server_pids "$theirs_dsn" "localhost:16379/64" | sort -u)" \
+      "and that worktree can still stop its own"
+# Two stacks against the shared `margince` differ ONLY in the logical database,
+# so a matcher reading the DSN alone passes every check above and still sweeps a
+# peer. This is the case that separates them.
+check "" "$(stack_server_pids "$mine_dsn" "localhost:16379/7" | grep -x "$mine" || true)" \
+      "matching the database alone is not enough — the logical Redis database is what separates two stacks on one database"
+kill "$mine" "$theirs" 2>/dev/null || true
+wait "$mine" "$theirs" 2>/dev/null || true
+
 echo "lib-testdb.sh: the integration lane's template is per worktree"
 
 # Lifted from lib-testdb.sh and exercised inside THROWAWAY repositories, because
