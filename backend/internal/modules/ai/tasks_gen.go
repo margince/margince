@@ -12,7 +12,7 @@ const (
 	// TaskBriefRanking is the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning
 	TaskBriefRanking    Task = "brief_ranking"
 	TaskCaptureClassify Task = "capture_classify"
-	// TaskCaptureCounterpartyVerdict is ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring.
+	// TaskCaptureCounterpartyVerdict is ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail.
 	TaskCaptureCounterpartyVerdict Task = "capture_counterparty_verdict"
 	// TaskCertJudge is the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding
 	TaskCertJudge Task = "cert_judge"
@@ -79,7 +79,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "17ca4cd56ba6d2d2ee1696ab8341d9f1915a03cc7f25c818f2eeebb8292ffbd1"
+const TaskContractHash = "9936380b886c3b946b6664a83a5ca2dd26ae5dce12fef3ba92cdd09a55eea54e"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -119,7 +119,7 @@ var taskLadders = map[Task][]Tier{
 	TaskAgentLoop:                  {TierCheapCloud, TierPremium},
 	TaskBriefRanking:               {TierPremium, TierCheapCloud},
 	TaskCaptureClassify:            {TierLocalSmall, TierCheapCloud},
-	TaskCaptureCounterpartyVerdict: {TierLocalSmall, TierCheapCloud},
+	TaskCaptureCounterpartyVerdict: {TierLocalSmall},
 	TaskCertJudge:                  {TierPremium, TierCheapCloud},
 	TaskColdStart:                  {TierCheapCloud, TierPremium},
 	TaskCorpusAsk:                  {TierPremium},
