@@ -15716,7 +15716,7 @@ type CaptureTraceEntryOutcome string
 
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {
-	// Kind Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam.
+	// Kind Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally.
 	Kind       *string                      `json:"kind,omitempty"`
 	ResolvedAt *time.Time                   `json:"resolved_at,omitempty"`
 	Status     CaptureTraceResolutionStatus `json:"status"`
