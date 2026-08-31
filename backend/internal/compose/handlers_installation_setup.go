@@ -44,9 +44,9 @@ type installationSetupHandlers struct {
 	//
 	// It is part of the answer because it is part of what the connect transport
 	// resolves: the stored app wins, and the environment is the fallback. An
-	// installation that has always exported the pair has a working Gmail
-	// integration, and reporting its setup step unconfigured would block it at a
-	// gate over a credential it already has.
+	// installation that exports the pair has a working Gmail integration, so
+	// reporting its step unconfigured would tell an operator to go and store an
+	// app the process already resolves.
 	//
 	// The two are not two sources of truth for STORAGE — the setting is the only
 	// place a write lands. They are one honest reading of a two-source
@@ -106,8 +106,9 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	// The app is configured from settings, where the card carries the redirect
 	// URIs Google's console asks for. The step stays in the report because that
 	// is what `blocking` is for: reporting it and calling it optional is the
-	// answer, and dropping it would make the two postures indistinguishable to a
-	// reader asking what is left to do.
+	// answer. Dropping it would leave an installation that has no app and one
+	// that has a working Gmail integration reporting the same thing to a reader
+	// asking what is left to do.
 	steps := []crmcontracts.InstallationSetupStep{
 		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
 		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: false},

@@ -326,10 +326,13 @@ func TestAStoredGoogleAppOutranksTheEnvironmentForBothProviders(t *testing.T) {
 	}
 }
 
-// bindCloudRouting binds a CLOUD vendor on every tier. Cloud is the point: it
-// is the case that needs a credential, and a local-only binding would report the
-// AI step configured with no key at all — which is correct, and would prove
-// nothing about the rule the callers are here for.
+// bindCloudRouting binds a cloud vendor on every tier this rule needs — one
+// bound cloud tier is enough for CloudProvidersBound to name it, and the
+// routing surface carries more than these three.
+//
+// Cloud is the point: it is the case that needs a credential, and a local-only
+// binding would report the AI step configured with no key at all — which is
+// correct, and would prove nothing about the rule the callers are here for.
 func bindCloudRouting(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	binding := crmcontracts.AiTierBinding{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
@@ -368,11 +371,13 @@ func storeCloudProviderKey(t *testing.T, e *apptest.AppEnv) {
 // pins is the policy: unconfigured and non-blocking, and an installation that
 // has bound a model is complete without ever touching Google.
 //
-// It reads every step rather than only the Google one on purpose. The frontend
-// draws nothing for a blocking step it has no panel for, and `ai_models` is the
-// only panel it has — so "ai_models is the sole blocker" is the invariant that
-// keeps the far side of the wire honest, and a test naming just `google_app`
-// would not fail the day a third step arrived blocking.
+// It reads every step rather than only the Google one on purpose: a test naming
+// just `google_app` would not fail the day a third step arrived blocking.
+//
+// Both halves are asserted. A loop that only rejects blockers OTHER than
+// ai_models proves nothing about ai_models itself, and reading that back out of
+// `complete` would be reasoning from the server's own arithmetic — which is
+// exactly what readSetup exists to avoid.
 func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 	e := setupGoogleAppHTTP(t)
 
@@ -382,18 +387,26 @@ func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 			t.Errorf("step %q blocks first run; only ai_models may, because it is the only one onboarding can ask for", step.Step)
 		}
 	}
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); !step.Blocking {
+		t.Error("ai_models does not block first run, so nothing gates the cold-start read the product cannot run without")
+	}
 	if fresh.Complete {
 		t.Fatal("a fresh installation reports setup complete with no model bound")
 	}
 	bindCloudRouting(t, e)
 	storeCloudProviderKey(t, e)
 
+	// ONE report answers both halves. Completeness and the Google step read from
+	// two separate GETs would let the sentence below describe a pairing neither
+	// response ever carried.
 	setup := readSetup(t, e)
 	if !setup.Complete {
 		t.Errorf("setup reads incomplete with a model bound and keyed: %+v", setup.Steps)
 	}
-	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); step.Configured {
-		t.Fatal("the Google app reads configured though none was ever stored, so completeness above proves nothing about skipping it")
+	for _, step := range setup.Steps {
+		if step.Step == crmcontracts.InstallationSetupStepStepGoogleApp && step.Configured {
+			t.Fatal("the Google app reads configured though none was ever stored, so completeness in this same report proves nothing about skipping it")
+		}
 	}
 }
 
