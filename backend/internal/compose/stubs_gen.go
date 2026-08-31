@@ -1255,6 +1255,14 @@ func (stubs) ListOrganizationFacts(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "ListOrganizationFacts")
 }
 
+func (stubs) CreateOrganizationFact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.CreateOrganizationFactParams) {
+	httperr.NotImplemented(w, r, "CreateOrganizationFact")
+}
+
+func (stubs) DeleteOrganizationFact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, factKey crmcontracts.FactKey, params crmcontracts.DeleteOrganizationFactParams) {
+	httperr.NotImplemented(w, r, "DeleteOrganizationFact")
+}
+
 func (stubs) UpdateOrganizationFact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, factKey crmcontracts.FactKey, params crmcontracts.UpdateOrganizationFactParams) {
 	httperr.NotImplemented(w, r, "UpdateOrganizationFact")
 }

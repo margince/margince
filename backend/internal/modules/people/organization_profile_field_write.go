@@ -90,6 +90,12 @@ type evidenceRow struct {
 	// overwrite a claim. A human verdict that moved `source` alone left this
 	// naming the machine, so the next ordinary refresh reclaimed the row.
 	CapturedBy string
+	// Identity names WHICH claim this row was, in the sidecar's own terms — the
+	// field a profile row holds, or the organization, category, field and
+	// value_key a fact is addressed by. Dead weight on a correction, whose row
+	// survives to be looked up; load-bearing on a REMOVAL, where the audit
+	// entry's entity_id is left pointing at a row that no longer exists.
+	Identity map[string]any
 }
 
 // auditImage is the machine's whole claim, which is what a correction's BEFORE
@@ -97,13 +103,21 @@ type evidenceRow struct {
 // human's answer, so "what did it say before I fixed it" stays answerable
 // (PO-AC-N-2).
 func (r evidenceRow) auditImage() map[string]any {
-	return map[string]any{
+	image := map[string]any{
 		auditKeyValue: r.Value, auditKeySource: r.Source,
 		auditKeyEvidenceSnippet: r.EvidenceSnippet, auditKeySourceURL: r.SourceURL,
 		auditKeyConfidence: r.Confidence,
 		auditKeyVerifiedAt: r.VerifiedAt, auditKeyVerifiedBy: r.VerifiedBy,
 		auditKeyCapturedBy: r.CapturedBy,
 	}
+	// Merged rather than nested, so the claim's identity reads beside its value
+	// exactly as every other before-image in this tree does. Load-bearing on a
+	// REMOVAL: once the row is gone the audit entry's entity_id points at
+	// nothing, and without this the trail cannot say what was taken away.
+	for key, value := range r.Identity {
+		image[key] = value
+	}
+	return image
 }
 
 // ProfileFieldWriteInput carries a correction. Value is nil for a confirmation,

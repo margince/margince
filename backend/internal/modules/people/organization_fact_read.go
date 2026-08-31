@@ -58,7 +58,7 @@ func (s *Store) ListOrganizationFacts(ctx context.Context, id ids.OrganizationID
 		rows, err := tx.Query(ctx, `
 			SELECT id, category, field, value, value_key, source, captured_by,
 			       evidence_snippet, source_url, confidence, retrieved_at,
-			       verified_at, verified_by, updated_at
+			       verified_at, verified_by, updated_at, version
 			  FROM organization_fact
 			 WHERE organization_id = $1
 			 ORDER BY category, field, value_key, value`,
@@ -76,7 +76,8 @@ func (s *Store) ListOrganizationFacts(ctx context.Context, id ids.OrganizationID
 			if err := rows.Scan(&factID, &category, &field, &fact.Value, &fact.ValueKey,
 				&source, &fact.CapturedBy, &fact.EvidenceSnippet, &fact.SourceUrl,
 				&fact.Confidence, &fact.RetrievedAt,
-				&fact.VerifiedAt, &fact.VerifiedBy, &fact.UpdatedAt); err != nil {
+				&fact.VerifiedAt, &fact.VerifiedBy, &fact.UpdatedAt,
+				&fact.Version); err != nil {
 				return fmt.Errorf("scan organization fact: %w", err)
 			}
 			// The row's own id, so a brief sentence written from this fact can

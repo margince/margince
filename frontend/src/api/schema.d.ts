@@ -2176,7 +2176,21 @@ export interface paths {
         /** The organization's confirmed facts (organization_fact), grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. */
         get: operations["listOrganizationFacts"];
         put?: never;
-        post?: never;
+        /**
+         * State a fact about this company by hand.
+         * @description The half the fact store never had. Facts arrived only from a site read, so a rep who knew
+         *     the company runs a product the crawl never found had nowhere to record it — and the
+         *     correction path cannot help, because there is no row to correct.
+         *
+         *     The row is human-owned from birth (`source: human`, `captured_by` from the authenticated
+         *     principal), which is also what protects it: both enrichment upserts decline to overwrite a
+         *     row a person captured, so the next site read leaves it alone.
+         *
+         *     A live duplicate is refused with 409 rather than silently upserted — if the fact is already
+         *     stated, the honest verbs are confirm and correct, and an upsert here would let a hand write
+         *     quietly overwrite a machine claim without the correction's audit before-image.
+         */
+        post: operations["createOrganizationFact"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11204,7 +11218,18 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Remove a fact this company does not state.
+         * @description A crawl reads what a page says, and a page says wrong things: a phone number filed as a
+         *     location, a customer who left three years ago. Correction answers "this value is wrong";
+         *     this answers "this is not a fact about this company at all", which correction cannot say.
+         *
+         *     The row is deleted rather than tombstoned, so **a later site read may state the fact
+         *     again** — the enrichment upserts skip rows a human captured, and a deleted row leaves
+         *     nothing to skip. Removal means "not true today", not "never show this again". The audit
+         *     before-image keeps what was removed, so the deletion is answerable either way.
+         */
+        delete: operations["deleteOrganizationFact"];
         options?: never;
         head?: never;
         /**
@@ -11393,6 +11418,14 @@ export interface components {
         };
         /** @description The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce. */
         UpdateOrganizationFactRequest: {
+            value: string;
+        };
+        /** @description A fact a person states about a company. The category and field come from the same closed vocabulary a site read writes (org_fact_field_vocab), so a hand-stated fact and a read one are the same kind of row and the same readers find both. The dedupe key is derived from the value on the server, never supplied: a caller-chosen key could collide with an unrelated fact or slip past the uniqueness the store depends on. */
+        CreateOrganizationFactRequest: {
+            /** @enum {string} */
+            category: "company" | "offering" | "market" | "signal";
+            /** @description A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back. */
+            field: string;
             value: string;
         };
         /** @description An async refresh was enqueued; proposals will appear in the approvals inbox. */
@@ -20976,6 +21009,8 @@ export interface components {
             readonly suspect_reason?: null | "phone_shaped_location" | "not_a_phone" | "not_a_year" | "not_an_email" | "not_a_size";
             /** Format: date-time */
             updated_at: string;
+            /** @description The row's version, for the `If-Match` a correction or a removal sends. The write path has always honoured the precondition; without the version on the read no client could send one, so two readers editing the same fact silently overwrote each other. */
+            version?: components["schemas"]["RowVersion"];
         };
         OrganizationFactListResponse: {
             data: components["schemas"]["OrganizationFact"][];
@@ -28108,6 +28143,74 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createOrganizationFact: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrganizationFactRequest"];
+            };
+        };
+        responses: {
+            /** @description The stated fact. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationFact"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            /** @description The company already states this fact; confirm or correct it instead. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     listOrganizationProfileFields: {
@@ -43433,6 +43536,74 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompanyProfileField"];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteOrganizationFact: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
+                 *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
+                 *     `value_key` alone is only unique within a field.
+                 */
+                factKey: components["parameters"]["FactKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The fact is gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];

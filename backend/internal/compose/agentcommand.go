@@ -136,6 +136,8 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// onto update_record's own {record_type, id, fields} arguments cannot
 	// express (margince/margince#928 task 5).
 	"confirmOrganizationFact":         confirmFactCommand,
+	"createOrganizationFact":          createFactCommand,
+	"deleteOrganizationFact":          deleteFactCommand,
 	"updateOrganizationFact":          updateFactCommand,
 	"confirmOrganizationProfileField": confirmProfileFieldCommand,
 	"updateOrganizationProfileField":  updateProfileFieldCommand,

@@ -607,7 +607,7 @@ type tableWrite struct {
 // the field can actually hold. Ratified, not discovered: the reason must name
 // them, so the exception is re-checkable against the construction sites.
 var indirectTableArg = gatekit.Waive(map[string]string{
-	"internal/modules/people:w.table": "the evidence writer is one shape over two sidecars; the field is set at two struct literals in this package, to organization_fact and organization_profile_field, and people owns both",
+	"internal/modules/people:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the organization_fact constant and to organization_profile_field, and people owns both",
 })
 
 // tableArgText reads a storekit table argument: a string literal, or an

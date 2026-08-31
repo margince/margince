@@ -55,7 +55,7 @@ func (s *Store) writeFact(
 	// No canonical hook: the whole claim lives in the sidecar, so the row IS
 	// the value and there is no second write to keep in step.
 	return writeEvidence(ctx, s, orgID, evidenceWrite[crmcontracts.OrganizationFact]{
-		table:      "organization_fact",
+		table:      tableOrganizationFact,
 		archived:   storekit.NoArchiveColumn,
 		changedKey: factKey,
 		value:      in.Value,
@@ -112,18 +112,28 @@ func readFactRow(
 	if !ok {
 		return r, errMalformedFactKey()
 	}
+	var category string
 	err := tx.QueryRow(ctx, `
-		SELECT id, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
+		SELECT id, category, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
 		  FROM organization_fact
 		 WHERE organization_id = $1 AND field = $2 AND value_key = $3`,
 		orgID, field, valueKey,
-	).Scan(&r.ID, &r.Value, &r.Source, &r.EvidenceSnippet, &r.SourceURL, &r.Confidence,
+	).Scan(&r.ID, &category, &r.Value, &r.Source, &r.EvidenceSnippet, &r.SourceURL, &r.Confidence,
 		&r.VerifiedAt, &r.VerifiedBy, &r.CapturedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return r, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return r, fmt.Errorf("read organization fact: %w", err)
+	}
+	// What this row IS, for the audit before-image. A removal leaves an
+	// entity_id pointing at a row that no longer exists, so without these four
+	// the trail cannot answer which organization lost which fact.
+	r.Identity = map[string]any{
+		siteReadOrgKey:   orgID.UUID,
+		factCategoryKey:  category,
+		evidenceFieldKey: field,
+		"value_key":      valueKey,
 	}
 	return r, nil
 }
@@ -144,13 +154,13 @@ func readFactWire(
 	err := tx.QueryRow(ctx, `
 		SELECT id, category, field, value, value_key, source, captured_by,
 		       evidence_snippet, source_url, confidence,
-		       retrieved_at, verified_at, verified_by, updated_at
+		       retrieved_at, verified_at, verified_by, updated_at, version
 		  FROM organization_fact
 		 WHERE organization_id = $1 AND field = $2 AND value_key = $3`,
 		orgID, keyField, valueKey,
 	).Scan(&id, &category, &field, &f.Value, &f.ValueKey, &srcV, &f.CapturedBy,
 		&f.EvidenceSnippet, &f.SourceUrl, &f.Confidence,
-		&f.RetrievedAt, &f.VerifiedAt, &f.VerifiedBy, &f.UpdatedAt)
+		&f.RetrievedAt, &f.VerifiedAt, &f.VerifiedBy, &f.UpdatedAt, &f.Version)
 	if err != nil {
 		return f, fmt.Errorf("re-read organization fact: %w", err)
 	}
