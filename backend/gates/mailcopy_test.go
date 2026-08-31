@@ -147,8 +147,11 @@ func frontendCatalog(t *testing.T, language string) map[string]string {
 func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 	t.Parallel()
 	for _, language := range mailLabelLanguages(t) {
-		if mailcopy.For(language).WeeklyPromised == mailcopy.For("zz-not-a-language").WeeklyPromised &&
-			language != string(mailcopy.Fallback) {
+		// Asked, not inferred. For answers for every language — that is what
+		// makes it safe to call — so a field compared against English's would
+		// call a language missing the moment one of its labels legitimately
+		// matched, and skip the sweep below on a language that is carried.
+		if !mailcopy.Known(language) {
 			t.Errorf("the contract admits base_language %q and the mail catalog has no copy for it, so an "+
 				"installation set to it is sent %s mail without anything saying so",
 				language, mailcopy.Fallback)

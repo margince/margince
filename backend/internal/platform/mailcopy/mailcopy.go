@@ -58,6 +58,18 @@ func For(language string) Copy {
 	return catalog[Fallback]
 }
 
+// Known reports whether this build carries copy for a language.
+//
+// Separate from For because For ANSWERS for every language — that is what makes
+// it safe to call — and a caller asking "is this one carried?" cannot tell a
+// real entry from the fallback by looking at what came back. Comparing a field
+// against English would call a language missing the moment one of its labels
+// legitimately matched English's.
+func Known(language string) bool {
+	_, known := catalog[Language(language)]
+	return known
+}
+
 // Copy holds the strings the senders need, in one language.
 //
 // A field left out of an entry below is the empty string, which for a subject
