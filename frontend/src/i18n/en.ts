@@ -1806,9 +1806,12 @@ export const en = {
   "co.factField.email_security": "Mail authentication",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Operated service",
-  "co.vat.title": "VAT registration",
-  "co.vat.sub":
-    "What the EU VAT register answered about this company's VAT ID, and the proof it was asked.",
+  "co.vat.markVerdict": "VAT ID: {verdict}",
+  "co.vat.markUnchecked": "VAT ID: not checked with the register yet",
+  "co.vat.markUnreadable":
+    "VAT ID: the check could not be read just now — press to try again",
+  "co.vat.numberMoved":
+    "The number on this record has changed since this check. Ask the register again to check the new one.",
   "co.vat.verdict": "Register answer",
   "co.vat.number": "Number consulted",
   "co.vat.registeredName": "Registered to",
