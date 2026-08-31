@@ -30,7 +30,7 @@ type TroubledAutomationRun struct {
 	// AutomationID is the RULE that failed, as distinct from this one firing
 	// of it. Two failures of one rule share it; a rename does not change it,
 	// and two rules that happen to share a name do not collide on it.
-	AutomationID ids.UUID
+	AutomationID ids.AutomationID
 	Name         string
 	Outcome      string
 	Reason       *string

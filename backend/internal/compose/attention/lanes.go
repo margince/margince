@@ -469,7 +469,7 @@ type TroubledAutomationRun struct {
 	ID ids.UUID
 	// AutomationID is the RULE, not this firing of it: the identity two
 	// failures of one broken rule share, and which a rename does not move.
-	AutomationID ids.UUID
+	AutomationID ids.AutomationID
 	Name         string
 	// Outcome is the contract's failed/blocked vocabulary.
 	Outcome string
