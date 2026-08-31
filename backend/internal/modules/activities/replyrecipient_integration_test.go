@@ -37,13 +37,16 @@ func (d ourDomain) Covers(context.Context) (func(string) bool, error) {
 	}, nil
 }
 
-// seedPersonEmail gives a person one address, the way capture records one.
-func (e *sendEnv) seedPersonEmail(t *testing.T, person ids.UUID, email string, primary bool, position int) {
+// seedPersonEmail gives a person their one primary address, the way capture
+// records one. Which of SEVERAL addresses wins is ReplyAddressFor's own
+// question and is covered where that resolver lives; what these cases vary is
+// WHOSE address is offered.
+func (e *sendEnv) seedPersonEmail(t *testing.T, person ids.UUID, email string) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO person_email (person_id, email, is_primary, position, source, captured_by)
-		VALUES ($1, $2, $3, $4, 'manual', 'human:x')`,
-		person, email, primary, position); err != nil {
+		VALUES ($1, $2, true, 0, 'manual', 'human:x')`,
+		person, email); err != nil {
 		t.Fatalf("seeding the person address: %v", err)
 	}
 }
@@ -119,11 +122,11 @@ func TestAReplyIsAddressedToTheSenderOfTheMessageItAnswers(t *testing.T) {
 	// wrong person: only the role ranking can put the sender ahead of them.
 	// Seeded the other way round, this passes with no ranking at all.
 	copied := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, copied, "anne@buyer.test", true, 0)
+	e.seedPersonEmail(t, copied, "anne@buyer.test")
 	e.participate(t, anchor, copied, "cc", nil)
 
 	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, sender, "dietmar@buyer.test", true, 0)
+	e.seedPersonEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
@@ -148,11 +151,11 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 	// an @demo.test address instead, this passes with the seat filter deleted
 	// and proves nothing about it.
 	us := e.linkPerson(t, anchor, "Sofia Meier")
-	e.seedPersonEmail(t, us, "sofia.private@gmail.test", true, 0)
+	e.seedPersonEmail(t, us, "sofia.private@gmail.test")
 	e.participate(t, anchor, us, "from", &e.rep)
 
 	buyer := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, buyer, "dietmar@buyer.test", true, 0)
+	e.seedPersonEmail(t, buyer, "dietmar@buyer.test")
 	e.participate(t, anchor, buyer, "to", nil)
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
@@ -178,7 +181,7 @@ func TestAColleagueWithoutASeatIsNotAddressable(t *testing.T) {
 	// A co-worker on our own domain who has NO login, so no user_id marks
 	// them as ours. Only the domain predicate can tell.
 	coworker := e.linkPerson(t, anchor, "Jonas Weber")
-	e.seedPersonEmail(t, coworker, "jonas@demo.test", true, 0)
+	e.seedPersonEmail(t, coworker, "jonas@demo.test")
 	e.participate(t, anchor, coworker, "from", nil)
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
@@ -192,7 +195,7 @@ func TestAnUnwiredColleagueReaderOffersNoAddressRatherThanAnUnfilteredOne(t *tes
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	coworker := e.linkPerson(t, anchor, "Jonas Weber")
-	e.seedPersonEmail(t, coworker, "jonas@demo.test", true, 0)
+	e.seedPersonEmail(t, coworker, "jonas@demo.test")
 	e.participate(t, anchor, coworker, "from", nil)
 
 	// Nil reader: a deployment that has not wired the own-domain store cannot
@@ -209,10 +212,10 @@ func TestTheDraftCarriesTheAddressTheRecipientEndpointNames(t *testing.T) {
 	anchor := e.seedAnchor(t, "", "")
 
 	us := e.linkPerson(t, anchor, "Sofia Meier")
-	e.seedPersonEmail(t, us, "sofia.private@gmail.test", true, 0)
+	e.seedPersonEmail(t, us, "sofia.private@gmail.test")
 	e.participate(t, anchor, us, "from", &e.rep)
 	buyer := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, buyer, "dietmar@buyer.test", true, 0)
+	e.seedPersonEmail(t, buyer, "dietmar@buyer.test")
 	e.participate(t, anchor, buyer, "to", nil)
 
 	h := e.handlers(ourDomain{suffix: "@demo.test"})
@@ -242,7 +245,7 @@ func TestAnArchivedAddressIsNotOfferedAsTheRecipient(t *testing.T) {
 	anchor := e.seedAnchor(t, "", "")
 
 	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, sender, "gone@buyer.test", true, 0)
+	e.seedPersonEmail(t, sender, "gone@buyer.test")
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE person_email SET archived_at = now() WHERE person_id = $1`, sender); err != nil {
 		t.Fatalf("archiving the address: %v", err)
@@ -270,11 +273,11 @@ func TestAnErasedPersonYieldsNeitherNameNorAddress(t *testing.T) {
 	// A readable contact keeps the CONVERSATION reachable, so this exercises
 	// the person filter rather than the activity gate refusing outright.
 	readable := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, readable, "anne@buyer.test", true, 0)
+	e.seedPersonEmail(t, readable, "anne@buyer.test")
 	e.participate(t, anchor, readable, "cc", nil)
 
 	erased := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, erased, "dietmar@buyer.test", true, 0)
+	e.seedPersonEmail(t, erased, "dietmar@buyer.test")
 	e.participate(t, anchor, erased, "from", nil)
 	// Art. 17 erasure archives the person in place, leaving the activity and
 	// its participant row behind. The reply must not go on naming or writing
@@ -304,7 +307,7 @@ func TestAPrivatelyCapturedContactStaysWithheldOnAReachableConversation(t *testi
 	// activity is unreachable outright and this would pass on the outer
 	// refusal, never exercising capture privacy at all.
 	readable := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, readable, "anne@buyer.test", true, 0)
+	e.seedPersonEmail(t, readable, "anne@buyer.test")
 	e.participate(t, anchor, readable, "cc", nil)
 
 	private := ids.NewV7()
@@ -314,7 +317,7 @@ func TestAPrivatelyCapturedContactStaysWithheldOnAReachableConversation(t *testi
 		private, e.other); err != nil {
 		t.Fatalf("seeding the owner-private person: %v", err)
 	}
-	e.seedPersonEmail(t, private, "dietmar@buyer.test", true, 0)
+	e.seedPersonEmail(t, private, "dietmar@buyer.test")
 	// The private contact is the SENDER, so the role ranking wants them: only
 	// the capture-privacy arm can keep their address off this reply.
 	e.participate(t, anchor, private, "from", nil)
@@ -338,7 +341,7 @@ func TestAddressingRefusesACallerWithoutThePersonReadGrant(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, sender, "dietmar@buyer.test", true, 0)
+	e.seedPersonEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
 	// A seat that may read the conversation and not the people on it. Neither

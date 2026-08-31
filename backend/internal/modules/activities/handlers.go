@@ -58,8 +58,11 @@ type Handlers struct {
 }
 
 // ColleagueDomains reports whether an address belongs to this installation's
-// own people. It is the same reader the automation reply path uses, so the two
-// surfaces cannot disagree about who counts as a colleague.
+// own people — by registered email domain, which is how a co-worker with no
+// login is recognised at all.
+//
+// The predicate it returns is what ReplyAddressFor walks its candidates past,
+// so what this answers decides who a composed reply may go to.
 type ColleagueDomains interface {
 	Covers(ctx context.Context) (func(address string) bool, error)
 }
