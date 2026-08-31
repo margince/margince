@@ -260,3 +260,74 @@ func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
+
+// replayTableFor is the choice of WHICH table a body's record lives in, and it
+// has three answers with three different failure modes.
+//
+// Getting it wrong is not a refusal, it is a lookup in the wrong table: a send
+// answered as an activity when it was scheduled finds nothing and turns a
+// legitimate retry into a 404, which a client then "recovers" from with a fresh
+// key and a second message to the customer.
+func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		target replayTarget
+		body   string
+		want   string
+		refuse bool
+	}{
+		{
+			name:   "the entry's own table when it names one",
+			target: replayTarget{table: tablePerson, idPath: "id"},
+			body:   `{"id":"x"}`,
+			want:   tablePerson,
+		},
+		{
+			name:   "a send that went now is its activity",
+			target: replayTarget{table: tableActivity, altTable: tableScheduledSend, altMarker: "scheduled_at"},
+			body:   `{"id":"x"}`,
+			want:   tableActivity,
+		},
+		{
+			name:   "a send that will go later is its scheduled send",
+			target: replayTarget{table: tableActivity, altTable: tableScheduledSend, altMarker: "scheduled_at"},
+			body:   `{"id":"x","scheduled_at":"2026-07-05T09:00:00Z"}`,
+			want:   tableScheduledSend,
+		},
+		{
+			// Present and null is the same answer as absent: the field carries
+			// no discriminator, so the body is the primary shape.
+			name:   "a null marker is not the alternate shape",
+			target: replayTarget{table: tableActivity, altTable: tableScheduledSend, altMarker: "scheduled_at"},
+			body:   `{"id":"x","scheduled_at":null}`,
+			want:   tableActivity,
+		},
+		{
+			name:   "a polymorphic reference reads its table off the body",
+			target: replayTarget{tableField: "record_type", idPath: "record_id"},
+			body:   `{"record_type":"deal","record_id":"x"}`,
+			want:   tableDeal,
+		},
+		{
+			// The table is the thing being resolved, so a body that does not
+			// name one cannot be probed at all.
+			name:   "a polymorphic reference with no table refuses",
+			target: replayTarget{tableField: "record_type", idPath: "record_id"},
+			body:   `{"record_id":"x"}`,
+			refuse: true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := replayTableFor(c.target, c.body)
+			switch {
+			case c.refuse && !errors.Is(err, apperrors.ErrNotFound):
+				t.Fatalf("err = %v, want ErrNotFound", err)
+			case c.refuse:
+			case err != nil:
+				t.Fatalf("err = %v, want nil", err)
+			case got != c.want:
+				t.Errorf("table = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
