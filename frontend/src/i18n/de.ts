@@ -1631,7 +1631,6 @@ export const de = {
   "co.vat.receipt": "Abfrage-Nummer",
   "co.vat.status.valid": "Gültig",
   "co.vat.status.invalid": "Nicht gültig",
-  "co.vat.status.unavailable": "Register hat nicht geantwortet",
   "co.vat.noReceipt":
     "Keine vergeben. Das Register vergibt eine Abfrage-Nummer nur für eine Abfrage unter eurer eigenen USt-IdNr. — trag sie in den Einstellungen ein, dann trägt die nächste Abfrage einen Nachweis, den ein Finanzamt akzeptiert.",
   "co.vat.never":

@@ -26,9 +26,17 @@ export function vatCheckKey(orgId: string) {
 }
 
 /** What each verdict is called, which glyph carries it, and how strongly to say
- * it. `unavailable` is the register declining rather than a finding about the
- * company, so it stays untoned — colouring it would report an outage as a
- * problem with the account. */
+ * it.
+ *
+ * Three states and no more, because three is what a reader can act on: the
+ * number holds up, it does not, or nobody has asked. `unavailable` reads as
+ * NOT VALID rather than as a fourth idea — a number the register cannot
+ * recognise and a number it was never asked about are the same problem on the
+ * record, and the reader's next move is identical either way.
+ *
+ * Nothing writes `unavailable` today (the worker records a malformed number as
+ * invalid, and a declining register is retried rather than written), so this
+ * entry is for a row an older build left behind. */
 const VERDICTS: Readonly<
   Record<
     VatStatus,
@@ -46,8 +54,9 @@ const VERDICTS: Readonly<
     icon: <ShieldAlert aria-hidden />,
   },
   unavailable: {
-    label: "co.vat.status.unavailable",
-    icon: <ShieldQuestion aria-hidden />,
+    label: "co.vat.status.invalid",
+    tone: "danger",
+    icon: <ShieldAlert aria-hidden />,
   },
 };
 

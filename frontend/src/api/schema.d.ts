@@ -21457,8 +21457,16 @@ export interface components {
              */
             vat_number: string;
             /**
-             * @description `valid` and `invalid` are answers ABOUT the number. `unavailable` is the register
-             *     declining to answer, and is a fact about the lookup rather than about the company.
+             * @description `valid` and `invalid` are answers ABOUT the number, and `invalid` covers both a
+             *     number the register rejected and one that was never asked about because it is not
+             *     VAT-ID shaped: no request is made for a value that cannot be a VAT ID, and a reader
+             *     fixes their own field either way.
+             *
+             *     `unavailable` is no longer written. It meant the register declining to answer, but a
+             *     register that declines is snoozed or retried rather than recorded, so the only thing
+             *     that ever produced it was a malformed number — which now reads as what it is. The
+             *     value stays in the enum because rows written by older builds still carry it, and a
+             *     client reads it as `invalid`.
              * @enum {string}
              */
             status: "valid" | "invalid" | "unavailable";

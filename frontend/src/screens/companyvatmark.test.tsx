@@ -127,6 +127,20 @@ describe("the VAT mark beside the number", () => {
     ).toBeInTheDocument();
   });
 
+  it("reads a legacy unavailable row as not valid", async () => {
+    // Nothing writes that status now, but a row an older build left behind
+    // still says it. Three states is what a reader can act on — the number
+    // holds up, it does not, or nobody asked — and a fourth word would only
+    // ask them to work out which of the three it meant.
+    answerWith({ ...CHECKED, status: "unavailable" });
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    ).toBeInTheDocument();
+  });
+
   it("says a company nobody has consulted is unchecked", async () => {
     answerWith({}, 404);
 
