@@ -17,11 +17,17 @@
 -- login and every export lands here — and an index over all of it to serve one
 -- reader would cost every writer.
 --
--- SHARE on a table this migration did not create; building the index over the
--- ledger's conflict rows alone is quick, but an unbounded wait turns one open
--- transaction into a write stall on the busiest table there is, so the wait is
--- bounded and a migration that cannot get in fails the deploy loudly instead
--- of holding the door.
+-- Not CONCURRENTLY: a migration runs in one transaction and CONCURRENTLY
+-- forbids that (1787320004's note on the same point, and 1787650813 made the
+-- same call for the same reason). So this holds a write-blocking build, and
+-- the honest cost is a heap scan of the whole of system_log — the partial
+-- predicate makes the INDEX small, not the scan short.
+--
+-- Bounded, because this blocks writers on a table it did not create: without a
+-- timeout, an open transaction holding a conflicting lock stalls every write
+-- to system_log for as long as this is willing to queue, which is forever. A
+-- migration that cannot get in fails the deploy loudly instead of holding the
+-- door.
 SET LOCAL lock_timeout = '3s';
 
 CREATE INDEX idx_system_log_mirror_conflict_class

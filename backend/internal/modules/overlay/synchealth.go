@@ -155,13 +155,20 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 func (s *Service) overwrittenConcern(ctx context.Context) (concern SyncConcern, overwritten bool, err error) {
 	var classes []string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The action is CONCATENATED rather than bound: the index this read
+		// depends on is partial on that value, and a partial index is only
+		// used where the planner can prove the query implies its predicate.
+		// Bound as a parameter, a generic plan cannot prove it — the read
+		// silently falls back to a heap fetch per row. Concatenated, the
+		// predicate is a literal in every plan, and the value still has one
+		// spelling in this package.
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT detail->>'object_class'
 			FROM system_log
-			WHERE action = $1
-			  AND occurred_at > now() - $2::interval
+			WHERE action = '`+mirrorConflictAction+`'
+			  AND occurred_at > now() - $1::interval
 			  AND detail->>'object_class' IS NOT NULL
-			ORDER BY 1`, mirrorConflictAction, overwriteWindow)
+			ORDER BY 1`, overwriteWindow)
 		if err != nil {
 			return err
 		}
