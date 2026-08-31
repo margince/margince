@@ -48,6 +48,9 @@ type Candidate struct {
 	PersonID string
 	FullName string
 	Title    string
+	// HoldsRole says a person has already answered this question for this
+	// contact. The read may not overwrite them.
+	HoldsRole bool
 	// Messages the contact themselves wrote, newest first. Their own words are
 	// the only evidence that says what they do on this deal.
 	Messages []Message
@@ -68,10 +71,6 @@ type Proposal struct {
 	EvidenceSnippet string  `json:"evidence_snippet"`
 	SourceID        string  `json:"source_id"`
 	Confidence      float64 `json:"confidence"`
-}
-
-type answer struct {
-	Proposals []Proposal `json:"proposals"`
 }
 
 const systemPrompt = `You read buying roles out of messages a customer's own people wrote.
@@ -101,9 +100,12 @@ Rules you must not break:
 func Request(dealName string, candidates []Candidate) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	// The deal's own name is ours, so it stays outside: it is the question, not
-	// the material, and fencing it would tell the model to distrust the ask.
-	prompt.WriteString(fmt.Sprintf("Deal: %s\n\n", dealName))
+	// The deal's NAME is record data — somebody typed it, and on a shared deal
+	// that somebody may not be us. Interpolated into the instruction region it
+	// would be read in the prompt's own voice, which is the whole attack, so it
+	// is fenced like everything else that came from a person.
+	prompt.WriteString("Deal (untrusted):\n")
+	prompt.WriteString(fence.Wrap(dealName) + "\n\n")
 	for _, candidate := range candidates {
 		prompt.WriteString("Contact (untrusted):\n")
 		// The name and title go INSIDE the boundary with everything else they
@@ -150,6 +152,14 @@ func Schema() json.RawMessage {
 	))
 }
 
+// MinEvidenceWords is how many words a quote must carry to be evidence.
+//
+// A substring check alone is not one: "I" occurs in almost every message, so a
+// one-word snippet satisfies the letter of "quote your source" while supporting
+// nothing. Six words is short enough for a real sentence fragment and long
+// enough that it cannot be found by accident.
+const MinEvidenceWords = 6
+
 // Gate is what stands between a model's answer and a customer's record.
 //
 // Nothing here trusts the model. Every proposal has to survive four separate
@@ -169,12 +179,30 @@ func Schema() json.RawMessage {
 // A proposal that fails any of them is dropped, silently and without a retry:
 // the honest answer to weak evidence is no answer.
 func Gate(proposals []Proposal, candidates []Candidate) []Proposal {
-	sources := map[string]string{}
+	// Every source is bound to the person who WROTE it. Keyed by activity id
+	// alone, a proposal could cite one contact's message as evidence about
+	// another — and since both sit in the same prompt, a sender who writes an
+	// instruction into their own email could hand a role to a colleague they
+	// have never spoken for. The pair is what makes evidence evidence.
+	sources := map[string]struct {
+		author string
+		body   string
+	}{}
 	known := map[string]bool{}
+	held := map[string]bool{}
 	for _, candidate := range candidates {
 		known[candidate.PersonID] = true
+		if candidate.HoldsRole {
+			held[candidate.PersonID] = true
+		}
 		for _, message := range candidate.Messages {
-			sources[message.ActivityID] = message.Subject + "\n" + message.Body
+			sources[message.ActivityID] = struct {
+				author string
+				body   string
+			}{
+				author: candidate.PersonID,
+				body:   message.Subject + "\n" + message.Body,
+			}
 		}
 	}
 	roles := map[string]bool{}
@@ -185,22 +213,57 @@ func Gate(proposals []Proposal, candidates []Candidate) []Proposal {
 	seen := map[string]bool{}
 	kept := make([]Proposal, 0, len(proposals))
 	for _, proposal := range proposals {
-		if !known[proposal.PersonID] || seen[proposal.PersonID] {
+		if seen[proposal.PersonID] {
 			continue
 		}
-		if !roles[proposal.Role] || proposal.Confidence < ConfidenceFloor {
-			continue
-		}
-		body, ok := sources[proposal.SourceID]
-		if !ok {
-			continue
-		}
-		snippet := strings.TrimSpace(proposal.EvidenceSnippet)
-		if snippet == "" || !strings.Contains(body, snippet) {
+		if !survives(proposal, known, held, roles, sources) {
 			continue
 		}
 		seen[proposal.PersonID] = true
 		kept = append(kept, proposal)
 	}
 	return kept
+}
+
+// survives asks the four questions of one proposal.
+//
+// Its own function because each answer is a separate reason a record would be
+// wrong, and a reader checking one of them should not have to hold the loop
+// that walks them.
+func survives(
+	proposal Proposal,
+	known, held, roles map[string]bool,
+	sources map[string]struct {
+		author string
+		body   string
+	},
+) bool {
+	if !known[proposal.PersonID] {
+		return false
+	}
+	// A seat somebody typed is a human's answer. Overwriting it with a reading
+	// is the one thing this must never do.
+	if held[proposal.PersonID] {
+		return false
+	}
+	// Outside [0,1] it is not a confidence at all: a model answering 75 for
+	// "75%" would clear a 0.75 floor by a hundredfold and defeat it.
+	if proposal.Confidence < ConfidenceFloor || proposal.Confidence > 1 {
+		return false
+	}
+	if !roles[proposal.Role] {
+		return false
+	}
+	// The evidence has to be the PERSON'S OWN words. Keyed by activity alone, a
+	// sender who writes an instruction into their own email could hand a role to
+	// a colleague they have never spoken for.
+	src, ok := sources[proposal.SourceID]
+	if !ok || src.author != proposal.PersonID {
+		return false
+	}
+	snippet := strings.TrimSpace(proposal.EvidenceSnippet)
+	if len(strings.Fields(snippet)) < MinEvidenceWords {
+		return false
+	}
+	return strings.Contains(src.body, snippet)
 }

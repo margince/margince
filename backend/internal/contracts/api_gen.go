@@ -600,6 +600,7 @@ const (
 	AiActivityKindNlSearch                   AiActivityKind = "nl_search"
 	AiActivityKindOfferDraft                 AiActivityKind = "offer_draft"
 	AiActivityKindOvernightAtRiskSweep       AiActivityKind = "overnight_at_risk_sweep"
+	AiActivityKindProposeRoles               AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                AiActivityKind = "rate_extract"
 	AiActivityKindSignalExtract              AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                AiActivityKind = "site_extract"
@@ -644,6 +645,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindOfferDraft:
 		return true
 	case AiActivityKindOvernightAtRiskSweep:
+		return true
+	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
 		return true

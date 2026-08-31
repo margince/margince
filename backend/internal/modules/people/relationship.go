@@ -277,11 +277,17 @@ func lockPersonForEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 }
 
 func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRelationshipInput) (relationshipRow, error) {
+	// Who is editing. The row becomes theirs — see the captured_by assignment
+	// in the statement below.
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return relationshipRow{}, err
+	}
 	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
 		return relationshipRow{}, err
 	}
 	var out relationshipRow
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// The row lock makes the state read and the update below one
 		// race-free unit.
 		// The per-person lock comes FIRST, before the row lock, and that order is
@@ -348,6 +354,13 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		row := tx.QueryRow(ctx, `
 			UPDATE relationship SET
 			  role = coalesce($2, role),
+			  -- The edit is the confirmation. A seat an agent proposed carries
+			  -- that agent as its captured_by, which is what marks it unconfirmed
+			  -- on the page; a person changing the row has answered the question
+			  -- themselves, so the row becomes theirs. Left alone, a corrected
+			  -- seat went on claiming to be a machine's unreviewed reading
+			  -- forever.
+			  captured_by = coalesce($6, captured_by),
 			  -- An employment somebody has LEFT is not their CURRENT primary
 			  -- one, whichever half of the patch makes it so: ending the job
 			  -- clears the flag, and setting the flag on a job already over
@@ -360,7 +373,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			  ended_at = coalesce($5, ended_at)
 			WHERE id = $1
 			RETURNING `+relationshipColumns,
-			id, in.Role, in.IsCurrentPrimary, in.StartedAt, in.EndedAt)
+			id, in.Role, in.IsCurrentPrimary, in.StartedAt, in.EndedAt, capturedBy)
 		if out, err = scanRelationship(row); err != nil {
 			// Through the SAME constraint mapping the insert uses. A patch can
 			// violate rel_dates exactly as a create can — moving ended_at behind

@@ -168,7 +168,7 @@ func (s *Service) fillCommittee(
 	if err != nil {
 		return err
 	}
-	committee, err := s.wireCommittee(ctx, tx, orgID, now, seats, total, all)
+	committee, err := s.wireCommittee(ctx, tx, orgID, selected, now, seats, total, all)
 	if err != nil {
 		return err
 	}
@@ -177,8 +177,9 @@ func (s *Service) fillCommittee(
 }
 
 func (s *Service) wireCommittee(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
-	seats []deals.DealStakeholder, total int, all []people.ContactStrength,
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, dealID ids.DealID,
+	now time.Time, seats []deals.DealStakeholder, total int,
+	all []people.ContactStrength,
 ) (crmcontracts.OrganizationCoverageCommittee, error) {
 	out := crmcontracts.OrganizationCoverageCommittee{
 		Seats:         []crmcontracts.OrganizationCoverageSeat{},
@@ -219,7 +220,7 @@ func (s *Service) wireCommittee(
 	// Which of these seats the product read rather than a person asserted, and
 	// what it read them from. Kept out of deals.Stakeholders because one caller
 	// needing provenance is not a reason to widen the shape every caller reads.
-	marks, err := suggestedSeats(ctx, tx, seats)
+	marks, err := suggestedSeats(ctx, tx, dealID, seats)
 	if err != nil {
 		return crmcontracts.OrganizationCoverageCommittee{}, err
 	}
@@ -342,7 +343,7 @@ type seatMark struct {
 // carries — so "which of these did we read" is answered by the row itself
 // rather than by a column somebody has to remember to set.
 func suggestedSeats(
-	ctx context.Context, tx pgx.Tx, seats []deals.DealStakeholder,
+	ctx context.Context, tx pgx.Tx, dealID ids.DealID, seats []deals.DealStakeholder,
 ) (map[ids.UUID]seatMark, error) {
 	out := map[ids.UUID]seatMark{}
 	if len(seats) == 0 {
@@ -352,11 +353,31 @@ func suggestedSeats(
 	for _, seat := range seats {
 		ids0 = append(ids0, seat.PersonID)
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT person_id, captured_by = $2
-		  FROM relationship
-		 WHERE kind = 'deal_stakeholder' AND person_id = ANY($1)
-		   AND archived_at IS NULL AND ended_at IS NULL`, ids0, proposeroles.CapturedBy)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	peoplePos, dealPos, agentPos := arg(ids0), arg(dealID), arg(proposeroles.CapturedBy)
+	// The edge grant, like every other reader of this table: a seat names two
+	// records, and who may learn that pair is what relationship.read governs.
+	// The sibling that reads the same rows for the 360 asks for it, and a
+	// second reader that did not would be the way around it.
+	edgeBound, err := edgeScope(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	// SCOPED TO THIS DEAL. Keyed by person alone, somebody sitting on two deals
+	// carried whichever row the scan happened to return last — so a seat a
+	// colleague typed here could be marked as the product's reading because of
+	// an unrelated deal elsewhere.
+	//
+	// And the SAME liveness rule the committee read applies: it excludes only
+	// archived rows, so filtering ended ones here as well would drop the
+	// provenance of a seat still on the board and quietly unmark it.
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT r.person_id, r.captured_by = $%d
+		  FROM relationship r
+		 WHERE r.kind = 'deal_stakeholder' AND r.person_id = ANY($%d)
+		   AND r.deal_id = $%d AND r.archived_at IS NULL
+		   AND (%s)`, agentPos, peoplePos, dealPos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("org360: reading the committee's provenance: %w", err)
 	}

@@ -342,3 +342,45 @@ func TestCoverageMarksASeatTheProductRead(t *testing.T) {
 		t.Fatal("a seat a person typed is marked as the product's reading")
 	}
 }
+
+// The mark is scoped to the deal it is about.
+//
+// A person can sit on two deals. Keyed by person alone, the provenance read
+// carried whichever row the scan returned last — so a seat a colleague typed
+// on THIS deal could be marked as the product's reading because of an
+// unrelated deal somewhere else.
+func TestCoverageMarksPerDealRatherThanPerPerson(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	svc := org360Service(e)
+
+	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	pipeline, openStage, _ := integration.DealFixture(t, e)
+	here := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
+	elsewhere := e.SeedDeal(t, "Service renewal", pipeline, openStage, nil)
+	e.WsExec(t, `UPDATE deal SET organization_id = $1 WHERE id = $2`, org, here)
+	e.WsExec(t, `UPDATE deal SET updated_at = now() - interval '1 day' WHERE id = $1`, elsewhere)
+
+	person := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, person, org, "Procurement")
+	// Typed by a colleague on the deal this page is about.
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, person, here)
+	// Read by the product on a different deal entirely.
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
+		person, elsewhere)
+
+	got, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("reading coverage: %v", err)
+	}
+	if got.Committee == nil || len(got.Committee.Seats) == 0 {
+		t.Fatalf("no committee: %+v", got.Committee)
+	}
+	for _, seat := range got.Committee.Seats {
+		if seat.AiSuggested != nil && *seat.AiSuggested {
+			t.Fatalf("a seat typed on this deal is marked as the product's reading, because of another deal's row: %+v", seat)
+		}
+	}
+}

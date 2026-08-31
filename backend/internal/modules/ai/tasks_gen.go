@@ -32,7 +32,7 @@ const (
 	// TaskNlSearch is Declared, not built (ADR-0074).
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
-	// TaskProposeRoles is Read the buying roles out of what a contact has actually written — who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and a snippet that is not in the source it names is dropped rather than trusted. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the record carries the evidence so a reader can check it and the mark stays until a human confirms.
+	// TaskProposeRoles is PLANNED — the reading and its gate exist (compose/proposeroles) and are tested offline; the site arrives with the endpoint that calls them, because a planned task declares no site and therefore cannot present as certified. Read the buying roles out of what a contact has actually written — who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and a snippet that is not in the source it names is dropped rather than trusted. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the record carries the evidence so a reader can check it and the mark stays until a human confirms.
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
 	TaskRateExtract Task = "rate_extract"
@@ -81,7 +81,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "accdf5e9b188aee62f021de09e626d772189d766bca860eb5a05b139e3991eb9"
+const TaskContractHash = "46875e88404bca352bfc28138c8cbe1de47a46375a6679f8b3dbb46172dd6f02"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -220,7 +220,7 @@ var taskStatus = map[Task]string{
 	TaskGrowthFit:                  "shipped",
 	TaskNlSearch:                   "planned",
 	TaskOfferDraft:                 "shipped",
-	TaskProposeRoles:               "shipped",
+	TaskProposeRoles:               "planned",
 	TaskRateExtract:                "shipped",
 	TaskSignalExtract:              "shipped",
 	TaskSiteExtract:                "shipped",
@@ -297,9 +297,6 @@ var taskSites = map[Task][]Site{
 	},
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
-	},
-	TaskProposeRoles: {
-		{Name: "committee", Kind: "one_shot"},
 	},
 	TaskRateExtract: {
 		{Name: "pricing", Kind: "one_shot"},
@@ -401,7 +398,6 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskGrowthFit:                  {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
 	TaskNlSearch:                   {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
 	TaskOfferDraft:                 {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
-	TaskProposeRoles:               {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:              {TokenBudget: 0, Conditional: false},
 	TaskSiteExtract:                {TokenBudget: 0, Conditional: false},
@@ -428,7 +424,6 @@ func CompanyContextFor(t Task) (CompanyContextPolicy, bool) {
 var taskCostUnit = map[Task]string{
 	TaskCaptureClassify: "per_message",
 	TaskEnrich:          "per_person",
-	TaskProposeRoles:    "per_deal",
 }
 
 // CostUnitFor returns the task's unit-rule name, or "" when unpriced.
