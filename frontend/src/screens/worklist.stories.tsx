@@ -38,6 +38,7 @@ export const AFullDay: Story = {
       scope_options: ["mine", "team", "all"],
       summary: { urgent: 1, due: 2, lower_priority: 3, total: 5 },
       sources_unavailable: [],
+      reach: [],
       queue: [
         {
           id: "waiting-1",
@@ -119,6 +120,7 @@ export const NothingWaiting: Story = {
       scope_options: ["mine"],
       summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
       sources_unavailable: [],
+      reach: [],
       queue: [],
     });
     return (
@@ -140,6 +142,7 @@ export const PartlyUnread: Story = {
       summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
       sources_unavailable: [{ source: "capture_health", reason: "failed" }],
       queue: [],
+      reach: [],
     });
     return (
       <StoryProviders>

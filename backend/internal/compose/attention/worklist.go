@@ -259,17 +259,19 @@ func (s *Service) worklistFrom(
 // stays a count of what this read actually weighed.
 func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
 	bounded := map[crmcontracts.WorklistItemSource]bool{}
-	atCap := func(source crmcontracts.WorklistItemSource, lane *[]crmcontracts.AttentionItem, cap int) {
-		if lane != nil && len(*lane) >= cap {
+	// These lanes share one bound, doneCap, and a lane that came back holding
+	// exactly that many may have had more behind it.
+	atCap := func(source crmcontracts.WorklistItemSource, lane *[]crmcontracts.AttentionItem) {
+		if lane != nil && len(*lane) >= doneCap {
 			bounded[source] = true
 		}
 	}
-	atCap("failed_approval", day.DidNotRun, doneCap)
-	atCap("dsr", day.Dsr, doneCap)
-	atCap("ai_work_health", day.AiWorkHealth, doneCap)
-	atCap("notice", day.Notices, doneCap)
-	atCap("automation_run", day.AutomationHealth, doneCap)
-	atCap("bounce", day.Bounces, doneCap)
+	atCap("failed_approval", day.DidNotRun)
+	atCap("dsr", day.Dsr)
+	atCap("ai_work_health", day.AiWorkHealth)
+	atCap("notice", day.Notices)
+	atCap("automation_run", day.AutomationHealth)
+	atCap("bounce", day.Bounces)
 	// The decision lane is read deeper than the rest, because a batch row
 	// counts a pile and a count taken from a page of ten would report ten over
 	// a hundred and fifty.
