@@ -205,7 +205,11 @@ func ParseDraft(raw string, in Input) (Draft, error) {
 		return Draft{}, fmt.Errorf("account draft response: %w", err)
 	}
 	subject := strings.TrimSpace(out.Subject)
-	body := strings.TrimSpace(out.Body)
+	// Plain text, as the contract says a body is. A model asked for prose
+	// answers with `<br>` between paragraphs often enough that it is the
+	// shape of the answer; the reply surface reads it the same way, so the
+	// same model cannot format correctly on one surface and not the other.
+	body := strings.TrimSpace(ai.PlainText(out.Body))
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("account draft response: empty subject or body")
 	}

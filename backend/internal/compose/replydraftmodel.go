@@ -36,6 +36,7 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The activity and stated intent are the authoritative reason for this reply.
 - Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
+- Write the body as plain text. No markdown, no HTML, no bullet characters. Separate paragraphs with a blank line.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
 
 // firstDraftSystem is the draft_reply/first site: a message that OPENS a
@@ -197,12 +198,16 @@ func parseReplyDraft(text string) (replyDraft, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &draft); err != nil {
 		return replyDraft{}, fmt.Errorf("compose: reply draft response is not valid JSON: %w", err)
 	}
+	draft.Body = ai.PlainText(draft.Body)
 	return draft, nil
 }
 
+// replyDraftShapeValid judges the answer the CALLER will get, so it reads it
+// through the same parse. Judging the raw text instead would accept a body
+// that is only non-empty because of markup the caller then strips away.
 func replyDraftShapeValid(text string) error {
-	var draft replyDraft
-	if err := json.Unmarshal([]byte(ai.Unfence(text)), &draft); err != nil {
+	draft, err := parseReplyDraft(text)
+	if err != nil {
 		return fmt.Errorf(`output must be {"subject":"...","body":"..."}: %w`, err)
 	}
 	return validateReplyDraft(draft)
