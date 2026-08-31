@@ -252,12 +252,20 @@ export function EditRecordModal({
   // what this keys off, so a re-render never wipes what the user is typing.
   // Starts false, not `open`: a modal mounted already open still has to seed.
   const [seededOpen, setSeededOpen] = useState(false);
+  // WHICH record the values above belong to. A screen can swap the record
+  // under an open dialog without remounting it — the quota rail does — and
+  // then the form is showing one record's values while the caller's write
+  // addresses another. Re-seeding on identity is not the same trade as
+  // re-seeding on every render: keeping what the person typed is only worth
+  // anything while it is about the record they are still editing.
+  const [seededFor, setSeededFor] = useState<string | null>(null);
   // The reading the values were taken from, kept for the write. Set in the
   // same transition as they are, so the three cannot describe different
   // moments of the record.
   const [opened, setOpened] = useState(record);
-  if (open !== seededOpen) {
+  if (open !== seededOpen || (open && record.id !== seededFor)) {
     setSeededOpen(open);
+    setSeededFor(open ? record.id : null);
     if (open) {
       // A fresh open starts from the record's current values, never a
       // previous attempt's leftovers.

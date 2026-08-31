@@ -321,6 +321,62 @@ describe("what an edit is a reading of", () => {
   // The same reading has to be the diff baseline, or an untouched field whose
   // value moved under the dialog reads as this person's edit and is sent —
   // overwriting a change nobody here made.
+  // A screen can swap the record under an open dialog without remounting it —
+  // the quota rail does exactly this. The form is then showing one record's
+  // values while the caller's write addresses another, and the frozen reading
+  // would send the FIRST record's version against the second record's id.
+  it("re-reads when the record under the dialog is a different one", async () => {
+    const seen: { opened?: unknown; live?: unknown }[] = [];
+    function Screen() {
+      const [record, setRecord] = useState({
+        id: "p1",
+        version: 3,
+        full_name: "Alice",
+      });
+      return (
+        <>
+          <Button
+            onClick={() =>
+              setRecord({ id: "p2", version: 11, full_name: "Bruno" })
+            }
+          >
+            switch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fields}
+            record={record}
+            savedMessage="saved"
+            invalidate="people"
+            recordKey="person"
+            update={async (_values, _rows, opened) => {
+              seen.push({ opened, live: record });
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "switch" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    const { opened } = seen[0] as {
+      opened: { id: string; version?: number; full_name?: string };
+    };
+    // The dialog is now about p2, so everything the write carries must be p2's
+    // — an id from one record and a version from another is the mismatch this
+    // guards.
+    expect(opened.id).toBe("p2");
+    expect(opened.version).toBe(11);
+    expect(opened.full_name).toBe("Bruno");
+  });
+
   it("compares against the values it prefilled, not the ones that arrived after", async () => {
     const seen: { opened?: unknown; live?: unknown }[] = [];
     await editThroughARefetch(seen);
