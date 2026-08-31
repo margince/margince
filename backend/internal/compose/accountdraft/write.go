@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -246,7 +247,14 @@ func ParseDraft(raw string, in Input) (Draft, error) {
 	// answers with `<br>` between paragraphs often enough that it is the
 	// shape of the answer; the reply surface reads it the same way, so the
 	// same model cannot format correctly on one surface and not the other.
-	body := strings.TrimSpace(ai.PlainText(out.Body))
+	// The greeting break is restored here rather than trusted to the prompt:
+	// the same request returns the run-on and the two-line form about equally
+	// often, and the composer renders exactly the breaks it is handed.
+	// Both names, because the register decides which one opens the message:
+	// the familiar greeting takes the first name and the formal one the
+	// surname, and the repair must recognise whichever the model wrote.
+	body := strings.TrimSpace(draftfloor.SplitGreetingLine(
+		ai.PlainText(out.Body), in.Recipient.FirstName, in.Recipient.LastName))
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("account draft response: empty subject or body")
 	}

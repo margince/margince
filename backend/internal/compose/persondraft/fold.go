@@ -95,16 +95,25 @@ func recipientOf(view crmcontracts.Person360) RecipientIn {
 	if person.Title != nil {
 		out.Title = *person.Title
 	}
-	if person.FirstName != nil {
-		out.FirstName = *person.FirstName
-	}
 	out.Email = primaryEmail(person)
 	return out
 }
 
-// greetingName falls back to the leading word of the display name when the
-// record has no separate first name. A one-word name is a name, not a mistake.
+// A one-word name is a name, not a mistake.
+// greetingName is what a familiar greeting calls this person.
+//
+// The stored first name wins, exactly as surname prefers the stored last name.
+// Splitting the full name on its first space is the FALLBACK, and it was the
+// only rule here until a contact called "Pg Philipp" was greeted "Hi Pg": the
+// record already knew the first name was Philipp, in the column this function
+// did not read.
+//
+// The split still has to stay for the records that carry a full name and
+// nothing else, which is most of what capture writes.
 func greetingName(person crmcontracts.Person) string {
+	if person.FirstName != nil && strings.TrimSpace(*person.FirstName) != "" {
+		return strings.TrimSpace(*person.FirstName)
+	}
 	full := strings.TrimSpace(person.FullName)
 	if cut, _, found := strings.Cut(full, " "); found && cut != "" {
 		return cut
