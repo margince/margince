@@ -59,6 +59,11 @@ func foldRoutineDecisions(rows []ranked) []ranked {
 // A group whose members were cut short says so: "200+" rather than "200",
 // because a bound printed as a total is a wrong number rather than a bounded
 // one, and the reader has no way to tell the two apart.
+// keySystemIncident groups repeated failures of ONE broken thing. It is the one
+// batch key whose members are system trouble rather than routine tidying, and
+// several rules read it to tell the two apart.
+const keySystemIncident = crmcontracts.WorklistBatchKey("system_incident")
+
 func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 	// Keyed by the group AND its cause: every contact question shares one cause
 	// (there is none to name), while two failing rules are two incidents that
@@ -96,7 +101,7 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 		// decision lane's own scan depth, and a system incident read from a
 		// different lane never hit it — marking one "8+" because an unrelated
 		// lane filled up reports a number the reader cannot check.
-		kept = append(kept, batchRow(at.key, at.cause, members, bounded && at.key != "system_incident"))
+		kept = append(kept, batchRow(at.key, at.cause, members, bounded && at.key != keySystemIncident))
 	}
 	return kept
 }
@@ -140,7 +145,7 @@ func systemCause(row ranked) (string, bool) {
 func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 	if row.item.Category == categorySystem {
 		if _, ok := systemCause(row); ok {
-			return "system_incident", true
+			return keySystemIncident, true
 		}
 		return "", false
 	}
@@ -205,7 +210,7 @@ const batchSample = 3
 // reports that one thing broke repeatedly, and calling that "routine" tells the
 // reader to leave a dead mailbox for later.
 func groupReason(key crmcontracts.WorklistBatchKey) crmcontracts.WorklistReasonKind {
-	if key == "system_incident" {
+	if key == keySystemIncident {
 		return "repeated_failure"
 	}
 	return "routine"
@@ -229,7 +234,7 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 	level, category, consequence := levelRoutine,
 		crmcontracts.WorklistItemCategory("decisions"),
 		crmcontracts.WorklistItemConsequence("data_drifts")
-	if key == "system_incident" {
+	if key == keySystemIncident {
 		// The MOST urgent member's band, not the first one read. The members
 		// arrive in the lane's own order, which is not urgency, so taking the
 		// first would rank an incident by whichever failure happened to be
