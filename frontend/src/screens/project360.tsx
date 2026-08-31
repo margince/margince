@@ -325,11 +325,11 @@ function ProjectActions({
           mode: "edit",
         })}
         record={projectEditRecord(project)}
-        update={async (values) => {
+        update={async (values, _rows, opened) => {
           const { data, error } = await api.PATCH("/projects/{id}", {
             params: {
               path: { id: project.id },
-              ...ifMatch(requireVersion(project.version)),
+              ...ifMatch(requireVersion(opened?.version)),
             },
             body: mapProjectUpdate(values),
           });

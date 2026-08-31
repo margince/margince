@@ -565,21 +565,31 @@ function CompanyEditAction({
           domain: domain.domain,
           is_primary: String(domain.is_primary),
         })),
+        // The domains as the RECORD held them, carried with the rest of this
+        // reading so the replace-set diff is taken against the same moment the
+        // rows were prefilled from. The mapper wants the record's own shape,
+        // which the prefilled rows above have already been stringified out of;
+        // the form never reads this key, because prefill walks the field list.
+        domains_at_open: org.domains ?? [],
         ...cf.recordSlice(org),
       }}
-      update={async (values, rows) => {
+      update={async (values, rows, opened) => {
         const { data, error } = await api.PATCH("/organizations/{id}", {
           params: {
             path: { id: org.id },
-            ...ifMatch(requireVersion(org.version)),
+            ...ifMatch(requireVersion(opened?.version)),
           },
           body: {
-            ...mapOrgUpdate(values, rows ?? {}, org.domains),
+            ...mapOrgUpdate(
+              values,
+              rows ?? {},
+              opened?.domains_at_open as Organization["domains"],
+            ),
             // A DIFF, like the core half above. recordSlice is what the form
             // prefilled from, so it is what "unchanged" is measured against —
             // a snapshot here sends `null` for every empty custom field, which
             // the API reads as an instruction to clear a column nobody touched.
-            ...cf.toPatch(values, cf.recordSlice(org)),
+            ...cf.toPatch(values, opened ?? {}),
           },
         });
         if (error) {

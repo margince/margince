@@ -392,11 +392,11 @@ export function EditTargetAction({
         amount: quota.target_minor,
         currency: quota.currency,
       }}
-      update={async (values) => {
+      update={async (values, _rows, opened) => {
         const { data, error } = await api.PATCH("/quotas/{id}", {
           params: {
             path: { id: quota.id },
-            ...ifMatch(requireVersion(quota.version)),
+            ...ifMatch(requireVersion(opened?.version)),
           },
           body: {
             period_start: String(values.period_start),
