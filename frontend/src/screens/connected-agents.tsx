@@ -20,10 +20,11 @@ import "./connected-agents.css";
 
 // The other half of the passport story, and the half nothing on this screen
 // used to tell. A human mints a passport; a client that connects over MCP is
-// then issued its OWN credential derived from the passport the human lent it.
-// Both are rows in GET /passports, and listing them together left a connection
-// showing under the raw DCR client id its label carries — a name nobody chose,
-// next to passports they did.
+// issued its OWN credential at token exchange, minted from the scopes the
+// human ticked on the consent screen rather than derived from any existing
+// passport. Both are rows in GET /passports, and listing them together left a
+// connection showing under the raw DCR client id its label carries — a name
+// nobody chose, next to passports they did.
 //
 // So the split is by `connection`, the server's own statement of which kind a
 // row is, never the `oauth:` label prefix: a label is display text, and a human
@@ -72,7 +73,8 @@ async function fetchConnectorState(): Promise<ConnectorState> {
 
 // One command per client, because "point your agent at the URL" is exactly the
 // instruction people cannot act on. All four reach the same place: the client
-// registers itself, and the consent screen asks which passport to lend.
+// registers itself, and the consent screen asks which of the five scopes to
+// grant.
 //
 // Antigravity is the odd one out only in shape — it has no add command, so its
 // step is the config file its docs name. The OAuth handshake is identical. That
