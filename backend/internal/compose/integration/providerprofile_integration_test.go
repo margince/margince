@@ -278,3 +278,65 @@ func seedNarrowRun(t *testing.T, e *Env, personID ids.UUID, category string) {
 		t.Fatal(err)
 	}
 }
+
+// The page must not say nobody asked for a value it is showing.
+//
+// Claims outlive the runs that fetched them: a merge relinks the losing side's
+// purchases onto the survivor, and a seeded or imported installation holds
+// claims with no run at all. Deciding "never asked for" from the run history
+// alone printed that sentence directly above the mobile number it was denying.
+func TestACategoryOnThePageIsNeverCalledUnrequested(t *testing.T) {
+	e := Setup(t)
+	connectProvider(t, e)
+	personID := seedSubject(t, e)
+	// A purchase with NO run behind it, which is what a merge or a seed leaves.
+	seedOrphanClaim(t, e, personID, "mobile_phones",
+		`[{"value": "+49 170 0000000"}]`)
+	// Plus a run that asked for something else entirely, so the list is built
+	// from a run history that never mentions the mobile.
+	seedNarrowRun(t, e, personID, "linkedin_profile")
+
+	page, err := person360Service(e).Assemble(e.Admin(), ids.From[ids.PersonKind](personID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := sectionFor(t, page, "surfe")
+	if len(profile.MobilePhones) == 0 {
+		t.Fatal("the seeded number is not on the page, so this case cannot prove anything")
+	}
+	for _, named := range profile.CategoriesNotRequested {
+		if named == "mobile" {
+			t.Error("categories_not_requested names \"mobile\" while the page shows a mobile " +
+				"number — the reader is told nobody bought the thing they are looking at")
+		}
+	}
+}
+
+// seedOrphanClaim writes a stored claim with no run of its own, the way a merge
+// relink and a seeded installation both leave one.
+func seedOrphanClaim(t *testing.T, e *Env, personID ids.UUID, key, value string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var runID string
+		if err := tx.QueryRow(context.Background(), `
+			INSERT INTO provider_run
+			  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+			   external_correlation_id, connection_version, connection_epoch,
+			   configuration_snapshot, requested_categories, completed_at)
+			VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+			        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY['job_history'], now())
+			RETURNING id::text`, personID, "fp-orphan-"+personID.String()).Scan(&runID); err != nil {
+			return err
+		}
+		// The claim names a category that run never requested — which is exactly
+		// the shape a relink leaves behind.
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO person_provider_claim
+			  (person_id, run_id, provider, claim_key, value_json, source, captured_by, retrieved_at)
+			VALUES ($1, $2, 'surfe', $3, $4::jsonb, 'provider', 'connector:surfe', now())`,
+			personID, runID, key, value)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

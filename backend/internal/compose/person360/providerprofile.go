@@ -230,11 +230,16 @@ type providerRunRow struct {
 	connectionVersion int64
 	state             string
 	claimsUnwritten   bool
-	safeCode          string
-	requested         []string
-	skipReason        string
-	createdAt         time.Time
-	completedAt       *time.Time
+	// Whether this run's answers have been offered to the record. The page
+	// waits on it: the apply commits AFTER the run completes, so a client
+	// that stopped at the terminal state would refresh one step before the
+	// values it is waiting for exist.
+	applied     bool
+	safeCode    string
+	requested   []string
+	skipReason  string
+	createdAt   time.Time
+	completedAt *time.Time
 }
 
 // providerRuns reads this person's run history, newest first. Scrubbed runs
@@ -243,6 +248,7 @@ type providerRunRow struct {
 func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]providerRunRow, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, provider, trigger, connection_version, state, claims_unwritten,
+		       applied_at IS NOT NULL,
 		       coalesce(last_safe_status_code, ''), coalesce(skip_reason, ''),
 		       requested_categories, created_at, completed_at
 		  FROM provider_run
@@ -256,7 +262,7 @@ func (s *Service) providerRuns(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	for rows.Next() {
 		var r providerRunRow
 		if err := rows.Scan(&r.id, &r.providerName, &r.trigger, &r.connectionVersion, &r.state, &r.claimsUnwritten,
-			&r.safeCode, &r.skipReason, &r.requested, &r.createdAt, &r.completedAt); err != nil {
+			&r.applied, &r.safeCode, &r.skipReason, &r.requested, &r.createdAt, &r.completedAt); err != nil {
 			return nil, fmt.Errorf("person360: scanning a provider run: %w", err)
 		}
 		out = append(out, r)
@@ -283,6 +289,7 @@ func toWireRun(r providerRunRow) crmcontracts.ProviderRun {
 		Trigger:             crmcontracts.ProviderRunTrigger(r.trigger),
 		State:               crmcontracts.ProviderRunState(r.state),
 		ClaimsUnwritten:     r.claimsUnwritten,
+		Applied:             &r.applied,
 		RequestedCategories: r.requested,
 		ConnectionVersion:   r.connectionVersion,
 		CreatedAt:           r.createdAt,
@@ -310,19 +317,22 @@ func contributingRuns(runs []providerRunRow) []crmcontracts.ProviderRun {
 // is the page's answer to a blank field: "we never asked" is a different fact
 // from "we asked and they had nothing", and only this list tells them apart.
 //
-// An EARLIER run counts only where its answer is still on the page. Reading the
-// latest run alone made the section contradict itself — buy a mobile for
-// somebody whose profile link was bought last week, and this line named the
-// profile link as never requested while the profile link was printed two inches
-// above it. Counting every earlier run instead would open the opposite gap:
-// categories_without_answer is the LATEST run's receipt by contract, so a
+// Two things take a category off this list, and they answer the question from
+// opposite ends. The LATEST run's own requests count whatever they returned,
+// because its receipt is rendered beside this list and already says what came
+// back empty. And any category whose value is ON THE PAGE counts, whatever the
+// run history says.
+//
+// The second is what stops the section contradicting itself. Reading runs alone
+// printed "never asked for: mobile number" directly above a mobile number,
+// because claims outlive the runs that fetched them: a merge relinks the losing
+// side's purchases to the survivor, and a seeded or imported installation holds
+// claims with no run at all.
+//
+// Counting every earlier RUN instead would open the opposite gap:
+// categories_without_answer is the latest run's receipt by contract, so a
 // category an older run asked about and got nothing for would leave this list
 // without entering that one, and vanish from the page entirely.
-//
-// Delivering a claim is the test that closes both. A category whose value the
-// reader can see is plainly not one nobody asked for, and a category with
-// nothing to show stays here — which is the honest answer to the blank field
-// they are looking at.
 func categoriesNotRequested(desc provider.Descriptor, runs []providerRunRow, claims []storedClaim) []string {
 	// Claim KEYS, which are not category names — `professional_email` is asked
 	// for and `professional_emails` comes back. desc.Answers owns that mapping
@@ -338,16 +348,23 @@ func categoriesNotRequested(desc provider.Descriptor, runs []providerRunRow, cla
 			// The latest run's own requests count whatever it returned: its
 			// receipt is rendered beside this list, so a category it asked
 			// about and got nothing for is already accounted for there.
-			if r.id == runs[0].id || answeredBy(desc.Answers[provider.Category(c)], delivered) {
+			if r.id == runs[0].id {
 				asked[c] = true
 			}
 		}
 	}
 	out := []string{}
 	for _, c := range desc.Categories {
-		if !asked[string(c)] {
-			out = append(out, string(c))
+		// A category whose value is ON THE PAGE is never one nobody asked for,
+		// whatever the run history says. Claims outlive the runs that fetched
+		// them — a merge relinks the losing side's purchases to the survivor,
+		// and a seeded or imported installation holds claims with no run at all
+		// — so deciding this from runs alone printed "never asked for: mobile
+		// number" directly above the mobile number.
+		if asked[string(c)] || answeredBy(desc.Answers[c], delivered) {
+			continue
 		}
+		out = append(out, string(c))
 	}
 	sort.Strings(out)
 	return out
