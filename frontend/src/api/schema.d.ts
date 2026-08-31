@@ -23607,6 +23607,17 @@ export interface components {
              */
             as_of: string;
             /**
+             * @description Whose work this read answered for.
+             * @enum {string}
+             */
+            scope: "mine" | "team" | "all";
+            /**
+             * @description The scopes this reader may ask for, narrowest first — derived from their own
+             *     row scope. A client draws a control only when there is more than one, so a
+             *     rep who can only see their own work is never offered a switch that would 403.
+             */
+            scope_options: ("mine" | "team" | "all")[];
+            /**
              * @description The narrowing this read applied.
              * @enum {string}
              */
@@ -33927,6 +33938,17 @@ export interface operations {
     getWorklist: {
         parameters: {
             query?: {
+                /**
+                 * @description Whose work to answer for. Omitted means `mine`, which is the default for
+                 *     every reader: an admin account can read every deal in the installation, and a
+                 *     queue that showed all of them would hand a rep several hundred rows belonging
+                 *     to colleagues and call it their day.
+                 *
+                 *     A scope the reader's own row scope does not reach is refused with 403 rather
+                 *     than quietly narrowed — answering a question about the team with facts about
+                 *     one person, with no way for the reader to tell, is the worse failure.
+                 */
+                scope?: "mine" | "team" | "all";
                 /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
                 filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
                 /** @description How many ranked items to return. */

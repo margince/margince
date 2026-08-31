@@ -11194,6 +11194,48 @@ func (e WorklistFilter) Valid() bool {
 	}
 }
 
+// Defines values for WorklistScope.
+const (
+	WorklistScopeAll  WorklistScope = "all"
+	WorklistScopeMine WorklistScope = "mine"
+	WorklistScopeTeam WorklistScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the WorklistScope enum.
+func (e WorklistScope) Valid() bool {
+	switch e {
+	case WorklistScopeAll:
+		return true
+	case WorklistScopeMine:
+		return true
+	case WorklistScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistScopeOptions.
+const (
+	WorklistScopeOptionsAll  WorklistScopeOptions = "all"
+	WorklistScopeOptionsMine WorklistScopeOptions = "mine"
+	WorklistScopeOptionsTeam WorklistScopeOptions = "team"
+)
+
+// Valid indicates whether the value is a known member of the WorklistScopeOptions enum.
+func (e WorklistScopeOptions) Valid() bool {
+	switch e {
+	case WorklistScopeOptionsAll:
+		return true
+	case WorklistScopeOptionsMine:
+		return true
+	case WorklistScopeOptionsTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistComparisonComparator.
 const (
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
@@ -12949,33 +12991,54 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	}
 }
 
+// Defines values for GetWorklistParamsScope.
+const (
+	GetWorklistParamsScopeAll  GetWorklistParamsScope = "all"
+	GetWorklistParamsScopeMine GetWorklistParamsScope = "mine"
+	GetWorklistParamsScopeTeam GetWorklistParamsScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsScope enum.
+func (e GetWorklistParamsScope) Valid() bool {
+	switch e {
+	case GetWorklistParamsScopeAll:
+		return true
+	case GetWorklistParamsScopeMine:
+		return true
+	case GetWorklistParamsScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -26902,6 +26965,14 @@ type Worklist struct {
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
 
+	// Scope Whose work this read answered for.
+	Scope WorklistScope `json:"scope"`
+
+	// ScopeOptions The scopes this reader may ask for, narrowest first — derived from their own
+	// row scope. A client draws a control only when there is more than one, so a
+	// rep who can only see their own work is never offered a switch that would 403.
+	ScopeOptions []WorklistScopeOptions `json:"scope_options"`
+
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
 
@@ -26912,6 +26983,12 @@ type Worklist struct {
 
 // WorklistFilter The narrowing this read applied.
 type WorklistFilter string
+
+// WorklistScope Whose work this read answered for.
+type WorklistScope string
+
+// WorklistScopeOptions defines model for Worklist.ScopeOptions.
+type WorklistScopeOptions string
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
@@ -31444,12 +31521,25 @@ type GetLatestWeeklyReviewParams struct {
 
 // GetWorklistParams defines parameters for GetWorklist.
 type GetWorklistParams struct {
+	// Scope Whose work to answer for. Omitted means `mine`, which is the default for
+	// every reader: an admin account can read every deal in the installation, and a
+	// queue that showed all of them would hand a rep several hundred rows belonging
+	// to colleagues and call it their day.
+	//
+	// A scope the reader's own row scope does not reach is refused with 403 rather
+	// than quietly narrowed — answering a question about the team with facts about
+	// one person, with no way for the reader to tell, is the worse failure.
+	Scope *GetWorklistParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+
 	// Filter Narrow the queue to one kind of work. Omitted means everything, which is the default view.
 	Filter *GetWorklistParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
 
 	// Limit How many ranked items to return.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
+
+// GetWorklistParamsScope defines parameters for GetWorklist.
+type GetWorklistParamsScope string
 
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
@@ -66977,6 +67067,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetWorklistParams
+
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope", r.URL.Query(), &params.Scope, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "filter" -------------
 
