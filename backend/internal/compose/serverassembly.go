@@ -204,6 +204,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.blockedDomainHandlers = blockedDomainHandlers{people: s.peopleStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
 	s.threadAudience = NewThreadAudienceSetter(pool)
+	s.captureSenderHandlers = captureSenderHandlers{
+		db:    InstallationDB(pool),
+		store: capture.NewSenderOverrideStore(InstallationDB(pool)),
+	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
 	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{store: capture.NewCounterpartyHoldStore(InstallationDB(pool))}
 	s.claimHandlers = claimHandlers{people: s.peopleStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}

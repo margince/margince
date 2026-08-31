@@ -423,6 +423,18 @@ func (stubs) DeleteCaptureOwnerIdentity(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "DeleteCaptureOwnerIdentity")
 }
 
+func (stubs) ListCaptureSenders(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCaptureSenders")
+}
+
+func (stubs) DeleteCaptureSenderDecision(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "DeleteCaptureSenderDecision")
+}
+
+func (stubs) SetCaptureSenderDecision(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "SetCaptureSenderDecision")
+}
+
 func (stubs) GetCaptureSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureSettings")
 }

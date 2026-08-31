@@ -223,6 +223,18 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(ctx context.Context, claimed []
 // floor. An answer still below the floor retires the row to `unsure` for a human
 // rather than spending another attempt on a question this model cannot answer.
 func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.PendingCounterparty) (int, error) {
+	// The OWNER's own decision first, and no model call at all when there is
+	// one. A person who told this product what a sender is has answered the
+	// question; asking anyway would spend a call to be told something we then
+	// have to discard, and a machine that could overturn them would make every
+	// correction temporary.
+	decided, kind, err := e.ownerDecided(ctx, row)
+	if err != nil {
+		return 0, err
+	}
+	if decided {
+		return e.applyJudged(ctx, row, kind)
+	}
 	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
@@ -400,4 +412,31 @@ func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx
 	}
 	return e.people.SuppressBulkSenderDomainTx(ctx, tx, row.Domain,
 		"mail from this domain was judged "+kind+", so it is not a company this business works with")
+}
+
+// ownerDecided answers whether the mailbox owner already settled this sender,
+// and which kind their decision amounts to.
+//
+// `business` becomes `person`: the owner is saying this is somebody the CRM
+// should hold, which is the one kind that creates a record. `keep_out` becomes
+// `spam`, the noise kind whose effects — hide the mail, suppress the domain —
+// are what "keep this out for good" means. Neither invents a new kind: the
+// ledger's vocabulary is closed: a decision spelled outside it would sit in a
+// column every downstream reader parses against a fixed set, and be skipped.
+func (e *CounterpartyVerdictEngine) ownerDecided(ctx context.Context, row capture.PendingCounterparty) (bool, string, error) {
+	var decision string
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		decision, err = capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
+		return err
+	}); err != nil {
+		return false, "", err
+	}
+	switch decision {
+	case capture.OverrideBusiness:
+		return true, capture.KindPerson, nil
+	case capture.OverrideKeepOut:
+		return true, capture.KindSpam, nil
+	}
+	return false, "", nil
 }

@@ -2137,6 +2137,24 @@ func (e CaptureOwnerIdentitySource) Valid() bool {
 	}
 }
 
+// Defines values for CaptureSenderDecisionDecision.
+const (
+	CaptureSenderDecisionDecisionBusiness CaptureSenderDecisionDecision = "business"
+	CaptureSenderDecisionDecisionKeepOut  CaptureSenderDecisionDecision = "keep_out"
+)
+
+// Valid indicates whether the value is a known member of the CaptureSenderDecisionDecision enum.
+func (e CaptureSenderDecisionDecision) Valid() bool {
+	switch e {
+	case CaptureSenderDecisionDecisionBusiness:
+		return true
+	case CaptureSenderDecisionDecisionKeepOut:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceEntryOutcome.
 const (
 	CaptureTraceEntryOutcomeCaptured   CaptureTraceEntryOutcome = "captured"
@@ -12262,6 +12280,24 @@ func (e BookMeetingJSONBodyLinksEntityType) Valid() bool {
 	}
 }
 
+// Defines values for SetCaptureSenderDecisionJSONBodyDecision.
+const (
+	SetCaptureSenderDecisionJSONBodyDecisionBusiness SetCaptureSenderDecisionJSONBodyDecision = "business"
+	SetCaptureSenderDecisionJSONBodyDecisionKeepOut  SetCaptureSenderDecisionJSONBodyDecision = "keep_out"
+)
+
+// Valid indicates whether the value is a known member of the SetCaptureSenderDecisionJSONBodyDecision enum.
+func (e SetCaptureSenderDecisionJSONBodyDecision) Valid() bool {
+	switch e {
+	case SetCaptureSenderDecisionJSONBodyDecisionBusiness:
+		return true
+	case SetCaptureSenderDecisionJSONBodyDecisionKeepOut:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCustomFieldsParamsObject.
 const (
 	ListCustomFieldsParamsObjectDeal         ListCustomFieldsParamsObject = "deal"
@@ -15766,6 +15802,39 @@ type CapturePurgeOutcome struct {
 	// correspondence inside its retention window. Untouched, and reported rather than passed
 	// over in silence.
 	Skipped int `json:"skipped"`
+}
+
+// CaptureSenderDecision One sender your mailbox produced, and what became of them.
+type CaptureSenderDecision struct {
+	Address string `json:"address"`
+
+	// Decision What YOU decided instead, absent when you have not.
+	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
+
+	// Kind What the classifier concluded — person, role_mailbox, organization_sender, newsletter,
+	// transactional, spam, personal, advisor — or absent when it has not answered yet.
+	Kind *string `json:"kind,omitempty"`
+
+	// Overruled Whether your own decision is what governs this sender.
+	Overruled bool `json:"overruled"`
+
+	// OverruledKind What your decision overruled. Present so the page can say you corrected something,
+	// rather than showing only the answer that now stands.
+	OverruledKind *string `json:"overruled_kind,omitempty"`
+
+	// RecordExists Whether a contact actually exists for this address.
+	RecordExists bool `json:"record_exists"`
+
+	// Status The ledger's own lifecycle for this sender.
+	Status *string `json:"status,omitempty"`
+}
+
+// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not.
+type CaptureSenderDecisionDecision string
+
+// CaptureSenderListResponse defines model for CaptureSenderListResponse.
+type CaptureSenderListResponse struct {
+	Data []CaptureSenderDecision `json:"data"`
 }
 
 // CaptureSettings The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
@@ -28999,6 +29068,14 @@ type PurgeCaptureExclusionParams struct {
 	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
 }
 
+// SetCaptureSenderDecisionJSONBody defines parameters for SetCaptureSenderDecision.
+type SetCaptureSenderDecisionJSONBody struct {
+	Decision SetCaptureSenderDecisionJSONBodyDecision `json:"decision"`
+}
+
+// SetCaptureSenderDecisionJSONBodyDecision defines parameters for SetCaptureSenderDecision.
+type SetCaptureSenderDecisionJSONBodyDecision string
+
 // ListCommissionEntriesParams defines parameters for ListCommissionEntries.
 type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -32848,6 +32925,9 @@ type CreateCaptureExclusionJSONRequestBody = CreateCaptureExclusionRequest
 
 // CreateCaptureOwnerIdentityJSONRequestBody defines body for CreateCaptureOwnerIdentity for application/json ContentType.
 type CreateCaptureOwnerIdentityJSONRequestBody = CreateCaptureOwnerIdentityRequest
+
+// SetCaptureSenderDecisionJSONRequestBody defines body for SetCaptureSenderDecision for application/json ContentType.
+type SetCaptureSenderDecisionJSONRequestBody SetCaptureSenderDecisionJSONBody
 
 // UpdateCaptureSettingsJSONRequestBody defines body for UpdateCaptureSettings for application/json ContentType.
 type UpdateCaptureSettingsJSONRequestBody = UpdateCaptureSettingsRequest
@@ -41320,6 +41400,15 @@ type ServerInterface interface {
 	// Withdraw one of your own addresses.
 	// (DELETE /capture/owner-identities/{id})
 	DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
+	// Every decision this product made about your senders.
+	// (GET /capture/senders)
+	ListCaptureSenders(w http.ResponseWriter, r *http.Request)
+	// Withdraw your decision and hand the sender back to the classifier.
+	// (DELETE /capture/senders/{address}/decision)
+	DeleteCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string)
+	// Overrule what the classifier decided about a sender.
+	// (PUT /capture/senders/{address}/decision)
+	SetCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string)
 	// The workspace's capture settings.
 	// (GET /capture/settings)
 	GetCaptureSettings(w http.ResponseWriter, r *http.Request)
@@ -43210,6 +43299,24 @@ func (_ Unimplemented) CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http
 // Withdraw one of your own addresses.
 // (DELETE /capture/owner-identities/{id})
 func (_ Unimplemented) DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Every decision this product made about your senders.
+// (GET /capture/senders)
+func (_ Unimplemented) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw your decision and hand the sender back to the classifier.
+// (DELETE /capture/senders/{address}/decision)
+func (_ Unimplemented) DeleteCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Overrule what the classifier decided about a sender.
+// (PUT /capture/senders/{address}/decision)
+func (_ Unimplemented) SetCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -49620,6 +49727,90 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureOwnerIdentity(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureOwnerIdentity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCaptureSenders operation middleware
+func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCaptureSenders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCaptureSenderDecision operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCaptureSenderDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCaptureSenderDecision(w, r, address)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetCaptureSenderDecision operation middleware
+func (siw *ServerInterfaceWrapper) SetCaptureSenderDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetCaptureSenderDecision(w, r, address)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69510,6 +69701,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/owner-identities/{id}", wrapper.DeleteCaptureOwnerIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/senders", wrapper.ListCaptureSenders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/capture/senders/{address}/decision", wrapper.DeleteCaptureSenderDecision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/capture/senders/{address}/decision", wrapper.SetCaptureSenderDecision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/settings", wrapper.GetCaptureSettings)

@@ -8467,6 +8467,85 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /capture/senders:
+    get:
+      tags: [Capture]
+      operationId: listCaptureSenders
+      summary: Every decision this product made about your senders.
+      description: |
+        What was decided about each address your mailbox brought in — the classifier's answer, and
+        yours where you gave one. A product that decides silently and shows nobody is one you have
+        to trust rather than check, and the whole posture rests on being able to check.
+
+        Your own senders and nobody else's. Whose mail a person keeps out is itself private, so
+        there is no id here that reaches a colleague's list and no admin view of one.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The caller's senders.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureSenderListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /capture/senders/{address}/decision:
+    parameters:
+      - name: address
+        in: path
+        required: true
+        schema: { type: string, maxLength: 320 }
+        description: The sender's email address.
+    put:
+      tags: [Capture]
+      operationId: setCaptureSenderDecision
+      summary: Overrule what the classifier decided about a sender.
+      description: |
+        The classifier judges every new sender and is sometimes wrong. This is how you correct it,
+        and the correction is permanent: the machine consults your answer before it asks a model
+        and never writes over it. A decision the next message overwrote would not be a decision.
+
+        `business` readmits a sender: they are a counterparty after all, and their mail belongs in
+        the CRM like anyone else's. `keep_out` ends it — no record, and the mail this sender
+        already brought in is destroyed.
+
+        Your own mailbox only. A sender is personal to the person who knows them: one rep's family
+        member is another rep's customer.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [business, keep_out]
+      responses:
+        '200':
+          description: The decision as recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureSenderDecision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Capture]
+      operationId: deleteCaptureSenderDecision
+      summary: Withdraw your decision and hand the sender back to the classifier.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '204': { description: Withdrawn. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /capture/counterparty-holds:
     get:
       tags: [Capture]
@@ -18620,6 +18699,44 @@ components:
             Whether a human vouched for this domain. Only a verified domain — or one the
             installation's own company claims — suppresses storage.
         created_at: { type: string, format: date-time }
+    CaptureSenderListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureSenderDecision' }
+
+    CaptureSenderDecision:
+      type: object
+      description: One sender your mailbox produced, and what became of them.
+      required: [address, overruled, record_exists]
+      properties:
+        address: { type: string }
+        kind:
+          type: string
+          description: |
+            What the classifier concluded — person, role_mailbox, organization_sender, newsletter,
+            transactional, spam, personal, advisor — or absent when it has not answered yet.
+        status:
+          type: string
+          description: The ledger's own lifecycle for this sender.
+        decision:
+          type: string
+          enum: [business, keep_out]
+          description: What YOU decided instead, absent when you have not.
+        overruled_kind:
+          type: string
+          description: |
+            What your decision overruled. Present so the page can say you corrected something,
+            rather than showing only the answer that now stands.
+        overruled:
+          type: boolean
+          description: Whether your own decision is what governs this sender.
+        record_exists:
+          type: boolean
+          description: Whether a contact actually exists for this address.
+
     ThreadAudienceOutcome:
       type: object
       description: What an owner's decision about a thread reached.
