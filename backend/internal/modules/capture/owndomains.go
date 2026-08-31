@@ -313,9 +313,14 @@ func (s SelfSet) WithoutSelf(addresses []string) []string {
 	}
 	out := make([]string, 0, len(addresses))
 	for _, address := range addresses {
-		if !s.Covers(address) {
-			out = append(out, address)
+		// A blank entry is not an external party. AllInternal already skips
+		// one, so letting it through here would make an owner-only message
+		// look like it still had somebody else on it — "nothing external is
+		// left" has to mean the same thing in both places.
+		if strings.TrimSpace(address) == "" || s.Covers(address) {
+			continue
 		}
+		out = append(out, address)
 	}
 	return out
 }

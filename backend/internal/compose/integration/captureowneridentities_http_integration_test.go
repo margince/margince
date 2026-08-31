@@ -13,10 +13,14 @@ package integration
 // else's answers not-found rather than confirming it exists.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestTheOwnerIdentityEndpointsRoundTripAClaim(t *testing.T) {
@@ -98,11 +102,49 @@ func TestWithdrawingAnIdentityThatIsNotYoursAnswersNotFound(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	// A well-formed id nobody's row carries. Not-found rather than forbidden:
-	// the two are the same answer to somebody who may not know it exists, and
-	// distinguishing them would confirm a colleague's claim.
-	if status := e.Call(t, "DELETE", "/v1/capture/owner-identities/01a05100-0000-7000-8000-000000000000",
-		nil, nil, nil); status != http.StatusNotFound {
-		t.Errorf("DELETE of an identity that is not the caller's = %d, want 404", status)
+	// A COLLEAGUE'S row, not a fabricated id: an id nobody carries proves only
+	// that a missing row is 404, which is a different claim. What matters is
+	// that a row which EXISTS and belongs to somebody else answers the same,
+	// because distinguishing "not yours" from "not there" confirms a
+	// colleague's private address exists.
+	theirs := colleagueIdentity(t, e)
+	if status := e.Call(t, "DELETE", "/v1/capture/owner-identities/"+theirs, nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("DELETE of a colleague's identity = %d, want 404", status)
 	}
+	// And it is still there afterwards.
+	var stillTheirs int
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM capture_owner_identity WHERE id = $1`, theirs).Scan(&stillTheirs)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if stillTheirs != 1 {
+		t.Error("a colleague's identity was withdrawn by somebody else")
+	}
+}
+
+// colleagueIdentity plants one identity owned by a DIFFERENT seat, written
+// straight to the table because the endpoint only ever writes the caller's own
+// — which is the property under test, so it cannot be used to set it up.
+func colleagueIdentity(t *testing.T, e *apptest.AppEnv) string {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		var colleague ids.UUID
+		if err := tx.QueryRow(context.Background(), `
+			INSERT INTO app_user (id, email, display_name)
+			VALUES ($1, $2, 'A Colleague') RETURNING id`,
+			ids.NewV7(), "colleague-"+id.String()+"@seed.test").Scan(&colleague); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_owner_identity (id, user_id, kind, value, source, created_by)
+			VALUES ($1, $2, 'address', $3, 'user', 'human:seed')`,
+			id, colleague, "theirs-"+id.String()+"@private.example")
+		return err
+	}); err != nil {
+		t.Fatalf("planting a colleague's identity: %v", err)
+	}
+	return id.String()
 }

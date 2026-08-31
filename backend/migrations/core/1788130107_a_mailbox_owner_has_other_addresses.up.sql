@@ -10,8 +10,8 @@
 -- PER USER, never per workspace. One seat's alias says nothing about another
 -- seat's mail, and a workspace-wide list would let anyone silence a colleague's
 -- counterparty by claiming their address. The workspace's own mail domains are
--- a different thing and already exist (capture_own_domain): those say "we are
--- all colleagues here", this says "that is also me".
+-- a different thing and already exist (workspace_email_domain): those say "we
+-- are all colleagues here", this says "that is also me".
 CREATE TABLE capture_owner_identity (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
     user_id uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,

@@ -15,7 +15,7 @@ package capture
 // Per USER, never per workspace. One seat's alias says nothing about another
 // seat's mail, and a workspace-wide list would let anyone silence a colleague's
 // counterparty by claiming their address. The workspace's own mail DOMAINS are
-// a different list (capture_own_domain) saying "we are all colleagues here";
+// a different list (workspace_email_domain) saying "we are all colleagues here";
 // this one says "that is also me".
 
 import (
@@ -226,6 +226,14 @@ func ownerIdentityAuditImage(identity OwnerIdentity) map[string]any {
 	return map[string]any{"id": identity.ID, auditKeyKind: identity.Kind}
 }
 
+// Read once per gate rather than carried through the sink. Three gates ask it
+// for one message — the pre-store drop, the participant stamp, the ladder — and
+// each is one indexed lookup on a per-seat table that holds a handful of rows,
+// inside a transaction already writing an activity, its links, its participants
+// and its trace. Threading a value through those three call sites to save it
+// would be an abstraction bought with no measurement, and the rule here is that
+// the narrowest correct thing wins until a number says otherwise.
+//
 // ownerIdentitiesTx is the acting seat's identities as a SelfSet the sink's
 // gates test addresses against, or an empty set when no seat is acting (a
 // background sweep, a system principal). An empty set changes no decision: it
@@ -248,10 +256,16 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	// not cover it either, so a message between the owner's two addresses would
 	// stand the OWNER in as its own counterparty. account_label is what every
 	// mail connector reports at grant, and capture_connection holds it per seat.
+	//
+	// The label arrives in whatever form the provider gave it, `Rep <rep@co>`
+	// included, so it is parsed in Go through bareAddress rather than folded in
+	// SQL: a display-form label compared as a whole address matches no header,
+	// and the seat's primary address would be missing from the set with nothing
+	// to say so.
 	rows, err := tx.Query(ctx, `
 		SELECT kind, value FROM capture_owner_identity WHERE user_id = $1
 		 UNION ALL
-		SELECT 'address', lower(account_label) FROM capture_connection
+		SELECT 'address', account_label FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL`, user)
 	if err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
@@ -267,7 +281,10 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 			domains = append(domains, value)
 			continue
 		}
-		addresses = append(addresses, value)
+		// bareAddress on every address, not only the label: a declared value is
+		// already stored bare (ValidExclusionValue parses it), so this changes
+		// nothing for those and is what makes the label usable.
+		addresses = append(addresses, bareAddress(value))
 	}
 	if err := rows.Err(); err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
@@ -283,23 +300,47 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 // deleted: the Senders surface reads them, and an address that silently
 // vanished from it would be a decision nobody could see or reverse.
 //
-// A DOMAIN claim retires every open row on that domain and its subdomains,
-// matched the way SelfSet matches so the ledger and the gates agree about what
-// the claim covers.
+// The rows are chosen in Go through the same SelfSet the capture gates use,
+// never by a second predicate in SQL. A domain claim covers subdomains, folds
+// case and normalizes IDNA, and a SQL `split_part(...) = $2` would agree with
+// that on the ordinary cases and disagree on exactly the ones the claim was
+// made for — a ledger and a gate answering differently about the same address
+// is the shape nobody notices until a record appears.
 func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, identity OwnerIdentity) error {
-	const settle = `
+	var covered SelfSet
+	if identity.Kind == IdentityKindDomain {
+		covered = NewSelfSet(nil, []string{identity.Value})
+	} else {
+		covered = NewSelfSet([]string{identity.Value}, nil)
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, email FROM capture_pending_counterparty
+		 WHERE owner_id = $1 AND status IN ('pending', 'unsure')`, user)
+	if err != nil {
+		return fmt.Errorf("capture: reading the open questions about a claimed address: %w", err)
+	}
+	defer rows.Close()
+	var settle []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		var email string
+		if err := rows.Scan(&id, &email); err != nil {
+			return fmt.Errorf("capture: reading the open questions about a claimed address: %w", err)
+		}
+		if covered.Covers(email) {
+			settle = append(settle, id)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("capture: reading the open questions about a claimed address: %w", err)
+	}
+	if len(settle) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = 'suppressed', resolved_at = now()
-		 WHERE owner_id = $1 AND status IN ('pending', 'unsure')`
-	var err error
-	if identity.Kind == IdentityKindDomain {
-		_, err = tx.Exec(ctx, settle+`
-		   AND (split_part(email, '@', 2) = $2
-		        OR split_part(email, '@', 2) LIKE '%.' || $2)`, user, identity.Value)
-	} else {
-		_, err = tx.Exec(ctx, settle+` AND email = $2`, user, identity.Value)
-	}
-	if err != nil {
+		 WHERE id = ANY($1)`, settle); err != nil {
 		return fmt.Errorf("capture: retiring the open questions about a claimed address: %w", err)
 	}
 	return nil
