@@ -287,15 +287,9 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, personID 
 	// would be the ordering the eraser deadlocks against. person_social is a
 	// declared PII table Art. 17 deletes, and the hold is what stops a handle
 	// landing after the erasure cleared it.
-	tag, err := tx.Exec(ctx, `
-		INSERT INTO person_social (person_id, platform, handle)
-		VALUES ($1, $3, $2)
-		ON CONFLICT (person_id, platform) DO NOTHING`, personID, *handle, socialLinkedIn)
-	if err != nil {
-		return false, fmt.Errorf("people: writing a confirmed contact's LinkedIn handle: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return false, nil
+	landed, err := insertSocialHandle(ctx, tx, personID, socialLinkedIn, *handle)
+	if err != nil || !landed {
+		return false, err
 	}
 	return true, touchPerson(ctx, tx, personID)
 }

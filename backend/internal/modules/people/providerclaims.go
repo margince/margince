@@ -48,12 +48,13 @@ func WriteProviderClaims(ctx context.Context, tx pgx.Tx, runID, personID, provid
 			INSERT INTO person_provider_claim
 			       (person_id, run_id, provider, claim_key, value_json, confidence,
 			        source, captured_by, retrieved_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $3, 'connector:' || $3, $7)
+			VALUES ($1, $2, $3, $4, $5, $6, $3, $8, $7)
 			ON CONFLICT (run_id, claim_key) DO UPDATE
 			   SET value_json = EXCLUDED.value_json,
 			       confidence = EXCLUDED.confidence,
 			       retrieved_at = EXCLUDED.retrieved_at`,
-			personID, runID, providerName, string(c.Key), []byte(c.Value), confidence, retrievedAt); err != nil {
+			personID, runID, providerName, string(c.Key), []byte(c.Value), confidence, retrievedAt,
+			connectorCapturedBy(providerName)); err != nil {
 			return fmt.Errorf("people: writing the %s claim: %w", c.Key, err)
 		}
 	}

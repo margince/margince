@@ -21,9 +21,46 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
+
+// HoldEnrichmentSubject is EnrichmentFence for the hand-off: it takes the
+// subject's row lock FIRST, then asks the same question.
+//
+// The lock is what makes the answer survive the write that follows. The fence
+// alone reads a snapshot, and under READ COMMITTED an Art. 17 erasure
+// committing between that read and the claim insert lands anyway — refilling
+// the very tables the erasure just cleared, since person_provider_claim and
+// every record column the values reach are declared PII it DELETES.
+//
+// Queue time does not need this and does not take it: nothing is written about
+// the subject there beyond the run row, and QueueRun already holds the subject
+// through EnsureWritableLive. Holding a lock across the whole queueing
+// transaction would serialize every run against every other write to that
+// person for no gain.
+//
+// Subject-first, because the eraser is subject-first: a transaction that took
+// any other row lock before this one has already lost the ordering that keeps
+// the two taking turns.
+func HoldEnrichmentSubject(ctx context.Context, tx pgx.Tx, personID string) (allowed bool, reason provider.SkipReason, err error) {
+	id, err := ids.Parse(personID)
+	if err != nil {
+		return false, "", fmt.Errorf("people: the enrichment subject's id: %w", err)
+	}
+	if err := auth.LockSubjectLive(ctx, tx, entityPerson, id); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			// Erased, archived or deleted under a run already in flight.
+			// The same answer the fence gives for a subject it cannot read.
+			return false, provider.SkipNotEligible, nil
+		}
+		return false, "", err
+	}
+	return EnrichmentFence(ctx, tx, personID)
+}
 
 // EnrichmentFence answers whether one subject may be enriched, inside the
 // caller's transaction. The two refusals are different facts and the caller

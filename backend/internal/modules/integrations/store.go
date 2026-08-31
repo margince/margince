@@ -60,6 +60,11 @@ type Store struct {
 	fence       FenceSubjectFunc
 	cluster     DuplicateClusterFunc
 	identifiers SubjectIdentifiersFunc
+	// holdSubject is the same question as fence, asked while HOLDING the
+	// subject's row. The hand-off uses it and queue time does not: only the
+	// hand-off goes on to write about the subject, and only it therefore has
+	// an erasure race to close. Nil until compose binds it.
+	holdSubject FenceSubjectFunc
 	// enqueueSubmit commits the submit job with the run row.
 	enqueueSubmit EnqueueSubmitFunc
 	// writeClaims is the owning domain's claim upsert (handoff.go). Nil until

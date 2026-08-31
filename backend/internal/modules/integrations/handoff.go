@@ -85,10 +85,18 @@ func (s *Store) handoffClaims(ctx context.Context, runID, personID, name string,
 // already holds — the polled path opens one for it, the synchronous path
 // reuses its own terminal transaction because it has no handle to recover by.
 func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personID, name string, claims []provider.Claim) error {
-	if s.writeClaims == nil || s.fence == nil {
+	if s.writeClaims == nil || s.holdSubject == nil {
 		return errors.New("integrations: no claim writer is bound, so the hand-off must wait for the sweep")
 	}
-	verdict, err := s.fence(ctx, tx, personID)
+	// The HOLDING fence, not the reading one. This transaction is about to put
+	// values on the subject's own record, and the queue-time answer is a
+	// snapshot an erasure can commit behind. holdSubject takes the row first,
+	// so the write that follows either happens before the erasure or refuses
+	// after it, rather than landing on top of it.
+	//
+	// It is also the FIRST row this transaction locks, which is the ordering
+	// the eraser requires — nothing above may take another subject's lock.
+	verdict, err := s.holdSubject(ctx, tx, personID)
 	if err != nil {
 		return err
 	}
@@ -109,8 +117,14 @@ func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personI
 	}
 	// Cleared with the write: a crash after the claims commit but before a
 	// separate clear would merely re-run an idempotent upsert.
+	//
+	// applied_at is stamped here rather than by the domain, because provider_run
+	// is this module's table. It says the answers reached the record, which is a
+	// different fact from completed_at: a run can be paid and complete while the
+	// values are still only beside the record, and a client that stopped
+	// watching at "completed" would show a page that still looks empty.
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run SET next_attempt_at = NULL
+		UPDATE provider_run SET next_attempt_at = NULL, applied_at = now()
 		 WHERE id = $1`, runID); err != nil {
 		return fmt.Errorf("integrations: clearing the claims-pending marker: %w", err)
 	}
