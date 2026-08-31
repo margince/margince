@@ -13,6 +13,11 @@ package identity
 // tab while the screen sat open — so the commit had to re-resolve that row
 // under a lock. The human's own ticks are not a row, cannot go stale, and race
 // nothing.
+//
+// The grant and passport are written at TOKEN EXCHANGE (oauth_token.go), not
+// here. This function writes ONLY the authorization code row and its audit
+// record. The code is the courier the client posts at /token; the grant and
+// passport follow from the code's own data, read and validated at redemption.
 
 import (
 	"context"
@@ -22,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -66,10 +72,14 @@ func parseConsentedScopes(raw string) ([]string, error) {
 	return out, nil
 }
 
-// mintConsentedAuthorizationCode writes a consent, the grant and the authorization code
-// the client will redeem, all in one transaction. The code is single-use: its row
-// is deleted on a successful redeem (oauth_token.go), and a second redeem on the
-// same code finds no row, which is a refusal.
+// mintConsentedAuthorizationCode writes the single-use code the client will
+// redeem, and the audit row naming the grant — all in ONE transaction, so a
+// code the audit trail cannot explain is a state this flow cannot reach.
+//
+// The code is the ONLY row written here. The grant and passport follow from
+// the code's data (scopes, client_id, user_id) at token redemption
+// (oauth_token.go), so writing them here would be duplicate. This function
+// answers with the plaintext courier; only the courier's hash is stored.
 func (s *Service) mintConsentedAuthorizationCode(
 	ctx context.Context, id Identity, rawScopes string, req authorizeRequest,
 ) (code string, err error) {
@@ -89,46 +99,32 @@ func (s *Service) mintConsentedAuthorizationCode(
 		storedScopes = append(append([]string{}, scopes...), scopeOfflineAccess)
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The GRANT: what the human authorized. Its id becomes the passport's
-		// oauth_grant_id, which tells the Settings list it is a connection.
-		grantID := ids.NewV7()
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO oauth_grant (
-				id, client_id, redirect_uri, scope, refresh_allowed,
-				captured_by
-			) VALUES ($1, $2, $3, $4, $5, $6)
-			RETURNING id`,
-			grantID, req.ClientID, req.RedirectURI, strings.Join(scopes, " "),
-			req.Offline, id.UserID).Scan(&grantID); err != nil {
-			return err
-		}
-		// The PASSPORT: the credential the client will mint from the code. It
-		// carries the scopes the human actually ticked.
-		passportID := ids.NewV7()
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO passport (
-				id, workspace_id, on_behalf_of, label, scopes, expires_at,
-				oauth_grant_id, captured_by
-			) VALUES ($1, $2, $3, $4, $5, now() + interval '1 hour', $6, $7)
-			RETURNING id`,
-			passportID, id.WorkspaceID, id.UserID, "", scopes, grantID,
-			id.UserID).Scan(&passportID); err != nil {
-			return err
-		}
 		// The AUTHORIZATION CODE: a single-use password the client posts at the
-		// token endpoint. The code hash is stored, not the plaintext: the
-		// plaintext is the courier and appears in no durable record.
+		// token endpoint. The code row is the contract: if the code does not name
+		// the scopes, client, and user, the redemption has no authority to mint
+		// from (oauth_token.go deletes the code on a successful redeem).
 		codeHash := hashOAuthCode(code)
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO oauth_authorization_code (
-				code_hash, grant_id, client_id, scopes, code_challenge,
-				redirect_uri, resource, expires_at, captured_by
-			) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), now() + $8::interval, $9)`,
-			codeHash, grantID, req.ClientID, storedScopes, req.CodeChallenge,
-			req.RedirectURI, req.Resource, authCodeTTL.String(), id.UserID); err != nil {
+		var codeID ids.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO oauth_authorization_code
+			  (code_hash, client_id, user_id, scopes, code_challenge, redirect_uri, resource, expires_at)
+			VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), now() + $8::interval)
+			RETURNING id`,
+			codeHash, req.ClientID, id.UserID, storedScopes, req.CodeChallenge,
+			req.RedirectURI, req.Resource, authCodeTTL.String()).Scan(&codeID); err != nil {
 			return err
 		}
-		return nil
+		// Audit the consent: what scopes the human ticked, for what client, with
+		// what refresh authority. The grant will be minted at redemption and
+		// record the same pair, so the consent and its redemption read as one
+		// story.
+		_, err := storekit.Audit(ctx, tx, "create", "oauth_authorization_code", codeID, nil,
+			map[string]any{
+				auditFieldClientID:       req.ClientID,
+				auditFieldScopes:         scopes,
+				auditFieldRefreshAllowed: req.Offline,
+			})
+		return err
 	})
 	if err != nil {
 		return "", err

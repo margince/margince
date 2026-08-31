@@ -35,6 +35,17 @@ func (e *revocationEnv) rotate(t *testing.T, fixture *connectFixture) {
 	fixture.refresh = refreshed
 }
 
+// mintLendable issues a human-minted passport with the given scopes. It is used
+// to build passports for testing, independent of the lend flow.
+func (e *revocationEnv) mintLendable(t *testing.T, human Identity, scopes []string) ids.PassportID {
+	t.Helper()
+	issued, err := e.svc.IssuePassport(e.wsCtx(human), human, IssuePassportInput{Scopes: scopes})
+	if err != nil {
+		t.Fatalf("minting a lendable passport: %v", err)
+	}
+	return issued.ID
+}
+
 // A connection is ONE row in the list, however many times it has renewed.
 // Without the grouping this is the list's worst failure mode and the least
 // visible one: nothing is wrong on the day it ships, and a week later the
