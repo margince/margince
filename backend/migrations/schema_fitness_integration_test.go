@@ -212,10 +212,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// claim sink, from the run's own person_id, and never from a request body.
 	"person_provider_claim.person_id": "child row: written by the claim hand-off from the run's own subject, which QueueRun already gated; the fence is re-run immediately before every write (PI-AC-7)",
 	// The record of WHICH field a run filled, beside the claim that bought it.
-	// Same subject, same hand-off, same gate: the person is the run's own, and
-	// QueueRun gated seeing them before the run existed. It reaches the record
-	// through the claim writer rather than through a caller of its own.
-	"provider_applied_field.person_id": "child row: written alongside the claim, from the run's own subject, which QueueRun already gated",
+	// SCHEMA ONLY so far — nothing in the tree writes this table yet — so this
+	// entry is the obligation rather than a record of one already met: the
+	// subject a writer may name is the run's own, which QueueRun gated before
+	// the run existed, and a writer that named a person of its own instead
+	// would need its own gate and its own entry.
+	"provider_applied_field.person_id": "PENDING WRITER: the obligation on whoever writes it — the subject must be the run's own, which QueueRun already gated, as its sibling person_provider_claim.person_id is",
 	// telegram-oa design §6.4: the channel-aware ensure contract creates the
 	// Person (owner_id NULL) and this identity satellite in the same
 	// transaction, from the inbound message's own channel principal —

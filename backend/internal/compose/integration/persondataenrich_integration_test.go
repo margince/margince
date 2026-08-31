@@ -163,20 +163,6 @@ func actorEnvelope(personID ids.UUID, actorType, actorID string) events.Envelope
 	}
 }
 
-// admitCapturedContacts is the customer switching automatic_import on, through
-// the same column the settings card writes. Separate from the setup so every
-// other case here keeps the default the server ships, which is off.
-func (c *providerConsumerEnv) admitCapturedContacts(t *testing.T) {
-	t.Helper()
-	if err := database.WithWorkspaceTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`UPDATE provider_connection SET automatic_import = true WHERE provider = 'surfe'`)
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func (c *providerConsumerEnv) runsForPerson(t *testing.T) int {
 	t.Helper()
 	var runs int
@@ -249,31 +235,32 @@ func TestAnAgentCreatedPersonBuysNothing(t *testing.T) {
 	}
 }
 
-// The other half of the import toggle: switched ON, a captured counterparty
-// buys exactly like a typed one. Without this case the refusal below passes
-// against a gate that admits nobody — the toggle could be wired to a constant
-// false and every assertion in this file would still be green.
-func TestACapturedContactIsBoughtOnceTheImportToggleIsOn(t *testing.T) {
+// The other half of the posture: switched ON, a captured counterparty is looked
+// up exactly like a typed one — the writer is not the question any more.
+//
+// Without this case the refusal beside it passes against a gate that admits
+// nobody: the setting could be wired to a constant false and every assertion in
+// this file would still be green.
+func TestACapturedContactIsLookedUpOnceThePostureIsOn(t *testing.T) {
 	c := setupProviderConsumer(t, true)
-	c.admitCapturedContacts(t)
 
 	if err := c.consumer.HandleEvent(context.Background(),
 		actorEnvelope(c.personID, "connector", "connector:gmail")); err != nil {
 		t.Fatal(err)
 	}
 	if runs := c.runsForPerson(t); runs != 1 {
-		t.Errorf("%d runs exist for a captured counterparty with automatic_import on, want 1 — the customer switched capture enrichment on and got nothing", runs)
+		t.Errorf("%d runs exist for a captured counterparty with automatic lookups on, want 1 — the installation left the posture on and got nothing", runs)
 	}
 	if *c.enqueued != 1 {
 		t.Errorf("%d submit jobs were committed, want 1 — a queued run with no job blocks every later attempt at that subject", *c.enqueued)
 	}
 }
 
-// Capture creates a person per external counterparty, so a mailbox connect
-// with a year of history would buy thousands of records. That is what
-// automatic_import governs, and it is NOT the individual-create toggle.
 // A captured counterparty is governed by the same installation-wide answer as
 // any other automatic trigger.
+//
+// Capture creates a person per external counterparty, so a mailbox connect with
+// a year of history reaches thousands of them.
 //
 // It used to be governed by a switch of its own — the writer mattered, because
 // a connector's thousands of contacts each spent credits. An automatic run now
