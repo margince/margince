@@ -11143,6 +11143,360 @@ func (e WeeklyReviewDealOutcome) Valid() bool {
 	}
 }
 
+// Defines values for WorklistFilter.
+const (
+	WorklistFilterAll             WorklistFilter = "all"
+	WorklistFilterCustomerWaiting WorklistFilter = "customer_waiting"
+	WorklistFilterDealsAtRisk     WorklistFilter = "deals_at_risk"
+	WorklistFilterDecisions       WorklistFilter = "decisions"
+	WorklistFilterMeetings        WorklistFilter = "meetings"
+	WorklistFilterSystem          WorklistFilter = "system"
+	WorklistFilterTasks           WorklistFilter = "tasks"
+)
+
+// Valid indicates whether the value is a known member of the WorklistFilter enum.
+func (e WorklistFilter) Valid() bool {
+	switch e {
+	case WorklistFilterAll:
+		return true
+	case WorklistFilterCustomerWaiting:
+		return true
+	case WorklistFilterDealsAtRisk:
+		return true
+	case WorklistFilterDecisions:
+		return true
+	case WorklistFilterMeetings:
+		return true
+	case WorklistFilterSystem:
+		return true
+	case WorklistFilterTasks:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistComparisonComparator.
+const (
+	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
+	WorklistComparisonComparatorExpectedRevenue WorklistComparisonComparator = "expected_revenue"
+	WorklistComparisonComparatorLevel           WorklistComparisonComparator = "level"
+	WorklistComparisonComparatorOrder           WorklistComparisonComparator = "order"
+	WorklistComparisonComparatorPin             WorklistComparisonComparator = "pin"
+	WorklistComparisonComparatorRelationship    WorklistComparisonComparator = "relationship"
+	WorklistComparisonComparatorWaitingDays     WorklistComparisonComparator = "waiting_days"
+)
+
+// Valid indicates whether the value is a known member of the WorklistComparisonComparator enum.
+func (e WorklistComparisonComparator) Valid() bool {
+	switch e {
+	case WorklistComparisonComparatorDeadline:
+		return true
+	case WorklistComparisonComparatorExpectedRevenue:
+		return true
+	case WorklistComparisonComparatorLevel:
+		return true
+	case WorklistComparisonComparatorOrder:
+		return true
+	case WorklistComparisonComparatorPin:
+		return true
+	case WorklistComparisonComparatorRelationship:
+		return true
+	case WorklistComparisonComparatorWaitingDays:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemActions.
+const (
+	WorklistItemActionsAcknowledge WorklistItemActions = "acknowledge"
+	WorklistItemActionsAct         WorklistItemActions = "act"
+	WorklistItemActionsComplete    WorklistItemActions = "complete"
+	WorklistItemActionsDecide      WorklistItemActions = "decide"
+	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
+	WorklistItemActionsMerge       WorklistItemActions = "merge"
+	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
+	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemActions enum.
+func (e WorklistItemActions) Valid() bool {
+	switch e {
+	case WorklistItemActionsAcknowledge:
+		return true
+	case WorklistItemActionsAct:
+		return true
+	case WorklistItemActionsComplete:
+		return true
+	case WorklistItemActionsDecide:
+		return true
+	case WorklistItemActionsDismiss:
+		return true
+	case WorklistItemActionsMerge:
+		return true
+	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsSetAside:
+		return true
+	case WorklistItemActionsSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemCategory.
+const (
+	WorklistItemCategoryCustomerWaiting WorklistItemCategory = "customer_waiting"
+	WorklistItemCategoryDealsAtRisk     WorklistItemCategory = "deals_at_risk"
+	WorklistItemCategoryDecisions       WorklistItemCategory = "decisions"
+	WorklistItemCategoryMeetings        WorklistItemCategory = "meetings"
+	WorklistItemCategorySystem          WorklistItemCategory = "system"
+	WorklistItemCategoryTasks           WorklistItemCategory = "tasks"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemCategory enum.
+func (e WorklistItemCategory) Valid() bool {
+	switch e {
+	case WorklistItemCategoryCustomerWaiting:
+		return true
+	case WorklistItemCategoryDealsAtRisk:
+		return true
+	case WorklistItemCategoryDecisions:
+		return true
+	case WorklistItemCategoryMeetings:
+		return true
+	case WorklistItemCategorySystem:
+		return true
+	case WorklistItemCategoryTasks:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemConsequence.
+const (
+	WorklistItemConsequenceBuyerWaits            WorklistItemConsequence = "buyer_waits"
+	WorklistItemConsequenceCustomerNeverReceived WorklistItemConsequence = "customer_never_received"
+	WorklistItemConsequenceDataDrifts            WorklistItemConsequence = "data_drifts"
+	WorklistItemConsequenceDealDrifts            WorklistItemConsequence = "deal_drifts"
+	WorklistItemConsequenceDealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
+	WorklistItemConsequenceLegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
+	WorklistItemConsequenceMailboxBlind          WorklistItemConsequence = "mailbox_blind"
+	WorklistItemConsequenceMeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
+	WorklistItemConsequenceNone                  WorklistItemConsequence = "none"
+	WorklistItemConsequencePromiseBreaks         WorklistItemConsequence = "promise_breaks"
+	WorklistItemConsequenceTaskSlips             WorklistItemConsequence = "task_slips"
+	WorklistItemConsequenceWorkBlocked           WorklistItemConsequence = "work_blocked"
+	WorklistItemConsequenceYouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemConsequence enum.
+func (e WorklistItemConsequence) Valid() bool {
+	switch e {
+	case WorklistItemConsequenceBuyerWaits:
+		return true
+	case WorklistItemConsequenceCustomerNeverReceived:
+		return true
+	case WorklistItemConsequenceDataDrifts:
+		return true
+	case WorklistItemConsequenceDealDrifts:
+		return true
+	case WorklistItemConsequenceDealSlipsPastClose:
+		return true
+	case WorklistItemConsequenceLegalDeadlineMissed:
+		return true
+	case WorklistItemConsequenceMailboxBlind:
+		return true
+	case WorklistItemConsequenceMeetingUnprepared:
+		return true
+	case WorklistItemConsequenceNone:
+		return true
+	case WorklistItemConsequencePromiseBreaks:
+		return true
+	case WorklistItemConsequenceTaskSlips:
+		return true
+	case WorklistItemConsequenceWorkBlocked:
+		return true
+	case WorklistItemConsequenceYouBelieveItHappened:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemSource.
+const (
+	WorklistItemSourceAiWorkHealth      WorklistItemSource = "ai_work_health"
+	WorklistItemSourceApproval          WorklistItemSource = "approval"
+	WorklistItemSourceAutomationRun     WorklistItemSource = "automation_run"
+	WorklistItemSourceBounce            WorklistItemSource = "bounce"
+	WorklistItemSourceBriefItem         WorklistItemSource = "brief_item"
+	WorklistItemSourceCaptureHealth     WorklistItemSource = "capture_health"
+	WorklistItemSourceConversationClaim WorklistItemSource = "conversation_claim"
+	WorklistItemSourceDealAtRisk        WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDedupeCandidate   WorklistItemSource = "dedupe_candidate"
+	WorklistItemSourceDsr               WorklistItemSource = "dsr"
+	WorklistItemSourceFailedApproval    WorklistItemSource = "failed_approval"
+	WorklistItemSourceMeeting           WorklistItemSource = "meeting"
+	WorklistItemSourceNotice            WorklistItemSource = "notice"
+	WorklistItemSourceRelationshipDecay WorklistItemSource = "relationship_decay"
+	WorklistItemSourceSyncHealth        WorklistItemSource = "sync_health"
+	WorklistItemSourceTask              WorklistItemSource = "task"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemSource enum.
+func (e WorklistItemSource) Valid() bool {
+	switch e {
+	case WorklistItemSourceAiWorkHealth:
+		return true
+	case WorklistItemSourceApproval:
+		return true
+	case WorklistItemSourceAutomationRun:
+		return true
+	case WorklistItemSourceBounce:
+		return true
+	case WorklistItemSourceBriefItem:
+		return true
+	case WorklistItemSourceCaptureHealth:
+		return true
+	case WorklistItemSourceConversationClaim:
+		return true
+	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDedupeCandidate:
+		return true
+	case WorklistItemSourceDsr:
+		return true
+	case WorklistItemSourceFailedApproval:
+		return true
+	case WorklistItemSourceMeeting:
+		return true
+	case WorklistItemSourceNotice:
+		return true
+	case WorklistItemSourceRelationshipDecay:
+		return true
+	case WorklistItemSourceSyncHealth:
+		return true
+	case WorklistItemSourceTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistReasonKind.
+const (
+	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
+	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
+	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
+	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
+	WorklistReasonKindClosingSoon        WorklistReasonKind = "closing_soon"
+	WorklistReasonKindDueToday           WorklistReasonKind = "due_today"
+	WorklistReasonKindExpectedRevenue    WorklistReasonKind = "expected_revenue"
+	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
+	WorklistReasonKindMaterial           WorklistReasonKind = "material"
+	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
+	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
+	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
+	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
+	WorklistReasonKindPromised           WorklistReasonKind = "promised"
+	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
+	WorklistReasonKindRoutine            WorklistReasonKind = "routine"
+	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
+)
+
+// Valid indicates whether the value is a known member of the WorklistReasonKind enum.
+func (e WorklistReasonKind) Valid() bool {
+	switch e {
+	case WorklistReasonKindApprovedAndFailed:
+		return true
+	case WorklistReasonKindBelowMaterial:
+		return true
+	case WorklistReasonKindBlocksCustomerWork:
+		return true
+	case WorklistReasonKindBuyerWroteLast:
+		return true
+	case WorklistReasonKindClosingSoon:
+		return true
+	case WorklistReasonKindDueToday:
+		return true
+	case WorklistReasonKindExpectedRevenue:
+		return true
+	case WorklistReasonKindLegalDeadline:
+		return true
+	case WorklistReasonKindMaterial:
+		return true
+	case WorklistReasonKindMeetingSoon:
+		return true
+	case WorklistReasonKindNoChampion:
+		return true
+	case WorklistReasonKindOverdue:
+		return true
+	case WorklistReasonKindPinned:
+		return true
+	case WorklistReasonKindPromised:
+		return true
+	case WorklistReasonKindQuietDays:
+		return true
+	case WorklistReasonKindRoutine:
+		return true
+	case WorklistReasonKindWaitingDays:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistSourceUnavailableReason.
+const (
+	Failed   WorklistSourceUnavailableReason = "failed"
+	Withheld WorklistSourceUnavailableReason = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the WorklistSourceUnavailableReason enum.
+func (e WorklistSourceUnavailableReason) Valid() bool {
+	switch e {
+	case Failed:
+		return true
+	case Withheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistValueKind.
+const (
+	WorklistValueKindDate  WorklistValueKind = "date"
+	WorklistValueKindDays  WorklistValueKind = "days"
+	WorklistValueKindLevel WorklistValueKind = "level"
+	WorklistValueKindMoney WorklistValueKind = "money"
+	WorklistValueKindNone  WorklistValueKind = "none"
+)
+
+// Valid indicates whether the value is a known member of the WorklistValueKind enum.
+func (e WorklistValueKind) Valid() bool {
+	switch e {
+	case WorklistValueKindDate:
+		return true
+	case WorklistValueKindDays:
+		return true
+	case WorklistValueKindLevel:
+		return true
+	case WorklistValueKindMoney:
+		return true
+	case WorklistValueKindNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceEmailDomainSource.
 const (
 	Admin   WorkspaceEmailDomainSource = "admin"
@@ -12141,22 +12495,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -12273,22 +12627,22 @@ func (e ListProjectsParamsPhase) Valid() bool {
 
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
+	Email    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
+	FullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
+	Phone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
+	Title    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
 )
 
 // Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyCorrectionsField enum.
 func (e SubmitConfirmDetailsJSONBodyCorrectionsField) Valid() bool {
 	switch e {
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail:
+	case Email:
 		return true
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName:
+	case FullName:
 		return true
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone:
+	case Phone:
 		return true
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle:
+	case Title:
 		return true
 	default:
 		return false
@@ -12571,6 +12925,39 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	case Resolved:
 		return true
 	case Unresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetWorklistParamsFilter.
+const (
+	All             GetWorklistParamsFilter = "all"
+	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	Decisions       GetWorklistParamsFilter = "decisions"
+	Meetings        GetWorklistParamsFilter = "meetings"
+	System          GetWorklistParamsFilter = "system"
+	Tasks           GetWorklistParamsFilter = "tasks"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
+func (e GetWorklistParamsFilter) Valid() bool {
+	switch e {
+	case All:
+		return true
+	case CustomerWaiting:
+		return true
+	case DealsAtRisk:
+		return true
+	case Decisions:
+		return true
+	case Meetings:
+		return true
+	case System:
+		return true
+	case Tasks:
 		return true
 	default:
 		return false
@@ -26446,6 +26833,229 @@ type WeeklyReviewIndex struct {
 	Weeks []openapi_types.Date `json:"weeks"`
 }
 
+// Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
+// cannot compare the position of one lane with another to work out that an item
+// several screens down matters more.
+//
+// `sources_unavailable` carries the same promise `/attention`'s `lanes_omitted`
+// does, widened: a source the caller may not read is named as `withheld`, and one
+// that failed to answer is named as `failed`. Both keep the summary from claiming a
+// clear day it did not actually see.
+type Worklist struct {
+	// AsOf The instant every source below was read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Filter The narrowing this read applied.
+	Filter *WorklistFilter `json:"filter,omitempty"`
+
+	// Queue Everything actionable, best-first. The order is the product of this endpoint.
+	Queue []WorklistItem `json:"queue"`
+
+	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
+	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
+
+	// Summary The day in figures, for the one line above the queue. Each count is of items the
+	// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+	Summary WorklistSummary `json:"summary"`
+}
+
+// WorklistFilter The narrowing this read applied.
+type WorklistFilter string
+
+// WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
+// values — so a row can say "above the next because it closes sooner" instead of
+// asking the reader to trust the order.
+//
+// Absent on the last row of the page, which has nothing below it to beat.
+type WorklistComparison struct {
+	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+	Comparator WorklistComparisonComparator `json:"comparator"`
+
+	// Mine A typed comparator value — a date, an amount, a count of days, or nothing. Typed
+	// rather than pre-formatted because the reader's language and notation are the
+	// client's to apply.
+	Mine *WorklistValue `json:"mine,omitempty"`
+
+	// Theirs A typed comparator value — a date, an amount, a count of days, or nothing. Typed
+	// rather than pre-formatted because the reader's language and notation are the
+	// client's to apply.
+	Theirs *WorklistValue `json:"theirs,omitempty"`
+}
+
+// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+type WorklistComparisonComparator string
+
+// WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
+// `amount_minor × win_probability`, converted to the installation's base currency —
+// the only figure by which two deals in different currencies may be compared.
+type WorklistDealFacts struct {
+	AmountMinor       *int64              `json:"amount_minor,omitempty"`
+	Currency          *string             `json:"currency,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+
+	// ExpectedMinorBase Expected revenue in the base currency. Null when the amount or the rate is unknown.
+	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	QuietDays         *int                `json:"quiet_days,omitempty"`
+	StageId           *openapi_types.UUID `json:"stage_id,omitempty"`
+	WinProbability    *int                `json:"win_probability,omitempty"`
+}
+
+// WorklistItem One thing to do, with the reason it sits where it sits.
+//
+// `level` is the hard product rule and `score` orders inside it; a client renders
+// the order it is given and never re-sorts, because the tie-breaks depend on facts
+// (base-currency conversion, the material threshold) that the server holds and the
+// browser does not.
+type WorklistItem struct {
+	// AboveNext The first tie-break at which this item beat the one below it, with both sides'
+	// values — so a row can say "above the next because it closes sooner" instead of
+	// asking the reader to trust the order.
+	//
+	// Absent on the last row of the page, which has nothing below it to beat.
+	AboveNext *WorklistComparison `json:"above_next,omitempty"`
+
+	// Actions What this item offers, routed to the endpoint that owns the verb.
+	Actions []WorklistItemActions `json:"actions"`
+
+	// Because The facts that put this item at this level, in the order they were weighed.
+	Because []WorklistReason `json:"because"`
+
+	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
+	Category WorklistItemCategory `json:"category"`
+
+	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
+	// source, because one source has several honest answers: a deal past its close
+	// date slips, one merely idle drifts.
+	Consequence WorklistItemConsequence `json:"consequence"`
+
+	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
+	// `amount_minor × win_probability`, converted to the installation's base currency —
+	// the only figure by which two deals in different currencies may be compared.
+	Deal *WorklistDealFacts `json:"deal,omitempty"`
+
+	// Detail One supporting line.
+	Detail *string `json:"detail,omitempty"`
+
+	// DueAt When this is due, or when the meeting starts.
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// Id The owning record's id, as its own endpoint spells it.
+	Id string `json:"id"`
+
+	// Kind The producer's own sub-type — for the icon and the label, never for authority.
+	Kind *string `json:"kind,omitempty"`
+
+	// Level The hard priority band, and the whole of the product rule: 0 pinned by the
+	// reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+	// approved action that failed, 3 material revenue at risk, 4 an assigned task
+	// or a smaller deal drifting, 5 a decision blocking customer work, 6 data
+	// hygiene. Levels are never mixed by a score.
+	Level int `json:"level"`
+
+	// OccurredAt When the thing being reported happened.
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
+	Overdue *bool `json:"overdue,omitempty"`
+
+	// Score Rank within the level. Higher is first. Meaningless across levels.
+	Score *float32 `json:"score,omitempty"`
+
+	// Source Which producer raised it, and therefore which endpoint its verbs go to.
+	Source WorklistItemSource `json:"source"`
+
+	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
+	Subject *AttentionSubject `json:"subject,omitempty"`
+
+	// Title The server's own sentence for this item, where it has one.
+	Title *string `json:"title,omitempty"`
+}
+
+// WorklistItemActions defines model for WorklistItem.Actions.
+type WorklistItemActions string
+
+// WorklistItemCategory The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
+type WorklistItemCategory string
+
+// WorklistItemConsequence What happens if the reader does nothing. Derived per ITEM rather than per
+// source, because one source has several honest answers: a deal past its close
+// date slips, one merely idle drifts.
+type WorklistItemConsequence string
+
+// WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+type WorklistItemSource string
+
+// WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
+// product ships three languages and a sentence composed here would reach a German
+// reader in English.
+type WorklistReason struct {
+	// Kind Which fact this is. The client writes the phrase.
+	Kind WorklistReasonKind `json:"kind"`
+
+	// Value A typed comparator value — a date, an amount, a count of days, or nothing. Typed
+	// rather than pre-formatted because the reader's language and notation are the
+	// client's to apply.
+	Value *WorklistValue `json:"value,omitempty"`
+}
+
+// WorklistReasonKind Which fact this is. The client writes the phrase.
+type WorklistReasonKind string
+
+// WorklistSourceUnavailable A source that did not contribute, and why. `withheld` means the caller may not
+// read it; `failed` means it did not answer. Both are reported rather than folded
+// into an empty queue, because "there is nothing" and "I could not look" are
+// different answers and only one of them means the day is clear.
+type WorklistSourceUnavailable struct {
+	Reason WorklistSourceUnavailableReason `json:"reason"`
+	Source string                          `json:"source"`
+}
+
+// WorklistSourceUnavailableReason defines model for WorklistSourceUnavailable.Reason.
+type WorklistSourceUnavailableReason string
+
+// WorklistSummary The day in figures, for the one line above the queue. Each count is of items the
+// queue actually CARRIES, so a number here and the rows below it cannot disagree.
+type WorklistSummary struct {
+	// BaseCurrency The currency every expected-revenue figure here is converted to.
+	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// Due Items carrying a date that has arrived or passed.
+	Due int `json:"due"`
+
+	// LowerPriority Routine work: decisions that block nothing, and data hygiene.
+	LowerPriority int `json:"lower_priority"`
+
+	// MaterialThresholdMinor The expected-revenue bar a deal must clear to count as material, in the
+	// installation's base currency — the median open deal at this instant. Sent so
+	// the client can say WHY a deal ranked where it did. Null when the pipeline has
+	// no open deals to take a median of.
+	MaterialThresholdMinor *int64 `json:"material_threshold_minor,omitempty"`
+
+	// Total How many items the queue carries.
+	Total int `json:"total"`
+
+	// Urgent Items at the top two levels: somebody is waiting, or a promise is breaking.
+	Urgent int `json:"urgent"`
+}
+
+// WorklistValue A typed comparator value — a date, an amount, a count of days, or nothing. Typed
+// rather than pre-formatted because the reader's language and notation are the
+// client's to apply.
+type WorklistValue struct {
+	Currency *string           `json:"currency,omitempty"`
+	Date     *time.Time        `json:"date,omitempty"`
+	Days     *int              `json:"days,omitempty"`
+	Kind     WorklistValueKind `json:"kind"`
+	Level    *int              `json:"level,omitempty"`
+
+	// Minor Money in minor units of `currency`.
+	Minor *int64 `json:"minor,omitempty"`
+}
+
+// WorklistValueKind defines model for WorklistValue.Kind.
+type WorklistValueKind string
+
 // WorkspaceEmailDomain defines model for WorkspaceEmailDomain.
 type WorkspaceEmailDomain struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
@@ -30780,6 +31390,18 @@ type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
 }
+
+// GetWorklistParams defines parameters for GetWorklist.
+type GetWorklistParams struct {
+	// Filter Narrow the queue to one kind of work. Omitted means everything, which is the default view.
+	Filter *GetWorklistParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Limit How many ranked items to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetWorklistParamsFilter defines parameters for GetWorklist.
+type GetWorklistParamsFilter string
 
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
@@ -40581,6 +41203,9 @@ type ServerInterface interface {
 	// The acting rep's most recent weekly review, or a named week's.
 	// (GET /weekly-reviews/latest)
 	GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams)
+	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
+	// (GET /worklist)
+	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -43644,6 +44269,12 @@ func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
 // The acting rep's most recent weekly review, or a named week's.
 // (GET /weekly-reviews/latest)
 func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
+// (GET /worklist)
+func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -66177,6 +66808,60 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetWorklist operation middleware
+func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetWorklistParams
+
+	// ------------- Optional query parameter "filter" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "filter", r.URL.Query(), &params.Filter, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "filter"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "filter", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorklist(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -67819,6 +68504,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-reviews/latest", wrapper.GetLatestWeeklyReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
 	})
 
 	return r

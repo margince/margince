@@ -5555,6 +5555,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
+         * @description The Worklist. `/attention` answers "which producers have rows?" and leaves the
+         *     reader to compare fourteen lanes; this answers "what should I do next, why does
+         *     it matter, and can I act here?" — one list, ordered, with the reason for the
+         *     order on every row.
+         *
+         *     The order is HARD LEVELS first, then tie-breaks inside a level. The levels are a
+         *     product rule, not a score: a customer waiting outranks a promise, a promise
+         *     outranks material revenue at risk, and routine data hygiene never outranks any of
+         *     them however large its pile. Level 0 is the reader's own pin, which is the one
+         *     override a person has over the ordering.
+         *
+         *     Inside a level the tie-breaks run deadline → expected revenue → waiting days →
+         *     relationship importance → occurrence. Deadline leads because a date somebody
+         *     agreed to is the one fact that expires; expected revenue converts every deal to
+         *     the installation's base currency first, because raw minor units compare a yen to
+         *     a euro and get it wrong.
+         *
+         *     Every row carries `because` (its own facts) and `above_next` (the first tie-break
+         *     at which it beat the row below it), so the ordering can be read rather than
+         *     trusted. Every row also carries `consequence`: what happens if the reader does
+         *     nothing, which is the question a queue exists to answer.
+         *
+         *     A source the caller may not read is NOT reported as empty — it is named in
+         *     `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
+         *     source that FAILED is named there too. A day cannot read as clear while something
+         *     that would have filled it never answered.
+         */
+        get: operations["getWorklist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/digest": {
         parameters: {
             query?: never;
@@ -23462,6 +23507,203 @@ export interface components {
             label?: string;
         };
         /**
+         * @description The rep's day, ranked. One list rather than fourteen lanes, because a reader
+         *     cannot compare the position of one lane with another to work out that an item
+         *     several screens down matters more.
+         *
+         *     `sources_unavailable` carries the same promise `/attention`'s `lanes_omitted`
+         *     does, widened: a source the caller may not read is named as `withheld`, and one
+         *     that failed to answer is named as `failed`. Both keep the summary from claiming a
+         *     clear day it did not actually see.
+         */
+        Worklist: {
+            /**
+             * Format: date-time
+             * @description The instant every source below was read at.
+             */
+            as_of: string;
+            /**
+             * @description The narrowing this read applied.
+             * @enum {string}
+             */
+            filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            summary: components["schemas"]["WorklistSummary"];
+            /** @description Everything actionable, best-first. The order is the product of this endpoint. */
+            queue: components["schemas"]["WorklistItem"][];
+            /** @description Sources that could not be included, and why. Empty is the honest common case. */
+            sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+        };
+        /**
+         * @description The day in figures, for the one line above the queue. Each count is of items the
+         *     queue actually CARRIES, so a number here and the rows below it cannot disagree.
+         */
+        WorklistSummary: {
+            /** @description Items at the top two levels: somebody is waiting, or a promise is breaking. */
+            urgent: number;
+            /** @description Items carrying a date that has arrived or passed. */
+            due: number;
+            /** @description Routine work: decisions that block nothing, and data hygiene. */
+            lower_priority: number;
+            /** @description How many items the queue carries. */
+            total: number;
+            /**
+             * Format: int64
+             * @description The expected-revenue bar a deal must clear to count as material, in the
+             *     installation's base currency — the median open deal at this instant. Sent so
+             *     the client can say WHY a deal ranked where it did. Null when the pipeline has
+             *     no open deals to take a median of.
+             */
+            material_threshold_minor?: number | null;
+            /** @description The currency every expected-revenue figure here is converted to. */
+            base_currency?: string | null;
+        };
+        /**
+         * @description One thing to do, with the reason it sits where it sits.
+         *
+         *     `level` is the hard product rule and `score` orders inside it; a client renders
+         *     the order it is given and never re-sorts, because the tie-breaks depend on facts
+         *     (base-currency conversion, the material threshold) that the server holds and the
+         *     browser does not.
+         */
+        WorklistItem: {
+            /** @description The owning record's id, as its own endpoint spells it. */
+            id: string;
+            /**
+             * @description Which producer raised it, and therefore which endpoint its verbs go to.
+             * @enum {string}
+             */
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
+            /**
+             * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
+             * @enum {string}
+             */
+            category: "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            /**
+             * @description The hard priority band, and the whole of the product rule: 0 pinned by the
+             *     reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+             *     approved action that failed, 3 material revenue at risk, 4 an assigned task
+             *     or a smaller deal drifting, 5 a decision blocking customer work, 6 data
+             *     hygiene. Levels are never mixed by a score.
+             */
+            level: number;
+            /** @description Rank within the level. Higher is first. Meaningless across levels. */
+            score?: number;
+            /** @description The producer's own sub-type — for the icon and the label, never for authority. */
+            kind?: string;
+            /** @description The server's own sentence for this item, where it has one. */
+            title?: string;
+            /** @description One supporting line. */
+            detail?: string;
+            /** @description The facts that put this item at this level, in the order they were weighed. */
+            because: components["schemas"]["WorklistReason"][];
+            above_next?: components["schemas"]["WorklistComparison"];
+            /**
+             * @description What happens if the reader does nothing. Derived per ITEM rather than per
+             *     source, because one source has several honest answers: a deal past its close
+             *     date slips, one merely idle drifts.
+             * @enum {string}
+             */
+            consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
+            subject?: components["schemas"]["AttentionSubject"];
+            deal?: components["schemas"]["WorklistDealFacts"];
+            /**
+             * Format: date-time
+             * @description When this is due, or when the meeting starts.
+             */
+            due_at?: string;
+            /** @description Past due at the read instant, resolved server-side so every surface agrees. */
+            overdue?: boolean;
+            /**
+             * Format: date-time
+             * @description When the thing being reported happened.
+             */
+            occurred_at?: string;
+            /** @description What this item offers, routed to the endpoint that owns the verb. */
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
+        };
+        /**
+         * @description One fact behind an item's rank, as a typed pair rather than a sentence: the
+         *     product ships three languages and a sentence composed here would reach a German
+         *     reader in English.
+         */
+        WorklistReason: {
+            /**
+             * @description Which fact this is. The client writes the phrase.
+             * @enum {string}
+             */
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "legal_deadline" | "meeting_soon";
+            value?: components["schemas"]["WorklistValue"];
+        };
+        /**
+         * @description The first tie-break at which this item beat the one below it, with both sides'
+         *     values — so a row can say "above the next because it closes sooner" instead of
+         *     asking the reader to trust the order.
+         *
+         *     Absent on the last row of the page, which has nothing below it to beat.
+         */
+        WorklistComparison: {
+            /**
+             * @description What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+             * @enum {string}
+             */
+            comparator: "pin" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
+            mine?: components["schemas"]["WorklistValue"];
+            theirs?: components["schemas"]["WorklistValue"];
+        };
+        /**
+         * @description A typed comparator value — a date, an amount, a count of days, or nothing. Typed
+         *     rather than pre-formatted because the reader's language and notation are the
+         *     client's to apply.
+         */
+        WorklistValue: {
+            /** @enum {string} */
+            kind: "date" | "money" | "days" | "level" | "none";
+            /** Format: date-time */
+            date?: string;
+            /**
+             * Format: int64
+             * @description Money in minor units of `currency`.
+             */
+            minor?: number;
+            currency?: string;
+            days?: number;
+            level?: number;
+        };
+        /**
+         * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
+         *     `amount_minor × win_probability`, converted to the installation's base currency —
+         *     the only figure by which two deals in different currencies may be compared.
+         */
+        WorklistDealFacts: {
+            /** Format: uuid */
+            stage_id?: string | null;
+            /** Format: int64 */
+            amount_minor?: number | null;
+            currency?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            win_probability?: number | null;
+            /**
+             * Format: int64
+             * @description Expected revenue in the base currency. Null when the amount or the rate is unknown.
+             */
+            expected_minor_base?: number | null;
+            /** Format: date */
+            expected_close_date?: string | null;
+            quiet_days?: number | null;
+        };
+        /**
+         * @description A source that did not contribute, and why. `withheld` means the caller may not
+         *     read it; `failed` means it did not answer. Both are reported rather than folded
+         *     into an empty queue, because "there is nothing" and "I could not look" are
+         *     different answers and only one of them means the day is clear.
+         */
+        WorklistSourceUnavailable: {
+            source: string;
+            /** @enum {string} */
+            reason: "withheld" | "failed";
+        };
+        /**
          * @description A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
          *     owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
          *     createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
@@ -33522,6 +33764,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Attention"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getWorklist: {
+        parameters: {
+            query?: {
+                /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
+                filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+                /** @description How many ranked items to return. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ranked day. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Worklist"];
                 };
             };
             401: components["responses"]["Unauthorized"];

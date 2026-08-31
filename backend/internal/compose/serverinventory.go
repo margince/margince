@@ -397,3 +397,8 @@ var _ crmcontracts.ServerInterface = Server{}
 func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetAttention(w, r)
 }
+
+// GetWorklist forwards the ranked read to the same assembled surface.
+func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
+	s.attentionHandlers.GetWorklist(w, r, params)
+}

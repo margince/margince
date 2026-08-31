@@ -2062,3 +2062,7 @@ func (stubs) ListWeeklyReviews(w nethttp.ResponseWriter, r *nethttp.Request) {
 func (stubs) GetLatestWeeklyReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetLatestWeeklyReviewParams) {
 	httperr.NotImplemented(w, r, "GetLatestWeeklyReview")
 }
+
+func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetWorklistParams) {
+	httperr.NotImplemented(w, r, "GetWorklist")
+}

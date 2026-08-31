@@ -8359,6 +8359,57 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+
+  /worklist:
+    get:
+      tags: [Brief]
+      operationId: getWorklist
+      summary: The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
+      description: |
+        The Worklist. `/attention` answers "which producers have rows?" and leaves the
+        reader to compare fourteen lanes; this answers "what should I do next, why does
+        it matter, and can I act here?" — one list, ordered, with the reason for the
+        order on every row.
+
+        The order is HARD LEVELS first, then tie-breaks inside a level. The levels are a
+        product rule, not a score: a customer waiting outranks a promise, a promise
+        outranks material revenue at risk, and routine data hygiene never outranks any of
+        them however large its pile. Level 0 is the reader's own pin, which is the one
+        override a person has over the ordering.
+
+        Inside a level the tie-breaks run deadline → expected revenue → waiting days →
+        relationship importance → occurrence. Deadline leads because a date somebody
+        agreed to is the one fact that expires; expected revenue converts every deal to
+        the installation's base currency first, because raw minor units compare a yen to
+        a euro and get it wrong.
+
+        Every row carries `because` (its own facts) and `above_next` (the first tie-break
+        at which it beat the row below it), so the ordering can be read rather than
+        trusted. Every row also carries `consequence`: what happens if the reader does
+        nothing, which is the question a queue exists to answer.
+
+        A source the caller may not read is NOT reported as empty — it is named in
+        `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
+        source that FAILED is named there too. A day cannot read as clear while something
+        that would have filled it never answered.
+      x-agent-access: human-only
+      parameters:
+        - name: filter
+          in: query
+          schema: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system] }
+          description: 'Narrow the queue to one kind of work. Omitted means everything, which is the default view.'
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+          description: 'How many ranked items to return.'
+      responses:
+        '200':
+          description: The ranked day.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Worklist' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /digest:
     get:
       tags: [Capture]
@@ -31072,6 +31123,183 @@ components:
         id: { type: string, format: uuid }
         label: { type: string, description: "The record's display name. Absent when the caller may not read it, which is not the same as unnamed." }
 
+    # ---- The Worklist: one ranked queue over every producer the day has ----
+    Worklist:
+      type: object
+      description: |
+        The rep's day, ranked. One list rather than fourteen lanes, because a reader
+        cannot compare the position of one lane with another to work out that an item
+        several screens down matters more.
+
+        `sources_unavailable` carries the same promise `/attention`'s `lanes_omitted`
+        does, widened: a source the caller may not read is named as `withheld`, and one
+        that failed to answer is named as `failed`. Both keep the summary from claiming a
+        clear day it did not actually see.
+      required: [as_of, queue, summary, sources_unavailable]
+      properties:
+        as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
+        filter: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
+        summary: { $ref: '#/components/schemas/WorklistSummary' }
+        queue:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistItem' }
+          description: 'Everything actionable, best-first. The order is the product of this endpoint.'
+        sources_unavailable:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }
+          description: 'Sources that could not be included, and why. Empty is the honest common case.'
+
+    WorklistSummary:
+      type: object
+      description: |
+        The day in figures, for the one line above the queue. Each count is of items the
+        queue actually CARRIES, so a number here and the rows below it cannot disagree.
+      required: [urgent, due, lower_priority, total]
+      properties:
+        urgent: { type: integer, minimum: 0, description: 'Items at the top two levels: somebody is waiting, or a promise is breaking.' }
+        due: { type: integer, minimum: 0, description: 'Items carrying a date that has arrived or passed.' }
+        lower_priority: { type: integer, minimum: 0, description: 'Routine work: decisions that block nothing, and data hygiene.' }
+        total: { type: integer, minimum: 0, description: 'How many items the queue carries.' }
+        material_threshold_minor:
+          type: [integer, 'null']
+          format: int64
+          description: |
+            The expected-revenue bar a deal must clear to count as material, in the
+            installation's base currency — the median open deal at this instant. Sent so
+            the client can say WHY a deal ranked where it did. Null when the pipeline has
+            no open deals to take a median of.
+        base_currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$', description: 'The currency every expected-revenue figure here is converted to.' }
+
+    WorklistItem:
+      type: object
+      description: |
+        One thing to do, with the reason it sits where it sits.
+
+        `level` is the hard product rule and `score` orders inside it; a client renders
+        the order it is given and never re-sorts, because the tie-breaks depend on facts
+        (base-currency conversion, the material threshold) that the server holds and the
+        browser does not.
+      required: [id, source, category, level, actions, because, consequence]
+      properties:
+        id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
+        source:
+          type: string
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
+          description: 'Which producer raised it, and therefore which endpoint its verbs go to.'
+        category:
+          type: string
+          enum: [customer_waiting, deals_at_risk, meetings, tasks, decisions, system]
+          description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
+        level:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: |
+            The hard priority band, and the whole of the product rule: 0 pinned by the
+            reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+            approved action that failed, 3 material revenue at risk, 4 an assigned task
+            or a smaller deal drifting, 5 a decision blocking customer work, 6 data
+            hygiene. Levels are never mixed by a score.
+        score: { type: number, description: 'Rank within the level. Higher is first. Meaningless across levels.' }
+        kind: { type: string, description: "The producer's own sub-type — for the icon and the label, never for authority." }
+        title: { type: string, description: "The server's own sentence for this item, where it has one." }
+        detail: { type: string, description: 'One supporting line.' }
+        because:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistReason' }
+          description: 'The facts that put this item at this level, in the order they were weighed.'
+        above_next:
+          $ref: '#/components/schemas/WorklistComparison'
+        consequence:
+          type: string
+          enum: [buyer_waits, promise_breaks, deal_drifts, deal_slips_past_close, meeting_unprepared, task_slips, work_blocked, customer_never_received, you_believe_it_happened, legal_deadline_missed, mailbox_blind, data_drifts, none]
+          description: |
+            What happens if the reader does nothing. Derived per ITEM rather than per
+            source, because one source has several honest answers: a deal past its close
+            date slips, one merely idle drifts.
+        subject: { $ref: '#/components/schemas/AttentionSubject' }
+        deal: { $ref: '#/components/schemas/WorklistDealFacts' }
+        due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
+        overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
+        occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
+        actions:
+          type: array
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
+          description: 'What this item offers, routed to the endpoint that owns the verb.'
+
+    WorklistReason:
+      type: object
+      description: |
+        One fact behind an item's rank, as a typed pair rather than a sentence: the
+        product ships three languages and a sentence composed here would reach a German
+        reader in English.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, legal_deadline, meeting_soon]
+          description: 'Which fact this is. The client writes the phrase.'
+        value: { $ref: '#/components/schemas/WorklistValue' }
+
+    WorklistComparison:
+      type: object
+      description: |
+        The first tie-break at which this item beat the one below it, with both sides'
+        values — so a row can say "above the next because it closes sooner" instead of
+        asking the reader to trust the order.
+
+        Absent on the last row of the page, which has nothing below it to beat.
+      required: [comparator]
+      properties:
+        comparator:
+          type: string
+          enum: [pin, level, deadline, expected_revenue, waiting_days, relationship, order]
+          description: 'What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.'
+        mine: { $ref: '#/components/schemas/WorklistValue' }
+        theirs: { $ref: '#/components/schemas/WorklistValue' }
+
+    WorklistValue:
+      type: object
+      description: |
+        A typed comparator value — a date, an amount, a count of days, or nothing. Typed
+        rather than pre-formatted because the reader's language and notation are the
+        client's to apply.
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [date, money, days, level, none] }
+        date: { type: string, format: date-time }
+        minor: { type: integer, format: int64, description: 'Money in minor units of `currency`.' }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        days: { type: integer }
+        level: { type: integer, minimum: 0, maximum: 6 }
+
+    WorklistDealFacts:
+      type: object
+      description: |
+        The deal behind an item, with the facts its card states. `expected_minor_base` is
+        `amount_minor × win_probability`, converted to the installation's base currency —
+        the only figure by which two deals in different currencies may be compared.
+      properties:
+        stage_id: { type: [string, 'null'], format: uuid }
+        amount_minor: { type: [integer, 'null'], format: int64 }
+        currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        owner_id: { type: [string, 'null'], format: uuid }
+        win_probability: { type: [integer, 'null'], minimum: 0, maximum: 100 }
+        expected_minor_base: { type: [integer, 'null'], format: int64, description: 'Expected revenue in the base currency. Null when the amount or the rate is unknown.' }
+        expected_close_date: { type: [string, 'null'], format: date }
+        quiet_days: { type: [integer, 'null'], minimum: 0 }
+
+    WorklistSourceUnavailable:
+      type: object
+      description: |
+        A source that did not contribute, and why. `withheld` means the caller may not
+        read it; `failed` means it did not answer. Both are reported rather than folded
+        into an empty queue, because "there is nothing" and "I could not look" are
+        different answers and only one of them means the day is clear.
+      required: [source, reason]
+      properties:
+        source: { type: string }
+        reason: { type: string, enum: [withheld, failed] }
     # ---- Quota + attainment (RD-T06, RD-WIRE-2/3, RD-DDL-2, RD-FORM-2) ----
     Quota:
       type: object
