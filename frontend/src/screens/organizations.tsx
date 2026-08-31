@@ -2414,7 +2414,11 @@ function CompanyRecordBody({
             <CompanyPeopleList
               orgId={org.id}
               bandSlot={(narrow) => (
-                <CoverageBand orgId={org.id} onNarrow={narrow} />
+                <CoverageBand
+                  orgId={org.id}
+                  accountName={org.display_name}
+                  onNarrow={narrow}
+                />
               )}
             />
           )}

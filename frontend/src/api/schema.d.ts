@@ -16539,6 +16539,15 @@ export interface components {
             full_name: string;
             role: string;
             engagement?: components["schemas"]["ContactEngagement"];
+            /**
+             * @description Who on our side can reach this seat, strongest first — the same per-contact
+             *     routes the company 360 carries, from the same read.
+             *
+             *     ABSENT rather than empty for a caller without the activity grant: an empty set
+             *     is an answer ("nobody can reach them"), and giving that answer to somebody who
+             *     was not allowed to ask is the disclosure inverted.
+             */
+            routes?: components["schemas"]["Organization360ContactRoutes"];
         };
         OrganizationCoverageCompleteness: {
             /**

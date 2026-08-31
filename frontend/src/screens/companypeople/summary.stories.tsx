@@ -52,7 +52,11 @@ function story(body: Coverage) {
     stub(body);
     return (
       <StoryProviders>
-        <CoverageBand orgId="o-1" onNarrow={() => {}} />
+        <CoverageBand
+          orgId="o-1"
+          accountName="Brandt GmbH"
+          onNarrow={() => {}}
+        />
       </StoryProviders>
     );
   };
@@ -60,7 +64,7 @@ function story(body: Coverage) {
 
 /** The account a rep hopes for: a way in, and one hole to close. */
 export const AWayInAndAGap: Story = {
-  args: { orgId: "o-1", onNarrow: () => {} },
+  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       best_way_in: {
@@ -91,7 +95,7 @@ export const AWayInAndAGap: Story = {
  * the card says so rather than dressing a fourth follow-up up as an opening.
  */
 export const NobodyHasAnswered: Story = {
-  args: { orgId: "o-1", onNarrow: () => {} },
+  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       summary: { contacts_total: 12, answered: 0, no_reply: 12, untried: 0 },
@@ -110,7 +114,7 @@ export const NobodyHasAnswered: Story = {
  * champion": the deal may well have one this reader cannot see.
  */
 export const CommitteeWithheld: Story = {
-  args: { orgId: "o-1", onNarrow: () => {} },
+  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       deals: [],
@@ -129,7 +133,7 @@ export const CommitteeWithheld: Story = {
  * a committee, and reporting a hole over a partial reading would invent one.
  */
 export const SeatsHidden: Story = {
-  args: { orgId: "o-1", onNarrow: () => {} },
+  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
   render: story(
     coverage({
       committee: { seats: [], gaps: [], unlisted_seats: 3 },

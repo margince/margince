@@ -167,7 +167,7 @@ func (s *Service) fillCommittee(
 	if err != nil {
 		return err
 	}
-	committee, err := s.wireCommittee(ctx, tx, orgID, seats, total, all)
+	committee, err := s.wireCommittee(ctx, tx, orgID, now, seats, total, all)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (s *Service) fillCommittee(
 }
 
 func (s *Service) wireCommittee(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
 	seats []deals.DealStakeholder, total int, all []people.ContactStrength,
 ) (crmcontracts.OrganizationCoverageCommittee, error) {
 	out := crmcontracts.OrganizationCoverageCommittee{
@@ -196,6 +196,25 @@ func (s *Service) wireCommittee(
 	if err != nil {
 		return crmcontracts.OrganizationCoverageCommittee{}, err
 	}
+	// Who on our side can reach each seat, from the SAME reader the 360's
+	// people section uses — a second route ranking would let the map and the
+	// roster disagree about which colleague to ask. Absent without the
+	// activity grant, because an empty set is an answer.
+	var routes map[ids.UUID]crmcontracts.Organization360ContactRoutes
+	mayRoutes, err := mayReadRoutes(ctx)
+	if err != nil {
+		return crmcontracts.OrganizationCoverageCommittee{}, err
+	}
+	if mayRoutes {
+		raw := make([]ids.UUID, len(personIDs))
+		for i, id := range personIDs {
+			raw[i] = id.UUID
+		}
+		routes, err = contactRoutes(ctx, tx, raw, now)
+		if err != nil {
+			return crmcontracts.OrganizationCoverageCommittee{}, err
+		}
+	}
 	held := map[string]bool{}
 	for _, seat := range seats {
 		held[seat.Role] = true
@@ -207,6 +226,9 @@ func (s *Service) wireCommittee(
 		if state, ok := engagement[seat.PersonID]; ok {
 			at := crmcontracts.ContactEngagement(state)
 			wire.Engagement = &at
+		}
+		if route, ok := routes[seat.PersonID]; ok {
+			wire.Routes = &route
 		}
 		out.Seats = append(out.Seats, wire)
 	}
