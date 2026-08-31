@@ -53,6 +53,12 @@ func TestOneClickAcceptsAnEmptyBody(t *testing.T) {
 	if err := requireOneClickBody(oneClickRequest("", "application/x-www-form-urlencoded")); err != nil {
 		t.Errorf("refused an empty form body: %v", err)
 	}
+	// A caller that declares a content type it never fills — e.g. a client
+	// that always sets Content-Type: application/json — is still an absent
+	// body, not a malformed one.
+	if err := requireOneClickBody(oneClickRequest("", "application/json")); err != nil {
+		t.Errorf("refused an empty body carrying an unrelated content type: %v", err)
+	}
 }
 
 // A charset parameter is ordinary and must not change the verdict.

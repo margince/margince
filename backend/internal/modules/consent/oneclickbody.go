@@ -75,8 +75,28 @@ func requireOneClickBody(r *http.Request) error {
 	case "application/x-www-form-urlencoded":
 		return oneClickFromForm(r)
 	default:
-		return httperr.Validation("body", "not_one_click", "a one-click unsubscribe carries the RFC 8058 form body")
+		// A stray content type on a body that turns out to be empty is still
+		// the absent-body case the module comment promises: a caller that
+		// declares a type it never fills must not be refused for content it
+		// did not send.
+		return requireEmptyBody(r)
 	}
+}
+
+// requireEmptyBody admits a body only if it turns out to hold nothing,
+// regardless of what content type declared it.
+func requireEmptyBody(r *http.Request) error {
+	body, err := io.ReadAll(io.LimitReader(r.Body, oneClickBodyLimit+1))
+	if err != nil {
+		return httperr.Validation("body", "not_one_click", "could not read the one-click body")
+	}
+	if len(body) > oneClickBodyLimit {
+		return httperr.Validation("body", "too_large", "a one-click unsubscribe body is a single short field")
+	}
+	if len(body) == 0 {
+		return nil
+	}
+	return httperr.Validation("body", "not_one_click", "a one-click unsubscribe carries the RFC 8058 form body")
 }
 
 // oneClickFromForm reads the URL-encoded spelling.
