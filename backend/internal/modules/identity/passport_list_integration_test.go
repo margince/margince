@@ -35,13 +35,13 @@ func (e *revocationEnv) rotate(t *testing.T, fixture *connectFixture) {
 	fixture.refresh = refreshed
 }
 
-// mintLendable issues a human-minted passport with the given scopes. It is used
-// to build passports for testing, independent of the lend flow.
-func (e *revocationEnv) mintLendable(t *testing.T, human Identity, scopes []string) ids.PassportID {
+// mintOwnPassport issues a human-minted passport with the given scopes. It is
+// used to build passports for testing.
+func (e *revocationEnv) mintOwnPassport(t *testing.T, human Identity, scopes []string) ids.PassportID {
 	t.Helper()
 	issued, err := e.svc.IssuePassport(e.wsCtx(human), human, IssuePassportInput{Scopes: scopes})
 	if err != nil {
-		t.Fatalf("minting a lendable passport: %v", err)
+		t.Fatalf("minting a passport: %v", err)
 	}
 	return issued.ID
 }
@@ -120,8 +120,8 @@ func TestAConnectionIsListedOncePerConnectionNotOncePerRotation(t *testing.T) {
 // one row and silently hide credentials a human still holds.
 func TestMintedPassportsAreNeverFoldedIntoEachOther(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-list-unbound")
-	first := e.mintLendable(t, e.admin, []string{"read"})
-	second := e.mintLendable(t, e.admin, []string{"read", "write"})
+	first := e.mintOwnPassport(t, e.admin, []string{"read"})
+	second := e.mintOwnPassport(t, e.admin, []string{"read", "write"})
 
 	rows, err := e.svc.ListPassports(e.wsCtx(e.admin), e.admin)
 	if err != nil {
@@ -147,7 +147,7 @@ func TestMintedPassportsAreNeverFoldedIntoEachOther(t *testing.T) {
 // `oauth_grant_id IS NULL` from the DISTINCT ON and one of these rows vanishes.
 func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-list-collision")
-	minted := e.mintLendable(t, e.admin, []string{"read"})
+	minted := e.mintOwnPassport(t, e.admin, []string{"read"})
 	ctx := context.Background()
 
 	clientID := "client-" + ids.NewV7().String()

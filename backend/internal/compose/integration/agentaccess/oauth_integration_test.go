@@ -179,7 +179,7 @@ func (o *oauthEnv) postConsent(t *testing.T, form url.Values) (status int, locat
 }
 
 // requestedScopes is the passport vocabulary a scope parameter names, which is
-// what a passport minted to be LENT against that request has to carry. It
+// what a passport minted against that request has to carry. It
 // mirrors the server's own parse: offline_access asks for the connection's
 // lifetime rather than authority over a record, so it is never a passport
 // scope, and a request naming no access scope at all defaults to read exactly

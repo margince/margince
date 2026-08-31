@@ -25,8 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The handler's first act is to demand the human whose authority would be lent.
-// A caller without one is refused there — above the client lookup, and without
+// The handler's first act is to demand the human whose authority the consent
+// would grant. A caller without one is refused there — above the client lookup, and without
 // a database round trip — which is why the Service below carries no pool: a
 // lookup that ran anyway could not silently pass.
 func TestConsentRequestRefusesACallerWithNoSignedInHumanBeforeResolvingTheClient(t *testing.T) {
