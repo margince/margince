@@ -150,6 +150,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// no objects has no purge, which is honest — destroying the rows and
 		// leaving the files would report mail as gone while its attachments sat
 		// in the bucket.
+		//nolint:staticcheck // QF1008: the embedded field is named on purpose, and the file says why forty lines up — every call here is qualified through its own embedded field so that a second embed growing the same method never turns one of them into an ambiguous selector nobody wrote a test for.
 		s.captureExclusionHandlers.purger = NewCapturePurger(pool,
 			NewRetentionServiceFor(InstallationDB(pool), store, slog.Default()))
 		// Captured mail carries files too. Recorded as the STORE, which the sink
