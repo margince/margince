@@ -981,8 +981,9 @@ function AiSettingsTab() {
 
 // This person's own agent authority: what an agent may do unattended, the
 // credentials they have minted, the clients holding one, and the governed tools
-// those credentials reach. Every seat gets it, ungated — a passport is lent by
-// the human, so an admin-only surface here would mean only admins could lend.
+// those credentials reach. Every seat gets it, ungated — a connection's
+// authority comes from the human's own consent, so an admin-only surface here
+// would mean only admins could connect a client.
 function AgentsTab() {
   return (
     <>
@@ -993,7 +994,8 @@ function AgentsTab() {
           tiers the tools below are governed by, so it now reads after them. */}
       <PassportCard />
       {/* Directly after the passports, because it is the second half of one
-          story: mint a passport, then lend it to a client that connects. */}
+          story: mint a passport for unattended use, or consent to a client
+          that connects with its own fresh credential instead. */}
       <ConnectedAgentsCard />
       <AgentToolsCard />
       <AutonomyCard />
@@ -1301,10 +1303,11 @@ function LanguageSettingRow() {
 
 const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
 
-// The scope's wire token is what the server reads; a person choosing what to lend
-// an agent needs the sentence. Composed rather than switched, and annotated so an
-// added scope is a missing-key compile error rather than a checkbox that quietly
-// labels itself `enrich` in every language.
+// The scope's wire token is what the server reads; a person choosing what
+// authority to hand their agent needs the sentence. Composed rather than
+// switched, and annotated so an added scope is a missing-key compile error
+// rather than a checkbox that quietly labels itself `enrich` in every
+// language.
 function scopeLabelKey(scope: (typeof PASSPORT_SCOPES)[number]): MessageKey {
   return `passport.scope.${scope}`;
 }
@@ -1469,8 +1472,9 @@ function PassportCard() {
     >
       <PanelBody>
         {/* The card's prose, and BOTH sentences of it, above the rows: what a
-            passport is, and what lending one does. The lending line used to be
-            a `panel-foot` band under the list, which gave one card three
+            passport is, and how it differs from a connection's own credential.
+            The second sentence used to be a `panel-foot` band under the list,
+            which gave one card three
             different intervals — a body, a row list, and a ruled band — where
             its neighbours have two. Every card on this page now reads the same
             way: title, prose, rows. No `form-stack` either: the paragraph's own
@@ -1785,11 +1789,12 @@ function AgentToolsCard() {
       return data;
     },
   });
-  // Live, and the human's OWN to lend. A connection's credential is neither:
-  // the server refuses to lend a grant-bound passport (identity's
-  // lendablePassportPredicate), so offering one here would name a choice the
-  // consent screen cannot honour — and would put a raw DCR client id back in
-  // front of a reader the rest of this change just took it away from.
+  // Live, and minted by the human themselves. A connection's credential is
+  // neither: it is minted fresh by the token exchange from whatever the human
+  // ticked on the consent screen, so it was never a standalone passport a
+  // human picked from a list — offering one here would offer a choice that
+  // doesn't exist, and would put a raw DCR client id back in front of a reader
+  // the rest of this change just took it away from.
   const mintedPassports = (passports.data?.data ?? []).filter(
     (p) => p.revoked_at == null && p.connection == null,
   );

@@ -5,8 +5,8 @@ import { isMessageKey, useT } from "../i18n";
 import { Select, type SelectOption } from "./select";
 
 // Shared between the tool console's passport filter and the OAuth consent
-// screen (Task 7) — extracted so the two surfaces cannot drift into
-// rendering "which passport, which scopes" differently. A caller supplies
+// screen — extracted so the two surfaces cannot drift into rendering "which
+// passport, which scopes" differently. A caller supplies
 // its own already-localized `label` per option (e.g. the tool console's
 // "Reachable by {name}" phrasing); this component only lays the list out.
 export type PassportOption = {
@@ -17,8 +17,8 @@ export type PassportOption = {
 
 // A scope chip row: every chip a scope the passport carries. There is no
 // "granted versus not" distinction to draw — a connection's scopes are exactly
-// what its consent screen was ticked for (Task 7), and the tool console lists
-// a whole passport's scopes — so a chip means one thing on both surfaces.
+// what its consent screen was ticked for, and the tool console lists a whole
+// passport's scopes — so a chip means one thing on both surfaces.
 export function ScopeChips({ scopes }: Readonly<{ scopes: string[] }>) {
   const t = useT();
   return (
