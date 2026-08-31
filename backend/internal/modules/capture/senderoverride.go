@@ -73,9 +73,29 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	if !ok || actor.UserID == ids.Nil {
 		return SenderOverride{}, apperrors.ErrPermissionDenied
 	}
+	// A read seat is licensed to look. RequireHuman refuses an agent and reads
+	// no grant at all, so on its own it would let one change what the CRM
+	// records — a `business` decision is how a contact gets created, and
+	// `keep_out` is how mail gets destroyed.
+	if !actor.SeatType.CanMutate() {
+		return SenderOverride{}, apperrors.ErrPermissionDenied
+	}
 	if decision != OverrideBusiness && decision != OverrideKeepOut {
 		return SenderOverride{}, &InvalidOverrideError{Reason: "decision is business or keep_out"}
 	}
+	// The grant follows the DECISION, because the two are different acts.
+	// `business` is how a contact comes to exist, so it takes create;
+	// `keep_out` is how one is refused and their mail destroyed, so it takes
+	// delete. Asking for create on a keep_out would refuse the seat who is
+	// allowed to remove people but not add them, which is backwards.
+	grant := principal.ActionCreate
+	if decision == OverrideKeepOut {
+		grant = principal.ActionDelete
+	}
+	if err := auth.Require(ctx, "person", grant); err != nil {
+		return SenderOverride{}, err
+	}
+
 	folded := normalizeEmail(address)
 	if folded == "" {
 		return SenderOverride{}, &InvalidOverrideError{Reason: "give one email address"}
@@ -156,6 +176,9 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
+		return apperrors.ErrPermissionDenied
+	}
+	if !actor.SeatType.CanMutate() {
 		return apperrors.ErrPermissionDenied
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

@@ -143,7 +143,7 @@ func purgeCtx(e *integration.Env, user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Update: true, Delete: true},
-				"person":   {Read: true, Update: true, Delete: true},
+				"person":   {Read: true, Create: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
