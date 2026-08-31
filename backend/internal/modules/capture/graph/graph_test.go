@@ -62,12 +62,44 @@ type fakeAPI struct {
 	sentIDs       map[string]bool // listed ids Graph filed under Sent Items
 	skipIDs       map[string]bool // ids GetMIME refuses as a per-message drop
 	sentFolderErr error
+
+	// The outbound half's state.
+	sendCalls     int
+	sendErr       error
+	sentMIME      [][]byte
+	findCalls     int
+	findErr       error
+	seenFindID    string
+	sentByID      map[string]string
 	listNext      string
 	listCalls     int
 	seenPageToken string
 }
 
 func (f *fakeAPI) Profile(context.Context, string) (string, error) { return f.email, nil }
+
+// The outbound half. sentByID is what Sent Items holds, keyed on the
+// UNBRACKETED identity the caller asks about; sentRaw is the copy the read-back
+// parses. sentMIME records what was submitted, so a test can assert that a
+// retry which found a prior send transmitted NOTHING.
+func (f *fakeAPI) SendMIME(_ context.Context, _ string, rfc822 []byte) error {
+	f.sendCalls++
+	if f.sendErr != nil {
+		return f.sendErr
+	}
+	f.sentMIME = append(f.sentMIME, rfc822)
+	return nil
+}
+
+func (f *fakeAPI) FindSentByMessageID(_ context.Context, _, id string) (string, bool, error) {
+	f.findCalls++
+	f.seenFindID = id
+	if f.findErr != nil {
+		return "", false, f.findErr
+	}
+	msgID, ok := f.sentByID[id]
+	return msgID, ok, nil
+}
 
 func (f *fakeAPI) DeltaInit(_ context.Context, _ string, after time.Time) ([]string, string, error) {
 	f.initCalls++

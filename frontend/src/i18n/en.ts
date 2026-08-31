@@ -3920,11 +3920,11 @@ export const en = {
   "connectors.connectProvider": "Connect {provider}",
   "connectors.rosterLabel": "Mailboxes capturing",
   "connectors.addGmailBrings":
-    "The mail you send and receive, from Google — and the only connection Margince can send from.",
+    "The mail you send and receive, from Google. Margince can send from it too.",
   "connectors.addGcalBrings":
     "Your Google calendar. It connects separately from Gmail.",
   "connectors.addGraphBrings":
-    "Mail and calendar on a Microsoft work account, over the Graph API. Capture only.",
+    "Mail and calendar on a Microsoft work account, over the Graph API. Margince can send from it too.",
   "connectors.addImapBrings":
     "Any other mail host, with an app password. Capture only.",
   "connectors.providerNotConfigured":

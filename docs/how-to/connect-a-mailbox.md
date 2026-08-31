@@ -1,14 +1,12 @@
 # Connect a mailbox for capture
 
-Connect a mailbox so Margince captures its mail onto the timeline — creating people, organizations, and
-activities through the one dedupe chokepoint. This guide is **UI-first**: you drive it from the app,
-with the equivalent `curl` shown alongside for scripting and verification. It covers the three paths you
-can drive from the **UI** — **Gmail over OAuth** (a standing connection with background sync + backfill),
-**IMAP with an app-password** (also a standing connection, and the way to reach a **Gmail** or
-**Outlook / Microsoft 365** mailbox without registering an OAuth app), and **Graph OAuth** for Outlook /
-Microsoft 365 (a standing connection, Path C) — plus **Google Calendar (`gcal`)**, a separate standing connection you add
-alongside Gmail from the same Settings surface (Path D). For the mental model — the connector seam, the
-one Sink, the three ingestion modes, credential custody — read
+Connect a mailbox so Margince captures its mail onto the timeline — creating people, organizations and
+activities through the one dedupe chokepoint. **UI-first**: you drive it from the app, with the
+equivalent `curl` alongside for scripting and verification. Every connection below is standing, and each
+path has its own section: **Gmail over OAuth** (A), **IMAP with an app-password** (B, the way to reach a
+Gmail or Outlook mailbox without registering an OAuth app), **Graph OAuth** for Outlook / Microsoft 365
+(C), and **Google Calendar** (D). For the mental model — the connector seam, the one Sink, the ingestion
+modes, credential custody — read
 [explanation/capture-connectors.md](../explanation/capture-connectors.md) first.
 
 > **Single-organization installation.** One installation serves one organization; the
@@ -247,8 +245,11 @@ export MARGINCE_GRAPH_TENANT="common"   # or a specific tenant id
 # plus the same MARGINCE_CONNECTOR_STATE_KEY / MARGINCE_KEYVAULT_ROOT_KEY / MARGINCE_PUBLIC_BASE_URL as A1
 ```
 
-Register a Microsoft Entra (Azure AD) app with delegated scopes `offline_access User.Read Mail.Read` and
-a redirect URI of `<api-base>/v1/connectors/graph/callback`, then `make dev` to pick up the env.
+Register a Microsoft Entra (Azure AD) app with delegated permissions `offline_access User.Read
+Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`, then `make dev`
+to pick up the env. `Mail.Send` rides the same consent because Microsoft will not add a permission to
+an existing refresh token — a mailbox connected without it captures normally and refuses every send
+by name until it is reconnected.
 
 ### C2. Connect from the UI
 

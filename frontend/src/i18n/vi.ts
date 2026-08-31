@@ -3846,11 +3846,11 @@ export const vi = {
   "connectors.connectProvider": "Kết nối {provider}",
   "connectors.rosterLabel": "Hộp thư đang thu thập",
   "connectors.addGmailBrings":
-    "Thư bạn gửi và nhận, từ Google — và là kết nối duy nhất mà Margince có thể gửi thư qua.",
+    "Thư bạn gửi và nhận, từ Google. Margince cũng có thể gửi thư qua kết nối này.",
   "connectors.addGcalBrings":
     "Google Calendar của bạn. Nó được kết nối riêng, không đi kèm Gmail.",
   "connectors.addGraphBrings":
-    "Thư và lịch của một tài khoản công việc Microsoft, qua Graph API. Chỉ thu thập.",
+    "Thư và lịch của một tài khoản công việc Microsoft, qua Graph API. Margince cũng có thể gửi thư qua kết nối này.",
   "connectors.addImapBrings":
     "Bất kỳ máy chủ thư nào khác, bằng mật khẩu ứng dụng. Chỉ thu thập.",
   "connectors.providerNotConfigured":

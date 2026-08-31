@@ -50,6 +50,8 @@ const (
 	paramClientID = "client_id"
 	paramScope    = "scope"
 	paramFilter   = "$filter"
+	paramSelect   = "$select"
+	paramTop      = "$top"
 
 	// maxMIMELen bounds one message's fetched RFC822 bytes. A message over
 	// this is refused rather than truncated (a truncated MIME blob is not
@@ -87,7 +89,8 @@ type OAuth interface {
 	Refresh(ctx context.Context, refreshToken string) (oauthflow.TokenRefresh, error)
 }
 
-// API is the read-only Graph mail surface the connector uses. All calls take
+// API is the Graph mail surface the connector uses — read-only but for the two
+// send calls at the end, which ride the separate Mail.Send permission. All calls take
 // a short-lived access token (minted from the refresh token per Sync).
 type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
@@ -114,6 +117,15 @@ type API interface {
 	// folder, against which a message's ParentFolderID identifies mail the
 	// authenticated owner sent.
 	SentFolderID(ctx context.Context, accessToken string) (string, error)
+
+	// SendMIME transmits one complete RFC822 message as the signed-in user.
+	// Microsoft acknowledges the submission without naming a message id, so
+	// this reports only whether it was accepted.
+	SendMIME(ctx context.Context, accessToken string, rfc822 []byte) error
+	// FindSentByMessageID resolves the sent copy of a message by the RFC822
+	// identity it was asked to carry — the at-least-once retry guard, and the
+	// only way to name a message this connector has just submitted.
+	FindSentByMessageID(ctx context.Context, accessToken, unbracketedMessageID string) (msgID string, found bool, err error)
 }
 
 // MessageRef is one listed message: its id, plus the folder Graph filed it in.
@@ -337,8 +349,8 @@ func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken string, after t
 	q := url.Values{
 		paramFilter: {receivedAfterFilter(after)},
 		"$count":    {"true"},
-		"$select":   {"id"},
-		"$top":      {"1"},
+		paramSelect: {"id"},
+		paramTop:    {"1"},
 	}
 	// $count=true needs the eventual-consistency header on Graph.
 	hdr := http.Header{"ConsistencyLevel": {"eventual"}}
@@ -353,8 +365,8 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 	if u == "" {
 		q := url.Values{
 			paramFilter: {receivedAfterFilter(after)},
-			"$select":   {"id,parentFolderId"},
-			"$top":      {strconv.Itoa(pageSize)},
+			paramSelect: {"id,parentFolderId"},
+			paramTop:    {strconv.Itoa(pageSize)},
 		}
 		u = a.base + "/me/messages?" + q.Encode()
 	} else if err := a.sameAPIOrigin(u); err != nil {
@@ -395,7 +407,7 @@ func (a *httpAPI) SentFolderID(ctx context.Context, accessToken string) (string,
 	var out struct {
 		ID string `json:"id"`
 	}
-	q := url.Values{"$select": {"id"}}
+	q := url.Values{paramSelect: {"id"}}
 	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/sentitems?"+q.Encode(), nil, &out); err != nil {
 		return "", err
 	}

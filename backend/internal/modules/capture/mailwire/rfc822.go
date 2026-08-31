@@ -1,16 +1,25 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package gmail
-
-// The wire format: a provider-neutral message rendered as the RFC822 bytes
-// Gmail's messages.send accepts.
+// Package mailwire is the OUTBOUND wire format: a provider-neutral message
+// rendered as the RFC822 bytes a mail provider accepts for transmission. It is
+// the sending twin of capture/mailmap, which reads the same format on the way
+// in.
 //
-// Apart from the connector's transport concerns because it is a different
+// Apart from any connector's transport concerns because it is a different
 // question — that half decides WHETHER and WHEN to send, this half decides what
 // the bytes are. It is also the half a reader checks against a spec: the part
 // order, the transfer encodings and the boundary rules below each cite the RFC
 // that requires them.
+//
+// Its own package because TWO providers now submit these bytes: Gmail's
+// messages.send and Microsoft Graph's sendMail both take a complete RFC822
+// message. A second renderer would be a second answer to questions with one
+// right answer — which part comes first in a multipart/alternative, whether an
+// attachment's filename rides in one header or two, where the base64 folds —
+// and the way it fails is that one vendor's recipients get a blank message or a
+// truncated PDF while the other vendor's do not.
+package mailwire
 
 import (
 	"crypto/sha256"
@@ -24,10 +33,11 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// buildRFC822 renders the provider-neutral message as the wire format Gmail
-// accepts: header order follows RFC 5322's origination-first sequence, body is
-// text/plain UTF-8.
-func buildRFC822(from string, msg connector.EmailMessage) string {
+// Build renders the provider-neutral message as a complete RFC822 message:
+// header order follows RFC 5322's origination-first sequence, body is
+// text/plain UTF-8 (or the multipart shapes below when the message carries
+// markup or files).
+func Build(from string, msg connector.EmailMessage) string {
 	var b strings.Builder
 	writeHeader(&b, "From", fromHeader(from, msg.FromName))
 	// An empty To line is omitted rather than written bare. A message sent
@@ -272,4 +282,41 @@ func fromHeader(address, name string) string {
 		return address
 	}
 	return (&mail.Address{Name: trimmed, Address: address}).String()
+}
+
+// bracket renders a message identity as RFC 5322 requires it on the wire. The
+// identity travels unbracketed everywhere else in this system, because that is
+// the form mail parsing yields and therefore the form the captured copy of this
+// message will be keyed on.
+func bracket(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "<" + strings.Trim(id, "<>") + ">"
+}
+
+// addressList renders one address header value: each address trimmed, empties
+// dropped, comma-separated. The trim is the same normalization the send path's
+// consent gate matches on, so the address a recipient is asked about and the
+// address the header carries are one string — a stored " a@x " must not become
+// folding whitespace around an addr-spec that some clients then display raw.
+func addressList(addrs []string) string {
+	out := make([]string, 0, len(addrs))
+	for _, addr := range addrs {
+		if trimmed := strings.TrimSpace(addr); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return strings.Join(out, ", ")
+}
+
+// writeHeader emits one header line with CR and LF removed from the value: a
+// bare CR or LF inside a header is the classic injection vector, and the only
+// safe rendering of one is not to emit it.
+func writeHeader(b *strings.Builder, name, value string) {
+	clean := strings.NewReplacer("\r", "", "\n", "").Replace(value)
+	b.WriteString(name)
+	b.WriteString(": ")
+	b.WriteString(clean)
+	b.WriteString("\r\n")
 }

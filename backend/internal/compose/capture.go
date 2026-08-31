@@ -50,11 +50,23 @@ var gmailScopes = []string{
 	gmail.SendScope,
 }
 
-// graphScopes are the Microsoft identity platform scopes the read-only Graph
-// capture connector requests: mail read + the signed-in user's profile (the
-// mailbox owner lookup) + offline_access (the refresh token). No send, no
-// modify.
-var graphScopes = []string{"offline_access", "User.Read", "Mail.Read"}
+// graphScopes are the Microsoft identity platform permissions a Graph mailbox
+// connection requests: mail read for capture, the signed-in user's profile (the
+// mailbox owner lookup), offline_access (the refresh token), and send for the
+// governed outbound path. No modify, no delete, no shared mailboxes.
+//
+// They ride ONE consent for the same reason Gmail's pair does — Microsoft will
+// not add a permission to an existing refresh token, so asking later would mean
+// a second connection for the same mailbox. A mailbox connected before the send
+// permission landed captures normally and refuses every send by name until it
+// is reconnected.
+//
+// The send entry is the connector's OWN constant, not a copy of its text: what
+// the consent requests and what the connector re-checks are then one string by
+// construction. The second literal — the permission comms demands at the
+// authority gate — cannot be imported by either (comms must not reach into a
+// capture provider), so a fitness test binds it here instead: sendscope_test.go.
+var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.SendScope}
 
 // CaptureConfig is the deployment's capture list-config, threaded from
 // margince.yaml's `capture:` block into the Sink's suppression gates: the

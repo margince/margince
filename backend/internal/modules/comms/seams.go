@@ -315,6 +315,21 @@ func SetChannelProviders(providers []string) {
 	channelProvidersMu.Unlock()
 }
 
+// mailSendScopes are the OAuth permissions a MAIL grant must carry to transmit,
+// per provider.
+//
+// A map rather than a chain of ifs because there are now two vendors and the
+// chain's failure mode is silent: a provider missing from it reports CannotSend,
+// and every one of its deliveries parks with "provider cannot send messages" —
+// a connector limitation that does not exist. Each value is a SECOND spelling of
+// a string a capture provider already declares (this module must not import
+// one), and compose holds the two against each other per provider in
+// compose/sendscope_test.go.
+var mailSendScopes = map[string]string{
+	"gmail": "https://www.googleapis.com/auth/gmail.send",
+	"graph": "Mail.Send",
+}
+
 // SendScopeFor answers whether a provider can transmit and, when its grant must
 // carry an OAuth scope to do so, which scope.
 //
@@ -323,24 +338,19 @@ func SetChannelProviders(providers []string) {
 // authority gate. Two spellings of "may this grant send" could disagree, and a
 // pre-flight that accepted what the gate then parks is worse than none.
 //
-// The MAIL arm is a literal, unchanged: gmail is not, and never will be, an
-// activity_kind (DESIGN-SP4 §4 — the channel_provider table FKs into
-// activity_kind, and gmail names no activity kind), so there is no registry
-// for it to derive from. The scope string is a SECOND spelling of one a
-// capture provider already declares — Gmail's OAuth consent requests that
-// same scope constant rather than a copy — and it has to be: this module must
-// not import a capture provider. compose imports both sides and holds them
-// against each other (compose/sendscope_test.go), because drift here is
-// silent: a misspelled scope parks every send as ungranted, which reads as a
-// user who declined consent.
+// The MAIL arm reads mailSendScopes above: gmail and graph are not, and never
+// will be, activity_kinds (DESIGN-SP4 §4 — the channel_provider table FKs into
+// activity_kind, and neither names an activity kind), so there is no registry
+// for them to derive from. See that map for why the strings are second
+// spellings and what holds them to the first.
 //
 // The CHANNEL arm derives from channelProviders — the same registry
 // activities.IsChannelKind reads — so a provider clearing it is answerable
 // for both "is this a channel conversation" and "can this installation send
 // on it" in one boot-time act.
 func SendScopeFor(provider string) (string, SendCapability) {
-	if provider == "gmail" {
-		return "https://www.googleapis.com/auth/gmail.send", SendsWithScope
+	if scope, ok := mailSendScopes[provider]; ok {
+		return scope, SendsWithScope
 	}
 	channelProvidersMu.RLock()
 	isChannel := channelProviders[provider]
