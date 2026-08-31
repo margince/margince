@@ -19,6 +19,11 @@ import (
 
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
+	// configuredProviders carries the external sign-in providers this DEPLOYMENT
+	// holds credentials for, injected by the option that wires them. Empty is
+	// the honest answer for a deployment that composed none, and the screen then
+	// offers nothing to toggle rather than a list nobody can use.
+	configuredProviders []identity.OIDCProviderConfig
 	// maxUploadBytes is the deployment's attachment ceiling (OPS-CFG-12),
 	// published so an upload surface enforces the number THIS installation
 	// applies rather than one compiled into the client.
@@ -83,6 +88,12 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// identity's own sentence, which quotes the value that was refused. A
 	// second check here would name a different field and say less.
 	patch.FiscalYearStartMonth = req.FiscalYearStartMonth
+	// Passed through unvalidated against the deployment's list on purpose. A key
+	// this deployment holds no credentials for enables nothing — the effective
+	// answer is the intersection — so refusing it would be refusing a request
+	// that is already harmless, and would make an admin's saved choice depend on
+	// which providers happened to be wired the day they saved it.
+	patch.EnabledOidcProviders = req.EnabledOidcProviders
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -107,10 +118,50 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
 		BaseCurrencyLocked:   s.BaseCurrencyLocked,
 		MaxUploadBytes:       h.maxUploadBytes,
+		SignInProviders:      h.signInProviders(s.EnabledOidcProviders),
 	}
 	if s.BaseCurrencyLockedReason != "" {
 		reason := s.BaseCurrencyLockedReason
 		out.BaseCurrencyLockedReason = &reason
+	}
+	return out
+}
+
+// signInProviders reports every provider this DEPLOYMENT can offer, each marked
+// with whether the installation currently offers it.
+//
+// The deployment's list is the spine and the setting only marks it, because the
+// two answer different questions: credentials decide what is possible, and the
+// admin decides what is offered. Rendering the setting alone would show an
+// operator a provider they cannot actually use, and rendering it as a free-text
+// list would invite them to type one in.
+//
+// A nil chosen list means the admin has never chosen, which is every configured
+// provider. That is the reading compose applies when it resolves the effective
+// set, and this screen has to apply it too or it would show an operator a
+// provider list their login page does not serve.
+func (h installationSettingsHandlers) signInProviders(chosen []string) []struct {
+	Enabled bool   `json:"enabled"`
+	Key     string `json:"key"`
+	Label   string `json:"label"`
+} {
+	out := make([]struct {
+		Enabled bool   `json:"enabled"`
+		Key     string `json:"key"`
+		Label   string `json:"label"`
+	}, 0, len(h.configuredProviders))
+	for _, p := range h.configuredProviders {
+		enabled := chosen == nil
+		for _, key := range chosen {
+			if key == p.Key {
+				enabled = true
+			}
+		}
+		out = append(out, struct {
+			Enabled bool   `json:"enabled"`
+			Key     string `json:"key"`
+			Label   string `json:"label"`
+		}{Enabled: enabled, Key: p.Key, Label: p.Label})
 	}
 	return out
 }

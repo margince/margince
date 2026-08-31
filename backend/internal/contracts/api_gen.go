@@ -19157,6 +19157,25 @@ type InstallationSettings struct {
 	// Name The organization's display name.
 	Name string `json:"name"`
 
+	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
+	// the installation currently offers it on the login screen. The list is what the
+	// DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
+	// a client id and secret cannot be invented from a settings screen.
+	//
+	// Password sign-in is deliberately absent from this list. It is the method every
+	// installation always has and the one that cannot be disabled, so there is no state
+	// here that could turn it off and strand everybody.
+	SignInProviders []struct {
+		// Enabled Whether this installation currently offers it on the login screen.
+		Enabled bool `json:"enabled"`
+
+		// Key The provider key the sign-in routes are served under.
+		Key string `json:"key"`
+
+		// Label The provider's display name, as the login screen shows it.
+		Label string `json:"label"`
+	} `json:"sign_in_providers"`
+
 	// Timezone IANA zone name every reporting period boundary is computed in (not a user's own
 	// display timezone, which is per-user).
 	Timezone string `json:"timezone"`
@@ -26105,6 +26124,15 @@ type UpdateInstallationSettingsRequest struct {
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
+
+	// EnabledOidcProviders The provider keys the login screen may offer, of those this deployment configured.
+	// Sending a key the deployment has no credentials for enables nothing: the effective
+	// list is the intersection, so this can only ever narrow what is possible.
+	//
+	// Password sign-in is not a member of this list and cannot be removed by any value of
+	// it. Omit the field to leave the choice unchanged; send an empty array to offer
+	// password only.
+	EnabledOidcProviders *[]string `json:"enabled_oidc_providers,omitempty"`
 
 	// FiscalYearStartMonth The month the installation's business year begins, 1..12. Never frozen: it cuts
 	// reports on read and stores nothing, so moving it re-labels every period report at

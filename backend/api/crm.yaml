@@ -17101,7 +17101,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, base_currency_locked, max_upload_bytes]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, base_currency_locked, max_upload_bytes, sign_in_providers]
       properties:
         name:
           type: string
@@ -17140,6 +17140,31 @@ components:
             The label spells both calendar years a non-January year spans — `FY2026/27` — so
             a reader can tell which twelve months a bucket covers without knowing the
             convention. A January year is not a span and keeps the plain `2026`.
+        sign_in_providers:
+          type: array
+          description: |
+            Every external sign-in provider this deployment holds credentials for, and whether
+            the installation currently offers it on the login screen. The list is what the
+            DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
+            a client id and secret cannot be invented from a settings screen.
+
+            Password sign-in is deliberately absent from this list. It is the method every
+            installation always has and the one that cannot be disabled, so there is no state
+            here that could turn it off and strand everybody.
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, label, enabled]
+            properties:
+              key:
+                type: string
+                description: The provider key the sign-in routes are served under.
+              label:
+                type: string
+                description: The provider's display name, as the login screen shows it.
+              enabled:
+                type: boolean
+                description: Whether this installation currently offers it on the login screen.
         base_currency_locked:
           type: boolean
           description: |
@@ -17188,6 +17213,17 @@ components:
             The month the installation's business year begins, 1..12. Never frozen: it cuts
             reports on read and stores nothing, so moving it re-labels every period report at
             once and re-means no stored row.
+        enabled_oidc_providers:
+          type: array
+          items: { type: string }
+          description: |
+            The provider keys the login screen may offer, of those this deployment configured.
+            Sending a key the deployment has no credentials for enables nothing: the effective
+            list is the intersection, so this can only ever narrow what is possible.
+
+            Password sign-in is not a member of this list and cannot be removed by any value of
+            it. Omit the field to leave the choice unchanged; send an empty array to offer
+            password only.
 
     CaptureActivityResponse:
       type: object

@@ -25,6 +25,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -153,7 +156,7 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 // injects nothing, so oidc_providers stays [] and the routes 404 (identity's
 // own per-provider lookup).
 func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
+	return func(s *Server, pool *pgxpool.Pool) {
 		if !cfg.Enabled() {
 			return
 		}
@@ -175,8 +178,71 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 				FailureURL:   cfg.FailureURL,
 			},
 		)
-		s.authHandlers = s.WithOIDCCapabilitiesFn(func() []identity.OIDCProviderConfig {
-			return []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
-		})
+		configured := []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
+		s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, identity.NewService(pool), configured))
+		// The settings screen needs the same list, so an admin sees the providers
+		// this deployment can actually offer rather than a free-text field. Set
+		// HERE rather than in assembly because only this option knows what was
+		// composed, and options run after the handlers are assembled.
+		s.configuredProviders = configured
+	}
+}
+
+// enabledOidcProvidersReadActor names the read in the audit trail. A SYSTEM
+// actor because no human asked for this: a browser rendered a login screen, and
+// this is the configuration that decides what it may offer. The same shape as
+// the installation-setup and google-app reads, for the same reason.
+const enabledOidcProvidersReadActor = "system:enabled_oidc_providers_read"
+
+// enabledOidcProviders answers which providers may be used right now:
+// the deployment's configured set INTERSECTED with the admin's chosen list.
+//
+// The intersection, and never the setting alone, because an operator cannot
+// invent a client id and secret from a settings screen — the deployment is what
+// makes a provider possible and the setting only narrows it. Absent (nil) means
+// every configured provider, so an installation that upgrades into this setting
+// keeps the login screen it had.
+//
+// This is reached from an ANONYMOUS endpoint, so it resolves the installation
+// and reads as a system actor: the settings read takes an RBAC gate, and there
+// is no human on a login screen to satisfy it. It is only ever wired when the
+// deployment composed a provider at all, which is what keeps /auth/capabilities
+// off the database entirely on an installation that has none.
+func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured []identity.OIDCProviderConfig) func(context.Context) ([]identity.OIDCProviderConfig, error) {
+	return func(ctx context.Context) ([]identity.OIDCProviderConfig, error) {
+		// No pool means no settings store, so there is no admin policy to read
+		// and the deployment's list IS the whole answer — the same reading an
+		// absent setting gets below. Only a role composed without a database
+		// reaches this; every role that serves /v1 has one.
+		if pool == nil {
+			return configured, nil
+		}
+		wsID, err := svc.InstallationWorkspace(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("resolving the installation for the sign-in provider policy: %w", err)
+		}
+		readCtx := principal.WithCorrelationID(
+			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
+				Type: principal.PrincipalSystem,
+				ID:   enabledOidcProvidersReadActor,
+			}), ids.NewV7())
+		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
+		if err != nil {
+			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)
+		}
+		if chosen == nil {
+			return configured, nil
+		}
+		allowed := make(map[string]bool, len(chosen))
+		for _, key := range chosen {
+			allowed[key] = true
+		}
+		enabled := make([]identity.OIDCProviderConfig, 0, len(configured))
+		for _, p := range configured {
+			if allowed[p.Key] {
+				enabled = append(enabled, p)
+			}
+		}
+		return enabled, nil
 	}
 }

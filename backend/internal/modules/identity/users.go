@@ -143,7 +143,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
-			nil, map[string]any{"email": in.Email, "role": in.Role, "team_ids": in.TeamIDs, userAuditKeyStatus: userStatusInvited})
+			nil, map[string]any{"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs, userAuditKeyStatus: userStatusInvited})
 		if err != nil {
 			return err
 		}

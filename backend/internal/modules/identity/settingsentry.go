@@ -176,6 +176,38 @@ var FiscalYearStartMonth = settings.Define[int](
 	},
 ).AsInstallationIdentity()
 
+// EnabledOidcProviders is which external identity providers this installation
+// offers on its login screen, of those the deployment holds credentials for.
+// The effective list is the INTERSECTION: this setting can only ever narrow
+// what the deployment composed, because an operator cannot invent a client id
+// and secret from the settings screen.
+//
+// PASSWORD IS NOT A MEMBER OF THIS SET, and that is the whole reason the entry
+// is named for providers rather than for login methods. Password is the method
+// every installation always has and the one an admin must not be able to strand
+// everybody by removing, so "it cannot be disabled" is a property of the shape
+// here — there is no value of this setting that turns it off — rather than a
+// validation rule a later change could relax. GetAuthCapabilities reports
+// Password as a constant for the same reason.
+//
+// Absent (nil) means every provider the deployment configured, so an
+// installation that upgrades into this setting keeps the login screen it had
+// and nobody has to be told to go and re-enable Google.
+var EnabledOidcProviders = settings.Define[[]string](
+	"identity.enabled_oidc_providers",
+	installationSettingsObject,
+	"update",
+	nil,
+	func(keys []string) error {
+		for _, key := range keys {
+			if strings.TrimSpace(key) == "" {
+				return fmt.Errorf("a provider key cannot be blank")
+			}
+		}
+		return nil
+	},
+)
+
 // Definitions is identity's contribution to the settings registry.
 func Definitions() []settings.Definition {
 	return []settings.Definition{
@@ -184,6 +216,7 @@ func Definitions() []settings.Definition {
 		BaseCurrency,
 		BaseLanguage,
 		FiscalYearStartMonth,
+		EnabledOidcProviders,
 		SMTPPasswordRef,
 		LicenseTokenRef,
 	}

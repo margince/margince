@@ -11283,6 +11283,24 @@ export interface components {
              */
             fiscal_year_start_month: number;
             /**
+             * @description Every external sign-in provider this deployment holds credentials for, and whether
+             *     the installation currently offers it on the login screen. The list is what the
+             *     DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
+             *     a client id and secret cannot be invented from a settings screen.
+             *
+             *     Password sign-in is deliberately absent from this list. It is the method every
+             *     installation always has and the one that cannot be disabled, so there is no state
+             *     here that could turn it off and strand everybody.
+             */
+            sign_in_providers: {
+                /** @description The provider key the sign-in routes are served under. */
+                key: string;
+                /** @description The provider's display name, as the login screen shows it. */
+                label: string;
+                /** @description Whether this installation currently offers it on the login screen. */
+                enabled: boolean;
+            }[];
+            /**
              * @description True once a conversion rate has been frozen against the base currency — by a closed
              *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
              *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
@@ -11329,6 +11347,16 @@ export interface components {
              *     once and re-means no stored row.
              */
             fiscal_year_start_month?: number;
+            /**
+             * @description The provider keys the login screen may offer, of those this deployment configured.
+             *     Sending a key the deployment has no credentials for enables nothing: the effective
+             *     list is the intersection, so this can only ever narrow what is possible.
+             *
+             *     Password sign-in is not a member of this list and cannot be removed by any value of
+             *     it. Omit the field to leave the choice unchanged; send an empty array to offer
+             *     password only.
+             */
+            enabled_oidc_providers?: string[];
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];

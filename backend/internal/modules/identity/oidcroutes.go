@@ -8,6 +8,7 @@ package identity
 // resolve/link logic) purely to keep that file under the size ceiling.
 
 import (
+	"context"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -62,13 +63,44 @@ func (h Handlers) WithOIDCProviders(
 	return h
 }
 
-// WithOIDCCapabilitiesFn injects how GetAuthCapabilities discovers the
-// currently-configured provider list. Separate from WithOIDCProviders on
-// purpose: that call wires the start/callback routes from a fixed provider
-// map; this one is read fresh on every request, so it can reflect a
-// Settings-configured Google app that changed after boot without requiring a
-// restart.
-func (h Handlers) WithOIDCCapabilitiesFn(fn func() []OIDCProviderConfig) Handlers {
-	h.oidcCapabilitiesFn = fn
+// WithOIDCProvidersEnabledFn injects the ONE answer to "which providers may be
+// used right now", read fresh on every request so a settings change takes
+// effect without a restart.
+//
+// All three consumers take this same function, and that is the point of it
+// being one rather than three checks: GetAuthCapabilities decides which buttons
+// to draw, StartOidcSignIn decides whether a flow may begin, and
+// OidcSignInCallback decides whether one may complete. Filtering only the
+// capabilities response would leave the routes live — the button disappears
+// while the endpoint still mints sessions for anyone holding the URL — and
+// checking the callback too is what makes disabling a provider stop the flows
+// already in flight rather than only the ones not yet started.
+//
+// It returns an error because the answer comes from a settings read that can
+// fail, and every caller must be able to tell "no providers" from "I could not
+// find out". The two get different treatment: no providers is a login screen
+// with password only, while a failure refuses the sign-in.
+func (h Handlers) WithOIDCProvidersEnabledFn(fn func(context.Context) ([]OIDCProviderConfig, error)) Handlers {
+	h.oidcProvidersEnabledFn = fn
 	return h
+}
+
+// oidcProviderEnabled reports whether one provider may be used for a sign-in
+// right now. Both routes ask it through this helper, and an unwired seam
+// answers "enabled" so a deployment that composed providers without the policy
+// keeps working exactly as it did.
+func (h Handlers) oidcProviderEnabled(ctx context.Context, provider string) (bool, error) {
+	if h.oidcProvidersEnabledFn == nil {
+		return true, nil
+	}
+	enabled, err := h.oidcProvidersEnabledFn(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, p := range enabled {
+		if p.Key == provider {
+			return true, nil
+		}
+	}
+	return false, nil
 }

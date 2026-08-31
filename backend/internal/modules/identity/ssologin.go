@@ -136,6 +136,19 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
+	// A provider the admin has turned off answers exactly like one that was
+	// never configured, so the response does not disclose that it exists but is
+	// off. A failed policy read is NOT that answer: reporting an outage as
+	// absence would send an operator to debug a configuration that is fine.
+	enabled, policyErr := h.oidcProviderEnabled(r.Context(), provider)
+	if policyErr != nil {
+		httperr.Write(w, r, policyErr)
+		return
+	}
+	if !enabled {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
 	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
@@ -191,6 +204,19 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	}
 
 	if _, ok := h.oidcProviders[provider]; !ok {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	// Checked on the CALLBACK too, not only at the start. A provider disabled
+	// while a browser was away at the consent screen must not be able to
+	// complete: filtering the button row alone would leave this route minting
+	// sessions for every flow already in flight.
+	enabled, policyErr := h.oidcProviderEnabled(ctx, provider)
+	if policyErr != nil {
+		fail(ctx, "provider policy", policyErr)
+		return
+	}
+	if !enabled {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}

@@ -6,6 +6,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -149,7 +150,7 @@ type Handlers struct {
 	// boot (WithOIDCCapabilitiesFn) — separate from oidcProviders above
 	// because a Settings-configured Google app can change after boot without
 	// a restart. Nil reports no providers.
-	oidcCapabilitiesFn func() []OIDCProviderConfig
+	oidcProvidersEnabledFn func(context.Context) ([]OIDCProviderConfig, error)
 }
 
 // NewHandlers builds the identity transport surface over its service.
@@ -286,8 +287,19 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 		Key   string `json:"key"`
 		Label string `json:"label"`
 	}, 0)
-	if h.oidcCapabilitiesFn != nil {
-		for _, p := range h.oidcCapabilitiesFn() {
+	if h.oidcProvidersEnabledFn != nil {
+		// A failed read reports NO providers rather than refusing the request.
+		// This endpoint is what the login screen renders from, so an error here
+		// must degrade to the method every installation always has — password —
+		// instead of leaving a reader with no way in at all. The routes
+		// themselves fail closed separately (StartOidcSignIn), so reporting a
+		// short list can never admit a sign-in the policy would refuse.
+		enabled, err := h.oidcProvidersEnabledFn(r.Context())
+		if err != nil {
+			slog.WarnContext(r.Context(), "the enabled sign-in providers could not be read; this login screen offers password only",
+				"reason", err)
+		}
+		for _, p := range enabled {
 			caps.OidcProviders = append(caps.OidcProviders, struct {
 				Key   string `json:"key"`
 				Label string `json:"label"`
