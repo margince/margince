@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
@@ -362,9 +363,12 @@ func googleAppReachable(resolve googleAppResolver, c GmailConfig) bool {
 }
 
 // CaptureSyncRegistry is the worker's sweep registry: always non-nil —
-// the standing IMAP connector needs no deployment config — with the gmail
-// and graph connectors added when their OAuth apps are configured. A provider
-// nobody registered simply never appears in the dispatcher's provider list.
+// the standing IMAP connector needs no deployment config — with the Google and
+// Microsoft connectors added when their OAuth apps are configured. Each vendor
+// contributes BOTH its mail and its calendar connector, because one app serves
+// both and a calendar that connects but never syncs reads as an empty calendar
+// rather than as a broken one. A provider nobody registered simply never
+// appears in the dispatcher's provider list.
 func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, g GraphConfig, cfg CaptureConfig, log *slog.Logger) *capture.Registry {
 	// The worker resolves the STORED app exactly as the api does. Without this
 	// a mailbox connected against a stored app would connect and then never
@@ -374,6 +378,7 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	if g.canSync() {
 		reg.Register(graph.New(newGraphOAuth(g), graph.NewAPI(nil, "")).
 			WithBounceSink(newBounceSink(pool)))
+		reg.Register(graphcal.New(newGraphCalOAuth(g), graphcal.NewAPI(nil, "")))
 	}
 	return reg
 }

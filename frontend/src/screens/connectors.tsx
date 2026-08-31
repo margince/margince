@@ -54,18 +54,32 @@ const providerLabel: Record<Provider, MessageKey> = {
   gmail: "connectors.provGmail",
   gcal: "connectors.provGcal",
   graph: "connectors.provGraph",
+  graphcal: "connectors.provGraphCal",
   imap: "connectors.provImap",
 };
 
 // The OAuth providers whose reconnect re-mints a consent URL; imap reconnects
 // (and first-connects) through the inline ImapConnectForm below instead, since
 // a credential provider never redirects.
-const OAUTH_PROVIDERS = new Set<Provider>(["gmail", "gcal", "graph"]);
+const OAUTH_PROVIDERS = new Set<Provider>([
+  "gmail",
+  "gcal",
+  "graph",
+  "graphcal",
+]);
 
 // The full connector roster the "Add a connection" affordance offers from —
-// the empty state shows all four, the row shows whichever aren't already
-// present in GET /connectors.
-const ALL_PROVIDERS: Provider[] = ["gmail", "gcal", "graph", "imap"];
+// the empty state shows every one, the row shows whichever aren't already
+// present in GET /connectors. Mail and calendar are separate entries on both
+// vendors because they are separate CONNECTIONS: one consent each, so a person
+// can bring one without the other and disconnect either.
+const ALL_PROVIDERS: Provider[] = [
+  "gmail",
+  "gcal",
+  "graph",
+  "graphcal",
+  "imap",
+];
 
 // Disconnecting an OAuth connection deletes OUR stored credential; it does
 // not reach out to the vendor to revoke the grant on their side (there is no
@@ -76,6 +90,7 @@ const OAUTH_DISCONNECT_NOTE: Partial<Record<Provider, MessageKey>> = {
   gmail: "connectors.disconnectBodyGoogleNote",
   gcal: "connectors.disconnectBodyGoogleNote",
   graph: "connectors.disconnectBodyMicrosoftNote",
+  graphcal: "connectors.disconnectBodyMicrosoftNote",
 };
 
 // The OAuth callback lands back on #/settings/connections/{outcome} — the
@@ -182,14 +197,15 @@ function ConnectionIdentity({
 }
 
 // What each provider actually brings, one sentence each. They exist because
-// the choice cannot be made from four names: "Gmail" and "Google Calendar"
-// are two halves of one account, only the OAuth mailboxes can send, and IMAP is the
-// answer for every host with no OAuth at all. A strip of four buttons had
-// nowhere to say any of that.
+// the choice cannot be made from the names alone: on both vendors the mail and
+// the calendar are two halves of one account and two separate connections, only
+// the OAuth mailboxes can send, and IMAP is the answer for every host with no
+// OAuth at all. A strip of buttons had nowhere to say any of that.
 const PROVIDER_BLURB: Record<Provider, MessageKey> = {
   gmail: "connectors.addGmailBrings",
   gcal: "connectors.addGcalBrings",
   graph: "connectors.addGraphBrings",
+  graphcal: "connectors.addGraphCalBrings",
   imap: "connectors.addImapBrings",
 };
 

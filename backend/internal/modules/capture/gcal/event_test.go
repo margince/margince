@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -163,13 +164,12 @@ func TestParseEventAllDayFallsBackToDate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	m := mustParse(t, raw)
 	// A timezone-free all-day date is anchored at noon UTC so it keeps its
 	// calendar date across the ±12h of real-world offsets (midnight UTC would
 	// slip to the previous day for any zone west of UTC).
 	want := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
-	if !m.occurredAt.Equal(want) {
-		t.Errorf("all-day OccurredAt = %v, want %v (noon UTC)", m.occurredAt, want)
+	if got := occurredAtOf(t, mustRecord(t, raw)); !got.Equal(want) {
+		t.Errorf("all-day OccurredAt = %v, want %v (noon UTC)", got, want)
 	}
 }
 
@@ -198,7 +198,7 @@ func TestParseEventBodyFoldsParticipants(t *testing.T) {
 }
 
 func TestBodyIsTruncatedToBudget(t *testing.T) {
-	longDesc := strings.Repeat("a", maxBodyLen+500)
+	longDesc := strings.Repeat("a", meetingmap.MaxBodyLen+500)
 	raw, err := json.Marshal(map[string]any{
 		"id": "evt-long", "status": "confirmed", "summary": "Big",
 		"description": longDesc,
@@ -209,9 +209,9 @@ func TestBodyIsTruncatedToBudget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	body := mustParse(t, raw).body
-	if len([]rune(body)) > maxBodyLen+1 { // +1 for the ellipsis rune
-		t.Errorf("body of %d runes exceeds the cap %d", len([]rune(body)), maxBodyLen)
+	body := bodyOf(t, mustRecord(t, raw))
+	if len([]rune(body)) > meetingmap.MaxBodyLen+1 { // +1 for the ellipsis rune
+		t.Errorf("body of %d runes exceeds the cap %d", len([]rune(body)), meetingmap.MaxBodyLen)
 	}
 	if !strings.HasSuffix(body, "…") {
 		t.Error("a truncated body must end with an ellipsis")
@@ -238,7 +238,7 @@ func TestParseEventRejectsMalformedJSON(t *testing.T) {
 
 const gcalOwner = "rep@myco.com"
 
-func mustParse(t *testing.T, raw []byte) meeting {
+func mustParse(t *testing.T, raw []byte) meetingmap.Meeting {
 	t.Helper()
 	m, err := parseEvent(raw, gcalOwner)
 	if err != nil {
@@ -250,6 +250,27 @@ func mustParse(t *testing.T, raw []byte) meeting {
 func mustRecord(t *testing.T, raw []byte) connector.NormalizedRecord {
 	t.Helper()
 	return mustParse(t, raw).ToRecord("gcal", raw)
+}
+
+// bodyOf and occurredAtOf read stored fields off a record, failing the test
+// rather than asserting the Fields type at each call site.
+func bodyOf(t *testing.T, rec connector.NormalizedRecord) string {
+	t.Helper()
+	return activityFields(t, rec).Body
+}
+
+func occurredAtOf(t *testing.T, rec connector.NormalizedRecord) time.Time {
+	t.Helper()
+	return activityFields(t, rec).OccurredAt
+}
+
+func activityFields(t *testing.T, rec connector.NormalizedRecord) capture.ActivityFields {
+	t.Helper()
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("Fields is %T, want capture.ActivityFields", rec.Fields)
+	}
+	return fields
 }
 
 // roomEventJSON is eventJSON with one booked room on the attendee list: the

@@ -2,7 +2,7 @@
 
 `internal/modules/capture` (interfaces.md §1, capture.md CAP-*) is Margince's **inbound**
 integration surface: a *connector* talks to an external provider (Gmail, an IMAP mailbox, Microsoft
-365 / Outlook via Graph, Google Calendar), normalizes each provider record onto the clean relational
+365 / Outlook mail and calendar via Graph, Google Calendar), normalizes each provider record onto the clean relational
 core, and hands it to the **one** `connector.Sink` the capture module owns. It is the mirror image of
 [outbound-webhooks.md](outbound-webhooks.md): that is the governed *egress* surface, this is the
 governed *ingress* one.
@@ -143,11 +143,11 @@ token; they never fight, and the capture key makes any overlap a no-op.
 
 ## Connecting — the OAuth flow
 
-The standing connectors (`gmail`/`gcal`/`graph`) share one handshake (`capture/oauthflow`). Only the
+The standing connectors (`gmail`/`gcal`/`graph`/`graphcal`) share one handshake (`capture/oauthflow`). Only the
 connect step is worth a picture — everything after is the sync above:
 
 ```text
-1. POST /connectors/{gmail|gcal|graph}/connect      (human session)
+1. POST /connectors/{gmail|gcal|graph|graphcal}/connect  (human session)
       → sign state (HMAC key, TTL 10m) + set CSRF cookie
       → return authorize_url  ──▶  user consents at the provider
 
@@ -165,18 +165,15 @@ refresh token (see below).
 
 ## The connectors
 
-All five register in `internal/compose/capture.go`; every one produces `activity` on the way in, and
-three of them can also transmit. The differences that matter:
-
-| | **Gmail** | **IMAP** | **Graph** (Outlook) | **Calendar** (gcal) | **Telegram** |
-|---|---|---|---|---|---|
-| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` | BotFather bot token |
-| Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
-| Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `getUpdates` offset |
-| Push | Pub/Sub 7-day | — (poll) | — (poll) | — (poll) | — (long poll, exclusive per bot) |
-| Backfill | ✔ | — | ✔ | — | — (the Bot API has no history endpoint) |
-| Send | ✔ (`EmailSender`) | — | ✔ (`EmailSender`) | — | ✔ (`MessageSender`) |
-| Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only (its own card) |
+| | **Gmail** | **IMAP** | **Graph** (Outlook mail) | **Calendar** (gcal) | **Graph calendar** (graphcal) | **Telegram** |
+|---|---|---|---|---|---|---|
+| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` | OAuth `Calendars.Read` | BotFather bot token |
+| Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
+| Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `deltaLink` | `getUpdates` offset |
+| Push | Pub/Sub 7-day | — (poll) | — (poll) | — (poll) | — (poll) | — (long poll, exclusive per bot) |
+| Backfill | ✔ | — | ✔ | — | — (the window IS the sync) | — (the Bot API has no history endpoint) |
+| Send | ✔ (`EmailSender`) | — | ✔ (`EmailSender`) | — | — | ✔ (`MessageSender`) |
+| Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only | Settings only (its own card) |
 
 ### Gmail — standing OAuth, push-capable, send-capable
 
@@ -255,6 +252,31 @@ the calendar scope enabled and a `/connectors/gcal/callback` redirect URI added,
 Settings **Add a connection** starts it (no onboarding chip for Calendar — Gmail, Microsoft, and IMAP are
 the three onboarding chips); the roster manages an existing connection.
 
+### Microsoft 365 calendar (graphcal) — standing OAuth, poll-only
+
+OAuth2 to the Microsoft identity platform with `offline_access User.Read Calendars.Read`. It **reuses
+the same Entra app as the Outlook mailbox**, but as its *own* authorization requesting the calendar
+permission alone — so a person can bring their calendar without their mail, and disconnecting either
+leaves the other standing (exactly the boundary the Gmail/Calendar pair keeps). Incremental sync walks
+a **calendarView delta** from a `deltaLink`; a stale link (`ErrDeltaGone`, HTTP 410) re-anchors.
+
+The window is 90 days back and a year ahead, and it is what the standing connection *watches* rather
+than merely a first pull's bound — Graph's `calendarView` delta reports only events starting inside the
+range it was opened against. That range does **not** move on its own, and a valid `deltaLink` is
+resumed forever, so the connector dates its window in the cursor and **reopens it every 30 days**:
+without that, a meeting booked past the forward edge would never be reported and nothing would say so.
+There is no separate `Backfiller` — the backwards half of the window already is one, which is also why
+a calendar has no manual backfill to run.
+
+No push. **To run:** the *same* Microsoft Entra app as Outlook mail, with `Calendars.Read` added and a
+`/connectors/graphcal/callback` redirect URI, + the vault key. **UI:** Settings **Add a connection**
+starts it (no onboarding chip for either calendar — Gmail, Microsoft and IMAP are the three onboarding
+chips); the roster manages an existing connection.
+
+The mapping rules — which meetings are worth logging, whether a booked room counts as a guest, which
+addresses reach the writer — are **shared with Google Calendar** (`capture/meetingmap`). Each
+connector owns only its vendor's decode.
+
 ## Where each piece runs
 
 Capture spans both process roles ([the four `cmd/<role>` binaries](architecture.md)):
@@ -298,14 +320,18 @@ which has no onboarding chip and so is Settings-only.
 
 The pipeline is live; these were scoped out, not missed:
 
-- **No onboarding chip for Calendar.** `gcal` is a fully wired OAuth connector (same
+- **No onboarding chip for either calendar.** `gcal` and `graphcal` are fully wired OAuth connectors (same
   `connect`/`callback`/`disconnect` + sync as Gmail/Graph); Settings' **Add a connection** footer starts
   one, but the onboarding connect step's three chips (Google, Microsoft, IMAP) don't include it — adding
   Calendar during first-run onboarding still means a trip to Settings afterward.
-- **Graph is poll-only.** The change-notification subscription (validationToken handshake, `clientState`,
-  ≤3-day renewal) is unbuilt, so Outlook latency is the poll interval. (Gmail has both halves — the
-  push-watch renewal sweep and the `/webhooks/gmail` consumer above — so a Gmail deployment with a
-  Pub/Sub topic configured is push-driven, with the poll behind it as the safety net.)
+- **Graph is poll-only, mail and calendar alike.** The change-notification subscription
+  (validationToken handshake, `clientState`, ≤3-day renewal) is unbuilt, so Outlook latency is the poll
+  interval. (Gmail has both halves — the push-watch renewal sweep and the `/webhooks/gmail` consumer
+  above — so a Gmail deployment with a Pub/Sub topic configured is push-driven, with the poll behind it
+  as the safety net.)
+- **The Outlook calendar sees a bounded window.** 90 days back, a year ahead, reopened every 30 days so
+  forward-dated meetings enter it. History older than 90 days at connect time is never imported — there
+  is no calendar `Backfiller` on either vendor.
 - **Graph refresh-token rotation is persisted** (it was not, and the gap is closed). Microsoft issues a
   NEW refresh token on every redemption; the old one stays valid for its own lifetime, but that lifetime
   is a ceiling — 90 days idle for a confidential client, shorter after a password change, an admin revoke
@@ -337,8 +363,10 @@ The pipeline is live; these were scoped out, not missed:
   app-password included, and destroyed on disconnect. A provider that REPLACES it on use (Microsoft does,
   on every redemption) reports the replacement through `CredentialRotator`, and the re-seal obeys the
   same fence and the same destroy-the-old rule.
-- **All four connections are standing** and sync in the background; only Gmail/Graph backfill and
-  send; only Gmail pushes.
+- **Every connection is standing** and syncs in the background; only Gmail/Graph backfill, only
+  Gmail/Graph send, and only Gmail pushes.
+- **Mail and calendar are always separate connections**, on Google and Microsoft alike: one consent
+  each, so a person can bring one without the other and disconnect either.
 
 ## Where the code lives
 
@@ -357,6 +385,8 @@ The pipeline is live; these were scoped out, not missed:
 | Graph connector (OAuth, delta sync, backfill, send) | `internal/modules/capture/graph/` |
 | The shared outbound RFC822 renderer both mail senders use | `internal/modules/capture/mailwire/` |
 | Google Calendar connector (OAuth, syncToken) | `internal/modules/capture/gcal/` |
+| Microsoft 365 calendar connector (OAuth, calendarView delta) | `internal/modules/capture/graphcal/` |
+| The shared meeting rules both calendars compose | `internal/modules/capture/meetingmap/` |
 | Shared OAuth handshake (authorize URL, code/refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/` |
 | Connect surface + state signing + CSRF (api) | `internal/compose/connectors.go`, `connectors_imap.go` |
 | Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |

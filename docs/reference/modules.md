@@ -97,9 +97,11 @@ they wire module stores together
 - `identity/internal/policy` — the role permission-policy documents (kept hidden from the rest of the module).
 - `identity/internal/password` — Argon2id hashing/verification.
 - `agents/runner` — the Surface-B reason-act-observe loop (its own `Store`, catalog, window).
-- `capture/{imap,gmail,graph}` — the per-provider mail-capture connectors, with
-  `capture/oauthflow` (the shared OAuth connect/callback flow) and
-  `capture/mailmap` (address/domain mapping).
+- `capture/{imap,gmail,graph}` — the per-provider mail-capture connectors, and
+  `capture/{gcal,graphcal}` — the per-vendor calendar ones, with
+  `capture/oauthflow` (the shared OAuth connect/callback flow),
+  `capture/mailmap` (address/domain mapping) and `capture/meetingmap` (the
+  calendar rules both calendars compose).
 
 ## Where cross-module edges are wired
 
