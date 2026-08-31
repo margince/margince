@@ -225,13 +225,12 @@ OAuth2 to the Microsoft identity platform with delegated scopes `offline_access 
 `Watcher` — there is no change-notification subscription built, so Outlook latency is the poll interval,
 not a push p95. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key. **UI:** a
 first-connect affordance from both the onboarding **Microsoft** chip and the Settings **Add a connection**
-footer; the roster manages an existing connection. Note Microsoft **rotates
-the refresh token on every redemption** and Margince does not yet persist the rotated value: the stored
-original typically keeps working up to Microsoft's default **90-day inactive lifetime** for a confidential
-client (an actively-syncing mailbox stays inside it), **but it can be revoked or expire earlier** (a
-password change, an admin revoke, a conditional-access policy). When it stops working, the sync/connect
-path surfaces `reauth_required` and the user must **reconnect** — there is no silent recovery until the
-credential-update seam lands.
+footer; the roster manages an existing connection. Microsoft **rotates the refresh token on every redemption**, and the replacement is now persisted: the
+connector reports it through `CredentialRotator` and the registry re-seals it into the vault on each
+sync (see *Honest limitations*). The stored original would otherwise have aged out on Microsoft's
+**90-day inactive lifetime** for a confidential client. A grant can still be ended from Microsoft's side
+— a password change, an admin revoke, a conditional-access policy — and then the sync/connect path
+surfaces `reauth_required` and the user must **reconnect**.
 
 ### Google Calendar (gcal) — standing OAuth, poll-only
 
@@ -294,10 +293,16 @@ The pipeline is live; these were scoped out, not missed:
   ≤3-day renewal) is unbuilt, so Outlook latency is the poll interval. (Gmail has both halves — the
   push-watch renewal sweep and the `/webhooks/gmail` consumer above — so a Gmail deployment with a
   Pub/Sub topic configured is push-driven, with the poll behind it as the safety net.)
-- **Graph refresh-token rotation isn't persisted.** The stored token usually lasts up to Microsoft's
-  default 90-day inactive lifetime (a confidential client) but can be revoked or expire earlier; on
-  expiry the connection goes `reauth_required` and the user reconnects. Avoiding that reauth needs a
-  credential-update seam the `Connector` interface lacks.
+- **Graph refresh-token rotation is persisted** (it was not, and the gap is closed). Microsoft issues a
+  NEW refresh token on every redemption; the old one stays valid for its own lifetime, but that lifetime
+  is a ceiling — 90 days idle for a confidential client, shorter after a password change, an admin revoke
+  or a conditional-access policy — so a connection that never stored the replacement aged out on a
+  schedule nobody set. `connector.CredentialRotator` is the optional seam (type-asserted like `Watcher`
+  and `EmailSender`, so the frozen `Connector` interface is unchanged); the registry binds a per-sync
+  sink that re-seals into the vault under the same generation fence the cursor commits under, and
+  retires the superseded blob only after the row naming its replacement commits. A re-seal that fails
+  costs one cycle's freshness, never the mail — the old credential is still valid, which is what makes
+  that the right way round. A connection can still reach `reauth_required` from a real revoke.
 - **IMAP has no backfill and no push.** It syncs forward from connect time on the poll; mail older than
   the connection is not imported, and there is no `Backfiller` to import it.
 - **No dedicated connector-health screen.** The digest's `connectors[]` health rows surface as a single
@@ -316,7 +321,9 @@ The pipeline is live; these were scoped out, not missed:
   `disconnected`/`reauth_required` park a row.
 - **Connecting is human-only.** An agent never self-connects a mailbox.
 - **The credential leaves the connection row entirely** — vault-sealed under `credential_ref`, IMAP's
-  app-password included, and destroyed on disconnect.
+  app-password included, and destroyed on disconnect. A provider that REPLACES it on use (Microsoft does,
+  on every redemption) reports the replacement through `CredentialRotator`, and the re-seal obeys the
+  same fence and the same destroy-the-old rule.
 - **All four connections are standing** and sync in the background; only Gmail/Graph backfill; only
   Gmail pushes.
 
@@ -325,6 +332,7 @@ The pipeline is live; these were scoped out, not missed:
 | | |
 |---|---|
 | The connector seam (Connector / Watcher / Backfiller / Sink / NormalizedRecord) | `internal/shared/ports/connector/connector.go` |
+| The credential-rotation seam (CredentialRotator / CredentialSink) | `internal/shared/ports/connector/rotation.go`, `internal/modules/capture/registry_rotation.go` |
 | The one Sink + write shape + idempotency | `internal/modules/capture/sink.go` |
 | The registry — scope intersection, Connect/Disconnect, SyncOnce, backfill, watch | `internal/modules/capture/registry.go`, `registry_connections.go`, `registry_watch.go`, `backfill.go` |
 | Sync-state sidecar (backoff, error taxonomy, degrade/heal) | `internal/modules/capture/syncstate.go` |

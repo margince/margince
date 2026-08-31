@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -56,6 +57,12 @@ type Connector struct {
 	// outbound mail they name. Nil keeps the old behaviour: the report is
 	// dropped with the rest of the delivery-system mail.
 	bounces connector.BounceSink
+	// rotations receives the replacement credential Microsoft issues on every
+	// token redemption. Nil drops it, which is what every caller but the
+	// standing sync wants: a health probe and a one-shot send have nowhere to
+	// persist one, and a rotation reported to nobody is the behaviour this
+	// connector had before the seam existed.
+	rotations connector.CredentialSink
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -66,16 +73,31 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 	return &copied
 }
 
+// WithCredentialSink returns a COPY that reports the refresh token Microsoft
+// replaces on every redemption (connector.CredentialRotator).
+//
+// A copy, not a field on the shared instance: one registry entry serves every
+// connection the fleet syncs at once, and a sink stored on it would carry one
+// mailbox's credential into another mailbox's re-seal.
+//
+//nolint:ireturn // implements connector.CredentialRotator, whose contract returns the Connector seam
+func (c *Connector) WithCredentialSink(sink connector.CredentialSink) connector.Connector {
+	copied := *c
+	copied.rotations = sink
+	return &copied
+}
+
 // New returns a Graph connector over the given OAuth + API surfaces.
 func New(oauth OAuth, api API) *Connector {
 	return &Connector{oauth: oauth, api: api, now: time.Now}
 }
 
 var (
-	_ connector.Connector      = (*Connector)(nil)
-	_ connector.Backfiller     = (*Connector)(nil)
-	_ connector.GrantedScoper  = (*Connector)(nil)
-	_ connector.AccountLabeler = (*Connector)(nil)
+	_ connector.Connector         = (*Connector)(nil)
+	_ connector.Backfiller        = (*Connector)(nil)
+	_ connector.GrantedScoper     = (*Connector)(nil)
+	_ connector.AccountLabeler    = (*Connector)(nil)
+	_ connector.CredentialRotator = (*Connector)(nil)
 )
 
 // authState is the persisted credential bundle (the opaque connector.Auth).
@@ -205,10 +227,17 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}
 	owner := st.Owner // local — never stored on the shared instance
 
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
+	access := refreshed.AccessToken
+	// Reported BEFORE the pull, and deliberately: the replacement is already
+	// issued and the old token is already spent by the time Graph answers, so
+	// waiting for the pull to succeed would drop the rotation on every sync
+	// that fails for an unrelated reason — which is exactly the mailbox that
+	// most needs its credential kept fresh.
+	c.reportRotation(ctx, st, refreshed.Rotated)
 
 	start, err := parseCursor(cursor)
 	if err != nil {
@@ -247,6 +276,29 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		nextDelta = start // provider closed the round without a new link; keep the prior watermark
 	}
 	return marshalCursor(nextDelta, owner), nil
+}
+
+// reportRotation hands the replacement credential to the sink, if there is one
+// and if the provider actually issued one.
+//
+// A failure is LOGGED, never returned. The old token stays valid for its own
+// lifetime, which is what makes a missed rotation cost one cycle's freshness
+// rather than the mailbox — where failing the sync over it would cost the mail
+// to save the bookkeeping.
+func (c *Connector) reportRotation(ctx context.Context, st authState, rotated string) {
+	if c.rotations == nil || rotated == "" {
+		return
+	}
+	st.RefreshToken = rotated
+	//nolint:gosec // G117: re-sealing the connector's own rotated refresh token into the opaque Auth bundle IS the intended path — the registry stores it encrypted in the vault, never logged or returned
+	next, err := json.Marshal(st)
+	if err != nil {
+		slog.WarnContext(ctx, "graph: encoding the rotated credential", "err", err)
+		return
+	}
+	if err := c.rotations.Rotated(ctx, next); err != nil {
+		slog.WarnContext(ctx, "graph: recording the rotated credential", "err", err)
+	}
 }
 
 // selectMessages resolves which message ids to pull and the deltaLink to
