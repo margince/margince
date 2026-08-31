@@ -73,7 +73,12 @@ function stub(
   profileFields: readonly ProfileField[] = [],
   answers: { patch?: () => Response } = {},
 ) {
-  const calls: { method: string; pathname: string; body: string }[] = [];
+  const calls: {
+    method: string;
+    pathname: string;
+    body: string;
+    ifMatch: string | null;
+  }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -84,6 +89,7 @@ function stub(
         // Read here rather than in the assertion: the body stream is consumed
         // once, and a later read would come back empty.
         body: request.method === "GET" ? "" : await request.text(),
+        ifMatch: request.headers.get("If-Match"),
       });
       if (pathname.endsWith("/me")) {
         return json(meFixture({ allow: { organization: ["read", "update"] } }));
@@ -123,6 +129,9 @@ function profileField(
     source: "site_read",
     captured_by: "agent:deepread",
     updated_at: "2026-06-01T08:00:00Z",
+    // The version a correction pins. Omitting it would model a row the server
+    // does not send and leave the precondition untested.
+    version: 4,
   };
 }
 
@@ -204,6 +213,33 @@ describe("the legal identity a person can state", () => {
     expect(JSON.parse(written?.body ?? "{}")).toEqual({
       value: "DE811907980",
     });
+    // Nothing to pin: this write CREATES the row, so there is no earlier state
+    // another editor could be overwriting.
+    expect(written?.ifMatch).toBeNull();
+  });
+
+  it("pins the row when correcting a value somebody already stated", async () => {
+    const user = userEvent.setup();
+    const calls = await renderSettledGrid(ORG, [
+      profileField("register_vat", "DE111111111"),
+    ]);
+    await screen.findByText("DE111111111");
+
+    await user.click(
+      screen.getByRole("button", { name: "Change Register / VAT ID" }),
+    );
+    await user.clear(screen.getByLabelText("Register / VAT ID"));
+    await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
+    await user.keyboard("{Enter}");
+
+    // Two people correcting the same number: unpinned, the second silently
+    // replaces a change its author never saw.
+    const written = await waitFor(() => {
+      const call = calls.find((one) => one.method === "PATCH");
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(written?.ifMatch).toBe("4");
   });
 
   // Clearing a stated value is the reader asking to unsay it, and the
