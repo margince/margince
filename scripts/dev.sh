@@ -620,15 +620,26 @@ margince_server_pids() {
 # never enqueued at all. Every other lane keeps running, which is what makes a
 # stale worker read as a broken feature rather than as a process nobody stopped.
 #
-# Matched on the DSN and the Redis address, which are this stack's identity: a
-# parallel worktree holds a different database and a different logical database,
-# so it is never in this list.
-stack_server_pids() { # dsn redis_addr
+# Matched on the DSN, and on the Redis address when the caller knows it. The
+# database name is already one-to-one with the slug — `margince` for the primary
+# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
+# stack. The Redis address narrows it further and is passed whenever a record
+# supplies it.
+#
+# It is OMITTED rather than guessed when there is no record. A stack whose state
+# file is gone has no claim to read, and the registry's fallback for "no claim"
+# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
+# linked worktree's database on the primary's Redis database, match nothing, and
+# clean up nothing, silently: the same shape of miss this function exists to
+# close.
+stack_server_pids() { # dsn [redis_addr]
   local pid cmd
   for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"--dsn $1"* && "$cmd" == *"--redis $2"* ]] && echo "$pid"
+    [[ "$cmd" == *"--dsn $1"* ]] || continue
+    [[ -n "${2:-}" && "$cmd" != *"--redis $2"* ]] && continue
+    echo "$pid"
   done
 }
 
@@ -1178,7 +1189,9 @@ stop)
     # database with nothing left pointing at them. Ports are CLAIMED now rather
     # than derived from the slug, so there is nothing to guess at there — but the
     # DATABASE is the slug's, so the servers can still be named.
-    orphans=$(stack_server_pids "$(with_database "$APP_DSN" "$db")" "$REDIS_ADDR" | sort -u || true)
+    # No Redis address: see stack_server_pids. Without a claim, REDIS_ADDR here
+    # names logical database 0 whatever the slug, which is the primary stack's.
+    orphans=$(stack_server_pids "$(with_database "$APP_DSN" "$db")" | sort -u || true)
     if [[ -n "$orphans" ]]; then
       # shellcheck disable=SC2086
       kill_pids $orphans

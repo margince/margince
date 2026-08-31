@@ -410,6 +410,16 @@ check "$theirs" "$(stack_server_pids "$theirs_dsn" "localhost:16379/64" | sort -
 # peer. This is the case that separates them.
 check "" "$(stack_server_pids "$mine_dsn" "localhost:16379/7" | grep -x "$mine" || true)" \
       "matching the database alone is not enough — the logical Redis database is what separates two stacks on one database"
+
+# The missing-state case, which is the one a linked worktree hits. With no claim
+# to read, the registry answers logical database 0 for EVERY slug — the primary
+# stack's — so a cleanup that insisted on the Redis half would ask for
+# margince_dev_band on db 0, match nothing, and report success over servers it
+# left running. The Redis argument is omitted there instead of guessed.
+check "$theirs" "$(stack_server_pids "$theirs_dsn" | sort -u)" \
+      "a linked worktree's servers are found with no Redis address — its database name already names the stack"
+check "" "$(stack_server_pids "$theirs_dsn" "localhost:16379/0" | grep -x "$theirs" || true)" \
+      "and guessing db 0 for it would have found nothing, which is the miss that made omitting it necessary"
 kill "$mine" "$theirs" 2>/dev/null || true
 wait "$mine" "$theirs" 2>/dev/null || true
 
