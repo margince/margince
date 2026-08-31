@@ -7,6 +7,8 @@ import type {
   MapNode,
   RelationshipMapModel,
 } from "../../design-system/relationshipmap.layout";
+import { routeFor } from "../../design-system/relationshipmap.layout";
+import type { IntroTarget } from "./introrequest";
 
 // The wire read, as the picture the map draws.
 //
@@ -43,6 +45,8 @@ export type MapCopy = Readonly<{
   theyReplied: string;
   neverWritten: string;
   onDeal: string;
+  /** The verb on a person somebody on our side can actually reach. */
+  askIntro: string;
 }>;
 
 /**
@@ -112,6 +116,11 @@ export function mapModelFromCoverage(
 
 function personNode(seat: Seat, copy: MapCopy): MapNode {
   const engagement = seat.engagement as MapEngagement | undefined;
+  // The verb goes ONLY on a seat somebody can actually reach. Asking for an
+  // introduction from nobody is not a move, and offering it on a contact with
+  // no route would send the reader to a dialog that can only refuse — the
+  // endpoint requires a recorded route and answers 404 without one.
+  const reachable = (seat.routes?.top ?? []).length > 0;
   return {
     id: `p:${seat.person_id}`,
     kind: "person",
@@ -123,8 +132,12 @@ function personNode(seat: Seat, copy: MapCopy): MapNode {
     sublabel: seat.routes ? undefined : copy.routesWithheld,
     engagement,
     engagementLabel: engagement ? copy.engagement[engagement] : undefined,
+    actions: reachable ? [{ id: ASK_INTRO, label: copy.askIntro }] : undefined,
   };
 }
+
+/** The action a person node offers when somebody on our side can reach them. */
+export const ASK_INTRO = "ask_intro";
 
 /**
  * routeEdges turns one seat's colleagues into lines.
@@ -264,5 +277,49 @@ function dealEdge(personId: string, dealId: string, copy: MapCopy): MapEdge {
     to: `d:${dealId}`,
     kind: "membership",
     words: copy.onDeal,
+  };
+}
+
+/**
+ * introTargetFor names the colleague to ask, from the map the reader is
+ * looking at.
+ *
+ * The STRONGEST route, which is the one the panel has already named as the
+ * best way in — so the dialog asks about the person the reader just read
+ * about, rather than whichever edge happened to be first.
+ *
+ * It refuses anything that is not a PERSON. A route edge runs colleague →
+ * person, so reading `from` as the colleague is only true for a person focus;
+ * on a colleague focus the same edge points the other way and this would ask
+ * the contact to introduce the reader to their own colleague. Today the action
+ * only sits on person nodes, which makes that unreachable — and a function
+ * that is correct only because of where it happens to be called is one the
+ * next caller breaks silently.
+ */
+export function introTargetFor(
+  model: RelationshipMapModel,
+  nodeId: string,
+): IntroTarget | null {
+  const person = model.nodes.find((node) => node.id === nodeId);
+  if (person?.kind !== "person") {
+    return null;
+  }
+  const { route } = routeFor(model, nodeId);
+  const best = route
+    ? model.edges.find((edge) => edge.id === route.edgeIds[0])
+    : null;
+  const colleague = best && model.nodes.find((node) => node.id === best.from);
+  if (!best || colleague?.kind !== "user") {
+    return null;
+  }
+  return {
+    // The ids the map draws with are PREFIXED so a person and a colleague
+    // cannot collide; the endpoint wants the bare uuid. Stripped by the node's
+    // own kind rather than by pattern, so a value that merely starts with the
+    // letters cannot be trimmed into a different record.
+    personId: nodeId.slice("p:".length),
+    personName: person.label,
+    viaUserId: colleague.id.slice("u:".length),
+    viaName: colleague.label,
   };
 }

@@ -44,3 +44,38 @@
   gap: var(--space-1);
   margin-top: var(--space-1);
 }
+
+/* The introduction request. A form the reader edits before taking it away, so
+ * the fields get room rather than the compact shape a confirm dialog uses. */
+.cp-intro-who {
+  margin: 0 0 var(--space-3);
+  color: var(--textMeta);
+}
+
+.cp-intro-mark {
+  margin: 0 0 var(--space-2);
+}
+
+.cp-intro-field {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+}
+
+.cp-intro-why {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--textMeta);
+}
+
+.cp-intro-error {
+  margin: var(--space-2) 0 0;
+  color: var(--danger);
+}
+
+.cp-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}

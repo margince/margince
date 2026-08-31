@@ -1618,6 +1618,21 @@ export const en = {
   "co.people.map.scopePartial":
     "{count} on the buying team · {hidden} more you cannot see.",
   "co.people.board.readFromMessages": "Read from their messages",
+  "co.intro.title": "Ask for an introduction",
+  "co.intro.who": "Asking {colleague} to introduce you to {contact}.",
+  "co.intro.write": "Write the message",
+  "co.intro.writing": "Writing",
+  "co.intro.fromTemplate":
+    "Written from a template — this installation has no model configured.",
+  "co.intro.subject": "Subject",
+  "co.intro.body": "Message",
+  "co.intro.basedOn": "Based on",
+  "co.intro.copy": "Copy",
+  "co.intro.copyFailed":
+    "This browser would not let the page copy. Select the message and copy it yourself.",
+  "co.intro.copied": "Copied",
+  "co.intro.openMail": "Open in your mail app",
+  "co.map.askIntro": "Ask for an intro",
   "co.people.board.suggest": "Suggest roles",
   "co.people.board.suggesting": "Reading their messages",
   "co.people.board.suggestNoDeal":
