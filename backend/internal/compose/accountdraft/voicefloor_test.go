@@ -14,6 +14,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -93,6 +95,39 @@ func TestARetryThatClearsNothingIsDiscarded(t *testing.T) {
 	}
 	if !strings.Contains(draft.Body, "Shall we pick this up?") {
 		t.Errorf("the composer kept a retry that cleared no violation; body = %q", draft.Body)
+	}
+}
+
+// A retry that clears a voice violation may not smuggle in a draftcheck one.
+//
+// The floor runs AFTER draftcore.CorrectOnce, so the draft it receives has
+// already cleared draftcheck. The retry it may substitute has not: it is a
+// fresh answer, written to a prompt that names the voice violations and says
+// nothing about the phrasing rules the first pass already fixed. Counting only
+// voice violations lets a retry that drops an em dash and invents a shared
+// history — "we help companies", on a first-touch message — replace a draft
+// that was clean by both measures.
+func TestARetryThatTradesAVoiceViolationForAPhrasingOneIsDiscarded(t *testing.T) {
+	// A spaced em dash: one voice violation, no draftcheck finding.
+	const first = `{"subject":"Rollout","body":"Hi Sarah,\n\nThe rollout — Phase 2 — is ready. Shall we pick this up?"}`
+	// The em dash is gone, so it clears MORE voice violations than the first.
+	// It also claims a sales pitch draftcheck refuses on a first message.
+	const retry = `{"subject":"Rollout","body":"Hi Sarah,\n\nWe help companies like yours. Shall we pick this up?"}`
+	lane := &sequencedLane{answers: []string{first, retry}}
+
+	// A FIRST-TOUCH envelope, which is what makes "we help companies" a
+	// finding: the invention rules only bind where there is no prior
+	// correspondence to have established anything.
+	in := sampleInput()
+	in.Envelope = draftfloor.Envelope{ConversationState: string(convstate.BandNone)}
+
+	draft, _, err := Write(context.Background(), lane, in, voiced())
+	if err != nil {
+		t.Fatalf("the voiced draft failed: %v", err)
+	}
+	if strings.Contains(strings.ToLower(draft.Body), "we help companies") {
+		t.Errorf("the floor served a retry carrying a phrasing rule the first draft had cleared; "+
+			"body = %q", draft.Body)
 	}
 }
 

@@ -137,8 +137,7 @@ func writeChecked(ctx context.Context, lane Completer, in Input, voice draftvoic
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, in, voice, correction)
 		},
-		func(d Draft) (string, []string) { return d.Body, reasonLabels(d.Reasoning) },
-		func(d Draft) (string, bool) { return d.Subject, in.Threaded() },
+		draftText, draftSubject(in),
 		// No observer: this package holds no logger, and a retry that does not
 		// help still returns a real draft. The reply surface, which has one,
 		// reports it.
@@ -150,53 +149,21 @@ func writeChecked(ctx context.Context, lane Completer, in Input, voice draftvoic
 	return applyVoiceFloor(ctx, lane, in, voice, draft)
 }
 
-// applyVoiceFloor is the deterministic anti-AI pass a voiced draft must clear:
-// detect on the raw text, one critic retry that fixes the SENTENCE, then the
-// sanitizer for what is left to remove mechanically.
-//
-// It runs only for a voiced draft. An unvoiced one is already governed by the
-// shared rules and by draftcheck, and running a second retry over every draft
-// would double the model spend of the common case to fix the rare one.
-//
-// Every step can only improve the draft, never replace it with a worse one.
-// The retry is kept only if it clears MORE violations than the attempt it
-// replaces — a retry is one more model answer, not a better one by definition,
-// and it is written without the draftcheck findings the first pass already
-// cleared. The sanitizer's edits are kept only if what survives them is still a
-// draft: it deletes characters, so a subject that was nothing but an em dash
-// comes back empty, and an empty subject is not a message the contract allows.
-//
-// A draft that still trips the floor after all of that is served anyway. The
-// alternative is the deterministic floor — a two-line opener — and a rep who
-// asked for a draft is better served by an imperfect real message than by a
-// stub, which is the same trade Write makes when the model is down.
-func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, draft Draft) (Draft, error) {
-	if !voice.OK {
-		return draft, nil
-	}
-	// Detect on the RAW draft: a violation the sanitizer could mechanically
-	// remove still earns the retry, because the retry rewrites the sentence
-	// where the sanitizer only deletes the punctuation.
-	violations := draftvoice.Violations(draft.Subject, draft.Body)
-	if len(violations) > 0 {
-		retried, retryErr := writeWithModel(ctx, lane, in, voice, draftvoice.Feedback(violations))
-		if retryErr == nil && len(draftvoice.Violations(retried.Subject, retried.Body)) < len(violations) {
-			draft = retried
-		}
-	}
-	sanitized := draft
-	sanitized.Subject, sanitized.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
-	if !servable(sanitized) {
-		return draft, nil
-	}
-	return sanitized, nil
+// draftText and draftSubject say which parts of a draft the phrasing rules
+// read. Both passes that check a draft take them from here rather than each
+// spelling the accessors inline: the voice floor's whole job is comparing one
+// draft against another, and a comparison whose two sides read different fields
+// measures nothing.
+func draftText(d Draft) (string, []string) { return d.Body, reasonLabels(d.Reasoning) }
+
+func draftSubject(in Input) func(Draft) (string, bool) {
+	return func(d Draft) (string, bool) { return d.Subject, in.Threaded() }
 }
 
-// servable reports whether a draft is still one the contract can carry. The
-// sanitizer removes characters, so a draft made only of what it removes comes
-// back empty — and an empty subject or body is not a message.
-func servable(draft Draft) bool {
-	return strings.TrimSpace(draft.Subject) != "" && strings.TrimSpace(draft.Body) != ""
+// phrasingFindings is what the shared phrasing rules say is wrong with a draft.
+func phrasingFindings(in Input, draft Draft) int {
+	return len(draftcore.Findings(draft, in.Envelope.Lang(), in.Envelope.Band(),
+		draftText, draftSubject(in)))
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, correction string) (Draft, error) {
