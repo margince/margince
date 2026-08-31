@@ -6190,6 +6190,21 @@ export const en = {
   // reads mail through a Google app and signs in with Google accounts, through
   // that same app. Asking twice would be asking somebody to answer the same
   // fact in two places and then keep the two agreeing.
+  // The four seconds after a model is bound. Every line is a claim that is true
+  // at the moment it is drawn, and the last one is the one worth hearing while
+  // the first two land: the product can think now, and it still cannot act.
+  "firstRun.ignite.title": "It has a pulse.",
+  "firstRun.ignite.sub":
+    "Everything after this can think. Nothing after this acts without you.",
+  "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
+  "firstRun.ignite.reaching": "reaching the model for the first time…",
+  "firstRun.ignite.pulse": "Everything after this can think.",
+  "firstRun.ignite.canNow": "can now",
+  "firstRun.ignite.cannot": "cannot",
+  "firstRun.ignite.read": "read your website and tell you what it found",
+  "firstRun.ignite.draft": "draft in a voice you taught it",
+  "firstRun.ignite.act": "send anything, or change a record, unless you say so",
+  "firstRun.ignite.carryOn": "Carry on",
   "firstRun.platform.title": "What does your organization run on?",
   "firstRun.platform.sub":
     "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",

@@ -18,6 +18,8 @@ import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
 import { useSetGoogleApp } from "./google-app";
+import { CORE_LABELS } from "./onboarding-core-label";
+import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
 // on purpose: both onboarding CSS gates derive their corpus from that prefix,
 // so a first-run sheet named after its component would style the coldest screen
@@ -78,7 +80,6 @@ export function outstandingStep(setup: Setup | undefined): Step | undefined {
 }
 
 function useBindModels() {
-  const queryClient = useQueryClient();
   return useMutation({
     // Same reasoning as the provider-key mutation: nothing here is a secret,
     // but the two settle together and a stale binding on screen after a
@@ -123,8 +124,16 @@ function useBindModels() {
         throwProblem(error);
       }
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["installation-setup"] }),
+    // NO invalidation here, and this is the one mutation in the file that holds
+    // it back. Re-reading the setup report is what moves the screen on, and the
+    // binding is the moment the ignition exists to mark — invalidating on
+    // success would swap the step out from under a sequence the reader is
+    // watching. The refetch happens when they press past it (`onDone`), which
+    // means the screen is theirs to leave rather than the query's to take.
+    //
+    // The write has already landed either way: a reload mid-sequence finds the
+    // server saying `ai_models` is configured and opens the next question, which
+    // is correct and loses nothing but the ceremony.
   });
 }
 
@@ -156,7 +165,14 @@ function StepForm({
 }
 
 /** The AI step: one vendor, one key, the two models it will serve. */
-function AiStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
+function AiStep({
+  onBusy,
+  onIgnite,
+}: Readonly<{
+  onBusy: (busy: boolean) => void;
+  /** Both writes landed, for the vendor named. The stage takes it from here. */
+  onIgnite: (vendor: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const [choice, setChoice] = useState<SetupProviderId>("gemini");
@@ -216,9 +232,10 @@ function AiStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
                 // only copy of the key the app was holding.
                 setApiKey("");
                 saveKey.reset();
-                // Nothing else: both mutations invalidate the setup query, so
-                // what is still outstanding comes back from the server rather
-                // than from this component's guess about what it just did.
+                // And the screen becomes the ignition. Nothing is refetched
+                // yet: see `useBindModels` for why the reader, not the query,
+                // decides when this step is over.
+                onIgnite(preset.label);
               },
             },
           ),
@@ -584,6 +601,25 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
  * `lit` derived from "this is the second step" would say the same thing by
  * accident rather than by reading it.
  */
+/**
+ * The stage's headline and its sentence under it.
+ *
+ * The ignition takes them over rather than standing under the question it just
+ * answered: leaving "Choose a model provider" over a sequence about a model
+ * already chosen is the screen contradicting itself while somebody reads it.
+ */
+function head(
+  ignited: boolean,
+  ai: boolean,
+): Readonly<{ title: MessageKey; sub: MessageKey }> {
+  if (ignited) {
+    return { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" };
+  }
+  return ai
+    ? { title: "firstRun.ai.title", sub: "firstRun.ai.sub" }
+    : { title: "firstRun.platform.title", sub: "firstRun.platform.sub" };
+}
+
 function modelBound(setup: Setup | undefined): boolean {
   return (
     setup?.steps?.some((s) => s.step === "ai_models" && s.configured) ?? false
@@ -604,11 +640,21 @@ function modelBound(setup: Setup | undefined): boolean {
  */
 export function InstallationSetup() {
   const t = useT();
+  const queryClient = useQueryClient();
   const setup = useInstallationSetup();
   const step = outstandingStep(setup.data);
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
   const [busy, setBusy] = useState(false);
+  // The binding landed and the reader is watching the sequence. Held here
+  // rather than in the step, because what it changes is the ROOM: the light, the
+  // orb and what stands in the column all belong to the stage.
+  //
+  // The vendor travels with it because the sequence names whose key was sealed,
+  // and "sealed in the vault" without saying whose is a sentence about a
+  // mechanism rather than about what the reader just did.
+  const [ignited, setIgnited] = useState<string | null>(null);
+  const igniting = useIgnitionCore(ignited !== null);
 
   // While the answer has not arrived, nothing: a step drawn from a guess would
   // be replaced a moment later by the real one, and the reader would have
@@ -622,15 +668,22 @@ export function InstallationSetup() {
     return null;
   }
   const ai = step.step === "ai_models";
+  const core =
+    ignited !== null ? igniting.state : busy ? "working" : ("idle" as const);
   return (
     <OnboardingStage
-      lit={modelBound(setup.data)}
-      coreState={busy ? "working" : "idle"}
+      // The room lights the moment the binding lands, a beat before the server
+      // is asked again. That is not a second meaning for the indigo — it is the
+      // same claim, made by the client that just watched the write succeed
+      // rather than by the read that confirms it.
+      lit={ignited !== null || modelBound(setup.data)}
+      coreState={core}
+      coreProgress={igniting.progress}
       // The Core is aria-hidden, so the band says in words what it is showing.
       // From `ob.core.*`, the vocabulary every onboarding surface reads: the
       // orb showing the same state on two screens must not read as two
       // different things.
-      coreStateLabel={t(busy ? "ob.core.working" : "ob.core.idle")}
+      coreStateLabel={t(CORE_LABELS[core])}
       // The server's step list, in the server's order — the same array the gate
       // walks, so the band cannot claim a different flow than the one being
       // walked.
@@ -645,10 +698,31 @@ export function InstallationSetup() {
         at: (setup.data?.steps ?? []).findIndex((s) => s.step === step.step),
       }}
       eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
-      title={t(ai ? "firstRun.ai.title" : "firstRun.platform.title")}
-      sub={t(ai ? "firstRun.ai.sub" : "firstRun.platform.sub")}
+      title={t(head(ignited !== null, ai).title)}
+      sub={t(head(ignited !== null, ai).sub)}
     >
-      {ai ? <AiStep onBusy={setBusy} /> : <GoogleStep onBusy={setBusy} />}
+      {ignited !== null ? (
+        <Ignition
+          vendor={ignited}
+          onDone={() => {
+            setIgnited(null);
+            // NOW the server is asked again, and the answer is what moves the
+            // screen — the same rule every other step follows, just deferred
+            // until the reader was done with this one.
+            queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
+          }}
+        />
+      ) : ai ? (
+        <AiStep
+          onBusy={setBusy}
+          onIgnite={(vendor) => {
+            setBusy(false);
+            setIgnited(vendor);
+          }}
+        />
+      ) : (
+        <GoogleStep onBusy={setBusy} />
+      )}
     </OnboardingStage>
   );
 }

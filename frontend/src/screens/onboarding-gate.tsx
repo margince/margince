@@ -16,6 +16,7 @@ import { formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { normalizeUrl, skipReasonText } from "./onboarding";
+import { CORE_LABELS } from "./onboarding-core-label";
 import "./onboarding-gate.css";
 
 // The first screen of onboarding: one question, then the wait for the website
@@ -251,23 +252,6 @@ type StageHead = Readonly<{
   title: string;
   sub: string;
 }>;
-
-/**
- * The Core's own state, named for the band (WDS-CORE-4).
- *
- * NOT the phase line. The theatre already writes what the read is doing for the
- * reader ("Fetching pages"), and putting that sentence in the band too would be
- * one fact in two places, free to disagree the day either moves. This says what
- * the ORB is doing, which is the thing the reader cannot otherwise learn: the
- * orb is aria-hidden, and its state is motion first.
- */
-const CORE_LABELS: Readonly<Record<MarginceCoreState, MessageKey>> = {
-  idle: "ob.core.idle",
-  ingest: "ob.core.ingest",
-  working: "ob.core.working",
-  warning: "ob.core.warning",
-  error: "ob.core.error",
-};
 
 function stageHead(
   t: Translate,

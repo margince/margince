@@ -1,0 +1,202 @@
+/*
+ * The ignition: the four seconds after a model is bound.
+ *
+ * ALL OF THE TIMING IS HERE, and that is the point. The component runs three
+ * timers, and they only tell the orb what it is doing; every delay a reader
+ * perceives is an `animation-delay` in this file, so the reduced-motion block at
+ * the bottom turns the whole sequence into its end state in ONE place. A
+ * sequence split between keyframes and `setTimeout` is a sequence where the two
+ * halves drift and nothing fails.
+ *
+ * THE DURATIONS ARE NAMED HERE rather than taken from `tokens.css`, and this is
+ * the one surface where that is right. The token ladder is deliberately folded
+ * to four rungs because it times a CONTROL changing or a block arriving — 90ms
+ * to 360ms, the range where a reader reads a response. This is neither: it is a
+ * sequence somebody watches, and the rungs it needs are seconds. They are
+ * declared once, on the block, named for the beat they time.
+ */
+
+.ob-ig {
+  --ig-wash: 2400ms;
+  --ig-room: 1600ms;
+  --ig-beat: 2000ms;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/*
+ * The first thing the orb ever did: a dot at the Core's own place in the stage,
+ * expanding once past every edge.
+ *
+ * Positioned against the STAGE, not this block — the light comes from the orb,
+ * which is in the other column — so it is `position: fixed` at the Core's
+ * column centre. Fixed rather than absolute because the stage is a grid and an
+ * absolutely-placed child of a grid item cannot reach across a column.
+ */
+.ob-ig-flash {
+  position: fixed;
+  left: 22%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  /* Centred on its own coordinate by the transform rather than by a negative
+     margin, so there is one place the dot's geometry is decided and the
+     keyframes below carry it through the scale. */
+  border-radius: var(--r-full);
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--orbGlow) 78%, transparent),
+    transparent 70%
+  );
+  animation: ob-ig-wash var(--ig-wash) var(--ease-out) both;
+}
+@keyframes ob-ig-wash {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  100% {
+    /* Past every edge of every viewport this runs on. The wash does not stop at
+       a boundary, because it is the room filling rather than a shape growing. */
+    transform: translate(-50%, -50%) scale(300);
+    opacity: 0;
+  }
+}
+
+/* The key, gone. Green because this one IS recorded — the vault holds it, and
+   the sentence is about what happened rather than what an agent proposes. */
+.ob-ig-sealed {
+  margin: 0;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-full);
+  background: var(--accentLight);
+  color: var(--accentText);
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+  animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
+}
+
+/* Reaching the vendor. It settles to a low opacity rather than leaving: what it
+   says stays true, and a line that vanishes reads as a step undone. */
+.ob-ig-beat {
+  margin: 0;
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+  color: var(--aiText);
+  animation: ob-ig-appear var(--ig-beat) var(--ease-out) 1500ms both;
+}
+
+@keyframes ob-ig-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  16% {
+    opacity: 1;
+    transform: none;
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* The claim, at the size of a claim. It arrives with the room's light rather
+   than before it, so the sentence and the reason it is true land together. */
+.ob-ig-line {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+  animation: ob-ig-rise var(--ig-room) var(--ease-out) 2600ms both;
+}
+
+@keyframes ob-ig-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* What is true now, and the one thing that is not. */
+.ob-ig-can {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ob-ig-can li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--textContent);
+  animation: ob-ig-rise var(--dur-enter) var(--ease-out) both;
+}
+.ob-ig-can li:nth-child(1) {
+  animation-delay: 3100ms;
+}
+.ob-ig-can li:nth-child(2) {
+  animation-delay: 3250ms;
+}
+.ob-ig-can li:nth-child(3) {
+  animation-delay: 3400ms;
+}
+/* Indigo for what the agent may now do, and the ordinary meta ink for what it
+   may not: the refusal is not a warning, it is the shape of the product. */
+.ob-ig-can li b {
+  flex: none;
+  min-width: 6.5ch;
+  font-family: var(--f-mono);
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--aiText);
+}
+.ob-ig-can li[data-can="false"] b {
+  color: var(--textMeta);
+}
+
+.ob-ig-go {
+  margin-top: var(--space-2);
+  animation: ob-ig-rise var(--dur-enter) var(--ease-out) 3600ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * The sequence ENDS rather than never happening. Every line is present and
+   * legible at once, the wash does not run, and what the screen says is exactly
+   * what it says four seconds in — which is the whole content. A reader who has
+   * asked not to be moved is not a reader who should be told less.
+   */
+  .ob-ig-flash {
+    display: none;
+  }
+  .ob-ig-sealed,
+  .ob-ig-beat,
+  .ob-ig-line,
+  .ob-ig-can li,
+  .ob-ig-go {
+    animation: none;
+  }
+}

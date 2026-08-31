@@ -131,6 +131,27 @@ export const ChoosingThePlatform: Story = {
   },
 };
 
+// The ignition, driven the way a reader reaches it: type a key, press Continue,
+// and the screen becomes the sequence rather than the next question.
+//
+// The capture lands at whatever the timeline has reached — the wash, the sealed
+// chip and the beats are `animation-delay`, so what a still frame shows depends
+// on when it was taken. Open it in Storybook to watch the whole thing, and flip
+// reduced motion on to see the end state it collapses to.
+export const TheIgnition: Story = {
+  ...BindingTheModel,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByLabelText("API key"),
+      "AIza-not-a-real-key",
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Continue" }),
+    );
+  },
+};
+
 // The answer that needs no Google app here, which is where the honest awkwardness
 // lives: the operator work is somebody else's and named, and first run still
 // cannot finish, because `google_app` blocks whatever this answer is. The fields

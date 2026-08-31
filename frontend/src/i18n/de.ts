@@ -6119,6 +6119,20 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "firstRun.ignite.title": "Es hat einen Puls.",
+  "firstRun.ignite.sub":
+    "Alles ab hier kann denken. Nichts ab hier handelt ohne Sie.",
+  "firstRun.ignite.sealed": "im Tresor versiegelt · {vendor}",
+  "firstRun.ignite.reaching": "erreiche das Modell zum ersten Mal…",
+  "firstRun.ignite.pulse": "Alles ab hier kann denken.",
+  "firstRun.ignite.canNow": "kann jetzt",
+  "firstRun.ignite.cannot": "kann nicht",
+  "firstRun.ignite.read": "Ihre Website lesen und sagen, was sie gefunden hat",
+  "firstRun.ignite.draft":
+    "in einer Stimme schreiben, die Sie ihr beigebracht haben",
+  "firstRun.ignite.act":
+    "etwas senden oder einen Datensatz ändern, solange Sie es nicht sagen",
+  "firstRun.ignite.carryOn": "Weiter",
   "firstRun.platform.title": "Womit arbeitet Ihre Organisation?",
   "firstRun.platform.sub":
     "Eine Antwort entscheidet, wie Mail zu Margince kommt und wie sich Leute anmelden. Später unter Einstellungen änderbar.",

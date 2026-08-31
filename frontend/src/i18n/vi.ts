@@ -6055,6 +6055,19 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
+  "firstRun.ignite.title": "Nó đã có nhịp đập.",
+  "firstRun.ignite.sub":
+    "Từ đây trở đi nó có thể suy luận. Từ đây trở đi nó không tự hành động.",
+  "firstRun.ignite.sealed": "đã niêm phong trong vault · {vendor}",
+  "firstRun.ignite.reaching": "đang gọi mô hình lần đầu…",
+  "firstRun.ignite.pulse": "Từ đây trở đi nó có thể suy luận.",
+  "firstRun.ignite.canNow": "giờ có thể",
+  "firstRun.ignite.cannot": "không thể",
+  "firstRun.ignite.read": "đọc website của bạn và nói nó tìm được gì",
+  "firstRun.ignite.draft": "viết theo giọng bạn đã dạy nó",
+  "firstRun.ignite.act":
+    "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
+  "firstRun.ignite.carryOn": "Tiếp tục",
   "firstRun.platform.title": "Tổ chức của bạn đang chạy trên nền tảng nào?",
   "firstRun.platform.sub":
     "Một câu trả lời quyết định cách thư đến Margince và cách mọi người đăng nhập. Có thể đổi sau ở Cài đặt.",

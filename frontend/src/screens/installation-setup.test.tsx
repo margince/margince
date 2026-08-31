@@ -93,8 +93,15 @@ function mount(
   refuse: readonly string[] = [],
 ) {
   const writes: { url: string; body: unknown }[] = [];
+  // Counted because WHEN the setup report is re-read is a product decision on
+  // this screen: the ignition holds it back so the reader, not the query,
+  // decides when the model step is over.
+  const setupReads: number[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
+    if (request.method === "GET" && url.endsWith("/installation/setup")) {
+      setupReads.push(Date.now());
+    }
     if (request.method !== "GET") {
       writes.push({ url, body: JSON.parse(await request.text()) });
       if (refuse.some((p) => url.endsWith(p))) {
@@ -115,7 +122,7 @@ function mount(
     </QueryClientProvider>
   );
   render(<InstallationSetup />, { wrapper: Wrap });
-  return { writes };
+  return { writes, setupReads };
 }
 
 describe("the first-run setup gate", () => {
@@ -250,6 +257,46 @@ describe("the first-run setup gate", () => {
     expect(writes[0].body).toEqual({
       client_id: "123-abc.apps.googleusercontent.com",
       client_secret: "GOCSPX-secret",
+    });
+  });
+
+  // Binding a model is the one write in first run that the screen marks rather
+  // than getting out of the way of. What that costs mechanically is a deferred
+  // refetch, and these are the two halves of it.
+  describe("the ignition", () => {
+    async function bind(): Promise<ReturnType<typeof mount>> {
+      const user = userEvent.setup();
+      const harness = mount(setupReport(false, false));
+      await screen.findByText("Choose a model provider");
+      await user.type(screen.getByLabelText("API key"), "AIza-secret");
+      await user.click(screen.getByRole("button", { name: "Continue" }));
+      await waitFor(() => expect(harness.writes.length).toBe(2));
+      return harness;
+    }
+
+    it("holds the screen after the binding lands, and names whose key was sealed", async () => {
+      const { setupReads } = await bind();
+      // The sequence is on screen, not the next question.
+      expect(
+        await screen.findByText(/sealed in the vault · Google Gemini/),
+      ).toBeTruthy();
+      expect(screen.getByText("Everything after this can think.")).toBeTruthy();
+      // And the one thing it may still not do, which is the point of saying any
+      // of it here.
+      expect(screen.getByText(/unless you say so/)).toBeTruthy();
+      // The report has NOT been re-read: the write landed, and the screen is the
+      // reader's to leave.
+      const readsWhileWatching = setupReads.length;
+      await waitFor(() => expect(setupReads.length).toBe(readsWhileWatching));
+    });
+
+    it("re-reads the report only once the reader presses past it", async () => {
+      const user = userEvent.setup();
+      const { setupReads } = await bind();
+      await screen.findByText(/sealed in the vault/);
+      const before = setupReads.length;
+      await user.click(screen.getByRole("button", { name: "Carry on" }));
+      await waitFor(() => expect(setupReads.length).toBeGreaterThan(before));
     });
   });
 
