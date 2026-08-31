@@ -80,10 +80,18 @@ The shield beside the number carries it. Open it for the whole receipt.
 
 | Verdict | What it means |
 |---|---|
-| **Valid** | The register recognises the number. |
-| **Not valid** | The register does not. Most often a copied imprint stating another company's ID — check **Registered to** against the company you think you have. |
+| **Valid** | The register recognises the number. **Read Registered to before you trust it** — see below. |
+| **Not valid** | The register does not recognise it. A typo, a number that has been deregistered, or one that was never real. |
 | **Register did not answer** | A fact about the **lookup**, never about the company. A member state's register was offline, or the number was not VAT-ID shaped so no request was made. |
 | *(grey, "not checked yet")* | Nobody has asked. Distinct from having asked and been told no. |
+
+**Valid does not mean "belongs to this company."** A VAT ID copied from another company's imprint — a
+template reused, a subsidiary's number left in place — is a *real* number, so the register returns
+**Valid**. What exposes it is **Registered to**: the name the register holds against that number. If it
+is not the company you think you have, the number is somebody else's, whatever the verdict says.
+
+That is why the name is shown beside the verdict rather than folded away, and it is the single most
+useful line in the receipt.
 
 **Consulted on** is the date the *register* reported, not the day this installation recorded it — a
 receipt attests to when the register was asked.
@@ -101,13 +109,20 @@ curl -sS -b cookies.txt -X POST "$BASE/v1/organizations/$ORG/vat-check"
 # 202 Accepted, no body
 ```
 
-The button then stays **busy** until the register replies, saying *"Asking the register — the answer
-appears here once it replies."* It is not pressable again in the meantime: the request is accepted in
-milliseconds and the register answers seconds later, and a second press would either queue a duplicate
-consultation or meet the rate floor below and refuse you over your own in-flight request.
+The button then goes **busy**, saying *"Asking the register — the answer appears here once it replies."*
+It is not pressable again while it is: the request is accepted in milliseconds and the register answers
+seconds later, and a second press would either queue a duplicate consultation or meet the rate floor
+below and refuse you over your own in-flight request.
 
-The answer arrives on its own. It is written by a background worker, so the mark looks again a few times
-over the following seconds rather than making you reload.
+The answer arrives on its own — it is written by a background worker, so the mark looks again a few
+times over the following seconds rather than making you reload.
+
+**The busy state lasts about fifteen seconds, not forever.** If the answer has not landed by then the
+button frees up, because a register that never replies must not leave you with a control you cannot
+press and no reason given. The consultation may still be running: the worker retries a service that
+refused, and a register that told us when to come back is obeyed. So a verdict can change a minute after
+the button came back — reopen the shield to see it, and the five-minute floor stops you spending a
+second consultation in the meantime.
 
 ### Why a request can be refused
 
@@ -115,7 +130,13 @@ over the following seconds rather than making you reload.
 |---|---|
 | **429** *"This number was checked in the last few minutes…"* | Wait. The answer on the record **is** that check. The floor is five minutes per company. |
 | **404** *"This company states no VAT number yet."* | Add one in the Details panel; the write checks it automatically. |
-| **404** *"This installation does not consult the VAT register."* | [Turn it on](#turn-the-register-on). |
+
+There is deliberately **no refusal for an unconfigured register**, and this is the trap worth knowing.
+The api role always accepts the request and queues the job; the register itself lives on the **worker**.
+A worker with no register configured runs the job, records nothing — an absent check is not a failed one
+— and reports success. So on an installation that was never [turned on](#turn-the-register-on), the
+button works, the busy state runs its fifteen seconds, and no answer ever appears. Nothing on screen says
+why, which is the first thing to suspect when a check produces silence.
 
 The register is a shared public service consulted on one worker at roughly one request every two
 seconds, and its terms describe it as intended for occasional verification rather than bulk lookup. The
@@ -134,14 +155,25 @@ the old number.
 **The shield never appears.** The row draws it only once a number is stated. An empty VAT field has
 nothing to verify.
 
-**I pressed the button and nothing came back.** Almost always the register is not configured — see
-[Turn it on](#turn-the-register-on), and remember `make dev` after changing the env. Confirm with:
+**I pressed the button and nothing came back.** Almost always the register is not configured on the
+**worker**. Nothing refuses the request in that case — see the note under
+[Ask again](#ask-again) — so the only symptom is silence. Check the worker's own environment rather than
+the api's, and remember `make dev` after changing it: the api and worker are compiled binaries.
+
+Confirm what is on record with:
 
 ```bash
 curl -sS -b cookies.txt "$BASE/v1/organizations/$ORG/vat-check"
 ```
 
-`404` means never consulted; a body with `"status"` means an answer is on record.
+`404` means never consulted; a body with `"status"` means an answer is on record. If the job ran and
+still nothing landed, the worker had no register to ask:
+
+```bash
+# the job completed, and recorded nothing
+psql "$DSN" -c "SELECT state, attempt FROM river_job
+                 WHERE kind = 'check_organization_vat' ORDER BY id DESC LIMIT 3;"
+```
 
 **The answer is always "Register did not answer".** Check the number's shape. A VAT ID starts with a
 two-letter country code — `122323235` is not one, and no request is made for a value that cannot be a VAT
