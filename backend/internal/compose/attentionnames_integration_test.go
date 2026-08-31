@@ -285,3 +285,47 @@ func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
 		}
 	})
 }
+
+// A type with no subjects on the page asks nothing at all. The fill pass only
+// calls for types it met, but the store must be safe to call with an empty
+// set regardless — an `id = ANY('{}')` would be a query run to learn nothing.
+func TestATypeWithNothingToNameAsksNothing(t *testing.T) {
+	e := integration.Setup(t)
+	names := namesOver(e)
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	for _, kind := range []string{"person", "organization", "deal", "activity", "lead", "project"} {
+		labels, err := names.Labels(reader, kind, nil)
+		if err != nil {
+			t.Fatalf("naming an empty set of %s: %v", kind, err)
+		}
+		if len(labels) != 0 {
+			t.Fatalf("%s answered %v for an empty ask", kind, labels)
+		}
+	}
+}
+
+// A reader who may not read the OBJECT at all loses the labels and nothing
+// else. The lane still renders, the ids still travel, and the page does not
+// fail because one of its producers named a record this reader has no grant
+// for — which is the same promise as a record they cannot see.
+func TestAnObjectGrantTheReaderLacksCostsOnlyItsLabels(t *testing.T) {
+	e := integration.Setup(t)
+	names := namesOver(e)
+	person := e.SeedPerson(t, "Dana Weiss", nil)
+
+	// A rep holding no person grant at all.
+	ungranted := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}},
+		RowScope: principal.RowScopeTeam,
+	})
+
+	labels, err := names.Labels(ungranted, "person", []ids.UUID{person})
+	if err != nil {
+		t.Fatalf("a missing grant must cost the labels, not fail the page: %v", err)
+	}
+	if len(labels) != 0 {
+		t.Fatalf("labels = %v for a reader with no person grant", labels)
+	}
+}
