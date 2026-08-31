@@ -797,7 +797,7 @@ describe("mapOrgUpdate — domains change detection (P1)", () => {
 // value, a field the read never grounded is simply absent, and an empty read
 // states so honestly instead of inventing rows.
 describe("CompanyScreen — profile fields card (B5)", () => {
-  it("renders a confirmed field's label + value and omits absent fields", async () => {
+  it("renders a confirmed field's value and draws absent fields as empty rows", async () => {
     stubFetch(async (url) => {
       // The tab's rows are editable, and an edit affordance needs all three
       // write axes: the grant, a full seat, and the record's own `writable`.
@@ -849,7 +849,12 @@ describe("CompanyScreen — profile fields card (B5)", () => {
       (el) => el.textContent?.trim() === "Fleet retrofits without downtime",
     );
     expect(valueControl).toBeTruthy();
-    const receipt = buttons.find(
+    // Scoped to the field's own row: the page's overflow menu is also an
+    // aria-expanded button, so a page-wide search passes even when the value
+    // has lost its evidence mark entirely.
+    const row = valueControl?.closest(".fieldgrid-value");
+    expect(row).toBeTruthy();
+    const receipt = Array.from(row?.querySelectorAll("button") ?? []).find(
       (el) => el.getAttribute("aria-expanded") === "false",
     );
     expect(receipt).toBeTruthy();

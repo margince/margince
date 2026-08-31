@@ -111,6 +111,10 @@ export function CompanyProfileForm({
                 key={field}
                 orgId={org.id}
                 fields={fields}
+                // A pending or failed read is not the same claim as "this
+                // field has no row": editing on that guess sends no If-Match
+                // and overwrites a value the reader never saw.
+                fieldsLoaded={profileQuery.isSuccess}
                 field={field}
                 // The label comes from the ONE vocabulary map
                 // (PROFILE_FIELD_LABELS), not a second list here: a field

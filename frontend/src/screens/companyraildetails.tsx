@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
+import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Disclosure } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
@@ -70,11 +71,12 @@ const DESCRIPTION_MAX_LENGTH = 500;
  * Writability gates the VERBS only, never the values: an archived or
  * overlay-mirrored account still shows every field, it simply shows them
  * without the edit affordance (InlineText/InlineChoice's own
- * `canEdit={false}` path). Derived internally from `useCan("organization",
- * "update")` and `useCompanyReadOnlyReason` — the same RBAC grant and the
- * same archived/overlay reasoning the header's own inline controls already
- * gate on — rather than threaded down as a prop, so a caller cannot render
- * this grid writable on a record it should not be able to write.
+ * `canEdit={false}` path). Derived internally from
+ * `useCanWriteRecord("organization", …)` and `useCompanyReadOnlyReason` — the
+ * grant, the seat ceiling, the record's own `writable`, and the same
+ * archived/overlay reasoning the header's inline controls gate on — rather
+ * than threaded down as a prop, so a caller cannot render this grid writable
+ * on a record it should not be able to write.
  *
  * Every field here edits in place, including lifecycle, domain and address —
  * none of the three is scalar the way legal name or industry is, so each
@@ -464,6 +466,7 @@ const SIDECAR_FIELDS = [
 export function SidecarFieldRow({
   orgId,
   fields,
+  fieldsLoaded,
   field,
   labelKey,
   label: labelText,
@@ -474,6 +477,13 @@ export function SidecarFieldRow({
 }: Readonly<{
   orgId: string;
   fields: readonly ProfileField[];
+  // Whether `fields` is an ANSWER or merely the empty list a pending or failed
+  // read stands in with. The two are not the same claim: an answered read
+  // saying a field has no row means the write creates one, while an unanswered
+  // read saying the same thing means nobody knows — and sending no If-Match on
+  // that guess overwrites a value the reader never saw. Editing waits for the
+  // answer.
+  fieldsLoaded: boolean;
   field: ProfileFieldKey;
   // Two ways to name the row, because the two callers know the name
   // differently: the rail states its two fields literally, and the Profile tab
@@ -490,6 +500,7 @@ export function SidecarFieldRow({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
   const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
   const save = async (next: string) => {
@@ -540,11 +551,16 @@ export function SidecarFieldRow({
         value={current?.value ?? ""}
         placeholder={t(placeholderKey)}
         multiline={multiline}
-        canEdit={canEdit}
+        canEdit={canEdit && fieldsLoaded}
         readOnlyReason={readOnlyReason}
+        onEditingChange={setEditing}
         onSave={save}
       />
-      {source && current && (
+      {/* Only while the stored value is what is on screen. Mid-edit the text
+          belongs to the reader, and a receipt saying "a crawl read this" beside
+          their own draft attributes their words to a machine — indefinitely, if
+          the save then fails and the draft stays. */}
+      {source && current && !editing && (
         <EvidenceMark value={t("evidence.mark")} source={source} />
       )}
       {/* The register's verdict beside the number it answers for. Only once a
@@ -561,7 +577,12 @@ function DetailsGridBody({
   organization,
 }: Readonly<{ organization: Organization }>) {
   const t = useT();
-  const canUpdate = useCan("organization", "update");
+  // useCanWriteRecord, not useCan: the grant alone offers a control whose save
+  // the seat middleware refuses before RBAC is even consulted, and offers it on
+  // a record the row scope will not let this reader write. The Profile tab
+  // derives the same answer for its own rows, so the two halves of one page
+  // cannot disagree about whether the reader may edit it.
+  const canUpdate = useCanWriteRecord("organization", organization);
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   const patch = useCompanyFieldPatch(organization);
   // The same read the Overview's own profile-field card uses, so a correction
@@ -611,6 +632,7 @@ function DetailsGridBody({
             key={sidecar.field}
             orgId={organization.id}
             fields={sidecarFields}
+            fieldsLoaded={sidecarQuery.isSuccess}
             canEdit={row.canEdit}
             readOnlyReason={readOnlyReason}
             {...sidecar}

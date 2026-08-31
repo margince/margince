@@ -283,6 +283,7 @@ export function InlineText({
   placeholder,
   maxLength,
   multiline,
+  onEditingChange,
   canEdit,
   readOnlyReason,
   onSave,
@@ -300,6 +301,11 @@ export function InlineText({
   // becomes Cmd/Ctrl+Enter and blur still commits exactly as it does for a
   // line.
   multiline?: boolean;
+  // Fires when the reader opens or closes the editor. The row beside this
+  // control may need to know: an evidence receipt describes the STORED value,
+  // and standing beside a draft it would attribute the reader's own words to
+  // whatever produced the old one.
+  onEditingChange?: (editing: boolean) => void;
   canEdit: boolean;
   readOnlyReason?: string;
   // Returns nothing on success and throws on failure. What the reader is shown
@@ -336,6 +342,7 @@ export function InlineText({
   // them — the box would then sit open until it was clicked into, including
   // after the reader had moved on to another field.
   useEffect(() => {
+    onEditingChange?.(editing);
     if (editing) {
       field.current?.focus();
       return;
@@ -344,7 +351,7 @@ export function InlineText({
       restoreFocus.current = false;
       trigger.current?.focus();
     }
-  }, [editing]);
+  }, [editing, onEditingChange]);
 
   if (!canEdit || !editing) {
     const shown = value || placeholder;
