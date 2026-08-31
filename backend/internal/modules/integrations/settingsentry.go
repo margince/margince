@@ -33,12 +33,16 @@ import (
 // tab is a human's own act and never consults this.
 //
 // MachineryApplied because admission reads it to bind its OWN write, inside
-// the transaction that queues the run, under whichever principal the create
-// event or the sweep happens to carry. A gated read there would refuse a seat
-// that legitimately holds `person:update` but no `integrations` grant — the
-// posture would then depend on who typed the contact, which is the opposite of
-// an installation-wide answer. The settings surface still answers this value
-// to a caller through Get, and that read keeps its gate.
+// the transaction that queues the run — the shape that declaration exists for.
+// The posture is a fact about the installation, so it must bind the same way
+// whoever the acting principal turns out to be; a read gated on the caller
+// would make an installation-wide answer depend on who typed the contact.
+//
+// Note what this is NOT: a way around a refusal. The automatic path already
+// runs under a system principal, which auth.Require admits unconditionally, so
+// a gated read there would pass anyway. The declaration is about the question
+// being the machinery's rather than the caller's. The settings surface answers
+// this value to a caller through Get, and that read keeps its gate.
 var AutomaticLookup = settings.Define[bool](
 	"integrations.automatic_lookup",
 	objectIntegrations,

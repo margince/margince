@@ -25,6 +25,34 @@
 
 SET LOCAL lock_timeout = '3s';
 
+-- Carry the old answer forward. The new setting defaults to ON, and an absent
+-- row resolves to that default, so without this an installation that had
+-- deliberately switched automatic enrichment OFF would start buying data about
+-- its contacts the moment this deploys — a purchasing decision made on the
+-- customer's behalf by a migration, which is the one thing a default must never
+-- do.
+--
+-- The old answer was three columns, and it was OFF unless all of them admitted
+-- an automatic path: the mode had to run on create, and both switches had to be
+-- set. Anything less than that is carried across as OFF, because a customer who
+-- narrowed the old controls did not ask for a wider posture.
+--
+-- Insert-only, and only where a connection exists. An installation that never
+-- connected a provider has nothing to preserve and takes the default.
+INSERT INTO setting (key, value)
+SELECT 'integrations.automatic_lookup',
+       to_jsonb(bool_and(
+         c.mode = 'automatic_on_create'
+         AND c.automatic_individual_create
+         AND c.automatic_import))
+  FROM provider_connection c
+ WHERE EXISTS (SELECT 1 FROM provider_connection)
+ HAVING bool_and(
+         c.mode = 'automatic_on_create'
+         AND c.automatic_individual_create
+         AND c.automatic_import) IS NOT NULL
+ON CONFLICT DO NOTHING;
+
 ALTER TABLE provider_run
   DROP CONSTRAINT provider_run_trigger_check;
 
