@@ -181,7 +181,7 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		profile.ContributingRuns = providerPtr(contributingRuns(runs))
 		if s.providers != nil {
 			if desc, err := s.providers.Descriptor(name); err == nil {
-				profile.CategoriesNotRequested = categoriesNotRequested(desc, latest.requested)
+				profile.CategoriesNotRequested = categoriesNotRequested(desc, runs)
 				if answerable(latest) {
 					delivered := deliveredKeys(latest.id, claims)
 					profile.CategoriesAsked = providerPtr(asked(desc, latest.requested, delivered))
@@ -305,16 +305,30 @@ func contributingRuns(runs []providerRunRow) []crmcontracts.ProviderRun {
 	return out
 }
 
-// categoriesNotRequested is what nobody asked for — the difference between
-// the provider's full vocabulary and what the latest run was authorized to
-// request. It is the page's answer to a blank field: "we never asked" is a
-// different fact from "we asked and they had nothing", and only this list
-// tells them apart.
-
-func categoriesNotRequested(desc provider.Descriptor, requested []string) []string {
-	asked := make(map[string]bool, len(requested))
-	for _, c := range requested {
-		asked[c] = true
+// categoriesNotRequested is what nobody asked for — the difference between the
+// provider's full vocabulary and what has been requested for this contact. It
+// is the page's answer to a blank field: "we never asked" is a different fact
+// from "we asked and they had nothing", and only this list tells them apart.
+//
+// Across every run that contributed a value, not the latest one alone. The
+// values ON the page accumulate from all of them, so reading the newest run by
+// itself made the page contradict what it was showing: buy a mobile for
+// somebody whose profile link and employer were bought last week, and this line
+// said nobody had asked for a profile link while the profile link was printed
+// two inches above it.
+func categoriesNotRequested(desc provider.Descriptor, runs []providerRunRow) []string {
+	asked := map[string]bool{}
+	for _, r := range runs {
+		// The same corpus contributingRuns reports, and for the same reason: a
+		// run whose claims never landed put nothing on this page, so counting
+		// it as "asked" would explain a blank with a purchase the reader
+		// cannot see.
+		if r.state != string(provider.RunCompleted) || r.claimsUnwritten {
+			continue
+		}
+		for _, c := range r.requested {
+			asked[c] = true
+		}
 	}
 	out := []string{}
 	for _, c := range desc.Categories {
