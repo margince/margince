@@ -13,10 +13,11 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 /**
  * The Google OAuth app a mailbox connection is made through.
  *
- * This file owns the endpoint's hooks and onboarding's first-run step borrows
- * them, rather than each writing its own: how long a client SECRET lives in a
- * mutation's `variables` is not a rule worth having two answers to, and the
- * onboarding screen is the one most likely to be written in a hurry.
+ * The ONLY form that writes it, and the only place first run sends an operator
+ * for it: the app is optional, and a second form would be one that cannot show
+ * the redirect URIs below — the half an operator has to paste into Google's
+ * console. So how long a client SECRET lives in a mutation's `variables` has
+ * one answer here rather than two answers to compare.
  *
  * The secret is never read back. `GET` answers whether one is stored and the
  * client id, which is not a secret — it travels in every authorization redirect,
@@ -55,8 +56,8 @@ export function useSetGoogleApp() {
       }
     },
     onSuccess: async () => {
-      // Both: the card's own view, and the first-run report that gates
-      // onboarding on this very step.
+      // Both: the card's own view, and the setup report, which names this
+      // step as outstanding whether or not it blocks anything.
       await queryClient.invalidateQueries({
         queryKey: ["installation-google-app"],
       });
@@ -214,7 +215,7 @@ export function GoogleAppCard() {
               </p>
               <RedirectUris uris={status.redirect_uris} />
               <Field
-                label={t("firstRun.google.clientId")}
+                label={t("googleApp.clientId")}
                 hint={
                   status.source === "stored"
                     ? t("googleApp.replaceHint")
@@ -228,12 +229,12 @@ export function GoogleAppCard() {
                     value={clientId}
                     autoComplete="off"
                     disabled={!canManage || busy}
-                    placeholder={t("firstRun.google.clientIdPlaceholder")}
+                    placeholder={t("googleApp.clientIdPlaceholder")}
                     onChange={(e) => setClientId(e.target.value)}
                   />
                 )}
               </Field>
-              <Field label={t("firstRun.google.clientSecret")}>
+              <Field label={t("googleApp.clientSecret")}>
                 {(control) => (
                   <TextInput
                     {...control}

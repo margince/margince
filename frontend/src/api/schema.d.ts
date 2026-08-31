@@ -6243,14 +6243,15 @@ export interface paths {
          * What this installation still has to be configured with before it can be used.
          * @description The onboarding gate's one question, answered in one place. A fresh installation cannot
          *     read a company website until it can call a model, and cannot capture mail until it has a
-         *     Google app — so onboarding asks here rather than composing the answer out of several
+         *     Google app — so a client asks here rather than composing the answer out of several
          *     surfaces and drifting from whatever the server actually requires.
          *
-         *     `blocking` is the SERVER's policy, not the screen's. A step that is unconfigured and
-         *     blocking is one the installation may not proceed past; a step may be unconfigured and
-         *     non-blocking, which is how a posture that does not need it (a deployment serving no mail,
-         *     say) is expressed without the client having to know that rule. `complete` is exactly
-         *     "no blocking step is unconfigured", so a client never recomputes it.
+         *     `blocking` is the SERVER's policy, not the screen's, and the two questions are not the
+         *     same one. A step that is unconfigured and blocking is one the installation may not
+         *     proceed past; a step may be unconfigured and non-blocking, which is how something an
+         *     installation can be used without (mail capture, on a deployment with no Google app) is
+         *     reported as still outstanding rather than as a gate. `complete` is exactly "no blocking
+         *     step is unconfigured", so a client never recomputes it.
          *
          *     Human session only. An agent never reads or completes an installation's setup.
          */

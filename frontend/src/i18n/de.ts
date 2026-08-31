@@ -6005,6 +6005,10 @@ export const de = {
   "googleApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
   "googleApp.fromEnvironment":
     "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
+  "googleApp.clientId": "Client-ID",
+  "googleApp.clientSecret": "Client-Secret",
+  "googleApp.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
@@ -6017,13 +6021,6 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
-  "firstRun.google.title": "Google-App verbinden",
-  "firstRun.google.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen. Später unter Einstellungen änderbar.",
-  "firstRun.google.clientIdPlaceholder":
-    "000000000000-xxxx.apps.googleusercontent.com",
-  "firstRun.google.clientId": "Client-ID",
-  "firstRun.google.clientSecret": "Client-Secret",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
   "aiProviderKeys.sub":
     "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",

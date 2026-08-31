@@ -163,27 +163,40 @@ func TestGoogleAppOverHTTPLetsAReadSeatLookAndNotTouch(t *testing.T) {
 	}
 }
 
-// The setup report is what onboarding gates on, so it has to move when the
+// readSetup is the whole report, which is what `complete` has to be read from:
+// the field is the server's own verdict and a test recomputing it from the step
+// list would be asserting its own arithmetic rather than the installation's
+// policy.
+func readSetup(t *testing.T, e *apptest.AppEnv) crmcontracts.InstallationSetup {
+	t.Helper()
+	var setup crmcontracts.InstallationSetup
+	if status := e.Call(t, "GET", "/v1/installation/setup", nil, nil, &setup); status != http.StatusOK {
+		t.Fatalf("GET installation/setup → %d, want 200", status)
+	}
+	return setup
+}
+
+// setupStep is one named step out of the report. A step the report never names
+// is fatal rather than a zero value: every assertion below is about what the
+// step SAYS, and a silently absent one would read as "not configured, not
+// blocking" and pass.
+func setupStep(t *testing.T, e *apptest.AppEnv, which crmcontracts.InstallationSetupStepStep) crmcontracts.InstallationSetupStep {
+	t.Helper()
+	for _, s := range readSetup(t, e).Steps {
+		if s.Step == which {
+			return s
+		}
+	}
+	t.Fatalf("the setup report names no %q step, so no surface can say whether it is outstanding", which)
+	return crmcontracts.InstallationSetupStep{}
+}
+
+// The setup report is what onboarding reads, so it has to move when the
 // installation does rather than reporting a constant.
 func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 	e := setupGoogleAppHTTP(t)
 
-	googleStep := func(t *testing.T) crmcontracts.InstallationSetupStep {
-		t.Helper()
-		var setup crmcontracts.InstallationSetup
-		if status := e.Call(t, "GET", "/v1/installation/setup", nil, nil, &setup); status != http.StatusOK {
-			t.Fatalf("GET installation/setup → %d, want 200", status)
-		}
-		for _, s := range setup.Steps {
-			if s.Step == crmcontracts.InstallationSetupStepStepGoogleApp {
-				return s
-			}
-		}
-		t.Fatal("the setup report names no google_app step, so onboarding has nothing to gate on")
-		return crmcontracts.InstallationSetupStep{}
-	}
-
-	if step := googleStep(t); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); step.Configured {
 		t.Fatal("a fresh installation reports the Google app as configured")
 	}
 	secret := httpSecret
@@ -191,13 +204,13 @@ func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 		crmcontracts.GoogleAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("PUT google-app → %d, want 204", status)
 	}
-	if step := googleStep(t); !step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); !step.Configured {
 		t.Fatal("the setup report still calls the Google app unconfigured after it was stored")
 	}
 	if status := e.Call(t, "DELETE", "/v1/installation/google-app", nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("DELETE google-app → %d, want 204", status)
 	}
-	if step := googleStep(t); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); step.Configured {
 		t.Fatal("the setup report still calls the Google app configured after it was removed")
 	}
 }
@@ -313,37 +326,15 @@ func TestAStoredGoogleAppOutranksTheEnvironmentForBothProviders(t *testing.T) {
 	}
 }
 
-// The AI step of the setup report, which is the other half of what onboarding
-// gates on — and the half with the rule worth pinning: a BINDING alone does not
-// make the step configured. Every cloud vendor the binding names needs a
-// credential too, because a bound installation with no key fails on its first
-// real call, and reporting it ready would send an admin through onboarding into
-// a cold start that cannot run.
-func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
-	e := setupGoogleAppHTTP(t)
-
-	aiStep := func(t *testing.T) crmcontracts.InstallationSetupStep {
-		t.Helper()
-		var setup crmcontracts.InstallationSetup
-		if status := e.Call(t, "GET", "/v1/installation/setup", nil, nil, &setup); status != http.StatusOK {
-			t.Fatalf("GET installation/setup → %d, want 200", status)
-		}
-		for _, s := range setup.Steps {
-			if s.Step == crmcontracts.InstallationSetupStepStepAiModels {
-				return s
-			}
-		}
-		t.Fatal("the setup report names no ai_models step, so onboarding has nothing to gate on")
-		return crmcontracts.InstallationSetupStep{}
-	}
-
-	if step := aiStep(t); step.Configured {
-		t.Fatal("a fresh installation reports the AI step as configured with nothing bound")
-	}
-
-	// Bind a CLOUD vendor on every tier. Cloud is the point: it is the case that
-	// needs a credential, and a local-only binding would pass this step with no
-	// key at all — which is correct, and would prove nothing here.
+// bindCloudRouting binds a cloud vendor on every tier this rule needs — one
+// bound cloud tier is enough for CloudProvidersBound to name it, and the
+// routing surface carries more than these three.
+//
+// Cloud is the point: it is the case that needs a credential, and a local-only
+// binding would report the AI step configured with no key at all — which is
+// correct, and would prove nothing about the rule the callers are here for.
+func bindCloudRouting(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
 	binding := crmcontracts.AiTierBinding{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
 	routing := crmcontracts.AiRouting{
 		Profile: "eu_hosted",
@@ -355,20 +346,94 @@ func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 	if status := e.Call(t, "PUT", "/v1/ai/routing", routing, nil, nil); status != http.StatusOK && status != http.StatusNoContent {
 		t.Fatalf("PUT ai/routing → %d, want 200 or 204", status)
 	}
+}
 
-	// Bound, and still NOT configured: the vendor has no key.
-	if step := aiStep(t); step.Configured {
-		t.Error("the AI step reads configured with a cloud vendor bound and no key for it — onboarding would wave the admin through into a cold start that cannot make a call")
-	}
-
+// storeCloudProviderKey gives the vendor bindCloudRouting bound its credential —
+// the second half of what makes the AI step configured.
+func storeCloudProviderKey(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
 	key := "AIza-test-key"
 	if status := e.Call(t, "PUT", "/v1/ai/provider-keys/gemini",
 		crmcontracts.AiProviderKeyInput{ApiKey: &key}, nil, nil); status != http.StatusNoContent && status != http.StatusOK {
 		t.Fatalf("PUT provider key → %d, want 200 or 204", status)
 	}
+}
+
+// ONLY the model binding blocks first run.
+//
+// An installation deployed without a Google app is fully usable — password
+// sign-in, no external provider — so a Google app has no place gating the
+// company form onboarding writes from.
+//
+// The step is still REPORTED, so a surface can say it is outstanding, and it
+// is still second, so nothing here weakens the order
+// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem pins. What this
+// pins is the policy: unconfigured and non-blocking, and an installation that
+// has bound a model is complete without ever touching Google.
+//
+// It reads every step rather than only the Google one on purpose: a test naming
+// just `google_app` would not fail the day a third step arrived blocking.
+//
+// Both halves are asserted. A loop that only rejects blockers OTHER than
+// ai_models proves nothing about ai_models itself, and reading that back out of
+// `complete` would be reasoning from the server's own arithmetic — which is
+// exactly what readSetup exists to avoid.
+func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
+	e := setupGoogleAppHTTP(t)
+
+	fresh := readSetup(t, e)
+	for _, step := range fresh.Steps {
+		if step.Blocking && step.Step != crmcontracts.InstallationSetupStepStepAiModels {
+			t.Errorf("step %q blocks first run; only ai_models may, because it is the only one onboarding can ask for", step.Step)
+		}
+	}
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); !step.Blocking {
+		t.Error("ai_models does not block first run, so nothing gates the cold-start read the product cannot run without")
+	}
+	if fresh.Complete {
+		t.Fatal("a fresh installation reports setup complete with no model bound")
+	}
+	bindCloudRouting(t, e)
+	storeCloudProviderKey(t, e)
+
+	// ONE report answers both halves. Completeness and the Google step read from
+	// two separate GETs would let the sentence below describe a pairing neither
+	// response ever carried.
+	setup := readSetup(t, e)
+	if !setup.Complete {
+		t.Errorf("setup reads incomplete with a model bound and keyed: %+v", setup.Steps)
+	}
+	for _, step := range setup.Steps {
+		if step.Step == crmcontracts.InstallationSetupStepStepGoogleApp && step.Configured {
+			t.Fatal("the Google app reads configured though none was ever stored, so completeness in this same report proves nothing about skipping it")
+		}
+	}
+}
+
+// The AI step of the setup report, which is the other half of what onboarding
+// reads — and the half with the rule worth pinning: a BINDING alone does not
+// make the step configured. Every cloud vendor the binding names needs a
+// credential too, because a bound installation with no key fails on its first
+// real call, and reporting it ready would send an admin through onboarding into
+// a cold start that cannot run.
+func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
+	e := setupGoogleAppHTTP(t)
+
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
+		t.Fatal("a fresh installation reports the AI step as configured with nothing bound")
+	}
+
+	bindCloudRouting(t, e)
+
+	// Bound, and still NOT configured: the vendor has no key.
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
+		t.Error("the AI step reads configured with a cloud vendor bound and no key for it — onboarding would wave the admin through into a cold start that cannot make a call")
+	}
+
+	storeCloudProviderKey(t, e)
 
 	// Both halves present: now it is configured.
-	if step := aiStep(t); !step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); !step.Configured {
 		t.Error("the AI step still reads unconfigured with a binding AND its key stored")
 	}
 }
