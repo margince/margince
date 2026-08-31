@@ -3079,6 +3079,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/reply-recipient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Who a reply to this message would be addressed to.
+         * @description The same resolution `draft_email` uses to address and greet its draft, asked
+         *     without drafting: a composer can show the recipient when it opens rather than
+         *     after a model call. Both read one gated statement, so what the reader sees before
+         *     drafting and what the draft carries are one answer.
+         *
+         *     The counterparty is read from the message's participants by role — the sender of
+         *     an inbound message first, then an addressee — falling back to the activity link.
+         *     Every field may be empty: a message linked to nobody, a person this caller cannot
+         *     read, or a contact with no live address all answer the empty recipient rather than
+         *     guessing one. Sending still requires `to` on the send request and gates consent
+         *     independently; this only saves typing an address the record already holds.
+         */
+        get: operations["getReplyRecipient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/send-email": {
         parameters: {
             query?: never;
@@ -17680,6 +17713,21 @@ export interface components {
             readonly draft_ref: string | null;
         };
         /**
+         * @description Who a reply to a message is addressed to: one person, resolved from the
+         *     message's participants by role.
+         *
+         *     One person rather than a list. A reply is written to somebody, and a group
+         *     thread degrades to the most likely counterparty rather than to nobody.
+         */
+        ReplyRecipient: {
+            /** @description The name as recorded, empty when no readable person is on the message. */
+            full_name: string;
+            /** @description What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call. */
+            first_name: string;
+            /** @description Where the reply is sent — their primary live address. Empty for a contact with no address on record, which the reader fills in themselves. */
+            address: string;
+        };
+        /**
          * @description A draft written from an account's records, and what it was written from
          *     (ADR-0087/A132). Never sent by drafting; send via `POST /emails`.
          *
@@ -29458,6 +29506,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailDraft"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getReplyRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recipient a reply would go to, with empty fields where unknown. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyRecipient"];
                 };
             };
             404: components["responses"]["NotFound"];

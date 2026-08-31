@@ -4647,6 +4647,33 @@ paths:
               schema: { $ref: '#/components/schemas/EmailDraft' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /activities/{id}/reply-recipient:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getReplyRecipient
+      summary: Who a reply to this message would be addressed to.
+      description: |
+        The same resolution `draft_email` uses to address and greet its draft, asked
+        without drafting: a composer can show the recipient when it opens rather than
+        after a model call. Both read one gated statement, so what the reader sees before
+        drafting and what the draft carries are one answer.
+
+        The counterparty is read from the message's participants by role — the sender of
+        an inbound message first, then an addressee — falling back to the activity link.
+        Every field may be empty: a message linked to nobody, a person this caller cannot
+        read, or a contact with no live address all answer the empty recipient rather than
+        guessing one. Sending still requires `to` on the send request and gates consent
+        independently; this only saves typing an address the record already holds.
+      responses:
+        '200':
+          description: The recipient a reply would go to, with empty fields where unknown.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplyRecipient' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /activities/{id}/send-email:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -24681,6 +24708,30 @@ components:
         ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.' }
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
+
+    ReplyRecipient:
+      type: object
+      description: |
+        Who a reply to a message is addressed to: one person, resolved from the
+        message's participants by role.
+
+        One person rather than a list. A reply is written to somebody, and a group
+        thread degrades to the most likely counterparty rather than to nobody.
+      required: [full_name, first_name, address]
+      properties:
+        full_name:
+          type: string
+          description: The name as recorded, empty when no readable person is on the message.
+        first_name:
+          type: string
+          description: >-
+            What a greeting uses. Split server-side rather than in a prompt: a model asked
+            to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
+        address:
+          type: string
+          description: >-
+            Where the reply is sent — their primary live address. Empty for a contact with
+            no address on record, which the reader fills in themselves.
 
     AccountEmailDraft:
       type: object

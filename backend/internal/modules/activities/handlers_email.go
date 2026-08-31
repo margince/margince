@@ -127,7 +127,8 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 	if req.Intent != nil {
 		intent = *req.Intent
 	}
-	result, err := h.prepareEmailDraft(r.Context(), ids.UUID(id), intent)
+	ctx := r.Context()
+	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), intent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -137,12 +138,49 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailDraft{
 		Subject:             result.Subject,
 		Body:                result.Body,
+		To:                  h.replyAddresses(ctx, ids.UUID(id)),
 		InReplyToActivityId: &replyTo,
 		AiGenerated:         &result.AIGenerated,
 		AiDisclosure:        result.AIDisclosure,
 		VoiceProfileVersion: result.VoiceProfileVersion,
 		DraftRef:            result.DraftRef,
 	})
+}
+
+// GetReplyRecipient answers who a reply to this message would go to, without
+// drafting one. A composer opening on a thread shows the recipient straight
+// away rather than after a model call that takes tens of seconds.
+func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	recipient, err := h.store.ReplyRecipientFor(r.Context(), ids.From[ids.ActivityKind](ids.UUID(id)))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReplyRecipient{
+		FullName:  recipient.FullName,
+		FirstName: recipient.FirstName,
+		Address:   recipient.Address,
+	})
+}
+
+// replyAddresses names where a reply to this anchor is sent, or nil.
+//
+// It resolves through the same gated statement that names the person the
+// draft GREETS, so the address on the response and the name in the body are
+// one person rather than two answers. A caller whose scope withholds the
+// person gets neither.
+//
+// Nil on any failure and on a person with no live address: drafting is the
+// caller's request and addressing is a convenience on top of it, so a draft
+// that cannot name its recipient is still served with the field left for the
+// reader to fill. The send path re-resolves and gates independently — this
+// only saves typing an address the record already holds.
+func (h Handlers) replyAddresses(ctx context.Context, anchor ids.UUID) *[]openapi_types.Email {
+	recipient, err := h.store.ReplyRecipientFor(ctx, ids.From[ids.ActivityKind](anchor))
+	if err != nil || recipient.Address == "" {
+		return nil
+	}
+	return &[]openapi_types.Email{openapi_types.Email(recipient.Address)}
 }
 
 func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, intent string) (DraftResult, error) {

@@ -28,7 +28,7 @@ import (
 
 // ReplyRecipient is who a reply to an activity is addressed to.
 //
-// Both fields may be empty, and that is an answer rather than a failure: an
+// Every field may be empty, and that is an answer rather than a failure: an
 // activity linked to no person, or to one this caller cannot read, leaves the
 // drafter with no name — and a draft that opens "Hallo," is correct there,
 // where one that guesses is not.
@@ -39,6 +39,14 @@ type ReplyRecipient struct {
 	// the prompt: a model asked to shorten a name will shorten
 	// "Dr. Anne-Marie Weiß-Konrad" differently on every call.
 	FirstName string
+	// Address is where a reply is sent, resolved in the SAME gated statement
+	// as the name. Two statements would let a caller who may greet a person
+	// be refused their address, or the reverse — and a composer that shows a
+	// name it cannot write to states a recipient the send will reject.
+	//
+	// Empty is the ordinary answer for a person with no live address on
+	// record, which a reader fills in themselves.
+	Address string
 }
 
 // ReplyRecipientFor names the person a reply to this activity is written to.
@@ -95,8 +103,13 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// Rank: the sender of an inbound message is who we are answering, then
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
+		// The address is a LATERAL rather than a join: a person with three
+		// live addresses would otherwise multiply the counterparty row and
+		// let ORDER BY pick the ranking's winner by which address sorted
+		// first. Primary first, then the record's own order, so the address
+		// shown is the one the person page calls their address.
 		q := `
-			SELECT p.full_name, coalesce(p.first_name, '')
+			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(e.email, '')
 			  FROM person p
 			  JOIN (
 			       SELECT person_id,
@@ -109,13 +122,20 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			         FROM activity_link
 			        WHERE activity_id = $1 AND person_id IS NOT NULL
 			  ) c ON c.person_id = p.id
+			  LEFT JOIN LATERAL (
+			       SELECT email
+			         FROM person_email
+			        WHERE person_id = p.id AND archived_at IS NULL
+			        ORDER BY is_primary DESC, position, id
+			        LIMIT 1
+			  ) e ON true
 			 WHERE p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`
 		}
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
-		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName)
+		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.Address)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a person out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather

@@ -514,6 +514,37 @@ function useLatestMessage(
 }
 
 /**
+ * Who a reply to this anchor goes to, resolved without drafting.
+ *
+ * Sending REQUIRES `to`, so an empty field is not a convenience gap: it is a
+ * reply the reader must address by hand against a record that already holds
+ * the answer. The server ranks the message's participants — its sender before
+ * anyone copied on it — and this asks that same resolution the draft uses, so
+ * what the composer shows on open and what a draft fills in cannot disagree.
+ *
+ * Undefined while unsettled and for a contact with no address on record. The
+ * caller only ever fills an EMPTY field from it, so a reader who typed their
+ * own recipient keeps it.
+ */
+function useReplyRecipient(anchor: string | undefined): string | undefined {
+  const query = useQuery({
+    queryKey: ["compose-reply-recipient", anchor],
+    queryFn: async () => {
+      const { data, error } = await api.GET(
+        "/activities/{id}/reply-recipient",
+        { params: { path: { id: anchor ?? "" } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    enabled: anchor !== undefined,
+  });
+  return query.data?.address === "" ? undefined : query.data?.address;
+}
+
+/**
  * What the composer says it is answering, or null while it does not yet know.
  *
  * A caller that named an activity has already told the reader what they opened
@@ -2146,6 +2177,20 @@ export function ComposeModal({
     open && !activityId,
   );
   const answering = activityId ?? latest.activity?.id;
+  // Addressing the reply before a draft is asked for. A channel reply resolves
+  // its recipient server-side and shows no To field, so it asks nothing.
+  const threadRecipient = useReplyRecipient(
+    open && !isChannelReply ? answering : undefined,
+  );
+  // Fills an EMPTY field only, and only while nothing drafted stands there:
+  // a reader who typed their own recipient, or a draft that named one, both
+  // outrank the thread's default.
+  useEffect(() => {
+    if (threadRecipient === undefined || to.length > 0) {
+      return;
+    }
+    setTo([threadRecipient]);
+  }, [threadRecipient, to.length]);
   // The sentence the reader reads. Null while the lookup is unsettled: an
   // unanswered read is not "no earlier message", and saying so would tell them
   // this starts a new thread when it may continue one.
