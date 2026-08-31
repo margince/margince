@@ -147,6 +147,11 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 // overwrite happened. Rows carrying no object_class are skipped rather than
 // reported as an unnamed class — a card that says "something was overwritten"
 // sends the reader nowhere.
+//
+// The lane is assembled on every render and a bad sweep writes one row per
+// record, so the class is carried in a partial index on the ledger keyed by
+// exactly this predicate: the scan arrives ordered by the class being made
+// distinct, and the duplicates collapse without a sort or a heap fetch.
 func (s *Service) overwrittenConcern(ctx context.Context) (concern SyncConcern, overwritten bool, err error) {
 	var classes []string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
