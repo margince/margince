@@ -3082,7 +3082,7 @@ export const de = {
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
-    "MCP-Clients mit eigenem Credential, abgeleitet aus einem Passport, den du verliehen hast",
+    "MCP-Clients mit eigenem Credential, mit dem Zugriff, den du bei der Autorisierung angekreuzt hast",
   "agents.noneConnected": "Noch ist kein Agent verbunden.",
   "agents.connectedOn": "verbunden {date}",
   "agents.disconnect": "Trennen",
@@ -3099,7 +3099,7 @@ export const de = {
     "Das beendet die ganze Verbindung, nicht nur ein Credential: der Agent verliert den Zugriff beim nächsten Aufruf und kann nicht erneuern. Für eine neue Verbindung musst du den Zugriff erneut genehmigen.",
   "agents.connectHow": "Agent verbinden",
   "agents.connectSteps":
-    "Stelle oben einen Passport aus und führe dann einen dieser Befehle aus. Der Client registriert sich selbst und bringt dich hierher zurück, um zu wählen, welchen Passport du verleihst.",
+    "Führe einen dieser Befehle aus. Der Client registriert sich selbst und bringt dich hierher zurück, um den Zugriff zu wählen, den er erhalten darf.",
   "agents.connectAntigravityPath":
     "Antigravity hat keinen Add-Befehl — trage den Block in ~/.gemini/config/mcp_config.json ein.",
   "agents.connectorOff": "Der MCP-Connector ist für diese Installation aus.",

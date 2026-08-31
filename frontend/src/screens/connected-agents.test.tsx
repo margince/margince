@@ -181,7 +181,26 @@ const render = (ui: ReactNode) => {
   );
 };
 
+// One connection, scopes swapped in by the caller — for cases that only care
+// what the chip row reads as, not any of the other connection facts.
+function renderConnectedAgents(opts: { scopes: string[] }) {
+  vi.stubGlobal(
+    "fetch",
+    backend({ passports: [{ ...CONNECTED, scopes: opts.scopes }] }),
+  );
+  render(<ConnectedAgentsCard />);
+}
+
 describe("ConnectedAgentsCard", () => {
+  it("names each scope the way the consent screen named it", async () => {
+    renderConnectedAgents({ scopes: ["read", "enrich"] });
+    // A human who ticked "Buy contact data" cannot map a raw "enrich" chip
+    // back to the decision they made.
+    expect(await screen.findByText("Read records")).toBeTruthy();
+    expect(screen.getByText("Buy contact data")).toBeTruthy();
+    expect(screen.queryByText("enrich")).toBeNull();
+  });
+
   it("names a connection by its client, never the raw client id its label carries", async () => {
     vi.stubGlobal("fetch", backend({}));
     render(<ConnectedAgentsCard />);

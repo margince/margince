@@ -1790,16 +1790,18 @@ function AgentToolsCard() {
   // lendablePassportPredicate), so offering one here would name a choice the
   // consent screen cannot honour — and would put a raw DCR client id back in
   // front of a reader the rest of this change just took it away from.
-  const lendable = (passports.data?.data ?? []).filter(
+  const mintedPassports = (passports.data?.data ?? []).filter(
     (p) => p.revoked_at == null && p.connection == null,
   );
   // The filter follows the selector: a passport revoked while it was the
   // chosen scope drops out of the options, and the <select> then shows "all
   // passports" — so the inventory must read as unfiltered too, rather than
   // stay quietly scoped to a credential no longer on offer.
-  const scopeId = lendable.some((p) => p.id === passportId) ? passportId : "";
+  const scopeId = mintedPassports.some((p) => p.id === passportId)
+    ? passportId
+    : "";
   const grantedScopes = new Set(
-    lendable.find((p) => p.id === scopeId)?.scopes ?? [],
+    mintedPassports.find((p) => p.id === scopeId)?.scopes ?? [],
   );
 
   return (
@@ -1821,7 +1823,7 @@ function AgentToolsCard() {
               label={t("tools.scopeLabel")}
               control={
                 <PassportSelect
-                  options={lendable.map((p) => ({
+                  options={mintedPassports.map((p) => ({
                     id: p.id,
                     label: t("tools.scopedTo", { label: p.label }),
                     scopes: p.scopes,

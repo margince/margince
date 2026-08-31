@@ -3052,7 +3052,7 @@ export const vi = {
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":
-    "Các client MCP giữ thông tin xác thực của riêng mình, sinh ra từ một passport bạn cho mượn",
+    "Các client MCP giữ thông tin xác thực của riêng mình, với đúng quyền bạn đã tick khi cấp quyền",
   "agents.noneConnected": "Chưa có Agent nào kết nối.",
   "agents.connectedOn": "kết nối {date}",
   "agents.disconnect": "Ngắt kết nối",
@@ -3069,7 +3069,7 @@ export const vi = {
     "Việc này kết thúc toàn bộ kết nối, không chỉ một thông tin xác thực: Agent mất quyền truy cập ở lần gọi kế tiếp và không gia hạn được. Muốn kết nối lại thì phải cấp quyền truy cập lần nữa.",
   "agents.connectHow": "Kết nối một Agent",
   "agents.connectSteps":
-    "Hãy tạo một passport ở trên, rồi chạy một trong các lệnh sau. Client sẽ tự đăng ký và đưa bạn quay lại đây để chọn passport cho mượn.",
+    "Hãy chạy một trong các lệnh sau. Client sẽ tự đăng ký và đưa bạn quay lại đây để chọn quyền truy cập mà nó được phép có.",
   "agents.connectAntigravityPath":
     "Antigravity không có lệnh add — hãy đặt khối đó vào ~/.gemini/config/mcp_config.json.",
   "agents.connectorOff": "Connector MCP đang tắt trên bản cài đặt này.",

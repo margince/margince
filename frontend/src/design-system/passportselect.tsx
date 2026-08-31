@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useT } from "../i18n";
+import { isMessageKey, useT } from "../i18n";
 import { Select, type SelectOption } from "./select";
 
 // Shared between the tool console's passport filter and the OAuth consent
@@ -16,17 +16,24 @@ export type PassportOption = {
 };
 
 // A scope chip row: every chip a scope the passport carries. There is no
-// "granted versus not" distinction to draw — a connection receives the scopes
-// of the passport lent to it, and the tool console lists a whole passport's
-// scopes — so a chip means one thing on both surfaces.
+// "granted versus not" distinction to draw — a connection's scopes are exactly
+// what its consent screen was ticked for (Task 7), and the tool console lists
+// a whole passport's scopes — so a chip means one thing on both surfaces.
 export function ScopeChips({ scopes }: Readonly<{ scopes: string[] }>) {
+  const t = useT();
   return (
     <>
-      {scopes.map((scope) => (
-        <span key={scope} className="badge">
-          {scope}
-        </span>
-      ))}
+      {scopes.map((scope) => {
+        const key = `passport.scope.${scope}`;
+        return (
+          <span key={scope} className="badge">
+            {/* A scope the catalogue has no entry for still renders — as the
+                raw token — rather than vanish: an unrecognized chip is a sign
+                the vocabulary grew, not a reason to hide what was granted. */}
+            {isMessageKey(key) ? t(key) : scope}
+          </span>
+        );
+      })}
     </>
   );
 }

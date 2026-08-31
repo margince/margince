@@ -3123,7 +3123,7 @@ export const en = {
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":
-    "MCP clients holding their own credential, derived from a passport you lent",
+    "MCP clients holding their own credential, scoped to what you ticked when you authorized them",
   "agents.noneConnected": "No agent is connected yet.",
   "agents.connectedOn": "connected {date}",
   "agents.disconnect": "Disconnect",
@@ -3140,7 +3140,7 @@ export const en = {
     "This ends the whole connection, not just one credential: the agent loses access on its next call and cannot renew. Reconnecting means approving access again.",
   "agents.connectHow": "Connect an agent",
   "agents.connectSteps":
-    "Mint a passport above, then run one of these. The client registers itself and brings you back here to choose which passport to lend.",
+    "Run one of these. The client registers itself and brings you back here to choose the access it can have.",
   "agents.connectAntigravityPath":
     "Antigravity has no add command — put that block in ~/.gemini/config/mcp_config.json.",
   "agents.connectorOff": "The MCP connector is off for this installation.",

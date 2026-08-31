@@ -52,15 +52,21 @@ describe("PassportSelect", () => {
 });
 
 describe("ScopeChips", () => {
-  it("renders every scope as one chip, all reading the same", () => {
+  it("renders every scope as one chip, localized, all reading the same", () => {
     render(<ScopeChips scopes={["read", "write"]} />);
-    const read = screen.getByText("read");
-    const write = screen.getByText("write");
-    // Each chip is exactly its scope name with nothing appended: a connection
-    // gets the scopes of the passport lent to it, so no chip is qualified as
-    // withheld, and neither chip may read as weaker than the other.
-    expect(read.textContent).toBe("read");
-    expect(write.textContent).toBe("write");
+    const read = screen.getByText("Read records");
+    const write = screen.getByText("Change records");
+    // Each chip is the catalogue's word for its scope, with nothing appended:
+    // a connection's scopes are exactly what the human ticked, so no chip is
+    // qualified as withheld, and neither chip may read as weaker than the
+    // other.
+    expect(read.textContent).toBe("Read records");
+    expect(write.textContent).toBe("Change records");
     expect(write.className).toBe(read.className);
+  });
+
+  it("falls back to the raw token for a scope the catalogue has no word for", () => {
+    render(<ScopeChips scopes={["nonexistent-scope"]} />);
+    expect(screen.getByText("nonexistent-scope")).toBeTruthy();
   });
 });
