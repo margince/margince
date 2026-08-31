@@ -1577,6 +1577,7 @@ export const de = {
   "co.people.map.scope": "{count} im Buying-Team · nur der gewählte Deal.",
   "co.people.map.scopePartial":
     "{count} im Buying-Team · {hidden} weitere für dich nicht sichtbar.",
+  "co.people.board.readFromMessages": "Aus ihren Nachrichten gelesen",
   "co.reach.answered": "Antwortet",
   "co.reach.silent": "Keine Antwort",
   "co.reach.untried": "Nie angesprochen",

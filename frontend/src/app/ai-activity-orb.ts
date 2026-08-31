@@ -60,6 +60,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   offer_draft: "working",
   overnight_at_risk_sweep: "working",
   summarize: "working",
+  propose_roles: "working",
   transcript_propose: "working",
   weekly_review: "working",
 };

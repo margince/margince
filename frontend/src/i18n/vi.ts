@@ -1571,6 +1571,7 @@ export const vi = {
   "co.people.map.assignHint": "Chưa ai dẫn dắt deal này",
   "co.people.map.scopePartial":
     "{count} trong nhóm · {hidden} người khác bạn không thấy.",
+  "co.people.board.readFromMessages": "Đọc từ tin nhắn của họ",
   "co.reach.answered": "Đã hồi đáp",
   "co.reach.silent": "Chưa có hồi đáp",
   "co.reach.untried": "Chưa tiếp cận",

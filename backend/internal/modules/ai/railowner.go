@@ -63,6 +63,12 @@ var railOwners = map[Task]string{
 
 	TaskEmbeddings: SourceNoOccurrence,
 
+	// A planned task: nothing calls it yet, and when something does the call
+	// will be one interactive completion the router reports after the fact —
+	// there is no durable row to say queued and running for a read a human
+	// waits on.
+	TaskProposeRoles: SourceRouter,
+
 	TaskBriefRanking:               SourceRouter,
 	TaskCaptureClassify:            SourceRouter,
 	TaskCaptureCounterpartyVerdict: SourceRouter,

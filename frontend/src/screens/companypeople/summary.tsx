@@ -12,6 +12,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
 import { EntityRef } from "../entityref";
 import { mapModelFromCoverage } from "./mapmodel";
+import "./companypeople.css";
 
 // What the account looks like before the reader picks anybody.
 //
@@ -416,8 +417,19 @@ function mapCopy(t: ReturnType<typeof useT>) {
 
 function SeatCard({ seat }: Readonly<{ seat: Seat }>) {
   const t = useT();
+  // Indigo, dashed, and only here: the treatment means "a machine decided this
+  // and nobody has confirmed it". A seat a colleague typed carries none of it,
+  // which is the whole point — a reader can see which half of the committee is
+  // the product's reading of the evidence and disagree with that half.
+  const suggested = seat.ai_suggested === true;
   return (
-    <div>
+    <div
+      className={suggested ? "cp-seat cp-seat-suggested" : "cp-seat"}
+      data-suggested={suggested ? "true" : undefined}
+    >
+      {suggested && (
+        <p className="cp-seat-mark">{t("co.people.board.readFromMessages")}</p>
+      )}
       <EntityRef kind="person" id={seat.person_id} name={seat.full_name} />
       {seat.engagement && (
         <Badge

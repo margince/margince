@@ -154,6 +154,7 @@ export const ACTIVITY_LINE: Readonly<
   site_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_fact_extract: SITE_READ_WATCHED_WHERE_IT_RUNS,
   site_triage: SITE_READ_WATCHED_WHERE_IT_RUNS,
+  propose_roles: SYSTEM_SWEEP,
   transcript_propose: SYSTEM_SWEEP,
   voice_build: SYSTEM_SWEEP,
 

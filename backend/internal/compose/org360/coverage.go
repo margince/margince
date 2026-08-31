@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -167,7 +168,7 @@ func (s *Service) fillCommittee(
 	if err != nil {
 		return err
 	}
-	committee, err := s.wireCommittee(ctx, tx, orgID, now, seats, total, all)
+	committee, err := s.wireCommittee(ctx, tx, orgID, selected, now, seats, total, all)
 	if err != nil {
 		return err
 	}
@@ -176,8 +177,9 @@ func (s *Service) fillCommittee(
 }
 
 func (s *Service) wireCommittee(
-	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
-	seats []deals.DealStakeholder, total int, all []people.ContactStrength,
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, dealID ids.DealID,
+	now time.Time, seats []deals.DealStakeholder, total int,
+	all []people.ContactStrength,
 ) (crmcontracts.OrganizationCoverageCommittee, error) {
 	out := crmcontracts.OrganizationCoverageCommittee{
 		Seats:         []crmcontracts.OrganizationCoverageSeat{},
@@ -215,6 +217,13 @@ func (s *Service) wireCommittee(
 			return crmcontracts.OrganizationCoverageCommittee{}, err
 		}
 	}
+	// Which of these seats the product read rather than a person asserted, and
+	// what it read them from. Kept out of deals.Stakeholders because one caller
+	// needing provenance is not a reason to widen the shape every caller reads.
+	marks, err := suggestedSeats(ctx, tx, dealID, seats)
+	if err != nil {
+		return crmcontracts.OrganizationCoverageCommittee{}, err
+	}
 	held := map[string]bool{}
 	for _, seat := range seats {
 		held[seat.Role] = true
@@ -229,6 +238,9 @@ func (s *Service) wireCommittee(
 		}
 		if route, ok := routes[seat.PersonID]; ok {
 			wire.Routes = &route
+		}
+		if mark, ok := marks[seat.PersonID]; ok && mark.suggested {
+			wire.AiSuggested = &mark.suggested
 		}
 		out.Seats = append(out.Seats, wire)
 	}
@@ -317,4 +329,66 @@ func seatCount(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (int, error) {
 		return 0, fmt.Errorf("org360: counting the deal's seats: %w", err)
 	}
 	return total, nil
+}
+
+// seatMark is what a seat's own row says about where it came from.
+type seatMark struct {
+	suggested bool
+}
+
+// suggestedSeats reads the provenance of the committee's own rows.
+//
+// A seat the product read out of messages carries the proposing agent as its
+// captured_by, which is the same mark every other agent write in the tree
+// carries — so "which of these did we read" is answered by the row itself
+// rather than by a column somebody has to remember to set.
+func suggestedSeats(
+	ctx context.Context, tx pgx.Tx, dealID ids.DealID, seats []deals.DealStakeholder,
+) (map[ids.UUID]seatMark, error) {
+	out := map[ids.UUID]seatMark{}
+	if len(seats) == 0 {
+		return out, nil
+	}
+	ids0 := make([]ids.UUID, 0, len(seats))
+	for _, seat := range seats {
+		ids0 = append(ids0, seat.PersonID)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	peoplePos, dealPos, agentPos := arg(ids0), arg(dealID), arg(proposeroles.CapturedBy)
+	// The edge grant, like every other reader of this table: a seat names two
+	// records, and who may learn that pair is what relationship.read governs.
+	// The sibling that reads the same rows for the 360 asks for it, and a
+	// second reader that did not would be the way around it.
+	edgeBound, err := edgeScope(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	// SCOPED TO THIS DEAL. Keyed by person alone, somebody sitting on two deals
+	// carried whichever row the scan happened to return last — so a seat a
+	// colleague typed here could be marked as the product's reading because of
+	// an unrelated deal elsewhere.
+	//
+	// And the SAME liveness rule the committee read applies: it excludes only
+	// archived rows, so filtering ended ones here as well would drop the
+	// provenance of a seat still on the board and quietly unmark it.
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT r.person_id, r.captured_by = $%d
+		  FROM relationship r
+		 WHERE r.kind = 'deal_stakeholder' AND r.person_id = ANY($%d)
+		   AND r.deal_id = $%d AND r.archived_at IS NULL
+		   AND (%s)`, agentPos, peoplePos, dealPos, edgeBound), args...)
+	if err != nil {
+		return nil, fmt.Errorf("org360: reading the committee's provenance: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var mark seatMark
+		if err := rows.Scan(&id, &mark.suggested); err != nil {
+			return nil, err
+		}
+		out[id] = mark
+	}
+	return out, rows.Err()
 }
