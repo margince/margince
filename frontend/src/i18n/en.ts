@@ -2976,6 +2976,10 @@ export const en = {
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
   "compose.threadHeading": "This conversation",
+  "compose.continueHeading": "Continue a conversation?",
+  "compose.threadLeave": "Choose another",
+  "compose.messageCount_one": "{count} message",
+  "compose.messageCount_other": "{count} messages",
   "compose.threadContinuing": "The last exchange, which this will continue",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":

@@ -82,3 +82,64 @@
     max-block-size: 14rem;
   }
 }
+
+/* The head is a row now: the heading, and the way back out of a conversation
+   the reader picked. */
+.compose-thread-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.compose-thread-leave {
+  flex: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-meta);
+  color: var(--accentText);
+  cursor: pointer;
+}
+.compose-thread-leave:hover {
+  text-decoration: underline;
+}
+
+/* The ways in. Each is one press target across its whole width — the subject
+   and what places it are one answer, not two things to aim at. */
+.compose-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.compose-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  inline-size: 100%;
+  text-align: start;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  cursor: pointer;
+}
+.compose-choice:hover {
+  background: var(--bgHover);
+  border-color: var(--borderSubtle);
+}
+
+.compose-choice-subject {
+  font-size: var(--fs-sm);
+  color: var(--textPrimary);
+}
+
+.compose-choice-meta {
+  color: var(--textMeta);
+}

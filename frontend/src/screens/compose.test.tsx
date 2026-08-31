@@ -2225,7 +2225,7 @@ describe("what the composer says it is answering", () => {
     updated_at: "2026-08-02T09:00:00Z",
   };
 
-  it("names the record's latest message, and drafts against it", async () => {
+  it("offers the record's conversations, and drafts against the one picked", async () => {
     const sent = stubRoutes({
       "GET /activities": () =>
         jsonResponse({
@@ -2248,9 +2248,12 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // The conversation being continued is on screen BEFORE the reader commits
-    // to anything.
-    expect(await screen.findByText(/Rechnung GR-2026-0207/)).toBeTruthy();
+    // The conversations are OFFERED, not chosen for the reader: pressing a
+    // button that says "write an email" used to anchor the message to whatever
+    // came last, addressed to somebody they had not picked.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
+    );
 
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
@@ -2314,19 +2317,24 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // WHAT is being continued, in the conversation itself rather than in a
-    // sentence about it: the pane carries the message the draft is answering.
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    // The conversation is picked, then drafted against.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
+    );
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    // And WHO, in the field that will actually carry it. The recipient used to
-    // be reported in the answering sentence, which the pane replaced — a
-    // sentence naming the subject beside a pane showing it read as a stutter.
-    expect(await screen.findByText(/dietmar@valantic.test/)).toBeTruthy();
+    // And WHO, in the field that will actually carry it — asked for as the
+    // chip's own control, because the address also appears in the quoted head
+    // of the message the pane is showing.
+    expect(
+      await screen.findByRole("button", {
+        name: "Remove dietmar@valantic.test",
+      }),
+    ).toBeTruthy();
   });
 
   // The project narrows through the list's OWN project_id filter. Asking for
@@ -2405,7 +2413,9 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
+    );
     await userEvent.click(
       screen.getByRole("button", { name: "Draft with AI" }),
     );
@@ -2416,7 +2426,9 @@ describe("what the composer says it is answering", () => {
     );
 
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Send", exact: true }),
+    );
 
     await waitFor(() => {
       // The reply path, not POST /emails — which would file under the body's
@@ -2457,9 +2469,13 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // It falls back to the account path, which asks the reader to name a
-    // recipient — the honest state, rather than a dead end.
+    // Not offered as a way in: its subject comes back null and the draft
+    // endpoint gates on content, so choosing it would dead-end the composer.
+    // The reader gets the account path, which asks them to name a recipient.
     expect(await screen.findByText(/starts a new thread/i)).toBeTruthy();
+    expect(
+      screen.queryByRole("region", { name: /continue a conversation/i }),
+    ).toBeNull();
   });
 
   // A caller that named the message has already shown it — the page behind the
@@ -2563,13 +2579,16 @@ describe("the composer's conversation pane", () => {
     expect(pane.querySelectorAll("li")).toHaveLength(2);
   });
 
-  it("does not call a conversation the reader never opened theirs", async () => {
-    // Started from the record, the composer anchors the mail to the account's
-    // latest exchange. The thread is worth showing — the send really will join
-    // it — but the reader did not open it, so the heading says which it is.
+  it("anchors nothing until the reader picks a conversation", async () => {
+    // The heading used to have to apologise for a thread the composer chose on
+    // the reader's behalf. Nothing is chosen now, so there is nothing to
+    // explain: the conversations are offered and the reader takes one.
     stubRoutes({
       "GET /activities": () =>
         jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+      // Choosing a conversation reads its newest message, the way a Reply on
+      // the History tab does.
+      "GET /activities/act-1": () => jsonResponse(threaded),
     });
     render(
       <ComposeModal
@@ -2581,13 +2600,18 @@ describe("the composer's conversation pane", () => {
     );
 
     expect(
-      await screen.findByRole("region", {
-        name: /the last exchange, which this will continue/i,
-      }),
+      await screen.findByRole("region", { name: /continue a conversation/i }),
     ).toBeTruthy();
     expect(
       screen.queryByRole("region", { name: /^this conversation$/i }),
     ).toBeNull();
+
+    // Taking one turns the column into that conversation, with a way back.
+    await userEvent.click(screen.getByRole("button", { name: /Re: Q3/ }));
+    expect(
+      await screen.findByRole("region", { name: /this conversation/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Choose another" })).toBeTruthy();
   });
 
   it("draws no conversation beside a reply to a note", async () => {

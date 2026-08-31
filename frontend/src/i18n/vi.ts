@@ -2924,6 +2924,10 @@ export const vi = {
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email này?",
   "compose.threadHeading": "Cuộc trao đổi này",
+  "compose.continueHeading": "Tiếp nối một cuộc trao đổi?",
+  "compose.threadLeave": "Chọn cuộc khác",
+  "compose.messageCount_one": "{count} tin nhắn",
+  "compose.messageCount_other": "{count} tin nhắn",
   "compose.threadContinuing": "Lần trao đổi gần nhất, mà thư này tiếp nối",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":

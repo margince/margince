@@ -57,7 +57,12 @@ import {
   useViewerId,
 } from "./common";
 import { recordNamesIn, useOrganization360 } from "./company360";
-import { ThreadPane, useThreadMessages } from "./composethread";
+import {
+  ConversationChoices,
+  ThreadPane,
+  useRecentConversations,
+  useThreadMessages,
+} from "./composethread";
 import { useConsentPurposes } from "./consent";
 import { useRoster } from "./entityref";
 import {
@@ -2245,7 +2250,26 @@ export function ComposeModal({
     account.grounding.projectId,
     open && !activityId,
   );
-  const answering = activityId ?? latest.activity?.id;
+  // The conversation the reader PICKED, when they picked one. A composer opened
+  // from the record used to anchor itself to the account's latest exchange
+  // without asking: the reader pressed a button that says "write an email" and
+  // got a reply to whatever came last, addressed to somebody they had not
+  // chosen. The threads are offered beside the form now, and this holds their
+  // answer. The old behaviour's benefit survives — continuing the last exchange
+  // is still one press — without the surprise.
+  const [chosen, setChosen] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!open) {
+      setChosen(undefined);
+    }
+  }, [open]);
+  // Only where the choice is actually OFFERED. A person's or a deal's composer
+  // draws no conversation column, so there is nothing there to pick from and
+  // the resolved latest message stays its anchor, exactly as before.
+  const offeringThreads =
+    entityType === "organization" && !isChannelReply && !activityId;
+  const answering =
+    activityId ?? (offeringThreads ? chosen : latest.activity?.id);
   // Addressing the reply before a draft is asked for. A channel reply resolves
   // its recipient server-side and shows no To field, so it asks nothing.
   const threadRecipient = useReplyRecipient(
@@ -2270,6 +2294,13 @@ export function ComposeModal({
   const stopOfferingRecipient = useCallback(() => {
     offered.current = true;
   }, []);
+  // A reader who picks a DIFFERENT conversation is owed its address: the offer
+  // is once per anchor, not once per composer. Without this the field kept the
+  // first thread's counterparty while the pane showed another's messages.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the anchor alone — this re-arms the offer when the conversation changes, not when its address resolves.
+  useEffect(() => {
+    offered.current = false;
+  }, [answering]);
   useEffect(() => {
     if (threadRecipient === undefined || offered.current) {
       return;
@@ -2303,9 +2334,17 @@ export function ComposeModal({
   );
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
-  const anchorRead = useThreadProject(activityId);
-  const anchorActivity = activityId ? anchorRead.activity : latest.activity;
+  const anchorRead = useThreadProject(activityId ?? chosen);
+  const anchorActivity = answering
+    ? (anchorRead.activity ?? latest.activity)
+    : undefined;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
+  const recent = useRecentConversations(
+    entityType,
+    entityId,
+    open && offeringThreads && !chosen,
+    { nameOf, t, locale },
+  );
   // The sentence the reader reads. Null while the lookup is unsettled: an
   // unanswered read is not "no earlier message", and saying so would tell them
   // this starts a new thread when it may continue one.
@@ -2343,6 +2382,11 @@ export function ComposeModal({
     anchorActivity?.kind === "email" || anchorActivity?.kind === "message";
   const showConversation =
     asDrawer && answeringCorrespondence && conversation.messages.length > 0;
+  // The ways in, when the reader has not taken one. Nothing to offer is not a
+  // column: an account with no mail gets the plain drawer it had before.
+  const showChoices =
+    offeringThreads && !chosen && recent.conversations.length > 0;
+  const splitColumns = showConversation || showChoices;
   // Where this send files, and the subject tag that travels with it. The
   // account path keeps its own picker (it chooses a project rather than
   // inheriting one), so this covers the anchored sends: a reply, and a message
@@ -2660,7 +2704,7 @@ export function ComposeModal({
         // five-line porthole — and the Send button has to sit above the fold,
         // not below a scroll. A reply takes the split width because it carries
         // a second column: the conversation it is answering.
-        size={showConversation ? "split" : "wide"}
+        size={splitColumns ? "split" : "wide"}
         // A DRAWER for every mail on an account, whether it starts a
         // conversation or answers one, so the record it is about stays on
         // screen beside it. It used to turn on `groundable`, which is false as
@@ -2716,15 +2760,23 @@ export function ComposeModal({
           lone form inside a two-column grid is a form with an empty half. */}
         <div
           ref={fields}
-          className={showConversation ? "compose-split" : undefined}
+          className={splitColumns ? "compose-split" : undefined}
         >
+          {showChoices && (
+            <ConversationChoices
+              conversations={recent.conversations}
+              pending={recent.pending}
+              onChoose={setChosen}
+            />
+          )}
           {showConversation && (
             <ThreadPane
               messages={conversation.messages}
               pending={conversation.pending}
               viewerUserId={viewerId}
               nameOf={nameOf}
-              named={Boolean(activityId)}
+              named
+              onLeave={chosen ? () => setChosen(undefined) : undefined}
             />
           )}
           <div className="compose-fields">
@@ -2752,7 +2804,7 @@ export function ComposeModal({
                 // messages themselves. The sentence stays for the composer that
                 // has no pane — an account-started message, where what is being
                 // continued was decided here and shown nowhere.
-                answering={showConversation ? null : answeringLine}
+                answering={splitColumns ? null : answeringLine}
                 flagged={flagged}
                 intent={intent}
                 onIntentChange={setIntent}
