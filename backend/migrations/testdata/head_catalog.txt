@@ -921,6 +921,7 @@ public.capture_connection.account_bound_at timestamp with time zone gen=- def=-
 public.capture_connection.account_label text gen=- def=-
 public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
+public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
 public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
@@ -930,6 +931,7 @@ public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def
 public.capture_connection.credential_ref text gen=- def=-
 public.capture_connection.generation integer NOT NULL gen=- def=0
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_connection.mail_posture text NOT NULL gen=- def='classified'::text
 public.capture_connection.provider text NOT NULL gen=- def=-
 public.capture_connection.provider_scopes text[] gen=- def=-
 public.capture_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
@@ -941,6 +943,21 @@ public.capture_connection.uq_capture_connection_ws_id UNIQUE (id)
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
 public.capture_connection_unique CREATE UNIQUE INDEX capture_connection_unique ON public.capture_connection USING btree (user_id, provider)
+public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
+public.capture_counterparty_hold.capture_counterparty_hold_pkey PRIMARY KEY (id)
+public.capture_counterparty_hold.capture_counterparty_hold_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.capture_counterparty_hold.capture_counterparty_hold_user_value_key UNIQUE (user_id, kind, value)
+public.capture_counterparty_hold.capture_counterparty_hold_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+public.capture_counterparty_hold.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_counterparty_hold.created_by text NOT NULL gen=- def=-
+public.capture_counterparty_hold.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_counterparty_hold.kind text NOT NULL gen=- def=-
+public.capture_counterparty_hold.user_id uuid NOT NULL gen=- def=-
+public.capture_counterparty_hold.value text NOT NULL gen=- def=-
+public.capture_counterparty_hold_pkey CREATE UNIQUE INDEX capture_counterparty_hold_pkey ON public.capture_counterparty_hold USING btree (id)
+public.capture_counterparty_hold_user_idx CREATE INDEX capture_counterparty_hold_user_idx ON public.capture_counterparty_hold USING btree (user_id, kind)
+public.capture_counterparty_hold_user_value_key CREATE UNIQUE INDEX capture_counterparty_hold_user_value_key ON public.capture_counterparty_hold USING btree (user_id, kind, value)
 public.capture_digest acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_digest.capture_digest_pkey PRIMARY KEY (id)
 public.capture_digest.capture_digest_user_id_digest_date_key UNIQUE (user_id, digest_date)
@@ -1051,6 +1068,31 @@ public.capture_sync_state.next_sync_at timestamp with time zone NOT NULL gen=- d
 public.capture_sync_state.trg_capture_sync_state_updated CREATE TRIGGER trg_capture_sync_state_updated BEFORE UPDATE ON public.capture_sync_state FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.capture_sync_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_sync_state_pkey CREATE UNIQUE INDEX capture_sync_state_pkey ON public.capture_sync_state USING btree (connection_id)
+public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
+public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.capture_thread_verdict.capture_thread_verdict_pkey PRIMARY KEY (id)
+public.capture_thread_verdict.capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
+public.capture_thread_verdict.capture_thread_verdict_thread_user_key UNIQUE (thread_key, user_id)
+public.capture_thread_verdict.capture_thread_verdict_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.capture_thread_verdict.claimed_by text gen=- def=-
+public.capture_thread_verdict.claimed_until timestamp with time zone gen=- def=-
+public.capture_thread_verdict.confidence numeric gen=- def=-
+public.capture_thread_verdict.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_thread_verdict.disposition_reason text gen=- def=-
+public.capture_thread_verdict.first_activity_id uuid gen=- def=-
+public.capture_thread_verdict.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_thread_verdict.kind text gen=- def=-
+public.capture_thread_verdict.next_attempt_at timestamp with time zone gen=- def=-
+public.capture_thread_verdict.resolved_at timestamp with time zone gen=- def=-
+public.capture_thread_verdict.seen_addresses text[] NOT NULL gen=- def='{}'::text[]
+public.capture_thread_verdict.status text NOT NULL gen=- def='pending'::text
+public.capture_thread_verdict.thread_key text NOT NULL gen=- def=-
+public.capture_thread_verdict.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_thread_verdict.user_id uuid NOT NULL gen=- def=-
+public.capture_thread_verdict_due_idx CREATE INDEX capture_thread_verdict_due_idx ON public.capture_thread_verdict USING btree (next_attempt_at) WHERE ((status = 'pending'::text) AND (next_attempt_at IS NOT NULL))
+public.capture_thread_verdict_pkey CREATE UNIQUE INDEX capture_thread_verdict_pkey ON public.capture_thread_verdict USING btree (id)
+public.capture_thread_verdict_thread_user_key CREATE UNIQUE INDEX capture_thread_verdict_thread_user_key ON public.capture_thread_verdict USING btree (thread_key, user_id)
 public.capture_trace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_trace.activity_id uuid gen=- def=-
 public.capture_trace.capture_trace_connector_check CHECK (((connector ~ '^[a-z][a-z0-9_:.-]*$'::text) AND (char_length(connector) <= 96)))

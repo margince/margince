@@ -131,7 +131,7 @@ func (s *Service) waitingCustomers(
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return nil, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceWaiting, Reason: crmcontracts.Withheld,
+			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
 		// Named on the page AND recorded here. A source reported as failed with
@@ -140,7 +140,7 @@ func (s *Service) waitingCustomers(
 		// anybody being able to say what broke.
 		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
 		return nil, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceWaiting, Reason: crmcontracts.Failed,
+			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	default:
 		return rows, nil
@@ -296,7 +296,7 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 		}
 		out = append(out, crmcontracts.WorklistSourceUnavailable{
 			Source: string(lane),
-			Reason: crmcontracts.Withheld,
+			Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		})
 	}
 	return out

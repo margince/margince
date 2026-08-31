@@ -1990,6 +1990,27 @@ func (e BlockedDomainSource) Valid() bool {
 	}
 }
 
+// Defines values for CaptureConnectionMailPosture.
+const (
+	CaptureConnectionMailPostureClassified CaptureConnectionMailPosture = "classified"
+	CaptureConnectionMailPostureHeld       CaptureConnectionMailPosture = "held"
+	CaptureConnectionMailPostureShared     CaptureConnectionMailPosture = "shared"
+)
+
+// Valid indicates whether the value is a known member of the CaptureConnectionMailPosture enum.
+func (e CaptureConnectionMailPosture) Valid() bool {
+	switch e {
+	case CaptureConnectionMailPostureClassified:
+		return true
+	case CaptureConnectionMailPostureHeld:
+		return true
+	case CaptureConnectionMailPostureShared:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureConnectionProvider.
 const (
 	CaptureConnectionProviderGcal  CaptureConnectionProvider = "gcal"
@@ -2032,6 +2053,24 @@ func (e CaptureConnectionStatus) Valid() bool {
 	case CaptureConnectionStatusError:
 		return true
 	case CaptureConnectionStatusReauthRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureCounterpartyHoldKind.
+const (
+	CaptureCounterpartyHoldKindAddress CaptureCounterpartyHoldKind = "address"
+	CaptureCounterpartyHoldKindDomain  CaptureCounterpartyHoldKind = "domain"
+)
+
+// Valid indicates whether the value is a known member of the CaptureCounterpartyHoldKind enum.
+func (e CaptureCounterpartyHoldKind) Valid() bool {
+	switch e {
+	case CaptureCounterpartyHoldKindAddress:
+		return true
+	case CaptureCounterpartyHoldKindDomain:
 		return true
 	default:
 		return false
@@ -3676,6 +3715,24 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	case CreateActivityRequestMeetingStatusHeld:
 		return true
 	case CreateActivityRequestMeetingStatusNoShow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateCaptureCounterpartyHoldRequestKind.
+const (
+	CreateCaptureCounterpartyHoldRequestKindAddress CreateCaptureCounterpartyHoldRequestKind = "address"
+	CreateCaptureCounterpartyHoldRequestKindDomain  CreateCaptureCounterpartyHoldRequestKind = "domain"
+)
+
+// Valid indicates whether the value is a known member of the CreateCaptureCounterpartyHoldRequestKind enum.
+func (e CreateCaptureCounterpartyHoldRequestKind) Valid() bool {
+	switch e {
+	case CreateCaptureCounterpartyHoldRequestKindAddress:
+		return true
+	case CreateCaptureCounterpartyHoldRequestKindDomain:
 		return true
 	default:
 		return false
@@ -9367,6 +9424,27 @@ func (e SetLeadManualSignalRequestFactor) Valid() bool {
 	}
 }
 
+// Defines values for SetMailPostureRequestPosture.
+const (
+	SetMailPostureRequestPostureClassified SetMailPostureRequestPosture = "classified"
+	SetMailPostureRequestPostureHeld       SetMailPostureRequestPosture = "held"
+	SetMailPostureRequestPostureShared     SetMailPostureRequestPosture = "shared"
+)
+
+// Valid indicates whether the value is a known member of the SetMailPostureRequestPosture enum.
+func (e SetMailPostureRequestPosture) Valid() bool {
+	switch e {
+	case SetMailPostureRequestPostureClassified:
+		return true
+	case SetMailPostureRequestPostureHeld:
+		return true
+	case SetMailPostureRequestPostureShared:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetProjectStakeholderRequestRole.
 const (
 	SetProjectStakeholderRequestRoleBlocker             SetProjectStakeholderRequestRole = "blocker"
@@ -11592,16 +11670,16 @@ func (e WorklistReasonKind) Valid() bool {
 
 // Defines values for WorklistSourceUnavailableReason.
 const (
-	Failed   WorklistSourceUnavailableReason = "failed"
-	Withheld WorklistSourceUnavailableReason = "withheld"
+	WorklistSourceUnavailableReasonFailed   WorklistSourceUnavailableReason = "failed"
+	WorklistSourceUnavailableReasonWithheld WorklistSourceUnavailableReason = "withheld"
 )
 
 // Valid indicates whether the value is a known member of the WorklistSourceUnavailableReason enum.
 func (e WorklistSourceUnavailableReason) Valid() bool {
 	switch e {
-	case Failed:
+	case WorklistSourceUnavailableReasonFailed:
 		return true
-	case Withheld:
+	case WorklistSourceUnavailableReasonWithheld:
 		return true
 	default:
 		return false
@@ -12939,25 +13017,25 @@ func (e ListRelationshipsParamsKind) Valid() bool {
 
 // Defines values for ListScheduledSendsParamsStatus.
 const (
-	Cancelled ListScheduledSendsParamsStatus = "cancelled"
-	Held      ListScheduledSendsParamsStatus = "held"
-	Released  ListScheduledSendsParamsStatus = "released"
-	Scheduled ListScheduledSendsParamsStatus = "scheduled"
-	Sent      ListScheduledSendsParamsStatus = "sent"
+	ListScheduledSendsParamsStatusCancelled ListScheduledSendsParamsStatus = "cancelled"
+	ListScheduledSendsParamsStatusHeld      ListScheduledSendsParamsStatus = "held"
+	ListScheduledSendsParamsStatusReleased  ListScheduledSendsParamsStatus = "released"
+	ListScheduledSendsParamsStatusScheduled ListScheduledSendsParamsStatus = "scheduled"
+	ListScheduledSendsParamsStatusSent      ListScheduledSendsParamsStatus = "sent"
 )
 
 // Valid indicates whether the value is a known member of the ListScheduledSendsParamsStatus enum.
 func (e ListScheduledSendsParamsStatus) Valid() bool {
 	switch e {
-	case Cancelled:
+	case ListScheduledSendsParamsStatusCancelled:
 		return true
-	case Held:
+	case ListScheduledSendsParamsStatusHeld:
 		return true
-	case Released:
+	case ListScheduledSendsParamsStatusReleased:
 		return true
-	case Scheduled:
+	case ListScheduledSendsParamsStatusScheduled:
 		return true
-	case Sent:
+	case ListScheduledSendsParamsStatusSent:
 		return true
 	default:
 		return false
@@ -15351,6 +15429,22 @@ type CaptureConnection struct {
 	// LastSyncedAt Last sync attempt (CAP-DDL-5); null before the first.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 
+	// MailPosture What this mailbox asks of the mail it brings in. `shared` — a captured message is
+	// readable by colleagues the moment it lands. `classified` — held to its participants
+	// until a classifier judges the thread ordinary. `held` — held whatever any classifier
+	// concludes.
+	//
+	// `classified` is the default for a new connection, and a rebind to a different account
+	// resets to `held`: the previous mailbox's answer is not the new one's to inherit.
+	// `shared` additionally needs the workspace to allow it
+	// (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
+	// is what the works-council agreement in the DACH package is about.
+	//
+	// Set through PUT /connectors/{provider}/mail-posture. Moving it governs mail captured
+	// AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
+	// for `apply_to_history`.
+	MailPosture *CaptureConnectionMailPosture `json:"mail_posture,omitempty"`
+
 	// NextSyncDueAt When the sweep will next pick this connection up (backoff-aware).
 	NextSyncDueAt *time.Time `json:"next_sync_due_at,omitempty"`
 
@@ -15380,6 +15474,22 @@ type CaptureConnection struct {
 	WatchExpiresAt *time.Time `json:"watch_expires_at,omitempty"`
 }
 
+// CaptureConnectionMailPosture What this mailbox asks of the mail it brings in. `shared` — a captured message is
+// readable by colleagues the moment it lands. `classified` — held to its participants
+// until a classifier judges the thread ordinary. `held` — held whatever any classifier
+// concludes.
+//
+// `classified` is the default for a new connection, and a rebind to a different account
+// resets to `held`: the previous mailbox's answer is not the new one's to inherit.
+// `shared` additionally needs the workspace to allow it
+// (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
+// is what the works-council agreement in the DACH package is about.
+//
+// Set through PUT /connectors/{provider}/mail-posture. Moving it governs mail captured
+// AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
+// for `apply_to_history`.
+type CaptureConnectionMailPosture string
+
 // CaptureConnectionProvider The mail/calendar provider (A51 email+calendar parity).
 type CaptureConnectionProvider string
 
@@ -15404,6 +15514,28 @@ type CaptureConsent struct {
 
 	// Wording The exact wording shown, stored with the consent event for demonstrability.
 	Wording *string `json:"wording,omitempty"`
+}
+
+// CaptureCounterpartyHold One seat's decision that their mail with a party is nobody else's. Per user, never
+// workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
+// would let anyone keep a colleague's customer out of the CRM by naming their domain.
+type CaptureCounterpartyHold struct {
+	CreatedAt *time.Time          `json:"created_at,omitempty"`
+	Id        *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind A domain hold covers its subdomains, the way the own-domain matcher reads one.
+	Kind CaptureCounterpartyHoldKind `json:"kind"`
+
+	// Value The folded address or registrable domain.
+	Value string `json:"value"`
+}
+
+// CaptureCounterpartyHoldKind A domain hold covers its subdomains, the way the own-domain matcher reads one.
+type CaptureCounterpartyHoldKind string
+
+// CaptureCounterpartyHoldListResponse defines model for CaptureCounterpartyHoldListResponse.
+type CaptureCounterpartyHoldListResponse struct {
+	Data []CaptureCounterpartyHold `json:"data"`
 }
 
 // CaptureExclusion defines model for CaptureExclusion.
@@ -15469,6 +15601,18 @@ type CaptureSettings struct {
 	// the audience it has. Turning it off makes shared pipeline work hard; the setting exists
 	// for installations that accept that cost.
 	MailSharing bool `json:"mail_sharing"`
+
+	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
+	// reading a captured message the moment it lands, before anything has judged it.
+	//
+	// OFF by default, and the only capture setting whose default withholds rather than
+	// shares. Reading an employee's mailbox into a shared CRM is what a works-council
+	// agreement covers in Germany and Austria; an admin turning this on is the customer
+	// saying they hold that agreement. Margince does not verify one exists.
+	//
+	// Turning it off does not move any mailbox already in `shared`, and does not rewrite
+	// mail already captured. It governs what a seat may newly ask for.
+	SharedPostureAllowed bool `json:"shared_posture_allowed"`
 
 	// SignatureEnrich The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
 	// number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
@@ -16890,6 +17034,17 @@ type CreateAutomationRequest struct {
 	Name   string                 `json:"name"`
 	Params map[string]interface{} `json:"params"`
 }
+
+// CreateCaptureCounterpartyHoldRequest defines model for CreateCaptureCounterpartyHoldRequest.
+type CreateCaptureCounterpartyHoldRequest struct {
+	Kind CreateCaptureCounterpartyHoldRequestKind `json:"kind"`
+
+	// Value An email address or a registrable domain; folded before it is stored.
+	Value string `json:"value"`
+}
+
+// CreateCaptureCounterpartyHoldRequestKind defines model for CreateCaptureCounterpartyHoldRequest.Kind.
+type CreateCaptureCounterpartyHoldRequestKind string
 
 // CreateCaptureExclusionRequest defines model for CreateCaptureExclusionRequest.
 type CreateCaptureExclusionRequest struct {
@@ -25679,6 +25834,21 @@ type SetLeadManualSignalRequest struct {
 // SetLeadManualSignalRequestFactor defines model for SetLeadManualSignalRequest.Factor.
 type SetLeadManualSignalRequestFactor string
 
+// SetMailPostureRequest What one mailbox asks of the mail it brings in.
+type SetMailPostureRequest struct {
+	// ApplyToHistory Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
+	// narrows: a move towards `shared` leaves history where it is, because opening what was
+	// captured under a stricter answer is a separate decision from what to do next. Rows a
+	// human set to `selected` are never touched.
+	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
+
+	// Posture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
+	Posture SetMailPostureRequestPosture `json:"posture"`
+}
+
+// SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
+type SetMailPostureRequestPosture string
+
 // SetMyAgentGrantRequest The rep's answer for one scheduled agent.
 type SetMyAgentGrantRequest struct {
 	// Granted True grants and mints the rep's own passport; false withdraws and revokes the
@@ -26268,6 +26438,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// MailSharing Toggle the workspace mail-sharing posture; affects mail captured from now on.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
+
+	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
+	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
 
 	// SignatureEnrich Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.
 	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
@@ -32005,6 +32178,9 @@ type SetBlockedDomainJSONRequestBody = SetBlockedDomainRequest
 // AddConsumerMailDomainJSONRequestBody defines body for AddConsumerMailDomain for application/json ContentType.
 type AddConsumerMailDomainJSONRequestBody = AddConsumerMailDomainRequest
 
+// CreateCaptureCounterpartyHoldJSONRequestBody defines body for CreateCaptureCounterpartyHold for application/json ContentType.
+type CreateCaptureCounterpartyHoldJSONRequestBody = CreateCaptureCounterpartyHoldRequest
+
 // CreateWorkspaceEmailDomainJSONRequestBody defines body for CreateWorkspaceEmailDomain for application/json ContentType.
 type CreateWorkspaceEmailDomainJSONRequestBody = CreateWorkspaceEmailDomainRequest
 
@@ -32052,6 +32228,9 @@ type PreviewConnectorBackfillJSONRequestBody = BackfillPreviewRequest
 
 // ConnectConnectorJSONRequestBody defines body for ConnectConnector for application/json ContentType.
 type ConnectConnectorJSONRequestBody = ConnectConnectorRequest
+
+// SetConnectorMailPostureJSONRequestBody defines body for SetConnectorMailPosture for application/json ContentType.
+type SetConnectorMailPostureJSONRequestBody = SetMailPostureRequest
 
 // SetConnectorSignatureEnrichmentJSONRequestBody defines body for SetConnectorSignatureEnrichment for application/json ContentType.
 type SetConnectorSignatureEnrichmentJSONRequestBody = SetSignatureEnrichmentRequest
@@ -40437,6 +40616,15 @@ type ServerInterface interface {
 	// Withdraw a consumer-mail list entry (admin/ops).
 	// (DELETE /capture/consumer-mail-domains/{id})
 	RemoveConsumerMailDomain(w http.ResponseWriter, r *http.Request, id Id)
+	// Whose mail the caller keeps out of the shared timeline.
+	// (GET /capture/counterparty-holds)
+	ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request)
+	// Keep one party's mail to the people on it.
+	// (POST /capture/counterparty-holds)
+	CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request)
+	// Lift a counterparty hold.
+	// (DELETE /capture/counterparty-holds/{id})
+	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
 	// The workspace's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
@@ -40554,6 +40742,9 @@ type ServerInterface interface {
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
 	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// Set what this mailbox asks of the mail it brings in.
+	// (PUT /connectors/{provider}/mail-posture)
+	SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// Set this mailbox's own answer to the nightly signature pass.
 	// (PUT /connectors/{provider}/signature-enrichment)
 	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -42258,6 +42449,24 @@ func (_ Unimplemented) RemoveConsumerMailDomain(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Whose mail the caller keeps out of the shared timeline.
+// (GET /capture/counterparty-holds)
+func (_ Unimplemented) ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Keep one party's mail to the people on it.
+// (POST /capture/counterparty-holds)
+func (_ Unimplemented) CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Lift a counterparty hold.
+// (DELETE /capture/counterparty-holds/{id})
+func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The workspace's own email domains.
 // (GET /capture/email-domains)
 func (_ Unimplemented) ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request) {
@@ -42489,6 +42698,12 @@ func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, 
 // Disconnect the calling user's mail/calendar capture.
 // (POST /connectors/{provider}/disconnect)
 func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set what this mailbox asks of the mail it brings in.
+// (PUT /connectors/{provider}/mail-posture)
+func (_ Unimplemented) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -48330,6 +48545,78 @@ func (siw *ServerInterfaceWrapper) RemoveConsumerMailDomain(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// ListCaptureCounterpartyHolds operation middleware
+func (siw *ServerInterfaceWrapper) ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCaptureCounterpartyHolds(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCaptureCounterpartyHold operation middleware
+func (siw *ServerInterfaceWrapper) CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCaptureCounterpartyHold(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCaptureCounterpartyHold operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListWorkspaceEmailDomains operation middleware
 func (siw *ServerInterfaceWrapper) ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request) {
 
@@ -49530,6 +49817,38 @@ func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DisconnectConnector(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetConnectorMailPosture operation middleware
+func (siw *ServerInterfaceWrapper) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetConnectorMailPosture(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -68107,6 +68426,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/capture/consumer-mail-domains/{id}", wrapper.RemoveConsumerMailDomain)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/counterparty-holds", wrapper.ListCaptureCounterpartyHolds)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/counterparty-holds", wrapper.CreateCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/email-domains", wrapper.ListWorkspaceEmailDomains)
 	})
 	r.Group(func(r chi.Router) {
@@ -68222,6 +68550,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/disconnect", wrapper.DisconnectConnector)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/connectors/{provider}/mail-posture", wrapper.SetConnectorMailPosture)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/connectors/{provider}/signature-enrichment", wrapper.SetConnectorSignatureEnrichment)

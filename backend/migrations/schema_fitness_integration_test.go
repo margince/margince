@@ -324,8 +324,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_participant.person_id":   "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
 	// The named audience of a limited activity. Written only by the audience
 	// endpoint, which has put the activity through the content gate first.
-	"activity_audience_member.activity_id": "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
-	"capture_import.activity_id":           "child row: written only by the capture sink, for the activity that same sink just landed or replayed, after auth.EnsureActivityContentVisibleLive — the gate matters here because a message's natural key is the sender-supplied Message-ID, so hitting an incumbent must grant the syncing seat nothing",
+	"activity_audience_member.activity_id":     "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
+	"capture_thread_verdict.first_activity_id": "provenance, not a reach: the message that opened this thread for this seat, so a verdict can be traced to what it was asked about. NOTHING writes it yet — the classifier that records verdicts is a later change, and this column lands with the ledger it belongs to rather than being added under it. The obligation on that writer is the one stated here: the activity must be the one whose capture opened the thread — the ledger is keyed on (thread_key, user_id), and every decision it drives is asked of those two. ON DELETE SET NULL because losing the activity must not lose the verdict, which would re-open a thread a classifier already held",
+	"capture_import.activity_id":               "child row: written only by the capture sink, for the activity that same sink just landed or replayed, after mailboxWasARecipientTx, which requires one of the seat's own EXACT addresses on the message — a message's natural key is the sender-supplied Message-ID, so hitting an incumbent must grant the syncing seat nothing they cannot evidence",
 	// The interaction projection (CG-DDL-1) holds no fact of its own: every
 	// row is folded from activity_participant rows by the consumer, and no
 	// request body ever names a person here. Reads of it carry the person

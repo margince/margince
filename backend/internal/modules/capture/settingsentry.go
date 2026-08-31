@@ -67,6 +67,24 @@ var MailSharing = settings.Define[bool](
 	nil, // every bool is a valid posture; a validator here would be ceremony
 ).MachineryApplied() // the sink stamps each new email's audience from it
 
+// SharedPostureAllowed is the workspace's answer to whether a seat may put
+// their mailbox in the `shared` posture at all — colleagues reading a captured
+// message the moment it lands, before anything has judged it.
+//
+// Default FALSE, and it is the only capture setting whose default withholds
+// rather than shares. Reading an employee's mailbox into a shared CRM is what
+// the DACH works-council agreement is about, and a product that switched it on
+// by itself would be making a legal commitment on the customer's behalf. The
+// admin confirming it is the customer saying they hold that agreement; the
+// product does not verify one exists, and says so where it asks.
+var SharedPostureAllowed = settings.Define[bool](
+	"capture.shared_posture_allowed",
+	captureSettingsObject,
+	"update",
+	false,
+	nil, // every bool is a valid posture; a validator here would be ceremony
+).MachineryApplied() // SetMailPosture reads it inside the write it gates
+
 // SignatureEnrich is the workspace DEFAULT for the nightly pass that lifts
 // stated fields out of an email signature — a title, a phone number, the
 // company somebody types under their own name.
@@ -96,5 +114,5 @@ var SignatureEnrich = settings.Define[bool](
 // such function, so this is opt-in rather than an interface every module must
 // satisfy.
 func Definitions() []settings.Definition {
-	return []settings.Definition{AutoEnrich, MailSharing, SignatureEnrich, GoogleAppSetting}
+	return []settings.Definition{AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich, GoogleAppSetting}
 }

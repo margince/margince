@@ -264,7 +264,16 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              share_acknowledged_at = CASE WHEN $7 THEN now()
 		                                           ELSE COALESCE(capture_connection.share_acknowledged_at, now()) END,
 		              account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
-		              generation = capture_connection.generation + CASE WHEN $7 THEN 1 ELSE 0 END,
+		              -- A rebind points this row at a DIFFERENT account, so the
+              -- previous mailbox's answer about who may read its mail is not
+              -- this one's to inherit. Reset to HELD rather than to the
+              -- classified default: the seat chose a posture for a mailbox
+              -- that is now gone, and the new one is held until they say
+              -- otherwise. The opening direction is the one that must never
+              -- happen by inheritance — rebinding a shared role mailbox to a
+              -- personal account would publish that account's mail on arrival.
+              mail_posture = CASE WHEN $7 THEN 'held' ELSE capture_connection.mail_posture END,
+              generation = capture_connection.generation + CASE WHEN $7 THEN 1 ELSE 0 END,
 		              sync_cursor = CASE WHEN $7 THEN NULL ELSE capture_connection.sync_cursor END,
 		              -- A rebind points this row at a DIFFERENT account, so the
 		              -- previous mailbox's answer about reading its signatures

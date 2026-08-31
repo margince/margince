@@ -176,7 +176,7 @@ func TestAWithheldLaneIsNamedButTheRoleWithheldPrivacyLaneIsNot(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("named %d sources, wanted only the mailbox one", len(got))
 	}
-	if got[0].Source != "capture_health" || got[0].Reason != crmcontracts.Withheld {
+	if got[0].Source != "capture_health" || got[0].Reason != crmcontracts.WorklistSourceUnavailableReasonWithheld {
 		t.Fatalf("named %q/%q, wanted capture_health/withheld", got[0].Source, got[0].Reason)
 	}
 }

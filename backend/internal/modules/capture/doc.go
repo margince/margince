@@ -20,6 +20,8 @@
 // not read as correspondence and an alias is never minted as a contact),
 // capture_import (one row per mailbox that delivered a message — an email
 // is stored once, so this is the only place a second importing seat's
-// decisions about it can live).
+// decisions about it can live), capture_counterparty_hold (whose mail one
+// seat keeps out of the shared timeline) and capture_thread_verdict (what a
+// classifier concluded about one thread, for one seat).
 // Imports shared + platform only; never a sibling module.
 package capture
