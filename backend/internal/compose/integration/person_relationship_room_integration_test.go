@@ -745,3 +745,42 @@ func TestThePerson360TimelineNamesTheTransportThatCarriedAMessage(t *testing.T) 
 		t.Errorf("channel_provider = %q, want telegram", string(*got.ChannelProvider))
 	}
 }
+
+// TestThePerson360TimelineCarriesTheVersionAWriteNeeds is the second
+// instance of the same defect class TestThePerson360TimelineNamesTheTransportThatCarriedAMessage
+// guards: the hand-written SELECT in person360's readActivities dropped a
+// column activities.activityColumns carries, and nothing pointed at the
+// copy. This time it was version — AudienceAction (the Visibility control)
+// sends the row's version as If-Match and refuses to write blind without
+// one, so a row that reaches this page with no version cannot have its
+// audience narrowed from here at all (margince#3249).
+//
+// Same shape as the sibling guard, and for the same reason: a source grep
+// for "version" would pass on a query that selected it into a variable
+// nobody scanned onto the wire row.
+func TestThePerson360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedPerson(t, "Version Carrier", &e.Rep1)
+
+	message := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'message', 'they wrote', '2026-08-01T09:00:00Z', 'inbound', 'manual', 'human:x')`)
+	LinkActivity(t, owner, message, "person", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	page, err := personRoomService(e).Assemble(rep, ids.From[ids.PersonKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.Activities == nil || len(page.Activities.Data) != 1 {
+		t.Fatalf("the timeline holds %v rows, want the one captured message", page.Activities)
+	}
+	got := page.Activities.Data[0]
+	if got.Version == nil {
+		t.Fatal("the message reached the page with no version; a write against it (narrowing its audience) " +
+			"refuses to go blind and the request never leaves the browser")
+	}
+	if *got.Version != 1 {
+		t.Errorf("version = %d, want 1 for a freshly inserted row", *got.Version)
+	}
+}
