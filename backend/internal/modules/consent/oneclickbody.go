@@ -50,12 +50,18 @@ const (
 func requireOneClickBody(r *http.Request) error {
 	raw := strings.TrimSpace(r.Header.Get("Content-Type"))
 	if raw == "" {
-		// No content type: only an empty body is meaningful, and draining
-		// it keeps the connection reusable. A read failure here is the
-		// client hanging up on a request already decided, so it changes
-		// no verdict — but it is not silently discarded either.
-		if _, err := io.Copy(io.Discard, io.LimitReader(r.Body, oneClickBodyLimit)); err != nil {
+		// No content type: only an empty body is meaningful. Read one byte
+		// PAST the ceiling rather than draining to it — a reader stopped at
+		// the limit cannot tell a body that ended from one that went on, so
+		// draining to the cap would accept any size while appearing to
+		// enforce one.
+		n, err := io.Copy(io.Discard, io.LimitReader(r.Body, oneClickBodyLimit+1))
+		if err != nil {
 			slog.DebugContext(r.Context(), "one-click unsubscribe body could not be drained", "error", err)
+			return nil
+		}
+		if n > oneClickBodyLimit {
+			return httperr.Validation("body", "too_large", "a one-click unsubscribe body is a single short field")
 		}
 		return nil
 	}
@@ -97,8 +103,12 @@ func oneClickFromMultipart(r *http.Request, boundary string) error {
 	if boundary == "" {
 		return httperr.Validation("body", "not_one_click", "a multipart one-click unsubscribe needs its boundary")
 	}
-	form, err := multipart.NewReader(io.LimitReader(r.Body, oneClickBodyLimit+1), boundary).
-		ReadForm(oneClickBodyLimit)
+	// The limited reader is kept so the ceiling can be CHECKED after the
+	// parse: multipart stops at its closing boundary and is content with a
+	// valid form followed by any amount of epilogue, so a parser that
+	// merely succeeded proves nothing about the size of what arrived.
+	limited := &countingReader{inner: io.LimitReader(r.Body, oneClickBodyLimit+1)}
+	form, err := multipart.NewReader(limited, boundary).ReadForm(oneClickBodyLimit)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil
@@ -109,12 +119,23 @@ func oneClickFromMultipart(r *http.Request, boundary string) error {
 	// change this request's verdict, but a failure means temp files are
 	// accumulating under an anonymous endpoint, which is worth saying out
 	// loud rather than dropping.
+	// Logged without the request context on purpose: this runs as the
+	// handler unwinds, when that context may already be cancelled, and a
+	// cleanup failure is about the server's disk rather than about this
+	// request.
 	defer func() {
 		if err := form.RemoveAll(); err != nil {
-			slog.WarnContext(r.Context(), "one-click unsubscribe left its multipart scratch files behind",
-				"error", err)
+			slog.Warn("one-click unsubscribe left its multipart scratch files behind", "error", err)
 		}
 	}()
+	// Drain whatever the parser left, so the epilogue counts toward the
+	// ceiling too, then hold it.
+	if _, err := io.Copy(io.Discard, limited); err != nil {
+		slog.DebugContext(r.Context(), "one-click unsubscribe body could not be drained", "error", err)
+	}
+	if limited.read > oneClickBodyLimit {
+		return httperr.Validation("body", "too_large", "a one-click unsubscribe body is a single short field")
+	}
 	if len(form.Value[oneClickField]) == 0 {
 		return admitOneClick("")
 	}
@@ -127,4 +148,17 @@ func admitOneClick(value string) error {
 		return nil
 	}
 	return httperr.Validation("body", "not_one_click", "a one-click unsubscribe carries the RFC 8058 form body")
+}
+
+// countingReader remembers how much passed through it, so a ceiling can be
+// held on a body somebody else's parser consumed.
+type countingReader struct {
+	inner io.Reader
+	read  int64
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.inner.Read(p)
+	c.read += int64(n)
+	return n, err
 }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -153,17 +154,41 @@ func (s *Store) saveChoiceTx(
 	if err != nil {
 		return ChoiceOutcome{}, false, err
 	}
-	if _, err := s.recordAdmittedTx(ctx, tx, in, sub, state); err != nil {
-		// A GRANT for an archived subject is refused by the live-row probe,
-		// which answers ErrNotFound. On this surface that is not "no such
-		// record" — the token just resolved it — so it must not reach the
-		// client as a 404, and it must not take the rest of the save with it.
-		if c.State == StateGranted && errors.Is(err, apperrors.ErrNotFound) {
+	// Whether the subject can take a GRANT at all is asked HERE rather than
+	// read off the error below. ErrNotFound is answered by more than one
+	// thing in the write — a purpose archived between the key lookup and the
+	// proof read answers it too — and a catch-all would report that genuine
+	// fault as an ordinary "you cannot opt in", telling the recipient their
+	// choice was declined when in truth nothing looked at it.
+	if c.State == StateGranted {
+		grantable, err := subjectTakesAGrantTx(ctx, tx, sub)
+		if err != nil {
+			return ChoiceOutcome{}, false, err
+		}
+		if !grantable {
 			return ChoiceOutcome{PurposeKey: c.PurposeKey, Reason: ReasonCannotGrant}, false, nil
 		}
+	}
+	if _, err := s.recordAdmittedTx(ctx, tx, in, sub, state); err != nil {
 		return ChoiceOutcome{}, false, err
 	}
 	return ChoiceOutcome{}, true, nil
+}
+
+// subjectTakesAGrantTx asks the one question the refusal above turns on:
+// is this subject still live enough to claim a lawful basis.
+//
+// The same probe recordAdmittedTx runs for a grant, asked in advance so
+// its refusal can be told apart from every other ErrNotFound in the write.
+func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, error) {
+	err := auth.EnsureWritableLive(ctx, tx, sub.entityType, sub.id)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return false, err
 }
 
 // PublicWithdrawAll stops the named purposes in one transaction and

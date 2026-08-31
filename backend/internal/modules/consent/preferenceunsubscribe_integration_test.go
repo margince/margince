@@ -140,3 +140,20 @@ func TestUnsubscribeAllLeavesTransactionalAlone(t *testing.T) {
 		t.Error("transactional was withdrawn from the preference centre")
 	}
 }
+
+// A grant the subject cannot take is reported as a refusal, and a purpose
+// that genuinely is not there is NOT: the two both answer ErrNotFound
+// inside the write, and collapsing them would tell a recipient their
+// choice was declined when in truth nothing looked at it.
+func TestAnUnknownPurposeIsAFaultNotARefusal(t *testing.T) {
+	e := setupChannelConsent(t)
+	token := seedPreferenceToken(t, e)
+
+	rec := preferenceSave(t, e, token,
+		`{"choices":[{"purpose_key":"no_such_purpose","state":"granted"}]}`)
+
+	if rec.Code == http.StatusOK {
+		t.Errorf("status = %d — a purpose the catalog does not carry must not read as an ordinary refusal: %s",
+			rec.Code, rec.Body.String())
+	}
+}

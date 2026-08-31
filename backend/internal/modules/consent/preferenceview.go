@@ -29,6 +29,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// entityPerson is the subject table the preference centre speaks for. The
+// public surfaces only ever answer for a person: a lead has no mailbox
+// this link could have reached.
+const entityPerson = "person"
+
 // Choice is what the RECIPIENT decided, which is what the checkbox edits.
 type Choice string
 
@@ -60,15 +65,24 @@ type PreferenceView struct {
 
 // PublicPreferenceView reads everything the page needs in one transaction.
 func (s *Store) PublicPreferenceView(ctx context.Context, personID ids.PersonID) (PreferenceView, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
 		return PreferenceView{}, err
 	}
 	var view PreferenceView
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "person", personID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, entityPerson, personID.UUID); err != nil {
 			return err
 		}
-		purposes, err := purposeStatesTx(ctx, tx, personID)
+		// Asked once for the whole view: an archived subject cannot take a
+		// grant on ANY purpose, and a page that offered the switch anyway
+		// would invite a choice the save is bound to refuse.
+		grantable, err := subjectTakesAGrantTx(ctx, tx, subject{
+			entityType: entityPerson, id: personID.UUID, column: personIDKey,
+		})
+		if err != nil {
+			return err
+		}
+		purposes, err := purposeStatesTx(ctx, tx, personID, grantable)
 		if err != nil {
 			return err
 		}
@@ -118,7 +132,7 @@ func primaryEmailTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (stri
 // phone_outreach is excluded: the verdict blocks it unconditionally
 // because no call path is configured, so offering its switch would offer
 // a control over something that cannot happen.
-func purposeStatesTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]PurposeChoice, error) {
+func purposeStatesTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID, grantable bool) ([]PurposeChoice, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT cp.key, cp.label, coalesce(pc.state, 'unknown'),
 		       cp.requires_double_opt_in, cp.class
@@ -141,9 +155,10 @@ func purposeStatesTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]P
 		c.Locked = LockedPurpose(c.Key)
 		c.Choice = choiceOf(state, Class(class))
 		// A locked purpose is not editable at all; otherwise a grant is
-		// offered only where the engine would accept one without a
-		// confirmation round-trip this token cannot evidence.
-		c.CanOptIn = !c.Locked && !c.GrantNeedsConfirmation
+		// offered only where the engine would accept one — without a
+		// confirmation round-trip this token cannot evidence, and against a
+		// subject still live enough to claim a lawful basis.
+		c.CanOptIn = !c.Locked && !c.GrantNeedsConfirmation && grantable
 		out = append(out, c)
 	}
 	return out, rows.Err()
