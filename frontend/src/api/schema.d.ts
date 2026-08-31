@@ -982,6 +982,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The installation's provider-lookup posture.
+         * @description Whether a provider run may be queued without a human pressing anything. Every role may
+         *     read it — a rep needs to know whether a contact arrives already looked up; only
+         *     admin/ops may change it (PATCH). Governed by the `integrations` RBAC object.
+         */
+        get: operations["getIntegrationsSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update the installation's provider-lookup posture (admin/ops).
+         * @description Admin/ops-only. `automatic_lookup` ON means every contact is looked up once for the
+         *     details the provider charges nothing for; email and mobile are never bought this way
+         *     and stay a per-contact human action. OFF is a jurisdiction answer rather than a pause:
+         *     an installation whose contacts fall under a law that forbids trading personal data
+         *     turns it off and looks a contact up by hand. Human session only — an agent never
+         *     changes an installation-wide purchasing posture. Audit-only write (EVT-NOEVT-3).
+         */
+        patch: operations["updateIntegrationsSettings"];
+        trace?: never;
+    };
     "/provider-connections": {
         parameters: {
             query?: never;
@@ -10834,13 +10865,23 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Correct a profile field — the canonical value changes, the machine's proposal survives.
+         * State or correct a profile field — the canonical value changes, the machine's proposal survives.
          * @description DOSS-WIRE-4 / PO-AC-N-1. Where the field maps to a column on `organization`, THE COLUMN IS
          *     WHAT CHANGES; the sidecar keeps the machine's proposal, excerpt, source URL and confidence in
          *     history rather than overwriting them (PO-AC-N-2). A correction that changed only the sidecar
          *     would be a lie about having been accepted. Provenance flips to `human` with the acting
          *     principal and the timestamp; the whole thing commits as one mutation with its audit entry and
          *     its outboxed event.
+         *
+         *     A field with NO row yet is CREATED by this write, audited as a creation with no before-image.
+         *     Most of this vocabulary is only ever filled by a crawl that read a legal notice, and a company
+         *     whose site publishes none would otherwise hold a fact nobody could record. Originating a claim
+         *     is a human act: an agent principal still gets `404` here, because the write stamps
+         *     `verified_by` with the granting user and that would record a human verification of a value no
+         *     human saw. Correcting a claim that already exists stays open to an agent.
+         *
+         *     `404` therefore means the organization is unreachable, or — for the confirm operation, or for
+         *     an agent's first statement — that no such claim exists to answer for.
          */
         patch: operations["updateOrganizationProfileField"];
         trace?: never;
@@ -11684,6 +11725,30 @@ export interface components {
              *     default; a value outside [1,2000] is refused.
              */
             dimensions?: number;
+        };
+        /**
+         * @description The installation's provider-lookup posture. Read by every role, changed only by
+         *     admin/ops.
+         */
+        IntegrationsSettings: {
+            /**
+             * @description When true, every contact is looked up once against the connected data provider for
+             *     the details it charges nothing for — the professional profile link, the current role
+             *     and employer, the work history. Email and mobile are never bought this way: those
+             *     cost credits and stay a per-contact human action.
+             *
+             *     Default is ON. Switching it OFF is a jurisdiction answer rather than a pause button:
+             *     some laws forbid trading personal data outright, and an installation whose contacts
+             *     fall under one turns this off and looks a contact up by hand, which keeps the
+             *     decision with the person who made it. There is no per-contact equivalent because a
+             *     contact's country is not a fact this product holds.
+             */
+            automatic_lookup: boolean;
+        };
+        /** @description A sparse provider-posture patch (admin/ops). */
+        UpdateIntegrationsSettingsRequest: {
+            /** @description Toggle whether contacts are looked up automatically for the free details. */
+            automatic_lookup?: boolean;
         };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
@@ -13087,10 +13152,15 @@ export interface components {
         ProviderConfiguration: {
             mode: components["schemas"]["ProviderConnectionMode"];
             preset: components["schemas"]["ProviderPreset"];
-            /** @default true */
+            /**
+             * @deprecated
+             * @description IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`.
+             * @default true
+             */
             automatic_individual_create: boolean;
             /**
-             * @description Enrich every person a connector creates. A mailbox, channel or other connection mints one person per counterparty it sees, and each purchase spends credits; off by default for that reason.
+             * @deprecated
+             * @description IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`. It once held connector-created contacts back because each purchase spent credits; an automatic run now buys only what costs nothing, so the two cases stopped differing.
              * @default false
              */
             automatic_import: boolean;
@@ -13173,6 +13243,13 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** @description How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do. */
+        ProviderLookupBacklog: {
+            /** @description Contacts with no completed free lookup and no live one in flight. Counts down to zero as the sweep works through them, and rises when contacts are created faster than it can reach them. */
+            remaining: number;
+            /** @description True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep. */
+            paused: boolean;
+        };
         ProviderConnection: {
             provider: components["schemas"]["Provider"];
             status: components["schemas"]["ProviderConnectionStatus"];
@@ -13185,6 +13262,7 @@ export interface components {
             effective_constraints?: string[];
             credits: components["schemas"]["ProviderCredits"];
             spend?: components["schemas"]["ProviderSpend"];
+            lookup_backlog?: components["schemas"]["ProviderLookupBacklog"];
             /** Format: date-time */
             connected_at?: string | null;
             /** Format: date-time */
@@ -13230,8 +13308,14 @@ export interface components {
              */
             person_id?: string | null;
             provider: components["schemas"]["Provider"];
-            /** @enum {string} */
-            trigger: "automatic_create" | "automatic_import" | "scheduled_refresh" | "manual";
+            /**
+             * @description What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+             *     contact that existed before the provider was connected, or that no run has covered
+             *     yet; like the other automatic triggers it buys only the categories that cost
+             *     nothing.
+             * @enum {string}
+             */
+            trigger: "automatic_create" | "automatic_import" | "automatic_backfill" | "scheduled_refresh" | "manual";
             /** @enum {string} */
             state: "queued" | "submitting" | "in_progress" | "completed" | "no_match" | "skipped" | "submission_unknown" | "failed" | "cancelled";
             /**
@@ -13242,9 +13326,13 @@ export interface components {
              *     (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
              *     than the connection's refresh window, so an automatic trigger declined to buy
              *     the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+             *     `no_identifiers` means the contact carries neither a profile link nor a name with
+             *     a company, so the provider has nothing to match on; an automatic trigger declines
+             *     rather than spending a call that can only answer "no match". A human pressing the
+             *     button on the contact is still allowed to try.
              * @enum {string|null}
              */
-            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | null;
+            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | "no_identifiers" | null;
             /** Format: int64 */
             connection_version: number;
             configuration_snapshot: components["schemas"]["ProviderConfiguration"];
@@ -13262,6 +13350,16 @@ export interface components {
              * @default false
              */
             claims_unwritten: boolean;
+            /**
+             * @description True once this run's answers have been folded onto the contact's own record — the
+             *     fields it filled that were empty. A `completed` run that is not yet `applied` has
+             *     bought its values but they have not reached the record, which is the window a
+             *     client polls through: stopping at `completed` shows a page that still looks empty.
+             *     Always false for a run that never completed, and for one whose claims were
+             *     discarded (`claims_unwritten`), because there was nothing to apply.
+             * @default false
+             */
+            applied: boolean;
             /** Format: date-time */
             submitted_at?: string | null;
             /** Format: date-time */
@@ -20300,6 +20398,11 @@ export interface components {
             confidence?: number | null;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: int64
+             * @description The row's version, for the `If-Match` a correction sends. The write path has always honoured the precondition; without the version on the read, no client could supply one, and two people correcting the same claim overwrote each other with no conflict and no trace.
+             */
+            readonly version?: number;
         };
         /**
          * @description Which system receives a company's mail, classified from its MX records. `other` is a
@@ -23507,7 +23610,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -23659,6 +23762,17 @@ export interface components {
              */
             as_of: string;
             /**
+             * @description Whose work this read answered for.
+             * @enum {string}
+             */
+            scope: "mine" | "team" | "all";
+            /**
+             * @description The scopes this reader may ask for, narrowest first — derived from their own
+             *     row scope. A client draws a control only when there is more than one, so a
+             *     rep who can only see their own work is never offered a switch that would 403.
+             */
+            scope_options: ("mine" | "team" | "all")[];
+            /**
              * @description The narrowing this read applied.
              * @enum {string}
              */
@@ -23708,7 +23822,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -25723,6 +25837,55 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getIntegrationsSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The provider-lookup posture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateIntegrationsSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIntegrationsSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated posture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listProviderConnections: {
@@ -33979,6 +34142,26 @@ export interface operations {
     getWorklist: {
         parameters: {
             query?: {
+                /**
+                 * @description Whose work to answer for. Omitted means `mine`, which is the default for
+                 *     every reader: an admin account can read every deal in the installation, and a
+                 *     queue that showed all of them would hand a rep several hundred rows belonging
+                 *     to colleagues and call it their day.
+                 *
+                 *     A scope the reader's own row scope does not reach is refused with 403 rather
+                 *     than quietly narrowed — answering a question about the team with facts about
+                 *     one person, with no way for the reader to tell, is the worse failure.
+                 *
+                 *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
+                 *     going quiet, meetings and duplicate pairs are read under the caller's row
+                 *     scope, so `team` and `all` return what that tier reaches and `mine` narrows
+                 *     below it. The intrinsically per-user sources do not, and cannot: a notice is
+                 *     addressed to one person, a mailbox belongs to one, a promise was made by one,
+                 *     and an approved action failed for the person who approved it. `all` therefore
+                 *     means "every shared record I may see, plus my own personal queue" — not a
+                 *     licence to read a colleague's inbox.
+                 */
+                scope?: "mine" | "team" | "all";
                 /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
                 filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
                 /** @description How many ranked items to return. */
@@ -34001,6 +34184,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getMorningDigest: {

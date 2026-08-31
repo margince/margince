@@ -2031,6 +2031,7 @@ public.idx_activity_restricted_until CREATE INDEX idx_activity_restricted_until 
 public.idx_activity_search CREATE INDEX idx_activity_search ON public.activity USING gin (search_tsv)
 public.idx_activity_tasks CREATE INDEX idx_activity_tasks ON public.activity USING btree (assignee_id, due_at) WHERE ((kind = 'task'::text) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_thread CREATE INDEX idx_activity_thread ON public.activity USING btree (thread_key) WHERE (thread_key IS NOT NULL)
+public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_seek ON public.activity USING btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL))
 public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
 public.idx_activity_ws_time CREATE INDEX idx_activity_ws_time ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_agent_run_awaiting CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text)
@@ -3670,6 +3671,26 @@ public.project_phase_history.reason text gen=- def=-
 public.project_phase_history.to_phase text NOT NULL gen=- def=-
 public.project_phase_history_pkey CREATE UNIQUE INDEX project_phase_history_pkey ON public.project_phase_history USING btree (id)
 public.project_pkey CREATE UNIQUE INDEX project_pkey ON public.project USING btree (id)
+public.provider_applied_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.provider_applied_field.applied_at timestamp with time zone NOT NULL gen=- def=now()
+public.provider_applied_field.applied_value text gen=- def=-
+public.provider_applied_field.captured_by text NOT NULL gen=- def=-
+public.provider_applied_field.id uuid NOT NULL gen=- def=uuidv7()
+public.provider_applied_field.person_id uuid NOT NULL gen=- def=-
+public.provider_applied_field.provider text NOT NULL gen=- def=-
+public.provider_applied_field.provider_applied_field_identity_shape CHECK (((target_row_id IS NULL) <> (applied_value IS NULL)))
+public.provider_applied_field.provider_applied_field_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.provider_applied_field.provider_applied_field_pkey PRIMARY KEY (id)
+public.provider_applied_field.provider_applied_field_run_id_fkey FOREIGN KEY (run_id) REFERENCES provider_run(id) ON DELETE CASCADE
+public.provider_applied_field.provider_applied_field_target_check CHECK ((target_table = ANY (ARRAY['person'::text, 'person_social'::text, 'person_email'::text, 'person_phone'::text, 'relationship'::text])))
+public.provider_applied_field.run_id uuid NOT NULL gen=- def=-
+public.provider_applied_field.target_field text NOT NULL gen=- def=-
+public.provider_applied_field.target_row_id uuid gen=- def=-
+public.provider_applied_field.target_table text NOT NULL gen=- def=-
+public.provider_applied_field_by_person CREATE INDEX provider_applied_field_by_person ON public.provider_applied_field USING btree (person_id, provider)
+public.provider_applied_field_by_provider CREATE INDEX provider_applied_field_by_provider ON public.provider_applied_field USING btree (provider)
+public.provider_applied_field_once CREATE UNIQUE INDEX provider_applied_field_once ON public.provider_applied_field USING btree (run_id, target_table, target_field, COALESCE(target_row_id, person_id))
+public.provider_applied_field_pkey CREATE UNIQUE INDEX provider_applied_field_pkey ON public.provider_applied_field USING btree (id)
 public.provider_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.provider_connection.automatic_import boolean NOT NULL gen=- def=false
 public.provider_connection.automatic_individual_create boolean NOT NULL gen=- def=true
@@ -3720,6 +3741,7 @@ public.provider_connection_credential_ref_key CREATE UNIQUE INDEX provider_conne
 public.provider_connection_pkey CREATE UNIQUE INDEX provider_connection_pkey ON public.provider_connection USING btree (id)
 public.provider_connection_provider_key CREATE UNIQUE INDEX provider_connection_provider_key ON public.provider_connection USING btree (provider)
 public.provider_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.provider_run.applied_at timestamp with time zone gen=- def=-
 public.provider_run.attempt_count integer NOT NULL gen=- def=0
 public.provider_run.claims_unwritten boolean NOT NULL gen=- def=false
 public.provider_run.completed_at timestamp with time zone gen=- def=-
@@ -3742,12 +3764,12 @@ public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_co
 public.provider_run.provider_run_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
 public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id)
-public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text]))))
+public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))
 public.provider_run.provider_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text, 'no_match'::text, 'skipped'::text, 'submission_unknown'::text, 'failed'::text, 'cancelled'::text])))
 public.provider_run.provider_run_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['person'::text, 'scrubbed'::text])))
 public.provider_run.provider_run_subject_shape CHECK ((((subject_kind = 'person'::text) AND (person_id IS NOT NULL)) OR ((subject_kind = 'scrubbed'::text) AND (person_id IS NULL))))
-public.provider_run.provider_run_trigger_check CHECK ((trigger = ANY (ARRAY['automatic_create'::text, 'automatic_import'::text, 'scheduled_refresh'::text, 'manual'::text])))
+public.provider_run.provider_run_trigger_check CHECK ((trigger = ANY (ARRAY['automatic_create'::text, 'automatic_import'::text, 'automatic_backfill'::text, 'scheduled_refresh'::text, 'manual'::text])))
 public.provider_run.requested_by uuid gen=- def=-
 public.provider_run.requested_categories text[] NOT NULL gen=- def=-
 public.provider_run.skip_reason text gen=- def=-

@@ -24,12 +24,17 @@ afterEach(() => {
 
 const ORG = "o-1";
 
+// The version is what both verbs pin. A fixture without it models a row the
+// server does not produce, and every read that offers a verdict now returns
+// one — so a test that omitted it would prove the buttons work against a
+// record shaped unlike the real one.
 const field: components["schemas"]["CompanyProfileField"] = {
   field: "industry",
   value: "Fahrzeugbau",
   source: "site_read",
   captured_by: "agent:deepread",
   updated_at: "2026-08-01T09:00:00Z",
+  version: 3,
 };
 
 const fact: components["schemas"]["OrganizationFact"] = {
@@ -46,7 +51,12 @@ const fact: components["schemas"]["OrganizationFact"] = {
 // The calls the component made, so a test can assert the METHOD and the PATH
 // rather than that something happened.
 function recordCalls() {
-  const calls: { method: string; path: string; body?: unknown }[] = [];
+  const calls: {
+    method: string;
+    path: string;
+    body?: unknown;
+    ifMatch: string | null;
+  }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -54,6 +64,10 @@ function recordCalls() {
         method: request.method,
         path: new URL(request.url).pathname,
         body: request.body ? await request.clone().json() : undefined,
+        // Both verbs overwrite a row somebody else may have moved, so the
+        // precondition is part of what each call IS — asserted here rather than
+        // left to a reviewer to notice missing.
+        ifMatch: request.headers.get("If-Match"),
       });
       return new Response("{}", {
         status: 200,
@@ -96,6 +110,10 @@ describe("a human's verdict on a machine's claim", () => {
       "/v1/organizations/o-1/profile-fields/industry/confirm",
     );
     expect(calls[0].body).toBeUndefined();
+    // A confirmation is a person agreeing with a value they READ. Unpinned, it
+    // stamps their name on whatever the row says by the time it lands — which
+    // may be a correction they never saw.
+    expect(calls[0].ifMatch).toBe("3");
   });
 
   it("corrects a profile field by sending the new value", async () => {
@@ -118,6 +136,7 @@ describe("a human's verdict on a machine's claim", () => {
     expect(calls[0].method).toBe("PATCH");
     expect(calls[0].path).toBe("/v1/organizations/o-1/profile-fields/industry");
     expect(calls[0].body).toEqual({ value: "Automotive" });
+    expect(calls[0].ifMatch).toBe("3");
   });
 
   it("addresses a single-value fact by its bare-colon key", async () => {

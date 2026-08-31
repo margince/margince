@@ -80,8 +80,14 @@ type RecordFace struct {
 }
 
 // Tasks is the open-task read, through the activities module.
+//
+// mineOnly asks the store for the READER'S OWN open tasks rather than every
+// task they may see. It belongs in the query and not in a filter afterwards:
+// the store bounds what it returns, so narrowing later would cut a colleague's
+// twelve rows out of a page of twelve and leave the reader's own overdue task
+// unreachable behind them.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, until time.Time, limit int) ([]Task, error)
+	OpenForViewer(ctx context.Context, until time.Time, limit int, mineOnly bool) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
@@ -288,6 +294,31 @@ type QuietRelationship struct {
 	// LastAt is when they last spoke, so the card can date the silence rather
 	// than only measure it.
 	LastAt time.Time
+}
+
+// Waiting is who has written to this workspace and had no reply.
+//
+// Its own reader rather than a filter over AtRisk, because a fresh inbound
+// makes a deal LESS quiet: deriving "waiting" from "quiet" loses the newest
+// cases, which are the ones a rep most needs. It also reaches a person with no
+// deal at all, whom the deal-shaped lanes never see.
+type Waiting interface {
+	Unanswered(ctx context.Context, asOf time.Time) ([]WaitingCustomer, error)
+}
+
+// WaitingCustomer is one message nobody has answered.
+type WaitingCustomer struct {
+	// ActivityID is the message itself — what a reply would be drafted to.
+	ActivityID ids.UUID
+	Subject    string
+	// Since is when they wrote. The wait is measured from it, and it is what
+	// the card says out loud.
+	Since time.Time
+	// The record the thread is filed under, most specific first. Any may be
+	// zero: a message from a stranger names nobody.
+	PersonID       ids.UUID
+	OrganizationID ids.UUID
+	DealID         ids.UUID
 }
 
 // Meetings is today's booked meetings that have not happened yet.

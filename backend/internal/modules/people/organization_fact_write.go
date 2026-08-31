@@ -60,8 +60,12 @@ func (s *Store) writeFact(
 		changedKey: factKey,
 		value:      in.Value,
 		ifVersion:  in.IfVersion,
-		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, error) {
-			return readFactRow(ctx, tx, orgID, factKey)
+		// Never creates: a fact is addressed by `<field>:<value_key>`, a key a
+		// machine derives from what it read, so there is no vocabulary a person
+		// could originate one from. An absent fact stays not-found.
+		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, bool, error) {
+			row, err := readFactRow(ctx, tx, orgID, factKey)
+			return row, false, err
 		},
 		readAfter: func(ctx context.Context, tx pgx.Tx) (crmcontracts.OrganizationFact, error) {
 			return readFactWire(ctx, tx, orgID, factKey)

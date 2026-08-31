@@ -17,9 +17,14 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"sort"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // worklistPage is how many ranked items one read carries by default.
@@ -35,17 +40,111 @@ const worklistMaxPage = 100
 // The filter narrows what is CARRIED, never what is read: a source is read,
 // classified and then dropped, so the summary's figures describe the same day
 // whichever filter is applied.
-func (s *Service) Worklist(ctx context.Context, filter string, limit int) (crmcontracts.Worklist, error) {
-	day, err := s.Assemble(ctx)
+func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int) (crmcontracts.Worklist, error) {
+	// Resolved BEFORE the day is read: a reader asking for a scope they do not
+	// hold gets a refusal rather than a page assembled and then narrowed, and
+	// the read they were never entitled to make is not made.
+	resolved, err := resolveScope(ctx, scope)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	return s.worklistFrom(day, filter, limit)
+	// The producers that CAN be narrowed are narrowed in their own queries,
+	// not filtered afterwards: each store bounds what it returns, so a page
+	// full of colleagues' rows would hide the reader's own work behind a cut
+	// that had already happened.
+	reader := s
+	if mineOnly(resolved) {
+		reader = s.forReader()
+	}
+	day, err := reader.Assemble(ctx)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// Read beside the assembled day rather than inside it: /attention has its
+	// own fourteen-lane promise and this source is not one of its lanes. A
+	// refused read is named, never folded into an empty answer.
+	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
+	out := s.worklistFrom(ctx, day, resolved, filter, limit, waiting)
+	if waitingErr != nil {
+		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
+	}
+	out.Scope = crmcontracts.WorklistScope(resolved)
+	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
+	return out, nil
+}
+
+// keepReadersOwn drops the rows belonging to somebody else.
+//
+// It runs over the CANDIDATES, before the page is cut, so a reader asking for
+// twenty-five of their own rows gets twenty-five where they exist. Narrowing
+// after the cut returned a short page while the reader's own work sat just
+// past it.
+//
+// It fails CLOSED. A call with no human behind it has no "own work" to answer
+// for, and a queue that handed such a caller every row it had read would be
+// widening a scope named `mine` — the opposite of what it says. An agent that
+// needs the day reads it under a scope it can actually hold.
+//
+// The narrowing itself is a display cut, not the security boundary: the lanes
+// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
+// by default rather than what any store was asked. Pushing the filter into
+// each producer is the better shape and needs each to take an owner.
+func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return nil
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if ownedByReader(row.item, actor) {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// scopeOptions puts the resolver's answer on the wire.
+func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
+	out := make([]crmcontracts.WorklistScopeOptions, 0, len(options))
+	for _, option := range options {
+		out = append(out, crmcontracts.WorklistScopeOptions(option))
+	}
+	return out
 }
 
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
-func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit int) (crmcontracts.Worklist, error) {
+// waitingCustomers reads who is waiting, or names why it could not.
+//
+// A refusal is reported as a withheld source; any other failure as a failed
+// one. Neither takes the rest of the day down with it — a page that answered
+// nothing because one source stumbled is less useful than a page that says
+// which part it could not read.
+func (s *Service) waitingCustomers(
+	ctx context.Context, asOf time.Time,
+) ([]WaitingCustomer, *crmcontracts.WorklistSourceUnavailable) {
+	if s.waiting == nil {
+		return nil, nil
+	}
+	rows, err := s.waiting.Unanswered(ctx, asOf)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return nil, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceWaiting, Reason: crmcontracts.Withheld,
+		}
+	case err != nil:
+		return nil, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceWaiting, Reason: crmcontracts.Failed,
+		}
+	default:
+		return rows, nil
+	}
+}
+
+func (s *Service) worklistFrom(
+	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
+	waiting []WaitingCustomer,
+) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
 	}
@@ -53,7 +152,24 @@ func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit 
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
-	if filter != "" && filter != string(crmcontracts.All) {
+	// A waiting message has no owner of its own, so under `mine` its ownership
+	// is the ownership of the record it is filed under: a thread about a
+	// colleague's deal is that colleague's to answer. Judged against the deals
+	// this reader owns in THIS day, which is the set `mine` already narrowed.
+	owned := ownedDealsIn(ctx, day, scope)
+	for _, customer := range waiting {
+		if mineOnly(scope) && !waitingIsMine(customer, owned) {
+			continue
+		}
+		rows = append(rows, classifyWaiting(customer, day.AsOf))
+	}
+	// One unanswered message is one row: the deal it belongs to does not also
+	// appear as drifting.
+	rows = dropDealsAlreadyWaiting(rows)
+	if mineOnly(scope) {
+		rows = keepReadersOwn(ctx, rows)
+	}
+	if filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll) {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
@@ -71,7 +187,32 @@ func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit 
 		narrowed := crmcontracts.WorklistFilter(filter)
 		out.Filter = &narrowed
 	}
-	return out, nil
+	return out
+}
+
+// ownedDealsIn is the set of deals on this day that the reader owns.
+//
+// Read off the assembled day rather than queried again: the at-risk lane has
+// already returned the deals under the reader's own scope, so this is the
+// answer that surface already has rather than a second opinion about it.
+func ownedDealsIn(ctx context.Context, day crmcontracts.Attention, scope string) map[ids.UUID]bool {
+	owned := map[ids.UUID]bool{}
+	if !mineOnly(scope) || day.AtRisk == nil {
+		return owned
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return owned
+	}
+	for _, item := range *day.AtRisk {
+		if item.Deal == nil || item.Deal.OwnerId == nil || item.Subject == nil {
+			continue
+		}
+		if ids.UUID(*item.Deal.OwnerId) == actor.UserID {
+			owned[ids.UUID(item.Subject.Id)] = true
+		}
+	}
+	return owned
 }
 
 // page cuts the candidates to what one read carries.

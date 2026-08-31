@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useCan } from "../app/capability";
 import { Disclosure } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
@@ -16,6 +19,7 @@ import {
   useCompanyReadOnlyReason,
 } from "./companyheader";
 import { SIZE_BAND_OPTIONS } from "./companylookups";
+import { profileFieldsKey, useOrgProfileFields } from "./evidenceverdict";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
 // this file so the rail file stays under the 500-line ceiling: one panel
@@ -24,6 +28,11 @@ import { SIZE_BAND_OPTIONS } from "./companylookups";
 
 type Organization = components["schemas"]["Organization"];
 type OrganizationDomain = NonNullable<Organization["domains"]>[number];
+type ProfileField = components["schemas"]["CompanyProfileField"];
+// The path parameter's own closed vocabulary, taken from the generated contract
+// rather than respelled: a field name this endpoint does not accept is then a
+// compile error here rather than a 422 the reader meets.
+type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
 // Not `keyof Address`: the wire type carries a `[key: string]: unknown` catch-all
 // alongside its six named parts (schema.d.ts's own escape hatch for a future
 // field), which collapses `keyof` down to bare `string` and loses every part's
@@ -410,6 +419,99 @@ function DescriptionRow({
   );
 }
 
+// The two legal-identity fields that live only in the evidence sidecar: the
+// VAT/tax identifier and the address the company is REGISTERED at.
+//
+// Neither has a column on `organization`, so neither can ride the rows above:
+// they are written through the profile-field correction path instead. That
+// difference is invisible to a reader and should stay so — a rep stating the
+// company's VAT number is doing the same thing as stating its legal name, and
+// the two rows sit together because they are the same kind of fact.
+//
+// `registered_address` is NOT the postal address in the disclosure below. That
+// one is six columns describing where the company OPERATES; this one is the
+// single line a register prints. Collapsing them was never intended, so the
+// labels have to keep them apart.
+const SIDECAR_FIELDS = [
+  {
+    field: "register_vat",
+    labelKey: "co.profileField.register_vat",
+    placeholderKey: "field.addRegisterVat",
+  },
+  {
+    field: "registered_address",
+    labelKey: "co.profileField.registered_address",
+    placeholderKey: "field.addRegisteredAddress",
+  },
+] as const satisfies readonly {
+  field: ProfileFieldKey;
+  labelKey: MessageKey;
+  placeholderKey: MessageKey;
+}[];
+
+// One sidecar field's row. The value comes from the profile-fields read rather
+// than from `organization`, which carries no sidecar claim.
+function SidecarFieldRow({
+  orgId,
+  fields,
+  field,
+  labelKey,
+  placeholderKey,
+  canEdit,
+  readOnlyReason,
+}: Readonly<{
+  orgId: string;
+  fields: readonly ProfileField[];
+  field: ProfileFieldKey;
+  labelKey: MessageKey;
+  placeholderKey: MessageKey;
+  canEdit: boolean;
+  readOnlyReason: string | undefined;
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const label = t(labelKey);
+  const current = fields.find((one) => one.field === field);
+  const save = async (next: string) => {
+    const { error } = await api.PATCH(
+      "/organizations/{id}/profile-fields/{field}",
+      {
+        params: {
+          path: { id: orgId, field },
+          // A field nobody has stated yet has no row and so no version to pin:
+          // the write CREATES it, and there is no earlier state to lose. Once
+          // one exists the precondition is what stops two people correcting the
+          // same claim and the second silently replacing the first.
+          ...(current ? ifMatch(requireVersion(current.version)) : {}),
+        },
+        body: { value: next.trim() },
+      },
+    );
+    if (error) {
+      throwProblem(error);
+    }
+    // The record read and the profile-fields read both now describe the write
+    // that just landed, and the 360 summarises it.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
+      queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
+      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
+    ]);
+  };
+  return (
+    <FieldRow label={label}>
+      <InlineText
+        label={label}
+        value={current?.value ?? ""}
+        placeholder={t(placeholderKey)}
+        canEdit={canEdit}
+        readOnlyReason={readOnlyReason}
+        onSave={save}
+      />
+    </FieldRow>
+  );
+}
+
 function DetailsGridBody({
   organization,
 }: Readonly<{ organization: Organization }>) {
@@ -417,6 +519,14 @@ function DetailsGridBody({
   const canUpdate = useCan("organization", "update");
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   const patch = useCompanyFieldPatch(organization);
+  // The same read the Overview's own profile-field card uses, so a correction
+  // made here settles that card too rather than leaving the two surfaces
+  // disagreeing about what the record says.
+  const sidecarQuery = useOrgProfileFields(organization.id);
+  // A read that has not answered yet leaves both rows empty rather than absent:
+  // the grid's rule is that every known field draws a row, and a row that
+  // appears once its value arrives would make the panel jump under the reader.
+  const sidecarFields = sidecarQuery.data ?? [];
   const row: DetailsRowProps = {
     organization,
     canEdit: canUpdate && !readOnlyReason,
@@ -448,6 +558,19 @@ function DetailsGridBody({
           values still share one left edge down the whole panel. */}
       <FieldGrid>
         <LegalNameRow {...row} />
+        {/* Beside the legal name, not with the postal address below: a VAT
+            number and a registry address are identity facts about the legal
+            entity, and the address disclosure is where the company operates. */}
+        {SIDECAR_FIELDS.map((sidecar) => (
+          <SidecarFieldRow
+            key={sidecar.field}
+            orgId={organization.id}
+            fields={sidecarFields}
+            canEdit={row.canEdit}
+            readOnlyReason={readOnlyReason}
+            {...sidecar}
+          />
+        ))}
         <OwnerRow organization={organization} />
         <LifecycleRow organization={organization} />
         <DomainRow {...row} />

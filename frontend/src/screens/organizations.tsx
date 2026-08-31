@@ -120,6 +120,7 @@ import {
   EvidenceVerdict,
   factClaim,
   profileFieldClaim,
+  useOrgProfileFields,
 } from "./evidenceverdict";
 import { type FactGroup, factFieldLabelKey, groupFacts } from "./factview";
 import { RecordHistoryTab } from "./history";
@@ -1276,19 +1277,7 @@ function ProfileFieldsCard({
   onOpenHistory,
 }: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
   const t = useT();
-  const fieldsQuery = useQuery({
-    queryKey: ["org-profile-fields", orgId],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/organizations/{id}/profile-fields",
-        { params: { path: { id: orgId } } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data ?? [];
-    },
-  });
+  const fieldsQuery = useOrgProfileFields(orgId);
 
   return (
     <Card

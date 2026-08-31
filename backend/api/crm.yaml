@@ -1603,6 +1603,53 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  # ------------------------ /integrations/settings -------------------------
+  /integrations/settings:
+    get:
+      tags: [Integrations]
+      operationId: getIntegrationsSettings
+      security: [ { cookieAuth: [] } ]
+      summary: The installation's provider-lookup posture.
+      description: |
+        Whether a provider run may be queued without a human pressing anything. Every role may
+        read it — a rep needs to know whether a contact arrives already looked up; only
+        admin/ops may change it (PATCH). Governed by the `integrations` RBAC object.
+      responses:
+        '200':
+          description: The provider-lookup posture.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntegrationsSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Integrations]
+      operationId: updateIntegrationsSettings
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Update the installation's provider-lookup posture (admin/ops).
+      description: |
+        Admin/ops-only. `automatic_lookup` ON means every contact is looked up once for the
+        details the provider charges nothing for; email and mobile are never bought this way
+        and stay a per-contact human action. OFF is a jurisdiction answer rather than a pause:
+        an installation whose contacts fall under a law that forbids trading personal data
+        turns it off and looks a contact up by hand. Human session only — an agent never
+        changes an installation-wide purchasing posture. Audit-only write (EVT-NOEVT-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateIntegrationsSettingsRequest' }
+      responses:
+        '200':
+          description: The updated posture.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntegrationsSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ------------------------ /provider-connections --------------------------
   /provider-connections:
     get:
@@ -8460,6 +8507,27 @@ paths:
         that would have filled it never answered.
       x-agent-access: human-only
       parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [mine, team, all] }
+          description: |
+            Whose work to answer for. Omitted means `mine`, which is the default for
+            every reader: an admin account can read every deal in the installation, and a
+            queue that showed all of them would hand a rep several hundred rows belonging
+            to colleagues and call it their day.
+
+            A scope the reader's own row scope does not reach is refused with 403 rather
+            than quietly narrowed — answering a question about the team with facts about
+            one person, with no way for the reader to tell, is the worse failure.
+
+            WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
+            going quiet, meetings and duplicate pairs are read under the caller's row
+            scope, so `team` and `all` return what that tier reaches and `mine` narrows
+            below it. The intrinsically per-user sources do not, and cannot: a notice is
+            addressed to one person, a mailbox belongs to one, a promise was made by one,
+            and an approved action failed for the person who approved it. `all` therefore
+            means "every shared record I may see, plus my own personal queue" — not a
+            licence to read a colleague's inbox.
         - name: filter
           in: query
           schema: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system] }
@@ -8476,6 +8544,7 @@ paths:
               schema: { $ref: '#/components/schemas/Worklist' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /digest:
     get:
       tags: [Capture]
@@ -16127,7 +16196,7 @@ paths:
     patch:
       tags: [Organizations]
       operationId: updateOrganizationProfileField
-      summary: Correct a profile field — the canonical value changes, the machine's proposal survives.
+      summary: State or correct a profile field — the canonical value changes, the machine's proposal survives.
       description: |
         DOSS-WIRE-4 / PO-AC-N-1. Where the field maps to a column on `organization`, THE COLUMN IS
         WHAT CHANGES; the sidecar keeps the machine's proposal, excerpt, source URL and confidence in
@@ -16135,6 +16204,16 @@ paths:
         would be a lie about having been accepted. Provenance flips to `human` with the acting
         principal and the timestamp; the whole thing commits as one mutation with its audit entry and
         its outboxed event.
+
+        A field with NO row yet is CREATED by this write, audited as a creation with no before-image.
+        Most of this vocabulary is only ever filled by a crawl that read a legal notice, and a company
+        whose site publishes none would otherwise hold a fact nobody could record. Originating a claim
+        is a human act: an agent principal still gets `404` here, because the write stamps
+        `verified_by` with the granting user and that would record a human verification of a value no
+        human saw. Correcting a claim that already exists stays open to an agent.
+
+        `404` therefore means the organization is unreachable, or — for the confirm operation, or for
+        an agent's first statement — that no such claim exists to answer for.
       x-mcp-tool: { verb: update_record, record_type: organization, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -17741,6 +17820,35 @@ components:
                 The vector width the provider is asked to emit. Omit (or 0) for the compiled
                 default; a value outside [1,2000] is refused.
 
+    IntegrationsSettings:
+      type: object
+      description: |
+        The installation's provider-lookup posture. Read by every role, changed only by
+        admin/ops.
+      required: [automatic_lookup]
+      properties:
+        automatic_lookup:
+          type: boolean
+          description: |
+            When true, every contact is looked up once against the connected data provider for
+            the details it charges nothing for — the professional profile link, the current role
+            and employer, the work history. Email and mobile are never bought this way: those
+            cost credits and stay a per-contact human action.
+
+            Default is ON. Switching it OFF is a jurisdiction answer rather than a pause button:
+            some laws forbid trading personal data outright, and an installation whose contacts
+            fall under one turns this off and looks a contact up by hand, which keeps the
+            decision with the person who made it. There is no per-contact equivalent because a
+            contact's country is not a fact this product holds.
+
+    UpdateIntegrationsSettingsRequest:
+      type: object
+      description: A sparse provider-posture patch (admin/ops).
+      properties:
+        automatic_lookup:
+          type: boolean
+          description: Toggle whether contacts are looked up automatically for the free details.
+
     UpdateCaptureSettingsRequest:
       type: object
       description: A sparse capture-settings patch (admin/ops).
@@ -19203,16 +19311,28 @@ components:
         - automatic_import
         - categories
       properties:
+        # IGNORED since the lookup posture became installation-wide
+        # (`automatic_lookup` on /integrations/settings): the question is a legal
+        # posture rather than a per-connection preference. Still required and
+        # still emitted so a client reading the old field keeps parsing; nothing
+        # reads what it says. Written as a bare $ref on purpose — wrapping it to
+        # attach `deprecated` widens the property's type to `any`, which is a
+        # breaking change for every client that parses it as a string.
         mode: { $ref: '#/components/schemas/ProviderConnectionMode' }
         preset: { $ref: '#/components/schemas/ProviderPreset' }
-        automatic_individual_create: { type: boolean, default: true }
+        automatic_individual_create:
+          type: boolean
+          default: true
+          deprecated: true
+          description: 'IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`.'
         automatic_import:
           type: boolean
           default: false
+          deprecated: true
           description: >-
-            Enrich every person a connector creates. A mailbox, channel or
-            other connection mints one person per counterparty it sees, and
-            each purchase spends credits; off by default for that reason.
+            IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`. It once held
+            connector-created contacts back because each purchase spent credits; an automatic
+            run now buys only what costs nothing, so the two cases stopped differing.
         categories: { $ref: '#/components/schemas/ProviderCategorySelection' }
         refresh_after_days: { type: [integer, 'null'], minimum: 1 }
         daily_run_limit: { type: [integer, 'null'], minimum: 1 }
@@ -19309,6 +19429,28 @@ components:
           description: Credits charged per pool, worst case, the fallback included. Empty when free.
           additionalProperties: { type: integer, minimum: 0 }
 
+    ProviderLookupBacklog:
+      type: object
+      required: [remaining, paused]
+      description: >-
+        How much of the installation is still waiting to be looked up once, and whether the
+        sweep is moving. A count without the paused flag reads as progress that has stalled;
+        the two together say whether waiting is the right thing to do.
+      properties:
+        remaining:
+          type: integer
+          minimum: 0
+          description: >-
+            Contacts with no completed free lookup and no live one in flight. Counts down to
+            zero as the sweep works through them, and rises when contacts are created faster
+            than it can reach them.
+        paused:
+          type: boolean
+          description: >-
+            True when nothing will be queued right now — the posture is off, the connection is
+            not usable, or the day's run ceiling is spent. A remaining count that is not
+            falling is explained by this rather than by a stuck sweep.
+
     ProviderConnection:
       type: object
       required: [provider, status, credential_present, configuration, credits, version, created_at, updated_at]
@@ -19337,6 +19479,7 @@ components:
         # "what has this cost us" (PI-WIRE-7). Ours, not theirs — a customer may also
         # spend the same credits through the provider's own app.
         spend: { $ref: '#/components/schemas/ProviderSpend' }
+        lookup_backlog: { $ref: '#/components/schemas/ProviderLookupBacklog' }
         connected_at: { type: [string, 'null'], format: date-time }
         last_verified_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
@@ -19403,11 +19546,18 @@ components:
             subject kind has its own typed id field; the pairing is enforced by the shape check on
             `provider_run` (PI-DDL-2), not by this schema.
         provider: { $ref: '#/components/schemas/Provider' }
-        trigger: { type: string, enum: [automatic_create, automatic_import, scheduled_refresh, manual] }
+        trigger:
+          type: string
+          enum: [automatic_create, automatic_import, automatic_backfill, scheduled_refresh, manual]
+          description: |
+            What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+            contact that existed before the provider was connected, or that no run has covered
+            yet; like the other automatic triggers it buys only the categories that cost
+            nothing.
         state: { type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled] }
         skip_reason:
           type: [string, 'null']
-          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, null]
+          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, null]
           description: |
             Why a `skipped` run sent nothing. Null for every other state.
             `duplicate_subject_candidate` means the subject looked like a duplicate of an
@@ -19416,6 +19566,10 @@ components:
             (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
             than the connection's refresh window, so an automatic trigger declined to buy
             the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+            `no_identifiers` means the contact carries neither a profile link nor a name with
+            a company, so the provider has nothing to match on; an automatic trigger declines
+            rather than spending a call that can only answer "no match". A human pressing the
+            button on the contact is still allowed to try.
         connection_version: { type: integer, format: int64, minimum: 1 }
         configuration_snapshot: { $ref: '#/components/schemas/ProviderConfiguration' }
         requested_categories: { type: array, uniqueItems: true, items: { type: string } }
@@ -19436,6 +19590,16 @@ components:
             True when a paid terminal result could not be handed to the owning domain within
             the bounded retry (PI-PARAM-10). The spend is real and the claims are absent; an
             operator sees the gap rather than discovering it as missing data (PI-AC-12).
+        applied:
+          type: boolean
+          default: false
+          description: |
+            True once this run's answers have been folded onto the contact's own record — the
+            fields it filled that were empty. A `completed` run that is not yet `applied` has
+            bought its values but they have not reached the record, which is the window a
+            client polls through: stopping at `completed` shows a page that still looks empty.
+            Always false for a run that never completed, and for one whose claims were
+            discarded (`claims_unwritten`), because there was nothing to apply.
         submitted_at: { type: [string, 'null'], format: date-time }
         completed_at: { type: [string, 'null'], format: date-time }
         safe_status_code:
@@ -27765,6 +27929,15 @@ components:
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
         updated_at: { type: string, format: date-time }
+        version:
+          type: integer
+          format: int64
+          readOnly: true
+          description: >-
+            The row's version, for the `If-Match` a correction sends. The write path has
+            always honoured the precondition; without the version on the read, no client
+            could supply one, and two people correcting the same claim overwrote each
+            other with no conflict and no trace.
 
     TechnicalMailProvider:
       type: string
@@ -31188,7 +31361,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -31323,9 +31496,20 @@ components:
         does, widened: a source the caller may not read is named as `withheld`, and one
         that failed to answer is named as `failed`. Both keep the summary from claiming a
         clear day it did not actually see.
-      required: [as_of, queue, summary, sources_unavailable]
+      required: [as_of, queue, summary, sources_unavailable, scope, scope_options]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
+        scope:
+          type: string
+          enum: [mine, team, all]
+          description: 'Whose work this read answered for.'
+        scope_options:
+          type: array
+          items: { type: string, enum: [mine, team, all] }
+          description: |
+            The scopes this reader may ask for, narrowest first — derived from their own
+            row scope. A client draws a control only when there is more than one, so a
+            rep who can only see their own work is never offered a switch that would 403.
         filter: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
@@ -31372,7 +31556,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
           description: 'Which producer raised it, and therefore which endpoint its verbs go to.'
         category:
           type: string

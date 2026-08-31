@@ -58,7 +58,16 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	out, err := h.svc.Worklist(r.Context(), filter, limit)
+	scope := ""
+	if params.Scope != nil {
+		if !params.Scope.Valid() {
+			httperr.Write(w, r, httperr.Validation("scope", "unknown",
+				"that is not a scope this queue can answer for"))
+			return
+		}
+		scope = string(*params.Scope)
+	}
+	out, err := h.svc.Worklist(r.Context(), scope, filter, limit)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

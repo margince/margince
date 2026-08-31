@@ -2609,6 +2609,8 @@ export const vi = {
   "field.addLegalName": "Thêm tên pháp lý",
   "field.addIndustry": "Thêm ngành",
   "field.addLinkedinUrl": "Thêm URL LinkedIn",
+  "field.addRegisterVat": "Thêm mã số thuế",
+  "field.addRegisteredAddress": "Thêm địa chỉ đăng ký",
   "field.addFullName": "Thêm họ và tên",
   "field.addTitle": "Thêm chức danh",
   "field.addAddressLine1": "Thêm số nhà và tên đường",

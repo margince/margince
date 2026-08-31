@@ -36,8 +36,10 @@ type evidenceWrite[T any] struct {
 	value     *string
 	ifVersion *int64
 	// readBefore locates the row and returns the machine's claim in full, which
-	// becomes the audit before-image.
-	readBefore func(context.Context, pgx.Tx) (evidenceRow, error)
+	// becomes the audit before-image. The bool says the row did not exist and
+	// this write minted it: there is then no prior state, and the audit records
+	// a creation rather than an update against an image nobody ever wrote.
+	readBefore func(context.Context, pgx.Tx) (evidenceRow, bool, error)
 	// canonical moves the corrected value out of the sidecar and onto the
 	// record it describes. Nil for a claim that lives only in the sidecar and
 	// so has nothing to keep in step.
@@ -86,7 +88,7 @@ func writeEvidence[T any](
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
 			return fmt.Errorf("read transaction time: %w", err)
 		}
-		before, err := w.readBefore(ctx, tx)
+		before, created, err := w.readBefore(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -119,8 +121,23 @@ func writeEvidence[T any](
 			}
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", w.table,
-			before.ID, before.auditImage(), p.After())
+		// A row this write minted has no before-image, and calling it an update
+		// against the empty row we just inserted would put a state nobody ever
+		// wrote into the audit trail — the one record that answers "what did it
+		// say before I changed it". AuditEvent is the door for a write with no
+		// prior state; Audit refuses an update carrying no before-image.
+		//
+		// Spelled inline rather than behind a helper: the audit and the emit
+		// below are one obligation, and a helper holding only the audit half
+		// puts them in separate functions where nothing local shows they travel
+		// together — which is exactly what the write-shape gate reads.
+		var auditID ids.UUID
+		if created {
+			auditID, err = storekit.AuditEvent(ctx, tx, "create", w.table, before.ID, p.After())
+		} else {
+			auditID, err = storekit.Audit(ctx, tx, "update", w.table,
+				before.ID, before.auditImage(), p.After())
+		}
 		if err != nil {
 			return fmt.Errorf("audit %s write: %w", w.table, err)
 		}

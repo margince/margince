@@ -1375,6 +1375,7 @@ const (
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
+	AttentionItemSourceCustomerWaiting   AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceDsr               AttentionItemSource = "dsr"
@@ -1402,6 +1403,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceCaptureHealth:
 		return true
 	case AttentionItemSourceConversationClaim:
+		return true
+	case AttentionItemSourceCustomerWaiting:
 		return true
 	case AttentionItemSourceDealAtRisk:
 		return true
@@ -8494,6 +8497,7 @@ const (
 	ProviderRunSkipReasonBudgetExhausted           ProviderRunSkipReason = "budget_exhausted"
 	ProviderRunSkipReasonDuplicateSubjectCandidate ProviderRunSkipReason = "duplicate_subject_candidate"
 	ProviderRunSkipReasonLowBalance                ProviderRunSkipReason = "low_balance"
+	ProviderRunSkipReasonNoIdentifiers             ProviderRunSkipReason = "no_identifiers"
 	ProviderRunSkipReasonNotEligible               ProviderRunSkipReason = "not_eligible"
 	ProviderRunSkipReasonRateLimited               ProviderRunSkipReason = "rate_limited"
 	ProviderRunSkipReasonSuppressed                ProviderRunSkipReason = "suppressed"
@@ -8509,6 +8513,8 @@ func (e ProviderRunSkipReason) Valid() bool {
 	case ProviderRunSkipReasonDuplicateSubjectCandidate:
 		return true
 	case ProviderRunSkipReasonLowBalance:
+		return true
+	case ProviderRunSkipReasonNoIdentifiers:
 		return true
 	case ProviderRunSkipReasonNotEligible:
 		return true
@@ -8577,15 +8583,18 @@ func (e ProviderRunSubjectKind) Valid() bool {
 
 // Defines values for ProviderRunTrigger.
 const (
-	ProviderRunTriggerAutomaticCreate  ProviderRunTrigger = "automatic_create"
-	ProviderRunTriggerAutomaticImport  ProviderRunTrigger = "automatic_import"
-	ProviderRunTriggerManual           ProviderRunTrigger = "manual"
-	ProviderRunTriggerScheduledRefresh ProviderRunTrigger = "scheduled_refresh"
+	ProviderRunTriggerAutomaticBackfill ProviderRunTrigger = "automatic_backfill"
+	ProviderRunTriggerAutomaticCreate   ProviderRunTrigger = "automatic_create"
+	ProviderRunTriggerAutomaticImport   ProviderRunTrigger = "automatic_import"
+	ProviderRunTriggerManual            ProviderRunTrigger = "manual"
+	ProviderRunTriggerScheduledRefresh  ProviderRunTrigger = "scheduled_refresh"
 )
 
 // Valid indicates whether the value is a known member of the ProviderRunTrigger enum.
 func (e ProviderRunTrigger) Valid() bool {
 	switch e {
+	case ProviderRunTriggerAutomaticBackfill:
+		return true
 	case ProviderRunTriggerAutomaticCreate:
 		return true
 	case ProviderRunTriggerAutomaticImport:
@@ -11236,6 +11245,48 @@ func (e WorklistFilter) Valid() bool {
 	}
 }
 
+// Defines values for WorklistScope.
+const (
+	WorklistScopeAll  WorklistScope = "all"
+	WorklistScopeMine WorklistScope = "mine"
+	WorklistScopeTeam WorklistScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the WorklistScope enum.
+func (e WorklistScope) Valid() bool {
+	switch e {
+	case WorklistScopeAll:
+		return true
+	case WorklistScopeMine:
+		return true
+	case WorklistScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistScopeOptions.
+const (
+	WorklistScopeOptionsAll  WorklistScopeOptions = "all"
+	WorklistScopeOptionsMine WorklistScopeOptions = "mine"
+	WorklistScopeOptionsTeam WorklistScopeOptions = "team"
+)
+
+// Valid indicates whether the value is a known member of the WorklistScopeOptions enum.
+func (e WorklistScopeOptions) Valid() bool {
+	switch e {
+	case WorklistScopeOptionsAll:
+		return true
+	case WorklistScopeOptionsMine:
+		return true
+	case WorklistScopeOptionsTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistComparisonComparator.
 const (
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
@@ -11398,6 +11449,7 @@ const (
 	WorklistItemSourceBriefItem         WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth     WorklistItemSource = "capture_health"
 	WorklistItemSourceConversationClaim WorklistItemSource = "conversation_claim"
+	WorklistItemSourceCustomerWaiting   WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk        WorklistItemSource = "deal_at_risk"
 	WorklistItemSourceDedupeCandidate   WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDsr               WorklistItemSource = "dsr"
@@ -11425,6 +11477,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCaptureHealth:
 		return true
 	case WorklistItemSourceConversationClaim:
+		return true
+	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
 		return true
@@ -12687,22 +12741,22 @@ func (e ListProjectsParamsPhase) Valid() bool {
 
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
-	Email    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
-	FullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
-	Phone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
-	Title    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
 )
 
 // Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyCorrectionsField enum.
 func (e SubmitConfirmDetailsJSONBodyCorrectionsField) Valid() bool {
 	switch e {
-	case Email:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail:
 		return true
-	case FullName:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName:
 		return true
-	case Phone:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone:
 		return true
-	case Title:
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle:
 		return true
 	default:
 		return false
@@ -12991,33 +13045,54 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	}
 }
 
+// Defines values for GetWorklistParamsScope.
+const (
+	GetWorklistParamsScopeAll  GetWorklistParamsScope = "all"
+	GetWorklistParamsScopeMine GetWorklistParamsScope = "mine"
+	GetWorklistParamsScopeTeam GetWorklistParamsScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsScope enum.
+func (e GetWorklistParamsScope) Valid() bool {
+	switch e {
+	case GetWorklistParamsScopeAll:
+		return true
+	case GetWorklistParamsScopeMine:
+		return true
+	case GetWorklistParamsScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -15886,6 +15961,9 @@ type CompanyProfileField struct {
 
 	// VerifiedBy The human who confirmed the claim. Server-stamped, never accepted from a request body.
 	VerifiedBy *string `json:"verified_by,omitempty"`
+
+	// Version The row's version, for the `If-Match` a correction sends. The write path has always honoured the precondition; without the version on the read, no client could supply one, and two people correcting the same claim overwrote each other with no conflict and no trace.
+	Version *int64 `json:"version,omitempty"`
 }
 
 // CompanyProfileFieldField defines model for CompanyProfileField.Field.
@@ -19219,6 +19297,22 @@ type InstallationSetupStep struct {
 
 // InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
 type InstallationSetupStepStep string
+
+// IntegrationsSettings The installation's provider-lookup posture. Read by every role, changed only by
+// admin/ops.
+type IntegrationsSettings struct {
+	// AutomaticLookup When true, every contact is looked up once against the connected data provider for
+	// the details it charges nothing for — the professional profile link, the current role
+	// and employer, the work history. Email and mobile are never bought this way: those
+	// cost credits and stay a per-contact human action.
+	//
+	// Default is ON. Switching it OFF is a jurisdiction answer rather than a pause button:
+	// some laws forbid trading personal data outright, and an installation whose contacts
+	// fall under one turns this off and looks a contact up by hand, which keeps the
+	// decision with the person who made it. There is no per-contact equivalent because a
+	// contact's country is not a fact this product holds.
+	AutomaticLookup bool `json:"automatic_lookup"`
+}
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
@@ -23962,8 +24056,12 @@ type ProviderCategorySelection map[string]bool
 
 // ProviderConfiguration defines model for ProviderConfiguration.
 type ProviderConfiguration struct {
-	// AutomaticImport Enrich every person a connector creates. A mailbox, channel or other connection mints one person per counterparty it sees, and each purchase spends credits; off by default for that reason.
-	AutomaticImport           bool `json:"automatic_import"`
+	// AutomaticImport IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`. It once held connector-created contacts back because each purchase spent credits; an automatic run now buys only what costs nothing, so the two cases stopped differing.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	AutomaticImport bool `json:"automatic_import"`
+
+	// AutomaticIndividualCreate IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AutomaticIndividualCreate bool `json:"automatic_individual_create"`
 
 	// Budgets Per-pool ceilings keyed by the provider's declared credit pools.
@@ -24027,6 +24125,9 @@ type ProviderConnection struct {
 	LastUsedAt           *time.Time `json:"last_used_at,omitempty"`
 	LastVerifiedAt       *time.Time `json:"last_verified_at,omitempty"`
 
+	// LookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
+	LookupBacklog *ProviderLookupBacklog `json:"lookup_backlog,omitempty"`
+
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
 	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
@@ -24062,6 +24163,15 @@ type ProviderConnectionStatus string
 type ProviderCredits struct {
 	Pools  map[string]*int `json:"pools"`
 	ReadAt *time.Time      `json:"read_at,omitempty"`
+}
+
+// ProviderLookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
+type ProviderLookupBacklog struct {
+	// Paused True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep.
+	Paused bool `json:"paused"`
+
+	// Remaining Contacts with no completed free lookup and no live one in flight. Counts down to zero as the sweep works through them, and rises when contacts are created faster than it can reach them.
+	Remaining int `json:"remaining"`
 }
 
 // ProviderMonthlySpend One calendar month's consumption for one credit pool, from this installation's own
@@ -24113,6 +24223,14 @@ type ProviderRef = string
 
 // ProviderRun defines model for ProviderRun.
 type ProviderRun struct {
+	// Applied True once this run's answers have been folded onto the contact's own record — the
+	// fields it filled that were empty. A `completed` run that is not yet `applied` has
+	// bought its values but they have not reached the record, which is the window a
+	// client polls through: stopping at `completed` shows a page that still looks empty.
+	// Always false for a run that never completed, and for one whose claims were
+	// discarded (`claims_unwritten`), because there was nothing to apply.
+	Applied *bool `json:"applied,omitempty"`
+
 	// ClaimsUnwritten True when a paid terminal result could not be handed to the owning domain within
 	// the bounded retry (PI-PARAM-10). The spend is real and the claims are absent; an
 	// operator sees the gap rather than discovering it as missing data (PI-AC-12).
@@ -24155,6 +24273,10 @@ type ProviderRun struct {
 	// (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
 	// than the connection's refresh window, so an automatic trigger declined to buy
 	// the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+	// `no_identifiers` means the contact carries neither a profile link nor a name with
+	// a company, so the provider has nothing to match on; an automatic trigger declines
+	// rather than spending a call that can only answer "no match". A human pressing the
+	// button on the contact is still allowed to try.
 	SkipReason *ProviderRunSkipReason `json:"skip_reason,omitempty"`
 	State      ProviderRunState       `json:"state"`
 
@@ -24163,8 +24285,13 @@ type ProviderRun struct {
 	// populated for that kind (PI-DDL-2).
 	SubjectKind ProviderRunSubjectKind `json:"subject_kind"`
 	SubmittedAt *time.Time             `json:"submitted_at,omitempty"`
-	Trigger     ProviderRunTrigger     `json:"trigger"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+
+	// Trigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+	// contact that existed before the provider was connected, or that no run has covered
+	// yet; like the other automatic triggers it buys only the categories that cost
+	// nothing.
+	Trigger   ProviderRunTrigger `json:"trigger"`
+	UpdatedAt time.Time          `json:"updated_at"`
 }
 
 // ProviderRunSkipReason Why a `skipped` run sent nothing. Null for every other state.
@@ -24174,6 +24301,10 @@ type ProviderRun struct {
 // (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
 // than the connection's refresh window, so an automatic trigger declined to buy
 // the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+// `no_identifiers` means the contact carries neither a profile link nor a name with
+// a company, so the provider has nothing to match on; an automatic trigger declines
+// rather than spending a call that can only answer "no match". A human pressing the
+// button on the contact is still allowed to try.
 type ProviderRunSkipReason string
 
 // ProviderRunState defines model for ProviderRun.State.
@@ -24184,7 +24315,10 @@ type ProviderRunState string
 // populated for that kind (PI-DDL-2).
 type ProviderRunSubjectKind string
 
-// ProviderRunTrigger defines model for ProviderRun.Trigger.
+// ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+// contact that existed before the provider was connected, or that no run has covered
+// yet; like the other automatic triggers it buys only the categories that cost
+// nothing.
 type ProviderRunTrigger string
 
 // ProviderSpend A bounded consumption series: the current month plus a small number of prior
@@ -26156,6 +26290,12 @@ type UpdateInstallationSettingsRequest struct {
 // nothing already written, so artifacts stay in the language they were written in.
 type UpdateInstallationSettingsRequestBaseLanguage string
 
+// UpdateIntegrationsSettingsRequest A sparse provider-posture patch (admin/ops).
+type UpdateIntegrationsSettingsRequest struct {
+	// AutomaticLookup Toggle whether contacts are looked up automatically for the free details.
+	AutomaticLookup *bool `json:"automatic_lookup,omitempty"`
+}
+
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
 type UpdateLeadDisqualifyReasonRequest struct {
 	Active    *bool   `json:"active,omitempty"`
@@ -26997,6 +27137,14 @@ type Worklist struct {
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
 
+	// Scope Whose work this read answered for.
+	Scope WorklistScope `json:"scope"`
+
+	// ScopeOptions The scopes this reader may ask for, narrowest first — derived from their own
+	// row scope. A client draws a control only when there is more than one, so a
+	// rep who can only see their own work is never offered a switch that would 403.
+	ScopeOptions []WorklistScopeOptions `json:"scope_options"`
+
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
 
@@ -27007,6 +27155,12 @@ type Worklist struct {
 
 // WorklistFilter The narrowing this read applied.
 type WorklistFilter string
+
+// WorklistScope Whose work this read answered for.
+type WorklistScope string
+
+// WorklistScopeOptions defines model for Worklist.ScopeOptions.
+type WorklistScopeOptions string
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
@@ -31539,12 +31693,34 @@ type GetLatestWeeklyReviewParams struct {
 
 // GetWorklistParams defines parameters for GetWorklist.
 type GetWorklistParams struct {
+	// Scope Whose work to answer for. Omitted means `mine`, which is the default for
+	// every reader: an admin account can read every deal in the installation, and a
+	// queue that showed all of them would hand a rep several hundred rows belonging
+	// to colleagues and call it their day.
+	//
+	// A scope the reader's own row scope does not reach is refused with 403 rather
+	// than quietly narrowed — answering a question about the team with facts about
+	// one person, with no way for the reader to tell, is the worse failure.
+	//
+	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
+	// going quiet, meetings and duplicate pairs are read under the caller's row
+	// scope, so `team` and `all` return what that tier reaches and `mine` narrows
+	// below it. The intrinsically per-user sources do not, and cannot: a notice is
+	// addressed to one person, a mailbox belongs to one, a promise was made by one,
+	// and an approved action failed for the person who approved it. `all` therefore
+	// means "every shared record I may see, plus my own personal queue" — not a
+	// licence to read a colleague's inbox.
+	Scope *GetWorklistParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+
 	// Filter Narrow the queue to one kind of work. Omitted means everything, which is the default view.
 	Filter *GetWorklistParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
 
 	// Limit How many ranked items to return.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
+
+// GetWorklistParamsScope defines parameters for GetWorklist.
+type GetWorklistParamsScope string
 
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
@@ -31803,6 +31979,9 @@ type SetGoogleAppJSONRequestBody = GoogleAppInput
 
 // UpdateInstallationSettingsJSONRequestBody defines body for UpdateInstallationSettings for application/json ContentType.
 type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsRequest
+
+// UpdateIntegrationsSettingsJSONRequestBody defines body for UpdateIntegrationsSettings for application/json ContentType.
+type UpdateIntegrationsSettingsJSONRequestBody = UpdateIntegrationsSettingsRequest
 
 // CreateCorpusJSONRequestBody defines body for CreateCorpus for application/json ContentType.
 type CreateCorpusJSONRequestBody CreateCorpusJSONBody
@@ -40449,6 +40628,12 @@ type ServerInterface interface {
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
+	// The installation's provider-lookup posture.
+	// (GET /integrations/settings)
+	GetIntegrationsSettings(w http.ResponseWriter, r *http.Request)
+	// Update the installation's provider-lookup posture (admin/ops).
+	// (PATCH /integrations/settings)
+	UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request)
@@ -40755,7 +40940,7 @@ type ServerInterface interface {
 	// The organization's confirmed profile fields (organization_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 	// (GET /organizations/{id}/profile-fields)
 	ListOrganizationProfileFields(w http.ResponseWriter, r *http.Request, id Id)
-	// Correct a profile field — the canonical value changes, the machine's proposal survives.
+	// State or correct a profile field — the canonical value changes, the machine's proposal survives.
 	// (PATCH /organizations/{id}/profile-fields/{field})
 	UpdateOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params UpdateOrganizationProfileFieldParams)
 	// Confirm a profile field without changing its value.
@@ -42624,6 +42809,18 @@ func (_ Unimplemented) GetInstallationSetup(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The installation's provider-lookup posture.
+// (GET /integrations/settings)
+func (_ Unimplemented) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update the installation's provider-lookup posture (admin/ops).
+// (PATCH /integrations/settings)
+func (_ Unimplemented) UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The document corpora this workspace has defined.
 // (GET /knowledge/corpora)
 func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
@@ -43236,7 +43433,7 @@ func (_ Unimplemented) ListOrganizationProfileFields(w http.ResponseWriter, r *h
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Correct a profile field — the canonical value changes, the machine's proposal survives.
+// State or correct a profile field — the canonical value changes, the machine's proposal survives.
 // (PATCH /organizations/{id}/profile-fields/{field})
 func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params UpdateOrganizationProfileFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -53056,6 +53253,46 @@ func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetInstallationSetup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIntegrationsSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIntegrationsSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateIntegrationsSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateIntegrationsSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67073,6 +67310,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetWorklistParams
 
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope", r.URL.Query(), &params.Scope, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "filter" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "filter", r.URL.Query(), &params.Filter, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -67849,6 +68099,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/integrations/settings", wrapper.GetIntegrationsSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/integrations/settings", wrapper.UpdateIntegrationsSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/corpora", wrapper.ListCorpora)

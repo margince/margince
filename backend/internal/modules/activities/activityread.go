@@ -72,6 +72,16 @@ type ListActivitiesInput struct {
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
+
+	// OwnQueueOf narrows to the work one person is answerable for: assigned to
+	// them, or assigned to NOBODY. Distinct from AssigneeID, which means exact
+	// assignment and is what the task screen filters by.
+	//
+	// The unassigned arm is the difference that matters. A rep who writes
+	// themselves a task without filling in an assignee still owns it, and a
+	// "my work" queue that dropped it would hide the reader's own to-do from
+	// them — which is worse than showing one row too many.
+	OwnQueueOf *ids.UserID
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//

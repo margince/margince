@@ -1620,6 +1620,11 @@ const inProgressRun: components["schemas"]["ProviderRun"] = {
   ...completedProviderRun,
   id: "run-2",
   state: "in_progress",
+  // Overridden, not inherited: the base is a run that landed, and the contract
+  // says applied is always false for a run that never completed. Spreading it
+  // would have this story claim values reached the record while the run was
+  // still in flight.
+  applied: false,
   completed_at: null,
   submitted_at: "2026-08-13T09:00:00Z",
   requested_categories: ["email"],
@@ -1676,6 +1681,9 @@ const failedRun: components["schemas"]["ProviderRun"] = {
   ...completedProviderRun,
   id: "run-3",
   state: "failed",
+  // Same reason as the in-flight run above: nothing was applied, because
+  // nothing was bought.
+  applied: false,
   completed_at: "2026-08-13T09:05:00Z",
   safe_status_code: "provider_unavailable",
 };
