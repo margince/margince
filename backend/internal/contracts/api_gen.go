@@ -8455,6 +8455,27 @@ func (e PipelineStageRungSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for PreferenceCenterPurposesChoice.
+const (
+	NoObjection PreferenceCenterPurposesChoice = "no_objection"
+	OptedIn     PreferenceCenterPurposesChoice = "opted_in"
+	OptedOut    PreferenceCenterPurposesChoice = "opted_out"
+)
+
+// Valid indicates whether the value is a known member of the PreferenceCenterPurposesChoice enum.
+func (e PreferenceCenterPurposesChoice) Valid() bool {
+	switch e {
+	case NoObjection:
+		return true
+	case OptedIn:
+		return true
+	case OptedOut:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PreferenceCenterPurposesState.
 const (
 	PreferenceCenterPurposesStateGranted   PreferenceCenterPurposesState = "granted"
@@ -8470,6 +8491,21 @@ func (e PreferenceCenterPurposesState) Valid() bool {
 	case PreferenceCenterPurposesStateUnknown:
 		return true
 	case PreferenceCenterPurposesStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PreferenceCenterRefusedReason.
+const (
+	CannotGrant PreferenceCenterRefusedReason = "cannot_grant"
+)
+
+// Valid indicates whether the value is a known member of the PreferenceCenterRefusedReason enum.
+func (e PreferenceCenterRefusedReason) Valid() bool {
+	switch e {
+	case CannotGrant:
 		return true
 	default:
 		return false
@@ -13135,6 +13171,21 @@ func (e UpdatePreferencesJSONBodyChoicesState) Valid() bool {
 	case Granted:
 		return true
 	case Withdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OneClickUnsubscribeFormdataBodyListUnsubscribe.
+const (
+	OneClick OneClickUnsubscribeFormdataBodyListUnsubscribe = "One-Click"
+)
+
+// Valid indicates whether the value is a known member of the OneClickUnsubscribeFormdataBodyListUnsubscribe enum.
+func (e OneClickUnsubscribeFormdataBodyListUnsubscribe) Valid() bool {
+	switch e {
+	case OneClick:
 		return true
 	default:
 		return false
@@ -24415,23 +24466,62 @@ type PostDealRoomCommentRequest struct {
 // while a deal is live), and whether granting it needs a confirmation round-trip this surface
 // cannot perform.
 type PreferenceCenter struct {
-	Purposes []struct {
-		// GrantNeedsConfirmation A purpose requiring double opt-in. Withdrawing it here works; GRANTING it does not, because
-		// this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
-		// the way a confirmation round-trip does. A client must not offer the grant — the write refuses
-		// it with 422, and an offered switch that always fails is worse than an absent one.
+	// MaskedEmail The recipient's primary address, masked to its first character and domain. Account CONTEXT, not
+	// the scope of any action: the token resolves to a person and the delivered address is not recorded,
+	// so a person with several addresses may see a different one than the message reached. Client copy
+	// must not claim "this address". Empty when no address is on file.
+	MaskedEmail string `json:"masked_email"`
+	Purposes    []struct {
+		// CanOptIn Whether this surface may offer a grant at all. False for a locked purpose and for one needing a
+		// confirmation round-trip that a reusable, long-lived token cannot evidence. A control that always
+		// fails is worse than an absent one.
+		CanOptIn bool `json:"can_opt_in"`
+
+		// Choice What the RECIPIENT decided, derived server-side. `state: unknown` means opposite things either
+		// side of the consent line — on a marketing lane nobody has opted in, on direct correspondence
+		// nobody has objected — so a client that rendered the raw state called a live lane "not
+		// subscribed". Render this; never re-derive it. It is a recorded decision, never a delivery
+		// verdict: whether mail can actually be sent also depends on facts this surface must not disclose.
+		Choice PreferenceCenterPurposesChoice `json:"choice"`
+
+		// GrantNeedsConfirmation DEPRECATED, kept for one release as the inverse of `can_opt_in` on unlocked purposes. Read
+		// `can_opt_in` instead.
 		GrantNeedsConfirmation bool   `json:"grant_needs_confirmation"`
 		Key                    string `json:"key"`
 		Label                  string `json:"label"`
 
 		// Locked A locked purpose (transactional) cannot be changed from this surface.
-		Locked bool                          `json:"locked"`
-		State  PreferenceCenterPurposesState `json:"state"`
+		Locked bool `json:"locked"`
+
+		// State The raw stored state. Prefer `choice`, which reads it correctly for the purpose class.
+		State PreferenceCenterPurposesState `json:"state"`
 	} `json:"purposes"`
+
+	// Refused Choices the save could not record, by name. Present and empty on a read. A refused GRANT never
+	// costs the WITHDRAWAL saved beside it, so a save reports what did not apply rather than failing whole.
+	Refused []struct {
+		PurposeKey string `json:"purpose_key"`
+
+		// Reason cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+		Reason PreferenceCenterRefusedReason `json:"reason"`
+	} `json:"refused"`
+
+	// WorkspaceName The installation's own display label. Empty on an unnamed installation; copy needs an omission variant.
+	WorkspaceName string `json:"workspace_name"`
 }
 
-// PreferenceCenterPurposesState defines model for PreferenceCenter.Purposes.State.
+// PreferenceCenterPurposesChoice What the RECIPIENT decided, derived server-side. `state: unknown` means opposite things either
+// side of the consent line — on a marketing lane nobody has opted in, on direct correspondence
+// nobody has objected — so a client that rendered the raw state called a live lane "not
+// subscribed". Render this; never re-derive it. It is a recorded decision, never a delivery
+// verdict: whether mail can actually be sent also depends on facts this surface must not disclose.
+type PreferenceCenterPurposesChoice string
+
+// PreferenceCenterPurposesState The raw stored state. Prefer `choice`, which reads it correctly for the purpose class.
 type PreferenceCenterPurposesState string
+
+// PreferenceCenterRefusedReason cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+type PreferenceCenterRefusedReason string
 
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
@@ -31928,11 +32018,19 @@ type UpdatePreferencesJSONBody struct {
 // UpdatePreferencesJSONBodyChoicesState defines parameters for UpdatePreferences.
 type UpdatePreferencesJSONBodyChoicesState string
 
+// OneClickUnsubscribeFormdataBody defines parameters for OneClickUnsubscribe.
+type OneClickUnsubscribeFormdataBody struct {
+	ListUnsubscribe *OneClickUnsubscribeFormdataBodyListUnsubscribe `form:"List-Unsubscribe,omitempty" json:"List-Unsubscribe,omitempty"`
+}
+
 // OneClickUnsubscribeParams defines parameters for OneClickUnsubscribe.
 type OneClickUnsubscribeParams struct {
-	// Purpose The consent purpose key to withdraw. Omit to withdraw every non-transactional purpose.
+	// Purpose The consent purpose key to withdraw. Omit to withdraw every lane the recipient has not already stopped.
 	Purpose *string `form:"purpose,omitempty" json:"purpose,omitempty"`
 }
+
+// OneClickUnsubscribeFormdataBodyListUnsubscribe defines parameters for OneClickUnsubscribe.
+type OneClickUnsubscribeFormdataBodyListUnsubscribe string
 
 // ListBuyerRoomThreadsParams defines parameters for ListBuyerRoomThreads.
 type ListBuyerRoomThreadsParams struct {
@@ -33365,6 +33463,9 @@ type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
 // UpdatePreferencesJSONRequestBody defines body for UpdatePreferences for application/json ContentType.
 type UpdatePreferencesJSONRequestBody UpdatePreferencesJSONBody
+
+// OneClickUnsubscribeFormdataRequestBody defines body for OneClickUnsubscribe for application/x-www-form-urlencoded ContentType.
+type OneClickUnsubscribeFormdataRequestBody OneClickUnsubscribeFormdataBody
 
 // ExchangeDealRoomCredentialJSONRequestBody defines body for ExchangeDealRoomCredential for application/json ContentType.
 type ExchangeDealRoomCredentialJSONRequestBody = DealRoomCredentialRequest

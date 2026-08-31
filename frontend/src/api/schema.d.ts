@@ -3914,7 +3914,9 @@ export interface paths {
          *     (source `preference_center`) which the default-deny suppression gate honors on the very next send
          *     across every path (manual + agent). Idempotent. Only POST acts — a GET/prefetch by a mail scanner
          *     never unsubscribes anyone (the reason RFC 8058 mandates POST). With `purpose` only that purpose is
-         *     withdrawn (the one the message was sent under); without it every withdrawable purpose is.
+         *     withdrawn (the one the message was sent under); without it every lane the recipient has not already
+         *     stopped is — read from their `choice`, not the raw stored state, so direct correspondence running on
+         *     no-objection is included rather than silently skipped.
          */
         post: operations["oneClickUnsubscribe"];
         delete?: never;
@@ -22633,18 +22635,55 @@ export interface components {
          *     cannot perform.
          */
         PreferenceCenter: {
+            /**
+             * @description The recipient's primary address, masked to its first character and domain. Account CONTEXT, not
+             *     the scope of any action: the token resolves to a person and the delivered address is not recorded,
+             *     so a person with several addresses may see a different one than the message reached. Client copy
+             *     must not claim "this address". Empty when no address is on file.
+             */
+            masked_email: string;
+            /** @description The installation's own display label. Empty on an unnamed installation; copy needs an omission variant. */
+            workspace_name: string;
+            /**
+             * @description Choices the save could not record, by name. Present and empty on a read. A refused GRANT never
+             *     costs the WITHDRAWAL saved beside it, so a save reports what did not apply rather than failing whole.
+             */
+            refused: {
+                purpose_key: string;
+                /**
+                 * @description cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
+                 * @enum {string}
+                 */
+                reason: "cannot_grant";
+            }[];
             purposes: {
                 key: string;
                 label: string;
-                /** @enum {string} */
+                /**
+                 * @description The raw stored state. Prefer `choice`, which reads it correctly for the purpose class.
+                 * @enum {string}
+                 */
                 state: "unknown" | "granted" | "withdrawn";
                 /** @description A locked purpose (transactional) cannot be changed from this surface. */
                 locked: boolean;
                 /**
-                 * @description A purpose requiring double opt-in. Withdrawing it here works; GRANTING it does not, because
-                 *     this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
-                 *     the way a confirmation round-trip does. A client must not offer the grant — the write refuses
-                 *     it with 422, and an offered switch that always fails is worse than an absent one.
+                 * @description What the RECIPIENT decided, derived server-side. `state: unknown` means opposite things either
+                 *     side of the consent line — on a marketing lane nobody has opted in, on direct correspondence
+                 *     nobody has objected — so a client that rendered the raw state called a live lane "not
+                 *     subscribed". Render this; never re-derive it. It is a recorded decision, never a delivery
+                 *     verdict: whether mail can actually be sent also depends on facts this surface must not disclose.
+                 * @enum {string}
+                 */
+                choice: "opted_in" | "opted_out" | "no_objection";
+                /**
+                 * @description Whether this surface may offer a grant at all. False for a locked purpose and for one needing a
+                 *     confirmation round-trip that a reusable, long-lived token cannot evidence. A control that always
+                 *     fails is worse than an absent one.
+                 */
+                can_opt_in: boolean;
+                /**
+                 * @description DEPRECATED, kept for one release as the inverse of `can_opt_in` on unlocked purposes. Read
+                 *     `can_opt_in` instead.
                  */
                 grant_needs_confirmation: boolean;
             }[];
@@ -32017,7 +32056,7 @@ export interface operations {
     oneClickUnsubscribe: {
         parameters: {
             query?: {
-                /** @description The consent purpose key to withdraw. Omit to withdraw every non-transactional purpose. */
+                /** @description The consent purpose key to withdraw. Omit to withdraw every lane the recipient has not already stopped. */
                 purpose?: string;
             };
             header?: never;
@@ -32026,7 +32065,23 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /**
+         * @description RFC 8058 §3.2 prescribes `List-Unsubscribe=One-Click`, naming multipart/form-data as the SHOULD and
+         *     URL-encoding as the MAY. The handler accepts BOTH; only the URL-encoded form is declared here,
+         *     because declaring multipart would class this as a file upload and oblige it to carry a
+         *     megabyte-scale ceiling — which would misdescribe a route whose entire body is one short field
+         *     (the handler caps it at 4 KiB). An ABSENT body is accepted too: the product's own unsubscribe page
+         *     and an operator with curl carry none, and refusing them would break the human path to protect a
+         *     machine contract. A body that is present and says something else is refused.
+         */
+        requestBody?: {
+            content: {
+                "application/x-www-form-urlencoded": {
+                    /** @enum {string} */
+                    "List-Unsubscribe"?: "One-Click";
+                };
+            };
+        };
         responses: {
             /** @description Unsubscribed (idempotent). */
             200: {
@@ -32035,7 +32090,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        /** @description The purpose keys now withdrawn. */
+                        /**
+                         * @description The purpose keys this call actually CHANGED. Empty on a replay, because the recipient was
+                         *     already unsubscribed — which is how the page tells a first press from a second one instead
+                         *     of showing a fresh confirmation for a no-op.
+                         */
                         unsubscribed: string[];
                     };
                 };

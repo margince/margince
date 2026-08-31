@@ -75,7 +75,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (78)
+## Census (79)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -140,6 +140,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `precheckwiring_test.go` | H2 | A precheck that exists but is not wired protects nothing. |
+| `preferencecentrewriters_test.go` | H2 | The public preference centre answers in ONE shape, and resolves "which address is theirs" in ONE place. |
 | `profilefieldreaders_test.go` | H2 | person\_profile\_field holds what a machine ASSERTED about a person, and ai\_feedback holds what a human then decided about that assertion. |
 | `projectionedgereaders_test.go` | H2 | The projection tier's read census. |
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |

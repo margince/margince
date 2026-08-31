@@ -68,6 +68,13 @@ type PurposeChoice struct {
 	// the client so the switch is never OFFERED as a grant, because the write
 	// refuses it and a control that always fails is worse than an absent one.
 	GrantNeedsConfirmation bool
+	// Choice is what the RECIPIENT decided, derived server-side from the
+	// stored state and the purpose class. The client renders it and never
+	// computes it: 'unknown' reads as off on a consent lane and as on for
+	// direct correspondence, and a page that guessed got that backwards.
+	Choice Choice
+	// CanOptIn: whether this surface may offer a grant at all.
+	CanOptIn bool
 }
 
 // preferenceTokenTTLDays is how long one preference link stays honoured
