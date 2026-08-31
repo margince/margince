@@ -141,6 +141,41 @@ def read_transcript(path):
     return called, "\n".join(said)
 
 
+def unrun(path):
+    """Why this run never happened, or "" when it did.
+
+    A scenario failing every criterion and a run that never reached the model
+    produce the same score, and only one of them is a finding about the product.
+    That is not hypothetical: an expired key answered `401 API key is invalid`
+    on all eighteen runs of a lane, every scenario was recorded as failing its
+    criteria, and the verdict said six use cases were broken.
+
+    The transcript says which it was. The CLI's terminal `result` event carries
+    `is_error` and the message; a run that produced no assistant turn at all
+    never got as far as one. Neither is a scenario's fault, and scoring either
+    as one is how a credential problem is reported as a product regression.
+    """
+    saw_assistant = False
+    failure = ""
+    for line in _open_checked(path):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "assistant":
+            saw_assistant = True
+        if event.get("type") == "result" and event.get("is_error"):
+            failure = str(event.get("result") or "the run reported an error with no message")
+    if failure:
+        return failure
+    if not saw_assistant:
+        return "the transcript carries no assistant turn: the model was never reached"
+    return ""
+
+
 def tool_matches(called, want):
     """A tool is reached when any call names it.
 
@@ -191,6 +226,13 @@ def main():
             "pass_at": scenario.get("pass_at"),
         }, indent=2))
         return 0
+
+    if sys.argv[1] == "--ran":
+        why = unrun(sys.argv[2])
+        if why:
+            print(why)
+            sys.exit(1)
+        sys.exit(0)
 
     if sys.argv[1] == "--check":
         problems = check(parse_scenario(sys.argv[2]), sys.argv[3])
