@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -242,23 +243,66 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 	if err != nil {
 		return 0, err
 	}
-	done := true
 	completed := 0
 	for _, task := range open {
-		version := task.version
-		_, err := s.UpdateActivity(ctx, task.id, UpdateActivityInput{IsDone: &done, IfVersion: &version})
-		if errors.Is(err, apperrors.ErrVersionSkew) {
-			// Somebody moved this row between the selection and here. If it
-			// was the sibling firing, the task is complete and a second
-			// completion event would be the only thing this write added; if
-			// it was an ordinary edit, the next firing sees it still open and
-			// finishes it.
-			continue
-		}
+		flipped, err := s.completeSystemTask(ctx, task.id, task.version)
 		if err != nil {
 			return 0, fmt.Errorf("completing system task %s: %w", task.id, err)
 		}
-		completed++
+		if flipped {
+			completed++
+		}
 	}
 	return completed, nil
+}
+
+// completionAttempts bounds the re-read below. Each attempt is a lost race
+// with a DIFFERENT writer, so more than a couple means a row somebody is
+// editing continuously; failing then is honest, and the workflow's own retry
+// is the right place for the wait.
+const completionAttempts = 3
+
+// completeSystemTask completes one selected task, answering whether THIS call
+// is what flipped it.
+//
+// The version is the one the selection read, so a row that moved underneath
+// answers skew rather than writing. What happens next depends on why it moved,
+// and the two reasons are not alike:
+//
+//   - a sibling firing completed it — there is nothing left to do, and writing
+//     anyway would put a second identical completion in the task's history;
+//   - anything else touched it — the task is still open and still has to be
+//     completed, because the loop that opened it has closed and no later
+//     firing is promised.
+//
+// So skew is a re-read, not a skip. Skipping unconditionally trades a noisy
+// history for a follow-up task that can stay open forever, which is the worse
+// of the two.
+func (s *Store) completeSystemTask(ctx context.Context, id ids.ActivityID, version int64) (bool, error) {
+	done := true
+	for attempt := 0; attempt < completionAttempts; attempt++ {
+		_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{IsDone: &done, IfVersion: &version})
+		if err == nil {
+			return true, nil
+		}
+		if !errors.Is(err, apperrors.ErrVersionSkew) {
+			return false, err
+		}
+		current, err := s.GetActivity(ctx, id, storekit.LiveOnly)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			// Archived under us: there is no task to finish.
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		if current.IsDone != nil && *current.IsDone {
+			return false, nil
+		}
+		if current.Version == nil {
+			return false, fmt.Errorf("task %s reports no version to retry against", id)
+		}
+		version = int64(*current.Version)
+	}
+	return false, fmt.Errorf("task %s was edited under every one of %d completion attempts", id, completionAttempts)
 }

@@ -314,6 +314,72 @@ func TestAFiringThatSelectedBeforeSomebodyElseFinishedWritesNothing(t *testing.T
 	}
 }
 
+// An ordinary edit that lands between the selection and the completion moves
+// the version without finishing anything. The task still has to be completed:
+// the loop that opened it has closed, and no later firing is promised for this
+// lead — treating every version change as "somebody else did it" trades a noisy
+// history for a follow-up that stays open forever.
+func TestAnEditUnderTheFiringDoesNotLeaveTheTaskOpen(t *testing.T) {
+	e := setupResolve(t)
+	task := e.seedTask(t, "system", "system")
+	ctx := e.systemCtx()
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+
+	blocking, err := e.owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := blocking.Exec(context.Background(),
+		`SELECT id FROM activity WHERE id = $1 FOR UPDATE`, task); err != nil {
+		t.Fatal(err)
+	}
+
+	firing := make(chan firingResult, 1)
+	go func() {
+		completed, err := store.CompleteOpenSystemTasksForLead(ctx, ids.From[ids.LeadKind](e.lead))
+		firing <- firingResult{completed, err}
+	}()
+	t.Cleanup(func() {
+		//craft:ignore swallowed-errors the lock is normally released by the Commit below and this rollback is then a designed no-op; on the failure paths it is the release itself, and a failing release could tell this test nothing its own assertions have not
+		_ = blocking.Rollback(context.Background())
+		select {
+		case <-firing:
+		case <-time.After(10 * time.Second):
+			t.Error("the firing never returned after the lock was released")
+		}
+	})
+
+	e.waitForBlockedWriter(t, firing)
+
+	// Not a completion: somebody retitled the task. The version moves and the
+	// task stays open.
+	if _, err := blocking.Exec(context.Background(),
+		`UPDATE activity SET subject = 'Follow up (renamed)', version = version + 1 WHERE id = $1`, task); err != nil {
+		t.Fatal(err)
+	}
+	if err := blocking.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	var got firingResult
+	select {
+	case got = <-firing:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the firing never returned after the edit committed")
+	}
+	firing <- got
+
+	if got.err != nil {
+		t.Fatalf("the firing failed instead of completing the task it selected: %v", got.err)
+	}
+	if got.completed != 1 {
+		t.Errorf("the firing completed %d tasks, want the one it selected — an edit is not somebody else finishing it", got.completed)
+	}
+	if !e.isDone(t, task) {
+		t.Fatal("the task is still open after the firing that was supposed to close it — a rename cost the follow-up its completion")
+	}
+}
+
 // firingResult is one CompleteOpenSystemTasksForLead call's answer, carried
 // back from the goroutine that raced.
 type firingResult struct {
@@ -339,15 +405,18 @@ func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResu
 		default:
 		}
 		var blocked int
+		// Blocked BY US specifically, through pg_blocking_pids: any other
+		// waiter in this database would otherwise release the wait early and
+		// the test would go on to assert about a race it never set up.
+		//
 		// A waiter on a ROW lock does not appear as an ungranted lock on the
-		// relation — it waits on the holder's transaction id — so the wait
-		// event is what says it is stopped. Not its `state`: a backend parked
-		// on a lock inside a transaction reports "idle in transaction", and
-		// requiring "active" here looks right and finds nothing.
+		// relation — it waits on the holder's transaction id — and its
+		// `state` reads "idle in transaction" rather than "active", so
+		// neither of those is what identifies it.
 		if err := e.owner.QueryRow(context.Background(),
 			`SELECT count(*) FROM pg_stat_activity
-			  WHERE wait_event_type = 'Lock' AND pid <> pg_backend_pid()
-			    AND datname = current_database()`).Scan(&blocked); err != nil {
+			  WHERE datname = current_database()
+			    AND pg_backend_pid() = ANY(pg_blocking_pids(pid))`).Scan(&blocked); err != nil {
 			t.Fatal(err)
 		}
 		if blocked > 0 {
