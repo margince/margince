@@ -215,11 +215,11 @@ func TestColdStartOptionsRespectsResolvedPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveModelPath: %v", err)
 	}
-	if got := coldStartOptions(modelPath, ""); len(got) != 11 {
+	if got := coldStartOptions(modelPath, ""); len(got) != 12 {
 		t.Fatalf(
-			"coldStartOptions(bound path) = %d options, want 11 (cold-start, scrape, morning brief, "+
+			"coldStartOptions(bound path) = %d options, want 12 (cold-start, scrape, morning brief, "+
 				"account brief, company dossier, growth fit, reply draft, account draft, person draft, "+
-				"next move, role proposals)",
+				"next move, role proposals, intro request)",
 			len(got))
 	}
 }

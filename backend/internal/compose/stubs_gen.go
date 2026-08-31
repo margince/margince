@@ -1315,6 +1315,10 @@ func (stubs) GetOrganizationHierarchyRollup(w nethttp.ResponseWriter, r *nethttp
 	httperr.NotImplemented(w, r, "GetOrganizationHierarchyRollup")
 }
 
+func (stubs) DraftIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftIntroRequest")
+}
+
 func (stubs) GetOrganizationLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetOrganizationLogo")
 }

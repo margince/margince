@@ -559,3 +559,77 @@ func TestASeatCardAddressesItsOwnRowWhenAPersonHoldsTwoRoles(t *testing.T) {
 		t.Fatal("a seat a person typed is marked as the product's reading")
 	}
 }
+
+// A DEAL THE CALLER NAMED AND CANNOT READ IS A REFUSAL, not an account-wide
+// draft.
+//
+// Dropping it silently returns 200 with a message about the wrong subject,
+// which the rep then sends to a colleague believing it says what they asked
+// for. An ABSENT deal_id is the account-wide case, and only that.
+func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
+	e := integration.Setup(t)
+	svc := org360Service(e)
+
+	org, deal := seedRoleDeal(t, e)
+	contact := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, contact, org, "Chief Financial Officer")
+	wrote(t, e, contact, org, "Re: Angebot", "We will review the scope this week.", 2)
+	// A REAL route, so the refusal below is about the deal rather than about a
+	// colleague who cannot reach anybody. Without it this test passed with the
+	// bug restored, because introRoute refused first.
+	e.WsExec(t, `INSERT INTO graph_interaction_edge
+			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+		VALUES ($1, $2, $3, 20, 10, 10)`,
+		e.Rep1, contact, org360Clock.AddDate(0, 0, -2))
+
+	// A reader who may see the account, its people and their routes — and no
+	// deals at all.
+	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoDealPerms)
+	_, err := svc.IntroRequestDraft(blind, nil, ids.OrganizationID{UUID: org},
+		org360svc.IntroRequest{
+			PersonID:  ids.From[ids.PersonKind](contact),
+			ViaUserID: ids.From[ids.UserKind](e.Rep1),
+			DealID:    ptrDeal(deal),
+		})
+	if err == nil {
+		t.Fatal("a deal the caller cannot read was silently dropped and a draft returned")
+	}
+}
+
+func ptrDeal(id ids.UUID) *ids.DealID {
+	deal := ids.From[ids.DealKind](id)
+	return &deal
+}
+
+// And the same caller, asking for no deal in particular, gets their draft. Without
+// this the refusal above would pass against an endpoint that refuses everybody.
+func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
+	e := integration.Setup(t)
+	svc := org360Service(e)
+
+	org, _ := seedRoleDeal(t, e)
+	contact := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, contact, org, "Chief Financial Officer")
+	wrote(t, e, contact, org, "Re: Angebot", "We will review the scope this week.", 2)
+	e.WsExec(t, `INSERT INTO graph_interaction_edge
+			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+		VALUES ($1, $2, $3, 20, 10, 10)`,
+		e.Rep1, contact, org360Clock.AddDate(0, 0, -2))
+
+	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoDealPerms)
+	draft, err := svc.IntroRequestDraft(blind, nil, ids.OrganizationID{UUID: org},
+		org360svc.IntroRequest{
+			PersonID:  ids.From[ids.PersonKind](contact),
+			ViaUserID: ids.From[ids.UserKind](e.Rep1),
+		})
+	if err != nil {
+		t.Fatalf("an account-wide introduction was refused: %v", err)
+	}
+	if !strings.Contains(draft.Body, "Ute Sommer") {
+		t.Fatalf("the draft does not name who is to be met:\n%s", draft.Body)
+	}
+	// No lane was given, so the template wrote it and says so.
+	if draft.GeneratedBy != "deterministic" {
+		t.Fatalf("a draft written with no lane is credited to %q", draft.GeneratedBy)
+	}
+}

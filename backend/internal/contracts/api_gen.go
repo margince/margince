@@ -30946,6 +30946,18 @@ type GetOrganizationHierarchyRollupParams struct {
 // GetOrganizationHierarchyRollupParamsScope defines parameters for GetOrganizationHierarchyRollup.
 type GetOrganizationHierarchyRollupParamsScope string
 
+// DraftIntroRequestJSONBody defines parameters for DraftIntroRequest.
+type DraftIntroRequestJSONBody struct {
+	// DealId Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// PersonId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives.
+	PersonId openapi_types.UUID `json:"person_id"`
+
+	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show.
+	ViaUserId openapi_types.UUID `json:"via_user_id"`
+}
+
 // MergeOrganizationJSONBody defines parameters for MergeOrganization.
 type MergeOrganizationJSONBody struct {
 	// TargetId The surviving org (B). This row (A) is archived.
@@ -33192,6 +33204,9 @@ type CreateOrganizationFactJSONRequestBody = CreateOrganizationFactRequest
 
 // UpdateOrganizationFactJSONRequestBody defines body for UpdateOrganizationFact for application/json ContentType.
 type UpdateOrganizationFactJSONRequestBody = UpdateOrganizationFactRequest
+
+// DraftIntroRequestJSONRequestBody defines body for DraftIntroRequest for application/json ContentType.
+type DraftIntroRequestJSONRequestBody DraftIntroRequestJSONBody
 
 // MergeOrganizationJSONRequestBody defines body for MergeOrganization for application/json ContentType.
 type MergeOrganizationJSONRequestBody MergeOrganizationJSONBody
@@ -42069,6 +42084,9 @@ type ServerInterface interface {
 	// Roll up an organization's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
 	// (GET /organizations/{id}/hierarchy-rollup)
 	GetOrganizationHierarchyRollup(w http.ResponseWriter, r *http.Request, id Id, params GetOrganizationHierarchyRollupParams)
+	// Draft the message asking a colleague to introduce you.
+	// (POST /organizations/{id}/intro-request-draft)
+	DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// Stream an organization's logo image.
 	// (GET /organizations/{id}/logo)
 	GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id Id)
@@ -44637,6 +44655,12 @@ func (_ Unimplemented) RefreshOrganizationGrowthFit(w http.ResponseWriter, r *ht
 // Roll up an organization's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
 // (GET /organizations/{id}/hierarchy-rollup)
 func (_ Unimplemented) GetOrganizationHierarchyRollup(w http.ResponseWriter, r *http.Request, id Id, params GetOrganizationHierarchyRollupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Draft the message asking a colleague to introduce you.
+// (POST /organizations/{id}/intro-request-draft)
+func (_ Unimplemented) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59676,6 +59700,38 @@ func (siw *ServerInterfaceWrapper) GetOrganizationHierarchyRollup(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// DraftIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetOrganizationLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetOrganizationLogo(w http.ResponseWriter, r *http.Request) {
 
@@ -70370,6 +70426,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/hierarchy-rollup", wrapper.GetOrganizationHierarchyRollup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/intro-request-draft", wrapper.DraftIntroRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/logo", wrapper.GetOrganizationLogo)
