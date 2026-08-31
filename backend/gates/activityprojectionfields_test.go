@@ -5,69 +5,139 @@
 
 package gates
 
-// Every hand-written SELECT over `activity` that projects the row for a client
-// must carry the SAME audience columns as the shared projection.
+// Every writer of `Activity.AudienceReason` is named here with the test that
+// proves it withholds the reason from a reader who may not see the content.
 //
-// `activities/activityprojection.go` is the one list every reader is supposed
-// to go through, and most do. A record page does not: its 360 read assembles
-// its own statement, and the timeline it seeds is drawn from that. So the two
-// statements are two answers to "what does a client learn about this message",
-// and they drift silently — the reader sees a row with no reason and no way to
-// tell a held message from an open one.
+// Why a captured message is held describes what it is ABOUT — `personnel`,
+// `legal`, `security_incident` — so a colleague who may not read the message
+// must not learn why it is held either. `crm.yaml` says it: absent whenever
+// content_state is withheld.
 //
-// That is not hypothetical. `audience_reason` shipped in the shared projection
-// and was absent from the person 360's copy, so the record timeline — the one
+// The field is optional on the wire. A reason that leaks and a reason that was
+// never set produce responses no client can tell apart, and no downstream
+// assertion fails on either. Both halves of that have already happened: the
+// person 360 assembles its own SELECT rather than using the shared projection
+// and shipped without the column at all, so the record timeline — the one
 // screen where an owner decides whether to share a thread — never received it.
-// Nothing failed: the field is optional on the wire, so its absence reads
-// exactly like a row that has no reason.
 //
-// The corpus is DERIVED from what a file DOES, not from a list: a file that
-// both scans into a `crmcontracts.Activity` and selects `a.audience` is
-// assembling the client's view of a message, so a new 360 or export written the
-// same way joins this census on the commit it is written (AGENTS.md rule 8).
-// A file that reads the audience for its own purposes — the rescope consumer
-// deciding what to retract — projects nothing to a client and is not a subject.
+// This gate does NOT re-check the withholding by reading SQL. An earlier
+// version did, matching `a.audience` in the statement text, and it passed on
+// `a.audience AS audience` and on any table alias that was not the letter `a`
+// (`sarsections.go` uses `at`, `export_scope.go` uses `av`, so that is ordinary
+// style here rather than a contrivance). A census that can fail short has
+// already failed (AGENTS.md rule 8), and a text proxy for a behaviour is the
+// shape that fails short.
+//
+// What it asserts instead is the part a text scan cannot fake: WHO writes the
+// field, derived from the AST, so a third writer cannot appear unnoticed
+// whatever SQL it used to read the column. The withholding itself is proved by
+// the tests named below, each mutation-checked in both directions — a version
+// that leaks the reason and a version that never sets it both fail.
 
 import (
-	"regexp"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// Selecting the audience as a COLUMN, rather than filtering on it. RE2 has no
-// negative lookahead, so "not a predicate" is spelled by requiring a comma or a
-// newline where `= 'workspace'` would otherwise sit.
-var audienceSelected = regexp.MustCompile(`\ba\.audience\s*[,\n]`)
+// The writers, and the behaviour test that proves each one. A new writer joins
+// this map with its own proof, or the census below fails.
+//
+// gatekit:fixture the name of each writer's proof, not a reason to excuse it — the
+// census fails when a writer has no entry, and when an entry names a test that
+// does not exist.
+var audienceReasonWriters = map[string]string{
+	"internal/modules/activities/activityprojection.go": "TestAWithheldRowCarriesNoAudienceReason",
+	"internal/compose/person360/sectionstimeline.go":    "TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague",
+}
 
-// The reason must travel with it: a client handed the audience without the
-// reason is told a held message is an ordinary one.
-var reasonSelected = regexp.MustCompile(`\ba\.audience_reason\b`)
-
-// What makes a file a CLIENT projection: it fills the contract type the API
-// serves. A file reading the audience for its own logic does not.
-var buildsClientActivity = regexp.MustCompile(`crmcontracts\.Activity\b`)
-
-func TestEveryActivityProjectionCarriesTheAudienceColumns(t *testing.T) {
+func TestEveryAudienceReasonWriterIsProvedToWithholdIt(t *testing.T) {
 	t.Parallel()
-	var missing []string
-	goFilesUnderTree(t, func(path, body string) {
-		// The shared projection builds its column list from a table rather
-		// than spelling a SELECT, so it is the authority here, not a subject.
-		if strings.HasSuffix(path, "activityprojection.go") {
-			return
+	found := writersOfAudienceReason(t)
+
+	for path := range found {
+		if _, declared := audienceReasonWriters[path]; !declared {
+			t.Errorf("%s assigns Activity.AudienceReason and no test in this census proves it "+
+				"nils the reason when the content is withheld. A leaked reason and an absent one "+
+				"are the same bytes on the wire, so nothing downstream fails on either: write the "+
+				"test, mutation-check it in both directions, and name it here.", path)
 		}
-		if !buildsClientActivity.MatchString(body) {
-			return
-		}
-		if audienceSelected.MatchString(body) && !reasonSelected.MatchString(body) {
-			missing = append(missing,
-				path+" selects a.audience into a crmcontracts.Activity without a.audience_reason")
-		}
-	})
-	if len(missing) > 0 {
-		t.Fatalf("an activity projection that omits an audience column tells the "+
-			"reader a held message is an ordinary one, and nothing downstream "+
-			"fails because the field is optional on the wire:\n  %s",
-			strings.Join(missing, "\n  "))
 	}
+	for path, proof := range audienceReasonWriters {
+		if !found[path] {
+			t.Errorf("%s is named here as a writer of Activity.AudienceReason but no longer "+
+				"assigns it — drop the entry rather than leave the census guarding a file "+
+				"that moved", path)
+			continue
+		}
+		if !testExists(t, proof) {
+			t.Errorf("%s names %s as its proof, and no test by that name exists in the tree",
+				path, proof)
+		}
+	}
+}
+
+// writersOfAudienceReason walks the tree for an assignment to the contract
+// field. Derived rather than listed: a new 360, export or overlay that fills
+// the field joins the census on the commit it is written, whatever SQL spelling
+// or table alias it used to read the column.
+func writersOfAudienceReason(t *testing.T) map[string]bool {
+	t.Helper()
+	out := map[string]bool{}
+	goFilesUnderTree(t, func(path, _ string) {
+		// The generated contract DECLARES the field; it does not write one.
+		if strings.HasPrefix(path, "internal/contracts/") {
+			return
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			assign, ok := n.(*ast.AssignStmt)
+			if !ok {
+				return true
+			}
+			for _, lhs := range assign.Lhs {
+				if sel, ok := lhs.(*ast.SelectorExpr); ok && sel.Sel.Name == "AudienceReason" {
+					out[path] = true
+				}
+			}
+			return true
+		})
+	})
+	return out
+}
+
+// testExists asks whether a test function of that name is declared anywhere in
+// the tree, so a census entry cannot go on naming a proof that was renamed or
+// deleted.
+func testExists(t *testing.T, name string) bool {
+	t.Helper()
+	needle := "func " + name + "("
+	var found bool
+	err := filepath.WalkDir("..", func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if found || d.IsDir() || !strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		src, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(src), needle) {
+			found = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking the tree for %s: %v", name, err)
+	}
+	return found
 }
