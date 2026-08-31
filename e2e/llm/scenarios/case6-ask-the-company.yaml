@@ -61,7 +61,12 @@ must_mention:
 # three runs of 2026-08-27 — each of which adopted October as its own finding
 # ("the October complaint sat too long", "the complaint sat from October to
 # December") with no mention that the email says September — match none of them.
-  - "disagree|do(es)? not match|contradict|misremember|conflict|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|unrecorded|only logged inbound|no October|by the CRM's own dates|hearsay"
+# A bare "conflict" is not in the alternation: "a conflict of interest between
+# the two managers" would earn a green from an answer that never noticed the
+# dates at all, and a scenario that can pass a bad answer is worse than one
+# that fails a good one. It counts only when what conflicts is a date or a
+# record.
+  - "disagree|do(es)? not match|contradict|misremember|(dates?|records?|note|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|unrecorded|only logged inbound|no October|by the CRM's own dates|hearsay"
 
 runs: 3
 pass_at: 2
