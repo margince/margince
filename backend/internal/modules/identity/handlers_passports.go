@@ -123,13 +123,6 @@ func passportSummary(p PassportRow) crmcontracts.PassportSummary {
 		ConnectedAt: c.ConnectedAt,
 		Renewable:   c.Renewable,
 	}
-	// Provenance is omitted, never zeroed: a connection made before it was
-	// recorded has no answer, and a zero uuid on the wire would read as one.
-	if c.LentPassportID != nil {
-		lent := openapi_types.UUID(c.LentPassportID.UUID)
-		summary.Connection.LentPassportId = &lent
-	}
-	summary.Connection.LentPassportLabel = c.LentPassportLabel
 	return summary
 }
 

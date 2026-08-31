@@ -32935,36 +32935,25 @@ components:
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
         expires_at:   { type: string, format: date-time }
 
-    ConsentPassportOption:
-      type: object
-      description: |
-        One passport the signed-in human may lend to the requesting client. `scopes` is both
-        what the passport carries and what a connection lending it receives: the client's
-        request does not narrow the grant, so there is no second, smaller set beside it.
-      required: [id, label, scopes, expires_at]
-      properties:
-        id: { type: string, format: uuid }
-        label: { type: string }
-        scopes:
-          type: array
-          items: { type: string, enum: [read, draft, write, send, enrich] }
-        expires_at: { type: string, format: date-time }
     ConsentRequest:
       type: object
       description: |
         What the consent screen renders. The client name is resolved from the database, never
-        from the request URL, so no caller can put words on a consent screen. The consent
-        nonce is NOT here: it reaches the screen in the redirect fragment, because the
-        consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
-      required: [client_name, offline, passports]
+        from the request URL, so no caller can put words on a consent screen. `scopes` is the
+        closed verb vocabulary the human chooses from — the ceiling, not a selection: every
+        one of them is offered ticked, and what the human posts back is the grant. The client's
+        own scope request does not narrow it; every mainstream MCP client sends none at all.
+        The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
+        the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
+      required: [client_name, offline, scopes]
       properties:
         client_name: { type: string }
         offline:
           type: boolean
           description: The client asked to stay connected without asking again (offline_access).
-        passports:
+        scopes:
           type: array
-          items: { $ref: '#/components/schemas/ConsentPassportOption' }
+          items: { type: string, enum: [read, draft, write, send, enrich] }
     PassportSummary:
       type: object
       description: Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
@@ -33016,17 +33005,6 @@ components:
             When the connection was established — the GRANT's age, not the current passport's. Token
             rotation replaces the passport every renewal; a date that moved with it would report a
             connection as newer than the consent that authorized it.
-        lent_passport_id:
-          type: [string, 'null']
-          format: uuid
-          description: |
-            The passport the human lent to create this connection. Null for a connection established
-            before that provenance was recorded, and null once the lent passport is deleted outright.
-            It is never re-checked: a lend survives the lent passport's revocation by design, so this
-            answers "where did this come from", never "may this still connect".
-        lent_passport_label:
-          type: [string, 'null']
-          description: The lent passport's label at read time, for display beside `lent_passport_id`.
 
     MorningBrief:
       type: object

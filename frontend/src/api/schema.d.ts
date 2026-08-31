@@ -24689,29 +24689,19 @@ export interface components {
             expires_at: string;
         };
         /**
-         * @description One passport the signed-in human may lend to the requesting client. `scopes` is both
-         *     what the passport carries and what a connection lending it receives: the client's
-         *     request does not narrow the grant, so there is no second, smaller set beside it.
-         */
-        ConsentPassportOption: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
-            /** Format: date-time */
-            expires_at: string;
-        };
-        /**
          * @description What the consent screen renders. The client name is resolved from the database, never
-         *     from the request URL, so no caller can put words on a consent screen. The consent
-         *     nonce is NOT here: it reaches the screen in the redirect fragment, because the
-         *     consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
+         *     from the request URL, so no caller can put words on a consent screen. `scopes` is the
+         *     closed verb vocabulary the human chooses from — the ceiling, not a selection: every
+         *     one of them is offered ticked, and what the human posts back is the grant. The client's
+         *     own scope request does not narrow it; every mainstream MCP client sends none at all.
+         *     The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
+         *     the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
          */
         ConsentRequest: {
             client_name: string;
             /** @description The client asked to stay connected without asking again (offline_access). */
             offline: boolean;
-            passports: components["schemas"]["ConsentPassportOption"][];
+            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
         };
         /** @description Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token. */
         PassportSummary: {
@@ -24768,16 +24758,6 @@ export interface components {
              *     connection as newer than the consent that authorized it.
              */
             connected_at: string;
-            /**
-             * Format: uuid
-             * @description The passport the human lent to create this connection. Null for a connection established
-             *     before that provenance was recorded, and null once the lent passport is deleted outright.
-             *     It is never re-checked: a lend survives the lent passport's revocation by design, so this
-             *     answers "where did this come from", never "may this still connect".
-             */
-            lent_passport_id?: string | null;
-            /** @description The lent passport's label at read time, for display beside `lent_passport_id`. */
-            lent_passport_label?: string | null;
         };
         /**
          * @description One persisted Morning-Brief run for the acting rep (data-model §12.5 `brief_run` +

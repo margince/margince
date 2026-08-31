@@ -3349,33 +3349,6 @@ func (e ConsentEventNewState) Valid() bool {
 	}
 }
 
-// Defines values for ConsentPassportOptionScopes.
-const (
-	ConsentPassportOptionScopesDraft  ConsentPassportOptionScopes = "draft"
-	ConsentPassportOptionScopesEnrich ConsentPassportOptionScopes = "enrich"
-	ConsentPassportOptionScopesRead   ConsentPassportOptionScopes = "read"
-	ConsentPassportOptionScopesSend   ConsentPassportOptionScopes = "send"
-	ConsentPassportOptionScopesWrite  ConsentPassportOptionScopes = "write"
-)
-
-// Valid indicates whether the value is a known member of the ConsentPassportOptionScopes enum.
-func (e ConsentPassportOptionScopes) Valid() bool {
-	switch e {
-	case ConsentPassportOptionScopesDraft:
-		return true
-	case ConsentPassportOptionScopesEnrich:
-		return true
-	case ConsentPassportOptionScopesRead:
-		return true
-	case ConsentPassportOptionScopesSend:
-		return true
-	case ConsentPassportOptionScopesWrite:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal     ConsentQualifyingEventKind = "active_deal"
@@ -3412,6 +3385,33 @@ func (e ConsentQualifyingEventSourceEntityType) Valid() bool {
 	case ConsentQualifyingEventSourceEntityTypeActivity:
 		return true
 	case ConsentQualifyingEventSourceEntityTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsentRequestScopes.
+const (
+	ConsentRequestScopesDraft  ConsentRequestScopes = "draft"
+	ConsentRequestScopesEnrich ConsentRequestScopes = "enrich"
+	ConsentRequestScopesRead   ConsentRequestScopes = "read"
+	ConsentRequestScopesSend   ConsentRequestScopes = "send"
+	ConsentRequestScopesWrite  ConsentRequestScopes = "write"
+)
+
+// Valid indicates whether the value is a known member of the ConsentRequestScopes enum.
+func (e ConsentRequestScopes) Valid() bool {
+	switch e {
+	case ConsentRequestScopesDraft:
+		return true
+	case ConsentRequestScopesEnrich:
+		return true
+	case ConsentRequestScopesRead:
+		return true
+	case ConsentRequestScopesSend:
+		return true
+	case ConsentRequestScopesWrite:
 		return true
 	default:
 		return false
@@ -17353,19 +17353,6 @@ type ConsentEventActorType string
 // ConsentEventNewState Proof rows record only transitions to granted/withdrawn (never to unknown).
 type ConsentEventNewState string
 
-// ConsentPassportOption One passport the signed-in human may lend to the requesting client. `scopes` is both
-// what the passport carries and what a connection lending it receives: the client's
-// request does not narrow the grant, so there is no second, smaller set beside it.
-type ConsentPassportOption struct {
-	ExpiresAt time.Time                     `json:"expires_at"`
-	Id        openapi_types.UUID            `json:"id"`
-	Label     string                        `json:"label"`
-	Scopes    []ConsentPassportOptionScopes `json:"scopes"`
-}
-
-// ConsentPassportOptionScopes defines model for ConsentPassportOption.Scopes.
-type ConsentPassportOptionScopes string
-
 // ConsentPurpose defines model for ConsentPurpose.
 type ConsentPurpose struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -17400,16 +17387,22 @@ type ConsentQualifyingEventKind string
 type ConsentQualifyingEventSourceEntityType string
 
 // ConsentRequest What the consent screen renders. The client name is resolved from the database, never
-// from the request URL, so no caller can put words on a consent screen. The consent
-// nonce is NOT here: it reaches the screen in the redirect fragment, because the
-// consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
+// from the request URL, so no caller can put words on a consent screen. `scopes` is the
+// closed verb vocabulary the human chooses from — the ceiling, not a selection: every
+// one of them is offered ticked, and what the human posts back is the grant. The client's
+// own scope request does not narrow it; every mainstream MCP client sends none at all.
+// The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
+// the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
 type ConsentRequest struct {
 	ClientName string `json:"client_name"`
 
 	// Offline The client asked to stay connected without asking again (offline_access).
-	Offline   bool                    `json:"offline"`
-	Passports []ConsentPassportOption `json:"passports"`
+	Offline bool                   `json:"offline"`
+	Scopes  []ConsentRequestScopes `json:"scopes"`
 }
+
+// ConsentRequestScopes defines model for ConsentRequest.Scopes.
+type ConsentRequestScopes string
 
 // ConsumerMailBaselineResponse defines model for ConsumerMailBaselineResponse.
 type ConsumerMailBaselineResponse struct {
@@ -24093,15 +24086,6 @@ type PassportConnection struct {
 	// rotation replaces the passport every renewal; a date that moved with it would report a
 	// connection as newer than the consent that authorized it.
 	ConnectedAt time.Time `json:"connected_at"`
-
-	// LentPassportId The passport the human lent to create this connection. Null for a connection established
-	// before that provenance was recorded, and null once the lent passport is deleted outright.
-	// It is never re-checked: a lend survives the lent passport's revocation by design, so this
-	// answers "where did this come from", never "may this still connect".
-	LentPassportId *openapi_types.UUID `json:"lent_passport_id,omitempty"`
-
-	// LentPassportLabel The lent passport's label at read time, for display beside `lent_passport_id`.
-	LentPassportLabel *string `json:"lent_passport_label,omitempty"`
 
 	// Renewable Whether this connection may mint itself a replacement credential — the grant's
 	// `refresh_allowed`, set when the client asked for `offline_access`. It is what makes the

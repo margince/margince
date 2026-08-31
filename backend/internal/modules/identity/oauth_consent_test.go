@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -152,4 +153,16 @@ func bindsHumanPrincipalType(body *ast.BlockStmt) bool {
 		return !found
 	})
 	return found
+}
+
+func TestConsentPayloadOffersTheWholeVocabulary(t *testing.T) {
+	got := consentRequestPayload("Claude Code", true)
+
+	if got.ClientName != "Claude Code" || !got.Offline {
+		t.Fatalf("client name and offline must survive the mapping, got %+v", got)
+	}
+	want := []crmcontracts.ConsentRequestScopes{"read", "draft", "write", "send", "enrich"}
+	if !slices.Equal(got.Scopes, want) {
+		t.Fatalf("scopes = %v, want %v — the screen offers the closed vocabulary in authority order", got.Scopes, want)
+	}
 }

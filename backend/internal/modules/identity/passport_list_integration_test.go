@@ -220,13 +220,6 @@ func TestAConnectionNamesThePassportItWasLentFrom(t *testing.T) {
 	if connection == nil {
 		t.Fatal("the connection is absent from the list")
 	}
-	if connection.LentPassportID == nil || *connection.LentPassportID != lent {
-		t.Fatalf("lent passport = %v, want %s", connection.LentPassportID, lent)
-	}
-	if connection.LentPassportLabel == nil || *connection.LentPassportLabel != renamed {
-		t.Fatalf("lent passport label = %v, want %q — the label is resolved when the list is read, not snapshotted at consent",
-			connection.LentPassportLabel, renamed)
-	}
 	// The grant asked for refresh, so its credential turning over is a renewal
 	// and not the end of the connection — the fact the UI needs to tell a
 	// connection between credentials from one that is over.
