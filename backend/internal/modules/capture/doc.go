@@ -15,6 +15,8 @@
 // Tables owned: raw_capture, capture_connection, capture_trace (the
 // 24-hour diagnostic trace of what the pipeline decided about each
 // message, swept rather than retained), capture_exclusion (the addresses
-// and domains the sink refuses before any write). Imports shared +
-// platform only; never a sibling module.
+// and domains the sink refuses before any write), capture_owner_identity
+// (a seat's OTHER addresses, so mail among a person's own addresses is
+// not read as correspondence and an alias is never minted as a contact).
+// Imports shared + platform only; never a sibling module.
 package capture

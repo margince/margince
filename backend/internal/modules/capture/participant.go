@@ -79,6 +79,24 @@ func stampCaptureParticipants(
 	// Normalized the same way person_email is, so the promotion below and the
 	// erasure lookup both match without a runtime case fold.
 	address := strings.ToLower(strings.TrimSpace(counterpartyEmail))
+	// Never the owner's OWN address as the other end. The connector derives the
+	// counterparty by comparing the From header against the one address the
+	// grant names, so a message the owner sent from an alias arrives with that
+	// alias as its counterparty — and stamping it here would record the owner
+	// at both ends of their own message, in the rows the interaction graph
+	// reads as "who talked to whom".
+	//
+	// Nothing promotes such a row to a person (the promotion needs a
+	// person_email, and the capture gates keep an alias from having one), so
+	// what this prevents is a durable falsehood about the exchange rather than
+	// a contact record.
+	self, err := ownerIdentitiesTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if self.Covers(address) {
+		address = ""
+	}
 	if address != "" {
 		if err := insertParticipant(ctx, tx, activityID, theirRole, nil, nil, address); err != nil {
 			return fmt.Errorf("capture: stamping the counterparty as a participant: %w", err)

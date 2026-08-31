@@ -102,6 +102,7 @@ type Server struct {
 	consumerMailDomainHandlers
 	blockedDomainHandlers
 	captureExclusionHandlers
+	captureOwnerIdentityHandlers
 	claimHandlers
 	importHandlers
 	channelHandlers

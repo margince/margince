@@ -114,7 +114,8 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/people/linkedinmatchapply.go:auditLinkedInMatch": "the confirmed handle lands in person_social and no column of the person moves, so what the contact gained is the whole of what this write has to record",
 
-	"internal/modules/capture/exclusionstore.go:Add": "the settings row has no column for a rule; the write inserts one exclusion into a list, and the image names the rule that now applies",
+	"internal/modules/capture/exclusionstore.go:Add":     "the settings row has no column for a rule; the write inserts one exclusion into a list, and the image names the rule that now applies",
+	"internal/modules/capture/owneridentitystore.go:Add": "the settings row has no column for a seat's own addresses; the write inserts one claim into a per-seat list. The image names the claim's id and kind and deliberately NOT its value — an owner identity is one person's private address, and the audit log is where nothing erases it and every admin reads it",
 
 	"internal/modules/people/providerclaims.go:WriteProviderClaims": "the bought values land in person_provider_claim and the person row is untouched, and quoting them would put a second copy of the subject's data in a table the erasure treats as evidence rather than as subject data",
 	"internal/modules/people/researchclaim.go:SaveResearchClaims":   "the claims land in person_profile_field and the person row is untouched; what arrived rides the evidence column, where field history will not read it as a field of the record",
