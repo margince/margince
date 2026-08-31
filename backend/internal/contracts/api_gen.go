@@ -21849,6 +21849,103 @@ type OrganizationContactListResponse struct {
 	Page PageInfo              `json:"page"`
 }
 
+// OrganizationCoverage defines model for OrganizationCoverage.
+type OrganizationCoverage struct {
+	AsOf time.Time `json:"as_of"`
+
+	// BestWayIn The warmest way into the account: the contact most worth writing to, by the same
+	// ranking the contact list opens on.
+	BestWayIn    *OrganizationCoverageRoute       `json:"best_way_in,omitempty"`
+	Committee    *OrganizationCoverageCommittee   `json:"committee,omitempty"`
+	Completeness OrganizationCoverageCompleteness `json:"completeness"`
+
+	// Deals The account's open deals, so the reader can pick which committee to read.
+	Deals []OrganizationCoverageDeal `json:"deals"`
+
+	// SelectedDealId The deal the committee below describes. Null when the account has no visible open deal.
+	SelectedDealId *openapi_types.UUID         `json:"selected_deal_id,omitempty"`
+	Summary        OrganizationCoverageSummary `json:"summary"`
+}
+
+// OrganizationCoverageCommittee defines model for OrganizationCoverageCommittee.
+type OrganizationCoverageCommittee struct {
+	// Gaps The critical roles nobody holds on the selected deal — champion, then economic
+	// buyer. EMPTY whenever `unlisted_seats` is non-zero: a seat the caller cannot see
+	// is still a seat, and reporting a gap over a partial committee names a hole that
+	// may not exist.
+	Gaps  []string                   `json:"gaps"`
+	Seats []OrganizationCoverageSeat `json:"seats"`
+
+	// UnlistedSeats Seats held by somebody this caller may not see. Counted rather than named, so the
+	// reader learns the committee is bigger than the list without learning who is on it.
+	UnlistedSeats int `json:"unlisted_seats"`
+}
+
+// OrganizationCoverageCompleteness defines model for OrganizationCoverageCompleteness.
+type OrganizationCoverageCompleteness struct {
+	// CommitteeRead Whether the buying committee could be read at all. False when the caller lacks the
+	// deal or relationship grant — the committee and its gaps are then absent rather than
+	// empty, because an empty committee and an unreadable one are different facts.
+	CommitteeRead bool `json:"committee_read"`
+}
+
+// OrganizationCoverageDeal defines model for OrganizationCoverageDeal.
+type OrganizationCoverageDeal struct {
+	DealId openapi_types.UUID `json:"deal_id"`
+	Name   string             `json:"name"`
+}
+
+// OrganizationCoverageRoute The warmest way into the account: the contact most worth writing to, by the same
+// ranking the contact list opens on.
+type OrganizationCoverageRoute struct {
+	// Engagement Where one contact stands with us, over the same 90-day window the relationship
+	// score uses.
+	//
+	// `answered` — they have written back inside the window. The way in.
+	// `no_reply` — we have written and had nothing back. Writing again is a decision.
+	// `untried` — nobody has written to them at all. Free to approach.
+	//
+	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
+	// ignored" look identical in a roster and call for opposite next actions.
+	Engagement    ContactEngagement  `json:"engagement"`
+	FullName      string             `json:"full_name"`
+	LastInboundAt *time.Time         `json:"last_inbound_at,omitempty"`
+	PersonId      openapi_types.UUID `json:"person_id"`
+	Title         *string            `json:"title,omitempty"`
+}
+
+// OrganizationCoverageSeat defines model for OrganizationCoverageSeat.
+type OrganizationCoverageSeat struct {
+	// Engagement Where one contact stands with us, over the same 90-day window the relationship
+	// score uses.
+	//
+	// `answered` — they have written back inside the window. The way in.
+	// `no_reply` — we have written and had nothing back. Writing again is a decision.
+	// `untried` — nobody has written to them at all. Free to approach.
+	//
+	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
+	// ignored" look identical in a roster and call for opposite next actions.
+	Engagement *ContactEngagement `json:"engagement,omitempty"`
+	FullName   string             `json:"full_name"`
+	PersonId   openapi_types.UUID `json:"person_id"`
+	Role       string             `json:"role"`
+}
+
+// OrganizationCoverageSummary defines model for OrganizationCoverageSummary.
+type OrganizationCoverageSummary struct {
+	// Answered Contacts who have written back inside the 90-day window.
+	Answered int `json:"answered"`
+
+	// ContactsTotal Every contact the caller may see at this account, not a page of them.
+	ContactsTotal int `json:"contacts_total"`
+
+	// NoReply Contacts we have written to with nothing back.
+	NoReply int `json:"no_reply"`
+
+	// Untried Contacts nobody has written to at all.
+	Untried int `json:"untried"`
+}
+
 // OrganizationDomain defines model for OrganizationDomain.
 type OrganizationDomain struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -41064,6 +41161,9 @@ type ServerInterface interface {
 	// The agreements this account holds, newest first (CONTRACT-WIRE-1).
 	// (GET /organizations/{id}/contracts)
 	ListOrganizationContracts(w http.ResponseWriter, r *http.Request, id Id, params ListOrganizationContractsParams)
+	// How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
+	// (GET /organizations/{id}/coverage)
+	GetOrganizationCoverage(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the company's WHOLE site in the background — a crawl that ends in staged 🟡 proposals.
 	// (POST /organizations/{id}/deep-read)
 	DeepReadCompany(w http.ResponseWriter, r *http.Request, id Id)
@@ -43509,6 +43609,12 @@ func (_ Unimplemented) ListOrganizationContacts(w http.ResponseWriter, r *http.R
 // The agreements this account holds, newest first (CONTRACT-WIRE-1).
 // (GET /organizations/{id}/contracts)
 func (_ Unimplemented) ListOrganizationContracts(w http.ResponseWriter, r *http.Request, id Id, params ListOrganizationContractsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
+// (GET /organizations/{id}/coverage)
+func (_ Unimplemented) GetOrganizationCoverage(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57369,6 +57475,40 @@ func (siw *ServerInterfaceWrapper) ListOrganizationContracts(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// GetOrganizationCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationCoverage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeepReadCompany operation middleware
 func (siw *ServerInterfaceWrapper) DeepReadCompany(w http.ResponseWriter, r *http.Request) {
 
@@ -68732,6 +68872,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/contracts", wrapper.ListOrganizationContracts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/coverage", wrapper.GetOrganizationCoverage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/deep-read", wrapper.DeepReadCompany)

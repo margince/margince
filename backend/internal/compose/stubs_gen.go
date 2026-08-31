@@ -1203,6 +1203,10 @@ func (stubs) ListOrganizationContracts(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ListOrganizationContracts")
 }
 
+func (stubs) GetOrganizationCoverage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOrganizationCoverage")
+}
+
 func (stubs) DeepReadCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeepReadCompany")
 }

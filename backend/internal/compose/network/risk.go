@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -411,4 +412,6 @@ func hasEngagedChampion(stakeholders []deals.DealStakeholder) bool {
 
 // roleChampion is the canonical champion seat — the role champion-left fires
 // on, and the one a coverage gap looks for.
-const roleChampion = "champion"
+// Aliased from the leaf that owns the buying-role vocabulary, so this package
+// and dealstatus read the same value rather than two literals.
+const roleChampion = dealrole.Champion

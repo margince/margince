@@ -2212,6 +2212,43 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /organizations/{id}/coverage:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Organizations]
+      operationId: getOrganizationCoverage
+      summary: How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
+      description: |
+        The decision layer of the company People tab. `GET /organizations/{id}/contacts`
+        is the roster; this is the reading of it a rep opens the page for: is anybody
+        here talking to us, which buying roles nobody holds, and who is the warmest
+        route in.
+
+        **Counted over the WHOLE account, not a page.** A coverage figure taken from a
+        page is a figure about the page, and the reader cannot tell the two apart — so
+        the counts here are over every contact the caller may see, however many pages
+        the list would take.
+
+        **A role gap is only reported when the committee could be read in full.**
+        "Nobody is champion" is a claim about EVERY seat on the deal, and a seat whose
+        person the caller cannot see is still a seat: `unlisted_seats` counts them, and
+        `gaps` is empty whenever it is non-zero. A partial answer here is worse than
+        none, because the reader cannot tell which one they got.
+
+        Native system-of-record only: an overlay workspace gets `422`, the same refusal
+        the 360 gives.
+      responses:
+        '200':
+          description: The account's coverage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationCoverage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /organizations/{id}/contacts:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23305,6 +23342,92 @@ components:
           format: uuid
           description: 'The route-in contact. Always present in `nodes`, carrying `intro_path: true`.'
 
+    OrganizationCoverage:
+      type: object
+      required: [as_of, summary, deals, completeness]
+      properties:
+        as_of: { type: string, format: date-time }
+        summary: { $ref: '#/components/schemas/OrganizationCoverageSummary' }
+        deals:
+          type: array
+          description: The account's open deals, so the reader can pick which committee to read.
+          items: { $ref: '#/components/schemas/OrganizationCoverageDeal' }
+        selected_deal_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The deal the committee below describes. Null when the account has no visible open deal.
+        best_way_in:
+          $ref: '#/components/schemas/OrganizationCoverageRoute'
+        committee:
+          $ref: '#/components/schemas/OrganizationCoverageCommittee'
+        completeness: { $ref: '#/components/schemas/OrganizationCoverageCompleteness' }
+    OrganizationCoverageSummary:
+      type: object
+      required: [contacts_total, answered, no_reply, untried]
+      properties:
+        contacts_total:
+          type: integer
+          description: Every contact the caller may see at this account, not a page of them.
+        answered: { type: integer, description: Contacts who have written back inside the 90-day window. }
+        no_reply: { type: integer, description: Contacts we have written to with nothing back. }
+        untried: { type: integer, description: Contacts nobody has written to at all. }
+    OrganizationCoverageDeal:
+      type: object
+      required: [deal_id, name]
+      properties:
+        deal_id: { type: string, format: uuid }
+        name: { type: string }
+    OrganizationCoverageRoute:
+      type: object
+      required: [person_id, full_name, engagement]
+      description: |
+        The warmest way into the account: the contact most worth writing to, by the same
+        ranking the contact list opens on.
+      properties:
+        person_id: { type: string, format: uuid }
+        full_name: { type: string }
+        title: { type: string, nullable: true }
+        engagement: { $ref: '#/components/schemas/ContactEngagement' }
+        last_inbound_at: { type: string, format: date-time, nullable: true }
+    OrganizationCoverageCommittee:
+      type: object
+      required: [seats, gaps, unlisted_seats]
+      properties:
+        seats:
+          type: array
+          items: { $ref: '#/components/schemas/OrganizationCoverageSeat' }
+        gaps:
+          type: array
+          description: |
+            The critical roles nobody holds on the selected deal — champion, then economic
+            buyer. EMPTY whenever `unlisted_seats` is non-zero: a seat the caller cannot see
+            is still a seat, and reporting a gap over a partial committee names a hole that
+            may not exist.
+          items: { type: string }
+        unlisted_seats:
+          type: integer
+          description: |
+            Seats held by somebody this caller may not see. Counted rather than named, so the
+            reader learns the committee is bigger than the list without learning who is on it.
+    OrganizationCoverageSeat:
+      type: object
+      required: [person_id, full_name, role]
+      properties:
+        person_id: { type: string, format: uuid }
+        full_name: { type: string }
+        role: { type: string }
+        engagement: { $ref: '#/components/schemas/ContactEngagement' }
+    OrganizationCoverageCompleteness:
+      type: object
+      required: [committee_read]
+      properties:
+        committee_read:
+          type: boolean
+          description: |
+            Whether the buying committee could be read at all. False when the caller lacks the
+            deal or relationship grant — the committee and its gaps are then absent rather than
+            empty, because an empty committee and an unreadable one are different facts.
     ContactEngagement:
       type: string
       enum: [answered, no_reply, untried]
