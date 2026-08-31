@@ -141,6 +141,13 @@ def read_transcript(path):
     return called, "\n".join(said)
 
 
+# The failures that mean the model was never reached, rather than that it
+# answered badly. Matched on the message because the transport reports both the
+# same way — `is_error` on the terminal result — and only the message says which
+# happened.
+_REFUSALS = ("401", "403", "api key", "authenticate", "authentication", "unauthorized")
+
+
 def unrun(path):
     """Why this run never happened, or "" when it did.
 
@@ -150,10 +157,13 @@ def unrun(path):
     on all eighteen runs of a lane, every scenario was recorded as failing its
     criteria, and the verdict said six use cases were broken.
 
-    The transcript says which it was. The CLI's terminal `result` event carries
-    `is_error` and the message; a run that produced no assistant turn at all
-    never got as far as one. Neither is a scenario's fault, and scoring either
-    as one is how a credential problem is reported as a product regression.
+    ONLY those two shapes. A transcript with no assistant turn never got as far
+    as the model, and a terminal error naming a credential refusal never got
+    past the door. Every OTHER `is_error` is a run that happened — the lane sets
+    `--max-turns 20`, and exhausting it is a finding about the scenario, not
+    about the harness. Excusing one of those would be this same defect inverted:
+    a real answer thrown away as a harness fault, and the rest of the lane
+    abandoned with it.
     """
     saw_assistant = False
     failure = ""
@@ -168,11 +178,12 @@ def unrun(path):
         if event.get("type") == "assistant":
             saw_assistant = True
         if event.get("type") == "result" and event.get("is_error"):
-            failure = str(event.get("result") or "the run reported an error with no message")
-    if failure:
-        return failure
+            failure = str(event.get("result") or "")
     if not saw_assistant:
         return "the transcript carries no assistant turn: the model was never reached"
+    lowered = failure.lower()
+    if failure and any(mark in lowered for mark in _REFUSALS):
+        return failure
     return ""
 
 

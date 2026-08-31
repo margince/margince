@@ -30,10 +30,10 @@ failures=0
 
 # Under the repo's own .tmp/, because check.py refuses to open a path outside
 # the repository or the system temp directory — a guard worth keeping, and one
-# a test has to respect rather than work around.
-work="$root/.tmp/e2e-llm-check-test"
-rm -rf "$work"
-mkdir -p "$work"
+# a test has to respect rather than work around. A UNIQUE directory inside it,
+# so two runs of this script cannot delete each other's transcripts.
+mkdir -p "$root/.tmp"
+work="$(mktemp -d "$root/.tmp/e2e-llm-check.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
 # case_is <name> <expected-exit> <substring the output must carry> <<<transcript
@@ -70,9 +70,11 @@ case_is "a transcript with no assistant turn never reached the model" 1 "no assi
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
 JSONL
 
-# An error with no message still says the run did not happen, rather than
-# reading as a silent success.
-case_is "an error with no message is still not a run" 1 "reported an error" <<'JSONL'
+# An error that does NOT name a credential refusal is a run that happened. The
+# lane cannot tell a transient fault from a scenario the assistant handled
+# badly, and guessing the generous way would excuse a finding and abandon the
+# rest of the lane with it — this defect inverted.
+case_is "an unexplained error is a run that happened, not a harness fault" 0 "" <<'JSONL'
 {"type":"system","subtype":"init","tools":[]}
 {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
 {"type":"result","subtype":"error","is_error":true}
@@ -87,6 +89,16 @@ case_is "a run that happened and answered wrongly is not excused" 0 "" <<'JSONL'
 {"type":"result","subtype":"success","is_error":false,"result":"I could not find anything."}
 JSONL
 
+# A run that reached the model and then ran out of turns is a FINDING, not a
+# harness fault. The lane sets --max-turns 20, so this shape is reachable, and
+# excusing it would be this defect inverted: a real answer thrown away and the
+# rest of the lane abandoned with it.
+case_is "exhausting the turn budget is a run that happened" 0 "" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"result","subtype":"error_max_turns","is_error":true,"result":"Reached the maximum number of turns (20)."}
+JSONL
+
 # And one that did the right thing.
 case_is "a run that called a tool and answered is a run" 0 "" <<'JSONL'
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
@@ -95,18 +107,77 @@ case_is "a run that called a tool and answered is a run" 0 "" <<'JSONL'
 {"type":"result","subtype":"success","is_error":false,"result":"Here are the records."}
 JSONL
 
-# The lane's own wiring: the check must be REACHED, and its failure must stop
-# the lane rather than being scored. Asserted on the script's text, because
-# running the lane needs a key and a stack.
+# A bad answer is still SCORED as one, proved through the real checker rather
+# than inferred: --ran saying "it ran" is only half of it, and a version that
+# excused everything would satisfy the half above.
+scenario="$work/scenario.yaml"
+cat >"$scenario" <<'YAML'
+name: fixture_case
+runs: 1
+pass_at: 1
+prompt: |
+  irrelevant, the transcripts here are written by hand
+must_call:
+  - list_records
+must_mention:
+  - Here are the records
+YAML
+cat >"$work/good.jsonl" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"Here are the records."}
+JSONL
+cat >"$work/bad.jsonl" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"text","text":"I could not find anything."}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"I could not find anything."}
+JSONL
+if python3 "$check" --check "$scenario" "$work/good.jsonl" >/dev/null 2>&1; then
+	echo "ok: a run that did the right thing passes its scenario"
+else
+	echo "FAIL: the correct transcript does not pass its scenario"
+	python3 "$check" --check "$scenario" "$work/good.jsonl" 2>&1 | sed 's/^/    /' || :
+	failures=$((failures + 1))
+fi
+if python3 "$check" --check "$scenario" "$work/bad.jsonl" >/dev/null 2>&1; then
+	echo "FAIL: a run that answered wrongly passed its scenario — the finding was excused"
+	failures=$((failures + 1))
+else
+	echo "ok: a run that answered wrongly still fails its scenario"
+fi
+
+# The lane's own wiring. Asserted as the whole stop BLOCK rather than as tokens
+# anywhere in the file: a check that is present but not reached, or reached and
+# not exited on, satisfies three greps and none of the behaviour.
 lane="$root/scripts/e2e-llm.sh"
-for required in "check.py\" --ran" "HARNESS: the model was never reached" "exit 2"; do
-	if ! grep -q -- "$required" "$lane"; then
-		echo "FAIL: scripts/e2e-llm.sh does not carry '$required', so a refused run is scored as a failed scenario"
-		failures=$((failures + 1))
-	else
-		echo "ok: the lane carries $required"
-	fi
-done
+if ! python3 - "$lane" <<'PYEOF'
+import re, sys
+
+lane = open(sys.argv[1]).read()
+block = re.search(
+    r'if ! why="\$\(python3 "\$ROOT/e2e/llm/check\.py" --ran "\$transcript"\)"; then'
+    r'(?:.|\n)*?exit 2\n\s*fi',
+    lane,
+)
+if block is None:
+    print("the lane does not carry a --ran check that exits, as one block")
+    sys.exit(1)
+body = block.group(0)
+for required in ("HARNESS: the model was never reached", "$why", "exit 2"):
+    if required not in body:
+        print(f"the stop block does not carry {required!r}")
+        sys.exit(1)
+# And it must sit BEFORE the scoring call, or a refused run is scored anyway.
+if lane.index(block.group(0)) > lane.index('--check "$scenario" "$transcript"'):
+    print("the stop block runs after the scoring call")
+    sys.exit(1)
+PYEOF
+then
+	echo "FAIL: scripts/e2e-llm.sh does not stop the lane on a run that never happened"
+	failures=$((failures + 1))
+else
+	echo "ok: the lane stops on a run that never happened, before scoring it"
+fi
 
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2

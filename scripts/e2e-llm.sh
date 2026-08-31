@@ -282,7 +282,14 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: the model was never reached on $name run $i:"
       echo "  $why"
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null || true
+      # The transcript is the only evidence of WHICH failure this was, so a
+      # copy that fails says so rather than leaving the reader with a verdict
+      # and nothing to check it against.
+      if ! cp "$transcript" "$RECORD_DIR/"; then
+        echo "  and the transcript could not be kept: $transcript" >&2
+      else
+        echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      fi
       exit 2
     fi
     if python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1; then
