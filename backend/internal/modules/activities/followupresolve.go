@@ -18,11 +18,13 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -191,6 +193,17 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // UPDATE would be invisible history. Replays are harmless: a completed
 // task no longer matches the open filter.
 //
+// The selection and the completions are separate transactions, so two
+// firings for one lead — an activity.captured racing a lead.promoted — can
+// both select the same open task. Each completion therefore carries the
+// version the selection read, and a task somebody else finished first
+// answers version skew and is SKIPPED. Without it the loser writes
+// is_done = true over a row that already says so, and the task's history
+// shows two identical completions of the same thing.
+//
+// The count is what THIS call completed, which is also why skew is not an
+// error: another firing completing the task is the outcome this one wanted.
+//
 // "System-minted" is decided by source AND captured_by together: source
 // rides the client create wire verbatim (any caller can spell "system" —
 // see systemSource's doc), while captured_by is stamped from the authenticated
@@ -199,10 +212,14 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // leaves a call that takes no read gate of its own; each completion's
 // write is gated inside UpdateActivity.
 func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
-	var open []ids.ActivityID
+	type openTask struct {
+		id      ids.ActivityID
+		version int64
+	}
+	var open []openTask
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT a.id FROM activity a
+			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
@@ -214,11 +231,11 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var id ids.ActivityID
-			if err := rows.Scan(&id); err != nil {
+			var task openTask
+			if err := rows.Scan(&task.id, &task.version); err != nil {
 				return err
 			}
-			open = append(open, id)
+			open = append(open, task)
 		}
 		return rows.Err()
 	})
@@ -226,10 +243,22 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 		return 0, err
 	}
 	done := true
-	for _, id := range open {
-		if _, err := s.UpdateActivity(ctx, id, UpdateActivityInput{IsDone: &done}); err != nil {
-			return 0, fmt.Errorf("completing system task %s: %w", id, err)
+	completed := 0
+	for _, task := range open {
+		version := task.version
+		_, err := s.UpdateActivity(ctx, task.id, UpdateActivityInput{IsDone: &done, IfVersion: &version})
+		if errors.Is(err, apperrors.ErrVersionSkew) {
+			// Somebody moved this row between the selection and here. If it
+			// was the sibling firing, the task is complete and a second
+			// completion event would be the only thing this write added; if
+			// it was an ordinary edit, the next firing sees it still open and
+			// finishes it.
+			continue
 		}
+		if err != nil {
+			return 0, fmt.Errorf("completing system task %s: %w", task.id, err)
+		}
+		completed++
 	}
-	return len(open), nil
+	return completed, nil
 }

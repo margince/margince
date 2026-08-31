@@ -233,3 +233,142 @@ func TestALeadLeavingTheOpenPoolCompletesItsSystemTasks(t *testing.T) {
 		t.Error("the promoted lead's system follow-up is still open — a reminder chasing a closed loop")
 	}
 }
+
+// Two firings for one lead — an activity.captured racing a lead.promoted —
+// both select the same open task while it is still open. Only the one that
+// actually flips it may write a completion: the other adds an audit row and an
+// activity.updated event saying the task was finished, about a task that was
+// already finished, and the record's history then shows the same thing
+// happening twice.
+//
+// The interleaving is FORCED rather than hoped for. A sequential second call
+// proves nothing here — it re-runs the open-task query, finds nothing, and
+// writes nothing whatever the completion path does. What has to be reproduced
+// is a firing that selected the task while it was open and reaches its write
+// after somebody else finished it, so the row is locked under it until that
+// has happened.
+func TestAFiringThatSelectedBeforeSomebodyElseFinishedWritesNothing(t *testing.T) {
+	e := setupResolve(t)
+	task := e.seedTask(t, "system", "system")
+	ctx := e.systemCtx()
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+
+	// Hold the row so the firing below gets past its selection and stops at
+	// its write, which is exactly where the loser of the race stands.
+	blocking, err := e.owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := blocking.Exec(context.Background(),
+		`SELECT id FROM activity WHERE id = $1 FOR UPDATE`, task); err != nil {
+		t.Fatal(err)
+	}
+
+	loser := make(chan firingResult, 1)
+	go func() {
+		completed, err := store.CompleteOpenSystemTasksForLead(ctx, ids.From[ids.LeadKind](e.lead))
+		loser <- firingResult{completed, err}
+	}()
+	// However this test ends, the lock is released and the firing is waited
+	// for: a goroutine still holding a pooled connection outlives the test and
+	// the next one resets the database under it.
+	t.Cleanup(func() {
+		//craft:ignore swallowed-errors the lock is normally released by the Commit above and this rollback is then a designed no-op; on the failure paths it is the release itself, and there is nothing a failing release could tell this test that its own assertions have not already said
+		_ = blocking.Rollback(context.Background())
+		select {
+		case <-loser:
+		case <-time.After(10 * time.Second):
+			t.Error("the firing never returned after the lock was released")
+		}
+	})
+
+	e.waitForBlockedWriter(t, loser)
+
+	// The winner: the task is completed and its version moves, under the lock
+	// the loser is waiting on.
+	if _, err := blocking.Exec(context.Background(),
+		`UPDATE activity SET is_done = true, done_at = now(), version = version + 1 WHERE id = $1`, task); err != nil {
+		t.Fatal(err)
+	}
+	if err := blocking.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	var got firingResult
+	select {
+	case got = <-loser:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the firing never returned after the winner committed")
+	}
+	// Drained here, so the cleanup above finds the channel empty and does not
+	// wait for a result that has already been read.
+	loser <- got
+	if got.err != nil {
+		t.Fatalf("the losing firing failed instead of standing down: %v", got.err)
+	}
+	if got.completed != 0 {
+		t.Errorf("the losing firing reports %d completions, want none — it completed nothing", got.completed)
+	}
+	if events := e.completionEvents(t, task); events != 0 {
+		t.Fatalf("the losing firing wrote %d activity.updated event(s) for a task it did not finish", events)
+	}
+}
+
+// firingResult is one CompleteOpenSystemTasksForLead call's answer, carried
+// back from the goroutine that raced.
+type firingResult struct {
+	completed int
+	err       error
+}
+
+// waitForBlockedWriter waits until the firing under test is stopped on the row
+// lock. Polled rather than slept on: the point of the test is the ordering,
+// and a fixed pause would either be flaky or slow.
+func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResult) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		// A firing that RETURNED never reached the write, so the ordering this
+		// test needs did not happen and nothing it goes on to assert would
+		// mean anything. Said here rather than as a timeout, because "it
+		// finished early" and "it never started" are different faults.
+		select {
+		case got := <-firing:
+			t.Fatalf("the firing returned before it blocked (completed=%d err=%v): the race was never set up",
+				got.completed, got.err)
+		default:
+		}
+		var blocked int
+		// A waiter on a ROW lock does not appear as an ungranted lock on the
+		// relation — it waits on the holder's transaction id — so the wait
+		// event is what says it is stopped. Not its `state`: a backend parked
+		// on a lock inside a transaction reports "idle in transaction", and
+		// requiring "active" here looks right and finds nothing.
+		if err := e.owner.QueryRow(context.Background(),
+			`SELECT count(*) FROM pg_stat_activity
+			  WHERE wait_event_type = 'Lock' AND pid <> pg_backend_pid()
+			    AND datname = current_database()`).Scan(&blocked); err != nil {
+			t.Fatal(err)
+		}
+		if blocked > 0 {
+			return
+		}
+		//craft:ignore test-sleep the wait IS on the condition — a backend stopped on the lock — and this is only the interval between checks; the deadline above fails the test loudly rather than letting it pass on a race that never happened
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("no writer ever blocked on the row: the race this test reproduces did not happen, so it proves nothing")
+}
+
+// completionEvents counts the activity.updated events this task produced — the
+// noise a redundant write leaves behind.
+func (e *resolveEnv) completionEvents(t *testing.T, id ids.UUID) int {
+	t.Helper()
+	var count int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM event_outbox
+		  WHERE envelope->>'type' = 'activity.updated'
+		    AND envelope->'entity'->>'id' = $1::text`, id.String()).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	return count
+}
