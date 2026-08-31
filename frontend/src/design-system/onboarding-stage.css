@@ -79,7 +79,11 @@
   padding: var(--space-3) var(--space-6);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* The Core's reading takes the right edge whether or not there is a step name
+     on the left — `space-between` on a single child would centre it, and a
+     reading that moves depending on which flow is running is a reading a reader
+     has to hunt for. */
+  justify-content: flex-end;
   gap: var(--space-4);
   border-bottom: 1px solid var(--borderSubtle);
   background: color-mix(in srgb, var(--bgCard) 70%, transparent);
@@ -89,6 +93,9 @@
 
 .ob-stage-where {
   margin: 0;
+  /* Takes the rest of the band, so the Core's reading stays on the right edge
+     rather than sitting beside the step name. */
+  margin-right: auto;
   display: flex;
   align-items: center;
   gap: var(--space-3);

@@ -54,9 +54,7 @@ function StageBand({
 }: Readonly<{ progress?: StageProgress; coreStateLabel?: string }>) {
   return (
     <div className="ob-stage-band">
-      {progress === undefined ? (
-        <span />
-      ) : (
+      {progress === undefined ? null : (
         <p className="ob-stage-where">
           <span className="ob-stage-step">{progress.steps[progress.at]}</span>
           <span className="ob-stage-dashes" aria-hidden="true">
