@@ -29,6 +29,16 @@ import (
 // than it saves. It is the pile that needs collapsing, not the pair.
 const batchFloor = 3
 
+// The two approval kinds that are a message the product WROTE and is holding.
+//
+// Constants rather than literals at each site: the classifier and the grouper
+// both ask about them, and a typo in either would put the same decision in two
+// places while both halves still compiled.
+const (
+	kindHeldDraft     = "held_draft"
+	kindScheduledSend = "scheduled_send_held"
+)
+
 // foldRoutineDecisions replaces alike routine decisions with one row each.
 //
 // The members are kept in the fold's order, so the sample names the ones the
@@ -75,8 +85,8 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 	switch *row.item.Kind {
 	case "capture_counterparty":
 		return contactBatchKey(row), true
-	case "held_draft", "scheduled_send_held":
-		return "held_draft", true
+	case kindHeldDraft, kindScheduledSend:
+		return kindHeldDraft, true
 	default:
 		return "", false
 	}

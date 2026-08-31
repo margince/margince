@@ -106,7 +106,7 @@ function WorklistRow({
             has nothing below it to beat. */}
         {above && <p className="t-caption worklist-row-above">{above}</p>}
       </div>
-      <RowVerbs item={item} href={href} />
+      {item.batch ? <BatchVerb /> : <RowVerbs item={item} href={href} />}
       {decidable(item) && <RowDecision item={item} />}
     </PanelRow>
   );
@@ -136,6 +136,22 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <div className="worklist-row-decision">
       <ApprovalRow approval={usable} extraInvalidateKeys={[worklistKey]} />
+    </div>
+  );
+}
+
+// The way into a group.
+//
+// It narrows the queue to decisions rather than opening a screen of its own:
+// that screen is its own piece of work, and a row whose only verb led nowhere
+// would be worse than the pile it replaced. The filter is the door that exists.
+function BatchVerb() {
+  const t = useT();
+  return (
+    <div className="worklist-row-verbs">
+      <a className="worklist-row-verb" href="#/worklist?filter=decisions">
+        {t("worklist.verb.review_batch")}
+      </a>
     </div>
   );
 }
