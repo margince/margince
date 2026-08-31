@@ -150,7 +150,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// no objects has no purge, which is honest — destroying the rows and
 		// leaving the files would report mail as gone while its attachments sat
 		// in the bucket.
-		s.captureExclusionHandlers.purger = NewCapturePurger(pool,
+		s.purger = NewCapturePurger(pool,
 			NewRetentionServiceFor(InstallationDB(pool), store, slog.Default()))
 		// Captured mail carries files too. Recorded as the STORE, which the sink
 		// turns into a writer when it is built: a keeper assigned here would be
