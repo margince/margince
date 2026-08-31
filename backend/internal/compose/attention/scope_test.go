@@ -96,20 +96,66 @@ func TestAColleaguesDealLeavesTheQueueAndTheSummaryUnderMine(t *testing.T) {
 		Type: principal.PrincipalHuman, UserID: reader,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
-	mine := ownedDeal("mine", reader)
-	theirs := ownedDeal("theirs", colleague)
-	out := crmcontracts.Worklist{
-		Queue:   []crmcontracts.WorklistItem{mine, theirs},
-		Summary: crmcontracts.WorklistSummary{Total: 2},
+	rows := []ranked{
+		{item: ownedDeal("mine", reader)},
+		{item: ownedDeal("theirs", colleague)},
 	}
 
-	narrowed := narrowToReader(ctx, out)
+	kept := keepReadersOwn(ctx, rows)
 
-	if len(narrowed.Queue) != 1 || narrowed.Queue[0].Id != "mine" {
-		t.Fatalf("kept %d rows, wanted only the reader's own", len(narrowed.Queue))
+	if len(kept) != 1 || kept[0].item.Id != "mine" {
+		t.Fatalf("kept %d rows, wanted only the reader's own", len(kept))
 	}
-	if narrowed.Summary.Total != 1 {
-		t.Fatalf("the summary still counts %d, over a queue of 1", narrowed.Summary.Total)
+}
+
+// A call with no human behind it has no own work to answer for. Handing it
+// every row would widen a scope named `mine`, so it gets nothing.
+func TestAScopeWithNoReaderBehindItAnswersNothing(t *testing.T) {
+	rows := []ranked{{item: ownedDeal("someones", ids.MustParse("01a05500-0000-7000-8000-0000000000ff"))}}
+
+	if kept := keepReadersOwn(context.Background(), rows); len(kept) != 0 {
+		t.Fatalf("a caller with no human behind it was handed %d rows under `mine`", len(kept))
+	}
+}
+
+// Narrowing runs before the page is cut, so a reader asking for three of their
+// own rows gets three where they exist — not a short page with their own work
+// sitting just past the cut.
+func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
+	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: reader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	at := []crmcontracts.AttentionItem{}
+	for i := 0; i < 5; i++ {
+		at = append(at, dealItem("theirs-"+string(rune('a'+i)), colleague))
+	}
+	for i := 0; i < 3; i++ {
+		at = append(at, dealItem("mine-"+string(rune('a'+i)), reader))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
+
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3)
+
+	if len(out.Queue) != 3 {
+		t.Fatalf("a reader with three of their own rows got a page of %d", len(out.Queue))
+	}
+	for _, row := range out.Queue {
+		if row.Id[:4] != "mine" {
+			t.Fatalf("a colleague's row %q reached a page scoped to the reader", row.Id)
+		}
+	}
+}
+
+func dealItem(id string, owner ids.UUID) crmcontracts.AttentionItem {
+	uuid := openapi_types.UUID(owner)
+	return crmcontracts.AttentionItem{
+		Id:      id,
+		Source:  "deal_at_risk",
+		Deal:    &crmcontracts.AttentionDealFacts{OwnerId: &uuid},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 }
 
@@ -122,11 +168,11 @@ func TestARowWithNoOwnerStaysUnderMine(t *testing.T) {
 		Type: principal.PrincipalHuman, UserID: reader,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn},
 	})
-	out := crmcontracts.Worklist{
-		Queue: []crmcontracts.WorklistItem{{Id: "my-task", Source: "task", Actions: []crmcontracts.WorklistItemActions{}}},
-	}
+	rows := []ranked{{item: crmcontracts.WorklistItem{
+		Id: "my-task", Source: "task", Actions: []crmcontracts.WorklistItemActions{},
+	}}}
 
-	if len(narrowToReader(ctx, out).Queue) != 1 {
+	if len(keepReadersOwn(ctx, rows)) != 1 {
 		t.Fatal("a row with no owner was dropped, hiding the reader's own work")
 	}
 }

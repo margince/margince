@@ -48,40 +48,40 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	out, err := s.worklistFrom(day, filter, limit)
-	if err != nil {
-		return crmcontracts.Worklist{}, err
-	}
+	out := s.worklistFrom(ctx, day, resolved, filter, limit)
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	if mineOnly(resolved) {
-		out = narrowToReader(ctx, out)
-	}
 	return out, nil
 }
 
-// narrowToReader keeps the reader's own work.
+// keepReadersOwn drops the rows belonging to somebody else.
 //
-// It runs over the ASSEMBLED page rather than pushing an owner filter into
-// every lane, and the difference is worth naming: the lanes are already
-// row-scoped, so this narrows what a wide-scoped reader is SHOWN by default
-// without changing what any store was asked. Pushing the filter down is the
-// better shape and needs each producer to take an owner — a change to what the
-// feed reads rather than to what it draws.
-func narrowToReader(ctx context.Context, out crmcontracts.Worklist) crmcontracts.Worklist {
+// It runs over the CANDIDATES, before the page is cut, so a reader asking for
+// twenty-five of their own rows gets twenty-five where they exist. Narrowing
+// after the cut returned a short page while the reader's own work sat just
+// past it.
+//
+// It fails CLOSED. A call with no human behind it has no "own work" to answer
+// for, and a queue that handed such a caller every row it had read would be
+// widening a scope named `mine` — the opposite of what it says. An agent that
+// needs the day reads it under a scope it can actually hold.
+//
+// The narrowing itself is a display cut, not the security boundary: the lanes
+// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
+// by default rather than what any store was asked. Pushing the filter into
+// each producer is the better shape and needs each to take an owner.
+func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return out
+		return nil
 	}
-	kept := make([]crmcontracts.WorklistItem, 0, len(out.Queue))
-	for _, item := range out.Queue {
-		if ownedByReader(item, actor) {
-			kept = append(kept, item)
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if ownedByReader(row.item, actor) {
+			kept = append(kept, row)
 		}
 	}
-	out.Queue = kept
-	out.Summary = summarize(kept)
-	return out
+	return kept
 }
 
 // scopeOptions puts the resolver's answer on the wire.
@@ -95,7 +95,9 @@ func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
 
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
-func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit int) (crmcontracts.Worklist, error) {
+func (s *Service) worklistFrom(
+	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
+) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
 	}
@@ -103,6 +105,9 @@ func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit 
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
+	if mineOnly(scope) {
+		rows = keepReadersOwn(ctx, rows)
+	}
 	if filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll) {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
 	}
@@ -121,7 +126,7 @@ func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit 
 		narrowed := crmcontracts.WorklistFilter(filter)
 		out.Filter = &narrowed
 	}
-	return out, nil
+	return out
 }
 
 // page cuts the candidates to what one read carries.
