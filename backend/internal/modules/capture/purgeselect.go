@@ -25,6 +25,35 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// StatutoryFloor carries the shield every destructive activity path in this
+// installation applies, handed in by the compose seam.
+//
+// Capture cannot import privacy, and the predicate lives over there — a second
+// copy is how one destructive path quietly stops shielding what the others do.
+// So it travels: the seam reads it from privacy and passes it here.
+//
+// Held by: TestTheStatutoryFloorIsSpelledOnce (backend/gates/statutoryfloorsingle_test.go).
+type StatutoryFloor struct {
+	// Clause filters an activity aliased `a`, in the positive form: it is TRUE
+	// for a row the law still requires the installation to keep.
+	Clause func(intervalArg, anchorArg int) string
+	// Interval and Anchor are the two values Clause's placeholders take.
+	Interval any
+	Anchor   any
+}
+
+// column renders the shield as a boolean expression and appends its two
+// arguments, returning where they landed.
+func (f StatutoryFloor) column(used int, args []any) (string, []any) {
+	if f.Clause == nil {
+		// No floor supplied. Shield EVERYTHING rather than nothing: a purge
+		// that cannot ask what the law requires must not guess that the answer
+		// is "nothing", because that guess destroys correspondence.
+		return "true", args
+	}
+	return f.Clause(used+1, used+2), append(args, f.Interval, f.Anchor)
+}
+
 // PurgeSubject is what a purge found: what it will destroy, and what it will
 // only release.
 type PurgeSubject struct {
@@ -57,16 +86,22 @@ func (s PurgeSubject) Total() int {
 // Read-only. A preview and the purge itself call this with the same arguments
 // and get the same answer, which is what makes the preview's counts honest.
 func SelectPurgeSubjectTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string, floor StatutoryFloor,
 ) (PurgeSubject, error) {
 	var subject PurgeSubject
 	if user == ids.Nil || value == "" {
 		return subject, nil
 	}
 	match, args := purgeMatchClause(user, kind, value)
+	// The statutory shield, computed as its OWN column rather than as a filter.
+	// A row inside the retention window is not destroyed and not released — it
+	// is reported, because an owner told their mail is gone must not find it
+	// still there, and a rule that silently kept some of its matches would be
+	// exactly that.
+	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       a.restricted_at IS NOT NULL AS restricted,
+		       (a.restricted_at IS NOT NULL OR (`+shielded+`)) AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
@@ -78,16 +113,17 @@ func SelectPurgeSubjectTx(
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
-		var restricted bool
+		var withheld bool
 		var importers int
-		if err := rows.Scan(&id, &restricted, &importers); err != nil {
+		if err := rows.Scan(&id, &withheld, &importers); err != nil {
 			return subject, fmt.Errorf("capture: selecting what a purge would destroy: %w", err)
 		}
 		switch {
-		case restricted:
-			// A statutory hold or an open erasure outranks an owner's rule.
-			// Neither destroyed nor released: the row is somebody else's
-			// obligation until that lifts.
+		case withheld:
+			// A statutory hold, or commercial correspondence still inside its
+			// legal retention window. Neither destroyed nor released: the row
+			// is an obligation the installation owes somebody else, and an
+			// owner's rule does not outrank the law.
 			subject.Restricted = append(subject.Restricted, id)
 		case importers > 1:
 			subject.SharedImports = append(subject.SharedImports, id)
@@ -181,7 +217,8 @@ func SelectPurgeablePeopleTx(
 	//
 	//   a second live address outside the rule — the contact is more than what
 	//     the rule describes;
-	//   a deal link — somebody did work against this person;
+	//   a deal — they are a stakeholder on one, or their mail is filed against
+	//     one, either way somebody did work against this person;
 	//   another seat's import of their mail — a colleague knows them
 	//     independently of this mailbox;
 	//   no import of this seat's own — then this seat's mail is not why the
@@ -206,7 +243,14 @@ func SelectPurgeablePeopleTx(
 		      WHERE other.person_id = p.id AND other.archived_at IS NULL
 		        AND NOT (`+outside+`))
 		   AND NOT EXISTS (
-		     SELECT 1 FROM activity_link l WHERE l.person_id = p.id AND l.deal_id IS NOT NULL)
+		     SELECT 1 FROM relationship r
+		      WHERE r.person_id = p.id AND r.kind = 'deal_stakeholder'
+		        AND r.archived_at IS NULL)
+		   AND NOT EXISTS (
+		     SELECT 1 FROM activity_link pl
+		       JOIN activity_link dl ON dl.activity_id = pl.activity_id
+		                            AND dl.entity_type = 'deal'
+		      WHERE pl.person_id = p.id AND pl.entity_type = 'person')
 		   AND NOT EXISTS (
 		     SELECT 1 FROM capture_import mine
 		       JOIN activity ma ON ma.id = mine.activity_id

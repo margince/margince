@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -298,5 +299,77 @@ func TestADomainRuleDoesNotReachALookalikeDomain(t *testing.T) {
 	}
 	if body := activityBody(t, e, lookalike); body == "" {
 		t.Fatal("a lookalike domain's message was destroyed — the rule named kanzlei.example, not everything ending in it")
+	}
+}
+
+func TestAPurgeAsksTheStatutoryFloorBeforeDestroying(t *testing.T) {
+	// GoBD §147 AO: a Handelsbrief must be kept for years, and the nightly
+	// retention evaluator refuses to touch one inside its window. A purge is a
+	// destructive activity path like any other and applies the same shield —
+	// without it this would be the one path in the tree that lets an owner
+	// destroy what the law requires the installation to hold.
+	//
+	// What this test can assert depends on the build. The floor comes from a
+	// compiled-in jurisdiction pack, and a build with none (the default) has a
+	// zero-length window: nothing is shielded, and a purge destroying a
+	// Handelsbrief is then correct rather than a bypass. So the assertion
+	// follows the pack: with a window, the message is withheld; without one, it
+	// goes. Asserting "withheld" unconditionally would fail on the default
+	// build for a reason that is not a defect.
+	e := integration.Setup(t)
+	brief := seedPurgeableMail(t, e, "einkauf@kunde.example", "Auftragsbestätigung", e.Rep1)
+	stampCommercialCorrespondence(t, e, brief)
+	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, "einkauf@kunde.example")
+
+	shielded := statutoryWindowIsOpen(t, e, brief)
+	outcome := runPurge(t, e, e.Rep1, rule, false)
+
+	if shielded {
+		if outcome.Skipped != 1 || outcome.Destroyed != 0 {
+			t.Fatalf("skipped=%d destroyed=%d, want 1 and 0 — the statutory window is not an owner's to close",
+				outcome.Skipped, outcome.Destroyed)
+		}
+		if body := activityBody(t, e, brief); body == "" {
+			t.Fatal("a Handelsbrief inside its retention window was destroyed")
+		}
+		return
+	}
+	if outcome.Destroyed != 1 {
+		t.Fatalf("destroyed=%d, want 1 — this build declares no retention window, so nothing shields the message",
+			outcome.Destroyed)
+	}
+}
+
+// statutoryWindowIsOpen asks the DATABASE the same question the purge asks, so
+// the test's expectation comes from the installation's own floor rather than
+// from an assumption about which jurisdiction packs this binary carries.
+func statutoryWindowIsOpen(t *testing.T, e *integration.Env, activityID ids.UUID) bool {
+	t.Helper()
+	interval, anchor := privacy.StatutoryFloorArgs()
+	var open bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT (`+privacy.StatutoryFloorShield(2, 3)+`) FROM activity a WHERE a.id = $1`,
+			activityID, interval, anchor).Scan(&open)
+	}); err != nil {
+		t.Fatalf("asking whether the statutory window is open: %v", err)
+	}
+	return open
+}
+
+// stampCommercialCorrespondence marks a message as the kind of correspondence
+// the law requires keeping, dated so its window is still open.
+func stampCommercialCorrespondence(t *testing.T, e *integration.Env, activityID ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE activity
+			   SET retention_class = 'commercial_correspondence',
+			       retention_class_at = now(),
+			       occurred_at = now() - interval '30 days'
+			 WHERE id = $1`, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("stamping commercial correspondence: %v", err)
 	}
 }

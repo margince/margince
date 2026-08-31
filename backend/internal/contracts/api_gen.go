@@ -15762,8 +15762,9 @@ type CapturePurgeOutcome struct {
 	// them.
 	Released int `json:"released"`
 
-	// Skipped Messages under a statutory hold or an open erasure request. Untouched, and reported
-	// rather than passed over in silence.
+	// Skipped Messages the law still requires keeping: under a statutory hold, or commercial
+	// correspondence inside its retention window. Untouched, and reported rather than passed
+	// over in silence.
 	Skipped int `json:"skipped"`
 }
 

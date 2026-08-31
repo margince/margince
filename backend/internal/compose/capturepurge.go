@@ -27,6 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -74,6 +76,14 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return PurgeOutcome{}, fmt.Errorf("capture purge: destroying mail is a person's own act")
 	}
+	// A read seat is licensed to look, not to destroy. The object grants inside
+	// privacy answer what this caller may do to an activity or a person; the
+	// seat tier answers whether they may change anything at all, and the two
+	// are different questions — a read seat can hold grants and still not be
+	// somebody who mutates.
+	if !actor.SeatType.CanMutate() {
+		return PurgeOutcome{}, apperrors.ErrPermissionDenied
+	}
 	rule, err := p.ownRule(ctx, exclusionID, actor.UserID)
 	if err != nil {
 		return PurgeOutcome{}, err
@@ -81,7 +91,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	var subject capture.PurgeSubject
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
-		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value)
+		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, statutoryFloor())
 		return err
 	}); err != nil {
 		return PurgeOutcome{}, err
@@ -124,6 +134,22 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 			if err := capture.ReleaseImportTx(ctx, tx, id, actor.UserID); err != nil {
 				return err
 			}
+			// The write shape, on the arm that is easiest to forget: this
+			// removes a seat's ACCESS to a message — the import row is their
+			// hold on it and the participant row is what makes it readable — and
+			// without an audit row the question "who could read this, and when
+			// did that change" has no answer for exactly the messages somebody
+			// asked to be rid of.
+			if _, err := storekit.Audit(ctx, tx, "archive", "activity", id, nil, map[string]any{
+				"purge_reason": string(privacy.PurgeOwnerRule), "released_by": actor.UserID.String(),
+			}); err != nil {
+				return err
+			}
+			// No event of its own. The recompute below re-derives this
+			// message's audience across its remaining importers and emits
+			// activity.updated when that changes, which is the observable
+			// consequence of the release — a second event announcing the same
+			// change would be two answers to one question on the bus.
 			// The message's audience is derived across its importers, so
 			// dropping one changes what the rest ask for. Recomputing here is
 			// what stops a released message keeping a hold its only remaining
@@ -134,6 +160,27 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		}
 	}
 	return outcome, nil
+}
+
+// statutoryFloor hands capture the shield privacy spells once.
+//
+// Commercial correspondence inside its legal retention window is not the
+// owner's to destroy: the nightly evaluator refuses to touch it for six years,
+// and a purge that ignored the floor would be the one destructive path in the
+// tree that bypasses it. Capture cannot import privacy, so the predicate
+// travels rather than being written a second time — and a second copy is
+// exactly how one path stops shielding what the others do.
+func statutoryFloor() capture.StatutoryFloor {
+	interval, anchor := privacy.StatutoryFloorArgs()
+	return capture.StatutoryFloor{
+		// The predicate privacy hands out is the NEGATED form — it filters a
+		// destructive statement down to rows the law permits destroying. The
+		// purge needs the positive question ("must this be kept?"), so it is
+		// negated back here, where both halves are visible in one place.
+		Clause:   func(intervalArg, anchorArg int) string { return privacy.StatutoryFloorShield(intervalArg, anchorArg) },
+		Interval: interval,
+		Anchor:   anchor,
+	}
 }
 
 // ownRule reads the exclusion rule and refuses one that is not this seat's.

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // PurgeReason names why an owner is destroying records, recorded on every audit
@@ -74,6 +75,14 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 	// exactly the assumption that stops being true when somebody writes that
 	// second caller.
 	if err := auth.RequireHuman(ctx); err != nil {
+		return 0, err
+	}
+	// The OBJECT grant too. RequireHuman refuses an agent and reads no grant at
+	// all, so on its own it would let a read-only seat destroy correspondence:
+	// the sibling that erases a person for a subject request takes
+	// auth.Require(ctx, "person", ActionDelete) for the same act, and this is
+	// the same act on a different object.
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return 0, err
 	}
 	destroyed := 0
@@ -135,6 +144,10 @@ func (s *RetentionService) AnonymisePeople(ctx context.Context, people []ids.UUI
 	if err := auth.RequireHuman(ctx); err != nil {
 		return 0, err
 	}
+	// The same grant the subject-request eraser takes for the same act.
+	if err := auth.Require(ctx, "person", principal.ActionDelete); err != nil {
+		return 0, err
+	}
 	done := 0
 	for _, id := range people {
 		if err := s.anonymiseOnePerson(ctx, id, reason); err != nil {
@@ -163,4 +176,32 @@ func (s *RetentionService) anonymiseOnePerson(ctx context.Context, id ids.UUID, 
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "person", id,
 			retentionAppliedPayload(actionAnonymize, nil, nil))
 	})
+}
+
+// StatutoryFloorClause is the shield every destructive activity path applies,
+// handed out so a selection assembled OUTSIDE this module applies the same one.
+//
+// The predicate lives in retention_floor.go, and its comment says what happens
+// when a path skips it: correspondence the nightly evaluator
+// refuses to touch for six years gets destroyed anyway — a GoBD floor bypass.
+// The capture purge is such a path, and it cannot import this module, so the
+// clause travels to it rather than being written a second time.
+//
+// Held by: TestTheStatutoryFloorIsSpelledOnce (backend/gates/statutoryfloorsingle_test.go),
+// which fails when a second file spells the window comparison.
+//
+// The returned fragment is the POSITIVE form: it is TRUE for an activity
+// aliased `a` that the law still requires this installation to keep. A caller
+// deciding what it may destroy negates it; a caller deciding what to withhold
+// uses it as it stands. It expects the interval and the year-end anchor as the
+// next two positional arguments, in that order; StatutoryFloorArgs supplies
+// them.
+func StatutoryFloorShield(intervalArg, anchorArg int) string {
+	return handelsbriefShielded(intervalArg, anchorArg)
+}
+
+// StatutoryFloorArgs are the two values StatutoryFloorClause's placeholders
+// take, read from the installation's configured retention period.
+func StatutoryFloorArgs() (any, any) {
+	return statutoryFloorArgs()
 }
