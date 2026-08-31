@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionApprovals reads the staged queue through the engine every approval
@@ -133,15 +134,32 @@ func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct{ store *activities.Store }
 
-func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limit int) ([]attention.Task, error) {
+func (t attentionTasks) OpenForViewer(
+	ctx context.Context, until time.Time, limit int, mineOnly bool,
+) ([]attention.Task, error) {
 	// The store answers "open and due by then" itself, so the limit bounds the
 	// rows that QUALIFY. This used to read ten times the lane and narrow
 	// afterwards, which put the bound on the wrong set: a pile of completed
 	// tasks filled the scan, the overdue promise underneath never reached the
 	// reader, and the day rendered clear while the work was still there.
-	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{
-		OpenAndDueBy: &until, Limit: &limit,
-	})
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, Limit: &limit}
+	// Narrowed in the QUERY, so the store's own bound applies to the rows that
+	// qualify. Filtering the answer instead would let a colleague's twelve
+	// tasks fill the page and hide the reader's own overdue one behind them.
+	if mineOnly {
+		actor, ok := principal.Actor(ctx)
+		if !ok || actor.UserID.IsZero() {
+			// No human, no "own work" to answer for. Reading every task and
+			// calling the result theirs is the widening this narrowing exists
+			// to prevent.
+			return nil, nil
+		}
+		// Mine, or nobody's: a task the reader wrote themselves without an
+		// assignee is still theirs to do.
+		assignee := ids.From[ids.UserKind](actor.UserID)
+		in.OwnQueueOf = &assignee
+	}
+	rows, _, err := t.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err
 	}

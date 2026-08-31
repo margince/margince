@@ -79,10 +79,15 @@ type stubTasks struct {
 	// boundary rather than assume it. A pointer receiver only where it is
 	// read back; the value form stays valid for every test that ignores it.
 	until *time.Time
+	// mineOnly records whether the lane asked for the reader's own tasks, so a
+	// test can prove the narrowing reaches the QUERY rather than trusting that
+	// a filter ran afterwards.
+	mineOnly bool
 }
 
-func (s *stubTasks) OpenForViewer(_ context.Context, until time.Time, _ int) ([]Task, error) {
+func (s *stubTasks) OpenForViewer(_ context.Context, until time.Time, _ int, mineOnly bool) ([]Task, error) {
 	s.until = &until
+	s.mineOnly = mineOnly
 	return s.rows, s.err
 }
 

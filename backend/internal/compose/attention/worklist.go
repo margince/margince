@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // worklistPage is how many ranked items one read carries by default.
@@ -35,17 +36,76 @@ const worklistMaxPage = 100
 // The filter narrows what is CARRIED, never what is read: a source is read,
 // classified and then dropped, so the summary's figures describe the same day
 // whichever filter is applied.
-func (s *Service) Worklist(ctx context.Context, filter string, limit int) (crmcontracts.Worklist, error) {
-	day, err := s.Assemble(ctx)
+func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int) (crmcontracts.Worklist, error) {
+	// Resolved BEFORE the day is read: a reader asking for a scope they do not
+	// hold gets a refusal rather than a page assembled and then narrowed, and
+	// the read they were never entitled to make is not made.
+	resolved, err := resolveScope(ctx, scope)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	return s.worklistFrom(day, filter, limit)
+	// The producers that CAN be narrowed are narrowed in their own queries,
+	// not filtered afterwards: each store bounds what it returns, so a page
+	// full of colleagues' rows would hide the reader's own work behind a cut
+	// that had already happened.
+	reader := s
+	if mineOnly(resolved) {
+		reader = s.forReader()
+	}
+	day, err := reader.Assemble(ctx)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	out := s.worklistFrom(ctx, day, resolved, filter, limit)
+	out.Scope = crmcontracts.WorklistScope(resolved)
+	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
+	return out, nil
+}
+
+// keepReadersOwn drops the rows belonging to somebody else.
+//
+// It runs over the CANDIDATES, before the page is cut, so a reader asking for
+// twenty-five of their own rows gets twenty-five where they exist. Narrowing
+// after the cut returned a short page while the reader's own work sat just
+// past it.
+//
+// It fails CLOSED. A call with no human behind it has no "own work" to answer
+// for, and a queue that handed such a caller every row it had read would be
+// widening a scope named `mine` — the opposite of what it says. An agent that
+// needs the day reads it under a scope it can actually hold.
+//
+// The narrowing itself is a display cut, not the security boundary: the lanes
+// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
+// by default rather than what any store was asked. Pushing the filter into
+// each producer is the better shape and needs each to take an owner.
+func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return nil
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if ownedByReader(row.item, actor) {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// scopeOptions puts the resolver's answer on the wire.
+func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
+	out := make([]crmcontracts.WorklistScopeOptions, 0, len(options))
+	for _, option := range options {
+		out = append(out, crmcontracts.WorklistScopeOptions(option))
+	}
+	return out
 }
 
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
-func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit int) (crmcontracts.Worklist, error) {
+func (s *Service) worklistFrom(
+	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
+) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
 	}
@@ -53,7 +113,10 @@ func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit 
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
-	if filter != "" && filter != string(crmcontracts.All) {
+	if mineOnly(scope) {
+		rows = keepReadersOwn(ctx, rows)
+	}
+	if filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll) {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
@@ -71,7 +134,7 @@ func (s *Service) worklistFrom(day crmcontracts.Attention, filter string, limit 
 		narrowed := crmcontracts.WorklistFilter(filter)
 		out.Filter = &narrowed
 	}
-	return out, nil
+	return out
 }
 
 // page cuts the candidates to what one read carries.

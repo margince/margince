@@ -80,8 +80,14 @@ type RecordFace struct {
 }
 
 // Tasks is the open-task read, through the activities module.
+//
+// mineOnly asks the store for the READER'S OWN open tasks rather than every
+// task they may see. It belongs in the query and not in a filter afterwards:
+// the store bounds what it returns, so narrowing later would cut a colleague's
+// twelve rows out of a page of twelve and leave the reader's own overdue task
+// unreachable behind them.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, until time.Time, limit int) ([]Task, error)
+	OpenForViewer(ctx context.Context, until time.Time, limit int, mineOnly bool) ([]Task, error)
 }
 
 // Task is one piece of agreed work.

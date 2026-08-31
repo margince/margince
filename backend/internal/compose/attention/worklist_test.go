@@ -10,6 +10,7 @@ package attention
 // reads as clear when something that would have filled it was never read.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -320,10 +321,7 @@ func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 
-	out, err := (&Service{}).worklistFrom(day, "", 3)
-	if err != nil {
-		t.Fatalf("assembling the page: %v", err)
-	}
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3)
 
 	if out.Summary.Total != len(out.Queue) {
 		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))

@@ -78,6 +78,21 @@ type Service struct {
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
 	now   Clock
+	// mineOnly narrows the producers that can be narrowed to the acting
+	// reader's own work. Set per read (Assemble keeps the lane feed's
+	// behaviour; the ranked queue's default scope sets it), because the same
+	// service answers both surfaces.
+	mineOnly bool
+}
+
+// forReader returns a copy of this service that reads only the acting reader's
+// own work. A copy rather than a field mutation: one Service is shared by every
+// request, and a flag set on it would follow one reader's scope onto another
+// reader's page.
+func (s *Service) forReader() *Service {
+	narrowed := *s
+	narrowed.mineOnly = true
+	return &narrowed
 }
 
 // NewService binds the feed to its readers.
@@ -134,7 +149,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf)
+	planned, err := s.planned(ctx, asOf, s.mineOnly)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
@@ -280,8 +295,8 @@ func endOfDay(asOf time.Time) time.Time {
 }
 
 // planned is today's agreed work, overdue first.
-func (s *Service) planned(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap)
+func (s *Service) planned(ctx context.Context, asOf time.Time, mineOnly bool) ([]crmcontracts.AttentionItem, error) {
+	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, mineOnly)
 	if err != nil {
 		return nil, err
 	}
