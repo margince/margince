@@ -91,20 +91,27 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	}
 
 	// ORDER IS THE CONTRACT. `steps` is declared as "every setup step, in the
-	// order a reader should complete them", and onboarding walks it in the order
-	// it arrives: AI models, then the Google app. That is not cosmetic — a
-	// person who has bound no model cannot be shown a cold start, and the Gmail
-	// step is the one they can skip past without the product being unusable. A
-	// client sorting these itself would be re-deciding a sequence the server
-	// already owns, so the sequence is pinned by
+	// order a reader should complete them", and a client walks it in the order
+	// it arrives. A client sorting these itself would be re-deciding a sequence
+	// the server owns, so the sequence is pinned by
 	// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
 	//
-	// Both blocking, which is this installation's policy and the reason the
-	// field exists rather than being implied: a client that assumed "every step
-	// blocks" would have to be changed the day one of them stops.
+	// ONLY THE MODEL BINDING BLOCKS. Without one the product cannot perform the
+	// cold-start read that first run is, so there is nothing to let a reader
+	// through to. A Google app buys mailbox capture and nothing else: an
+	// installation signing in with passwords and no external provider is fully
+	// usable without one, so demanding it at the gate locked an operator with no
+	// Google app out of every route — the company profile is written from behind
+	// this gate, and its absence is what redirects them back to it.
+	//
+	// The app is configured from settings, where the card carries the redirect
+	// URIs Google's console asks for. The step stays in the report because that
+	// is what `blocking` is for: reporting it and calling it optional is the
+	// answer, and dropping it would make the two postures indistinguishable to a
+	// reader asking what is left to do.
 	steps := []crmcontracts.InstallationSetupStep{
 		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
-		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: true},
+		{Step: crmcontracts.InstallationSetupStepStepGoogleApp, Configured: googleReady, Blocking: false},
 	}
 	complete := true
 	for _, s := range steps {

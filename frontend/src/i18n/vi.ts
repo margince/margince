@@ -5946,6 +5946,10 @@ export const vi = {
   "googleApp.redirectTitle": "URI chuyển hướng được uỷ quyền",
   "googleApp.fromEnvironment":
     "Đang dùng từ cấu hình triển khai này: {clientId}. Lưu một ứng dụng tại đây sẽ thay thế nó trong thời gian còn lưu.",
+  "googleApp.clientId": "Client ID",
+  "googleApp.clientSecret": "Client secret",
+  "googleApp.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
@@ -5958,13 +5962,6 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
-  "firstRun.google.title": "Kết nối ứng dụng Google",
-  "firstRun.google.sub":
-    "Hộp thư được kết nối qua ứng dụng Google OAuth của bạn, nên thư được đọc bằng thông tin xác thực của tổ chức bạn. Có thể đổi sau trong Cài đặt.",
-  "firstRun.google.clientIdPlaceholder":
-    "000000000000-xxxx.apps.googleusercontent.com",
-  "firstRun.google.clientId": "Client ID",
-  "firstRun.google.clientSecret": "Client secret",
   "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
   "aiProviderKeys.sub":
     "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",

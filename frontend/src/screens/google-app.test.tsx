@@ -183,9 +183,9 @@ describe("the Google app card", () => {
     });
   });
 
-  // The secret cannot be read back, every mailbox is connected through this
-  // app, and removing it re-opens the first-run gate — so a stray click must
-  // not be enough.
+  // The secret cannot be read back and every mailbox is connected through this
+  // app, so removing it silently ends capture for the whole installation — a
+  // stray click must not be enough.
   it("deletes nothing until the removal is confirmed", async () => {
     const user = userEvent.setup();
     const { calls } = mount(stored());

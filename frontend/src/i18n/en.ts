@@ -6054,6 +6054,10 @@ export const en = {
   "googleApp.redirectTitle": "Authorized redirect URIs",
   "googleApp.fromEnvironment":
     "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
+  "googleApp.clientId": "Client ID",
+  "googleApp.clientSecret": "Client secret",
+  "googleApp.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
@@ -6066,13 +6070,6 @@ export const en = {
   "firstRun.ai.modelHint":
     "A starting point. The listed prices are per million tokens, in → out; any model id your provider serves will do.",
   "firstRun.ai.embedModel": "Embedding model",
-  "firstRun.google.title": "Connect a Google app",
-  "firstRun.google.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials. You can change this later under Settings.",
-  "firstRun.google.clientIdPlaceholder":
-    "000000000000-xxxx.apps.googleusercontent.com",
-  "firstRun.google.clientId": "Client ID",
-  "firstRun.google.clientSecret": "Client secret",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
   "aiProviderKeys.title": "Model provider keys",

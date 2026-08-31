@@ -50,9 +50,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // translating them here would have the form ask for something the page they
   // are copying from does not call by that name. The placeholder is an id
   // SHAPE rather than prose and is the same string everywhere.
-  "firstRun.google.clientId",
-  "firstRun.google.clientSecret",
-  "firstRun.google.clientIdPlaceholder",
+  "googleApp.clientId",
+  "googleApp.clientSecret",
+  "googleApp.clientIdPlaceholder",
   // "Embeddings" is the vocabulary of the routing document itself, which this
   // form renders raw beside `premium` and `gemini`. The host placeholder is a
   // URL, which is the same string in every language.
