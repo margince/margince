@@ -51,10 +51,12 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/relationships.tsx DELETE /relationships/{id}",
   "screens/contractform.tsx PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
+  // The two FACT writes stay: OrganizationFact carries no version on the wire,
+  // so no caller can pin one. Its sibling, CompanyProfileField, now does — the
+  // profile-field lines that used to sit here are gone because both verbs send
+  // the precondition.
   "screens/evidenceverdict.tsx PATCH /organizations/{id}/facts/{factKey}",
-  "screens/evidenceverdict.tsx PATCH /organizations/{id}/profile-fields/{field}",
   "screens/evidenceverdict.tsx POST /organizations/{id}/facts/{factKey}/confirm",
-  "screens/evidenceverdict.tsx POST /organizations/{id}/profile-fields/{field}/confirm",
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
   "screens/integrations-provider.tsx PATCH /provider-connections/{provider}",
   "screens/settings.tsx DELETE /stages/{id}",

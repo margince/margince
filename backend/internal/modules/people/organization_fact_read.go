@@ -119,7 +119,7 @@ func (s *Store) ListOrganizationProfileFields(ctx context.Context, id ids.Organi
 		rows, err := tx.Query(ctx, `
 			SELECT id, field, value, source, captured_by,
 			       evidence_snippet, source_url, confidence, retrieved_at,
-			       verified_at, verified_by, updated_at
+			       verified_at, verified_by, updated_at, version
 			  FROM organization_profile_field
 			 WHERE organization_id = $1
 			 ORDER BY field`,
@@ -137,7 +137,7 @@ func (s *Store) ListOrganizationProfileFields(ctx context.Context, id ids.Organi
 			if err := rows.Scan(&rowID, &field, &pf.Value, &source, &pf.CapturedBy,
 				&pf.EvidenceSnippet, &pf.SourceUrl, &pf.Confidence,
 				&pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy,
-				&pf.UpdatedAt); err != nil {
+				&pf.UpdatedAt, &pf.Version); err != nil {
 				return fmt.Errorf("scan organization profile field: %w", err)
 			}
 			// The row's own identity, so a dossier sentence written from this

@@ -2634,6 +2634,8 @@ export const de = {
   "field.addLegalName": "Rechtlichen Namen hinzufügen",
   "field.addIndustry": "Branche hinzufügen",
   "field.addLinkedinUrl": "LinkedIn-URL hinzufügen",
+  "field.addRegisterVat": "USt-IdNr. hinzufügen",
+  "field.addRegisteredAddress": "Registeranschrift hinzufügen",
   "field.addFullName": "Namen hinzufügen",
   "field.addTitle": "Titel hinzufügen",
   "field.addAddressLine1": "Straße und Hausnummer hinzufügen",

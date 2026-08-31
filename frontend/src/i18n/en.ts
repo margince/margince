@@ -2663,6 +2663,8 @@ export const en = {
   "field.addLegalName": "Add legal name",
   "field.addIndustry": "Add industry",
   "field.addLinkedinUrl": "Add LinkedIn URL",
+  "field.addRegisterVat": "Add VAT ID",
+  "field.addRegisteredAddress": "Add registered address",
   "field.addFullName": "Add name",
   "field.addTitle": "Add title",
   "field.addAddressLine1": "Add street and number",

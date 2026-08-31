@@ -10860,13 +10860,23 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Correct a profile field — the canonical value changes, the machine's proposal survives.
+         * State or correct a profile field — the canonical value changes, the machine's proposal survives.
          * @description DOSS-WIRE-4 / PO-AC-N-1. Where the field maps to a column on `organization`, THE COLUMN IS
          *     WHAT CHANGES; the sidecar keeps the machine's proposal, excerpt, source URL and confidence in
          *     history rather than overwriting them (PO-AC-N-2). A correction that changed only the sidecar
          *     would be a lie about having been accepted. Provenance flips to `human` with the acting
          *     principal and the timestamp; the whole thing commits as one mutation with its audit entry and
          *     its outboxed event.
+         *
+         *     A field with NO row yet is CREATED by this write, audited as a creation with no before-image.
+         *     Most of this vocabulary is only ever filled by a crawl that read a legal notice, and a company
+         *     whose site publishes none would otherwise hold a fact nobody could record. Originating a claim
+         *     is a human act: an agent principal still gets `404` here, because the write stamps
+         *     `verified_by` with the granting user and that would record a human verification of a value no
+         *     human saw. Correcting a claim that already exists stays open to an agent.
+         *
+         *     `404` therefore means the organization is unreachable, or — for the confirm operation, or for
+         *     an agent's first statement — that no such claim exists to answer for.
          */
         patch: operations["updateOrganizationProfileField"];
         trace?: never;
@@ -20336,6 +20346,11 @@ export interface components {
             confidence?: number | null;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: int64
+             * @description The row's version, for the `If-Match` a correction sends. The write path has always honoured the precondition; without the version on the read, no client could supply one, and two people correcting the same claim overwrote each other with no conflict and no trace.
+             */
+            readonly version?: number;
         };
         /**
          * @description Which system receives a company's mail, classified from its MX records. `other` is a

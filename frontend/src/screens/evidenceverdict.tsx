@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
@@ -45,6 +46,36 @@ export type EvidenceClaim = {
   correctPath: (value: string) => Promise<void>;
 };
 
+// The one read of a company's profile fields, and the one key everything that
+// writes them invalidates.
+//
+// Two surfaces show these claims — the Overview's own card and the record
+// rail's identity rows — and both write through the same endpoint. Spelled
+// twice, the two would drift the first time either added a `staleTime` or a
+// `select`, and the two surfaces would then disagree about a record they are
+// showing side by side.
+export function useOrgProfileFields(orgId: string) {
+  return useQuery({
+    queryKey: profileFieldsKey(orgId),
+    queryFn: async () => {
+      const { data, error } = await api.GET(
+        "/organizations/{id}/profile-fields",
+        { params: { path: { id: orgId } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data ?? [];
+    },
+  });
+}
+
+// React Query matches key segments exactly, so a near-miss spelling invalidates
+// nothing and a surface goes on showing a claim the human already settled.
+export function profileFieldsKey(orgId: string) {
+  return ["org-profile-fields", orgId] as const;
+}
+
 export function profileFieldClaim(
   orgId: string,
   field: ProfileField,
@@ -57,7 +88,12 @@ export function profileFieldClaim(
     confirmPath: async () => {
       const { error } = await api.POST(
         "/organizations/{id}/profile-fields/{field}/confirm",
-        { params: { path: { id: orgId, field: field.field } } },
+        {
+          params: {
+            path: { id: orgId, field: field.field },
+            ...ifMatch(requireVersion(field.version)),
+          },
+        },
       );
       if (error) {
         throwProblem(error);
@@ -67,7 +103,14 @@ export function profileFieldClaim(
       const { error } = await api.PATCH(
         "/organizations/{id}/profile-fields/{field}",
         {
-          params: { path: { id: orgId, field: field.field } },
+          params: {
+            path: { id: orgId, field: field.field },
+            // Both verbs pin the row they answer for. A confirmation is a human
+            // agreeing with a value they READ, so it is the verb a stale version
+            // damages most: agreeing with a claim that has since been corrected
+            // stamps a person's name on a value they never saw.
+            ...ifMatch(requireVersion(field.version)),
+          },
           body: { value },
         },
       );
@@ -135,9 +178,7 @@ export function EvidenceVerdict({
       // key segments exactly, so a near-miss spelling invalidates nothing and
       // the page keeps offering a verdict on a claim the human already settled.
       queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
-      queryClient.invalidateQueries({
-        queryKey: ["org-profile-fields", orgId],
-      }),
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
       queryClient.invalidateQueries({ queryKey: ["org-facts", orgId] }),
     ]);
   };
