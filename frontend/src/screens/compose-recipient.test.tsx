@@ -148,9 +148,17 @@ describe("ComposeModal recipient", () => {
     expect(screen.queryByText("dietmar@buyer.test")).toBeNull();
   });
 
-  it("keeps the recipient the reader typed", async () => {
-    // Answers slowly enough that the reader types first, which is the race
-    // this guards: a prefill landing after them must not replace their choice.
+  it("sends only to the address the reader typed, when they typed it first", async () => {
+    // RecipientField holds typed text in its OWN state until Enter, so `to`
+    // is still empty mid-word. A prefill landing in that window would be
+    // added, the reader's own address added on commit, and the reply sent to
+    // somebody they never chose.
+    //
+    // Two things prevent that and this asserts the OUTCOME rather than either
+    // mechanism: the first keystroke stops the offer (onEditing), and the
+    // fill itself never replaces a non-empty field. Neither alone is provable
+    // from here — with one removed the other still holds the outcome — so
+    // what is pinned is the field's final contents, which is what sends.
     let release: (() => void) | undefined;
     const held = new Promise<void>((resolve) => {
       release = resolve;
@@ -173,10 +181,44 @@ describe("ComposeModal recipient", () => {
 
     const user = userEvent.setup();
     const to = await screen.findByLabelText("To");
-    await user.type(to, "someone.else@buyer.test{Enter}");
+    // Typed but deliberately NOT committed — no Enter, no blur.
+    await user.type(to, "someone.else@buyer.test");
     release?.();
 
+    // Commit what was typed, the way a reader does, and assert the field
+    // holds ONLY their address. Asserting the absence mid-word would pass on
+    // a render that simply had not happened yet.
+    await user.keyboard("{Enter}");
     expect(await screen.findByText("someone.else@buyer.test")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText("dietmar@buyer.test")).toBeNull();
+    });
+  });
+
+  it("lets the reader remove the prefilled recipient and have it stay gone", async () => {
+    stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    const user = userEvent.setup();
+    expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: /dietmar@buyer.test/ }),
+    );
+
+    // Offering it again on the next render would make the field impossible to
+    // clear: the reader deletes it, the effect sees an empty field, and puts
+    // the same address straight back.
     await waitFor(() => {
       expect(screen.queryByText("dietmar@buyer.test")).toBeNull();
     });

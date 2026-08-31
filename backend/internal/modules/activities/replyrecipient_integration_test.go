@@ -366,3 +366,49 @@ func TestAddressingRefusesACallerWithoutThePersonReadGrant(t *testing.T) {
 		t.Errorf("reply-recipient answered 200 to a caller with no person read grant: %s", rec.Body.String())
 	}
 }
+
+func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+
+	// Privately captured by somebody else, so the person row is unreadable —
+	// and the message they wrote carries the address they wrote FROM, which is
+	// on the activity this caller already reached rather than on the person.
+	private := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Dietmar Rietsch', $2, 'owner', 'manual', 'human:x')`,
+		private, e.other); err != nil {
+		t.Fatalf("seeding the owner-private person: %v", err)
+	}
+	e.seedPersonEmail(t, private, "dietmar@buyer.test")
+	readable := e.linkPerson(t, anchor, "Anne Wiegert")
+	e.seedPersonEmail(t, readable, "anne@buyer.test")
+	e.participate(t, anchor, readable, "cc", nil)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_participant (activity_id, person_id, role, address)
+		VALUES ($1, $2, 'from', 'dietmar@buyer.test')`, anchor, private); err != nil {
+		t.Fatalf("stamping the corresponding address: %v", err)
+	}
+
+	got := recipientOf(e.as(principal.RowScopeAll), t,
+		e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
+
+	// The address is answered even though the person is not readable, and that
+	// is the honest outcome rather than a leak: it is on the message this
+	// caller can already open, and withholding it would refuse a reply to
+	// correspondence they are looking at.
+	if got.Address != "dietmar@buyer.test" {
+		t.Errorf("address = %q, want the address on the message itself", got.Address)
+	}
+	// The NAME cannot come from the withheld person, so it falls through to
+	// the readable contact — the two fields name two different people here.
+	// Worth pinning: a reader who assumed they were one person would greet
+	// the colleague and mail the sender.
+	if got.FullName != "Anne Wiegert" {
+		t.Errorf("full name = %q, want the readable Anne Wiegert — the withheld person cannot be named", got.FullName)
+	}
+	if got.FullName == "Dietmar Rietsch" {
+		t.Error("the withheld person was named through the drafting door")
+	}
+}

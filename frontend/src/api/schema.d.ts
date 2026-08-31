@@ -3104,11 +3104,23 @@ export interface paths {
          *     colleague is a message to ourselves.
          *
          *     Every field may be empty, and empty is an answer rather than a failure: a
-         *     message linked to nobody, a person this caller cannot read, a contact with no
-         *     live address, and a thread whose every participant is a colleague all answer
-         *     empty rather than guessing. Sending still requires `to` on the send request and
-         *     gates consent independently; this only saves typing an address the record
-         *     already holds.
+         *     message linked to nobody, a contact with no live address, and a thread whose
+         *     every participant is a colleague all answer empty rather than guessing.
+         *
+         *     The name and the address are withheld on DIFFERENT terms, so a caller may get
+         *     one without the other. Naming a person reads their record, so a person this
+         *     caller cannot read is not named. An address recorded on the message itself is
+         *     on correspondence they can already open, so it is answered whether or not the
+         *     person behind it is readable — which means the two fields can name two
+         *     different people, and a client that greets by `full_name` while sending to
+         *     `address` must not assume they are one.
+         *
+         *     A caller without the person read grant is refused outright (403) rather than
+         *     answered with empty fields; a caller who cannot see the message gets 404,
+         *     whether it is missing or merely withheld.
+         *
+         *     Sending still requires `to` on the send request and gates consent
+         *     independently; this only saves typing an address the record already holds.
          */
         get: operations["getReplyRecipient"];
         put?: never;
