@@ -310,6 +310,18 @@ func TestATaskArchivedUnderTheFiringIsNotAFailure(t *testing.T) {
 	if !e.isDone(t, sibling) {
 		t.Fatal("the firing stopped at the archived task and left its sibling open")
 	}
+	// And the archived task itself is left alone. Completing it would write an
+	// activity.updated event about a record that is no longer on any timeline,
+	// which is the opposite of the skip this branch exists for.
+	if e.isDone(t, task) {
+		t.Error("the firing completed a task that had been archived under it")
+	}
+	if events := e.completionEvents(t, task); events != 0 {
+		t.Errorf("the firing wrote %d activity.updated event(s) for an archived task", events)
+	}
+	if got.completed != 1 {
+		t.Errorf("the firing reports %d completions, want only the sibling", got.completed)
+	}
 }
 
 // blockedFiring is the shape all three race cases are: hold the task's row,
