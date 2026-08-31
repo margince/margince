@@ -6769,12 +6769,15 @@ export const de = {
     "Jeder Wert dieses Anbieters verschwindet von jedem Kontakt. Was du ausgegeben hast, bleibt in den Aufzeichnungen; die Daten nicht. Das lässt sich nicht rückgängig machen.",
   "provider.deleteDataConfirm.typed":
     "Zum Bestätigen den Namen des Anbieters eingeben",
-  "provider.autoEnrich": "Neue Kontakte automatisch anreichern",
-  "provider.autoEnrichHint":
-    "Wenn jemand einen Kontakt von Hand anlegt, dessen Daten gleich mitkaufen.",
-  "provider.autoImport": "Kontakte aus Verbindungen anreichern",
-  "provider.autoImportHint":
-    "Jedes Postfach, jeder Kanal und jede weitere Verbindung legt für jede erkannte Person einen Kontakt an — und jeder Kauf kostet Guthaben.",
+  "provider.automaticLookup": "Kontakte automatisch nachschlagen",
+  "provider.automaticLookupHint":
+    "Jeder Kontakt wird einmal nachgeschlagen, für die Angaben, die der Anbieter nicht berechnet: den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber, den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft — die kosten Guthaben und bleiben eine Entscheidung pro Kontakt.\n\nSchalten Sie das aus, wenn Ihre Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
+  "provider.backlog": "Noch nachzuschlagen",
+  "provider.backlogRemaining": "{count} Kontakte",
+  "provider.backlogWorking":
+    "Kontakte, die es beim Verbinden schon gab, werden nach und nach nachgeschlagen.",
+  "provider.backlogPaused":
+    "Zurzeit wird nichts nachgeschlagen: automatische Abfragen sind aus, das Tageslimit ist aufgebraucht, oder der Anbieter ist nicht nutzbar.",
   "provider.credits": "Restguthaben beim Anbieter",
   "provider.credits.none": "Der Anbieter hat uns noch keinen Stand genannt.",
   "provider.credits.notConnected":

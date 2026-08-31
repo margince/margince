@@ -141,16 +141,22 @@ export const ConnectDialog: Story = {
   },
 };
 
-// Both switches on: the state where a mailbox sync is also buying data, which
-// no other story draws. The two rows carry the same control at the same x, so
-// the only thing separating them is their labels — the picture worth having,
-// since a reader who misreads which one is on has misread the bill.
-export const OperatorEnrichingCapturedContacts: Story = {
+// An installation still working through the contacts it had before the provider
+// was connected. The count and the sentence under it are the picture worth
+// having: a figure alone stops moving for reasons this card would not explain,
+// so the row says whether the sweep is running or paused.
+export const OperatorCatchingUp: Story = {
   render: cardStory(OPERATOR, [
-    {
-      ...connected,
-      configuration: { ...connected.configuration, automatic_import: true },
-    },
+    { ...connected, lookup_backlog: { remaining: 1240, paused: false } },
+  ]),
+};
+
+// The same backlog, going nowhere. Every cause — the posture off, the day's
+// ceiling spent, a provider that stopped answering — reads identically as a
+// number that will not fall, which is why the card says so in words.
+export const OperatorCatchUpPaused: Story = {
+  render: cardStory(OPERATOR, [
+    { ...connected, lookup_backlog: { remaining: 1240, paused: true } },
   ]),
 };
 
