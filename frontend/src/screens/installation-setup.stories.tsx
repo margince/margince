@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { userEvent, waitFor, within } from "storybook/test";
 import { InstallationSetup } from "./installation-setup";
 import {
   installFetchStub,
@@ -134,10 +134,12 @@ export const ChoosingThePlatform: Story = {
 // The ignition, driven the way a reader reaches it: type a key, press Continue,
 // and the screen becomes the sequence rather than the next question.
 //
-// The capture lands at whatever the timeline has reached — the wash, the sealed
-// chip and the beats are `animation-delay`, so what a still frame shows depends
-// on when it was taken. Open it in Storybook to watch the whole thing, and flip
-// reduced motion on to see the end state it collapses to.
+// The play waits for the sequence to SETTLE before it hands back, because a
+// still frame taken partway through is a nearly empty column — every line here
+// arrives on an `animation-delay`, and the capture would show the one moment
+// that says least. Waiting on the last element's own opacity rather than on a
+// duration: the condition is "the sequence has finished", and a sleep long
+// enough to cover it today is a sleep that lies the day a beat moves.
 export const TheIgnition: Story = {
   ...BindingTheModel,
   play: async ({ canvasElement }) => {
@@ -148,6 +150,16 @@ export const TheIgnition: Story = {
     );
     await userEvent.click(
       await canvas.findByRole("button", { name: "Continue" }),
+    );
+    const carryOn = await canvas.findByRole("button", { name: "Carry on" });
+    await waitFor(
+      () => {
+        const settled = carryOn.closest(".ob-ig-go");
+        if (settled === null || getComputedStyle(settled).opacity !== "1") {
+          throw new Error("the ignition has not settled yet");
+        }
+      },
+      { timeout: 8000 },
     );
   },
 };

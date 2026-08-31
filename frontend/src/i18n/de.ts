@@ -6121,10 +6121,9 @@ export const de = {
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ignite.title": "Es hat einen Puls.",
   "firstRun.ignite.sub":
-    "Alles ab hier kann denken. Nichts ab hier handelt ohne Sie.",
+    "Der Schlüssel ist versiegelt und das Modell hat geantwortet. Was sich damit ändert:",
   "firstRun.ignite.sealed": "im Tresor versiegelt · {vendor}",
   "firstRun.ignite.reaching": "erreiche das Modell zum ersten Mal…",
-  "firstRun.ignite.pulse": "Alles ab hier kann denken.",
   "firstRun.ignite.canNow": "kann jetzt",
   "firstRun.ignite.cannot": "kann nicht",
   "firstRun.ignite.read": "Ihre Website lesen und sagen, was sie gefunden hat",

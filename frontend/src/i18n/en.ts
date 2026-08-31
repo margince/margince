@@ -6194,11 +6194,12 @@ export const en = {
   // at the moment it is drawn, and the last one is the one worth hearing while
   // the first two land: the product can think now, and it still cannot act.
   "firstRun.ignite.title": "It has a pulse.",
+  // The sub says what just happened; the list under it says what that changed.
+  // Neither repeats the other, and neither repeats the title.
   "firstRun.ignite.sub":
-    "Everything after this can think. Nothing after this acts without you.",
+    "The key is sealed and the model answered. Here is what that changes.",
   "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
   "firstRun.ignite.reaching": "reaching the model for the first time…",
-  "firstRun.ignite.pulse": "Everything after this can think.",
   "firstRun.ignite.canNow": "can now",
   "firstRun.ignite.cannot": "cannot",
   "firstRun.ignite.read": "read your website and tell you what it found",

@@ -6057,10 +6057,9 @@ export const vi = {
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.ignite.title": "Nó đã có nhịp đập.",
   "firstRun.ignite.sub":
-    "Từ đây trở đi nó có thể suy luận. Từ đây trở đi nó không tự hành động.",
+    "Khoá đã được niêm phong và mô hình đã trả lời. Điều đó thay đổi những gì:",
   "firstRun.ignite.sealed": "đã niêm phong trong vault · {vendor}",
   "firstRun.ignite.reaching": "đang gọi mô hình lần đầu…",
-  "firstRun.ignite.pulse": "Từ đây trở đi nó có thể suy luận.",
   "firstRun.ignite.canNow": "giờ có thể",
   "firstRun.ignite.cannot": "không thể",
   "firstRun.ignite.read": "đọc website của bạn và nói nó tìm được gì",

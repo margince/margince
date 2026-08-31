@@ -87,6 +87,7 @@ export function OnboardingStage({
   coreProgress,
   coreFeed,
   coreStateLabel,
+  coreFlash,
   coreScale = "hero",
   anchor = "center",
   progress,
@@ -106,6 +107,14 @@ export function OnboardingStage({
   coreProgress?: number;
   /** Context arriving at the Core. Off unless material really is arriving. */
   coreFeed?: boolean;
+  /**
+   * The Core's first light, washing the room once.
+   *
+   * For the one moment that earns it: an installation acquiring a model. It runs
+   * from the orb's own cell outward and does not repeat, so a caller sets it
+   * when that happens rather than holding it on.
+   */
+  coreFlash?: boolean;
   /**
    * How much room the Core takes: `hero` while it is the subject of the screen,
    * `work` once the reader has something of their own to attend to.
@@ -154,6 +163,14 @@ export function OnboardingStage({
         <StageBand progress={progress} coreStateLabel={coreStateLabel} />
       )}
       <div className="ob-stage-core">
+        {/* The Core's first light, and it is the STAGE's to place because the
+            Core's position is. Anchored to the orb's own cell rather than to a
+            remembered offset into the viewport: this layout is a centred grid,
+            so a percentage of the window is nowhere near the orb at most widths
+            and nowhere near it at all once the columns stack. */}
+        {coreFlash ? (
+          <span className="ob-stage-flash" aria-hidden="true" />
+        ) : null}
         <MarginceCoreScene
           state={coreState}
           progress={coreProgress}

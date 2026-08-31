@@ -17,8 +17,8 @@
  */
 
 .ob-ig {
-  --ig-wash: 2400ms;
-  --ig-room: 1600ms;
+  /* The one rung this block needs, named for the beat it times. The wash itself
+     belongs to the stage, beside the orb whose light it is. */
   --ig-beat: 2000ms;
   position: relative;
   display: flex;
@@ -26,47 +26,14 @@
   gap: var(--space-3);
 }
 
-/*
- * The first thing the orb ever did: a dot at the Core's own place in the stage,
- * expanding once past every edge.
- *
- * Positioned against the STAGE, not this block — the light comes from the orb,
- * which is in the other column — so it is `position: fixed` at the Core's
- * column centre. Fixed rather than absolute because the stage is a grid and an
- * absolutely-placed child of a grid item cannot reach across a column.
- */
-.ob-ig-flash {
-  position: fixed;
-  left: 22%;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  /* Centred on its own coordinate by the transform rather than by a negative
-     margin, so there is one place the dot's geometry is decided and the
-     keyframes below carry it through the scale. */
-  border-radius: var(--r-full);
-  pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--orbGlow) 78%, transparent),
-    transparent 70%
-  );
-  animation: ob-ig-wash var(--ig-wash) var(--ease-out) both;
-}
-@keyframes ob-ig-wash {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
+@keyframes ob-ig-rise {
+  from {
     opacity: 0;
+    transform: translateY(10px);
   }
-  10% {
-    opacity: 0.85;
-  }
-  100% {
-    /* Past every edge of every viewport this runs on. The wash does not stop at
-       a boundary, because it is the room filling rather than a shape growing. */
-    transform: translate(-50%, -50%) scale(300);
-    opacity: 0;
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -108,29 +75,6 @@
   }
   100% {
     opacity: 0.35;
-  }
-}
-
-/* The claim, at the size of a claim. It arrives with the room's light rather
-   than before it, so the sentence and the reason it is true land together. */
-.ob-ig-line {
-  margin: 0;
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-snug);
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
-  animation: ob-ig-rise var(--ig-room) var(--ease-out) 2600ms both;
-}
-
-@keyframes ob-ig-rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -189,12 +133,8 @@
    * what it says four seconds in — which is the whole content. A reader who has
    * asked not to be moved is not a reader who should be told less.
    */
-  .ob-ig-flash {
-    display: none;
-  }
   .ob-ig-sealed,
   .ob-ig-beat,
-  .ob-ig-line,
   .ob-ig-can li,
   .ob-ig-go {
     animation: none;

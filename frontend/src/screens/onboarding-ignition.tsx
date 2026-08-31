@@ -102,22 +102,17 @@ export function Ignition({
   const t = useT();
   return (
     <div className="ob-ig">
-      {/* The light arrives FROM the orb: a dot at the Core's own place in the
-          stage, expanding past the edges once. It is not the room's light — that
-          fades up underneath it and stays — it is the first thing the orb ever
-          did, and the room brightening is the consequence. */}
-      <span className="ob-ig-flash" aria-hidden="true" />
+      {/* The wash is the STAGE's — it comes from the orb, which is in the other
+          column, and the stage is what knows where the orb is. */}
       <p className="ob-ig-sealed">{t("firstRun.ignite.sealed", { vendor })}</p>
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}
       </p>
-      {/* One live region for the whole sequence, announcing the outcome rather
-          than each beat: a screen reader hearing three timed lines in four
-          seconds hears an interruption, not a ceremony. */}
-      <p className="ob-ig-line" role="status">
-        {t("firstRun.ignite.pulse")}
-      </p>
-      <ul className="ob-ig-can">
+      {/* One live region for the sequence, and it is the LIST: what changed is
+          what the installation can and cannot do, and a screen reader hearing
+          three timed lines in four seconds hears an interruption rather than a
+          ceremony. The headline above is the stage's and announces itself. */}
+      <ul className="ob-ig-can" role="status">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>
             <b>

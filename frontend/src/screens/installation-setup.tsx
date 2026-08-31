@@ -679,6 +679,7 @@ export function InstallationSetup() {
       lit={ignited !== null || modelBound(setup.data)}
       coreState={core}
       coreProgress={igniting.progress}
+      coreFlash={ignited !== null}
       // The Core is aria-hidden, so the band says in words what it is showing.
       // From `ob.core.*`, the vocabulary every onboarding surface reads: the
       // orb showing the same state on two screens must not read as two

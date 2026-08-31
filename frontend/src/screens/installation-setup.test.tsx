@@ -280,7 +280,7 @@ describe("the first-run setup gate", () => {
       expect(
         await screen.findByText(/sealed in the vault · Google Gemini/),
       ).toBeTruthy();
-      expect(screen.getByText("Everything after this can think.")).toBeTruthy();
+      expect(screen.getByText("It has a pulse.")).toBeTruthy();
       // And the one thing it may still not do, which is the point of saying any
       // of it here.
       expect(screen.getByText(/unless you say so/)).toBeTruthy();

@@ -180,6 +180,57 @@
 .ob-stage-core {
   display: flex;
   justify-content: center;
+  /* The frame the wash below is measured against. */
+  position: relative;
+}
+
+/*
+ * The Core's first light: a dot at the orb's own centre, crossing the room once.
+ *
+ * ANCHORED TO THE ORB'S CELL, not to a percentage of the window. This layout is
+ * a centred grid, so the orb's real position moves with every width and changes
+ * column entirely under 60rem — a remembered offset into the viewport is right
+ * at one width and wrong at all the others.
+ *
+ * It is the Core's act, so it lives with the Core rather than with the surface
+ * that triggers it. Behind the orb (`z-index: 0` inside this cell, which the
+ * canvas sits above) so the light comes from under the ball rather than over it.
+ */
+.ob-stage-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-full);
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--orbGlow) 78%, transparent),
+    transparent 70%
+  );
+  animation: ob-stage-flash 2400ms var(--ease-out) both;
+}
+@keyframes ob-stage-flash {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  100% {
+    /* Past every edge of every viewport this runs on: the room filling, not a
+       shape growing to a size. */
+    transform: translate(-50%, -50%) scale(300);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-stage-flash {
+    display: none;
+  }
 }
 
 /* The Core is the subject of this screen rather than a mark on it, so it runs
