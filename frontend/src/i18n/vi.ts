@@ -4721,7 +4721,7 @@ export const vi = {
   "auth.noticeSessionExpired":
     "Phiên của bạn đã hết hạn. Hãy đăng nhập lại để tiếp tục.",
   "auth.noticeOidcFailed":
-    "Đăng nhập bằng Google không thành công. Hãy thử lại hoặc dùng mật khẩu của bạn.",
+    "Đăng nhập bằng Google không thành công. Nếu bạn được mời, hãy mở liên kết trong email mời để hoàn tất thiết lập tài khoản.",
   "auth.connectionTitle": "Không kết nối được tới Margince",
   "auth.connectionBody":
     "Hãy kiểm tra kết nối rồi thử lại. Nếu vẫn vậy, có thể máy chủ đang khởi động lại.",
