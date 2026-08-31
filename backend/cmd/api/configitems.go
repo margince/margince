@@ -36,17 +36,20 @@ import (
 // connector-state HMAC key, the webhook sealing key and the /metrics bearer —
 // authenticates something.
 var apiPublic = map[string]bool{
-	"MARGINCE_CONFIG":                     true,
-	"MARGINCE_AI_ROUTING":                 true,
-	"MARGINCE_LOG_LEVEL":                  true,
-	"MARGINCE_LOG_FORMAT":                 true,
-	"MARGINCE_REDIS":                      true,
-	"MARGINCE_PUBLIC_BASE_URL":            true,
-	"MARGINCE_API_BASE_URL":               true,
-	"MARGINCE_MCP_APPS_BASE_URL":          true,
-	"MARGINCE_GMAIL_CLIENT_ID":            true,
-	"MARGINCE_GRAPH_CLIENT_ID":            true,
-	"MARGINCE_GRAPH_TENANT":               true,
+	"MARGINCE_CONFIG":            true,
+	"MARGINCE_AI_ROUTING":        true,
+	"MARGINCE_LOG_LEVEL":         true,
+	"MARGINCE_LOG_FORMAT":        true,
+	"MARGINCE_REDIS":             true,
+	"MARGINCE_PUBLIC_BASE_URL":   true,
+	"MARGINCE_API_BASE_URL":      true,
+	"MARGINCE_MCP_APPS_BASE_URL": true,
+	"MARGINCE_GMAIL_CLIENT_ID":   true,
+	"MARGINCE_GRAPH_CLIENT_ID":   true,
+	"MARGINCE_GRAPH_TENANT":      true,
+	// A directory id, like the tenant above: an identifier an operator reads
+	// off the Entra portal, not a credential.
+	"MARGINCE_MICROSOFT_SIGNIN_TENANT":    true,
 	"MARGINCE_GMAIL_JWKS_URL":             true,
 	"MARGINCE_GMAIL_PUSH_AUDIENCE":        true,
 	"MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT": true,

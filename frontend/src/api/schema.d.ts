@@ -111,6 +111,12 @@ export interface paths {
          *     PKCE S256). Sets a one-shot, `HttpOnly; Secure; SameSite=Lax` state cookie the
          *     callback consumes. An unconfigured or unknown provider answers 404 — an
          *     authentically absent flow, never a dead-ended redirect.
+         *
+         *     `microsoft` is offered only where the deployment pinned ONE Entra directory.
+         *     A sign-in matches the token's address to an existing member, and the
+         *     administrator of any tenant can set any of their own users' mail attribute to
+         *     any string — so a multi-tenant authority is refused at boot rather than
+         *     served here.
          */
         get: operations["startOidcSignIn"];
         put?: never;
@@ -25677,7 +25683,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "google";
+                provider: "google" | "microsoft";
             };
             cookie?: never;
         };
@@ -25704,7 +25710,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                provider: "google";
+                provider: "google" | "microsoft";
             };
             cookie?: never;
         };

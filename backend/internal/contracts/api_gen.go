@@ -12207,13 +12207,16 @@ func (e UploadAttachmentMultipartBodyEntityType) Valid() bool {
 
 // Defines values for OidcSignInCallbackParamsProvider.
 const (
-	OidcSignInCallbackParamsProviderGoogle OidcSignInCallbackParamsProvider = "google"
+	OidcSignInCallbackParamsProviderGoogle    OidcSignInCallbackParamsProvider = "google"
+	OidcSignInCallbackParamsProviderMicrosoft OidcSignInCallbackParamsProvider = "microsoft"
 )
 
 // Valid indicates whether the value is a known member of the OidcSignInCallbackParamsProvider enum.
 func (e OidcSignInCallbackParamsProvider) Valid() bool {
 	switch e {
 	case OidcSignInCallbackParamsProviderGoogle:
+		return true
+	case OidcSignInCallbackParamsProviderMicrosoft:
 		return true
 	default:
 		return false
@@ -12222,13 +12225,16 @@ func (e OidcSignInCallbackParamsProvider) Valid() bool {
 
 // Defines values for StartOidcSignInParamsProvider.
 const (
-	StartOidcSignInParamsProviderGoogle StartOidcSignInParamsProvider = "google"
+	StartOidcSignInParamsProviderGoogle    StartOidcSignInParamsProvider = "google"
+	StartOidcSignInParamsProviderMicrosoft StartOidcSignInParamsProvider = "microsoft"
 )
 
 // Valid indicates whether the value is a known member of the StartOidcSignInParamsProvider enum.
 func (e StartOidcSignInParamsProvider) Valid() bool {
 	switch e {
 	case StartOidcSignInParamsProviderGoogle:
+		return true
+	case StartOidcSignInParamsProviderMicrosoft:
 		return true
 	default:
 		return false

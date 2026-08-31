@@ -289,11 +289,17 @@ paths:
         PKCE S256). Sets a one-shot, `HttpOnly; Secure; SameSite=Lax` state cookie the
         callback consumes. An unconfigured or unknown provider answers 404 — an
         authentically absent flow, never a dead-ended redirect.
+
+        `microsoft` is offered only where the deployment pinned ONE Entra directory.
+        A sign-in matches the token's address to an existing member, and the
+        administrator of any tenant can set any of their own users' mail attribute to
+        any string — so a multi-tenant authority is refused at boot rather than
+        served here.
       parameters:
         - name: provider
           in: path
           required: true
-          schema: { type: string, enum: [google] }
+          schema: { type: string, enum: [google, microsoft] }
       responses:
         '302':
           description: Redirect to the provider's consent screen.
@@ -321,7 +327,7 @@ paths:
         - name: provider
           in: path
           required: true
-          schema: { type: string, enum: [google] }
+          schema: { type: string, enum: [google, microsoft] }
         - { name: code, in: query, schema: { type: string } }
         - { name: state, in: query, schema: { type: string } }
         - name: error

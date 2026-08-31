@@ -154,6 +154,13 @@ type Server struct {
 	// reader on the Worklist's notices lane.
 	noticesHandlers
 
+	// signInProviders accumulates the federated sign-in providers this
+	// deployment composed, in registration order. It exists because each
+	// provider arrives in its own Option while the identity handlers take the
+	// set as maps that are ASSIGNED — see signinregistry.go for why the union
+	// is rebuilt on every registration rather than merged in place.
+	signInProviders []signInProvider
+
 	// gmailPush is the Pub/Sub push webhook (built on the shared chassis,
 	// webhook.go), injected by WithGmailPush only when a subscription token
 	// is configured — the route is absent otherwise, never open.

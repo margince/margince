@@ -19,7 +19,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,46 +79,18 @@ func (cfg GoogleSignInConfig) Enabled() bool {
 // MissingFields names what's absent — used by cmd/api/googlesignin.go for
 // the three-state boot-log line.
 func (cfg GoogleSignInConfig) MissingFields() []string {
-	var missing []string
-	if cfg.ClientID == "" {
-		missing = append(missing, "client id")
-	}
-	if cfg.ClientSecret == "" {
-		missing = append(missing, "client secret")
-	}
-	if len(cfg.StateKey) < minStateKeyLen {
-		missing = append(missing, "state key (>=32B)")
-	}
-	if cfg.RedirectBase == "" {
-		missing = append(missing, "redirect base URL")
-	}
-	if cfg.PostLoginURL == "" {
-		missing = append(missing, "post-login URL")
-	}
-	if cfg.FailureURL == "" {
-		missing = append(missing, "failure URL")
-	}
-	return missing
-}
-
-// googleSignInMatchIdentity is the login flow's matchIdentity: the token's
-// audience must be the shared Gmail-capture client this deployment
-// configured. email_verified is checked by identity's own callback handler,
-// not here — the Pub/Sub push caller (oidcverify.go's other user of
-// googleOIDCVerifier) has no such requirement, so it is not baked into the
-// shared matchIdentity contract.
-func googleSignInMatchIdentity(clientID string) func(oidcClaims) error {
-	return func(c oidcClaims) error {
-		if c.Aud != clientID {
-			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-		}
-		return nil
-	}
+	// A conversion, not a field-by-field copy: this config IS the shared shape —
+	// Google's sign-in asks for no vendor knob of its own, where Microsoft's adds
+	// a directory. Spelling the fields out again would be a second place for the
+	// two to drift.
+	return signInFields(cfg).missingSignInFields()
 }
 
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
-// compose-level googleOIDCVerifier (generalized in oidcverify.go).
-type googleOIDCVerifierAdapter struct{ v *googleOIDCVerifier }
+// compose-level oidcTokenVerifier (generalized in oidcverify.go). Google's own
+// adapter because it reads Google's own `email_verified` claim; Microsoft
+// issues no such claim and carries its own adapter (microsoftsignin.go).
+type googleOIDCVerifierAdapter struct{ v *oidcTokenVerifier }
 
 func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error) {
 	claims, err := a.v.Verify(ctx, idToken)
@@ -127,13 +98,6 @@ func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (
 		return "", "", false, err
 	}
 	return claims.Email, claims.Sub, claims.EmailVerified, nil
-}
-
-// googleTokenExchangerAdapter satisfies identity.OIDCExchanger.
-type googleTokenExchangerAdapter struct{ ex googleTokenExchanger }
-
-func (a googleTokenExchangerAdapter) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
-	return a.ex.Exchange(ctx, code, codeVerifier, redirectURI)
 }
 
 // loginStateSignerAdapter satisfies identity.OIDCStateSigner over
@@ -150,24 +114,6 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 		return "", "", "", err
 	}
 	return st.Provider, st.Nonce, st.CodeVerifier, nil
-}
-
-// signInRedirectBase is the origin the sign-in callback is served on: the
-// deployment's own, plus the `/v1` the API mounts its contract under.
-//
-// It is used twice — once to WIRE the routes and once to tell an operator what
-// to register — and the two must be the same bytes, or the value they paste into
-// the Google console fails the very flow it was meant to enable.
-//
-// Held by: TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured and
-// TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends
-// (internal/compose/googleappredirect_test.go), which compare the two in both
-// directions.
-func signInRedirectBase(cfg GoogleSignInConfig) string {
-	if cfg.RedirectBase == "" {
-		return ""
-	}
-	return strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1"
 }
 
 // WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when cfg
@@ -187,7 +133,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// them: RedirectBase is this deployment's own externally-reachable
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
-		if base := signInRedirectBase(cfg); base != "" {
+		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
 			s.redirectURIs = append(s.redirectURIs, crmcontracts.GoogleAppRedirectUri{
 				Purpose: crmcontracts.SignIn,
 				Url:     identity.SignInRedirectURI(base, googleProviderKey),
@@ -196,31 +142,15 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		if !cfg.Enabled() {
 			return
 		}
-		providers := map[string]identity.OIDCProviderConfig{
-			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
-		}
-		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))}
-		exchanger := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}}
-		signer := loginStateSignerAdapter{s: newLoginStateSigner([]byte(cfg.StateKey))}
-
-		s.authHandlers = s.WithOIDCProviders(
-			providers,
-			map[string]identity.OIDCVerifier{googleProviderKey: verifier},
-			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
-			signer,
-			identity.OIDCRoutes{
-				RedirectBase: signInRedirectBase(cfg),
-				PostLoginURL: cfg.PostLoginURL,
-				FailureURL:   cfg.FailureURL,
-			},
-		)
-		configured := []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
-		s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, identity.NewService(pool), configured))
-		// The settings screen needs the same list, so an admin sees the providers
-		// this deployment can actually offer rather than a free-text field. Set
-		// HERE rather than in assembly because only this option knows what was
-		// composed, and options run after the handlers are assembled.
-		s.configuredProviders = configured
+		registerSignInProvider(s, pool, signInProvider{
+			config:    identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
+			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, audienceIs(cfg.ClientID))},
+			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
+		}, identity.OIDCRoutes{
+			RedirectBase: signInRedirectBase(cfg.RedirectBase),
+			PostLoginURL: cfg.PostLoginURL,
+			FailureURL:   cfg.FailureURL,
+		}, cfg.StateKey)
 	}
 }
 

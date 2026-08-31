@@ -85,13 +85,18 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 	}
 }
 
-func TestGoogleSignInMatchIdentityChecksAudience(t *testing.T) {
-	match := googleSignInMatchIdentity("cid")
+// The audience check is shared by every provider — a token minted for another
+// app's client id says nothing about who may sign in here, whoever issued it.
+func TestTheAudienceCheckRefusesAnotherAppsToken(t *testing.T) {
+	match := audienceIs("cid")
 	if err := match(oidcClaims{Aud: "cid"}); err != nil {
 		t.Fatalf("match(correct aud) = %v, want nil", err)
 	}
 	if err := match(oidcClaims{Aud: "someone-elses-client"}); err == nil {
 		t.Fatal("expected a mismatch to be rejected")
+	}
+	if err := match(oidcClaims{}); err == nil {
+		t.Fatal("a token naming no audience at all was accepted")
 	}
 }
 
@@ -129,7 +134,7 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	adapter := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}}
+	adapter := oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}}
 	idToken, err := adapter.Exchange(context.Background(), "code", "verifier", "https://app.example.com/cb")
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)

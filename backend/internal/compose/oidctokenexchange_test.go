@@ -25,7 +25,7 @@ func TestGoogleTokenExchangeParsesIDToken(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
+	ex := oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
 	idToken, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/v1/auth/oidc/google/callback")
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)
@@ -42,7 +42,7 @@ func TestGoogleTokenExchangeRejectsMissingIDToken(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
+	ex := oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
 	if _, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb"); err == nil {
 		t.Fatal("expected an error for a response with no id_token")
 	}
@@ -56,7 +56,7 @@ func TestGoogleTokenExchangeRejectsNonOKStatus(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
+	ex := oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
 	if _, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb"); err == nil {
 		t.Fatal("expected an error for a non-200 response")
 	}
@@ -67,7 +67,7 @@ func TestGoogleTokenExchangeRejectsUnreachableEndpoint(t *testing.T) {
 	url := srv.URL
 	srv.Close() // the endpoint is now unreachable; client.Do must fail
 
-	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: url, HTTPClient: srv.Client()}
+	ex := oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: url, HTTPClient: srv.Client()}
 	if _, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb"); err == nil {
 		t.Fatal("expected an error for an unreachable token endpoint")
 	}
@@ -80,7 +80,7 @@ func TestGoogleTokenExchangeRejectsMalformedJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
+	ex := oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}
 	if _, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb"); err == nil {
 		t.Fatal("expected an error for a malformed response body")
 	}
@@ -93,7 +93,7 @@ func TestGoogleTokenExchangeDefaultsHTTPClientWhenNil(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ex := googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL}
+	ex := oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL}
 	idToken, err := ex.Exchange(t.Context(), "auth-code", "verifier-xyz", "https://app.example.com/cb")
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)
