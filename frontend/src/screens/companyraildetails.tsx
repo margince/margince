@@ -19,6 +19,7 @@ import {
   useCompanyReadOnlyReason,
 } from "./companyheader";
 import { SIZE_BAND_OPTIONS } from "./companylookups";
+import { VatMark } from "./companyvatmark";
 import { profileFieldsKey, useOrgProfileFields } from "./evidenceverdict";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
@@ -508,6 +509,12 @@ function SidecarFieldRow({
         readOnlyReason={readOnlyReason}
         onSave={save}
       />
+      {/* The register's verdict beside the number it answers for. Only once a
+          number exists: a mark on an empty field would say the register had
+          declined to recognise something nobody has stated. */}
+      {field === "register_vat" && current?.value && (
+        <VatMark orgId={orgId} stated={current.value} />
+      )}
     </FieldRow>
   );
 }

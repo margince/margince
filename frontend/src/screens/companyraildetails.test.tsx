@@ -71,7 +71,7 @@ afterEach(() => {
 // invitation to hide in the first place.
 function stub(
   profileFields: readonly ProfileField[] = [],
-  answers: { patch?: () => Response } = {},
+  answers: { patch?: () => Response; vatCheck?: () => Response } = {},
 ) {
   const calls: {
     method: string;
@@ -96,6 +96,19 @@ function stub(
       }
       if (pathname.endsWith("/profile-fields")) {
         return json({ data: profileFields });
+      }
+      // The verdict the VAT mark reads. Answered here rather than left to fall
+      // through: the mark draws NOTHING until this settles, so a stub that gave
+      // it a list shape would render no mark and a test asserting its absence
+      // would pass for the wrong reason.
+      if (pathname.endsWith("/vat-check")) {
+        return (
+          answers.vatCheck?.() ??
+          new Response(JSON.stringify({ title: "not found" }), {
+            status: 404,
+            headers: { "content-type": "application/json" },
+          })
+        );
       }
       if (request.method === "PATCH") {
         return answers.patch?.() ?? json({});
@@ -155,7 +168,7 @@ function renderGrid(organization: Organization) {
 async function renderSettledGrid(
   organization: Organization,
   profileFields: readonly ProfileField[] = [],
-  answers: { patch?: () => Response } = {},
+  answers: { patch?: () => Response; vatCheck?: () => Response } = {},
 ) {
   const calls = stub(profileFields, answers);
   renderGrid(organization);
@@ -177,6 +190,62 @@ describe("the legal identity a person can state", () => {
     expect(screen.getByText("Add registered address")).toBeVisible();
     expect(screen.getByText("Register / VAT ID")).toBeVisible();
     expect(screen.getByText("Registered address")).toBeVisible();
+  });
+
+  // The defect the whole move is about: this verdict used to live on another
+  // tab behind a collapsed section, so a reader looking straight at the number
+  // never met it. A test that only proved the mark RENDERS would have passed
+  // for the old surface too — what has to be held is that it renders HERE.
+  it("carries the register's verdict beside the number it answers for", async () => {
+    await renderSettledGrid(
+      ORG,
+      [profileField("register_vat", "DE811907980")],
+      {
+        vatCheck: () =>
+          json({
+            organization_id: "o-1",
+            vat_number: "DE811907980",
+            status: "valid",
+            checked_at: "2026-08-14T09:12:00Z",
+          }),
+      },
+    );
+
+    // In the same row as the number, which is the entire point.
+    const mark = await screen.findByRole("button", { name: "VAT ID: Valid" });
+    const row = screen.getByText("DE811907980").closest(".fieldgrid-value");
+    expect(row).toContainElement(mark);
+  });
+
+  it("carries no verdict on the registry address, which no register answers for", async () => {
+    // BOTH sidecar fields, and the VAT one answered: the mark draws nothing
+    // until its read settles, so a fixture with only the address would find no
+    // mark whether or not the field guard exists. Waiting for the VAT mark to
+    // appear is what makes the address's own absence a settled fact.
+    await renderSettledGrid(
+      ORG,
+      [
+        profileField("register_vat", "DE811907980"),
+        profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
+      ],
+      {
+        vatCheck: () =>
+          json({
+            organization_id: "o-1",
+            vat_number: "DE811907980",
+            status: "valid",
+            checked_at: "2026-08-14T09:12:00Z",
+          }),
+      },
+    );
+    await screen.findByRole("button", { name: "VAT ID: Valid" });
+
+    // Exactly one mark on the panel, and it is not the address's.
+    expect(screen.getAllByRole("button", { name: /VAT ID:/ })).toHaveLength(1);
+    const addressRow = screen
+      .getByText("Kaiserdamm 1, 14057 Berlin")
+      .closest(".fieldgrid-value");
+    expect(addressRow?.querySelector('[class*="vatmark"]')).toBeNull();
   });
 
   it("reads back the values the crawl already found", async () => {

@@ -1765,9 +1765,10 @@ export const vi = {
   "co.factField.email_security": "Xác thực thư",
   "co.factField.hosting_provider": "Lưu trữ",
   "co.factField.operated_service": "Dịch vụ vận hành",
-  "co.vat.title": "Mã số thuế GTGT",
-  "co.vat.sub":
-    "Câu trả lời của sổ đăng ký thuế GTGT của EU về mã số thuế của công ty này, kèm bằng chứng đã tra cứu.",
+  "co.vat.markVerdict": "Mã số thuế GTGT: {verdict}",
+  "co.vat.markUnchecked": "Mã số thuế GTGT: chưa tra cứu tại cơ quan đăng ký",
+  "co.vat.numberMoved":
+    "Mã số trên hồ sơ đã thay đổi kể từ lần tra cứu này. Hãy tra cứu lại để kiểm tra mã số mới.",
   "co.vat.verdict": "Câu trả lời của sổ đăng ký",
   "co.vat.number": "Mã số đã tra cứu",
   "co.vat.registeredName": "Đăng ký cho",

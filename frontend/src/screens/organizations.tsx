@@ -99,7 +99,6 @@ import {
 } from "./companytab";
 import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
 import { TodayOnThisAccount } from "./companytoday";
-import { VatCheckCard } from "./companyvatcheck";
 import {
   CompanyWorkCard,
   hasWorkInFlight,
@@ -3197,13 +3196,14 @@ function ReferenceDisclosures({
       <Disclosure summary={t("co.profile.title")}>
         <ProfileFieldsCard orgId={org.id} onOpenHistory={onOpenHistory} />
       </Disclosure>
-      {/* Directly under the profile, because this VERIFIES one of its fields:
-          the register's answer is only meaningful next to the USt-IdNr. the
-          imprint stated, and a reader who has just read that number is the one
-          who wants to know whether it holds up. */}
-      <Disclosure summary={t("co.vat.title")}>
-        <VatCheckCard orgId={org.id} />
-      </Disclosure>
+      {/* The VAT verdict is NOT here. It used to be, one disclosure under the
+          profile, on the reasoning that a reader who had just read the number
+          wanted to know whether it held up — which was right about the reader
+          and wrong about where they are. The number itself lives in the record
+          rail, two tabs from this card and behind a fold, so somebody looking
+          straight at a VAT ID never met the thing that checks it. The verdict
+          is now a mark beside the number (companyvatmark.tsx), which is the
+          only place both facts are in one glance. */}
       {/* Documents are deliberately NOT here: they have their own tab, and a
           reader given the same list in two places has two lists to
           reconcile. */}

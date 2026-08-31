@@ -1779,9 +1779,10 @@ export const de = {
   "co.factField.email_security": "Mail-Authentifizierung",
   "co.factField.hosting_provider": "Hosting",
   "co.factField.operated_service": "Dienst",
-  "co.vat.title": "USt-IdNr.",
-  "co.vat.sub":
-    "Was das MIAS-Register der EU zur USt-IdNr. dieser Firma gesagt hat — und der Nachweis, dass gefragt wurde.",
+  "co.vat.markVerdict": "USt-IdNr.: {verdict}",
+  "co.vat.markUnchecked": "USt-IdNr.: noch nicht beim Register abgefragt",
+  "co.vat.numberMoved":
+    "Die Nummer auf diesem Datensatz hat sich seit dieser Abfrage geändert. Fragen Sie erneut ab, um die neue zu prüfen.",
   "co.vat.verdict": "Antwort des Registers",
   "co.vat.number": "Abgefragte Nummer",
   "co.vat.registeredName": "Eingetragen auf",
