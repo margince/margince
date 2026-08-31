@@ -285,12 +285,18 @@ func (s *Store) completeSystemTask(ctx context.Context, id ids.ActivityID, versi
 		if err == nil {
 			return true, nil
 		}
+		if errors.Is(err, apperrors.ErrNotFound) {
+			// Archived between the selection and the write: the row lock is
+			// taken live, so a task that has gone answers not-found. There is
+			// no task to finish and nothing here went wrong — failing the
+			// firing would strand every OTHER task it selected.
+			return false, nil
+		}
 		if !errors.Is(err, apperrors.ErrVersionSkew) {
 			return false, err
 		}
 		current, err := s.GetActivity(ctx, id, storekit.LiveOnly)
 		if errors.Is(err, apperrors.ErrNotFound) {
-			// Archived under us: there is no task to finish.
 			return false, nil
 		}
 		if err != nil {

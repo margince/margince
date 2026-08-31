@@ -380,6 +380,68 @@ func TestAnEditUnderTheFiringDoesNotLeaveTheTaskOpen(t *testing.T) {
 	}
 }
 
+// A task archived between the selection and the write is gone, not a failure.
+// The row lock is taken live, so the completion answers not-found — and
+// failing the firing on it would strand every other task the same call
+// selected.
+func TestATaskArchivedUnderTheFiringIsNotAFailure(t *testing.T) {
+	e := setupResolve(t)
+	task := e.seedTask(t, "system", "system")
+	other := e.seedTask(t, "system", "system")
+	ctx := e.systemCtx()
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+
+	blocking, err := e.owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := blocking.Exec(context.Background(),
+		`SELECT id FROM activity WHERE id = $1 FOR UPDATE`, task); err != nil {
+		t.Fatal(err)
+	}
+
+	firing := make(chan firingResult, 1)
+	go func() {
+		completed, err := store.CompleteOpenSystemTasksForLead(ctx, ids.From[ids.LeadKind](e.lead))
+		firing <- firingResult{completed, err}
+	}()
+	t.Cleanup(func() {
+		//craft:ignore swallowed-errors the lock is normally released by the Commit below and this rollback is then a designed no-op; on the failure paths it is the release itself, and a failing release could tell this test nothing its own assertions have not
+		_ = blocking.Rollback(context.Background())
+		select {
+		case <-firing:
+		case <-time.After(10 * time.Second):
+			t.Error("the firing never returned after the lock was released")
+		}
+	})
+
+	e.waitForBlockedWriter(t, firing)
+
+	if _, err := blocking.Exec(context.Background(),
+		`UPDATE activity SET archived_at = now() WHERE id = $1`, task); err != nil {
+		t.Fatal(err)
+	}
+	if err := blocking.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	var got firingResult
+	select {
+	case got = <-firing:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the firing never returned after the archive committed")
+	}
+	firing <- got
+
+	if got.err != nil {
+		t.Fatalf("a task that went away failed the firing: %v", got.err)
+	}
+	// The OTHER task is the point: a failure here would have stranded it.
+	if !e.isDone(t, other) {
+		t.Fatal("the firing stopped at the archived task and left its sibling open")
+	}
+}
+
 // firingResult is one CompleteOpenSystemTasksForLead call's answer, carried
 // back from the goroutine that raced.
 type firingResult struct {
