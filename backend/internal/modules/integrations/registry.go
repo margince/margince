@@ -66,12 +66,47 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 				return nil, fmt.Errorf("integrations: provider %q declares category %q with no cost entry: price it, or declare it free with an empty one", d.Name, category)
 			}
 		}
+		if err := pricesOnlyDeclaredPools(d); err != nil {
+			return nil, err
+		}
 		if d.EgressHost == "" {
 			return nil, fmt.Errorf("integrations: provider %q declared no egress host", d.Name)
 		}
 		r.adapters[d.Name] = a
 	}
 	return r, nil
+}
+
+// pricesOnlyDeclaredPools refuses an adapter whose cost table names a pool it
+// never declared.
+//
+// The reservation is keyed by the pools CostTable produces and the settlement
+// is keyed by the pools the adapter reports having spent. Nothing makes those
+// two vocabularies agree, and a mismatch is silent in the direction that costs
+// money: reconcile finds no figure for a held pool and, on per-successful-result
+// billing, releases it — so the customer's monthly ceiling is credited back a
+// charge the vendor kept, and later runs spend it twice.
+//
+// CreditPools is the adapter's own statement of what it bills in, so it is the
+// declaration to hold both sides to. Checked at registration, where an author
+// finds out immediately rather than through a ledger that quietly drifts.
+func pricesOnlyDeclaredPools(d provider.Descriptor) error {
+	declared := make(map[provider.Pool]bool, len(d.CreditPools))
+	for _, pool := range d.CreditPools {
+		declared[pool] = true
+	}
+	for category, cost := range d.CostTable {
+		for pool := range cost {
+			if !declared[pool] {
+				return fmt.Errorf(
+					"integrations: provider %q prices category %q in pool %q, which it does not declare in CreditPools: "+
+						"a hold taken in an undeclared pool cannot be matched to what the vendor reports spending, and "+
+						"settles as a refund of a charge they kept",
+					d.Name, category, pool)
+			}
+		}
+	}
+	return nil
 }
 
 // Names returns the registered providers in a stable order, so a settings

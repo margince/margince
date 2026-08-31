@@ -124,6 +124,12 @@ function ProviderPanel({
   // button that guessed the free set could ask for a priced category and
   // spend without saying so.
   const free = freeCategories(connections.data?.connections, profile.provider);
+  // `isPending` is the FIRST load only — it stays false through a background
+  // refetch, so a button the reader is looking at never goes dead under them.
+  // Testing `data === undefined` instead would hold the button forever when the
+  // query settles as an error, which is a different fact and has its own
+  // refusal to show.
+  const catalogPending = connections.isPending;
   // Nobody has looked this contact up yet, so the panel has no values to show
   // and the small header button is the only way to change that. An empty plate
   // that names the action instead: the reader came here to buy data, and a
@@ -169,6 +175,7 @@ function ProviderPanel({
             profile={profile}
             enrich={enrich}
             free={free}
+            catalogPending={catalogPending}
             // This contact has already been looked up, so the press is a
             // RE-CHECK: same free details, asked again because a job may have
             // changed. The empty-state twin below is the first lookup and says
@@ -197,6 +204,7 @@ function ProviderPanel({
                 profile={profile}
                 enrich={enrich}
                 free={free}
+                catalogPending={catalogPending}
               />
             }
           >
@@ -531,10 +539,14 @@ function EnrichNow({
   profile,
   enrich,
   free,
+  catalogPending,
   recheck = false,
   small = false,
 }: Readonly<{
   free: string[];
+  // Whether the connection catalog has answered yet. Separate from `free`
+  // being empty, which a connection selling nothing free also produces.
+  catalogPending: boolean;
   personId: string;
   profile: Profile;
   enrich: ReturnType<typeof useEnrichRun>;
@@ -556,21 +568,25 @@ function EnrichNow({
       type="button"
       pending={enrich.isPending}
       busyLabel={t("provider.profile.lookingUp")}
+      // Held while the catalog is still in flight, because that is the window
+      // where `free` is empty for a reason that is not "nothing is free".
+      // Pressing then used to omit the category list, and an omitted list asks
+      // the server for the connection's whole PERMITTED selection with the
+      // priced ones in it (runcategories.go) — a work email bought under a
+      // button labelled free, and the wider an admin sets the selection the
+      // more it costs.
+      disabled={catalogPending}
       // A profile carries no provider name until a run exists, so the first
       // lookup on a contact names the one the contract has.
-      // The FREE categories, named. Sending none asks for the connection's
-      // whole selection, priced ones included — a button that spends without
-      // saying so, which is the thing the split exists to prevent. Every
-      // purchase now states its price, and this one states that there is none.
       onClick={() =>
         enrich.mutate({
           personId,
           provider: profile.provider ?? "surfe",
-          // Omitted rather than empty while the catalog is still loading: an
-          // empty list asks for nothing at all, and the contract's minItems
-          // refuses it. Omitting falls back to the connection's own selection,
-          // which is what this button did before the free set existed.
-          categories: free.length > 0 ? free : undefined,
+          // The free categories, NAMED, and never omitted. A connection that
+          // really sells nothing free sends an empty list, which the contract
+          // refuses with 422 (minItems) — a refusal the reader can see, rather
+          // than a purchase they cannot.
+          categories: free,
         })
       }
     >

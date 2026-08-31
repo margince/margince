@@ -6758,7 +6758,8 @@ export const en = {
     "Not bought: the credit budget for this month is spent.",
   "provider.profile.rateLimited":
     "Not bought: the provider asked us to slow down.",
-  "provider.profile.providerError": "The provider could not answer.",
+  "provider.profile.providerError":
+    "The provider failed on its last call, so automatic lookups are held back. Press the free check below — one that gets through clears this by itself.",
   "provider.profile.submissionUnknown":
     "We never learned how this lookup ended. It may have been charged for.",
   "provider.profile.claimsUnwritten":

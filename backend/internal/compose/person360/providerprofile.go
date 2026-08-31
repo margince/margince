@@ -181,7 +181,7 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		profile.ContributingRuns = providerPtr(contributingRuns(runs))
 		if s.providers != nil {
 			if desc, err := s.providers.Descriptor(name); err == nil {
-				profile.CategoriesNotRequested = categoriesNotRequested(desc, latest.requested)
+				profile.CategoriesNotRequested = categoriesNotRequested(desc, runs, claims)
 				if answerable(latest) {
 					delivered := deliveredKeys(latest.id, claims)
 					profile.CategoriesAsked = providerPtr(asked(desc, latest.requested, delivered))
@@ -305,16 +305,43 @@ func contributingRuns(runs []providerRunRow) []crmcontracts.ProviderRun {
 	return out
 }
 
-// categoriesNotRequested is what nobody asked for — the difference between
-// the provider's full vocabulary and what the latest run was authorized to
-// request. It is the page's answer to a blank field: "we never asked" is a
-// different fact from "we asked and they had nothing", and only this list
-// tells them apart.
-
-func categoriesNotRequested(desc provider.Descriptor, requested []string) []string {
-	asked := make(map[string]bool, len(requested))
-	for _, c := range requested {
-		asked[c] = true
+// categoriesNotRequested is what nobody asked for — the difference between the
+// provider's full vocabulary and what has been requested for this contact. It
+// is the page's answer to a blank field: "we never asked" is a different fact
+// from "we asked and they had nothing", and only this list tells them apart.
+//
+// An EARLIER run counts only where its answer is still on the page. Reading the
+// latest run alone made the section contradict itself — buy a mobile for
+// somebody whose profile link was bought last week, and this line named the
+// profile link as never requested while the profile link was printed two inches
+// above it. Counting every earlier run instead would open the opposite gap:
+// categories_without_answer is the LATEST run's receipt by contract, so a
+// category an older run asked about and got nothing for would leave this list
+// without entering that one, and vanish from the page entirely.
+//
+// Delivering a claim is the test that closes both. A category whose value the
+// reader can see is plainly not one nobody asked for, and a category with
+// nothing to show stays here — which is the honest answer to the blank field
+// they are looking at.
+func categoriesNotRequested(desc provider.Descriptor, runs []providerRunRow, claims []storedClaim) []string {
+	// Claim KEYS, which are not category names — `professional_email` is asked
+	// for and `professional_emails` comes back. desc.Answers owns that mapping
+	// and answeredBy applies it; comparing the two vocabularies directly
+	// matches nothing and silently reports every category as unanswered.
+	delivered := map[string]bool{}
+	for _, c := range claims {
+		delivered[c.key] = true
+	}
+	asked := map[string]bool{}
+	for _, r := range runs {
+		for _, c := range r.requested {
+			// The latest run's own requests count whatever it returned: its
+			// receipt is rendered beside this list, so a category it asked
+			// about and got nothing for is already accounted for there.
+			if r.id == runs[0].id || answeredBy(desc.Answers[provider.Category(c)], delivered) {
+				asked[c] = true
+			}
+		}
 	}
 	out := []string{}
 	for _, c := range desc.Categories {

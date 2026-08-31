@@ -6694,7 +6694,8 @@ export const de = {
     "Nicht gekauft: das Guthabenbudget für diesen Monat ist aufgebraucht.",
   "provider.profile.rateLimited":
     "Nicht gekauft: der Anbieter hat uns gebremst.",
-  "provider.profile.providerError": "Der Anbieter konnte nicht antworten.",
+  "provider.profile.providerError":
+    "Der letzte Aufruf beim Anbieter ist fehlgeschlagen, deshalb werden automatische Abfragen zurückgehalten. Drücken Sie unten die kostenlose Prüfung — eine, die durchkommt, hebt das von selbst auf.",
   "provider.profile.submissionUnknown":
     "Wie diese Abfrage ausgegangen ist, haben wir nie erfahren. Sie kann berechnet worden sein.",
   "provider.profile.claimsUnwritten":

@@ -227,3 +227,54 @@ func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T)
 		t.Error("the page says no provider is connected while showing purchased contact details — it must read stale, not deny what it is displaying")
 	}
 }
+
+// A second purchase must not make the page deny the first one.
+//
+// Buying ONE detail is the ordinary case now that a rep can press "buy mobile"
+// on a contact whose free facts were fetched last week. That second run
+// requests only the mobile — and the "nobody asked for" line used to be read
+// off the latest run alone, so it named the profile link and the employer that
+// were printed directly above it. The page contradicted itself, and the reader
+// who believed the line would buy something they already owned.
+func TestASecondPurchaseDoesNotDenyWhatAnEarlierRunAskedFor(t *testing.T) {
+	e := Setup(t)
+	connectProvider(t, e)
+	personID := seedSubject(t, e)
+	completeOneRun(t, e, personID)
+	// The narrow follow-up: one category, nothing else. No claims — the
+	// provider had no number, which is exactly the case that produced the
+	// contradiction.
+	seedNarrowRun(t, e, personID, "mobile")
+
+	page, err := person360Service(e).Assemble(e.Admin(), ids.From[ids.PersonKind](personID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := sectionFor(t, page, "surfe")
+	for _, named := range profile.CategoriesNotRequested {
+		if named == "professional_email" || named == "mobile" {
+			t.Errorf("categories_not_requested names %q, which an earlier run DID ask for — "+
+				"the line is read off the newest run while the values above it come from "+
+				"every run, so the page denies what it is showing", named)
+		}
+	}
+}
+
+// seedNarrowRun writes a completed run that asked for one category and brought
+// nothing back, the way a paid button press with no answer lands.
+func seedNarrowRun(t *testing.T, e *Env, personID ids.UUID, category string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO provider_run
+			  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+			   external_correlation_id, connection_version, connection_epoch,
+			   configuration_snapshot, requested_categories, completed_at)
+			VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+			        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY[$3], now())`,
+			personID, "fp-narrow-"+personID.String(), category)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

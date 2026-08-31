@@ -74,3 +74,51 @@ func (r renamed) Descriptor() provider.Descriptor {
 	d.Name = r.name
 	return d
 }
+
+// An adapter that prices a category in a pool it never declared is refused
+// where it enters, because the mismatch is silent and costs money.
+//
+// The reservation is keyed by the pools the cost table produces; the settlement
+// is keyed by the pools the adapter reports spending. Nothing else makes those
+// agree — and a hold in a pool the vendor never reports settles, on
+// per-successful-result billing, as a REFUND of a charge they kept. The
+// customer's monthly ceiling is credited back money that left, and later runs
+// spend it a second time.
+func TestAProviderCannotPriceInAPoolItNeverDeclared(t *testing.T) {
+	t.Parallel()
+	shipped := NewOfflineProvider(0, time.Now).Descriptor()
+	if len(shipped.CreditPools) == 0 || len(shipped.CostTable) == 0 {
+		t.Fatal("the shipped fake declares no pools or no prices, so this case would pass over an empty subject")
+	}
+
+	if _, err := NewRegistry(NewOfflineProvider(0, time.Now)); err != nil {
+		t.Fatalf("the shipped adapter is refused by its own rule: %v", err)
+	}
+
+	_, err := NewRegistry(pricedInAnUndeclaredPool{Adapter: NewOfflineProvider(0, time.Now)})
+	if err == nil {
+		t.Fatal("an adapter pricing a category in an undeclared pool registered: its holds settle as refunds " +
+			"of charges the vendor kept, and nothing downstream can notice")
+	}
+	if !strings.Contains(err.Error(), "ghost_pool") {
+		t.Errorf("the refusal does not name the offending pool, so an author cannot act on it: %v", err)
+	}
+}
+
+// pricedInAnUndeclaredPool is the shipped fake billing one category in a pool
+// missing from its own CreditPools — the shape an extension author reaches by
+// adding a price and forgetting the declaration.
+type pricedInAnUndeclaredPool struct {
+	provider.Adapter
+}
+
+func (p pricedInAnUndeclaredPool) Descriptor() provider.Descriptor {
+	d := p.Adapter.Descriptor()
+	priced := make(map[provider.Category]map[provider.Pool]int, len(d.CostTable))
+	for category, cost := range d.CostTable {
+		priced[category] = cost
+	}
+	priced[d.Categories[0]] = map[provider.Pool]int{"ghost_pool": 1}
+	d.CostTable = priced
+	return d
+}

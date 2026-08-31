@@ -117,8 +117,15 @@ describe("a contact nobody has bought data for", () => {
 
     // One request, naming a provider. A body without one is refused by the
     // contract, which is the failure a profile-derived name would cause here.
+    //
+    // The category list is present and EMPTY: this mount serves no connections,
+    // so the catalog settles with nothing free, and the button sends what it
+    // knows rather than omitting the field. An omitted field asks the server
+    // for the connection's whole permitted selection, priced categories
+    // included; an empty one is refused by minItems, which is a refusal the
+    // reader can see instead of a purchase they cannot.
     await expect.poll(() => posted.length).toBe(1);
-    expect(posted[0]).toEqual({ provider: "surfe" });
+    expect(posted[0]).toEqual({ provider: "surfe", categories: [] });
   });
 
   it("shows the refusal when the lookup cannot even be queued", async () => {
@@ -255,8 +262,13 @@ describe("two providers connected", () => {
     expect(buttons.length).toBe(2);
     await user.click(buttons[1]);
 
+    // The PROVIDER is what this case is about. The empty category list rides
+    // along because this mount serves no connections, so the catalog settles
+    // with nothing free — asserted rather than elided, since a body that
+    // silently dropped the field would be asking for the whole priced
+    // selection.
     await expect.poll(() => posted.length).toBe(1);
-    expect(posted[0]).toEqual({ provider: "acmedata" });
+    expect(posted[0]).toEqual({ provider: "acmedata", categories: [] });
   });
 });
 
@@ -435,6 +447,46 @@ describe("the details that cost credits", () => {
     );
     return posted;
   }
+
+  // The free button must never send an OMITTED category list.
+  //
+  // An omitted list asks the server for the connection's whole permitted
+  // selection, priced categories included (runcategories.go) — so a press
+  // before the catalog arrives spent credits under a label that says free, and
+  // the wider an admin sets the selection the more it cost. The catalog is what
+  // says which categories are free, so until it lands the button has nothing
+  // safe to send.
+  it("withholds the free lookup until the catalog says what free means", async () => {
+    const posted: unknown[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      // A request that never settles, which IS the loading window. Omitting the
+      // route instead would resolve to the stub's fallback and settle the
+      // query — the button would then be enabled for the honest reason that
+      // the catalog answered, and this case would pass while testing nothing.
+      "GET /provider-connections": () =>
+        new Response(new ReadableStream({ start() {} }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      "POST /people/p-1/enrichment-runs": (body) => {
+        posted.push(body);
+        return queuedRun();
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[{ ...neverRun(), state: "completed" }]}
+        />
+      </StoryProviders>,
+    );
+
+    const button = await screen.findByRole("button", { name: /Check again/ });
+    expect(button).toHaveProperty("disabled", true);
+    await userEvent.setup().click(button);
+    expect(posted).toEqual([]);
+  });
 
   it("offers each priced detail with its price on the button", async () => {
     mountWithCatalog({ ...neverRun(), state: "completed" }, queuedRun);

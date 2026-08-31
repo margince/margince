@@ -6623,7 +6623,8 @@ export const vi = {
     "Không mua: ngân sách tín dụng tháng này đã hết.",
   "provider.profile.rateLimited":
     "Không mua: nhà cung cấp yêu cầu chúng ta chậm lại.",
-  "provider.profile.providerError": "Nhà cung cấp không thể trả lời.",
+  "provider.profile.providerError":
+    "Lần gọi gần nhất tới nhà cung cấp đã thất bại, nên các lượt tra cứu tự động đang bị giữ lại. Hãy nhấn nút kiểm tra miễn phí bên dưới — một lượt thành công sẽ tự gỡ trạng thái này.",
   "provider.profile.submissionUnknown":
     "Chúng ta không bao giờ biết lượt tra cứu này kết thúc ra sao. Nó có thể đã bị tính phí.",
   "provider.profile.claimsUnwritten":
