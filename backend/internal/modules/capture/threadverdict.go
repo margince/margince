@@ -22,11 +22,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -84,10 +81,15 @@ func NewThreadVerdictStore(db *database.DB) *ThreadVerdictStore {
 // also why it carries no auth gate of its own: it is reached only from the sink,
 // which took the grant, and the exception is ratified in the RBAC gate.
 //
-// The conflict clause is DO NOTHING rather than an update: a thread already
-// answered must not be re-opened by its next message. What re-opens a thread is
-// a deliberate act — an unseen sender on an opening verdict, or a confidential
-// marker — and both of those are spelled where that decision is made.
+// The conflict clause writes in exactly one case: a row that is pending and has
+// no message to judge. That is the state a reopen leaves behind — it clears the
+// pointer so the re-ask cannot read the text a previous answer already covered
+// — and this is what supplies the new one.
+//
+// It does NOT re-open an answered thread. A settled row fails the WHERE and is
+// left alone: re-opening is a deliberate act, taken where that decision is made
+// (an unseen sender on an opening verdict, or a confidential marker), never a
+// side effect of the next message arriving.
 func (s *ThreadVerdictStore) EnsureTx(
 	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID, firstActivity ids.UUID, due time.Time,
 ) error {
@@ -99,7 +101,12 @@ func (s *ThreadVerdictStore) EnsureTx(
 	_, err := tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict (thread_key, user_id, first_activity_id, status, next_attempt_at)
 		VALUES ($1, $2, $3, 'pending', $4)
-		ON CONFLICT (thread_key, user_id) DO NOTHING`,
+		ON CONFLICT (thread_key, user_id) DO UPDATE
+		   SET first_activity_id = EXCLUDED.first_activity_id,
+		       next_attempt_at = EXCLUDED.next_attempt_at,
+		       updated_at = now()
+		 WHERE capture_thread_verdict.status = 'pending'
+		   AND capture_thread_verdict.first_activity_id IS NULL`,
 		threadKey, user, firstActivity, due)
 	if err != nil {
 		return fmt.Errorf("capture: opening the confidentiality question for a thread: %w", err)
@@ -252,44 +259,66 @@ func (s *ThreadVerdictStore) RetireExhausted(ctx context.Context, reason string)
 	return retired, nil
 }
 
-// BacklogFor counts what one seat is still waiting on, which is what the owner
-// sees during an outage: how much of their mail is held for want of an answer.
+// RecordOutcomeTx writes this seat's answer onto its own import row for the
+// message the verdict was about.
 //
-// Own-row only, and human-only. The count is a fact about one person's private
-// correspondence — how much of it a classifier is still holding — so it is read
-// with the CALLER's own id rather than one off a request, and a background
-// principal has no backlog of its own to ask about.
-func (s *ThreadVerdictStore) BacklogFor(ctx context.Context) (pending int, unsure int, err error) {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return 0, 0, err
+// It lives here rather than in the engine because capture owns capture_import.
+// It takes the caller's transaction, which is the one ResolveAs just wrote the
+// ledger row on: both land together or neither does.
+//
+// The MESSAGE the model actually read, not every message on the thread. The
+// claim hands the classifier the thread's first message only, so opening the
+// whole thread would clear correspondence nobody looked at: a routine opening
+// message can be followed by a termination agreement before the pass runs, or
+// while the model call is in flight, and an answer about the first message says
+// nothing about those. A later message inherits through inheritedVerdictTx
+// instead, which admits an opening verdict only for a sender the verdict saw.
+//
+// Scoped to the seat whose verdict it is. A thread reaching two mailboxes is
+// two people's correspondence, each may conclude differently, and the
+// derivation takes the strictest — so a stamp that ignored user_id would let
+// one seat's answer publish a message their colleague's mailbox is holding.
+//
+// The KIND travels with the status as the row's reason, so a held message says
+// what held it. Without it the derivation falls back to a generic `verdict` and
+// `personnel`, `legal` and `security_incident` never reach the row a reader
+// sees.
+func (s *ThreadVerdictStore) RecordOutcomeTx(
+	ctx context.Context, tx pgx.Tx, row PendingThread, status, kind string,
+) error {
+	if row.ActivityID == ids.Nil {
+		// The message was erased while the question stood. The verdict is still
+		// worth recording on the ledger for the threads that inherit from it.
+		return nil
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID == ids.Nil {
-		return 0, 0, apperrors.ErrPermissionDenied
-	}
-	user := actor.UserID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT count(*) FILTER (WHERE status = 'pending'),
-			       count(*) FILTER (WHERE status = 'unsure')
-			  FROM capture_thread_verdict
-			 WHERE user_id = $1`, user).Scan(&pending, &unsure)
-	})
+	_, err := tx.Exec(ctx, `
+		UPDATE capture_import
+		   SET verdict_status = $3, verdict_reason = NULLIF($4, '')
+		 WHERE activity_id = $1 AND user_id = $2`,
+		row.ActivityID, row.UserID, status, kind)
 	if err != nil {
-		return 0, 0, fmt.Errorf("capture: reading a seat's confidentiality backlog: %w", err)
+		return fmt.Errorf("capture: recording a thread verdict on its import row: %w", err)
 	}
-	return pending, unsure, nil
+	return nil
 }
 
 // openConfidentialityQuestionTx schedules the thread this message belongs to
 // for a confidentiality answer, for the seat that just imported it.
 //
-// Held messages only. An open message needs no verdict to open it, and a
-// `shared` mailbox that asked anyway would spend one model call per message to
-// be told what its posture already said.
+// Held messages only, and only where the MAILBOX POSTURE is what holds them.
+// A `held` mailbox is never asked: its owner said "hold this whatever a
+// classifier concludes", and the derivation evaluates a verdict before a
+// posture, so a cleared answer would override the strongest privacy setting the
+// product offers. The other holds — a workspace floor, a counterparty hold, a
+// confidential marker — hold on their own authority and are not a classifier's
+// to lift either.
+//
+// An already-open message is not asked about at all: there is nothing for a
+// verdict to open, and a `shared` mailbox would spend one model call per
+// message to be told what its posture already said.
 //
 // Due immediately: the engine's own claim scan paces the work, and a delay here
-// would only be a second, quieter place where the cadence is decided.
+// would be a second, quieter place where the cadence is decided.
 func openConfidentialityQuestionTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, owner ids.UUID,
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
@@ -297,6 +326,12 @@ func openConfidentialityQuestionTx(
 	if fields.Kind != "email" {
 		// A meeting or a channel message is not correspondence a
 		// confidentiality classifier was ever asked about.
+		return nil
+	}
+	// Checked on the posture rather than the derived audience, because `held`
+	// and `classified` collapse to the same audience and only the posture can
+	// tell them apart.
+	if birth.posture != PostureClassified {
 		return nil
 	}
 	if audience, _ := birth.bornAudience(); audience != audienceParticipants {

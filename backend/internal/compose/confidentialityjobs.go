@@ -66,9 +66,9 @@ func (w *confidentialityVerdictWorkspaceWorker) Work(ctx context.Context, job *r
 		return jobs.FaultContext(ctx, err)
 	}
 	// A deployment with no model bound holds every thread, which is the correct
-	// answer rather than a fault: RunWorkspace returns cleanly and the owner
-	// sees the backlog on their own surface. Failing the job instead would fill
-	// the log with an alarm about a configuration somebody chose.
+	// answer rather than a fault: RunWorkspace returns cleanly. Failing the job
+	// instead would fill the log with an alarm about a configuration somebody
+	// chose.
 	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

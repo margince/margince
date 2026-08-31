@@ -5,6 +5,7 @@ package ai
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -181,60 +182,48 @@ func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
 // the ladder it can't reach; a task with at least one bound rung
 // (fallback or primary) is silent.
 func TestUnboundLadderWarnings(t *testing.T) {
-	allTiers := map[Tier]ProviderConfig{
-		TierLocalSmall: {Provider: "fake"},
-		TierCheapCloud: {Provider: "fake"},
-		TierPremium:    {Provider: "fake"},
-		TierLocalLarge: {Provider: "fake"},
+	// The property, not a transcript of the message.
+	//
+	// This used to be a hand-written list of every task and its ladder, which
+	// went stale the moment a ladder changed and failed a new task for
+	// existing. Deriving the expectation from taskLadders fixed the staleness
+	// and bought nothing: re-implementing the same loop over the same map
+	// produces a matching expectation for any behaviour at all. So the test
+	// asks what the warning is FOR — a task with no bound rung is named, a task
+	// with one is not — against tiers chosen so the two sets are non-empty and
+	// different.
+	bound := map[Tier]ProviderConfig{TierPremium: {Provider: "fake"}}
+	got := RoutingConfig{Tiers: bound}.UnboundLadderWarnings()
+
+	var wantNamed, wantSilent []Task
+	for _, task := range AllTasks() {
+		if slices.Contains(taskLadders[task], TierPremium) {
+			wantSilent = append(wantSilent, task)
+			continue
+		}
+		wantNamed = append(wantNamed, task)
 	}
-	cases := []struct {
-		name  string
-		tiers map[Tier]ProviderConfig
-		want  []string
-	}{
-		{
-			name:  "fully bound config warns about nothing",
-			tiers: allTiers,
-			want:  nil,
-		},
-		{
-			name: "one unbound rung but another bound on the same ladder stays silent",
-			// A task whose ladder holds premium still has a route; only a task
-			// with NO bound rung warns.
-			tiers: map[Tier]ProviderConfig{
-				TierPremium: {Provider: "fake"},
-			},
-			want: expectedUnboundWarnings(map[Tier]ProviderConfig{
-				TierPremium: {Provider: "fake"},
-			}),
-		},
-		{
-			name:  "ladder with zero bound rungs warns naming the task and its ladder",
-			tiers: map[Tier]ProviderConfig{},
-			want:  expectedUnboundWarnings(map[Tier]ProviderConfig{}),
-		},
+	if len(wantNamed) == 0 || len(wantSilent) == 0 {
+		t.Fatalf("the chosen binding leaves %d tasks unbound and %d bound; the test proves nothing "+
+			"unless both sets have members", len(wantNamed), len(wantSilent))
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := RoutingConfig{Tiers: tc.tiers}
-			got := cfg.UnboundLadderWarnings()
-			if len(got) != len(tc.want) {
-				t.Fatalf("got %d warnings, want %d:\ngot:  %v\nwant: %v", len(got), len(tc.want), got, tc.want)
-			}
-			for i := range got {
-				if got[i] != tc.want[i] {
-					t.Fatalf("warning %d: got %q, want %q", i, got[i], tc.want[i])
-				}
-			}
-		})
+	for _, task := range wantNamed {
+		if !slices.ContainsFunc(got, func(w string) bool { return strings.Contains(w, "task "+string(task)+":") }) {
+			t.Errorf("task %s has no bound rung and no warning names it; its calls will be refused silently", task)
+		}
+	}
+	for _, task := range wantSilent {
+		if slices.ContainsFunc(got, func(w string) bool { return strings.Contains(w, "task "+string(task)+":") }) {
+			t.Errorf("task %s has a bound rung and was warned about anyway", task)
+		}
+	}
+	// And a binding with nothing in it warns about everything, which is the
+	// arm that catches a warning loop that silently stopped running.
+	if none := (RoutingConfig{Tiers: map[Tier]ProviderConfig{}}).UnboundLadderWarnings(); len(none) != len(AllTasks()) {
+		t.Errorf("an empty binding produced %d warnings for %d tasks, want one each", len(none), len(AllTasks()))
 	}
 }
 
-// TestParseRoutingEmbedDimensions pins the embeddings-lane `dimensions`
-// contract (spec ai-operational-spec.md §1.4, embed-identity phase 2): unset
-// (0) defaults to 1536 (a gemini-recommended width) — while anything outside
-// [1,2000] fails at startup, the same boot-loud-not-3am-surprise posture
-// every other routing-config defect gets.
 func TestParseRoutingEmbedDimensions(t *testing.T) {
 	const base = `
 profile: eu_hosted
@@ -373,41 +362,4 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			}
 		})
 	}
-}
-
-// expectedUnboundWarnings derives the warnings a binding SHOULD produce, from
-// the same task table the code reads.
-//
-// It used to be a hand-written list of every task and its ladder, which is a
-// second copy of the census: it went stale the moment a task's ladder changed
-// (capture_counterparty_verdict dropped a rung and the list still named the old
-// one), and a new task failed the test for existing rather than for being
-// wrong. Derived, the test asks the question worth asking — does a task with no
-// bound rung warn, and does a task with one stay silent — and a new task joins
-// both sides at once.
-//
-// It deliberately re-implements the selection rather than calling the function
-// under test: a check that computed its expectation by running the code would
-// pass for any behaviour at all.
-func expectedUnboundWarnings(tiers map[Tier]ProviderConfig) []string {
-	var want []string
-	for _, task := range AllTasks() {
-		ladder := taskLadders[task]
-		bound := false
-		for _, tier := range ladder {
-			if _, ok := tiers[tier]; ok {
-				bound = true
-				break
-			}
-		}
-		if bound {
-			continue
-		}
-		names := make([]string, len(ladder))
-		for i, tier := range ladder {
-			names[i] = string(tier)
-		}
-		want = append(want, fmt.Sprintf("task %s: no bound tier on ladder %v; calls will be refused", task, names))
-	}
-	return want
 }

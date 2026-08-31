@@ -75,8 +75,10 @@ func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *s
 }
 
 // CanJudge reports whether a model lane was composed. A deployment without one
-// holds everything rather than failing: the surface that tells the owner so is
-// the backlog endpoint, not an error on a sweep nobody is watching.
+// holds every thread and says nothing: there is no owner-facing backlog surface
+// yet, so what an owner sees today is mail that stays private. Failing the
+// sweep instead would fill the log with an alarm about a configuration somebody
+// chose.
 func (e *ConfidentialityVerdictEngine) CanJudge() bool { return e.brain != nil }
 
 // workspaceCtx adds this pass's provenance to a context whose WORKSPACE the
@@ -224,10 +226,10 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// audience is derived across every seat's capture_import contribution,
 		// so a thread ledger updated on its own is an answer with no effect:
 		// the message stays exactly as held as it was born.
-		if err := stampThreadVerdictOnImportsTx(ctx, tx, row, status); err != nil {
+		if err := e.threads.RecordOutcomeTx(ctx, tx, row, status, kind); err != nil {
 			return err
 		}
-		return recomputeThreadAudienceTx(ctx, tx, row)
+		return recomputeJudgedMessageTx(ctx, tx, row)
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's
@@ -238,30 +240,6 @@ func (e *ConfidentialityVerdictEngine) apply(
 	return applied, nil
 }
 
-// stampThreadVerdictOnImportsTx writes this seat's answer onto its own import
-// row for every message on the thread.
-//
-// Scoped to the seat whose verdict it is, which is what keeps the per-owner
-// model intact: a thread reaching two mailboxes is two people's correspondence,
-// each may conclude differently, and the derivation takes the strictest. A
-// stamp that ignored user_id would let one seat's `ordinary` publish a message
-// their colleague's mailbox is holding.
-func stampThreadVerdictOnImportsTx(
-	ctx context.Context, tx pgx.Tx, row capture.PendingThread, status string,
-) error {
-	_, err := tx.Exec(ctx, `
-		UPDATE capture_import i
-		   SET verdict_status = $3
-		  FROM activity a
-		 WHERE a.id = i.activity_id
-		   AND a.thread_key = $1
-		   AND i.user_id = $2`, row.ThreadKey, row.UserID, status)
-	if err != nil {
-		return fmt.Errorf("confidentiality: recording a thread verdict on its import rows: %w", err)
-	}
-	return nil
-}
-
 // threadAddressesTx collects the exact addresses this verdict SAW.
 //
 // This is what binds a later message to the answer: capture admits an OPENING
@@ -269,15 +247,32 @@ func stampThreadVerdictOnImportsTx(
 // classifier never looked at re-opens the thread rather than inheriting a
 // clearance given for a different conversation.
 //
-// Every party on every message of the thread, not just the first message's
-// sender: the classifier was shown the thread, and a participant who was on it
-// throughout is somebody it judged.
+// The parties on the MESSAGE the classifier read, and no others. The claim
+// hands it the thread's first message alone, so collecting every address on the
+// thread would grant inheritance to senders whose text was never judged — the
+// hole ResolveAs's own doc names.
 func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread) ([]string, error) {
+	// Scoped to the messages THIS SEAT imported, not to the thread key.
+	//
+	// A thread key is the sender-controlled References root, in a namespace
+	// shared by the whole workspace. Reading addresses by thread key alone lets
+	// an outsider send a forged-root message to a colleague while this seat's
+	// thread is pending, and have their own address recorded as one this seat's
+	// verdict saw — after which a sensitive message from that address inherits
+	// the clearance. The import row is the evidence that this seat's mailbox
+	// actually received the message.
+	if row.ActivityID == ids.Nil {
+		return nil, nil
+	}
+	// restricted_at excluded: a message under a statutory hold or an erasure is
+	// not one whose parties a later verdict may inherit from. The claim already
+	// refuses to read its text for the same reason.
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT lower(trim(counterparty_email))
 		  FROM activity
-		 WHERE thread_key = $1 AND counterparty_email IS NOT NULL
-		   AND counterparty_email <> ''`, row.ThreadKey)
+		 WHERE id = $1 AND restricted_at IS NULL
+		   AND counterparty_email IS NOT NULL
+		   AND counterparty_email <> ''`, row.ActivityID)
 	if err != nil {
 		return nil, fmt.Errorf("confidentiality: reading the addresses a thread's verdict saw: %w", err)
 	}
@@ -296,39 +291,19 @@ func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread
 	return seen, nil
 }
 
-// recomputeThreadAudienceTx re-derives the audience of every activity on the
-// thread, so the verdict reaches the rows it was about.
+// recomputeJudgedMessageTx re-derives the audience of the message this verdict
+// was about, so the answer reaches the row it concerns.
 //
-// Per row rather than per thread, because the derivation is per row: an
-// activity's audience is the strictest across every seat that imported IT, and
-// two messages on one thread can have different importers.
-func recomputeThreadAudienceTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread) error {
-	rows, err := tx.Query(ctx, `
-		SELECT id FROM activity WHERE thread_key = $1 AND archived_at IS NULL`, row.ThreadKey)
-	if err != nil {
-		return fmt.Errorf("confidentiality: listing a thread's messages: %w", err)
+// One message, matching the stamp above. The thread's other messages were never
+// read by the classifier and keep whatever their own contributors ask for.
+func recomputeJudgedMessageTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread) error {
+	if row.ActivityID == ids.Nil {
+		// The message was erased while the question stood. There is nothing to
+		// recompute, and the verdict is still worth recording for the threads
+		// that inherit from it.
+		return nil
 	}
-	defer rows.Close()
-	var messages []ids.ActivityID
-	for rows.Next() {
-		var id ids.ActivityID
-		if err := rows.Scan(&id); err != nil {
-			return fmt.Errorf("confidentiality: listing a thread's messages: %w", err)
-		}
-		messages = append(messages, id)
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("confidentiality: listing a thread's messages: %w", err)
-	}
-	// Collected FIRST, then recomputed: the recompute writes to `activity`, and
-	// writing through a cursor still open on the same table is how a row gets
-	// visited twice or not at all.
-	for _, id := range messages {
-		if err := activities.RecomputeAudienceTx(ctx, tx, id); err != nil {
-			return err
-		}
-	}
-	return nil
+	return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](row.ActivityID))
 }
 
 // releaseBatch hands a whole claimed batch back after a budget stop, so no

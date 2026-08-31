@@ -48,9 +48,6 @@ func (confidentialityCases) Site() aitasks.Site {
 	}
 }
 
-// CertifiedScope narrows the record to the one call this case makes.
-func (confidentialityCases) CertifiedScope() string { return aitasks.ScopeSingleCall }
-
 // Prepare turns one thread and the kind the scenario expects into a runnable
 // case, MINTING the ledger row id rather than reading it from either.
 //

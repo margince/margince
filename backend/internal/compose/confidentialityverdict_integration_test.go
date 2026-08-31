@@ -60,6 +60,26 @@ func TestASensitiveThreadStaysHeldAndNamesWhy(t *testing.T) {
 	if got := activityAudience(t, e, activityID); got != "participants" {
 		t.Fatalf("a personnel thread's message is %q, want participants", got)
 	}
+	// And it says WHY. Without the kind travelling with the status, every held
+	// thread reads as the generic `verdict` and a reader is told a message is
+	// private without being told what kind of private.
+	if got := activityAudienceReason(t, e, activityID); got != confidentialityPersonnel {
+		t.Fatalf("the message's audience reason is %q, want personnel", got)
+	}
+}
+
+// activityAudienceReason answers what a reader is told about why a message is
+// held.
+func activityAudienceReason(t *testing.T, e *integration.Env, id ids.UUID) string {
+	t.Helper()
+	var reason string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(audience_reason, '') FROM activity WHERE id = $1`, id).Scan(&reason)
+	}); err != nil {
+		t.Fatalf("reading the audience reason: %v", err)
+	}
+	return reason
 }
 
 func TestAnOpeningAnswerBelowTheFloorHoldsTheThread(t *testing.T) {
@@ -161,11 +181,9 @@ type scriptedConfidentialityBrain struct {
 	kind       string
 	confidence float64
 	id         ids.UUID
-	calls      int
 }
 
 func (s *scriptedConfidentialityBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
-	s.calls++
 	askedFor := fencedIDs(req.System, req.Messages[0].Content, "id")
 	if len(askedFor) != 1 {
 		return model.Response{}, fmt.Errorf(
@@ -271,4 +289,60 @@ func importVerdictFor(t *testing.T, e *integration.Env, activityID, user ids.UUI
 		t.Fatalf("reading a seat's import verdict: %v", err)
 	}
 	return status
+}
+
+func TestAHeldMailboxIsNeverAskedAndNeverOpened(t *testing.T) {
+	// The strongest privacy setting the product offers. `held` means "hold this
+	// whatever a classifier concludes", and the audience derivation evaluates a
+	// verdict BEFORE a posture — so a cleared answer about a held mailbox's mail
+	// would widen the row and overrule the owner.
+	//
+	// The defence is that the question is never opened. Both `held` and
+	// `classified` produce the same audience, so the enqueue has to read the
+	// posture itself; a check on the derived audience cannot tell them apart.
+	e := integration.Setup(t)
+	activityID := seedHeldThreadMail(t, e, "thread-heldbox", "kunde@example.test", "Angebot")
+	setImportPosture(t, e, activityID, e.Rep1, "held")
+
+	// No ledger row exists for this thread, so a pass finds nothing to judge.
+	// Running one anyway is the assertion: an engine that opened the question
+	// would clear the message here.
+	engine := NewConfidentialityVerdictEngine(e.Pool, &scriptedConfidentialityBrain{
+		kind: confidentialityOrdinary, confidence: 0.99,
+	}, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("confidentiality pass: %v", err)
+	}
+
+	if n := countThreadQuestions(t, e, "thread-heldbox"); n != 0 {
+		t.Fatalf("%d confidentiality questions for a held mailbox, want 0 — its owner already answered", n)
+	}
+	if got := activityAudience(t, e, activityID); got != "participants" {
+		t.Fatalf("a held mailbox's message is %q, want participants", got)
+	}
+}
+
+// setImportPosture rewrites the posture a message was imported under.
+func setImportPosture(t *testing.T, e *integration.Env, activityID, user ids.UUID, posture string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_import SET posture_at_import = $3
+			 WHERE activity_id = $1 AND user_id = $2`, activityID, user, posture)
+		return err
+	}); err != nil {
+		t.Fatalf("setting the import posture: %v", err)
+	}
+}
+
+func countThreadQuestions(t *testing.T, e *integration.Env, threadKey string) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM capture_thread_verdict WHERE thread_key = $1`, threadKey).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting thread questions: %v", err)
+	}
+	return n
 }

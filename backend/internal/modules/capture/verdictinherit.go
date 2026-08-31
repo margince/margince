@@ -116,9 +116,21 @@ func reopenClearedThreadTx(ctx context.Context, tx pgx.Tx, threadKey string) err
 	if user == ids.Nil {
 		return nil
 	}
+	// first_activity_id is CLEARED, not kept.
+	//
+	// The classifier is shown the message that row names, so leaving it
+	// pointing at the message a previous answer was about would re-ask the same
+	// question about the same text — and then apply the answer to whatever
+	// triggered the re-ask. The unseen sender that caused the reopen would be
+	// judged by correspondence they were never part of.
+	//
+	// The next message on this thread supplies a new one: EnsureTx fills the
+	// column on the row it finds empty, and a claim skips a row that still has
+	// none rather than judging an empty prompt.
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = 'pending', kind = NULL, confidence = NULL,
+		       first_activity_id = NULL, seen_addresses = '{}',
 		       resolved_at = NULL, next_attempt_at = now(), updated_at = now()
 		 WHERE thread_key = $1 AND user_id = $2
 		   AND status IN ('cleared', 'shared_by_owner')`,
