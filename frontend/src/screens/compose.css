@@ -284,7 +284,11 @@
    The danger tone is the same one the composer already gives a send-time
    refusal, and it sits tight to the control so the message and the thing to
    fix are read as one. */
-.compose-need {
+/* Both classes, not one: `.t-caption` carries the size and sets its own
+   colour at the same specificity, so a single class left the message grey
+   whenever the bundler put the base sheet last. The pairing states the
+   override rather than depending on file order. */
+.t-caption.compose-need {
   color: var(--danger);
   margin-top: var(--space-1);
 }
