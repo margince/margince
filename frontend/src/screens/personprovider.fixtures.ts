@@ -27,6 +27,10 @@ export const completedProviderRun: components["schemas"]["ProviderRun"] = {
   requested_categories: ["email", "mobile"],
   reservations: [{ pool: "email", reserved_credits: 1, actual_credits: 1 }],
   claims_unwritten: false,
+  // The run bought its values AND they reached the contact's record. A
+  // completed run that is not yet applied is a different state — bought but
+  // not landed — and these stories are all the after picture.
+  applied: true,
   submitted_at: "2026-08-12T09:00:00Z",
   completed_at: "2026-08-12T09:02:00Z",
   safe_status_code: null,
