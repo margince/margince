@@ -7200,8 +7200,7 @@ export const en = {
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearOfWhatWasRead":
     "Nothing is waiting among the sources that answered.",
-  "worklist.partial":
-    "{count} source(s) could not be read, so this is not the whole day.",
+  "worklist.partial": "{sources}, so this is not the whole day.",
   "worklist.overdue": "Overdue",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
@@ -7294,6 +7293,15 @@ export const en = {
   "worklist.untitled.bounce": "An email did not arrive",
   "worklist.untitled.automation_run": "A rule did not do its work",
   "worklist.untitled.notice": "A notice for you",
+  "worklist.verb.decide": "Decide",
+  "worklist.verb.merge": "Merge",
+  "worklist.verb.open": "Open",
+  "worklist.verb.complete": "Open",
+  "worklist.verb.snooze": "Open",
+  "worklist.verb.acknowledge": "Open",
+  "worklist.source.failed": "{source} could not be read",
+  "worklist.source.withheld": "{source} is hidden from your account",
+  "worklist.untitled.generic": "Something needs you",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -12,6 +12,7 @@ import {
   consequenceText,
   itemTitle,
   reasonText,
+  sourceUnavailableText,
   subjectHref,
 } from "./worklist.copy";
 import {
@@ -61,18 +62,22 @@ function WorklistRow({
   const title = itemTitle(item, t);
   const because = item.because
     .map((reason) => reasonText(reason, t, locale, zone))
+    .filter((phrase): phrase is string => phrase !== null)
     .join(" · ");
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
   return (
     <PanelRow className="worklist-row">
-      <span className="t-caption worklist-rank" aria-hidden>
+      {/* The rank is the page's central claim, so it is readable rather than
+          decorative: the list element carries the order for a screen reader and
+          the number states it for everybody else. */}
+      <span className="t-caption worklist-rank">
         {formatNumber(position, locale)}
       </span>
       <div className="worklist-row-text">
         <p className="t-body worklist-row-title">
           {href ? (
-            <a className="worklist-row-link" href={href}>
+            <a className="entity-link" href={href}>
               {title}
             </a>
           ) : (
@@ -91,9 +96,89 @@ function WorklistRow({
             has nothing below it to beat. */}
         {above && <p className="t-caption worklist-row-above">{above}</p>}
       </div>
+      <RowVerbs item={item} href={href} />
     </PanelRow>
   );
 }
+
+// What this row offers, as the item itself declares it.
+//
+// Every verb is a LINK to the surface that owns it rather than a mutation from
+// here: this queue adds no authority of its own, so deciding an approval goes
+// to the decision surface and merging a pair to the dedupe queue, exactly as
+// they do from any other door. Rendering a button that acted here would be a
+// second place for those rules to live.
+//
+// A verb whose destination this page cannot name draws nothing. A control that
+// looks pressable and goes nowhere is worse than no control.
+function RowVerbs({
+  item,
+  href,
+}: Readonly<{ item: WorklistItem; href: string | undefined }>) {
+  const t = useT();
+  const verbs = item.actions.flatMap((action) => {
+    const route = VERB_DESTINATION[action];
+    if (!route) {
+      // A verb this build cannot route draws nothing. A control that looks
+      // pressable and goes nowhere is worse than no control.
+      return [];
+    }
+    const destination = route(href);
+    return destination ? [{ action, destination }] : [];
+  });
+  if (verbs.length === 0) {
+    return null;
+  }
+  return (
+    <div className="worklist-row-verbs">
+      {verbs.map(({ action, destination }) => (
+        <a key={action} className="worklist-row-verb" href={destination}>
+          {VERB_LABEL[action](t)}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+// Where each verb lives. A total map over the ones this page can route, so a
+// verb the contract adds either gets a destination here or is not drawn —
+// never a button that does nothing.
+const VERB_DESTINATION: Partial<
+  Record<
+    WorklistItem["actions"][number],
+    (href: string | undefined) => string | undefined
+  >
+> = {
+  // The decision surfaces own their own verbs; this sends the reader to them.
+  decide: () => "#/today",
+  merge: () => "#/today",
+  // Everything else is the record the row is about.
+  open: (href) => href,
+  complete: (href) => href,
+  snooze: (href) => href,
+  acknowledge: (href) => href,
+};
+
+// What each routable verb is called. Spelled as a map of functions rather than
+// a composed key, so a verb the contract adds without copy here does not
+// compile — which is the only way this cannot reach a reader as a raw word.
+const VERB_LABEL: Record<
+  WorklistItem["actions"][number],
+  (t: ReturnType<typeof useT>) => string
+> = {
+  decide: (t) => t("worklist.verb.decide"),
+  merge: (t) => t("worklist.verb.merge"),
+  open: (t) => t("worklist.verb.open"),
+  complete: (t) => t("worklist.verb.complete"),
+  snooze: (t) => t("worklist.verb.snooze"),
+  acknowledge: (t) => t("worklist.verb.acknowledge"),
+  // The briefing queue's three verbs. Named here because the map is total over
+  // the contract's actions — they route nowhere from this page yet, so
+  // VERB_DESTINATION does not carry them and no control is drawn.
+  act: (t) => t("worklist.verb.open"),
+  dismiss: (t) => t("worklist.verb.open"),
+  set_aside: (t) => t("worklist.verb.open"),
+};
 
 // The day's figures, and the dials that narrow them.
 function WorklistHeader({
@@ -164,7 +249,6 @@ function WorklistBody({
   onFilter: (next: WorklistFilter) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const missing = day.sources_unavailable;
   return (
     <>
@@ -181,7 +265,9 @@ function WorklistBody({
       {missing.length > 0 && (
         <Callout tone="warn">
           {t("worklist.partial", {
-            count: formatNumber(missing.length, locale),
+            sources: missing
+              .map((source) => sourceUnavailableText(source, t))
+              .join(", "),
           })}
         </Callout>
       )}
@@ -194,13 +280,13 @@ function WorklistBody({
         </p>
       ) : (
         <Panel title={t("worklist.queue")}>
-          {day.queue.map((item, index) => (
-            <WorklistRow
-              key={`${item.source}-${item.id}`}
-              item={item}
-              position={index + 1}
-            />
-          ))}
+          <ol className="worklist-list">
+            {day.queue.map((item, index) => (
+              <li key={`${item.source}-${item.id}`}>
+                <WorklistRow item={item} position={index + 1} />
+              </li>
+            ))}
+          </ol>
         </Panel>
       )}
     </>
@@ -219,9 +305,9 @@ export function WorklistScreen() {
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
   return (
     <div className="wrap worklist">
+      {/* No label: the shell already heads this page, and a second "Worklist"
+          would be announced twice and nest an h3 above the queue's own h2. */}
       <SurfaceState
-        label={t("worklist.title")}
-        labelLevel="h3"
         state={state}
         emptyLabel={t("worklist.clear")}
         loadingLabel={t("worklist.loading")}

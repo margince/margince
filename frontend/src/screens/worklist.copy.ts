@@ -1,7 +1,9 @@
-import { formatDateTime, formatNumber } from "../format/format";
-import { toMajorUnits } from "../format/minorunits";
+import { ENTITY, isEntityKind } from "../app/entity";
+import { routeHash } from "../app/router";
+import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import type {
+  Worklist,
   WorklistComparison,
   WorklistItem,
   WorklistReason,
@@ -19,27 +21,18 @@ type T = ReturnType<typeof useT>;
 // client's to write.
 
 // Which record an item points at, as an address the router understands.
+//
+// Through the entity registry, never a switch written here: the record types
+// have route names of their own (`contacts`, not `people`), and a second
+// spelling of them sends a reader to a page that does not exist. An activity
+// resolves to nothing on purpose — it is a timeline entry rather than a record
+// with a page, so naming it on the row is honest and linking it is not.
 export function subjectHref(item: WorklistItem): string | undefined {
-  if (!item.subject) {
+  const subject = item.subject;
+  if (!subject || !isEntityKind(subject.type)) {
     return undefined;
   }
-  const { type, id } = item.subject;
-  switch (type) {
-    case "person":
-      return `#/people/${id}`;
-    case "organization":
-      return `#/organizations/${id}`;
-    case "deal":
-      return `#/deals/${id}`;
-    case "lead":
-      return `#/leads/${id}`;
-    case "project":
-      return `#/projects/${id}`;
-    default:
-      // An activity is a timeline entry rather than a record with a page of its
-      // own. Naming it on the card is honest; promising navigation is not.
-      return undefined;
-  }
+  return routeHash(ENTITY[subject.type].route(subject.id));
 }
 
 // One comparator value, in the reader's notation.
@@ -59,15 +52,12 @@ function valueText(
     case "date":
       return value.date ? formatDateTime(value.date, locale, zone) : null;
     case "money":
-      // Through the shared scale, never a hard-coded hundred: a currency with
-      // no minor unit (JPY, VND, KRW) is understated a hundredfold by the
-      // arithmetic that looks obviously right for euros.
-      return value.minor == null
+      // Both halves or nothing. A euro sign on a figure that might be dong is
+      // worse than no figure, and the scale itself is wrong without the
+      // currency — so a value that names none says nothing at all.
+      return value.minor == null || !value.currency
         ? null
-        : formatNumber(
-            toMajorUnits(value.minor, value.currency ?? "EUR"),
-            locale,
-          );
+        : formatMoney(value.minor, value.currency, locale);
     case "days":
       return value.days == null ? null : formatNumber(value.days, locale);
     case "level":
@@ -95,13 +85,66 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
   return kind in VALUED_REASONS;
 }
 
+// Every reason this client has a sentence for.
+//
+// A newer server sending a reason this build does not know must not print
+// `worklist.because.customer_escalated` at a reader — a missing translation
+// returns its own key, so an unrecognised value has to be caught here rather
+// than discovered on screen.
+const KNOWN_REASONS = {
+  pinned: true,
+  buyer_wrote_last: true,
+  waiting_days: true,
+  overdue: true,
+  due_today: true,
+  closing_soon: true,
+  expected_revenue: true,
+  material: true,
+  below_material: true,
+  quiet_days: true,
+  no_champion: true,
+  promised: true,
+  approved_and_failed: true,
+  blocks_customer_work: true,
+  routine: true,
+  legal_deadline: true,
+  meeting_soon: true,
+} as const;
+
+type KnownReason = keyof typeof KNOWN_REASONS;
+
+function known(kind: WorklistReason["kind"]): kind is KnownReason {
+  return kind in KNOWN_REASONS;
+}
+
+// The comparators this build can name, for the same reason.
+const KNOWN_COMPARATORS = {
+  pin: true,
+  level: true,
+  deadline: true,
+  expected_revenue: true,
+  waiting_days: true,
+  relationship: true,
+} as const;
+
+function knownComparator(
+  comparator: WorklistComparison["comparator"],
+): comparator is keyof typeof KNOWN_COMPARATORS {
+  return comparator in KNOWN_COMPARATORS;
+}
+
 // One fact behind an item's rank.
 export function reasonText(
   reason: WorklistReason,
   t: T,
   locale: Locale,
   zone: string,
-): string {
+): string | null {
+  if (!known(reason.kind)) {
+    // A reason this build has no sentence for is DROPPED, not printed as its
+    // own key. The row keeps its other reasons and says one thing less.
+    return null;
+  }
   const value = valueText(reason.value, locale, zone);
   if (value !== null && valued(reason.kind)) {
     return t(`worklist.because.${reason.kind}.value` as const, { value });
@@ -137,7 +180,11 @@ export function comparisonText(
   locale: Locale,
   zone: string,
 ): string | null {
-  if (!comparison || comparison.comparator === "order") {
+  if (
+    !comparison ||
+    comparison.comparator === "order" ||
+    !knownComparator(comparison.comparator)
+  ) {
     return null;
   }
   const mine = valueText(comparison.mine, locale, zone);
@@ -169,5 +216,52 @@ export function itemTitle(item: WorklistItem, t: T): string {
   if (item.title) {
     return item.title;
   }
+  if (!knownSource(item.source)) {
+    return t("worklist.untitled.generic");
+  }
   return t(`worklist.untitled.${item.source}` as const);
+}
+
+// Which source could not be read, and why, in words.
+//
+// The source name goes through the same known-source check the titles use, so
+// a source this build has never heard of is described generically rather than
+// printed as its own identifier.
+export function sourceUnavailableText(
+  missing: NonNullable<Worklist["sources_unavailable"]>[number],
+  t: T,
+): string {
+  const name = knownSource(missing.source as WorklistItem["source"])
+    ? t(`worklist.untitled.${missing.source as keyof typeof KNOWN_SOURCES}`)
+    : t("worklist.untitled.generic");
+  return missing.reason === "withheld"
+    ? t("worklist.source.withheld", { source: name })
+    : t("worklist.source.failed", { source: name });
+}
+
+// The sources this build can name without its own sentence.
+const KNOWN_SOURCES = {
+  approval: true,
+  dedupe_candidate: true,
+  task: true,
+  brief_item: true,
+  conversation_claim: true,
+  customer_waiting: true,
+  deal_at_risk: true,
+  meeting: true,
+  relationship_decay: true,
+  failed_approval: true,
+  dsr: true,
+  sync_health: true,
+  capture_health: true,
+  ai_work_health: true,
+  bounce: true,
+  automation_run: true,
+  notice: true,
+} as const;
+
+function knownSource(
+  source: WorklistItem["source"],
+): source is keyof typeof KNOWN_SOURCES {
+  return source in KNOWN_SOURCES;
 }

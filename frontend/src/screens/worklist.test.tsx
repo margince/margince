@@ -123,9 +123,17 @@ describe("what the ranked queue tells a reader", () => {
         summary: { urgent: 0, due: 0, lower_priority: 0, total: 2 },
       }),
     );
-    renderWorklist();
+    const { container } = renderWorklist();
 
     expect(await screen.findByText(/Above the next:/)).toBeTruthy();
+    // The server's order is the page's order. Rendering the rows sorted or
+    // reversed would still show a reason line, so the DOM order is what this
+    // asserts.
+    const titles = Array.from(
+      container.querySelectorAll(".worklist-row-title"),
+    ).map((node) => node.textContent ?? "");
+    expect(titles[0]).toContain("Closing tomorrow");
+    expect(titles[1]).toContain("Closing later");
   });
 
   it("never prints the database's own words at a reader", async () => {
@@ -148,9 +156,71 @@ describe("what the ranked queue tells a reader", () => {
     const { container } = renderWorklist();
 
     await screen.findByText("A decision is waiting");
-    // The kind travels for the icon and the label; it must never be the label.
-    expect(container.textContent).not.toContain("capture_counterparty_verdict");
-    expect(container.textContent).not.toContain("_");
+    // Named values, not a blanket ban on underscores: a real title may carry
+    // one ("ACME_Q3"), and the raw words that actually leak — a kind, a source,
+    // a reason, an i18n key — mostly carry none.
+    const text = container.textContent ?? "";
+    for (const raw of [
+      "capture_counterparty_verdict",
+      "data_drifts",
+      "worklist.",
+      "approval",
+      "decisions",
+    ]) {
+      expect(text).not.toContain(raw);
+    }
+  });
+
+  it("says nothing rather than printing a word it does not know", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "A task",
+            // A reason from a newer server than this build.
+            because: [{ kind: "customer_escalated" as never }],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await screen.findByText("A task");
+    expect(container.textContent).not.toContain("customer_escalated");
+    expect(container.textContent).not.toContain("worklist.because");
+  });
+
+  it("offers the verbs the item says it has", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "Add someone from your mail",
+            source: "approval",
+            category: "decisions",
+            actions: ["decide"],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    expect(await screen.findByRole("link", { name: "Decide" })).toBeTruthy();
+  });
+
+  it("names the source it could not read rather than counting it", async () => {
+    stub(
+      day({
+        sources_unavailable: [{ source: "capture_health", reason: "failed" }],
+      }),
+    );
+    renderWorklist();
+
+    expect(
+      await screen.findByText(/mailbox connection needs attention/i),
+    ).toBeTruthy();
   });
 
   it("writes the day's figures in the reader's own notation", async () => {
@@ -170,7 +240,11 @@ describe("what the ranked queue tells a reader", () => {
     renderWorklist();
 
     await screen.findByText("A task");
-    expect(screen.queryByRole("radiogroup", { name: "Whose work" })).toBeNull();
+    // SegmentedControl draws a fieldset of pressed buttons, so the absence is
+    // asserted on what it actually renders — a role it never uses would make
+    // this pass over a control drawn unconditionally.
+    expect(screen.queryByRole("group", { name: "Whose work" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "My team" })).toBeNull();
   });
 
   it("offers the scope control when the reader may ask for more", async () => {

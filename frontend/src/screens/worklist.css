@@ -54,6 +54,16 @@
   margin: 0;
 }
 
-.worklist-row-link {
-  color: inherit;
+/* The queue is an ordered list for assistive technology and a plain stack on
+   screen: the rank number is already drawn in the row. */
+.worklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.worklist-row-verbs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
 }

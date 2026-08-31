@@ -7122,8 +7122,7 @@ export const de = {
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearOfWhatWasRead":
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
-  "worklist.partial":
-    "{count} Quelle(n) konnten nicht gelesen werden — das ist nicht der ganze Tag.",
+  "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
@@ -7221,4 +7220,13 @@ export const de = {
   "worklist.untitled.bounce": "Eine E-Mail kam nicht an",
   "worklist.untitled.automation_run": "Eine Regel hat nicht funktioniert",
   "worklist.untitled.notice": "Ein Hinweis für dich",
+  "worklist.verb.decide": "Entscheiden",
+  "worklist.verb.merge": "Zusammenführen",
+  "worklist.verb.open": "Öffnen",
+  "worklist.verb.complete": "Öffnen",
+  "worklist.verb.snooze": "Öffnen",
+  "worklist.verb.acknowledge": "Öffnen",
+  "worklist.source.failed": "{source} konnte nicht gelesen werden",
+  "worklist.source.withheld": "{source} ist für dein Konto nicht sichtbar",
+  "worklist.untitled.generic": "Etwas braucht dich",
 } as const satisfies Record<MessageKey, string>;

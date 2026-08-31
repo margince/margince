@@ -7054,8 +7054,7 @@ export const vi = {
   "worklist.clear": "Không có gì đang chờ bạn.",
   "worklist.clearOfWhatWasRead":
     "Không có gì đang chờ trong các nguồn đã trả lời.",
-  "worklist.partial":
-    "Không đọc được {count} nguồn, nên đây chưa phải cả ngày.",
+  "worklist.partial": "{sources}, nên đây chưa phải cả ngày.",
   "worklist.overdue": "Quá hạn",
   "worklist.scope.label": "Công việc của ai",
   "worklist.scope.mine": "Của tôi",
@@ -7146,4 +7145,13 @@ export const vi = {
   "worklist.untitled.bounce": "Một email không đến nơi",
   "worklist.untitled.automation_run": "Một quy tắc đã không chạy",
   "worklist.untitled.notice": "Một thông báo cho bạn",
+  "worklist.verb.decide": "Quyết định",
+  "worklist.verb.merge": "Gộp",
+  "worklist.verb.open": "Mở",
+  "worklist.verb.complete": "Mở",
+  "worklist.verb.snooze": "Mở",
+  "worklist.verb.acknowledge": "Mở",
+  "worklist.source.failed": "Không đọc được {source}",
+  "worklist.source.withheld": "{source} bị ẩn với tài khoản của bạn",
+  "worklist.untitled.generic": "Có việc cần bạn",
 } as const satisfies Record<MessageKey, string>;
