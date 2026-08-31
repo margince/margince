@@ -15,9 +15,11 @@ package integration
 // reaches the store.
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
@@ -261,5 +263,84 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 	}
 	if len(activities.Data) != 1 {
 		t.Fatalf("replayed log produced %d activities, want exactly 1", len(activities.Data))
+	}
+}
+
+// TestAScheduledSendReplayProbesTheScheduleNotTheActivity is the alt-table half
+// of the replay probe.
+//
+// One route answers two tables behind the same "id": the outbound ACTIVITY when
+// the message went now, the SCHEDULED SEND when the caller asked for later, and
+// scheduled_at is what tells them apart. Probing the activity table for a
+// scheduled send would look up an id that is not there and refuse every retry.
+func TestAScheduledSendReplayProbesTheScheduleNotTheActivity(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	route := "/v1/activities/" + p.activityID + "/send-email"
+	keyed := map[string]string{"Idempotency-Key": "schedule-retry-1"}
+	req := AnyMap{
+		"subject": "Monday morning", "body": "Written the night before.",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_tz": "Europe/Berlin",
+	}
+
+	var first AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &first); status != http.StatusCreated {
+		t.Fatalf("keyed schedule = %d %v", status, first)
+	}
+	if first["scheduled_at"] == nil {
+		t.Fatalf("the answer carries no scheduled_at, so the replay would be gated on the activity table and this test would prove nothing: %v", first)
+	}
+
+	var replay AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &replay); status != http.StatusCreated {
+		t.Fatalf("keyed replay = %d %v, want the original 201", status, replay)
+	}
+	if !reflect.DeepEqual(first, replay) {
+		t.Errorf("replayed response differs from the original:\n first: %v\nreplay: %v", first, replay)
+	}
+}
+
+// TestAScheduledSendReplayRefusesAMessageThatIsNoLongerTheCallersOwn is the
+// refusal that probe exists for.
+//
+// A scheduled message is the SENDER's own: an unsent body and its blind-copy
+// list are not workspace-readable the way a sent activity is, so the scope
+// asked here is the scheduled_by predicate the store itself reads with. The
+// row moving to another sender is what the test reaches through SQL — the
+// transport key is scoped per principal, so nothing in the API can hand one
+// caller another's key today, and this is the guard for the day something can.
+func TestAScheduledSendReplayRefusesAMessageThatIsNoLongerTheCallersOwn(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+
+	route := "/v1/activities/" + p.activityID + "/send-email"
+	keyed := map[string]string{"Idempotency-Key": "schedule-retry-2"}
+	req := AnyMap{
+		"subject": "Monday morning", "body": "Written the night before.",
+		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
+		"scheduled_at": time.Now().Add(3 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_tz": "Europe/Berlin",
+	}
+
+	var first AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &first); status != http.StatusCreated {
+		t.Fatalf("keyed schedule = %d %v", status, first)
+	}
+
+	colleague := SeedIDRow(t, p.Owner,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'other@preflight.test', 'Other Sender')`)
+	if _, err := p.Owner.Exec(context.Background(),
+		`UPDATE scheduled_send SET scheduled_by = $1 WHERE id = $2`, colleague, first["id"]); err != nil {
+		t.Fatalf("handing the schedule to another sender: %v", err)
+	}
+
+	// Existence-hiding, like every other row scope: somebody else's message is
+	// not found rather than forbidden.
+	var replay AnyMap
+	if status := p.Call(t, "POST", route, req, keyed, &replay); status != http.StatusNotFound {
+		t.Fatalf("replay of a schedule now owned by another sender = %d %v, want 404", status, replay)
 	}
 }

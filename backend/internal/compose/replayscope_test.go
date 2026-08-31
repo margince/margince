@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -241,9 +242,14 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 // verdict. The nil pool is the second half — reaching the database would panic,
 // so nil is proof the loop skipped rather than probed.
 func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
-	target := replayableOperations["POST /v1/people/quick-capture"]
-	if len(target.companions) == 0 {
-		t.Fatal("quick-capture declares no companion, so this test asserts nothing")
+	const route = "POST /v1/people/quick-capture"
+	target := replayableOperations[route]
+	// The companion this case is ABOUT, not merely one: with a different path
+	// both bodies below read as absent and the case passes having exercised
+	// nothing.
+	if !slices.Contains(target.companions, companionRef{table: tableOrganization, idPath: companionOrgField}) {
+		t.Fatalf("%s declares companions %+v, and this case is about {organization, %s} — with a different path both bodies read as absent",
+			route, target.companions, companionOrgField)
 	}
 	for _, body := range []string{
 		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"}}`,
@@ -323,5 +329,21 @@ func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
 				t.Errorf("table = %q, want %q", got, c.want)
 			}
 		})
+	}
+}
+
+// A companion present as an EMPTY STRING is a body the middleware cannot vouch
+// for, not a body that names no record. Skipping it would replay a malformed
+// answer on the strength of a valid primary.
+//
+// It sits beside the skip case deliberately: an empty string resolves through
+// stringAt as ("", nil) — present, unlike absent or null — and is what tells a
+// reader that "the field is there but says nothing" refuses while "the field is
+// not there" does not.
+func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
+	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture",
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":""}`)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
