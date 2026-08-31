@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
@@ -798,6 +799,16 @@ describe("mapOrgUpdate — domains change detection (P1)", () => {
 describe("CompanyScreen — profile fields card (B5)", () => {
   it("renders a confirmed field's label + value and omits absent fields", async () => {
     stubFetch(async (url) => {
+      // The tab's rows are editable, and an edit affordance needs all three
+      // write axes: the grant, a full seat, and the record's own `writable`.
+      // Left to the catch-all below, /me answers with the ORG body — no seat,
+      // no grants — and every row correctly renders read-only, which reads
+      // exactly like the values having gone missing.
+      if (url.includes("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
       if (url.includes("/profile-fields")) {
         return jsonResponse({
           data: [
@@ -826,22 +837,30 @@ describe("CompanyScreen — profile fields card (B5)", () => {
       expect(screen.getByText("What they promise")).toBeTruthy(),
     );
     expect(screen.getByText("Fleet retrofits without downtime")).toBeTruthy();
-    // The value carries ONE affordance now: an evidence mark on the value
-    // itself. The old footer — a provenance tag, a confidence meter and an
-    // evidence chip stacked under every row — is gone, because three chips
-    // under a value read as clutter rather than as "this was derived".
-    const marked = screen.getByRole("button", {
-      name: /Fleet retrofits without downtime/,
-    });
-    expect(marked.getAttribute("aria-expanded")).toBe("false");
+    // The value is EDITABLE now, so the value's own button starts an edit and
+    // the provenance receipt sits beside it as its own control. One element
+    // cannot be both, and the value being editable is the point of the tab.
+    // Two controls on the row, and they are different acts: the value itself
+    // is the button that starts an edit (its accessible name is the invitation
+    // to change the field, not the value), and the receipt beside it is the
+    // one that opens the provenance panel.
+    const buttons = screen.getAllByRole("button");
+    const valueControl = buttons.find(
+      (el) => el.textContent?.trim() === "Fleet retrofits without downtime",
+    );
+    expect(valueControl).toBeTruthy();
+    const receipt = buttons.find(
+      (el) => el.getAttribute("aria-expanded") === "false",
+    );
+    expect(receipt).toBeTruthy();
     expect(screen.queryByText(/^High$|^Medium$|^Low$/)).toBeNull();
-    // A field the read never grounded (legal name) must not be invented.
-    expect(screen.queryByText("Registered legal name")).toBeNull();
-    // The empty-state copy only shows when nothing was read.
-    expect(screen.queryByText(/Nothing read yet/)).toBeNull();
+    // A field the read never grounded still DRAWS ITS ROW, empty. The tab is a
+    // form now, not a list of what a crawl happened to find: a reader can only
+    // add what they can see is missing, and the old card hid exactly that.
+    expect(screen.getAllByText("Who they sell to").length).toBeGreaterThan(0);
   });
 
-  it("shows the honest empty state when nothing has been read yet", async () => {
+  it("draws every narrative field as an empty row when nothing has been read", async () => {
     stubFetch(async (url) => {
       if (url.includes("/profile-fields")) {
         return jsonResponse({ data: [] });
@@ -854,9 +873,13 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     render(<CompanyScreen id="o-1" />);
     await openProfile();
 
+    // An account nobody has read is the case this tab exists for: every field
+    // is present and blank, so the reader can state what they know. The old
+    // card answered "Nothing read yet" and offered no way to change that.
     await waitFor(() =>
-      expect(screen.getByText(/Nothing read yet/)).toBeTruthy(),
+      expect(screen.getAllByText("What they sell").length).toBeGreaterThan(0),
     );
+    expect(screen.getAllByText("How they sell").length).toBeGreaterThan(0);
   });
 });
 
@@ -2029,16 +2052,21 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await screen.findByText("Brandt Automotive GmbH");
     await openProfile();
 
-    // Asserted on the disclosure summaries a reader actually clicks: these
-    // words also appear in the app's navigation, so a bare text match would
-    // pass on a page that had lost every one of these cards.
-    const summaries = () =>
-      Array.from(container.querySelectorAll(".disclosure-summary")).map((el) =>
+    // Asserted on the panel headings the tab is built from: these words also
+    // appear in the app's navigation, so a bare text match would pass on a page
+    // that had lost every one of these sections.
+    const headings = () =>
+      Array.from(container.querySelectorAll(".panel-head")).map((el) =>
         el.textContent?.trim(),
       );
-    await waitFor(() => expect(summaries()).toContain("Company profile"));
-    expect(summaries()).toContain("Where this came from");
-    expect(summaries()).toContain("Data & tools");
+    // A panel's header band carries its description line as well as its title,
+    // so these match the title at the start rather than the whole band.
+    const opensWith = (title: string) =>
+      headings().some((one) => one?.startsWith(title));
+    await waitFor(() => expect(opensWith("Details")).toBe(true));
+    expect(opensWith("What they do")).toBe(true);
+    expect(opensWith("Where this came from")).toBe(true);
+    expect(opensWith("Data & tools")).toBe(true);
     releaseView?.();
   });
 });

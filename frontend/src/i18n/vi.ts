@@ -1509,7 +1509,10 @@ export const vi = {
   "co.profileField.register_number": "Số đăng ký doanh nghiệp",
   "co.profileField.industry": "Ngành",
   "co.profileField.history": "Lịch sử",
-  "co.profile.title": "Hồ sơ công ty",
+  "co.narrative.title": "Họ làm gì",
+  "co.narrative.sub":
+    "Câu chuyện của tài khoản, theo cách trang web của họ kể. Hãy sửa bất cứ điều gì sai - một chỉnh sửa sẽ được giữ lại và lần đọc tiếp theo sẽ không ghi đè lên nó.",
+  "co.narrative.add": "Thêm",
   "co.people.engagement": "Trạng thái liên hệ",
   "co.people.lastInteraction": "Trao đổi gần nhất",
   "co.people.strength": "Mối quan hệ",
@@ -1665,8 +1668,6 @@ export const vi = {
   "co.overlayFallback":
     "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
   "org.domains": "Tên miền",
-  "org.firmographicsEmpty":
-    "Chưa đọc được gì — các trường hồ sơ có căn cứ sẽ hiện ở đây khi một lần đọc website xác nhận chúng.",
   "org.facts": "Dữ kiện đọc từ website",
   "org.factCategory.company": "Công ty",
   "org.factCategory.offering": "Sản phẩm dịch vụ",
@@ -2518,6 +2519,7 @@ export const vi = {
   "today.draft.to": "Soạn thư theo dõi gửi {name}",
   "today.draft.act": "Soạn thảo",
 
+  "evidence.mark": "đã đọc",
   "evidence.confirm": "Xác nhận",
   "evidence.correct": "Sửa",
   "evidence.save": "Lưu",

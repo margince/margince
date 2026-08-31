@@ -6,10 +6,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCan } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Disclosure } from "../design-system/atoms";
+import { EvidenceMark } from "../design-system/evidencemark";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import {
@@ -20,6 +22,7 @@ import {
 } from "./companyheader";
 import { SIZE_BAND_OPTIONS } from "./companylookups";
 import { VatMark } from "./companyvatmark";
+import { derivedSource } from "./evidencesource";
 import { profileFieldsKey, useOrgProfileFields } from "./evidenceverdict";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
@@ -452,26 +455,42 @@ const SIDECAR_FIELDS = [
 
 // One sidecar field's row. The value comes from the profile-fields read rather
 // than from `organization`, which carries no sidecar claim.
-function SidecarFieldRow({
+// Exported because the Profile tab writes the SAME sidecar fields through the
+// same PATCH — one writer for a profile-field value, mounted twice, so the rail
+// and the tab can never disagree about what they last wrote or which
+// precondition they sent. `multiline` is the tab's case: the narrative fields
+// (what they sell, who they sell to) are paragraphs, and a paragraph in a
+// single-line input is a field a reader cannot read back while typing it.
+export function SidecarFieldRow({
   orgId,
   fields,
   field,
   labelKey,
+  label: labelText,
   placeholderKey,
   canEdit,
   readOnlyReason,
+  multiline,
 }: Readonly<{
   orgId: string;
   fields: readonly ProfileField[];
   field: ProfileFieldKey;
-  labelKey: MessageKey;
+  // Two ways to name the row, because the two callers know the name
+  // differently: the rail states its two fields literally, and the Profile tab
+  // reads eleven of them out of the one vocabulary map that the backend gate
+  // holds. Exactly one is required, which the callers' own types enforce.
+  labelKey?: MessageKey;
+  label?: string;
   placeholderKey: MessageKey;
   canEdit: boolean;
   readOnlyReason: string | undefined;
+  multiline?: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const queryClient = useQueryClient();
-  const label = t(labelKey);
+  const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
   const save = async (next: string) => {
     const { error } = await api.PATCH(
@@ -499,16 +518,35 @@ function SidecarFieldRow({
       queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
     ]);
   };
+  // A value a machine read keeps its dotted underline and its receipt. The mark
+  // wraps the RESTING value only — while the reader is typing, the claim under
+  // edit is theirs, and an underline saying "a crawl found this" over their own
+  // draft would be false. Absent for a value a person typed: derivedSource
+  // returns nothing for a human row, and a mark with nothing behind it teaches
+  // the reader to stop opening them.
+  const source = current
+    ? derivedSource(current, locale, recordZone)
+    : undefined;
   return (
     <FieldRow label={label}>
+      {/* Editing and provenance are two controls, not one: EvidenceMark makes
+          its value the button that opens the receipt, and InlineText makes it
+          the button that starts an edit. One element cannot be both, so the
+          value stays editable and the receipt sits beside it — the same shape
+          the VAT verdict already uses on this grid. A human-typed value has no
+          receipt and shows no mark. */}
       <InlineText
         label={label}
         value={current?.value ?? ""}
         placeholder={t(placeholderKey)}
+        multiline={multiline}
         canEdit={canEdit}
         readOnlyReason={readOnlyReason}
         onSave={save}
       />
+      {source && current && (
+        <EvidenceMark value={t("evidence.mark")} source={source} />
+      )}
       {/* The register's verdict beside the number it answers for. Only once a
           number exists: a mark on an empty field would say the register had
           declined to recognise something nobody has stated. */}

@@ -1512,7 +1512,10 @@ export const de = {
   "co.profileField.register_number": "Registernummer",
   "co.profileField.industry": "Branche",
   "co.profileField.history": "Historie",
-  "co.profile.title": "Firmenprofil",
+  "co.narrative.title": "Was sie tun",
+  "co.narrative.sub":
+    "Die Geschichte des Kontos, wie sie die Website erzählt. Korrigieren Sie, was falsch ist - eine Korrektur bleibt, der nächste Lesevorgang überschreibt sie nicht.",
+  "co.narrative.add": "Hinzufügen",
   "co.people.engagement": "Kontaktstand",
   "co.people.lastInteraction": "Letzter Austausch",
   "co.people.strength": "Beziehung",
@@ -1670,8 +1673,6 @@ export const de = {
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
   "org.domains": "Domains",
-  "org.firmographicsEmpty":
-    "Noch nichts gelesen — belegte Profilfelder erscheinen hier, sobald eine Website-Auswertung sie bestätigt.",
   "org.facts": "Von der Website gelesene Fakten",
   "org.factCategory.company": "Unternehmen",
   "org.factCategory.offering": "Angebot",
@@ -2530,6 +2531,7 @@ export const de = {
   "today.draft.to": "Follow-up an {name} entwerfen",
   "today.draft.act": "Entwerfen",
 
+  "evidence.mark": "gelesen",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
   "evidence.save": "Speichern",
