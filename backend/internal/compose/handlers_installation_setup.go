@@ -100,9 +100,7 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	// cold-start read that first run is, so there is nothing to let a reader
 	// through to. A Google app buys mailbox capture and nothing else: an
 	// installation signing in with passwords and no external provider is fully
-	// usable without one, so demanding it at the gate locked an operator with no
-	// Google app out of every route — the company profile is written from behind
-	// this gate, and its absence is what redirects them back to it.
+	// usable without one.
 	//
 	// The app is configured from settings, where the card carries the redirect
 	// URIs Google's console asks for. The step stays in the report because that

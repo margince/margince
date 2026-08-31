@@ -364,11 +364,8 @@ func storeCloudProviderKey(t *testing.T, e *apptest.AppEnv) {
 // ONLY the model binding blocks first run.
 //
 // An installation deployed without a Google app is fully usable — password
-// sign-in, no external provider — and a blocking Google step locked such an
-// operator out of the entire product: onboarding refuses to show the company
-// form while a blocking step is outstanding, the company profile is written from
-// that form, and its absence is what redirects every route back to onboarding.
-// The only escape was to write the anchor organization over the API.
+// sign-in, no external provider — so a Google app has no place gating the
+// company form onboarding writes from.
 //
 // The step is still REPORTED, so a surface can say it is outstanding, and it is
 // still second, so nothing here weakens the order above. What this pins is the
