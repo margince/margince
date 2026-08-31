@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Badge, StatCard } from "../../design-system/atoms";
+import { useUrlParams } from "../../app/urlstate";
+import { Badge, SegmentedControl, StatCard } from "../../design-system/atoms";
 import { PipelineBoard } from "../../design-system/composed";
+import { RelationshipMap } from "../../design-system/relationshipmap";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
 import { EntityRef } from "../entityref";
+import { mapModelFromCoverage } from "./mapmodel";
 
 // What the account looks like before the reader picks anybody.
 //
@@ -53,9 +57,11 @@ export function useOrganizationCoverage(orgId: string) {
 
 export function CoverageBand({
   orgId,
+  accountName,
   onNarrow,
 }: Readonly<{
   orgId: string;
+  accountName: string;
   /** Each statement is a door: it narrows the list below to what it describes. */
   onNarrow: (status: "answered" | "untried" | null) => void;
 }>) {
@@ -107,7 +113,7 @@ export function CoverageBand({
           onOpen={() => onNarrow("untried")}
         />
       </StatStrip>
-      <CommitteeBoard coverage={coverage} />
+      <CommitteeBoard coverage={coverage} accountName={accountName} />
     </>
   );
 }
@@ -239,8 +245,32 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
  * the reading: the strategy is the shape, and a gap is a shape a sentence
  * under twenty-five rows cannot make anybody see.
  */
-function CommitteeBoard({ coverage }: Readonly<{ coverage: Coverage }>) {
+function CommitteeBoard({
+  coverage,
+  accountName,
+}: Readonly<{ coverage: Coverage; accountName: string }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [view, setView] = useState<"board" | "map">("board");
+  // The selection lives in the ADDRESS, so the two views agree about who is
+  // chosen and a reload or a pasted link restores it. Held locally it survived
+  // only until the component unmounted, which made the board and the map two
+  // pictures of the same account that could disagree.
+  const [params, setParams] = useUrlParams();
+  const focusId = params.get("focus") ?? null;
+  const setFocusId = (next: string | null) => {
+    const out = new Map(params);
+    if (next) {
+      out.set("focus", next);
+    } else {
+      out.delete("focus");
+    }
+    setParams(out);
+  };
+  const model = useMemo(
+    () => mapModelFromCoverage(coverage, accountName, mapCopy(t)),
+    [coverage, accountName, t],
+  );
   const committee = coverage.committee;
   if (!committee) {
     return null;
@@ -273,22 +303,115 @@ function CommitteeBoard({ coverage }: Readonly<{ coverage: Coverage }>) {
         ]
       : []),
   ];
-  return (
-    <PipelineBoard
-      variant="plain"
-      columns={columns}
-      renderCard={(record) => <SeatCard seat={record.seat} />}
-      columnExtras={(column) =>
-        // The gap, where it is: a critical role nobody holds says so in the
-        // column that would hold them, not in a line underneath the board.
-        column.deals.length === 0 && committee.gaps.includes(column.stage) ? (
-          <p className="t-caption" data-testid={`gap-${column.stage}`}>
-            {t("co.people.board.nobodyHolds")}
-          </p>
-        ) : null
-      }
+  const switcher = (
+    <SegmentedControl
+      options={["board", "map"] as const}
+      value={view}
+      onChange={setView}
+      label={t("co.people.view")}
+      labels={{
+        board: t("co.people.view.board"),
+        map: t("co.people.view.map"),
+      }}
     />
   );
+
+  if (view === "map") {
+    return (
+      <>
+        {switcher}
+        <RelationshipMap
+          model={model}
+          focusId={focusId}
+          onFocus={setFocusId}
+          // What the map DRAWS is the committee, not the account. Comparing
+          // seats against every contact read as a truncated contact map —
+          // "showing 3 of 100" — when the picture is complete for what it is
+          // about. It says the committee's own size, and names the seats it
+          // could not list.
+          completenessText={
+            committee.unlisted_seats > 0
+              ? t("co.people.map.scopePartial", {
+                  count: formatNumber(committee.seats.length, locale),
+                  hidden: formatNumber(committee.unlisted_seats, locale),
+                })
+              : t("co.people.map.scope", {
+                  count: formatNumber(committee.seats.length, locale),
+                })
+          }
+          labels={mapLabels(t, locale)}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {switcher}
+      <PipelineBoard
+        variant="plain"
+        columns={columns}
+        renderCard={(record) => <SeatCard seat={record.seat} />}
+        columnExtras={(column) =>
+          // The gap, where it is: a critical role nobody holds says so in the
+          // column that would hold them, not in a line underneath the board.
+          column.deals.length === 0 && committee.gaps.includes(column.stage) ? (
+            <p className="t-caption" data-testid={`gap-${column.stage}`}>
+              {t("co.people.board.nobodyHolds")}
+            </p>
+          ) : null
+        }
+      />
+    </>
+  );
+}
+
+/** The map's own words, all of them the caller's to supply. */
+function mapLabels(t: ReturnType<typeof useT>, locale: Locale) {
+  return {
+    region: t("co.people.map.region"),
+    band: {
+      strong: t("co.routeIn.band.strong"),
+      developing: t("co.routeIn.band.some"),
+      cold: t("co.routeIn.band.faint"),
+    },
+    bestRoute: t("co.people.map.bestRoute"),
+    alternatives: t("co.people.map.alternatives"),
+    noRoute: t("co.people.map.noRoute"),
+    laneMore: (hidden: number) =>
+      t("co.people.map.more", { count: formatNumber(hidden, locale) }),
+    clearFocus: t("co.people.map.clear"),
+    emptyTitle: t("co.people.map.emptyTitle"),
+    emptyBody: t("co.people.map.emptyBody"),
+    nothingSelected: t("co.people.map.nothingSelected"),
+  };
+}
+
+function mapCopy(t: ReturnType<typeof useT>) {
+  return {
+    routesWithheld: t("co.people.map.routesWithheld"),
+    ourSide: t("co.people.map.ourSide"),
+    account: t("co.people.map.account"),
+    roles: {
+      champion: t("co.role.champion"),
+      economic_buyer: t("co.role.economic_buyer"),
+      influencer: t("co.role.influencer"),
+      blocker: t("co.role.blocker"),
+      user: t("co.role.user"),
+    },
+    otherRoles: t("co.people.board.otherRoles"),
+    missing: (role: string) => t("co.people.map.missing", { role }),
+    assign: t("co.people.map.assignHint"),
+    engagement: {
+      answered: t("co.reach.answered"),
+      no_reply: t("co.reach.silent"),
+      untried: t("co.reach.untried"),
+    },
+    awaitingReply: t("co.people.map.awaiting"),
+    theyReplied: t("co.people.map.replied"),
+    neverWritten: t("co.people.map.never"),
+    onDeal: t("co.people.map.onDeal"),
+  };
 }
 
 function SeatCard({ seat }: Readonly<{ seat: Seat }>) {

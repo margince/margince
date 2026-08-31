@@ -1547,6 +1547,33 @@ export const de = {
   "co.people.band.unavailable": "Konnte nicht geladen werden",
   "co.people.band.unavailableWhy":
     "Die Abdeckung konnte nicht geladen werden; die Liste unten ist davon unberührt",
+  "co.people.view": "Team-Ansicht",
+  "co.people.view.board": "Board",
+  "co.people.view.map": "Karte",
+  "co.people.map.region": "Wer wen in diesem Konto erreicht",
+  "co.people.map.bestRoute": "Bester Weg",
+  "co.people.map.alternatives": "Alternativen",
+  "co.people.map.noRoute": "Kein Weg erfasst",
+  "co.people.map.more": "{count} weitere zeigen",
+  "co.people.map.clear": "Auswahl aufheben",
+  "co.people.map.emptyTitle": "Noch kein Weg erfasst",
+  "co.people.map.emptyBody":
+    "Vergib die Buying-Rollen oder importiere die vorhandenen Interaktionen.",
+  "co.people.map.nothingSelected":
+    "Wähle eine Person, um den besten Weg zu ihr zu sehen.",
+  "co.people.map.ourSide": "Unsere Seite",
+  "co.people.map.account": "Konto",
+  "co.people.map.missing": "{role} fehlt",
+  "co.people.map.awaiting": "wartet auf Antwort",
+  "co.people.map.replied": "sie haben geantwortet",
+  "co.people.map.never": "nie angeschrieben",
+  "co.people.map.onDeal": "auf dem Deal",
+  "co.people.map.routesWithheld":
+    "Wer sie erreicht, ist für dich nicht sichtbar",
+  "co.people.map.assignHint": "Niemand trägt diesen Deal",
+  "co.people.map.scope": "{count} im Buying-Team · nur der gewählte Deal.",
+  "co.people.map.scopePartial":
+    "{count} im Buying-Team · {hidden} weitere für dich nicht sichtbar.",
   "co.reach.answered": "Antwortet",
   "co.reach.silent": "Keine Antwort",
   "co.reach.untried": "Nie angesprochen",

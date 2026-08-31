@@ -23615,6 +23615,15 @@ components:
         full_name: { type: string }
         role: { type: string }
         engagement: { $ref: '#/components/schemas/ContactEngagement' }
+        routes:
+          $ref: '#/components/schemas/Organization360ContactRoutes'
+          description: |
+            Who on our side can reach this seat, strongest first — the same per-contact
+            routes the company 360 carries, from the same read.
+
+            ABSENT rather than empty for a caller without the activity grant: an empty set
+            is an answer ("nobody can reach them"), and giving that answer to somebody who
+            was not allowed to ask is the disclosure inverted.
     OrganizationCoverageCompleteness:
       type: object
       required: [committee_read]

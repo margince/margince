@@ -22129,6 +22129,19 @@ type OrganizationCoverageSeat struct {
 	FullName   string             `json:"full_name"`
 	PersonId   openapi_types.UUID `json:"person_id"`
 	Role       string             `json:"role"`
+
+	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
+	//
+	// The company page answers this per CONTACT rather than as a contact x
+	// every-colleague matrix: a forty-person sales team makes the matrix unreadable, and
+	// the reader's question is never "show me all the pairs" but "who should make this
+	// call". So each contact carries the few colleagues worth naming and a count of the
+	// rest.
+	//
+	// Only live members are named — recommending an intro from someone who has left is
+	// advice nobody can take. Their historical messages still count on the timeline; the
+	// person is gone, what happened is not.
+	Routes *Organization360ContactRoutes `json:"routes,omitempty"`
 }
 
 // OrganizationCoverageSummary defines model for OrganizationCoverageSummary.

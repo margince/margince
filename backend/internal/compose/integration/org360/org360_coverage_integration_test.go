@@ -258,3 +258,43 @@ func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
 			got.Summary.ContactsTotal)
 	}
 }
+
+// A seat carries who on our side can reach it, from the same reader the 360's
+// people section uses. A second route ranking would let the map and the roster
+// disagree about which colleague to ask.
+func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	owner := integration.OwnerConn(t)
+	svc := org360Service(e)
+
+	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	pipeline, openStage, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
+	e.WsExec(t, `UPDATE deal SET organization_id = $1 WHERE id = $2`, org, deal)
+
+	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, buyer, org, "Procurement")
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
+	// One colleague who has actually exchanged mail with them.
+	seedTouch(t, e, owner, "email", &e.Rep1, buyer)
+
+	got, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("reading coverage: %v", err)
+	}
+	if got.Committee == nil || len(got.Committee.Seats) != 1 {
+		t.Fatalf("expected one seat, got %+v", got.Committee)
+	}
+	routes := got.Committee.Seats[0].Routes
+	if routes == nil {
+		t.Fatal("the seat carries no routes for a caller who may read activity")
+	}
+	if routes.Untried {
+		t.Fatal("a seat somebody has exchanged mail with reads as untried")
+	}
+	if len(routes.Top) == 0 {
+		t.Fatal("no colleague named on a seat with a recorded exchange")
+	}
+}

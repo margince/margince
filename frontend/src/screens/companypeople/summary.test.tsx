@@ -9,6 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -66,7 +67,9 @@ test("names the person worth writing to", async () => {
       engagement: "answered",
     },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("Dietmar Rietsch")).not.toBeNull();
 });
@@ -78,7 +81,9 @@ test("says nobody has answered rather than naming a fallback", async () => {
   stub({
     summary: { contacts_total: 2, answered: 0, no_reply: 2, untried: 0 },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("Nobody has answered")).not.toBeNull();
 });
@@ -98,7 +103,9 @@ test("names the missing critical role", async () => {
       unlisted_seats: 0,
     },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("No champion")).not.toBeNull();
   // And the gap is shown WHERE it is: in the column that would hold them.
@@ -110,7 +117,9 @@ test("names the missing critical role", async () => {
 // nobody carrying it when it has somebody they cannot see.
 test("tells an unreadable committee apart from an empty one", async () => {
   stub({ completeness: { committee_read: false } });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("Hidden from you")).not.toBeNull();
   expect(screen.queryByText(/No champion/)).toBeNull();
@@ -122,7 +131,9 @@ test("does not name a gap when seats are hidden", async () => {
   stub({
     committee: { seats: [], gaps: [], unlisted_seats: 2 },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("2 more you cannot see")).not.toBeNull();
   expect(screen.queryByText(/No champion/)).toBeNull();
@@ -137,7 +148,13 @@ test("each door narrows the list to what it describes", async () => {
       engagement: "answered",
     },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={(s) => narrowed.push(s)} />);
+  render(
+    <CoverageBand
+      orgId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={(s) => narrowed.push(s)}
+    />,
+  );
 
   const untried = await screen.findByRole("button", {
     name: "Show who is untried",
@@ -148,7 +165,10 @@ test("each door narrows the list to what it describes", async () => {
 
 test("renders the German words under a German locale", async () => {
   stub({});
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />, "de");
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+    "de",
+  );
 
   await waitFor(() => expect(screen.getByText("Abdeckung")).not.toBeNull());
 });
@@ -158,7 +178,9 @@ test("renders the German words under a German locale", async () => {
 // role on every account that simply has nothing open.
 test("tells no-open-deal apart from withheld", async () => {
   stub({ deals: [], completeness: { committee_read: true } });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("No open deal")).not.toBeNull();
   expect(screen.queryByText("Hidden from you")).toBeNull();
@@ -169,7 +191,9 @@ test("tells no-open-deal apart from withheld", async () => {
 // a suppressed answer into a confident one.
 test("does not claim a complete committee when seats are hidden", async () => {
   stub({ committee: { seats: [], gaps: [], unlisted_seats: 2 } });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("Cannot be judged")).not.toBeNull();
   expect(screen.queryByText("Champion and economic buyer named")).toBeNull();
@@ -186,7 +210,9 @@ test("labels the way-in door by what it actually does", async () => {
       engagement: "untried",
     },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(
     await screen.findByRole("button", { name: "Show everyone" }),
@@ -214,7 +240,9 @@ test("draws a seat whose role has no column of its own", async () => {
       unlisted_seats: 0,
     },
   });
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("Sam Consultant")).not.toBeNull();
 });
@@ -225,7 +253,54 @@ test("says the reading failed rather than vanishing", async () => {
   vi.stubGlobal("fetch", () =>
     Promise.resolve(new Response("{}", { status: 500 })),
   );
-  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
 
   expect(await screen.findByText("Could not be read")).not.toBeNull();
+});
+
+test("offers the board and the map, and switches between them", async () => {
+  const user = userEvent.setup();
+  stub({
+    committee: {
+      seats: [
+        {
+          person_id: "p-1",
+          full_name: "Philipp Koenigs",
+          role: "economic_buyer",
+          engagement: "untried",
+          routes: {
+            top: [
+              {
+                user_id: "u-1",
+                display_name: "Sofia Meier",
+                strength_bucket: "developing",
+                last_interaction_at: "2026-08-20T09:00:00Z",
+              },
+            ],
+            remainder: 0,
+            untried: false,
+          },
+        },
+      ],
+      gaps: ["champion"],
+      unlisted_seats: 0,
+    },
+  });
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+
+  await screen.findByRole("button", { name: "Map" });
+  await user.click(screen.getByRole("button", { name: "Map" }));
+
+  // The same committee, drawn: the colleague who can reach the seat, and the
+  // hole where the champion would be.
+  expect(
+    await screen.findByRole("button", { name: /Sofia Meier/ }),
+  ).not.toBeNull();
+  expect(
+    screen.getByRole("button", { name: /champion missing/i }),
+  ).not.toBeNull();
 });
