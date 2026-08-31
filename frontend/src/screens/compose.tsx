@@ -2844,11 +2844,19 @@ export function TimelineActions({
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
-      <AudienceAction
-        activity={activity}
-        entityType={entityType}
-        entityId={entityId}
-      />
+      {activity.audience_reason ? (
+        <ThreadAudienceAction
+          activity={activity}
+          entityType={entityType}
+          entityId={entityId}
+        />
+      ) : (
+        <AudienceAction
+          activity={activity}
+          entityType={entityType}
+          entityId={entityId}
+        />
+      )}
       {relink && (
         <RelinkModal
           activityId={activity.id}
@@ -2873,6 +2881,97 @@ const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
   "workspace",
   "participants",
 ];
+
+// Why a captured message is held, in the reader's words. A reason the server
+// learned to give and this map has not falls back to nothing rather than to the
+// raw token: a badge reading `financial_corporate` beside a customer's mail is
+// worse than no badge at all.
+const audienceReasonLabel: Record<string, MessageKey> = {
+  posture: "compose.reason.posture",
+  workspace_floor: "compose.reason.workspaceFloor",
+  no_record: "compose.reason.noRecord",
+  pending_verdict: "compose.reason.pendingVerdict",
+  manual: "compose.reason.manual",
+};
+
+// ThreadAudienceAction shares or keeps back a whole THREAD, for a message that
+// came from a mailbox.
+//
+// Captured mail does not take the per-message dialog: its audience is derived
+// from what every importing mailbox asks for, so a direct write is refused
+// (`audience_is_derived`) and pointed here. The unit is the thread rather than
+// the message because that is what a person decides about — nobody shares the
+// third reply and keeps the fourth.
+//
+// The decision releases only the CALLER's hold. A thread two colleagues
+// imported opens when both allow it, so the outcome reports how many other
+// seats still hold it — a count and never a name, because whose mail a person
+// keeps private is itself private.
+function ThreadAudienceAction({
+  activity,
+  entityType,
+  entityId,
+}: Readonly<{
+  activity: Activity;
+  entityType: RelinkKind;
+  entityId: string;
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [held, setHeld] = useState<number | null>(null);
+  const shared = activity.audience === "workspace";
+  const threadKey = activity.thread_key;
+  const mutation = useMutation({
+    // The decision arrives as a variable, so the press belongs to the render
+    // the reader saw (frontend/AGENTS.md, mutation-variable-coverage).
+    mutationFn: async (share: boolean) => {
+      if (!threadKey) {
+        return null;
+      }
+      const { data, error } = await api.POST(
+        "/activities/threads/{thread_key}/audience",
+        { params: { path: { thread_key: threadKey } }, body: { share } },
+      );
+      if (error) throwProblem(error);
+      return data;
+    },
+    onSuccess: (outcome) => {
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      // A share that did not open the thread means somebody else still holds
+      // it. Saying so is the difference between a control that looks broken
+      // and one that reports what actually happened.
+      setHeld(outcome && !outcome.shared ? outcome.held_by_others : null);
+    },
+  });
+  // Withheld content carries no reason either, so there is nothing to draw and
+  // no standing to change it.
+  if (activity.content_state === "withheld" || !threadKey) {
+    return null;
+  }
+  const reasonKey = audienceReasonLabel[activity.audience_reason ?? ""];
+  return (
+    <>
+      {!shared && reasonKey && <Badge tone="warn">{t(reasonKey)}</Badge>}
+      <Button
+        small
+        pending={mutation.isPending}
+        onClick={() => {
+          setHeld(null);
+          mutation.mutate(!shared);
+        }}
+      >
+        {shared ? t("compose.threadKeepPrivate") : t("compose.threadShare")}
+      </Button>
+      {held !== null && (
+        <span className="t-caption">
+          {t("compose.threadStillHeld").replace("{count}", String(held))}
+        </span>
+      )}
+    </>
+  );
+}
 
 // AudienceAction limits (or re-opens) who may read ONE message's content. Per
 // message on purpose: a thread is not a unit of trust, and the contact stays
