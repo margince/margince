@@ -8,9 +8,11 @@ package persondraft_test
 import (
 	"testing"
 
-	uuid "github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/persondraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func viewOf(person crmcontracts.Person) crmcontracts.Person360 {
@@ -18,7 +20,7 @@ func viewOf(person crmcontracts.Person) crmcontracts.Person360 {
 }
 
 func personNamed(full string, first, last *string) crmcontracts.Person {
-	return crmcontracts.Person{Id: uuid.New(), FullName: full, FirstName: first, LastName: last}
+	return crmcontracts.Person{Id: openapi_types.UUID(ids.NewV7()), FullName: full, FirstName: first, LastName: last}
 }
 
 func ptr(s string) *string { return &s }

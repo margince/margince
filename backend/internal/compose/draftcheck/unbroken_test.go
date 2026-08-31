@@ -22,9 +22,10 @@ func rules(body string) []string {
 	return out
 }
 
-func has(rules []string, want string) bool {
-	for _, rule := range rules {
-		if rule == want {
+// flagsUnbrokenBlock reports whether the checks fired the unbroken-block rule.
+func flagsUnbrokenBlock(body string) bool {
+	for _, rule := range rules(body) {
+		if rule == "unbroken-block" {
 			return true
 		}
 	}
@@ -42,7 +43,7 @@ func TestAMessageRunTogetherOnOneLineIsAFinding(t *testing.T) {
 		"Hast du mit ihm gesprochen oder liegt das wieder nur auf deinem Schreibtisch? " +
 		"Sag mir bis morgen, ob das mit ihm läuft."
 
-	if !has(rules(body), "unbroken-block") {
+	if !flagsUnbrokenBlock(body) {
 		t.Error("a whole message on one line was accepted, so the rep opens a wall of text")
 	}
 }
@@ -53,7 +54,7 @@ func TestAMessageWithParagraphsIsNotAFinding(t *testing.T) {
 		"Erfahrung, die wir nutzen müssen. Hast du mit ihm gesprochen?\n\n" +
 		"Sag mir bis morgen, ob das mit ihm läuft."
 
-	if has(rules(body), "unbroken-block") {
+	if flagsUnbrokenBlock(body) {
 		t.Error("a draft with paragraphs was flagged, which would spend a model call making it worse")
 	}
 }
@@ -66,7 +67,7 @@ func TestAMessageWithParagraphsIsNotAFinding(t *testing.T) {
 func TestAShortOneLinerIsNotAFinding(t *testing.T) {
 	const body = "Greven, passt Donnerstag um 14 Uhr für den Call mit Michael?"
 
-	if has(rules(body), "unbroken-block") {
+	if flagsUnbrokenBlock(body) {
 		t.Error("a short complete one-line message was flagged as a wall of text")
 	}
 }
@@ -81,10 +82,10 @@ func TestTheThresholdSeparatesANoteFromAWall(t *testing.T) {
 	short := strings.TrimSpace(strings.Repeat(sentence, 2))
 	long := strings.TrimSpace(strings.Repeat(sentence, 4))
 
-	if has(rules(short), "unbroken-block") {
+	if flagsUnbrokenBlock(short) {
 		t.Errorf("a %d-character one-liner was flagged", len([]rune(short)))
 	}
-	if !has(rules(long), "unbroken-block") {
+	if !flagsUnbrokenBlock(long) {
 		t.Errorf("a %d-character one-liner was accepted", len([]rune(long)))
 	}
 }
