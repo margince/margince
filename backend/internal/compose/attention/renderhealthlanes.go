@@ -60,8 +60,13 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		Kind:    &kind,
 		Actions: []crmcontracts.AttentionItemActions{},
 	}
+	// The condition AND the mailbox it is about. Two disconnected mailboxes
+	// are two things to reconnect, and one row saying "disconnected" would
+	// send the reader to fix one and silently lose the other.
 	if mailbox != "" {
 		item.Detail = &mailbox
+		cause := "capture_health:" + kind + ":" + mailbox
+		item.CauseRef = &cause
 	}
 	return item
 }
@@ -80,6 +85,13 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 		Kind:       &state,
 		OccurredAt: &occurred,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	// The condition is the TASK that ran. Not the run's summary, which is
+	// written per run and would draw one incident per failure, and not the
+	// state, which is `failed` for every broken task there is.
+	if run.Kind != "" {
+		cause := "ai_work_health:" + run.Kind
+		item.CauseRef = &cause
 	}
 	if run.Summary != "" {
 		summary := run.Summary
@@ -136,6 +148,13 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 		Title:      &name,
 		OccurredAt: &occurred,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	// The condition is the RULE, not this firing of it and not its name: a
+	// name is mutable and not unique, so two rules sharing a name would merge
+	// and a renamed rule would split its own history.
+	if !run.AutomationID.IsZero() {
+		cause := "automation_run:" + run.AutomationID.String()
+		item.CauseRef = &cause
 	}
 	if run.Reason != "" {
 		reason := run.Reason

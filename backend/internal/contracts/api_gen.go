@@ -14789,6 +14789,16 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
+	// CauseRef Which underlying CONDITION this row reports, for a surface that groups repeated
+	// failures of one thing into one row. Two failures of one broken automation carry
+	// the same value; a failure of a different rule carries a different one.
+	//
+	// It is an opaque identity, not display text: never rendered, and never parsed for
+	// meaning. A row that reports no shared condition omits it. Present only on the
+	// system-health sources, where "the same thing broke again" is a question a reader
+	// has.
+	CauseRef *string `json:"cause_ref,omitempty"`
+
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
 
@@ -27744,6 +27754,11 @@ type WorklistItem struct {
 
 	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 	Category WorklistItemCategory `json:"category"`
+
+	// CauseRef Which underlying CONDITION this row reports, so a surface can group repeated
+	// failures of one thing into one row. Opaque identity, never rendered and never
+	// parsed. Absent on a row that reports no shared condition.
+	CauseRef *string `json:"cause_ref,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close

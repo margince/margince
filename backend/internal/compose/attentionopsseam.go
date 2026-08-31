@@ -94,6 +94,7 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 	for _, run := range troubled {
 		item := attention.TroubledRun{
 			ID:         run.ID,
+			Kind:       run.Kind,
 			State:      run.State,
 			OccurredAt: run.OccurredAt,
 		}
@@ -142,10 +143,11 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 	out := make([]attention.TroubledAutomationRun, 0, len(troubled))
 	for _, run := range troubled {
 		item := attention.TroubledAutomationRun{
-			ID:         run.ID,
-			Name:       run.Name,
-			Outcome:    run.Outcome,
-			OccurredAt: run.CreatedAt,
+			ID:           run.ID,
+			AutomationID: run.AutomationID,
+			Name:         run.Name,
+			Outcome:      run.Outcome,
+			OccurredAt:   run.CreatedAt,
 		}
 		if run.Reason != nil {
 			item.Reason = *run.Reason

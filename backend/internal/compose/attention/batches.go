@@ -97,47 +97,34 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 	return kept
 }
 
-// systemCause is what a broken system row has in common with its siblings: the
-// rule that failed, the AI task that failed, the mailbox that stopped.
+// systemCause is the CONDITION a broken-system row reports: the rule that
+// fails, the mailbox that stopped, the AI task that broke.
 //
-// A row with no cause it can name does not group. Grouping by SOURCE alone
-// would put a failing mailbox and a failing rule in one row, which tells the
-// reader two things are broken and names neither.
+// It reads one field, `cause_ref`, which each producer sets to its own real
+// identity — a rule id, a task kind, a condition-and-mailbox pair — and which
+// is namespaced by source, because the condition words are not unique across
+// producers: capture and overlay sync both say `sync_failing`, and one heading
+// covering both would tell a reader two things are broken and name neither.
+//
+// Nothing here reads a display field. An automation's NAME is mutable and not
+// unique, so two rules sharing one would merge and a rename would split a
+// rule's own history. An AI run's TITLE is its own per-run summary, so it draws
+// one incident per failure rather than one per broken task. Both were tried.
+//
+// A row with no `cause_ref` reports no shared condition and never groups. That
+// is the safe direction: an ungrouped row is one row too many on the page,
+// while a wrongly grouped one hides a failure the reader never learns about —
+// which is why a BOUNCE sets none. A bounce is a customer consequence, not a
+// system condition: this named person did not get this message, and folding
+// three of them behind one row hides two customers.
 func systemCause(row ranked) (string, bool) {
 	if row.item.Category != categorySystem {
 		return "", false
 	}
-	switch row.item.Source {
-	case "notice":
-		// A notice is addressed to one person about one thing. Two of them are
-		// two messages, not one condition.
-		return "", false
-	case "bounce":
-		// A bounced email is a CUSTOMER CONSEQUENCE, not a system condition:
-		// this customer did not get this message, and somebody has to fix that
-		// address. Three bounces are three customers, and grouping them by
-		// their provider's reason would hide two of them behind one row —
-		// which is the distinction the whole incident rule rests on.
+	if row.item.CauseRef == nil || *row.item.CauseRef == "" {
 		return "", false
 	}
-	// WHICH field names the cause depends on the producer, and getting this
-	// wrong is the difference between one incident and a hundred.
-	//
-	// An automation's title IS the rule ("Post-meeting recap draft"), stable
-	// across every firing, so eight failures of it are one broken rule. Its
-	// `kind` is the outcome — "failed" — which every broken thing shares, so
-	// grouping on that would file a dead mailbox under the same heading.
-	//
-	// An AI run's title is its own SUMMARY, written per run: grouping on it
-	// would draw a hundred and sixty-three incidents for one broken task. Its
-	// `kind` is what ran, which is the thing that is broken.
-	if row.item.Source == "automation_run" && row.item.Title != nil && *row.item.Title != "" {
-		return *row.item.Title, true
-	}
-	if row.item.Kind == nil || *row.item.Kind == "" {
-		return "", false
-	}
-	return *row.item.Kind, true
+	return *row.item.CauseRef, true
 }
 
 // batchKeyOf says which group a row belongs to, and whether it may be grouped

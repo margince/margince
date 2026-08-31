@@ -25,7 +25,10 @@ import (
 // or the read-time StateStalled, and OccurredAt is when it failed or, for a
 // stalled run, when it started.
 type TroubledRun struct {
-	ID           ids.UUID
+	ID ids.UUID
+	// Kind is which task ran. It is what two failures of one broken task have
+	// in common, and what tells them from a different task that also failed.
+	Kind         string
 	State        string
 	OccurredAt   time.Time
 	Summary      *string
@@ -43,9 +46,9 @@ type TroubledRun struct {
 // contract promises, and UNION ALL alone guarantees no order — the outer
 // ORDER BY is what puts stalled work first, newest within each shape.
 const troubledSQL = `
-SELECT id, state, occurred_at, summary, subject_label FROM (
+SELECT id, kind, state, occurred_at, summary, subject_label FROM (
   (
-    SELECT id, '` + StateStalled + `' AS state,
+    SELECT id, kind, '` + StateStalled + `' AS state,
            COALESCE(started_at, queued_at) AS occurred_at,
            left(summary, $4) AS summary, left(subject_label, $5) AS subject_label
       FROM ai_task_run
@@ -57,7 +60,7 @@ SELECT id, state, occurred_at, summary, subject_label FROM (
   )
   UNION ALL
   (
-    SELECT id, state,
+    SELECT id, kind, state,
            COALESCE(finished_at, started_at, queued_at) AS occurred_at,
            left(summary, $4) AS summary, left(subject_label, $5) AS subject_label
       FROM ai_task_run
@@ -93,7 +96,7 @@ func (s *Store) Troubled(ctx context.Context, since time.Time, limit int) ([]Tro
 		troubled = []TroubledRun{}
 		for rows.Next() {
 			var run TroubledRun
-			if scanErr := rows.Scan(&run.ID, &run.State,
+			if scanErr := rows.Scan(&run.ID, &run.Kind, &run.State,
 				&run.OccurredAt, &run.Summary, &run.SubjectLabel); scanErr != nil {
 				return scanErr
 			}

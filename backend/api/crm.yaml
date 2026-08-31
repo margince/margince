@@ -31960,6 +31960,17 @@ components:
             three languages, so a duplicate pair sends its `kind` and `confidence`
             and the client writes the line in the reader's own.
         detail: { type: string, description: "One supporting line: what changed, or what the evidence said." }
+        cause_ref:
+          type: string
+          description: |
+            Which underlying CONDITION this row reports, for a surface that groups repeated
+            failures of one thing into one row. Two failures of one broken automation carry
+            the same value; a failure of a different rule carries a different one.
+
+            It is an opaque identity, not display text: never rendered, and never parsed for
+            meaning. A row that reports no shared condition omits it. Present only on the
+            system-health sources, where "the same thing broke again" is a question a reader
+            has.
         rank: { type: integer, minimum: 1, description: "Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first." }
         confidence:
           type: number
@@ -32167,6 +32178,12 @@ components:
         score: { type: number, description: 'Rank within the level. Higher is first. Meaningless across levels.' }
         kind: { type: string, description: "The producer's own sub-type — for the icon and the label, never for authority." }
         title: { type: string, description: "The server's own sentence for this item, where it has one." }
+        cause_ref:
+          type: string
+          description: |
+            Which underlying CONDITION this row reports, so a surface can group repeated
+            failures of one thing into one row. Opaque identity, never rendered and never
+            parsed. Absent on a row that reports no shared condition.
         detail: { type: string, description: 'One supporting line.' }
         because:
           type: array

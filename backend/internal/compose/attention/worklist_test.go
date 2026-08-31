@@ -11,6 +11,7 @@ package attention
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -767,7 +768,7 @@ func TestAnAbsorbedDealKeepsItsMoneyOnTheWaitingRow(t *testing.T) {
 func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
 	for i := 0; i < 8; i++ {
-		failures = append(failures, item("f"+string(rune('a'+i)), "ai_work_health", withKind("site_triage")))
+		failures = append(failures, aiFailure(i, "site_triage"))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
 
@@ -779,7 +780,7 @@ func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
 	if got[0].Batch == nil || got[0].Batch.Count != 8 {
 		t.Fatal("the incident does not say how many times it happened")
 	}
-	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "site_triage" {
+	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "ai_work_health:site_triage" {
 		t.Fatal("the incident does not name WHAT is broken")
 	}
 }
@@ -789,9 +790,9 @@ func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
 func TestTwoBrokenThingsAreTwoIncidents(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
 	for i := 0; i < 4; i++ {
-		failures = append(failures,
-			item("a"+string(rune('a'+i)), "ai_work_health", withKind("site_triage")),
-			item("b"+string(rune('a'+i)), "ai_work_health", withKind("signal_extract")))
+		for _, task := range []string{"site_triage", "signal_extract"} {
+			failures = append(failures, aiFailure(i*2+len(task)%2, task))
+		}
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
 
@@ -806,7 +807,7 @@ func TestTwoBrokenThingsAreTwoIncidents(t *testing.T) {
 			causes[*row.Batch.Cause] = true
 		}
 	}
-	if !causes["site_triage"] || !causes["signal_extract"] {
+	if !causes["ai_work_health:site_triage"] || !causes["ai_work_health:signal_extract"] {
 		t.Fatalf("the incidents name %v, wanted both broken tasks", causes)
 	}
 }
@@ -854,7 +855,7 @@ func TestBouncesAreNeverFoldedIntoAnIncident(t *testing.T) {
 func TestAIFailuresGroupByWhatRanNotByEachRunsOwnWords(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
 	for i := 0; i < 5; i++ {
-		row := item("r"+string(rune('a'+i)), "ai_work_health", withKind("site_triage"))
+		row := aiFailure(i, "site_triage")
 		summary := "reading acme" + string(rune('a'+i)) + ".com failed"
 		row.Title = &summary
 		failures = append(failures, row)
@@ -866,7 +867,83 @@ func TestAIFailuresGroupByWhatRanNotByEachRunsOwnWords(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("five failures of one task drew %d incidents", len(got))
 	}
-	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "site_triage" {
+	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "ai_work_health:site_triage" {
 		t.Fatalf("the incident names %v, wanted the task that broke", got[0].Batch.Cause)
 	}
+}
+
+// Two broken mailboxes are two things to reconnect. A heading that says
+// "disconnected" once sends the reader to fix one and silently loses the other.
+func TestTwoBrokenMailboxesAreTwoIncidents(t *testing.T) {
+	rows := []crmcontracts.AttentionItem{}
+	for _, mailbox := range []string{"sales@acme.test", "lena@acme.test"} {
+		for i := 0; i < 4; i++ {
+			row := item(mailbox+string(rune('a'+i)), "capture_health", withKind("disconnected"))
+			cause := "capture_health:disconnected:" + mailbox
+			row.CauseRef = &cause
+			rows = append(rows, row)
+		}
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 2 {
+		t.Fatalf("two broken mailboxes drew %d rows, wanted one incident each", len(got))
+	}
+}
+
+// Capture and overlay sync both name a condition `sync_failing`. Grouping on
+// the condition word alone merges two unrelated failures under one heading
+// that names neither.
+func TestTwoSourcesSharingAConditionWordAreNotOneIncident(t *testing.T) {
+	capture := []crmcontracts.AttentionItem{}
+	for i := 0; i < 3; i++ {
+		row := item("c"+string(rune('a'+i)), "capture_health", withKind("sync_failing"))
+		cause := "capture_health:sync_failing:sales@acme.test"
+		row.CauseRef = &cause
+		capture = append(capture, row)
+	}
+	ai := []crmcontracts.AttentionItem{}
+	for i := 0; i < 3; i++ {
+		row := item("a"+string(rune('a'+i)), "ai_work_health", withKind("sync_failing"))
+		cause := "ai_work_health:sync_failing"
+		row.CauseRef = &cause
+		ai = append(ai, row)
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &capture, AiWorkHealth: &ai}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 2 {
+		t.Fatalf("two sources sharing a condition word drew %d rows, wanted one each", len(got))
+	}
+}
+
+// A row that names no condition never groups. An ungrouped row is one row too
+// many; a wrongly grouped one hides a failure the reader never learns about.
+func TestASystemRowWithNoNamedConditionNeverGroups(t *testing.T) {
+	rows := []crmcontracts.AttentionItem{}
+	for i := 0; i < 5; i++ {
+		rows = append(rows, item("s"+string(rune('a'+i)), "capture_health", withKind("disconnected")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 5 {
+		t.Fatalf("rows naming no condition folded into %d — a failure was hidden", len(got))
+	}
+}
+
+// aiFailure builds a troubled-AI row through the PRODUCTION renderer, so a test
+// about grouping is a test about how the product derives the grouping key. A
+// test that hand-set the marker would pass while the renderer set nothing.
+func aiFailure(seq int, taskKind string) crmcontracts.AttentionItem {
+	return aiWorkItem(TroubledRun{
+		ID:         ids.MustParse(fmt.Sprintf("01a05500-0000-7000-8000-0000000%05x", seq)),
+		Kind:       taskKind,
+		State:      "failed",
+		OccurredAt: rankInstant,
+	})
 }

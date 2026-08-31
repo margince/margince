@@ -26,11 +26,15 @@ import (
 // which way it stopped (the contract's failed/blocked vocabulary), and the
 // engine's own recorded reason where it left one.
 type TroubledAutomationRun struct {
-	ID        ids.UUID
-	Name      string
-	Outcome   string
-	Reason    *string
-	CreatedAt time.Time
+	ID ids.UUID
+	// AutomationID is the RULE that failed, as distinct from this one firing
+	// of it. Two failures of one rule share it; a rename does not change it,
+	// and two rules that happen to share a name do not collide on it.
+	AutomationID ids.UUID
+	Name         string
+	Outcome      string
+	Reason       *string
+	CreatedAt    time.Time
 }
 
 // troubledRunsSQL joins each failed or blocked run back to its LIVE, ENABLED
@@ -46,7 +50,7 @@ type TroubledAutomationRun struct {
 // everyone who decodes it. An archived automation's history stays
 // history — a card for a rule nobody can open would be a dead end.
 const troubledRunsSQL = `
-SELECT r.id, a.name, r.status, r.detail, r.created_at
+SELECT r.id, a.id, a.name, r.status, r.detail, r.created_at
   FROM workflow_run r
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
    AND r.handler = a.key
@@ -76,7 +80,7 @@ func (s *AutomationStore) TroubledRuns(ctx context.Context, since time.Time, lim
 			var run TroubledAutomationRun
 			var status string
 			var rawDetail []byte
-			if scanErr := rows.Scan(&run.ID, &run.Name,
+			if scanErr := rows.Scan(&run.ID, &run.AutomationID, &run.Name,
 				&status, &rawDetail, &run.CreatedAt); scanErr != nil {
 				return scanErr
 			}

@@ -24110,6 +24110,17 @@ export interface components {
             title?: string;
             /** @description One supporting line: what changed, or what the evidence said. */
             detail?: string;
+            /**
+             * @description Which underlying CONDITION this row reports, for a surface that groups repeated
+             *     failures of one thing into one row. Two failures of one broken automation carry
+             *     the same value; a failure of a different rule carries a different one.
+             *
+             *     It is an opaque identity, not display text: never rendered, and never parsed for
+             *     meaning. A row that reports no shared condition omits it. Present only on the
+             *     system-health sources, where "the same thing broke again" is a question a reader
+             *     has.
+             */
+            cause_ref?: string;
             /** @description Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first. */
             rank?: number;
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
@@ -24333,6 +24344,12 @@ export interface components {
             kind?: string;
             /** @description The server's own sentence for this item, where it has one. */
             title?: string;
+            /**
+             * @description Which underlying CONDITION this row reports, so a surface can group repeated
+             *     failures of one thing into one row. Opaque identity, never rendered and never
+             *     parsed. Absent on a row that reports no shared condition.
+             */
+            cause_ref?: string;
             /** @description One supporting line. */
             detail?: string;
             /** @description The facts that put this item at this level, in the order they were weighed. */

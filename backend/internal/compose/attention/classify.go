@@ -94,6 +94,7 @@ func base(
 		Kind:        item.Kind,
 		Title:       item.Title,
 		Detail:      item.Detail,
+		CauseRef:    item.CauseRef,
 		Subject:     item.Subject,
 		Deal:        dealFactsOf(item),
 		DueAt:       item.DueAt,
