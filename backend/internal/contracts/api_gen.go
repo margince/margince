@@ -18061,6 +18061,47 @@ type DealNextBestActionEvidence struct {
 	Text       string              `json:"text"`
 }
 
+// DealRoleProposalResult defines model for DealRoleProposalResult.
+type DealRoleProposalResult struct {
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Skipped How many of the model's proposals the gate refused — a wrong quote, a person
+	// who already holds a seat, a score under the floor, evidence written by
+	// somebody else.
+	//
+	// Reported as a COUNT, not a list. A refused proposal is a claim the product
+	// decided not to make, and showing it would put the unevidenced guess back in
+	// front of the reader that dropping it removed. The number is here so an empty
+	// answer can tell "nothing was proposed" apart from "everything proposed was
+	// refused", which are different facts about the account.
+	Skipped int `json:"skipped"`
+
+	// Written The seats this read actually created, in the order it wrote them. Each is a
+	// real `deal_stakeholder` relationship carrying `ai_suggested`, so the committee
+	// board and the map mark it without a second read.
+	Written []DealRoleProposalWritten `json:"written"`
+}
+
+// DealRoleProposalWritten defines model for DealRoleProposalWritten.
+type DealRoleProposalWritten struct {
+	Confidence float32 `json:"confidence"`
+
+	// EvidenceSnippet The words this role was read out of, quoted verbatim from the contact's own
+	// message. Checked against that message before the seat was written, so a
+	// reader can find the sentence rather than take the label on trust.
+	EvidenceSnippet string             `json:"evidence_snippet"`
+	FullName        string             `json:"full_name"`
+	PersonId        openapi_types.UUID `json:"person_id"`
+	Role            string             `json:"role"`
+
+	// SourceActivityId The message the quote came from, and the one the contact themselves wrote.
+	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+}
+
 // DealRoom One buyer-facing room per deal. Mirrors the `deal_room` table.
 //
 // The fields here are the WORKING copy — what a buyer actually reads is the
@@ -41338,6 +41379,9 @@ type ServerInterface interface {
 	// Create a draft offer under a deal (offer_number minted server-side).
 	// (POST /deals/{id}/offers)
 	CreateOffer(w http.ResponseWriter, r *http.Request, id Id, params CreateOfferParams)
+	// Read the buying roles out of what this deal's contacts have written.
+	// (POST /deals/{id}/role-proposals)
+	ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's stakeholders (deal↔person relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -43465,6 +43509,12 @@ func (_ Unimplemented) ListDealOffers(w http.ResponseWriter, r *http.Request, id
 // Create a draft offer under a deal (offer_number minted server-side).
 // (POST /deals/{id}/offers)
 func (_ Unimplemented) CreateOffer(w http.ResponseWriter, r *http.Request, id Id, params CreateOfferParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the buying roles out of what this deal's contacts have written.
+// (POST /deals/{id}/role-proposals)
+func (_ Unimplemented) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53245,6 +53295,38 @@ func (siw *ServerInterfaceWrapper) CreateOffer(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateOffer(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProposeDealRoles operation middleware
+func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeDealRoles(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69389,6 +69471,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/offers", wrapper.CreateOffer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/role-proposals", wrapper.ProposeDealRoles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)

@@ -126,6 +126,12 @@ type ModelPath struct {
 	DocumentExtract documentCompleter
 	// Enrich is the §2.9 evidence-or-omit signature field extraction lane.
 	Enrich completer
+	// ProposeRoles reads a deal's buying roles out of what its contacts wrote.
+	// The one lane in this struct with NO floor behind it: every other absent
+	// lane degrades to a deterministic answer, and a buying role has none —
+	// the only thing left to read it from would be the job title, which is the
+	// inference the contract forbids. So its endpoint declares 501 instead.
+	ProposeRoles completer
 	// VoiceBuild is the durable Voice DNA build lane: the builder pass and
 	// its evaluation drafts ride the same task label and budget.
 	VoiceBuild completer
@@ -269,6 +275,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		BriefRanking:                  brain(ai.TaskBriefRanking),
 		Summarize:                     brain(ai.TaskSummarize),
 		DealHealth:                    brain(ai.TaskDealHealth),
+		ProposeRoles:                  brain(ai.TaskProposeRoles),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),

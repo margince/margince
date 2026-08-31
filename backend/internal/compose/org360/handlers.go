@@ -29,11 +29,42 @@ type OverlayMode func(ctx context.Context) (bool, error)
 type Handlers struct {
 	svc     *Service
 	overlay OverlayMode
+	// roleLane is the propose-roles model lane, or nil in a process role that
+	// wired none. Held here rather than on the Service because it is the only
+	// part of this composite that calls a model at all: every other section is
+	// a read, and giving the whole service a lane would suggest otherwise.
+	roleLane Completer
 }
 
 // NewHandlers binds the transport to a ready service.
 func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
 	return Handlers{svc: svc, overlay: overlay}
+}
+
+// WithRoleLane binds the model lane that reads buying roles.
+//
+// Optional by design: without it ProposeDealRoles answers 501, which is the
+// honest answer for a role there is no non-guessing way to read.
+func (h Handlers) WithRoleLane(lane Completer) Handlers {
+	h.roleLane = lane
+	return h
+}
+
+// ProposeDealRoles implements POST /deals/{id}/role-proposals.
+func (h Handlers) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	if h.roleLane == nil {
+		httperr.NotImplemented(w, r, "ProposeDealRoles (no model path configured)")
+		return
+	}
+	out, err := h.svc.ProposeRoles(r.Context(), h.roleLane, ids.From[ids.DealKind](ids.UUID(id)))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // GetOrganization360 implements GET /organizations/{id}/360.

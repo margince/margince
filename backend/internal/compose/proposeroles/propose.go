@@ -267,3 +267,21 @@ func survives(
 	}
 	return strings.Contains(src.body, snippet)
 }
+
+// Parse decodes the model's answer.
+//
+// It reads the shape and nothing more — every judgement about whether a
+// proposal deserves to reach a record belongs to Gate, which is the one place
+// those rules are spelled. A reply that is not the declared shape at all is an
+// error rather than an empty reading: the two are different facts, and calling
+// a malformed answer "no roles found" would report a broken lane as a
+// well-covered account.
+func Parse(raw string) ([]Proposal, error) {
+	var answer struct {
+		Proposals []Proposal `json:"proposals"`
+	}
+	if err := json.Unmarshal([]byte(raw), &answer); err != nil {
+		return nil, fmt.Errorf("proposeroles: the reply is not the shape this site takes: %w", err)
+	}
+	return answer.Proposals, nil
+}
