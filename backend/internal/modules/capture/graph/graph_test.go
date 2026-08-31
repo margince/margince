@@ -27,15 +27,22 @@ type fakeOAuth struct {
 	// rotated is what Microsoft hands back in place of the stored refresh
 	// token; empty means it rotated nothing this round.
 	rotated string
+	// askedFor records the scopes the last refresh requested — a refresh must
+	// ask for the grant's own, never the deployment's configured list.
+	askedFor []string
 }
 
-func (f fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
-func (f fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
+func (f *fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
+func (f *fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
 	return oauthflow.TokenGrant{RefreshToken: f.refresh, Scopes: f.granted}, nil
 }
-func (f fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
+func (f *fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
 
-func (f fakeOAuth) Refresh(context.Context, string) (oauthflow.TokenRefresh, error) {
+// Refresh records what the caller asked to refresh FOR, which is half the
+// point of the seam: a refresh must ask for the grant's own scopes, never the
+// deployment's configured list.
+func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oauthflow.TokenRefresh, error) {
+	f.askedFor = granted
 	return oauthflow.TokenRefresh{AccessToken: f.access, Rotated: f.rotated}, nil
 }
 
@@ -62,12 +69,44 @@ type fakeAPI struct {
 	sentIDs       map[string]bool // listed ids Graph filed under Sent Items
 	skipIDs       map[string]bool // ids GetMIME refuses as a per-message drop
 	sentFolderErr error
+
+	// The outbound half's state.
+	sendCalls     int
+	sendErr       error
+	sentMIME      [][]byte
+	findCalls     int
+	findErr       error
+	seenFindID    string
+	sentByID      map[string]string
 	listNext      string
 	listCalls     int
 	seenPageToken string
 }
 
 func (f *fakeAPI) Profile(context.Context, string) (string, error) { return f.email, nil }
+
+// The outbound half. sentByID is what Sent Items holds, keyed on the
+// UNBRACKETED identity the caller asks about; sentRaw is the copy the read-back
+// parses. sentMIME records what was submitted, so a test can assert that a
+// retry which found a prior send transmitted NOTHING.
+func (f *fakeAPI) SendMIME(_ context.Context, _ string, rfc822 []byte) error {
+	f.sendCalls++
+	if f.sendErr != nil {
+		return f.sendErr
+	}
+	f.sentMIME = append(f.sentMIME, rfc822)
+	return nil
+}
+
+func (f *fakeAPI) FindSentByMessageID(_ context.Context, _, id string) (string, bool, error) {
+	f.findCalls++
+	f.seenFindID = id
+	if f.findErr != nil {
+		return "", false, f.findErr
+	}
+	msgID, ok := f.sentByID[id]
+	return msgID, ok, nil
+}
 
 func (f *fakeAPI) DeltaInit(_ context.Context, _ string, after time.Time) ([]string, string, error) {
 	f.initCalls++
@@ -166,7 +205,7 @@ func authBytes(t *testing.T) connector.Auth {
 var pinned = time.Date(2026, 7, 18, 12, 0, 0, 0, time.UTC)
 
 func pinnedConn(api *fakeAPI) *Connector {
-	c := New(fakeOAuth{access: "access-1"}, api)
+	c := New(&fakeOAuth{access: "access-1"}, api)
 	c.now = func() time.Time { return pinned }
 	return c
 }
@@ -174,7 +213,7 @@ func pinnedConn(api *fakeAPI) *Connector {
 // --- tests ---------------------------------------------------------------
 
 func TestDescriptorIsAutoExecuteReadOnly(t *testing.T) {
-	d := New(fakeOAuth{}, &fakeAPI{}).Descriptor()
+	d := New(&fakeOAuth{}, &fakeAPI{}).Descriptor()
 	if d.Name != "graph" {
 		t.Errorf("Name = %q, want graph", d.Name)
 	}
@@ -190,7 +229,7 @@ func TestDescriptorIsAutoExecuteReadOnly(t *testing.T) {
 }
 
 func TestAuthenticateBindsRefreshTokenAndOwner(t *testing.T) {
-	c := New(fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
+	c := New(&fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
 	req, err := AuthRequestFrom("the-code", "https://app/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -209,7 +248,7 @@ func TestAuthenticateBindsRefreshTokenAndOwner(t *testing.T) {
 }
 
 func TestAuthenticateRequiresCode(t *testing.T) {
-	c := New(fakeOAuth{}, &fakeAPI{})
+	c := New(&fakeOAuth{}, &fakeAPI{})
 	req, err := AuthRequestFrom("", "https://app/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -370,7 +409,7 @@ func TestCursorCarriesMailboxEmail(t *testing.T) {
 }
 
 func TestNormalizeSkipsAutomatedMail(t *testing.T) {
-	c := New(fakeOAuth{}, &fakeAPI{})
+	c := New(&fakeOAuth{}, &fakeAPI{})
 	c.owner = owner
 	auto := []byte(strings.Join([]string{
 		"From: system@acme.com", "To: " + owner, "Subject: OOO",
@@ -395,7 +434,7 @@ func TestNormalizeSkipsAutomatedMail(t *testing.T) {
 // already produced — no vault round-trip and no network — and a bundle that
 // names no mailbox is a blank line in the UI, not a lost connection.
 func TestAccountLabelNamesTheAuthorizedMailbox(t *testing.T) {
-	c := New(fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
+	c := New(&fakeOAuth{refresh: "refresh-1", access: "access-1"}, &fakeAPI{email: owner})
 	req, err := AuthRequestFrom("the-code", "https://app/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -414,7 +453,7 @@ func TestAccountLabelNamesTheAuthorizedMailbox(t *testing.T) {
 }
 
 func TestAccountLabelOfAnOwnerlessBundleIsAbsentNotAnError(t *testing.T) {
-	c := New(fakeOAuth{}, &fakeAPI{})
+	c := New(&fakeOAuth{}, &fakeAPI{})
 	bundle, err := json.Marshal(authState{RefreshToken: "r"})
 	if err != nil {
 		t.Fatal(err)

@@ -75,6 +75,12 @@ func newGraphOAuth(c GraphConfig) graph.OAuth {
 // after WithKeyvault, and after WithGmailCapture when both are configured.
 func WithGraphCapture(c GraphConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
+		// The send pre-flight's fact, recorded BEFORE the transport gate below
+		// and off canSync — the same split WithGmailCapture makes. An
+		// installation holding client credentials but no state key mounts no
+		// api-side connect transport and still sends perfectly well from the
+		// worker, so gating this on canConnect would report it unable to.
+		s.graphAppConfigured = c.canSync()
 		if !c.canConnect() || s.vault == nil {
 			return
 		}

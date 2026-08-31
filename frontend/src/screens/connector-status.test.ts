@@ -83,11 +83,28 @@ describe("missingSendGrant", () => {
   });
 
   // A provider that cannot send at all is not "cannot send" — it was never a
-  // sending mailbox, and its scope vocabulary is not Google's, so no absent
-  // Google scope says anything about it.
+  // sending mailbox, and its scope vocabulary is neither vendor's, so no absent
+  // scope says anything about it.
   it("never badges a provider that does not send in the first place", () => {
     expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
     expect(missingSendGrant({ provider: "gcal", scopes: [] })).toBe(false);
-    expect(missingSendGrant({ provider: "graph", scopes: [] })).toBe(false);
+  });
+
+  // Outlook sends too, and its grant carries Microsoft's own permission name —
+  // so a mailbox connected before sending shipped for that vendor is badged on
+  // the SAME rule, read against a different string.
+  it("badges an Outlook mailbox whose grant carries no send permission", () => {
+    expect(
+      missingSendGrant({
+        provider: "graph",
+        scopes: ["offline_access", "User.Read", "Mail.Read"],
+      }),
+    ).toBe(true);
+    expect(
+      missingSendGrant({
+        provider: "graph",
+        scopes: ["offline_access", "User.Read", "Mail.Read", "Mail.Send"],
+      }),
+    ).toBe(false);
   });
 });

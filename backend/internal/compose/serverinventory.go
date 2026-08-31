@@ -245,9 +245,14 @@ type Server struct {
 	// client credentials but no state key — which mounts no api-side connect
 	// transport yet sends perfectly well from the worker — still counts as
 	// configured. False is the honest default for a composition never told about
-	// a Google app at all. Gmail is the only provider with a field here because
-	// it is the only one comms.SendScopeFor gives a send scope.
+	// a Google app at all.
 	gmailAppConfigured bool
+	// graphAppConfigured is the Microsoft twin, recorded by WithGraphCapture on
+	// the same condition and read by the same pre-flight. It exists because
+	// Outlook now sends too: comms.SendScopeFor gives a send scope to both mail
+	// providers, so both reach the pre-flight and a missing field would report
+	// a configured deployment as unable to send.
+	graphAppConfigured bool
 	// googleAppResolver resolves the installation's STORED Google app, built by
 	// WithKeyvault and named in every connectorHandlers literal.
 	//

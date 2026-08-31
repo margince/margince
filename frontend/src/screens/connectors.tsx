@@ -183,7 +183,7 @@ function ConnectionIdentity({
 
 // What each provider actually brings, one sentence each. They exist because
 // the choice cannot be made from four names: "Gmail" and "Google Calendar"
-// are two halves of one account, only Gmail can ever send, and IMAP is the
+// are two halves of one account, only the OAuth mailboxes can send, and IMAP is the
 // answer for every host with no OAuth at all. A strip of four buttons had
 // nowhere to say any of that.
 const PROVIDER_BLURB: Record<Provider, MessageKey> = {

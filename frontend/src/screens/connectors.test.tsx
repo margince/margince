@@ -633,7 +633,7 @@ describe("add a connection", () => {
   });
 
   // Four provider names decide nothing: Gmail and Google Calendar are two
-  // halves of one account, only Gmail can ever send, and IMAP is the answer for
+  // halves of one account, only the OAuth mailboxes can send, and IMAP is the answer for
   // every host with no OAuth. Each pick carries the sentence that says so, and
   // it lands in that button's own aria-describedby.
   it("gives every pick the sentence its choice needs", async () => {

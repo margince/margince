@@ -166,16 +166,16 @@ refresh token (see below).
 ## The connectors
 
 All five register in `internal/compose/capture.go`; every one produces `activity` on the way in, and
-two of them can also transmit. The differences that matter:
+three of them can also transmit. The differences that matter:
 
 | | **Gmail** | **IMAP** | **Graph** (Outlook) | **Calendar** (gcal) | **Telegram** |
 |---|---|---|---|---|---|
-| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` | OAuth `calendar.readonly` | BotFather bot token |
+| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app-password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` | BotFather bot token |
 | Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
 | Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `getUpdates` offset |
 | Push | Pub/Sub 7-day | — (poll) | — (poll) | — (poll) | — (long poll, exclusive per bot) |
 | Backfill | ✔ | — | ✔ | — | — (the Bot API has no history endpoint) |
-| Send | ✔ (`EmailSender`) | — | — | — | ✔ (`MessageSender`) |
+| Send | ✔ (`EmailSender`) | — | ✔ (`EmailSender`) | — | ✔ (`MessageSender`) |
 | Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only (its own card) |
 
 ### Gmail — standing OAuth, push-capable, send-capable
@@ -219,11 +219,24 @@ read.
 
 ### Microsoft Graph — standing OAuth, poll-only
 
-OAuth2 to the Microsoft identity platform with delegated scopes `offline_access User.Read Mail.Read`
-(tenant defaults to `common`). Incremental sync walks a **delta query** from a `deltaLink`; a stale link
-(`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It is a `Backfiller` but **not** a
-`Watcher` — there is no change-notification subscription built, so Outlook latency is the poll interval,
-not a push p95. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key. **UI:** a
+OAuth2 to the Microsoft identity platform with delegated permissions `offline_access User.Read
+Mail.Read Mail.Send` (tenant defaults to `common`) — mail read for capture and send for the governed
+outbound path, on **one consent**, because Microsoft will not add a permission to an existing refresh
+token. A mailbox connected before the send permission landed captures normally and refuses every send
+by name until it is reconnected. Incremental sync walks a **delta query** from a `deltaLink`; a stale
+link (`ErrDeltaGone`, HTTP 410) re-anchors to a bounded 7-day window. It is a `Backfiller` and an
+`EmailSender` but **not** a `Watcher` — there is no change-notification subscription built, so Outlook
+latency is the poll interval, not a push p95.
+
+Sending submits the whole RFC822 message to `/me/sendMail`, rendered by the **shared** wire builder
+(`capture/mailwire`) that Gmail's send uses — one answer to what a multipart/alternative puts first and
+where base64 folds. Microsoft acknowledges without naming a message id, so the sent copy is resolved
+afterwards by filtering Sent Items on `internetMessageId`; that same filter is the at-least-once retry
+guard, and unlike Gmail's (which searches for an identity Gmail has already discarded) it reads the
+message's own property. It still does not close the window — Exchange may rewrite the identity on
+submission depending on tenant configuration. **Microsoft carries less than Gmail**: the MIME submit
+ceiling is 4 MB of base64, so `Carriage` declares ~3 MiB per file where Gmail declares 25 MiB, and an
+over-large message parks with an honest reason instead of drawing an opaque refusal. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key. **UI:** a
 first-connect affordance from both the onboarding **Microsoft** chip and the Settings **Add a connection**
 footer; the roster manages an existing connection. Microsoft **rotates the refresh token on every redemption**, and the replacement is now persisted: the
 connector reports it through `CredentialRotator` and the registry re-seals it into the vault on each
@@ -324,8 +337,8 @@ The pipeline is live; these were scoped out, not missed:
   app-password included, and destroyed on disconnect. A provider that REPLACES it on use (Microsoft does,
   on every redemption) reports the replacement through `CredentialRotator`, and the re-seal obeys the
   same fence and the same destroy-the-old rule.
-- **All four connections are standing** and sync in the background; only Gmail/Graph backfill; only
-  Gmail pushes.
+- **All four connections are standing** and sync in the background; only Gmail/Graph backfill and
+  send; only Gmail pushes.
 
 ## Where the code lives
 
@@ -341,7 +354,8 @@ The pipeline is live; these were scoped out, not missed:
 | Counterparty / RFC822 mapping (direction, ThreadKey, skip rules) | `internal/modules/capture/mailmap/mailmap.go` |
 | Gmail connector (OAuth, history sync, Pub/Sub watch, backfill) | `internal/modules/capture/gmail/` |
 | IMAP connector (standing UID-watermark sync; netguard SSRF guard) | `internal/modules/capture/imap/` |
-| Graph connector (OAuth, delta sync, backfill) | `internal/modules/capture/graph/` |
+| Graph connector (OAuth, delta sync, backfill, send) | `internal/modules/capture/graph/` |
+| The shared outbound RFC822 renderer both mail senders use | `internal/modules/capture/mailwire/` |
 | Google Calendar connector (OAuth, syncToken) | `internal/modules/capture/gcal/` |
 | Shared OAuth handshake (authorize URL, code/refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/` |
 | Connect surface + state signing + CSRF (api) | `internal/compose/connectors.go`, `connectors_imap.go` |

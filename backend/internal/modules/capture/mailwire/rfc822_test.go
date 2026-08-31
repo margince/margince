@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package gmail
+package mailwire
 
 // The wire shape of a message that carries markup.
 //
@@ -34,7 +34,7 @@ func plainMessage() connector.EmailMessage {
 // Wrapping one part in a multipart envelope buys nothing and costs every reader
 // a boundary to parse.
 func TestAPlainMessageStaysSinglePart(t *testing.T) {
-	parsed := parseMail(t, buildRFC822("rep@gradion.test", plainMessage()))
+	parsed := parseMail(t, Build("rep@gradion.test", plainMessage()))
 
 	mediaType, _, err := mime.ParseMediaType(parsed.Header.Get("Content-Type"))
 	if err != nil {
@@ -59,7 +59,7 @@ func TestAnHTMLMessageIsMultipartAlternativeWithPlainFirst(t *testing.T) {
 	msg := plainMessage()
 	msg.HTMLBody = "<p>Hallo Marine,</p><p>anbei die <b>Zahlen</b>.</p>"
 
-	parts := parseParts(t, buildRFC822("rep@gradion.test", msg))
+	parts := parseParts(t, Build("rep@gradion.test", msg))
 	if len(parts) != 2 {
 		t.Fatalf("expected two alternatives, got %d", len(parts))
 	}
@@ -83,7 +83,7 @@ func TestBothAlternativesDeclareUTF8(t *testing.T) {
 	msg := plainMessage()
 	msg.HTMLBody = "<p>Zahlen für Sie</p>"
 
-	for _, part := range parseParts(t, buildRFC822("rep@gradion.test", msg)) {
+	for _, part := range parseParts(t, Build("rep@gradion.test", msg)) {
 		if got := strings.ToLower(part.charset); got != "utf-8" {
 			t.Errorf("%s declares charset %q, expected utf-8", part.mediaType, got)
 		}
@@ -97,7 +97,7 @@ func TestTheBoundaryIsStableAcrossRenders(t *testing.T) {
 	msg := plainMessage()
 	msg.HTMLBody = "<p>x</p>"
 
-	if first, second := buildRFC822("rep@gradion.test", msg), buildRFC822("rep@gradion.test", msg); first != second {
+	if first, second := Build("rep@gradion.test", msg), Build("rep@gradion.test", msg); first != second {
 		t.Fatal("two renders of one message differ; a retry would look like a new message")
 	}
 
@@ -117,7 +117,7 @@ func TestABodyCannotForgeTheBoundary(t *testing.T) {
 	msg.Body = "Text mentioning " + boundary + " in passing."
 	msg.HTMLBody = "<p>markup</p>"
 
-	parts := parseParts(t, buildRFC822("rep@gradion.test", msg))
+	parts := parseParts(t, Build("rep@gradion.test", msg))
 	if len(parts) != 2 {
 		t.Fatalf("a body that names the boundary broke the message into %d parts", len(parts))
 	}
@@ -186,12 +186,12 @@ func TestEveryPartDeclaresItsTransferEncoding(t *testing.T) {
 	msg := plainMessage()
 	msg.HTMLBody = "<p>Zahlen für Sie</p>"
 
-	raw := buildRFC822("rep@gradion.test", msg)
+	raw := Build("rep@gradion.test", msg)
 	if strings.Count(raw, "Content-Transfer-Encoding: 8bit") != 2 {
 		t.Fatalf("expected both parts to declare 8bit:\n%s", raw)
 	}
 
-	plain := buildRFC822("rep@gradion.test", plainMessage())
+	plain := Build("rep@gradion.test", plainMessage())
 	if !strings.Contains(plain, "Content-Transfer-Encoding: 8bit") {
 		t.Fatalf("a single-part message declares no transfer encoding:\n%s", plain)
 	}
@@ -205,7 +205,7 @@ func TestBareLineFeedsAreCanonicalised(t *testing.T) {
 	msg.Body = "Line one\nLine two"
 	msg.HTMLBody = "<p>one</p>\n<p>two</p>"
 
-	raw := buildRFC822("rep@gradion.test", msg)
+	raw := Build("rep@gradion.test", msg)
 	if strings.Contains(strings.ReplaceAll(raw, "\r\n", ""), "\n") {
 		t.Fatalf("a bare line feed survived into the wire format:\n%q", raw)
 	}
@@ -236,7 +236,7 @@ func TestTheSenderIsNamedWhenTheNameIsKnown(t *testing.T) {
 	msg := plainMessage()
 	msg.FromName = "Lars Jankowfsky"
 
-	parsed := parseMail(t, buildRFC822("lars@gradion.test", msg))
+	parsed := parseMail(t, Build("lars@gradion.test", msg))
 	addr, err := mail.ParseAddress(parsed.Header.Get("From"))
 	if err != nil {
 		t.Fatalf("the From header does not parse as an address: %v", err)
@@ -255,7 +255,7 @@ func TestANonASCIISenderNameSurvivesTheWire(t *testing.T) {
 	msg := plainMessage()
 	msg.FromName = "Weiß Konrad"
 
-	raw := buildRFC822("weiss@gradion.test", msg)
+	raw := Build("weiss@gradion.test", msg)
 	if strings.Contains(raw, "From: Weiß") {
 		t.Fatalf("a non-ASCII name went out unencoded:\n%s", raw)
 	}
@@ -274,7 +274,7 @@ func TestASenderNameWithACommaStaysOneAddress(t *testing.T) {
 	msg := plainMessage()
 	msg.FromName = "Jankowfsky, Lars"
 
-	header := parseMail(t, buildRFC822("lars@gradion.test", msg)).Header.Get("From")
+	header := parseMail(t, Build("lars@gradion.test", msg)).Header.Get("From")
 	list, err := mail.ParseAddressList(header)
 	if err != nil {
 		t.Fatalf("the From header does not parse: %v", err)
@@ -294,7 +294,7 @@ func TestNoSenderNameSendsABareAddress(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			msg := plainMessage()
 			msg.FromName = given
-			if got := parseMail(t, buildRFC822("lars@gradion.test", msg)).Header.Get("From"); got != "lars@gradion.test" {
+			if got := parseMail(t, Build("lars@gradion.test", msg)).Header.Get("From"); got != "lars@gradion.test" {
 				t.Fatalf("expected a bare address, got %q", got)
 			}
 		})
@@ -311,7 +311,7 @@ func TestAMessageWithFilesIsMultipartMixed(t *testing.T) {
 		{Filename: "Vertrag.pdf", ContentType: "application/pdf", Body: []byte("%PDF-1.7 fake")},
 	}
 
-	parsed := parseMail(t, buildRFC822("rep@gradion.test", msg))
+	parsed := parseMail(t, Build("rep@gradion.test", msg))
 	mediaType, params, err := mime.ParseMediaType(parsed.Header.Get("Content-Type"))
 	if err != nil {
 		t.Fatalf("parsing the content type failed: %v", err)
@@ -362,7 +362,7 @@ func TestAFilesBytesAreBase64Encoded(t *testing.T) {
 		{Filename: "raw.bin", Body: []byte("line\r\n--boundary-ish\r\nmore")},
 	}
 
-	raw := buildRFC822("rep@gradion.test", msg)
+	raw := Build("rep@gradion.test", msg)
 	if !strings.Contains(raw, "Content-Transfer-Encoding: base64") {
 		t.Fatalf("a file went out unencoded:\n%s", raw)
 	}
@@ -378,7 +378,7 @@ func TestFilesAndMarkupNestCorrectly(t *testing.T) {
 	msg.HTMLBody = "<p>Anbei die Zahlen.</p>"
 	msg.Files = []connector.OutboundFile{{Filename: "z.pdf", Body: []byte("x")}}
 
-	parsed := parseMail(t, buildRFC822("rep@gradion.test", msg))
+	parsed := parseMail(t, Build("rep@gradion.test", msg))
 	_, params, err := mime.ParseMediaType(parsed.Header.Get("Content-Type"))
 	if err != nil {
 		t.Fatalf("parsing the content type failed: %v", err)
@@ -402,7 +402,7 @@ func TestANonASCIIFilenameIsEncoded(t *testing.T) {
 	// that a CLIENT recovers the name, not which legal spelling produced it.
 	// RFC 2231 is what a MIME parameter takes; the RFC 2047 encoded word this
 	// replaced is for header text and arrives literally in some clients.
-	recovered := filenameFromWire(t, buildRFC822("rep@gradion.test", msg))
+	recovered := filenameFromWire(t, Build("rep@gradion.test", msg))
 	if recovered != "Größenänderung.pdf" {
 		t.Fatalf("a client would see the filename as %q", recovered)
 	}
@@ -440,7 +440,7 @@ func TestAFileWithNoTypeGetsOctetStream(t *testing.T) {
 	msg := plainMessage()
 	msg.Files = []connector.OutboundFile{{Filename: "unknown", Body: []byte("x")}}
 
-	if !strings.Contains(buildRFC822("rep@gradion.test", msg), "application/octet-stream") {
+	if !strings.Contains(Build("rep@gradion.test", msg), "application/octet-stream") {
 		t.Fatal("a typeless file went out with no content type")
 	}
 }
@@ -469,7 +469,7 @@ func TestADeclaredTypesParametersSurviveButItsLineBreaksDoNot(t *testing.T) {
 				{Filename: "notes.txt", ContentType: tc.declared, Body: []byte("x")},
 			}
 
-			raw := buildRFC822("rep@gradion.test", msg)
+			raw := Build("rep@gradion.test", msg)
 			if !strings.Contains(raw, "Content-Type: "+tc.want) {
 				t.Errorf("the attachment part does not declare %q:\n%s", tc.want, raw)
 			}
@@ -490,7 +490,7 @@ func TestAFilenameWithAQuoteStaysOneParameter(t *testing.T) {
 		{Filename: `the "final" contract.pdf`, Body: []byte("x")},
 	}
 
-	if got := filenameFromWire(t, buildRFC822("rep@gradion.test", msg)); got != `the "final" contract.pdf` {
+	if got := filenameFromWire(t, Build("rep@gradion.test", msg)); got != `the "final" contract.pdf` {
 		t.Fatalf("a client would see the filename as %q", got)
 	}
 }
@@ -502,7 +502,7 @@ func TestABlindCopyIsAbsentFromTheVisibleHeaders(t *testing.T) {
 	msg.To = []string{"visible@surfe.test"}
 	msg.Bcc = []string{"blind@surfe.test"}
 
-	parsed := parseMail(t, buildRFC822("rep@gradion.test", msg))
+	parsed := parseMail(t, Build("rep@gradion.test", msg))
 	for _, header := range []string{"To", "Cc"} {
 		if strings.Contains(parsed.Header.Get(header), "blind@surfe.test") {
 			t.Fatalf("a blind copy reached the %s header: %q", header, parsed.Header.Get(header))
@@ -528,7 +528,7 @@ func TestABccOnlyMessageOmitsTheToHeaderEntirely(t *testing.T) {
 	msg.To = nil
 	msg.Bcc = []string{"one@surfe.test", "two@surfe.test"}
 
-	raw := buildRFC822("rep@gradion.test", msg)
+	raw := Build("rep@gradion.test", msg)
 	for _, line := range strings.Split(raw, "\r\n") {
 		if strings.HasPrefix(line, "To:") {
 			t.Fatalf("an empty To header was written: %q", line)

@@ -85,11 +85,18 @@ var _ activities.SendAuthority = mailboxAuthority{}
 // at CALL time rather than snapshotting it, so the two places that install the
 // pre-flight need no ordering rule against the option that records the fact.
 //
-// A provider with no field is not configured, which is also the only honest
-// answer: comms.SendScopeFor gives a send scope to gmail alone, so no other
-// provider reaches this at all.
+// A provider with no arm is not configured, which is also the only honest
+// answer: comms.SendScopeFor gives a send scope to the mail providers alone, so
+// no other provider reaches this at all.
 func (s *Server) mailAppConfigured(provider string) bool {
-	return provider == providerGmail && s.gmailAppConfigured
+	switch provider {
+	case providerGmail:
+		return s.gmailAppConfigured
+	case providerGraph:
+		return s.graphAppConfigured
+	default:
+		return false
+	}
 }
 
 // installSendPreflight installs the pre-flight over whichever capture registry

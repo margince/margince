@@ -3883,11 +3883,11 @@ export const de = {
   "connectors.connectProvider": "{provider} verbinden",
   "connectors.rosterLabel": "Erfassende Postfächer",
   "connectors.addGmailBrings":
-    "Die Mails, die du sendest und empfängst, von Google — und die einzige Verbindung, über die Margince senden kann.",
+    "Die Mails, die du sendest und empfängst, von Google. Margince kann auch darüber senden.",
   "connectors.addGcalBrings":
     "Dein Google Kalender. Er wird separat von Gmail verbunden.",
   "connectors.addGraphBrings":
-    "Mail und Kalender eines Microsoft-Geschäftskontos, über die Graph-API. Nur Erfassung.",
+    "Mail und Kalender eines Microsoft-Geschäftskontos, über die Graph-API. Margince kann auch darüber senden.",
   "connectors.addImapBrings":
     "Jeder andere Mail-Host, mit einem App-Passwort. Nur Erfassung.",
   "connectors.providerNotConfigured":
