@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The roster read gates the role-key lookup on WithRoles, and the wire mapping
@@ -511,5 +512,43 @@ func TestReactivatingAMemberWhoNeverSetAPasswordReturnsThemToInvited(t *testing.
 	}
 	if member.Status != "invited" {
 		t.Errorf("reactivated status = %q, want invited — this member has no password and can still sign in nowhere", member.Status)
+	}
+}
+
+// An invited administrator cannot sign in, so they must not satisfy the guard
+// that keeps an installation enterable. Before invitations carried their own
+// status this was a real lockout: the row was written active, counted as
+// another administrator, and let an operator deactivate the last one who could
+// actually enter — with no way back in.
+func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
+	e := setupRevocationEnv(t, "invited-admin-not-a-guard")
+
+	if _, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "second-admin@acme.test", DisplayName: "Second Admin", Role: "admin",
+	}); err != nil {
+		t.Fatalf("invite an admin: %v", err)
+	}
+
+	err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: e.admin.UserID})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("deactivating the only admin who can sign in: err = %v, want a conflict — "+
+			"an unredeemed invitation is not somebody who can administer the installation", err)
+	}
+
+	// And once that invitation is redeemed, the guard is genuinely satisfied:
+	// the refusal above must come from the status, not from a rule that never
+	// lets the last admin step down.
+	_, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "third-admin@acme.test", DisplayName: "Third Admin", Role: "admin",
+	})
+	if err != nil {
+		t.Fatalf("invite a second admin: %v", err)
+	}
+	if err := e.svc.RedeemPasswordReset(
+		principal.WithCorrelationID(e.wsCtx(e.admin), ids.NewV7()), rawToken, "an-admin-password-2"); err != nil {
+		t.Fatalf("redeem: %v", err)
+	}
+	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: e.admin.UserID}); err != nil {
+		t.Errorf("with a redeemed second admin the first may stand down: %v", err)
 	}
 }
