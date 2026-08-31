@@ -35,6 +35,7 @@ const SCREENS = [
   "deals",
   "projects",
   "today",
+  "worklist",
   "reports",
   "ai",
   "settings",
@@ -149,6 +150,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
   today: WHOLE_ADDRESS,
+  worklist: WHOLE_ADDRESS,
   // #/reports/<report> — the picker chooses a view of one screen, so switching
   // reports re-renders the panel instead of throwing the screen away.
   reports: 1,
