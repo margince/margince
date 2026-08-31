@@ -524,10 +524,6 @@ func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
 	}
 }
 
-func withDetail2(detail string) func(*crmcontracts.AttentionItem) {
-	return func(i *crmcontracts.AttentionItem) { i.Detail = &detail }
-}
-
 // A pile of alike questions is one row. On the real workspace this is 152
 // contact decisions and 545 held drafts — no ordering saves a reader who must
 // scroll past them to reach the next thing.
