@@ -167,12 +167,11 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		TokenURL:     cfg.TokenURL,
 		// Microsoft returns the code on the query (not fragment); the v2
 		// endpoint requires the scope in every token form for a refresh token.
-		// Microsoft rotates the refresh token on each redemption. The stored
-		// original keeps working within its lifetime (a confidential-client
-		// refresh token is valid ~90 days), so an actively-synced mailbox
-		// never reauths; a mailbox idle past that window must reconnect. A
-		// credential-rotation seam (Sync surfacing an updated credential for
-		// the registry to re-seal) is a tracked follow-up, not this PR.
+		// Microsoft rotates the refresh token on each redemption, and the
+		// replacement is persisted: Refresh reports it and the connector hands
+		// it to the registry's credential sink, which re-seals it. Without that
+		// a mailbox idle past the ~90-day confidential-client lifetime had to
+		// reconnect for no reason its owner could see.
 		AuthParams:        map[string]string{"response_mode": "query"},
 		ScopeInTokenForms: true,
 		AuthRejected:      ErrAuthRejected,

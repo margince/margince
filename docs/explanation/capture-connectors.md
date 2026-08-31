@@ -225,13 +225,12 @@ OAuth2 to the Microsoft identity platform with delegated scopes `offline_access 
 `Watcher` — there is no change-notification subscription built, so Outlook latency is the poll interval,
 not a push p95. **To run:** a Microsoft Entra (Azure AD) app + tenant + the vault key. **UI:** a
 first-connect affordance from both the onboarding **Microsoft** chip and the Settings **Add a connection**
-footer; the roster manages an existing connection. Note Microsoft **rotates
-the refresh token on every redemption** and Margince does not yet persist the rotated value: the stored
-original typically keeps working up to Microsoft's default **90-day inactive lifetime** for a confidential
-client (an actively-syncing mailbox stays inside it), **but it can be revoked or expire earlier** (a
-password change, an admin revoke, a conditional-access policy). When it stops working, the sync/connect
-path surfaces `reauth_required` and the user must **reconnect** — there is no silent recovery until the
-credential-update seam lands.
+footer; the roster manages an existing connection. Microsoft **rotates the refresh token on every redemption**, and the replacement is now persisted: the
+connector reports it through `CredentialRotator` and the registry re-seals it into the vault on each
+sync (see *Honest limitations*). The stored original would otherwise have aged out on Microsoft's
+**90-day inactive lifetime** for a confidential client. A grant can still be ended from Microsoft's side
+— a password change, an admin revoke, a conditional-access policy — and then the sync/connect path
+surfaces `reauth_required` and the user must **reconnect**.
 
 ### Google Calendar (gcal) — standing OAuth, poll-only
 
@@ -333,7 +332,7 @@ The pipeline is live; these were scoped out, not missed:
 | | |
 |---|---|
 | The connector seam (Connector / Watcher / Backfiller / Sink / NormalizedRecord) | `internal/shared/ports/connector/connector.go` |
-| The credential-rotation seam (CredentialRotator / CredentialSink) | `internal/shared/ports/connector/rotation.go`, `capture/registry_rotation.go` |
+| The credential-rotation seam (CredentialRotator / CredentialSink) | `internal/shared/ports/connector/rotation.go`, `internal/modules/capture/registry_rotation.go` |
 | The one Sink + write shape + idempotency | `internal/modules/capture/sink.go` |
 | The registry — scope intersection, Connect/Disconnect, SyncOnce, backfill, watch | `internal/modules/capture/registry.go`, `registry_connections.go`, `registry_watch.go`, `backfill.go` |
 | Sync-state sidecar (backoff, error taxonomy, degrade/heal) | `internal/modules/capture/syncstate.go` |

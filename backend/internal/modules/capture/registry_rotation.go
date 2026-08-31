@@ -38,7 +38,13 @@ type rotationSink struct {
 	// a disconnect that destroyed the credential must not be undone by a
 	// rotation racing behind it.
 	generation int
-	log        *slog.Logger
+	// readRef is the credential this sync actually read. It fences the write
+	// alongside the generation because a SAME-ACCOUNT reconnect does not bump
+	// the generation — only a rebind does — so a reconnect committing mid-pull
+	// would otherwise have its fresh credential overwritten by a replacement
+	// this sync derived from the one it replaced.
+	readRef *string
+	log     *slog.Logger
 }
 
 // Rotated seals the replacement and points the connection at it.
@@ -69,10 +75,13 @@ func (s rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 
 	superseded, previous, err := s.record(ctx, ref)
 	if err != nil {
-		// The row does not name the blob just written, so nothing reads it —
-		// retire it rather than leave it addressable for the life of the
-		// installation.
-		keyvault.DeleteDetached(ctx, s.registry.vault, s.log, ws, ref, "rotation-abandoned")
+		// The blob just written is deliberately LEFT. A commit can fail
+		// ambiguously — the connection drops after Postgres committed and
+		// before the client hears so — and deleting on that path would destroy
+		// the credential the row now points at, leaving a live connection
+		// naming a secret nothing can resolve. An orphan costs bytes; this
+		// costs the mailbox, so the uncertainty is resolved in the direction
+		// that still works.
 		return err
 	}
 	if superseded {
@@ -90,10 +99,18 @@ func (s rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 
 // record points the connection at the new ref and reports the one it replaced.
 //
-// The generation fence is read and matched in ONE statement rather than checked
-// and then written: a disconnect committing between the two would otherwise
-// have its credential-destroying update overwritten by this one, which is the
-// single outcome that must not be possible here.
+// TWO fences, matched in the same statement as the write rather than checked
+// before it. The generation catches a disconnect or a rebind, whose
+// credential-destroying update must not be overwritten by this one. The
+// credential ref catches what the generation cannot: a same-account reconnect
+// leaves the generation alone, so only "the credential I read is still the
+// credential on the row" distinguishes a rotation of the live grant from one
+// derived out of a grant that has since been replaced.
+//
+// `auth` is cleared in the same statement. A legacy row that never reached the
+// vault carries its credential in that column, and making the ref authoritative
+// while leaving the column populated would retire nothing — the superseded
+// secret would sit in the clear for the life of the installation.
 func (s rotationSink) record(ctx context.Context, ref keyvault.Ref) (superseded bool, previous string, err error) {
 	err = s.registry.db.Tx(ctx, func(tx pgx.Tx) error {
 		var prior *string
@@ -102,12 +119,13 @@ func (s rotationSink) record(ctx context.Context, ref keyvault.Ref) (superseded 
 		// yields the new value, and retiring that would destroy the secret the
 		// row now points at.
 		scanErr := tx.QueryRow(ctx, `
-			UPDATE capture_connection AS c SET credential_ref = $2
+			UPDATE capture_connection AS c SET credential_ref = $2, auth = NULL
 			FROM capture_connection AS before
 			WHERE c.id = before.id AND c.id = $1 AND c.generation = $3
+			  AND c.credential_ref IS NOT DISTINCT FROM $4
 			  AND c.status IN ('connected','error')
 			RETURNING before.credential_ref`,
-			s.connectionID, string(ref), s.generation).Scan(&prior)
+			s.connectionID, string(ref), s.generation, s.readRef).Scan(&prior)
 		if scanErr == pgx.ErrNoRows {
 			superseded = true
 			return nil

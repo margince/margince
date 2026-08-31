@@ -261,7 +261,8 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	// carry one mailbox's replacement credential into another mailbox's
 	// re-seal. A provider whose credential is stable is returned unchanged.
 	syncer := connector.RotatingSyncer(c, rotationSink{
-		registry: r, connectionID: connectionID, generation: generation, log: slog.Default(),
+		registry: r, connectionID: connectionID, generation: generation,
+		readRef: credentialRef, log: slog.Default(),
 	})
 	next, syncErr := syncer.Sync(runCtx, auth, connector.Cursor(cursor), r.sink)
 	if syncErr != nil {

@@ -39,6 +39,18 @@ type rotatingConnector struct {
 	// duringSync runs at the moment the provider would be answering — the
 	// deterministic stand-in for a human disconnecting mid-pull.
 	duringSync func()
+	// seen is shared BY POINTER with every copy WithCredentialSink makes —
+	// which is the whole point of that method, and why a plain counter field
+	// reads zero here: the copy is what runs, not the instance the test holds.
+	seen *rotationLog
+}
+
+// rotationLog is what the sink actually did. Without it a race test passes when
+// no rotation was attempted at all, asserting the disconnect's own effect and
+// nothing about the fence.
+type rotationLog struct {
+	attempts int
+	lastErr  error
 }
 
 func (c *rotatingConnector) Descriptor() connector.Descriptor {
@@ -71,8 +83,10 @@ func (c *rotatingConnector) Sync(ctx context.Context, _ connector.Auth, _ connec
 		c.duringSync()
 	}
 	if c.rotations != nil && c.next != "" {
-		if err := c.rotations.Rotated(ctx, connector.Auth(c.next)); err != nil {
-			return nil, err
+		c.seen.attempts++
+		c.seen.lastErr = c.rotations.Rotated(ctx, connector.Auth(c.next))
+		if c.seen.lastErr != nil {
+			return nil, c.seen.lastErr
 		}
 	}
 	return connector.Cursor(`{"email":"owner@myco.example"}`), nil
@@ -99,7 +113,7 @@ func TestARotatedCredentialIsSealedAndTheOldOneRetired(t *testing.T) {
 	seedCaptureRole(t, e)
 	vault := newTestKeyvault(t, e)
 	registry := newTestCaptureRegistry(e, vault)
-	fake := &rotatingConnector{next: "replacement-credential"}
+	fake := &rotatingConnector{next: "replacement-credential", seen: &rotationLog{}}
 	registry.Register(fake)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -144,7 +158,7 @@ func TestARotationThatLosesToADisconnectLandsNowhere(t *testing.T) {
 	seedCaptureRole(t, e)
 	vault := newTestKeyvault(t, e)
 	registry := newTestCaptureRegistry(e, vault)
-	fake := &rotatingConnector{next: "replacement-credential"}
+	fake := &rotatingConnector{next: "replacement-credential", seen: &rotationLog{}}
 	registry.Register(fake)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -163,7 +177,60 @@ func TestARotationThatLosesToADisconnectLandsNowhere(t *testing.T) {
 		t.Fatalf("SyncOnce over a disconnected connection: %v, want a clean return", err)
 	}
 
+	// The fence is only proved if a rotation was actually ATTEMPTED. Without
+	// this the assertion below passes on a run where the sink was never bound
+	// and Disconnect cleared the ref by itself — which says nothing about
+	// whether a rotation racing home would have been fenced out.
+	if fake.seen.attempts != 1 {
+		t.Fatalf("the connector attempted %d rotation(s), want exactly one to race the disconnect", fake.seen.attempts)
+	}
+	if fake.seen.lastErr != nil {
+		t.Fatalf("the superseded rotation reported %v, want a clean no-op: it lost the race, it did not fail", fake.seen.lastErr)
+	}
 	if ref := readCredentialRef(t, e, connID); ref != "" {
 		t.Fatalf("credential_ref = %q, want none — the disconnect destroyed the credential and the rotation must not restore one", ref)
+	}
+}
+
+// The other half of the same fence, and the one the generation cannot catch: a
+// SAME-ACCOUNT reconnect leaves the generation alone, so only "the credential I
+// read is still the credential on the row" tells a rotation of the live grant
+// apart from one derived out of a grant that has since been replaced.
+func TestARotationThatLosesToAReconnectLandsNowhere(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	vault := newTestKeyvault(t, e)
+	registry := newTestCaptureRegistry(e, vault)
+	fake := &rotatingConnector{next: "replacement-credential", seen: &rotationLog{}}
+	registry.Register(fake)
+
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	connID, err := registry.Connect(grantCtx, "gmail", connector.Auth("initial-credential"))
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	fake.duringSync = func() {
+		// The same human reconnects the same account mid-pull — a fresh
+		// credential on the same row, at the same generation.
+		if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("reconnected-credential")); err != nil {
+			t.Errorf("mid-sync reconnect: %v", err)
+		}
+	}
+
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if err := registry.SyncOnce(wsCtx, connID); err != nil {
+		t.Fatalf("SyncOnce across a reconnect: %v, want a clean return", err)
+	}
+	if fake.seen.attempts != 1 {
+		t.Fatalf("the connector attempted %d rotation(s), want exactly one to race the reconnect", fake.seen.attempts)
+	}
+
+	ref := readCredentialRef(t, e, connID)
+	sealed, err := vault.Get(wsCtx, ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref))
+	if err != nil {
+		t.Fatalf("resolving the connection's credential: %v", err)
+	}
+	if string(sealed) != "reconnected-credential" {
+		t.Fatalf("the connection holds %q — the stale sync's rotation overwrote the credential the human just reconnected with", sealed)
 	}
 }
