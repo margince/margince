@@ -215,6 +215,24 @@ for dir in "$MIGRATIONS_DIR"/*/; do
     ns_reset=1
   fi
 
+  # A version the base already carries that this branch's tree no longer
+  # does. The row loop below only ever asks what THIS branch adds — it
+  # cannot notice one going missing, because a version dropped from the tree
+  # never appears in tree_rows for the loop to walk. A deployed database's
+  # ledger does not forget an applied version because the file that produced
+  # it was renamed or deleted; a fresh install run against the renamed tree
+  # then never applies it under its old name, and the two installations
+  # diverge exactly as silently as the collision above — the difference is
+  # which install is missing the row, not whether one is. Renaming a shipped
+  # migration is this to the ledger whether or not its SQL also changed.
+  vanished="$(comm -23 <(echo "$base_rows" | cut -d' ' -f1) <(echo "$tree_rows" | cut -d' ' -f1))"
+  if [ -n "$vanished" ]; then
+    for v in $vanished; do
+      vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"
+      fail "$ns/$v ('$vname') is on $BASE_REF but this branch no longer has it — a migration a deployed database may already have applied cannot be renamed or removed; add a new one instead of renumbering it. If this branch is a baseline consolidation, set MIGRATION_VERSIONS_BASELINE_RESET=1"
+    done
+  fi
+
   while read -r version name; do
     [ -n "$version" ] || continue
     base_name="$(echo "$base_rows" | awk -v v="$version" '$1==v {print $2}')"

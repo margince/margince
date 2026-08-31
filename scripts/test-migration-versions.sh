@@ -194,6 +194,16 @@ sorts_below() {
   printf -- '-- probe\n' > "$1/backend/migrations/core/0002x_late.down.sql"
 }
 
+# One shipped migration re-stamped under a new version and left everything
+# else alone: the base's own outage-report case, run backwards. The new
+# version sorts above base_max, so on its own it reads as a normal addition —
+# the defect is what it leaves behind, not what it adds.
+renumbers_one() {
+  git -C "$1" rm -q "backend/migrations/core/0002_beta.up.sql" "backend/migrations/core/0002_beta.down.sql" || return 1
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.down.sql"
+}
+
 # A genuine consolidation: every version replaced, and FEWER of them.
 consolidates() {
   git -C "$1" rm -q backend/migrations/core/0001_alpha.up.sql \
@@ -251,6 +261,8 @@ expect "one version claimed twice in the tree fails" \
   1 plain    duplicates_in_tree   "declares one version twice"
 expect "a consolidation fails when NOT declared" \
   1 plain    consolidates         "is claimed by two different migrations"
+expect "a renumbered migration fails when not declared" \
+  1 plain    renumbers_one        "but this branch no longer has it"
 
 # The four that decide whether the escape hatch is a gate or a hole.
 expect "a declared consolidation is admitted" \
@@ -280,7 +292,7 @@ expect "a declared reset does not excuse a real collision" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=10
+expected_cases=11
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [ "$ran" -ne "$declared_cases" ]; then
