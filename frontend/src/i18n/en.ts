@@ -3856,6 +3856,11 @@ export const en = {
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
   "mailSharing.danger":
     "DANGER: Switching off email sharing will make usage of the CRM difficult. New mail will be visible only to the people on each message.",
+  "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
+  "mailSharing.sharedPosture.help":
+    "Lets a colleague put their own mailbox in the shared posture, where a captured message is readable by the team the moment it lands, before anything has judged it. Off by default.",
+  "mailSharing.sharedPosture.warning":
+    "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your organization holds one. Margince does not check.",
   "mailSharing.save": "Save",
   "connectors.sub":
     "Mailboxes capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
@@ -3889,6 +3894,23 @@ export const en = {
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox's own answer, kept whatever your organization's setting becomes.",
+  "connectors.mailPosture.label": "Who may read mail from this inbox",
+  "connectors.mailPosture.classified": "Held until classified",
+  "connectors.mailPosture.held": "Always held",
+  "connectors.mailPosture.shared": "Shared with the team",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "“Shared with the team” needs an admin to allow it for this organization.",
+  "connectors.mailPosture.help.classified":
+    "A new message is held to the people on it until a classifier judges the thread ordinary. Colleagues see nothing before that.",
+  "connectors.mailPosture.help.held":
+    "A new message is held to the people on it, whatever any classifier concludes. You share a thread yourself, one at a time.",
+  "connectors.mailPosture.help.shared":
+    "A new message is readable by colleagues the moment it lands.",
+  "connectors.mailPosture.historyTitle": "And the mail already captured?",
+  "connectors.mailPosture.historyBody":
+    "This answer governs mail captured from here on. Mail already in the CRM keeps the audience it has, unless you narrow it to match.",
+  "connectors.mailPosture.historyConfirm": "Change what colleagues may read",
+  "connectors.mailPosture.historyApply": "Also narrow mail already captured",
   "connectors.disconnectTitle": "Disconnect this inbox?",
   "connectors.disconnectBody":
     "This will delete the credential we stored for this mailbox. Capture stops immediately; everything already captured stays in your CRM, and reconnecting will ask for permission again.",

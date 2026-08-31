@@ -4,10 +4,17 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRoute } from "../app/router";
-import { Badge, Button, EmptyState, Modal } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  EmptyState,
+  Modal,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatDateTime } from "../format/format";
@@ -49,6 +56,7 @@ import "./connectors.css";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
+type MailPosture = NonNullable<CaptureConnection["mail_posture"]>;
 
 const providerLabel: Record<Provider, MessageKey> = {
   gmail: "connectors.provGmail",
@@ -680,6 +688,7 @@ function ConnectorRow({
           </div>
         }
       />
+      {conn.status === "connected" && <MailPostureRow conn={conn} />}
       {conn.status === "connected" && <SignatureEnrichmentRow conn={conn} />}
       {conn.status === "connected" && (
         <div className="connector-backfill">
@@ -688,6 +697,152 @@ function ConnectorRow({
       )}
     </>
   );
+}
+
+// What this mailbox asks of the mail it brings in. A row of its own beside the
+// signature answer, because it is the OTHER standing decision about a mailbox —
+// and the more consequential one: it decides who may read a message, not what a
+// nightly pass may mine out of it.
+//
+// A Select rather than a Switch, because the three answers are not one thing
+// turned on and off. `held` and `classified` both hold a message to the people
+// on it; what separates them is whether a classifier is ever allowed to open it
+// later. A two-position control would have to drop one of the three, and the one
+// it would drop is the default.
+//
+// `shared` is present and REFUSED rather than absent when the workspace has not
+// allowed it. A missing option tells a reader their product has two postures; a
+// refused one with the reason beside it tells them there is a third and who can
+// turn it on. The server refuses it too (422 `shared_posture_not_allowed`) — this
+// is the same rule said early, never the only place it is held.
+// How strict each posture is, so the row can tell a NARROWING from a widening.
+// Only a narrowing has anything to offer history: opening what was captured
+// under a stricter answer is a separate decision the server refuses to make as
+// a side effect, and `apply_to_history` only ever narrows.
+const postureRank: Record<MailPosture, number> = {
+  shared: 0,
+  classified: 1,
+  held: 2,
+};
+
+function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
+  const t = useT();
+  const settings = useCaptureSettings();
+  const save = useSetMailPosture(conn.provider);
+  const [pendingPosture, setPendingPosture] = useState<MailPosture | null>(
+    null,
+  );
+  const [applyToHistory, setApplyToHistory] = useState(false);
+  const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
+  const posture = conn.mail_posture ?? "classified";
+
+  // A narrowing asks about history; anything else is saved on the spot. The
+  // question is worth a dialog only when there is a real second answer to give.
+  const choose = (next: MailPosture) => {
+    if (postureRank[next] > postureRank[posture]) {
+      setPendingPosture(next);
+      return;
+    }
+    save.mutate({ posture: next, applyToHistory: false });
+  };
+
+  return (
+    <>
+      <SettingRow
+        testId={`connector-${conn.provider}-mail-posture`}
+        label={t("connectors.mailPosture.label")}
+        description={
+          // Two sentences when one of the three answers is refused: what the
+          // current posture does, and who can unlock the one that is greyed.
+          // The reason cannot ride on the OPTION's label — a listbox row
+          // ellipsises, and the half that gets cut is the half a reader needs.
+          sharedAllowed
+            ? t(`connectors.mailPosture.help.${posture}` as MessageKey)
+            : `${t(`connectors.mailPosture.help.${posture}` as MessageKey)} ${t("connectors.mailPosture.sharedNeedsAdmin")}`
+        }
+        control={(controlProps) => (
+          <Select
+            {...controlProps}
+            value={posture}
+            disabled={save.isPending}
+            onChange={(next) => choose(next as MailPosture)}
+            options={[
+              {
+                value: "classified",
+                label: t("connectors.mailPosture.classified"),
+              },
+              { value: "held", label: t("connectors.mailPosture.held") },
+              {
+                value: "shared",
+                label: t("connectors.mailPosture.shared"),
+                disabled: !sharedAllowed,
+              },
+            ]}
+          />
+        )}
+      />
+      <ConfirmModal
+        open={pendingPosture !== null}
+        onClose={() => {
+          setPendingPosture(null);
+          setApplyToHistory(false);
+        }}
+        title={t("connectors.mailPosture.historyTitle")}
+        confirmLabel={t("connectors.mailPosture.historyConfirm")}
+        pending={save.isPending}
+        error={save.error ? problemMessageOf(save.error, t) : undefined}
+        onConfirm={() => {
+          if (pendingPosture) {
+            save.mutate(
+              { posture: pendingPosture, applyToHistory },
+              {
+                onSuccess: () => {
+                  setPendingPosture(null);
+                  setApplyToHistory(false);
+                },
+              },
+            );
+          }
+        }}
+      >
+        <p>{t("connectors.mailPosture.historyBody")}</p>
+        {/* The reach of the change is a CHECKBOX rather than a second button.
+            Two verbs of similar weight side by side read as rival answers to
+            "are you sure", and in German neither label fits the compact confirm
+            width — both were clipped on the running stack. One question, one
+            modifier, and the button says what it does. */}
+        <Checkbox
+          checked={applyToHistory}
+          onChange={(e) => setApplyToHistory(e.target.checked)}
+          label={t("connectors.mailPosture.historyApply")}
+        />
+      </ConfirmModal>
+    </>
+  );
+}
+
+function useSetMailPosture(provider: CaptureConnection["provider"]) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // Both halves of the decision arrive as variables, like every mutation on
+    // this screen: a mutationFn closing over rendered state answers with the
+    // previous render's (frontend/AGENTS.md, mutation-variable-coverage).
+    mutationFn: async (vars: {
+      posture: MailPosture;
+      applyToHistory: boolean;
+    }) => {
+      const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
+        params: { path: { provider } },
+        body: { posture: vars.posture, apply_to_history: vars.applyToHistory },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["connectors"] });
+    },
+  });
 }
 
 // This mailbox's own answer to the nightly signature pass — a row of its own

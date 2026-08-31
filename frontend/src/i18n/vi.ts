@@ -3784,6 +3784,11 @@ export const vi = {
     "Có thể giới hạn từng tin nhắn sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
   "mailSharing.danger":
     "NGUY HIỂM: Tắt chia sẻ email sẽ khiến việc sử dụng CRM trở nên khó khăn. Email mới chỉ hiển thị với những người trong từng tin nhắn.",
+  "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
+  "mailSharing.sharedPosture.help":
+    "Cho phép đồng nghiệp đặt hộp thư của họ ở chế độ chia sẻ, khi đó thư thu thập được cả nhóm đọc ngay lúc đến, trước khi có bất kỳ đánh giá nào. Mặc định tắt.",
+  "mailSharing.sharedPosture.warning":
+    "Việc đọc hộp thư của nhân viên vào một CRM dùng chung thuộc phạm vi thỏa thuận với hội đồng lao động ở Đức và Áo. Bật mục này nghĩa là tổ chức của bạn đã có thỏa thuận đó. Margince không kiểm tra điều này.",
   "mailSharing.save": "Lưu",
   "connectors.sub":
     "Các hộp thư đang thu thập vào CRM của bạn. Cần thì ngắt kết nối hộp nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
@@ -3817,6 +3822,23 @@ export const vi = {
     "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
   "connectors.signatureEnrich.ownAnswer":
     "Lựa chọn riêng của hộp thư này, giữ nguyên dù thiết lập của tổ chức thay đổi.",
+  "connectors.mailPosture.label": "Ai được đọc thư từ hộp thư này",
+  "connectors.mailPosture.classified": "Giữ lại cho đến khi phân loại",
+  "connectors.mailPosture.held": "Luôn giữ lại",
+  "connectors.mailPosture.shared": "Chia sẻ với nhóm",
+  "connectors.mailPosture.sharedNeedsAdmin":
+    "“Chia sẻ với nhóm” cần quản trị viên cho phép trong tổ chức này.",
+  "connectors.mailPosture.help.classified":
+    "Thư mới chỉ dành cho những người có trong thư, cho đến khi bộ phân loại đánh giá chuỗi thư là thông thường. Trước đó đồng nghiệp không thấy gì.",
+  "connectors.mailPosture.help.held":
+    "Thư mới chỉ dành cho những người có trong thư, bất kể bộ phân loại kết luận thế nào. Bạn tự chia sẻ từng chuỗi thư một.",
+  "connectors.mailPosture.help.shared":
+    "Thư mới có thể được đồng nghiệp đọc ngay khi đến.",
+  "connectors.mailPosture.historyTitle": "Còn thư đã thu thập thì sao?",
+  "connectors.mailPosture.historyBody":
+    "Lựa chọn này áp dụng cho thư được thu thập từ nay về sau. Thư đã có trong CRM giữ nguyên phạm vi hiển thị, trừ khi bạn thu hẹp cho khớp.",
+  "connectors.mailPosture.historyConfirm": "Thay đổi phạm vi hiển thị",
+  "connectors.mailPosture.historyApply": "Thu hẹp cả thư đã thu thập",
   "connectors.disconnectTitle": "Ngắt kết nối hộp thư này?",
   "connectors.disconnectBody":
     "Thao tác này xoá thông tin xác thực chúng tôi đã lưu cho hộp thư. Việc thu thập dừng ngay; mọi thứ đã thu thập vẫn nằm trong CRM của bạn, và kết nối lại thì phải xin quyền lần nữa.",
