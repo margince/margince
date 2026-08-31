@@ -95,3 +95,31 @@ func TestNoSignInRedirectIsAdvertisedWithoutABase(t *testing.T) {
 		t.Error("a deployment with no redirect base advertises a URI built on nothing")
 	}
 }
+
+// The connector's URI is published on the same terms and for the same reason:
+// an operator registers BOTH while creating the OAuth client, and registering
+// only one fails at the consent screen with an error that does not say which.
+//
+// It is not derivable from the sign-in URI. This one prefers the API's own
+// origin and falls back to the SPA's, while sign-in rides a base that already
+// carries /v1 — on a split deployment they do not even share a host.
+func TestTheConnectorRedirectIsAdvertisedAndIsNotTheSignInOne(t *testing.T) {
+	var s Server
+	WithGmailCapture(GmailConfig{
+		PublicBaseURL: "https://app.example.com",
+		APIBaseURL:    "https://api.example.com",
+	}, CaptureConfig{})(&s, nil)
+
+	shown, ok := advertised(s.redirectURIs, crmcontracts.MailboxConnect)
+	if !ok {
+		t.Fatal("an operator is told no mailbox-connect URI to register, so half the OAuth client stays unconfigured")
+	}
+	// The value the connect flow itself builds, from the same two bases.
+	want := connectorCallbackURL("https://api.example.com", "https://app.example.com", "google")
+	if shown != want {
+		t.Errorf("advertised connector URI %q, but the connect flow sends %q", shown, want)
+	}
+	if signIn, _ := advertised(s.redirectURIs, crmcontracts.SignIn); signIn == shown {
+		t.Error("the two purposes advertise the same URL, so one of them is wrong on a split deployment")
+	}
+}
