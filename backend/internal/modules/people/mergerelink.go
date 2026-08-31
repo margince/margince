@@ -244,6 +244,15 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("relink provider claims: %w", err)
 	}
+	// What those purchases filled moves with them. Left on the loser, the rows
+	// would name a record nobody reads while the survivor carries the values
+	// they describe — so a later revert would clear nothing and the erasure
+	// would have to find them through a person the merge retired.
+	if _, err := tx.Exec(ctx,
+		`UPDATE provider_applied_field SET person_id = $2 WHERE person_id = $1`,
+		sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("relink what those purchases filled: %w", err)
+	}
 	// The source's queued runs are cancelled unconditionally. Not because the
 	// survivor will buy the same data — it may hold no run at all, or one
 	// parked in submission_unknown that never delivers — but because the

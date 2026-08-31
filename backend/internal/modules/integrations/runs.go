@@ -65,6 +65,18 @@ func (s *Store) WithDomain(fence FenceSubjectFunc, cluster DuplicateClusterFunc,
 	return s
 }
 
+// WithSubjectHold binds the fence's holding form, which the hand-off asks
+// before writing anything about a subject.
+//
+// Its own binder rather than a fourth argument to WithDomain: the two fences
+// share a type, so a call site passing them in the wrong order would compile
+// and would silently drop the lock — the failure being an erasure race nobody
+// sees until it happens.
+func (s *Store) WithSubjectHold(fn FenceSubjectFunc) *Store {
+	s.holdSubject = fn
+	return s
+}
+
 // WithSubmitEnqueue binds the durable hand-off to the worker.
 func (s *Store) WithSubmitEnqueue(fn EnqueueSubmitFunc) *Store {
 	s.enqueueSubmit = fn

@@ -24144,12 +24144,18 @@ type ProviderRef = string
 
 // ProviderRun defines model for ProviderRun.
 type ProviderRun struct {
-	// Applied True once this run's answers have been folded onto the contact's own record — the
-	// fields it filled that were empty. A `completed` run that is not yet `applied` has
-	// bought its values but they have not reached the record, which is the window a
-	// client polls through: stopping at `completed` shows a page that still looks empty.
-	// Always false for a run that never completed, and for one whose claims were
-	// discarded (`claims_unwritten`), because there was nothing to apply.
+	// Applied True once this run's answers have been OFFERED to the contact's own record — every
+	// field the record left empty is filled, and the rest were already answered. It says
+	// the folding HAPPENED, not that anything moved: a run whose values the record
+	// already held reports `applied` with nothing changed, because for a client waiting
+	// to re-read, "we tried and there is nothing more coming" is the same fact.
+	//
+	// A `completed` run that is not yet `applied` has bought its values and they have not
+	// reached the record yet, which is the window a client polls through: stopping at
+	// `completed` shows a page that still looks empty. Always false for a run that never
+	// completed, and for one whose claims were discarded (`claims_unwritten`) because the
+	// subject stopped being eligible mid-flight — that run's values reach nothing, and
+	// `claims_unwritten` is what says so.
 	Applied *bool `json:"applied,omitempty"`
 
 	// ClaimsUnwritten True when a paid terminal result could not be handed to the owning domain within

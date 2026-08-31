@@ -95,7 +95,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("people: insert employment edge: %w", err)
 	}
-	return auditCapturedEmployment(ctx, tx, edgeID, personID, orgID)
+	return auditCapturedEmployment(ctx, tx, edgeID, personID, orgID, relationshipOriginCapture)
 }
 
 // adoptDispositionForOrg settles a domain onto the organization that already
@@ -179,9 +179,9 @@ func (s *Store) deferOrgToTriage(ctx context.Context, tx pgx.Tx, in EnsureCounte
 // treats an employer as a fact somebody asserted can then tell an inference
 // from a statement, which is the whole difference between the two paths — and
 // it can do so without every existing consumer of person.updated changing.
-func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, personID ids.PersonID, orgID ids.OrganizationID) error {
+func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, personID ids.PersonID, orgID ids.OrganizationID, origin string) error {
 	auditID, err := storekit.Audit(ctx, tx, actionCreate, "relationship", edgeID, nil, map[string]any{
-		relationshipKindField: employmentKind, "origin": relationshipOriginCapture,
+		relationshipKindField: employmentKind, "origin": origin,
 	})
 	if err != nil {
 		return fmt.Errorf("people: audit the captured employment edge: %w", err)
@@ -189,7 +189,7 @@ func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, pe
 	delta := map[string]any{
 		eventKeyDelta: map[string]any{"relationship": map[string]any{
 			"id": edgeID, relationshipKindField: employmentKind, "action": actionCreate,
-			"organization_id": orgID, "origin": relationshipOriginCapture,
+			"organization_id": orgID, "origin": origin,
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, personID.UUID,
@@ -204,6 +204,13 @@ func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, pe
 // must agree — a reader comparing the two would otherwise have to decide which
 // spelling was authoritative.
 const relationshipOriginCapture = "capture"
+
+// relationshipOriginProvider marks an edge a licensed data provider asserted:
+// somebody was PAID to say this person works there. Distinct from capture,
+// which inferred it from correspondence the installation already had, because
+// the two carry different weight and a reader deciding whether to trust an
+// employer must be able to tell them apart.
+const relationshipOriginProvider = "provider"
 
 // employmentKind is the relationship kind this file plants, spelled once so the
 // SQL, the audit row and the event delta cannot drift apart.
