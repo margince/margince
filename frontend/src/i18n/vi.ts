@@ -6050,6 +6050,23 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
+  "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
+  "firstRun.google.helpStep1":
+    "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
+  "firstRun.google.helpStep2":
+    "Bật Gmail API và đưa cả hai scope gmail.readonly và gmail.send lên màn hình đồng ý. Chúng đi cùng một lần đồng ý là có chủ ý: Google không thêm scope vào refresh token đã cấp, nên xin quyền gửi sau này đồng nghĩa với việc kết nối hộp thư hai lần.",
+  "firstRun.google.helpStep3":
+    "Thêm một authorized redirect URI cho từng thứ sẽ dùng. Chỉ Mail là bắt buộc; thêm Calendar nếu cần lịch, và thêm URI đăng nhập nếu mọi người sẽ đăng nhập Margince bằng tài khoản Google.",
+  "firstRun.google.helpRedirectMail": "Mail",
+  "firstRun.google.helpRedirectCalendar": "Lịch",
+  "firstRun.google.helpRedirectSignIn": "Đăng nhập Google",
+  "firstRun.google.helpStep4":
+    "Chép client ID và client secret mà Google hiển thị vào hai ô bên dưới. Secret chỉ được gửi một lần và niêm phong trong key vault; sau đó không đọc lại được ở bất kỳ đâu.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpRedirectHost":
+    "{host} là địa chỉ mà API của bản cài này trả lời, tức giá trị MARGINCE_API_BASE_URL hoặc MARGINCE_PUBLIC_BASE_URL của server. Trong dev stack cục bộ, đó là http://localhost:8080.",
+  "firstRun.google.helpDocs":
+    "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
   "firstRun.ai.eyebrow": "Lần chạy đầu · 1 / 2",
   "firstRun.google.eyebrow": "Lần chạy đầu · 2 / 2",
   "aiRates.chatLane": "Dùng để suy luận",

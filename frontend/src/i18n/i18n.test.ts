@@ -22,6 +22,12 @@ import { vi as viCatalog } from "./vi";
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface.
   "room.card.title",
+  // Google's own name for the page an operator has to open. Translating a
+  // product name sends them looking for a screen that does not exist under it.
+  "firstRun.google.helpConsole",
+  // Same word in Vietnamese, and it is the right one: the label on the redirect
+  // URI an operator copies for mail.
+  "firstRun.google.helpRedirectMail",
   // Two placeholders and a dash. Every word in the line comes from elsewhere —
   // the dimension's own label and the sentence the server wrote — so there is
   // nothing here for a locale to translate.

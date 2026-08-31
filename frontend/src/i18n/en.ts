@@ -6176,6 +6176,27 @@ export const en = {
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",
   "firstRun.google.clientSecret": "Client secret",
+  // Where the two values above come from. It is operator work in somebody
+  // else's console, and this screen used to name neither the console nor the
+  // redirect URI — which is the half people get wrong, because Google rejects
+  // the consent silently until it matches.
+  "firstRun.google.helpToggle": "Where do I get these?",
+  "firstRun.google.helpStep1":
+    "In the Google Cloud console, open a project and go to APIs & Services → Credentials → Create credentials → OAuth client ID, and choose Web application.",
+  "firstRun.google.helpStep2":
+    "Enable the Gmail API, and put both the gmail.readonly and gmail.send scopes on the consent screen. They ride one consent on purpose: Google will not add a scope to a refresh token it already issued, so asking for send later means connecting the mailbox twice.",
+  "firstRun.google.helpStep3":
+    "Add an authorized redirect URI for each thing you will use. Mail is the only one you need; add Calendar if you want calendar too, and the sign-in one if people will sign in to Margince with their Google account.",
+  "firstRun.google.helpRedirectMail": "Mail",
+  "firstRun.google.helpRedirectCalendar": "Calendar",
+  "firstRun.google.helpRedirectSignIn": "Google sign-in",
+  "firstRun.google.helpStep4":
+    "Copy the client ID and client secret Google shows you into the two fields below. The secret is sent once and sealed in the key vault; it is never readable again, here or anywhere.",
+  "firstRun.google.helpConsole": "Google Cloud credentials console",
+  "firstRun.google.helpRedirectHost":
+    "{host} is wherever this installation's API answers, which is the address in the server's own MARGINCE_API_BASE_URL or MARGINCE_PUBLIC_BASE_URL. In a local dev stack that is http://localhost:8080.",
+  "firstRun.google.helpDocs":
+    "The full prerequisites, Microsoft and IMAP included: docs/how-to/connect-a-mailbox.md",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
   "aiProviderKeys.title": "Model provider keys",

@@ -3,13 +3,15 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { OnboardingStage } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { suggestionsFor, useAiModelCatalogue } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
@@ -341,6 +343,81 @@ function AiStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
   );
 }
 
+/**
+ * The redirect URIs a Google app has to authorize, and why they are written as
+ * a PATTERN rather than a finished address.
+ *
+ * The host is `MARGINCE_API_BASE_URL` (falling back to
+ * `MARGINCE_PUBLIC_BASE_URL`) — the api's externally-reachable base, which is
+ * server configuration the browser cannot see. On a split deployment the SPA's
+ * own origin is a different host, so deriving the URI from `location.origin`
+ * would print a confident, wrong address — and a redirect URI that does not
+ * match is the one Google failure that says nothing useful:
+ * `redirect_uri_mismatch` at the consent screen, after the operator has already
+ * finished here.
+ *
+ * So the screen shows the paths, names the host, and lets the operator supply
+ * the one value only their deployment knows.
+ */
+const REDIRECT_PATHS: ReadonlyArray<{ label: MessageKey; path: string }> = [
+  {
+    label: "firstRun.google.helpRedirectMail",
+    path: "/v1/connectors/gmail/callback",
+  },
+  {
+    label: "firstRun.google.helpRedirectCalendar",
+    path: "/v1/connectors/gcal/callback",
+  },
+  {
+    label: "firstRun.google.helpRedirectSignIn",
+    path: "/v1/auth/oidc/google/callback",
+  },
+];
+
+/** Google's own console, where the app is created and the two values are read. */
+const GOOGLE_CREDENTIALS_CONSOLE =
+  "https://console.cloud.google.com/apis/credentials";
+
+/**
+ * Where the client id and secret come from, folded away.
+ *
+ * A fold rather than four paragraphs above the fields: an operator who has done
+ * this before wants the two boxes, and one who has not needs every step. Open
+ * by default would push the actual form below the fold for everybody.
+ */
+function GoogleAppHelp() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("firstRun.google.helpToggle")}>
+      <ol className="ob-fr-help">
+        <li>{t("firstRun.google.helpStep1")}</li>
+        <li>{t("firstRun.google.helpStep2")}</li>
+        <li>
+          {t("firstRun.google.helpStep3")}
+          <dl className="ob-fr-uris">
+            {REDIRECT_PATHS.map((uri) => (
+              <div key={uri.path}>
+                <dt>{t(uri.label)}</dt>
+                <dd className="t-mono">{`{host}${uri.path}`}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="ob-fr-help-note">
+            {t("firstRun.google.helpRedirectHost", { host: "{host}" })}
+          </p>
+        </li>
+        <li>{t("firstRun.google.helpStep4")}</li>
+      </ol>
+      <p className="ob-fr-help-note">
+        <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
+          {t("firstRun.google.helpConsole")}
+        </OffsiteLink>
+      </p>
+      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+    </Disclosure>
+  );
+}
+
 /** The Google step: the OAuth app a mailbox connection is made through. */
 function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
   const t = useT();
@@ -381,6 +458,7 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
         }
       >
         <PanelBody>
+          <GoogleAppHelp />
           {save.error && (
             <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
           )}

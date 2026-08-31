@@ -6114,6 +6114,23 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "firstRun.google.helpToggle": "Woher bekomme ich das?",
+  "firstRun.google.helpStep1":
+    "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
+  "firstRun.google.helpStep2":
+    "Die Gmail API aktivieren und beide Bereiche gmail.readonly und gmail.send auf den Zustimmungsbildschirm setzen. Sie gehören absichtlich in eine Zustimmung: Google ergänzt einen Bereich nicht nachträglich an einem bereits ausgegebenen Refresh-Token, ein späteres Senden-Recht bedeutet also, das Postfach zweimal zu verbinden.",
+  "firstRun.google.helpStep3":
+    "Für alles, was genutzt wird, eine autorisierte Weiterleitungs-URI hinterlegen. Nötig ist nur Mail; Kalender nur bei Kalendernutzung, und die Anmelde-URI nur, wenn sich Leute mit ihrem Google-Konto bei Margince anmelden sollen.",
+  "firstRun.google.helpRedirectMail": "Mail",
+  "firstRun.google.helpRedirectCalendar": "Kalender",
+  "firstRun.google.helpRedirectSignIn": "Google-Anmeldung",
+  "firstRun.google.helpStep4":
+    "Client-ID und Client-Secret aus Google in die beiden Felder unten kopieren. Das Secret wird einmal gesendet und im Schlüsseltresor versiegelt; es ist danach nirgends mehr lesbar.",
+  "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
+  "firstRun.google.helpRedirectHost":
+    "{host} ist die Adresse, unter der die API dieser Installation antwortet, also der Wert aus MARGINCE_API_BASE_URL beziehungsweise MARGINCE_PUBLIC_BASE_URL des Servers. In einem lokalen Dev-Stack ist das http://localhost:8080.",
+  "firstRun.google.helpDocs":
+    "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
   "firstRun.ai.eyebrow": "Erststart · 1 von 2",
   "firstRun.google.eyebrow": "Erststart · 2 von 2",
   "aiRates.chatLane": "Womit es denkt",

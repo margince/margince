@@ -31,6 +31,51 @@
   gap: var(--space-5);
 }
 
+/*
+ * Where the Google client id and secret come from: operator work in somebody
+ * else's console, folded away so the two boxes stay the first thing an operator
+ * who has done this before sees.
+ */
+.ob-fr-help {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--textContent);
+}
+
+.ob-fr-help-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--textMeta);
+}
+
+/* The redirect URIs, as label→value pairs rather than prose: an operator is
+   going to copy these character by character into another window, and a URI
+   inside a sentence is a URI they have to find the ends of. Each row wraps
+   instead of scrolling, because the string is the point and a clipped one is
+   worse than two lines. */
+.ob-fr-uris {
+  margin: var(--space-3) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ob-fr-uris dt {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+.ob-fr-uris dd {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+
 /* What the binding costs, directly under the two fields that decide it. The
    plate is `StatStrip`, which is built for a record's readings row; here it
    holds the two lanes, and the small offset is what attaches it to the fields
