@@ -113,6 +113,16 @@ tasks:
     company_context: none
     doc: "S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed."
 
+  propose_roles:
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [committee]
+    company_context: none
+    cost_unit: per_deal
+    doc: "Read the buying roles out of what a contact has actually written — who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and a snippet that is not in the source it names is dropped rather than trusted. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the record carries the evidence so a reader can check it and the mark stays until a human confirms."
+
   enrich:
     ladder: [local_small, cheap_cloud]
     execution_mode: background

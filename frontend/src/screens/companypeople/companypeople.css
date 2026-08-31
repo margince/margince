@@ -1,0 +1,19 @@
+/* A seat the product read out of messages, not one a colleague typed.
+ *
+ * The indigo family means exactly one thing in this product: an agent decided
+ * it. Dashed while unconfirmed, because dashes going solid is what acceptance
+ * looks like everywhere else here. Text on the light fill takes --aiText, never
+ * --ai, which fails AA on its own family's ground. */
+.cp-seat-suggested {
+  border: 1.5px dashed var(--aiMed);
+  border-radius: var(--r-sm);
+  background: var(--aiLight);
+  padding: var(--space-2);
+}
+
+.cp-seat-mark {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  color: var(--aiText);
+}

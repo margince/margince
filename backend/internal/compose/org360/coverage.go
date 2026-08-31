@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -215,6 +216,13 @@ func (s *Service) wireCommittee(
 			return crmcontracts.OrganizationCoverageCommittee{}, err
 		}
 	}
+	// Which of these seats the product read rather than a person asserted, and
+	// what it read them from. Kept out of deals.Stakeholders because one caller
+	// needing provenance is not a reason to widen the shape every caller reads.
+	marks, err := suggestedSeats(ctx, tx, seats)
+	if err != nil {
+		return crmcontracts.OrganizationCoverageCommittee{}, err
+	}
 	held := map[string]bool{}
 	for _, seat := range seats {
 		held[seat.Role] = true
@@ -229,6 +237,9 @@ func (s *Service) wireCommittee(
 		}
 		if route, ok := routes[seat.PersonID]; ok {
 			wire.Routes = &route
+		}
+		if mark, ok := marks[seat.PersonID]; ok && mark.suggested {
+			wire.AiSuggested = &mark.suggested
 		}
 		out.Seats = append(out.Seats, wire)
 	}
@@ -317,4 +328,46 @@ func seatCount(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (int, error) {
 		return 0, fmt.Errorf("org360: counting the deal's seats: %w", err)
 	}
 	return total, nil
+}
+
+// seatMark is what a seat's own row says about where it came from.
+type seatMark struct {
+	suggested bool
+}
+
+// suggestedSeats reads the provenance of the committee's own rows.
+//
+// A seat the product read out of messages carries the proposing agent as its
+// captured_by, which is the same mark every other agent write in the tree
+// carries — so "which of these did we read" is answered by the row itself
+// rather than by a column somebody has to remember to set.
+func suggestedSeats(
+	ctx context.Context, tx pgx.Tx, seats []deals.DealStakeholder,
+) (map[ids.UUID]seatMark, error) {
+	out := map[ids.UUID]seatMark{}
+	if len(seats) == 0 {
+		return out, nil
+	}
+	ids0 := make([]ids.UUID, 0, len(seats))
+	for _, seat := range seats {
+		ids0 = append(ids0, seat.PersonID)
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT person_id, captured_by = $2
+		  FROM relationship
+		 WHERE kind = 'deal_stakeholder' AND person_id = ANY($1)
+		   AND archived_at IS NULL AND ended_at IS NULL`, ids0, proposeroles.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("org360: reading the committee's provenance: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var mark seatMark
+		if err := rows.Scan(&id, &mark.suggested); err != nil {
+			return nil, err
+		}
+		out[id] = mark
+	}
+	return out, rows.Err()
 }

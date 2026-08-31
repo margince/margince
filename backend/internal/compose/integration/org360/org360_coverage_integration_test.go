@@ -298,3 +298,47 @@ func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
 		t.Fatal("no colleague named on a seat with a recorded exchange")
 	}
 }
+
+// A seat the product read out of messages is marked; one a person typed is not.
+//
+// The mark comes off the row's own captured_by, which is the same identity
+// every agent write in this tree carries — so the card can say which part of
+// the committee is the product's reading and which a colleague asserted.
+func TestCoverageMarksASeatTheProductRead(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	svc := org360Service(e)
+
+	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	pipeline, openStage, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
+	e.WsExec(t, `UPDATE deal SET organization_id = $1 WHERE id = $2`, org, deal)
+
+	typed := e.SeedPerson(t, "Ute Sommer", nil)
+	read := e.SeedPerson(t, "Dietmar Rietsch", nil)
+	employ(t, e, typed, org, "Procurement")
+	employ(t, e, read, org, "Managing Director")
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, typed, deal)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
+		read, deal)
+
+	got, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("reading coverage: %v", err)
+	}
+	if got.Committee == nil {
+		t.Fatal("no committee")
+	}
+	marked := map[string]bool{}
+	for _, seat := range got.Committee.Seats {
+		marked[seat.FullName] = seat.AiSuggested != nil && *seat.AiSuggested
+	}
+	if !marked["Dietmar Rietsch"] {
+		t.Fatal("the seat the product read is not marked as suggested")
+	}
+	if marked["Ute Sommer"] {
+		t.Fatal("a seat a person typed is marked as the product's reading")
+	}
+}

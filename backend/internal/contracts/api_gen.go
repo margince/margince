@@ -22116,6 +22116,21 @@ type OrganizationCoverageRoute struct {
 
 // OrganizationCoverageSeat defines model for OrganizationCoverageSeat.
 type OrganizationCoverageSeat struct {
+	// AiSuggested The seat was read out of the contact's own messages rather than typed by a
+	// person, and nobody has confirmed it yet.
+	//
+	// It is a REAL seat — written, attributed and reversible — not a proposal
+	// waiting somewhere. What the flag buys is the mark on the card: a reader can
+	// see which part of the committee is the product's reading of the evidence and
+	// which part a colleague asserted, and can disagree with the first.
+	//
+	// Read off the row's own `captured_by`, which is the same mark every agent
+	// write in this tree carries. The evidence the read quoted lives in the
+	// audit trail rather than on the seat: `relationship` holds no evidence
+	// column, and adding one for this is a schema change this read does not need
+	// to answer the question the card asks.
+	AiSuggested *bool `json:"ai_suggested,omitempty"`
+
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses.
 	//

@@ -1,0 +1,211 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package proposeroles
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+)
+
+func candidates() []Candidate {
+	return []Candidate{{
+		PersonID: "p-1",
+		FullName: "Dietmar Rietsch",
+		Title:    "Managing Director",
+		Messages: []Message{{
+			ActivityID: "a-1",
+			Subject:    "Re: Retrofit 2026",
+			Body:       "I sign off the budget for this, so send it to me directly.",
+		}},
+	}}
+}
+
+// Every word somebody outside this company wrote sits inside the declared
+// boundary, and none of it appears in the instruction region as well.
+//
+// Containment is not membership: a prompt that wraps the message AND repeats it
+// in a header has fenced nothing, because the copy outside the boundary is read
+// in our own voice.
+func TestRequestFencesEveryUntrustedFieldUnderTheMarkerItDeclares(t *testing.T) {
+	t.Parallel()
+	req := Request("Retrofit 2026", candidates())
+	marker, ok := promptfence.MarkerIn(req.System)
+	if !ok {
+		t.Fatal("the system prompt declares no boundary")
+	}
+	content := req.Messages[0].Content
+	for _, untrusted := range []string{
+		"Dietmar Rietsch",
+		"Managing Director",
+		"I sign off the budget for this",
+	} {
+		if !strings.Contains(content, untrusted) {
+			t.Fatalf("the prompt does not carry %q at all", untrusted)
+		}
+		if outsideEverySpan(content, marker, untrusted) {
+			t.Fatalf("%q appears outside the fenced span — it would be read in our own voice", untrusted)
+		}
+	}
+	// The deal name is OURS: it is the question, and fencing it would tell the
+	// model to distrust the ask.
+	if !strings.Contains(content, "Deal: Retrofit 2026") {
+		t.Fatal("the deal name is not stated as the question")
+	}
+}
+
+// outsideEverySpan reports whether the needle occurs anywhere that is not
+// between two markers.
+func outsideEverySpan(content, marker, needle string) bool {
+	inside := false
+	for _, part := range strings.Split(content, marker) {
+		if !inside && strings.Contains(part, needle) {
+			return true
+		}
+		inside = !inside
+	}
+	return false
+}
+
+func TestGateKeepsAWellEvidencedProposal(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{{
+		PersonID:        "p-1",
+		Role:            "economic_buyer",
+		EvidenceSnippet: "I sign off the budget for this",
+		SourceID:        "a-1",
+		Confidence:      0.9,
+	}}, candidates())
+	if len(kept) != 1 {
+		t.Fatalf("dropped a proposal quoting its source verbatim: %+v", kept)
+	}
+}
+
+// A quote the source does not contain is a sentence the model wrote. A record
+// citing it would look checked while citing nothing.
+func TestGateDropsASnippetTheSourceDoesNotContain(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{{
+		PersonID:        "p-1",
+		Role:            "economic_buyer",
+		EvidenceSnippet: "I am the economic buyer",
+		SourceID:        "a-1",
+		Confidence:      0.95,
+	}}, candidates())
+	if len(kept) != 0 {
+		t.Fatalf("kept a quote its own source does not contain: %+v", kept)
+	}
+}
+
+func TestGateDropsASourceThisCallNeverSupplied(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{{
+		PersonID:        "p-1",
+		Role:            "economic_buyer",
+		EvidenceSnippet: "I sign off the budget for this",
+		SourceID:        "a-elsewhere",
+		Confidence:      0.95,
+	}}, candidates())
+	if len(kept) != 0 {
+		t.Fatalf("kept a proposal citing a source it cannot check: %+v", kept)
+	}
+}
+
+func TestGateDropsAProposalBelowTheFloor(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{{
+		PersonID:        "p-1",
+		Role:            "economic_buyer",
+		EvidenceSnippet: "I sign off the budget for this",
+		SourceID:        "a-1",
+		Confidence:      ConfidenceFloor - 0.01,
+	}}, candidates())
+	if len(kept) != 0 {
+		t.Fatalf("kept a proposal under the floor: %+v", kept)
+	}
+}
+
+func TestGateDropsAPersonThisCallNeverOffered(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{{
+		PersonID:        "p-somebody-else",
+		Role:            "champion",
+		EvidenceSnippet: "I sign off the budget for this",
+		SourceID:        "a-1",
+		Confidence:      0.95,
+	}}, candidates())
+	if len(kept) != 0 {
+		t.Fatalf("kept a proposal for somebody who was never a candidate: %+v", kept)
+	}
+}
+
+func TestGateDropsARoleTheVocabularyDoesNotHold(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{{
+		PersonID:        "p-1",
+		Role:            "chief_wizard",
+		EvidenceSnippet: "I sign off the budget for this",
+		SourceID:        "a-1",
+		Confidence:      0.95,
+	}}, candidates())
+	if len(kept) != 0 {
+		t.Fatalf("kept a role nobody declared: %+v", kept)
+	}
+}
+
+// One seat per person. Two proposals for the same contact is the model
+// disagreeing with itself, and writing both would put one person in two lanes.
+func TestGateKeepsOneProposalPerPerson(t *testing.T) {
+	t.Parallel()
+	kept := Gate([]Proposal{
+		{
+			PersonID:        "p-1",
+			Role:            "economic_buyer",
+			EvidenceSnippet: "I sign off the budget for this",
+			SourceID:        "a-1",
+			Confidence:      0.95,
+		},
+		{
+			PersonID:        "p-1",
+			Role:            "champion",
+			EvidenceSnippet: "send it to me directly",
+			SourceID:        "a-1",
+			Confidence:      0.9,
+		},
+	}, candidates())
+	if len(kept) != 1 {
+		t.Fatalf("kept %d proposals for one person", len(kept))
+	}
+	if kept[0].Role != "economic_buyer" {
+		t.Fatalf("kept the second proposal rather than the first: %+v", kept[0])
+	}
+}
+
+// The contract says a role is recorded and never inferred from a job title.
+// A contact whose only evidence is what they are CALLED yields nothing — the
+// prompt says so, and the gate holds it even if the model ignores that.
+func TestGateDropsAProposalEvidencedOnlyByATitle(t *testing.T) {
+	t.Parallel()
+	titleOnly := []Candidate{{
+		PersonID: "p-2",
+		FullName: "Ute Sommer",
+		Title:    "Chief Financial Officer",
+		Messages: []Message{{
+			ActivityID: "a-2",
+			Subject:    "Re: schedule",
+			Body:       "Thursday works for me.",
+		}},
+	}}
+	kept := Gate([]Proposal{{
+		PersonID:        "p-2",
+		Role:            "economic_buyer",
+		EvidenceSnippet: "Chief Financial Officer",
+		SourceID:        "a-2",
+		Confidence:      0.95,
+	}}, titleOnly)
+	if len(kept) != 0 {
+		t.Fatalf("read a job title as evidence of a buying role: %+v", kept)
+	}
+}

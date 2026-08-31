@@ -304,3 +304,39 @@ test("offers the board and the map, and switches between them", async () => {
     screen.getByRole("button", { name: /champion missing/i }),
   ).not.toBeNull();
 });
+
+// A seat the product read out of messages carries the AI mark; one a colleague
+// typed carries none of it. The mark is the whole reason a reader can tell the
+// product's reading from a person's assertion and disagree with the first.
+test("marks a seat the product read, and only that one", async () => {
+  stub({
+    committee: {
+      seats: [
+        {
+          person_id: "p-1",
+          full_name: "Dietmar Rietsch",
+          role: "champion",
+          engagement: "answered",
+          ai_suggested: true,
+        },
+        {
+          person_id: "p-2",
+          full_name: "Ute Sommer",
+          role: "economic_buyer",
+          engagement: "untried",
+        },
+      ],
+      gaps: [],
+      unlisted_seats: 0,
+    },
+  });
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+
+  await screen.findByText("Dietmar Rietsch");
+  const marks = screen.getAllByText("Read from their messages");
+  expect(marks).toHaveLength(1);
+  // The mark sits on the seat that was read, not the one that was typed.
+  expect(marks[0]?.closest("[data-suggested='true']")).not.toBeNull();
+});

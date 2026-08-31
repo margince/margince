@@ -16540,6 +16540,22 @@ export interface components {
             role: string;
             engagement?: components["schemas"]["ContactEngagement"];
             /**
+             * @description The seat was read out of the contact's own messages rather than typed by a
+             *     person, and nobody has confirmed it yet.
+             *
+             *     It is a REAL seat — written, attributed and reversible — not a proposal
+             *     waiting somewhere. What the flag buys is the mark on the card: a reader can
+             *     see which part of the committee is the product's reading of the evidence and
+             *     which part a colleague asserted, and can disagree with the first.
+             *
+             *     Read off the row's own `captured_by`, which is the same mark every agent
+             *     write in this tree carries. The evidence the read quoted lives in the
+             *     audit trail rather than on the seat: `relationship` holds no evidence
+             *     column, and adding one for this is a schema change this read does not need
+             *     to answer the question the card asks.
+             */
+            ai_suggested?: boolean;
+            /**
              * @description Who on our side can reach this seat, strongest first — the same per-contact
              *     routes the company 360 carries, from the same read.
              *
