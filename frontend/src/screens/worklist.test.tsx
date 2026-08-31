@@ -270,6 +270,45 @@ describe("what the ranked queue tells a reader", () => {
     });
   });
 
+  it("states the money and offers the reply the product already worked out", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "Re: pricing for the retrofit",
+            source: "customer_waiting",
+            category: "customer_waiting",
+            level: 1,
+            consequence: "buyer_waits",
+            deal: { amount_minor: 16010000, currency: "EUR" },
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-00000000bbbb",
+              label: "Acme Expansion",
+            },
+            move: {
+              action: "draft_reply",
+              activity_id: "01a05500-0000-7000-8000-00000000aaaa",
+            },
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The concept's sharpest example: a €160,100 deal reduced to "no contact
+    // for 83 days". The money was on the wire the whole time.
+    expect(await screen.findByText(/160,100/)).toBeTruthy();
+    const reply = screen.getByRole("link", { name: "Open to reply" });
+    // The verb says where it GOES, because that is what pressing it does: the
+    // composer lives on the record behind its own button, and a label promising
+    // a draft would overstate the click.
+    expect(reply.getAttribute("href")).toBe(
+      "#/deals/01a05500-0000-7000-8000-00000000bbbb",
+    );
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({

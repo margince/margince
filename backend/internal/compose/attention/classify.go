@@ -18,6 +18,8 @@ package attention
 import (
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -220,12 +222,24 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 	if item.Deal == nil {
 		return nil
 	}
-	return &crmcontracts.WorklistDealFacts{
+	facts := &crmcontracts.WorklistDealFacts{
 		StageId:     item.Deal.StageId,
 		OwnerId:     item.Deal.OwnerId,
 		AmountMinor: item.Deal.AmountMinor,
 		Currency:    item.Deal.Currency,
 	}
+	// The close date rides on the lane item's own due moment, and the idle
+	// count on its detail. Both were already resolved; only this projection
+	// dropped them, so the card could state money and never say when the deal
+	// was meant to land.
+	if item.DueAt != nil {
+		closes := openapi_types.Date{Time: *item.DueAt}
+		facts.ExpectedCloseDate = &closes
+	}
+	if quiet := quietDaysOf(item); quiet > 0 {
+		facts.QuietDays = &quiet
+	}
+	return facts
 }
 
 // expectedRevenue is what the deal is worth times how likely it is to land.
@@ -296,6 +310,14 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	occurred := waiting.Since
 	row.OccurredAt = &occurred
+	// The message IS the row's id, so the move needs nothing this row does not
+	// already carry. The product knew the buyer had written and knew nobody had
+	// answered; naming the step is the difference between a page that reports
+	// and a page a rep can work from.
+	row.Move = &crmcontracts.WorklistMove{
+		Action:     "draft_reply",
+		ActivityId: openapi_types.UUID(waiting.ActivityID),
+	}
 	return ranked{item: row, waitingDays: days, occurredAt: waiting.Since}
 }
 
@@ -317,10 +339,29 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 	if len(waitingDeals) == 0 {
 		return rows
 	}
+	// The deal's own facts ride onto the waiting row that absorbed it: a reader
+	// told a customer is waiting still wants to know the deal is worth €160k.
+	// Everything the drifting row was going to say, kept: a reader told a
+	// customer is waiting still needs to know the deal is material, has been
+	// quiet a month, and is past the date it was meant to close.
+	facts := map[string]*crmcontracts.WorklistDealFacts{}
+	grounds := map[string][]crmcontracts.WorklistReason{}
+	for _, row := range rows {
+		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+			facts[row.item.Id] = row.item.Deal
+			grounds[row.item.Id] = row.item.Because
+		}
+	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
 		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
 			continue
+		}
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectDeal && row.item.Deal == nil {
+			deal := row.item.Subject.Id.String()
+			row.item.Deal = facts[deal]
+			row.item.Because = append(row.item.Because, grounds[deal]...)
 		}
 		kept = append(kept, row)
 	}

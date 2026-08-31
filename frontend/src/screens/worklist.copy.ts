@@ -1,6 +1,11 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { formatDateTime, formatMoney, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import type { Locale, useT } from "../i18n";
 import type {
   Worklist,
@@ -204,6 +209,56 @@ export function consequenceText(item: WorklistItem, t: T): string | null {
     return null;
   }
   return t(`worklist.consequence.${item.consequence}` as const);
+}
+
+// The deal's own figures, in one line: what it is worth, and when it closes.
+//
+// The concept's sharpest example was a €160,100 deal reduced to "no contact for
+// 83 days". The money was on the wire the whole time; only the row discarded it.
+export function dealFactsText(
+  item: WorklistItem,
+  t: T,
+  locale: Locale,
+  zone: string,
+): string | null {
+  const deal = item.deal;
+  if (!deal) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (deal.amount_minor != null && deal.currency) {
+    parts.push(formatMoney(deal.amount_minor, deal.currency, locale));
+  }
+  if (deal.expected_close_date) {
+    parts.push(
+      t("worklist.deal.closes", {
+        date: formatDate(deal.expected_close_date, locale, zone),
+      }),
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+// Where the row's suggested step leads.
+//
+// The RECORD the thread belongs to, not the message: an activity is a timeline
+// entry with no page of its own — `app/entity.ts` says so in as many words —
+// so `#/activities/<id>` would be a control that goes nowhere.
+//
+// WHAT THIS IS NOT. It does not open a composer. The composer lives on the
+// record page behind its own button, and no route opens it, so a link labelled
+// "Draft the reply" would promise something the click does not do. The verb
+// therefore says where it goes — the reader lands on the record with the
+// message on its timeline, one press from the draft — and naming the step
+// honestly is worth more than a label that overstates it.
+//
+// Opening the composer from here needs a deep link the app does not have. That
+// is its own change, and the label moves back when it lands.
+export function moveHref(item: WorklistItem): string | undefined {
+  if (item.move?.action !== "draft_reply") {
+    return undefined;
+  }
+  return subjectHref(item);
 }
 
 // One item's headline.

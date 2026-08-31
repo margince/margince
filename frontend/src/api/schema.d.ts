@@ -24348,6 +24348,7 @@ export interface components {
             subject?: components["schemas"]["AttentionSubject"];
             deal?: components["schemas"]["WorklistDealFacts"];
             batch?: components["schemas"]["WorklistBatch"];
+            move?: components["schemas"]["WorklistMove"];
             /**
              * Format: date-time
              * @description When this is due, or when the meeting starts.
@@ -24410,6 +24411,37 @@ export interface components {
             currency?: string;
             days?: number;
             level?: number;
+        };
+        /**
+         * @description The next step this row suggests, and what it would act on.
+         *
+         *     The concept's clearest complaint about the surface this replaces: the product
+         *     knew the buyer had written, knew nobody had answered, and knew the answer was to
+         *     draft a reply — and the page said only "no contact for 83 days". A row that names
+         *     the move carries what the product already worked out into the place the reader is
+         *     standing.
+         *
+         *     It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
+         *     the deal page's own next-step card does, and a row offering a move is not the
+         *     product taking one.
+         */
+        WorklistMove: {
+            /**
+             * @description `draft_reply` answers the message in `activity_id` — offered only where the
+             *     reader may READ that message, because there is no replying to words they
+             *     cannot see.
+             *
+             *     One value, and the message is required with it: a move naming no message is
+             *     not a move, and a contract that allowed one would let a client draw a control
+             *     with nothing behind it. A row with no step to suggest sends no `move` at all.
+             * @enum {string}
+             */
+            action: "draft_reply";
+            /**
+             * Format: uuid
+             * @description The message a reply would answer, for `draft_reply`.
+             */
+            activity_id: string;
         };
         /**
          * @description A group of routine decisions that read alike, standing on the queue as one row.

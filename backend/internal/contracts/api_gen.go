@@ -11635,6 +11635,21 @@ func (e WorklistItemSource) Valid() bool {
 	}
 }
 
+// Defines values for WorklistMoveAction.
+const (
+	DraftReply WorklistMoveAction = "draft_reply"
+)
+
+// Valid indicates whether the value is a known member of the WorklistMoveAction enum.
+func (e WorklistMoveAction) Valid() bool {
+	switch e {
+	case DraftReply:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistReasonKind.
 const (
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
@@ -27739,6 +27754,19 @@ type WorklistItem struct {
 	// hygiene. Levels are never mixed by a score.
 	Level int `json:"level"`
 
+	// Move The next step this row suggests, and what it would act on.
+	//
+	// The concept's clearest complaint about the surface this replaces: the product
+	// knew the buyer had written, knew nobody had answered, and knew the answer was to
+	// draft a reply — and the page said only "no contact for 83 days". A row that names
+	// the move carries what the product already worked out into the place the reader is
+	// standing.
+	//
+	// It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
+	// the deal page's own next-step card does, and a row offering a move is not the
+	// product taking one.
+	Move *WorklistMove `json:"move,omitempty"`
+
 	// OccurredAt When the thing being reported happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
@@ -27779,6 +27807,40 @@ type WorklistItemConsequence string
 // routine decisions that read alike, so a hundred of them cost the reader one
 // row rather than a hundred. Its own facts ride in `batch`.
 type WorklistItemSource string
+
+// WorklistMove The next step this row suggests, and what it would act on.
+//
+// The concept's clearest complaint about the surface this replaces: the product
+// knew the buyer had written, knew nobody had answered, and knew the answer was to
+// draft a reply — and the page said only "no contact for 83 days". A row that names
+// the move carries what the product already worked out into the place the reader is
+// standing.
+//
+// It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
+// the deal page's own next-step card does, and a row offering a move is not the
+// product taking one.
+type WorklistMove struct {
+	// Action `draft_reply` answers the message in `activity_id` — offered only where the
+	// reader may READ that message, because there is no replying to words they
+	// cannot see.
+	//
+	// One value, and the message is required with it: a move naming no message is
+	// not a move, and a contract that allowed one would let a client draw a control
+	// with nothing behind it. A row with no step to suggest sends no `move` at all.
+	Action WorklistMoveAction `json:"action"`
+
+	// ActivityId The message a reply would answer, for `draft_reply`.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+}
+
+// WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the
+// reader may READ that message, because there is no replying to words they
+// cannot see.
+//
+// One value, and the message is required with it: a move naming no message is
+// not a move, and a contract that allowed one would let a client draw a control
+// with nothing behind it. A row with no step to suggest sends no `move` at all.
+type WorklistMoveAction string
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
 // product ships three languages and a sentence composed here would reach a German
