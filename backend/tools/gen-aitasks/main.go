@@ -34,6 +34,7 @@ import (
 var (
 	contractPath = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
 	outGoPath    = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
+	outEgressDoc = flag.String("out-egress", "../docs/reference/ai-egress.md", "generated egress table destination")
 )
 
 func main() {
@@ -56,6 +57,14 @@ func main() {
 	}
 	if err := os.WriteFile(*outGoPath, []byte(goSrc), 0o600); err != nil {
 		log.Fatalf("gen-aitasks: writing %s: %v", *outGoPath, err)
+	}
+
+	// The egress table, from the same parse. A page that answers "does our mail
+	// leave the building" has to be generated from the routing table it
+	// describes: a hand-written one says what somebody believed, and is wrong
+	// in the direction of claiming more privacy than the product delivers.
+	if err := os.WriteFile(*outEgressDoc, emitEgressDoc(c), 0o600); err != nil {
+		log.Fatalf("gen-aitasks: writing %s: %v", *outEgressDoc, err)
 	}
 
 	fmt.Printf("%d tasks, %d tiers generated\n", len(c.Tasks), len(c.Tiers))
