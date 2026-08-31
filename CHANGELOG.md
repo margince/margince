@@ -483,6 +483,15 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A refused API key is no longer reported as six broken use cases.** The
+  `e2e-llm` lane guarded against an empty transcript but not against one the API
+  refused: a `401` produces an init line and an error result, which the checker
+  scored as a scenario that called nothing and said nothing. All eighteen runs
+  of a lane failed that way, every scenario was recorded as failing its
+  criteria, and the verdict named the product — nothing outside the transcripts
+  said otherwise. A run that never reached the model is now named as one and
+  stops the lane, and a run that answered badly is still a finding.
+
 - **Outbound mail is written in the installation's own language.** Every message
   the product sent was hard-coded English while the screens are translated three
   ways. The weekly retrospective is the one that shows: it arrives unasked every

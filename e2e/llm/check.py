@@ -141,6 +141,77 @@ def read_transcript(path):
     return called, "\n".join(said)
 
 
+# The failures that mean the model was never reached, rather than that it
+# answered badly. Matched on the message because the transport reports both the
+# same way — `is_error` on the terminal result — and only the message says which
+# happened.
+#
+# WORD BOUNDARIES on the numeric codes, because a bare substring finds `401`
+# inside `4011` and `1401`. A run that reached the model and then failed with a
+# number that happens to contain one would be reported as never having happened,
+# which is this defect inverted: a real finding discarded and the rest of the
+# lane abandoned with it.
+#
+# The family is deliberately NARROW, and the cost is stated rather than fixed: a
+# refusal whose message names no marker — a bare "Permission denied" — is scored
+# as a scenario failure. That is the safe direction. Widening the family to
+# catch it would also catch a mid-run tool permission error, which IS a finding,
+# and excusing one of those is worse than reading one credential problem as a
+# bad answer.
+_REFUSALS = re.compile(
+    r"\b(?:401|403)\b|api key|authenticate|authentication|unauthorized", re.IGNORECASE
+)
+
+
+def unrun(path):
+    """Why this run never happened, or "" when it did.
+
+    A scenario failing every criterion and a run that never reached the model
+    produce the same score, and only one of them is a finding about the product.
+    That is not hypothetical: an expired key answered `401 API key is invalid`
+    on all eighteen runs of a lane, every scenario was recorded as failing its
+    criteria, and the verdict said six use cases were broken.
+
+    ONLY those two shapes. A transcript with no assistant turn never got as far
+    as the model, and a terminal error naming a credential refusal never got
+    past the door. Every OTHER `is_error` is a run that happened — the lane sets
+    `--max-turns 20`, and exhausting it is a finding about the scenario, not
+    about the harness. Excusing one of those would be this same defect inverted:
+    a real answer thrown away as a harness fault, and the rest of the lane
+    abandoned with it.
+    """
+    saw_assistant, called_tool = False, False
+    failure = ""
+    for line in _open_checked(path):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "assistant":
+            saw_assistant = True
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    called_tool = True
+        if event.get("type") == "result" and event.get("is_error"):
+            failure = str(event.get("result") or "")
+    if not saw_assistant:
+        return "the transcript carries no assistant turn: the model was never reached"
+    # A REFUSAL AFTER A TOOL CALL IS NOT A REFUSAL AT THE DOOR. The credential
+    # that shipped this defect produced one assistant turn carrying the error
+    # text and called nothing — the model was never reached. A tool answering
+    # `401 Unauthorized` mid-run is the opposite: the model was reached, chose
+    # a tool, and the product refused it, which is a finding about the product.
+    #
+    # The tool call is what separates them, and it is structural rather than a
+    # guess at wording.
+    if failure and not called_tool and _REFUSALS.search(failure):
+        return failure
+    return ""
+
+
 def tool_matches(called, want):
     """A tool is reached when any call names it.
 
@@ -191,6 +262,13 @@ def main():
             "pass_at": scenario.get("pass_at"),
         }, indent=2))
         return 0
+
+    if sys.argv[1] == "--ran":
+        why = unrun(sys.argv[2])
+        if why:
+            print(why)
+            sys.exit(1)
+        sys.exit(0)
 
     if sys.argv[1] == "--check":
         problems = check(parse_scenario(sys.argv[2]), sys.argv[3])

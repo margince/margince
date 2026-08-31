@@ -222,6 +222,7 @@ run_once() {
 
 PASSED=0
 FAILED=0
+mkdir -p "$RECORD_DIR"
 REPORT="$WORK/report.txt"
 : > "$REPORT"
 
@@ -262,6 +263,34 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "  run $i: NO TRANSCRIPT"
       echo "run $i: error" >> "$results"
       continue
+    fi
+    # A RUN THAT NEVER REACHED THE MODEL IS NOT A FAILED SCENARIO. An empty
+    # transcript is caught above; a run refused by the API is not empty — it
+    # carries an init line and an error result, which the checker then scores
+    # as a scenario that called nothing and said nothing.
+    #
+    # That is how an expired key was reported as six broken use cases: all
+    # eighteen runs answered "401 API key is invalid", every scenario recorded
+    # zero passes, and the verdict named the product. Nothing but the
+    # transcripts said otherwise.
+    #
+    # So the lane STOPS here rather than scoring the rest. Every remaining run
+    # would fail the same way, each costs a fresh stack, and the answer is the
+    # same after eighteen of them as after one.
+    if ! why="$(python3 "$ROOT/e2e/llm/check.py" --ran "$transcript")"; then
+      echo
+      echo "HARNESS: the model was never reached on $name run $i:"
+      echo "  $why"
+      echo "  This is not a use-case failure. Nothing was scored."
+      # The transcript is the only evidence of WHICH failure this was, so a
+      # copy that fails says so rather than leaving the reader with a verdict
+      # and nothing to check it against.
+      if ! cp "$transcript" "$RECORD_DIR/"; then
+        echo "  and the transcript could not be kept: $transcript" >&2
+      else
+        echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      fi
+      exit 2
     fi
     if python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1; then
       ok=$((ok + 1))
