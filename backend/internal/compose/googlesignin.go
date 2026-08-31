@@ -106,7 +106,7 @@ func (cfg GoogleSignInConfig) MissingFields() []string {
 // audience must be the shared Gmail-capture client this deployment
 // configured. email_verified is checked by identity's own callback handler,
 // not here — the Pub/Sub push caller (oidcverify.go's other user of
-// googleOIDCVerifier) has no such requirement, so it is not baked into the
+// oidcTokenVerifier) has no such requirement, so it is not baked into the
 // shared matchIdentity contract.
 func googleSignInMatchIdentity(clientID string) func(oidcClaims) error {
 	return func(c oidcClaims) error {
@@ -118,8 +118,10 @@ func googleSignInMatchIdentity(clientID string) func(oidcClaims) error {
 }
 
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
-// compose-level googleOIDCVerifier (generalized in oidcverify.go).
-type googleOIDCVerifierAdapter struct{ v *googleOIDCVerifier }
+// compose-level oidcTokenVerifier (generalized in oidcverify.go). Google's own
+// adapter because it reads Google's own `email_verified` claim; Microsoft
+// issues no such claim and carries its own adapter (microsoftsignin.go).
+type googleOIDCVerifierAdapter struct{ v *oidcTokenVerifier }
 
 func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error) {
 	claims, err := a.v.Verify(ctx, idToken)
@@ -196,31 +198,15 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		if !cfg.Enabled() {
 			return
 		}
-		providers := map[string]identity.OIDCProviderConfig{
-			googleProviderKey: {Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
-		}
-		verifier := googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))}
-		exchanger := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}}
-		signer := loginStateSignerAdapter{s: newLoginStateSigner([]byte(cfg.StateKey))}
-
-		s.authHandlers = s.WithOIDCProviders(
-			providers,
-			map[string]identity.OIDCVerifier{googleProviderKey: verifier},
-			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
-			signer,
-			identity.OIDCRoutes{
-				RedirectBase: signInRedirectBase(cfg),
-				PostLoginURL: cfg.PostLoginURL,
-				FailureURL:   cfg.FailureURL,
-			},
-		)
-		configured := []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
-		s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, identity.NewService(pool), configured))
-		// The settings screen needs the same list, so an admin sees the providers
-		// this deployment can actually offer rather than a free-text field. Set
-		// HERE rather than in assembly because only this option knows what was
-		// composed, and options run after the handlers are assembled.
-		s.configuredProviders = configured
+		registerSignInProvider(s, pool, signInProvider{
+			config:    identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
+			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))},
+			exchanger: googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
+		}, identity.OIDCRoutes{
+			RedirectBase: signInRedirectBase(cfg),
+			PostLoginURL: cfg.PostLoginURL,
+			FailureURL:   cfg.FailureURL,
+		}, cfg.StateKey)
 	}
 }
 

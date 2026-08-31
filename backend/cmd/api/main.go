@@ -337,6 +337,11 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		return nil, nil, nil, err
 	}
 	opts = append(opts, graphOpts...)
+	microsoftSignInOpts, err := microsoftSignInOptions(cfg, stdout)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	opts = append(opts, microsoftSignInOpts...)
 
 	schemaOpts, schemaPool, closeSchemaPool, err := schemaPoolOptions(ctx, cfg.schemaDSN, stdout)
 	if err != nil {
