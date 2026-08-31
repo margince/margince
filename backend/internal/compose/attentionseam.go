@@ -476,5 +476,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		},
 		now,
 	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
+		// The reader's own sends that never left, from the stamp the
+		// dispatcher's park records on the row.
+		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress)
 }

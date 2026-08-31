@@ -7127,6 +7127,7 @@ export const de = {
     "Eine Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",
   "worklist.untitled.bounce": "Eine E-Mail kam nicht an",
+  "worklist.untitled.undelivered": "Eine E-Mail wurde nie gesendet",
   "worklist.untitled.automation_run": "Eine Regel hat nicht funktioniert",
   "worklist.untitled.notice": "Ein Hinweis für dich",
   "worklist.verb.decide": "Entscheiden",

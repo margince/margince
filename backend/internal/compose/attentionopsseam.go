@@ -131,6 +131,29 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 	return out, nil
 }
 
+// attentionUndelivered binds the undelivered lane to the comms store's own
+// per-user read of the stamp the dispatcher's park leaves; the person-only
+// refusal lives there.
+type attentionUndelivered struct{ store *comms.Store }
+
+func (u attentionUndelivered) ParkedSends(ctx context.Context, since time.Time, limit int) ([]attention.ParkedSend, error) {
+	parked, err := u.store.ParkedSendsFor(ctx, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.ParkedSend, 0, len(parked))
+	for _, send := range parked {
+		out = append(out, attention.ParkedSend{
+			ID:       send.ID,
+			Subject:  send.Subject,
+			Reason:   send.Reason,
+			ParkedAt: send.ParkedAt,
+			PersonID: send.PersonID,
+		})
+	}
+	return out, nil
+}
+
 // attentionAutomations binds the rule-health lane to the automation store's
 // own cross-instance read; the automation-read gate lives there.
 type attentionAutomations struct{ store *automation.AutomationStore }

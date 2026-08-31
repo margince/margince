@@ -365,6 +365,7 @@ const KNOWN_SOURCES = {
   capture_health: true,
   ai_work_health: true,
   bounce: true,
+  undelivered: true,
   automation_run: true,
   notice: true,
   // A group of routine decisions, which names no single record.

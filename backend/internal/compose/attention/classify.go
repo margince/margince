@@ -50,6 +50,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
 	})
 	rows = appendLane(rows, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
+	rows = appendLane(rows, day.Undelivered, asOf, classifyUndelivered)
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
@@ -170,96 +171,6 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		overdue:    overdueAt(item.DueAt, asOf),
 		occurredAt: occurredOf(item, asOf),
 	}
-}
-
-// classifyRisk: a deal drifting. Whether it is worth interrupting the day for
-// is decided against the pipeline's own median rather than a number somebody
-// typed once, so "material" tracks the business as it changes.
-func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar) ranked {
-	consequence := crmcontracts.WorklistItemConsequence("deal_drifts")
-	if item.Kind != nil && *item.Kind == "close_overdue" {
-		consequence = "deal_slips_past_close"
-	}
-	expected, known := expectedRevenue(item)
-	// Material revenue interrupts the day; a smaller deal drifting is agreed
-	// work like any other. The bar is the pipeline's own median rather than a
-	// number somebody typed once, so "material" tracks the business as it
-	// moves — and a deal whose value nobody recorded is not assumed large.
-	level := levelAgreed
-	if known && bar.material(expected) {
-		level = levelMaterialRisk
-	}
-	row := base(item, level, "deals_at_risk", consequence)
-	if level == levelMaterialRisk {
-		row.Because = append(row.Because, reason("material", moneyOf(expected)))
-	} else if known {
-		row.Because = append(row.Because, reason("below_material", moneyOf(expected)))
-	}
-	quiet := quietDaysOf(item)
-	if quiet > 0 {
-		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
-	}
-	// The close date is a deadline the customer agreed to, so it ranks like
-	// one. Without this the risk lane compared on idle days alone, and a deal
-	// already past its date lost to one merely quiet for longer.
-	if item.DueAt != nil {
-		row.Because = append(row.Because, reason("closing_soon", nil))
-	}
-	return ranked{
-		item:         row,
-		deadlineAt:   deadlineOf(item.DueAt),
-		overdue:      item.Overdue != nil && *item.Overdue,
-		expectedBase: expected,
-		hasExpected:  known,
-		waitingDays:  quiet,
-		occurredAt:   occurredOf(item, asOf),
-	}
-}
-
-// dealFactsOf carries the deal's own figures onto the queue row. The lane feed
-// already resolved them; dropping them here would make the client read a second
-// endpoint per row to draw a card this one could have completed.
-func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFacts {
-	if item.Deal == nil {
-		return nil
-	}
-	facts := &crmcontracts.WorklistDealFacts{
-		StageId:     item.Deal.StageId,
-		OwnerId:     item.Deal.OwnerId,
-		AmountMinor: item.Deal.AmountMinor,
-		Currency:    item.Deal.Currency,
-	}
-	// The close date rides on the lane item's own due moment, and the idle
-	// count on its detail. Both were already resolved; only this projection
-	// dropped them, so the card could state money and never say when the deal
-	// was meant to land.
-	if item.DueAt != nil {
-		closes := openapi_types.Date{Time: *item.DueAt}
-		facts.ExpectedCloseDate = &closes
-	}
-	if quiet := quietDaysOf(item); quiet > 0 {
-		facts.QuietDays = &quiet
-	}
-	return facts
-}
-
-// expectedRevenue is what the deal is worth times how likely it is to land.
-//
-// The win probability lives on the stage rather than the deal, and this feed
-// does not read stages — so until that read exists the amount stands in for the
-// expectation. Naming that here rather than silently multiplying by one: the
-// figure is comparable between deals in one currency, which is what the
-// ordering needs, and it will get more accurate rather than change meaning.
-func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
-	if item.Deal == nil || item.Deal.AmountMinor == nil {
-		return 0, false
-	}
-	return *item.Deal.AmountMinor, true
-}
-
-func moneyOf(minor int64) *crmcontracts.WorklistValue {
-	value := minor
-	return &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
 }
 
 // classifyWaiting: somebody wrote and nobody answered.
@@ -402,6 +313,20 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // row rather than disappearing into an aggregate.
 func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "system", "customer_never_received")
+	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
+	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+}
+
+// classifyUndelivered: a message the rep believes they sent and which never
+// left. The belief is the damage — they are waiting on a reply to something
+// nobody has — so it sits with the broken promises rather than with the system
+// news, exactly where a bounce sits.
+//
+// It is a separate consequence from the bounce beside it: nobody received this
+// one because nobody was ever sent it, and the reader's move is to send it
+// rather than to fix an address.
+func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }

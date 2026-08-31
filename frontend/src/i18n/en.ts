@@ -7210,6 +7210,7 @@ export const en = {
   "worklist.untitled.capture_health": "A mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs a look",
   "worklist.untitled.bounce": "An email did not arrive",
+  "worklist.untitled.undelivered": "An email was never sent",
   "worklist.untitled.automation_run": "A rule did not do its work",
   "worklist.untitled.notice": "A notice for you",
   "worklist.verb.decide": "Decide",

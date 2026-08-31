@@ -24474,6 +24474,30 @@ export interface components {
              */
             bounces?: components["schemas"]["AttentionItem"][];
             /**
+             * @description The reader's OWN sends that were GIVEN UP ON, newest first, inside the
+             *     recent window. The lane beside it carries mail that ARRIVED and was
+             *     refused; this one carries mail that never left — the retry ladder ran
+             *     out, the mailbox would not transmit, the provider refused outright. From
+             *     the sender's chair the two look the same, a thread that goes quiet, and
+             *     only the bounce was ever reported.
+             *
+             *     Read from the stamp the dispatcher's own park leaves, so it carries only
+             *     sends that were abandoned: a send parked after its message went out is an
+             *     operational trace, and a pending send parked by an erasure or a
+             *     processing restriction is the law being applied. Neither is the sender's
+             *     to answer for and neither appears here.
+             *
+             *     The card carries the send's subject line as `title`, the dispatcher's own
+             *     reason as `detail`, and `open` on the person the send is filed under — the
+             *     page where sending it again lives. A send filed under no person still
+             *     appears, named by its subject line, without the verb.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human behind
+             *     it. Absent — not empty — on an installation whose feed does not read
+             *     delivery outcomes.
+             */
+            undelivered?: components["schemas"]["AttentionItem"][];
+            /**
              * @description The automations whose recent firings failed or were blocked, newest
              *     report first — a rule its owner believes is running and is not. The
              *     card names the rule (`title`), how it stopped (`kind`: failed or
@@ -24501,7 +24525,7 @@ export interface components {
              */
             notices?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "automation_health" | "notices")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -24536,6 +24560,8 @@ export interface components {
             ai_work_health?: number;
             /** @description How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports. */
             bounces?: number;
+            /** @description How many given-up-on sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
+            undelivered?: number;
             /** @description How many troubled automation firings the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
             automation_health?: number;
             /** @description How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
@@ -24554,7 +24580,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -24818,7 +24844,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}

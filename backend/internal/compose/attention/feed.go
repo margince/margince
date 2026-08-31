@@ -87,6 +87,9 @@ type Service struct {
 	aiWork AIWork
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
+	// undelivered is OPTIONAL and per-user for the same reasons: mail that
+	// never left, beside mail that arrived and was refused.
+	undelivered Undelivered
 	// automations is OPTIONAL and role-withheld exactly as dsrs is.
 	automations AutomationHealth
 	// notices is OPTIONAL and per-user exactly as captureHealth is.
@@ -140,6 +143,14 @@ func NewService(
 // same promise every optional lane makes.
 func (s *Service) WithWaiting(w Waiting) *Service {
 	s.waiting = w
+	return s
+}
+
+// WithUndelivered binds the given-up-on-sends reader — an option for the reason
+// WithWaiting is one, which this lane would otherwise have been the first to
+// disprove.
+func (s *Service) WithUndelivered(u Undelivered) *Service {
+	s.undelivered = u
 	return s
 }
 

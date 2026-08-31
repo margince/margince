@@ -197,6 +197,18 @@ func (s *Service) operationalLanes(
 			},
 			into: &out.Bounces, count: &out.Counts.Bounces,
 		},
+		{
+			name: "undelivered", bound: s.undelivered != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// The bounce lane's week, for the same reason: a message
+				// nobody sent is not less urgent for being a day older, and
+				// the sender is the only person who can decide to send it
+				// again.
+				parked, err := s.undelivered.ParkedSends(ctx, asOf.Add(-7*24*time.Hour), doneCap)
+				return renderEach(parked, parkedItem), err
+			},
+			into: &out.Undelivered, count: &out.Counts.Undelivered,
+		},
 	}
 }
 

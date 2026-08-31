@@ -1270,6 +1270,7 @@ const (
 	AttentionLanesOmittedRelationshipDecay AttentionLanesOmitted = "relationship_decay"
 	AttentionLanesOmittedSyncHealth        AttentionLanesOmitted = "sync_health"
 	AttentionLanesOmittedThisMorning       AttentionLanesOmitted = "this_morning"
+	AttentionLanesOmittedUndelivered       AttentionLanesOmitted = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
@@ -1306,6 +1307,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedSyncHealth:
 		return true
 	case AttentionLanesOmittedThisMorning:
+		return true
+	case AttentionLanesOmittedUndelivered:
 		return true
 	default:
 		return false
@@ -1391,6 +1394,7 @@ const (
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
 	AttentionItemSourceSyncHealth        AttentionItemSource = "sync_health"
 	AttentionItemSourceTask              AttentionItemSource = "task"
+	AttentionItemSourceUndelivered       AttentionItemSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemSource enum.
@@ -1429,6 +1433,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceSyncHealth:
 		return true
 	case AttentionItemSourceTask:
+		return true
+	case AttentionItemSourceUndelivered:
 		return true
 	default:
 		return false
@@ -11640,6 +11646,7 @@ const (
 	WorklistItemSourceRelationshipDecay WorklistItemSource = "relationship_decay"
 	WorklistItemSourceSyncHealth        WorklistItemSource = "sync_health"
 	WorklistItemSourceTask              WorklistItemSource = "task"
+	WorklistItemSourceUndelivered       WorklistItemSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemSource enum.
@@ -11680,6 +11687,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceSyncHealth:
 		return true
 	case WorklistItemSourceTask:
+		return true
+	case WorklistItemSourceUndelivered:
 		return true
 	default:
 		return false
@@ -14829,6 +14838,29 @@ type Attention struct {
 	// identically as zero rows, and only one of them has earned a tick. Absent
 	// when the lane itself was withheld (`lanes_omitted` names it).
 	ThisMorningState *AttentionThisMorningState `json:"this_morning_state,omitempty"`
+
+	// Undelivered The reader's OWN sends that were GIVEN UP ON, newest first, inside the
+	// recent window. The lane beside it carries mail that ARRIVED and was
+	// refused; this one carries mail that never left — the retry ladder ran
+	// out, the mailbox would not transmit, the provider refused outright. From
+	// the sender's chair the two look the same, a thread that goes quiet, and
+	// only the bounce was ever reported.
+	//
+	// Read from the stamp the dispatcher's own park leaves, so it carries only
+	// sends that were abandoned: a send parked after its message went out is an
+	// operational trace, and a pending send parked by an erasure or a
+	// processing restriction is the law being applied. Neither is the sender's
+	// to answer for and neither appears here.
+	//
+	// The card carries the send's subject line as `title`, the dispatcher's own
+	// reason as `detail`, and `open` on the person the send is filed under — the
+	// page where sending it again lives. A send filed under no person still
+	// appears, named by its subject line, without the verb.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind
+	// it. Absent — not empty — on an installation whose feed does not read
+	// delivery outcomes.
+	Undelivered *[]AttentionItem `json:"undelivered,omitempty"`
 }
 
 // AttentionLanesOmitted defines model for Attention.LanesOmitted.
@@ -14891,6 +14923,9 @@ type AttentionCounts struct {
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`
+
+	// Undelivered How many given-up-on sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
+	Undelivered *int `json:"undelivered,omitempty"`
 }
 
 // AttentionDealFacts The deal behind a `deal_at_risk` item: the facts its card states, so a client
