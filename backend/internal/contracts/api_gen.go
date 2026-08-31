@@ -31181,8 +31181,9 @@ type GetConsentRequestParams struct {
 	ClientId string `form:"client_id" json:"client_id"`
 
 	// Scope The space-delimited scopes the client requested. Only the offline_access marker in it
-	// is read, and reported back as `offline`: the access scopes bound nothing, since a lend
-	// grants the chosen passport's own.
+	// is read, and reported back as `offline`: the access scopes bind nothing, since the
+	// connection's authority is whatever the human ticks on the consent screen, not what the
+	// client asked for.
 	Scope string `form:"scope" json:"scope"`
 }
 
