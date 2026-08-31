@@ -39,6 +39,10 @@ func (stubs) RelinkThread(w nethttp.ResponseWriter, r *nethttp.Request, params c
 	httperr.NotImplemented(w, r, "RelinkThread")
 }
 
+func (stubs) SetThreadAudience(w nethttp.ResponseWriter, r *nethttp.Request, threadKey string) {
+	httperr.NotImplemented(w, r, "SetThreadAudience")
+}
+
 func (stubs) ArchiveActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveActivityParams) {
 	httperr.NotImplemented(w, r, "ArchiveActivity")
 }

@@ -71,6 +71,19 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
 			return err
 		}
+		// A CAPTURED message is not one person's to set.
+		//
+		// Its audience is derived across every mailbox that imported it, and
+		// each importer's contribution is theirs alone — so writing the column
+		// directly would either override a colleague's hold or be silently
+		// undone by the next recompute, and both are worse than a refusal. The
+		// owner endpoint changes the contribution instead, which is the thing
+		// the derivation actually reads.
+		//
+		// A hand-logged row has no contributors and stays writable here.
+		if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
+			return err
+		}
 		if err := ensureVersion(ctx, tx, id, in.IfVersion); err != nil {
 			return err
 		}
@@ -299,4 +312,39 @@ func (e *InvalidAudienceError) Error() string {
 // field.
 func (e *InvalidAudienceError) FieldFault() (field, code, message string) {
 	return "audience", "invalid_audience", e.Error()
+}
+
+// refuseCapturedAudienceWrite stops a direct audience write on a message a
+// mailbox brought in.
+//
+// The test is whether any seat has an import row: that is what makes the
+// audience derived rather than declared. A row with none was hand-logged, and
+// its audience is exactly what somebody set.
+func refuseCapturedAudienceWrite(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	var imported bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1)`,
+		id.UUID).Scan(&imported); err != nil {
+		return fmt.Errorf("activities: reading whether a message was imported: %w", err)
+	}
+	if imported {
+		return &CapturedAudienceError{}
+	}
+	return nil
+}
+
+// CapturedAudienceError refuses a direct audience write on captured mail and
+// says where the decision belongs instead.
+type CapturedAudienceError struct{}
+
+func (e *CapturedAudienceError) Error() string {
+	return "activities: a captured message's audience is derived from its importers; " +
+		"share or hold the thread instead"
+}
+
+// FieldFault maps the refusal onto the wire.
+func (e *CapturedAudienceError) FieldFault() (field, code, message string) {
+	return "audience", "audience_is_derived",
+		"This message came from a mailbox, so who can read it follows from what each " +
+			"importing mailbox asks for. Share or keep the thread private instead."
 }
