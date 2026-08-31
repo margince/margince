@@ -54,6 +54,7 @@ no code, no API, just the app.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md) — connect a mailbox for capture: Gmail OAuth (standing sync + backfill), IMAP app-password, Microsoft Graph OAuth, or Google Calendar — all standing connections.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md) — point the AI lanes at a local Ollama and enrich a company with no cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md) — the technical lookup: what DNS, certificate logs and a homepage fingerprint write onto a company, what triggers it, and the one setting that turns it on.
+- [check-a-vat-number.md](how-to/check-a-vat-number.md) — ask the EU register whether a company's stated VAT ID is real, read the receipt a tax authority accepts, and the one setting that turns it on.
 - [connect-telegram.md](how-to/connect-telegram.md) — bind a workspace-level Telegram bot for pull ingress and governed replies.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
