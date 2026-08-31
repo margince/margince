@@ -38,9 +38,9 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	}
 	row := base(item, level, "deals_at_risk", consequence)
 	if level == levelMaterialRisk {
-		row.Because = append(row.Because, reason("material", moneyOf(expected)))
+		row.Because = append(row.Because, reason("material", moneyOf(expected, item.Deal)))
 	} else if known {
-		row.Because = append(row.Because, reason("below_material", moneyOf(expected)))
+		row.Because = append(row.Because, reason("below_material", moneyOf(expected, item.Deal)))
 	}
 	quiet := quietDaysOf(item)
 	if quiet > 0 {
@@ -104,7 +104,15 @@ func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
 	return *item.Deal.AmountMinor, true
 }
 
-func moneyOf(minor int64) *crmcontracts.WorklistValue {
+// moneyOf carries the deal's own currency beside the amount. An amount without
+// one is not a smaller answer, it is no answer: the client refuses to format a
+// figure it cannot name the units of, so a reason that omits the currency
+// reaches the reader as a bare "material" with the number silently dropped.
+func moneyOf(minor int64, deal *crmcontracts.AttentionDealFacts) *crmcontracts.WorklistValue {
 	value := minor
-	return &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
+	money := &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
+	if deal != nil {
+		money.Currency = deal.Currency
+	}
+	return money
 }

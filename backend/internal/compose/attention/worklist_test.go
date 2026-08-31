@@ -983,3 +983,35 @@ func TestAGivenUpSendReachesTheQueueAndSaysWhatItCost(t *testing.T) {
 		t.Errorf("the two send failures read alike (%v), and they are not the same news", bounced)
 	}
 }
+
+// A money reason with no currency is not a smaller answer, it is no answer:
+// the client refuses to format a figure it cannot name the units of, so the
+// row would say "material" with the number silently dropped.
+func TestAMaterialDealCarriesTheCurrencyOfItsOwnAmount(t *testing.T) {
+	amount := int64(160_100_00)
+	currency := "EUR"
+	at := []crmcontracts.AttentionItem{{
+		Id:      ids.NewV7().String(),
+		Source:  "deal_at_risk",
+		Deal:    &crmcontracts.AttentionDealFacts{AmountMinor: &amount, Currency: &currency},
+		Actions: []crmcontracts.AttentionItemActions{},
+	}}
+
+	rows := classifyDay(crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}, rankInstant)
+
+	var money *crmcontracts.WorklistValue
+	for _, row := range rows {
+		for _, because := range row.item.Because {
+			if because.Kind == "material" || because.Kind == "below_material" {
+				money = because.Value
+			}
+		}
+	}
+	if money == nil {
+		t.Fatal("a deal with a recorded amount gave its row no money reason")
+	}
+	if money.Currency == nil || *money.Currency != currency {
+		t.Fatalf("the amount travels as %v with currency %v, and the client drops a figure it cannot name the units of",
+			money.Minor, money.Currency)
+	}
+}
