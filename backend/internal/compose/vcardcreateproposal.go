@@ -193,6 +193,13 @@ func vcardCreatePrecheck() approvals.ReleasePrecheck {
 		// is approved, the create fails after the decision, and the decider
 		// learns about it from the did-not-run lane instead of from the
 		// decision they were making.
+		//
+		// PARSING only, and deliberately. The create also refuses an address
+		// another person already claims, and that refusal cannot be brought
+		// forward honestly: a claim can be taken between this check and the
+		// approval, so asking here would not prevent the post-commit failure —
+		// it would only make it rarer while reading like a guarantee. A parse
+		// failure is a property of the card itself and cannot change under it.
 		if err := people.ValidateVCardContacts(proposal.Entry); err != nil {
 			return fmt.Errorf("this card carries a contact detail that cannot be stored: %w", err)
 		}

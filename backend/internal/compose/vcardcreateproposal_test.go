@@ -66,6 +66,10 @@ func TestACardCarryingAnUnstorableContactIsRefusedWhileItIsStillDecidable(t *tes
 // The card the reviewer is looking at is not rewritten by being checked. The
 // parse the create runs normalises in place, and a precheck that normalised
 // the staged row would change what the decider approved after they read it.
+//
+// The payload BYTES are what this can assert, and all it should: the precheck
+// is handed serialized JSON and never the caller's struct, so an assertion
+// about the entry value would be checking a copy nothing under test can reach.
 func TestTheCheckLeavesTheStagedCardExactlyAsItWas(t *testing.T) {
 	entry := people.VCardEntry{
 		FullName: "Ana Ionescu",
@@ -81,9 +85,6 @@ func TestTheCheckLeavesTheStagedCardExactlyAsItWas(t *testing.T) {
 
 	if string(staged) != string(before) {
 		t.Fatalf("the precheck rewrote the staged payload:\n before: %s\n  after: %s", before, staged)
-	}
-	if entry.Emails[0].Value != "  Ana.Ionescu@Example.COM  " {
-		t.Errorf("the entry's own address was normalised to %q by a check that should only read it", entry.Emails[0].Value)
 	}
 }
 
