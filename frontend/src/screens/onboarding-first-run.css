@@ -1,121 +1,20 @@
 /*
- * First run: the two questions a fresh installation must be answered before it
- * can be used, staged rather than stacked in a card on a page.
+ * First run, on the shared onboarding stage.
  *
- * WHY A STAGE. `margince-workbench.css` makes the argument for the surface that
- * follows this one — during setup this IS the application, so a card floating
- * on a page frames it as a dialog somebody could dismiss. The same is true one
- * step earlier, and it was not true of the markup: the model binding, which is
- * the moment this product acquires the ability to think at all, was a panel on
- * an empty page.
+ * The room, the Core's column and the type scale belong to
+ * `design-system/onboarding-stage.css`, which every screen before the workbench
+ * now stands in. What is left here is what is true of THIS surface only: a card
+ * holding a stack of questions, and the price plate attached to the two fields
+ * that decide it.
  *
- * WHY THE ROOM IS DARK UNTIL A MODEL IS BOUND. The light is not decoration and
- * not a reward. `--aiLight` means a machine did it (see the design-system
- * README), and until a model is bound no machine has done anything here — so
- * the stage carries no indigo, and the Core beside it wears its own still dress
- * rather than a running one. Binding is what turns both on, in that order,
- * because that is the order in which the claim becomes true.
- *
- * Copy never lives here, and no colour is a literal: both live where the gates
- * say they do.
+ * The sheet carries the `onboarding-` prefix so both onboarding CSS censuses
+ * (typography, dead rules) derive it from the tree the day it lands.
  */
-
-.ob-fr {
-  position: relative;
-  min-height: 100vh;
-  display: grid;
-  /* The Core holds a column of its own rather than sitting above the words.
-     Above, it is an illustration of the heading; beside, it is the thing the
-     heading is about. The column collapses below, where there is no room for
-     two. */
-  grid-template-columns: minmax(0, 22rem) minmax(0, 34rem);
-  align-content: center;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-10);
-  padding: var(--space-12) var(--space-6);
-  background: var(--bgElevated);
-  overflow-x: hidden;
-}
-@supports (min-height: 100dvh) {
-  /* 100vh on mobile Safari measures the viewport with the URL bar collapsed,
-     so the stage runs taller than the screen and its own primary action begins
-     below the fold. */
-  .ob-fr {
-    min-height: 100dvh;
-  }
-}
-
-/*
- * The room light. A layer of its own rather than a background on the stage,
- * because it fades: a background-image cannot be transitioned, and the two
- * washes have to arrive together as one change of light rather than as two
- * gradients repainting.
- */
-.ob-fr-light {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--dur-enter) var(--ease-out);
-  background:
-    radial-gradient(70% 55% at 18% 6%, var(--aiLight), transparent 64%),
-    radial-gradient(46% 42% at 96% 98%, var(--accentLight), transparent 62%);
-}
-.ob-fr[data-lit="true"] .ob-fr-light {
-  opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* The light still arrives — it says something true about the installation —
-     it just stops being a fade. */
-  .ob-fr-light {
-    transition: none;
-  }
-}
-
-.ob-fr-core,
-.ob-fr-column {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-}
-
-.ob-fr-core {
-  display: flex;
-  justify-content: center;
-}
-
-.ob-fr-column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.ob-fr-title {
-  margin: 0;
-  font-size: var(--fs-hero-fluid);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
-  /* A measure, not a width: a hero line that runs the full column reads as a
-     paragraph set large rather than as a title. */
-  max-width: 20ch;
-}
-
-.ob-fr-sub {
-  margin: 0;
-  font-size: var(--fs-lead);
-  line-height: var(--lh-relaxed);
-  color: var(--textSecondary);
-  max-width: 52ch;
-}
 
 /* The panel is the form, not a second frame around the stage: the stage is
    already the surface, so the card's own ground and shadow would draw a box
    inside a room. */
-.ob-fr-column .panel {
+.ob-fr-form .panel {
   background: transparent;
   border-color: var(--borderSubtle);
   box-shadow: none;
@@ -126,7 +25,7 @@
    hold one thing. First run holds a stack of questions in one body, so the air
    between them is this surface's to declare — without it a field's hint runs
    straight into the next field's label. */
-.ob-fr-column .panel-body {
+.ob-fr-form .panel-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -134,25 +33,8 @@
 
 /* What the binding costs, directly under the two fields that decide it. The
    plate is `StatStrip`, which is built for a record's readings row; here it
-   holds the two lanes, and the top rule is what attaches it to the fields
+   holds the two lanes, and the small offset is what attaches it to the fields
    above rather than letting it float as a third thing. */
 .ai-rate-plate {
   margin-top: var(--space-2);
-}
-
-@media (max-width: 60rem) {
-  .ob-fr {
-    grid-template-columns: minmax(0, 34rem);
-    justify-items: center;
-    gap: var(--space-6);
-    /* Anchored to the top once it is one column: centred, an expanding form
-       pushes the heading off the top of the screen while somebody is filling
-       it in. */
-    align-content: start;
-    padding-top: var(--space-10);
-  }
-  .ob-fr-title,
-  .ob-fr-sub {
-    max-width: none;
-  }
 }

@@ -1,0 +1,165 @@
+/*
+ * The onboarding stage: the room every question before the working view is
+ * asked in.
+ *
+ * WHY A STAGE AND NOT A CARD. `margince-workbench.css` makes the argument for
+ * the surface that comes after this one — during setup this IS the application,
+ * so a card floating on a page frames it as a dialog somebody could dismiss.
+ * The same was true of every screen before it and was not true of the markup:
+ * first run was a panel on an empty page, and the gate was a 540px column.
+ *
+ * WHY THE CORE HOLDS A COLUMN. Above the words it is an illustration of the
+ * heading; beside them it is the thing the heading is about. The column
+ * collapses under 60rem, where there is no room for two.
+ *
+ * WHY THE LIGHT IS A CLAIM. `--aiLight` means a machine did it (see README).
+ * The room carries indigo only where that is true — once this installation has
+ * a model bound — so `lit` is read from the server rather than set per screen.
+ * One colour, one meaning.
+ *
+ * Copy never lives here, and no colour is a literal.
+ */
+
+.ob-stage {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 24rem) minmax(0, 34rem);
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-12) var(--space-6);
+  background: var(--bgElevated);
+  overflow-x: hidden;
+}
+@supports (min-height: 100dvh) {
+  /* 100vh on mobile Safari measures the viewport with the URL bar collapsed,
+     so the stage runs taller than the screen and its own primary action begins
+     below the fold. */
+  .ob-stage {
+    min-height: 100dvh;
+  }
+}
+
+/*
+ * Two anchors, and the difference is behaviour rather than taste.
+ *
+ * `center` is for a question of a fixed size. `start` is for a surface that
+ * GROWS while somebody reads it — the read theatre gains a tile per page — and
+ * there a centred column re-centres on every arrival, so the line being read
+ * travels upward while it is being read. Anchored, growth extends downward into
+ * the room the bottom padding already reserves.
+ */
+.ob-stage[data-anchor="center"] {
+  align-content: center;
+}
+.ob-stage[data-anchor="start"] {
+  align-content: start;
+}
+
+/*
+ * The room light, on a layer of its own because it FADES: a background-image
+ * cannot be transitioned, and the two washes have to arrive as one change of
+ * light rather than as two gradients repainting.
+ */
+.ob-stage-light {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-enter) var(--ease-out);
+  background:
+    radial-gradient(70% 55% at 18% 6%, var(--aiLight), transparent 64%),
+    radial-gradient(46% 42% at 96% 98%, var(--accentLight), transparent 62%);
+}
+.ob-stage[data-lit="true"] .ob-stage-light {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The light still arrives — it says something true about the installation —
+     it just stops being a fade. */
+  .ob-stage-light {
+    transition: none;
+  }
+}
+
+.ob-stage-core,
+.ob-stage-column {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.ob-stage-core {
+  display: flex;
+  justify-content: center;
+}
+
+/* The Core is the subject of this screen rather than a mark on it, so it runs
+   larger than its own default. `--coreCap` is the documented opt-out for a
+   layout that has already sized the column the Core stands in: this one has,
+   and the viewport cap would otherwise shrink the sphere to two thirds of what
+   was asked for at the widths this stage is built around. The glass keeps the
+   component's own ratio to the shell. */
+.ob-stage-core .core {
+  --coreSize: 300px;
+  --coreGlass: 224px;
+  --coreCap: 100%;
+}
+
+.ob-stage-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ob-stage-title {
+  margin: 0;
+  font-size: var(--fs-hero-fluid);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+  /* A measure, not a width: a hero line that runs the full column reads as a
+     paragraph set large rather than as a title. */
+  max-width: 20ch;
+}
+
+.ob-stage-sub {
+  margin: 0;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-relaxed);
+  color: var(--textSecondary);
+  max-width: 52ch;
+}
+
+/* The column assembles in reading order through `.arrive-stack` (enter.css),
+   which is the product's one spelling of that: fade over `--dur-enter`, rise
+   over `--dur-move`, `--stagger-enter` apart, and reduced motion already
+   handled there. A second set of keyframes here would be the same intention
+   said twice, free to drift. */
+
+@media (max-width: 60rem) {
+  .ob-stage {
+    grid-template-columns: minmax(0, 34rem);
+    justify-items: center;
+    gap: var(--space-6);
+    /* One column is always top-anchored: centred, an expanding form pushes the
+       heading off the top of the screen while somebody is filling it in. */
+    align-content: start;
+    padding-top: var(--space-10);
+  }
+  /* Back inside the component's own cap. The wide layout opts out of it because
+     it sized the Core's column; this one did not, and a 300px sphere on a 390px
+     phone is the whole screen. */
+  .ob-stage-core .core {
+    --coreSize: 190px;
+    --coreGlass: 142px;
+    --coreCap: 46vw;
+  }
+  .ob-stage-title,
+  .ob-stage-sub {
+    max-width: none;
+  }
+}

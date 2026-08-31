@@ -10,10 +10,8 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { Disclosure } from "../design-system/atoms";
-import {
-  MarginceCoreScene,
-  type MarginceCoreState,
-} from "../design-system/margince-core";
+import type { MarginceCoreState } from "../design-system/margince-core";
+import { OnboardingStage } from "../design-system/onboarding-stage";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -272,18 +270,27 @@ function GateColumn({
             : t("ob.scan.sub"),
         };
   return (
-    <div className="ob-gate-stage">
+    <OnboardingStage
+      // Nothing reaches this screen until first run is done, so a model is
+      // always bound by the time anyone is here. The room says so, and it says
+      // only that: a second trigger per screen is how one colour acquires two
+      // meanings.
+      lit
+      coreState={head.core}
+      // A read GROWS under the reader, tile by tile. Centred, the column would
+      // re-centre on every arriving page and carry the line being read upward.
+      anchor={scan === undefined ? "center" : "start"}
+      title={head.title}
+      sub={head.sub}
+    >
       <div
         className={`ob-gate${scan === undefined ? "" : " ob-scan"}${
           settled ? " is-settled" : ""
         }`}
       >
-        <MarginceCoreScene state={head.core} />
-        <h1 className="ob-gate-title">{head.title}</h1>
-        <p className="ob-gate-sub">{head.sub}</p>
         {children}
       </div>
-    </div>
+    </OnboardingStage>
   );
 }
 

@@ -23,103 +23,22 @@
      column reads as a banner over the page; at the field's own width it reads
      as attached to the control it is about. */
   --ob-gate-measure: 420px;
-  width: min(540px, 100%);
-  margin: 0 auto;
-  min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  /* Anchored under a deliberate top band rather than centred in the viewport.
-     A centred column re-centres on every arriving page, so the line someone is
-     reading travels upward while they read it; anchored, growth extends
-     downward into the band the bottom padding reserves. */
-  justify-content: flex-start;
   gap: var(--space-5);
-  padding: clamp(var(--space-12), 13vh, var(--space-16)) var(--space-6)
-    var(--space-16);
-  text-align: center;
-}
-@supports (min-height: 100dvh) {
-  .ob-gate {
-    /* 100vh on iOS subtracts the browser chrome from the wrong side and puts
-       the primary action under the keyboard. */
-    min-height: 100dvh;
-  }
 }
 
-.ob-gate .core {
-  --coreSize: 170px;
-  --coreGlass: 108px;
-  /* The column's cadence is not one repeated gap. The Core stands clear of the
-     headline, the headline and its promise sentence sit together as a pair, and
-     the ask stands clear of both — so the reader's eye is given three things,
-     not five evenly spaced ones. The flex gap is the pair's spacing; these two
-     margins buy the breaks around it. */
-  margin-bottom: var(--space-4);
-}
-
-@keyframes ob-gate-rise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* The column assembles in reading order. Every child needs its own rung or it
-   arrives at delay 0 — ahead of the headline it belongs under, which reads as
-   the page landing in pieces rather than as one thing settling. */
-.ob-gate > * {
-  animation: ob-gate-rise 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-.ob-gate-title {
-  animation-delay: 0.08s;
-}
-.ob-gate-sub {
-  animation-delay: 0.16s;
-}
-.ob-gate-form,
-.ob-scan-panel {
-  animation-delay: 0.24s;
-}
-.ob-gate-alert {
-  animation-delay: 0.32s;
-}
-.ob-gate-alt {
-  animation-delay: 0.4s;
-}
-.ob-gate-ai,
-.ob-scan-cost {
-  animation-delay: 0.48s;
-}
-
-.ob-gate-title {
-  margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-display);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-  line-height: var(--lh-tight);
-  text-wrap: balance;
-  color: var(--textPrimary);
-}
-.ob-gate-sub {
-  margin: 0 0 var(--space-4);
-  max-width: 452px;
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
-  color: var(--textContent);
-}
+/* The room, the Core's column, the headline and the promise sentence belong to
+   `design-system/onboarding-stage.css`, which every screen before the workbench
+   stands in. What is below is the TAIL that changes: the ask, and then the read
+   growing under it. */
 
 /* ===== the ask ========================================================== */
 
 .ob-gate-form {
   width: 100%;
   display: flex;
-  justify-content: center;
 }
 /* One box, two controls: the ring is on the wrapper (`:focus-within`) and
    suppressed on the bare input, the way `.field-shell` does it — a leading field
@@ -205,38 +124,28 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
   gap: var(--space-2);
   font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 
 /*
- * The trust fold, on a column where everything else is centred.
- *
- * The shared `.disclosure` atom is built for a left-aligned form: its summary
- * hangs a chevron off the left edge and its rule spans whatever box it is in.
- * Both read as a misalignment here — a lone left-aligned control under a
- * centred headline, and a hairline wider than the field it sits under. So the
- * control centres with its own chevron and the rule is cut to the same measure
- * as the field, which is what makes it read as belonging to this column rather
- * than to the page.
+ * The trust fold takes the shared `.disclosure` atom exactly as it ships — a
+ * summary with its chevron on the left edge — because the column it sits in is
+ * left-aligned like the form the atom was built for. It is cut to the FIELD's
+ * measure rather than the column's, so its hairline reads as belonging to the
+ * question above it rather than to the whole stage.
  */
 .ob-gate .disclosure {
   width: 100%;
   max-width: var(--ob-gate-measure);
-  margin: 0 auto;
   padding-top: var(--space-4);
-}
-.ob-gate .disclosure-summary {
-  justify-content: center;
 }
 .ob-gate-trust {
   margin: 0;
   font-size: var(--fs-sm);
   line-height: var(--lh-relaxed);
   color: var(--textMeta);
-  text-align: center;
   text-wrap: pretty;
 }
 .ob-gate-link {
@@ -295,7 +204,6 @@
   align-items: baseline;
   gap: var(--space-2);
   flex-wrap: wrap;
-  justify-content: center;
   margin: var(--space-3) 0 0;
   color: var(--textMeta);
   font-size: var(--fs-meta);
@@ -325,26 +233,6 @@
   font-family: var(--f-mono);
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
-}
-
-/* The gate and the theatre are full-viewport stages, not cards on a page: the
-   host page's own washes would sit behind a surface that already owns the
-   whole screen. */
-/* The full-width surface the column sits on. */
-.ob-gate-stage {
-  position: relative;
-  min-height: 100vh;
-  overflow: hidden;
-  background: var(--bgElevated);
-}
-@supports (min-height: 100dvh) {
-  .ob-gate-stage {
-    /* The stage and the column it holds have to agree on what the whole screen
-       is. Left on 100vh while .ob-gate resolves to 100dvh, the two differ by
-       the height of the mobile browser chrome, and the surface steps as that
-       chrome retracts. */
-    min-height: 100dvh;
-  }
 }
 
 /* ===== the read theatre ================================================= */
@@ -772,14 +660,6 @@
 @media (max-width: 899px) {
   .ob-gate {
     gap: var(--space-4);
-    padding: var(--space-10) var(--space-4) var(--space-12);
-  }
-  .ob-gate .core {
-    --coreSize: 130px;
-    --coreGlass: 88px;
-  }
-  .ob-gate-title {
-    font-size: var(--fs-h1);
   }
   .ob-gate-input {
     /* Never below 16px, or iOS zooms the page on focus. */

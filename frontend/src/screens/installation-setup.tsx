@@ -6,11 +6,7 @@ import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
-import { Eyebrow } from "../design-system/eyebrow";
-import {
-  MarginceCoreScene,
-  type MarginceCoreState,
-} from "../design-system/margince-core";
+import { OnboardingStage } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
@@ -130,46 +126,6 @@ function useBindModels() {
 }
 
 /**
- * The room both questions are asked in.
- *
- * `lit` is a claim rather than a mood: the stage carries indigo only once this
- * installation has a model bound, because indigo means a machine did it and
- * until then none has. The Core beside the words says the same thing in the
- * other direction — it is `idle` and still until there is something to be idle
- * about, and `working` only while a write is actually in flight.
- */
-function FirstRunStage({
-  lit,
-  coreState,
-  eyebrow,
-  title,
-  sub,
-  children,
-}: Readonly<{
-  lit: boolean;
-  coreState: MarginceCoreState;
-  eyebrow: string;
-  title: string;
-  sub: string;
-  children: ReactNode;
-}>) {
-  return (
-    <div className="ob-fr" data-lit={lit}>
-      <div className="ob-fr-light" />
-      <div className="ob-fr-core">
-        <MarginceCoreScene state={coreState} />
-      </div>
-      <div className="ob-fr-column">
-        <Eyebrow as="h2">{eyebrow}</Eyebrow>
-        <h1 className="ob-fr-title">{title}</h1>
-        <p className="ob-fr-sub">{sub}</p>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/**
  * A step's form, telling the stage above it when a write is in flight.
  *
  * The Core is the stage's, and whether anything is being written is the step's,
@@ -193,7 +149,7 @@ function StepForm({
     // doing, and the next step would open with a spinning orb.
     return () => onBusy(false);
   }, [busy, onBusy]);
-  return children;
+  return <div className="ob-fr-form">{children}</div>;
 }
 
 /** The AI step: one vendor, one key, the two models it will serve. */
@@ -506,7 +462,7 @@ export function InstallationSetup() {
   }
   const ai = step.step === "ai_models";
   return (
-    <FirstRunStage
+    <OnboardingStage
       lit={modelBound(setup.data)}
       coreState={busy ? "working" : "idle"}
       eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
@@ -514,6 +470,6 @@ export function InstallationSetup() {
       sub={t(ai ? "firstRun.ai.sub" : "firstRun.google.sub")}
     >
       {ai ? <AiStep onBusy={setBusy} /> : <GoogleStep onBusy={setBusy} />}
-    </FirstRunStage>
+    </OnboardingStage>
   );
 }
