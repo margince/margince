@@ -6771,9 +6771,12 @@ export const de = {
     "Zum Bestätigen den Namen des Anbieters eingeben",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
   "provider.automaticLookupHint":
-    "Jeder Kontakt wird einmal nachgeschlagen, für die Angaben, die der Anbieter nicht berechnet: den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber, den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft — die kosten Guthaben und bleiben eine Entscheidung pro Kontakt.\n\nSchalten Sie das aus, wenn Ihre Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
+    "Jeder Kontakt wird einmal nachgeschlagen — für das, was die Verbindung auswählt und der Anbieter nicht berechnet, in der Regel den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber und den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft: die kosten Guthaben und bleiben eine Entscheidung pro Kontakt.",
+  "provider.automaticLookupJurisdiction":
+    "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
   "provider.backlog": "Noch nachzuschlagen",
-  "provider.backlogRemaining": "{count} Kontakte",
+  "provider.backlogRemaining_one": "{count} Kontakt",
+  "provider.backlogRemaining_other": "{count} Kontakte",
   "provider.backlogWorking":
     "Kontakte, die es beim Verbinden schon gab, werden nach und nach nachgeschlagen.",
   "provider.backlogPaused":

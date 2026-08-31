@@ -90,11 +90,22 @@ const unconnected: ProviderConnection = {
   updated_at: "2026-01-05T09:00:00Z",
 };
 
-function cardStory(allow: GrantSpec, connections: ProviderConnection[]) {
+function cardStory(
+  allow: GrantSpec,
+  connections: ProviderConnection[],
+  automaticLookup = true,
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /provider-connections": () => jsonResponse({ data: connections }),
+      // Routed explicitly, and defaulting to the INSTALLATION's own default of
+      // on. The stub's fallback answers an empty page, which reads as
+      // `automatic_lookup: undefined` and draws every switch off — so a story
+      // that skipped this route would show the posture off in its screenshot
+      // while its name claimed something else.
+      "GET /integrations/settings": () =>
+        jsonResponse({ automatic_lookup: automaticLookup }),
     });
     return (
       <StoryProviders>
@@ -155,9 +166,19 @@ export const OperatorCatchingUp: Story = {
 // ceiling spent, a provider that stopped answering — reads identically as a
 // number that will not fall, which is why the card says so in words.
 export const OperatorCatchUpPaused: Story = {
-  render: cardStory(OPERATOR, [
-    { ...connected, lookup_backlog: { remaining: 1240, paused: true } },
-  ]),
+  render: cardStory(
+    OPERATOR,
+    [{ ...connected, lookup_backlog: { remaining: 1240, paused: true } }],
+    // Paused BECAUSE the posture is off, which is one of the three causes the
+    // row's sentence names and the only one a screenshot can show.
+    false,
+  ),
+};
+
+// The posture off with nothing pending: what an installation in a jurisdiction
+// that forbids trading personal data looks like after somebody switched it off.
+export const OperatorLookupsOff: Story = {
+  render: cardStory(OPERATOR, [connected], false),
 };
 
 // May bind a key, may not destroy what it bought — so the overflow that holds

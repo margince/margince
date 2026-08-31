@@ -156,3 +156,22 @@
   font-size: var(--fs-sm);
   color: var(--textSecondary);
 }
+
+/* The two sentences under the lookup switch. A description is one <p>, and the
+   jurisdiction half has to read as its own paragraph rather than as a clause
+   glued to the end of the pricing one — an operator scanning for the reason to
+   switch this off is reading for a break that a collapsed newline never gives. */
+.provider-hint-para {
+  display: block;
+}
+
+.provider-hint-para + .provider-hint-para {
+  margin-top: var(--space-2);
+}
+
+/* The backlog figure, typed like every other number on this card: a count that
+   changes between reads should not shift the row's width as its digits change. */
+.provider-backlog-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--textContent);
+}

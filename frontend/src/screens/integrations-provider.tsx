@@ -26,7 +26,7 @@ import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import {
   connectionLabel,
@@ -364,13 +364,24 @@ function PolicyRow({
   const t = useT();
   const posture = useLookupPosture();
   const patch = usePatchLookupPosture();
-  const disconnected = connection.status !== "connected";
   return (
     <>
       <FreeTierNote catalog={connection.catalog ?? []} />
       <SettingRow
         label={t("provider.automaticLookup")}
-        description={t("provider.automaticLookupHint")}
+        // Two paragraphs, not one string with a blank line in it: HTML collapses
+        // the break, and the half that would have been glued on is the one an
+        // operator in the wrong jurisdiction has to read.
+        description={
+          <>
+            <span className="provider-hint-para">
+              {t("provider.automaticLookupHint")}
+            </span>
+            <span className="provider-hint-para">
+              {t("provider.automaticLookupJurisdiction")}
+            </span>
+          </>
+        }
         control={(control) => (
           <Switch
             // The row's description reaches the switch: what the lookup DOES
@@ -394,7 +405,7 @@ function PolicyRow({
             // the connection, and an operator deciding it BEFORE connecting a
             // provider is the order this setting is meant to support.
             reason={canEdit ? undefined : t("captureSettings.adminOnly")}
-            disabled={!canEdit || posture.isPending}
+            disabled={!canEdit || posture.isPending || posture.isError}
             pending={patch.isPending}
             // The row already draws this name on the left, so the switch keeps
             // its own copy hidden: it owns its accessible name by design (see
@@ -405,15 +416,19 @@ function PolicyRow({
           />
         )}
       />
-      <LookupBacklogRow connection={connection} disconnected={disconnected} />
+      <LookupBacklogRow connection={connection} />
       {/* Under the row whose flip failed, at the row's full width, rather than
           squeezed into the control column beside the switch: the reason names
           what the reader just tried to change, and a sentence sharing a
           nowrap flex line with a switch is a sentence nobody reads. */}
-      {patch.error && (
+      {/* The READ's failure as well as the write's. A posture we could not ask
+          for renders the switch off, and "off" is a claim about the
+          installation — so a failed GET has to say so rather than let the
+          control answer a question nobody could reach. */}
+      {(patch.error || posture.error) && (
         <div className="provider-row-note">
           <Callout tone="danger" live="alert">
-            {problemMessageOf(patch.error, t)}
+            {problemMessageOf(patch.error ?? posture.error, t)}
           </Callout>
         </div>
       )}
@@ -429,18 +444,21 @@ function PolicyRow({
 // which of the two the reader is looking at — a figure that is not falling is
 // explained rather than read as a stuck sweep.
 //
-// Absent at zero and while disconnected. A backlog of nothing is not a fact
-// worth a row, and a provider nobody has connected has no backlog to have.
+// Absent only at zero. NOT hidden while disconnected: "the provider is not
+// usable" is one of the three causes the paused sentence names, and an
+// installation that disconnects with a thousand contacts pending still has
+// them pending. Hiding the count in the state its own copy explains would be
+// the row disappearing exactly when it had something to say.
 function LookupBacklogRow({
   connection,
-  disconnected,
-}: Readonly<{ connection: ProviderConnection; disconnected: boolean }>) {
+}: Readonly<{ connection: ProviderConnection }>) {
   const t = useT();
+  const plural = usePlural();
   // The reader's own notation: a five-figure backlog is the ordinary case on a
   // real installation, and 12345 reads as a serial number.
   const { locale } = useLocale();
   const backlog = connection.lookup_backlog;
-  if (disconnected || !backlog || backlog.remaining === 0) {
+  if (!backlog || backlog.remaining === 0) {
     return null;
   }
   return (
@@ -453,7 +471,7 @@ function LookupBacklogRow({
       }
       control={() => (
         <span className="provider-backlog-count">
-          {t("provider.backlogRemaining", {
+          {plural("provider.backlogRemaining", backlog.remaining, {
             count: formatNumber(backlog.remaining, locale),
           })}
         </span>

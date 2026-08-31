@@ -6695,9 +6695,12 @@ export const vi = {
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
-    "Mỗi liên hệ được tra cứu một lần để lấy những thông tin nhà cung cấp không tính phí: liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, quá trình công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này — chúng tốn tín dụng và vẫn là quyết định cho từng liên hệ.\n\nHãy tắt mục này nếu liên hệ của bạn thuộc phạm vi luật cấm mua bán dữ liệu cá nhân, trong đó có luật Việt Nam. Nút trên từng liên hệ vẫn dùng được, để quyết định thuộc về người đưa ra nó.",
+    "Mỗi liên hệ được tra cứu một lần — cho những mục mà kết nối chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, cùng quá trình công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này: chúng tốn tín dụng và vẫn là quyết định cho từng liên hệ.",
+  "provider.automaticLookupJurisdiction":
+    "Hãy tắt mục này nếu liên hệ của bạn thuộc phạm vi luật cấm mua bán dữ liệu cá nhân, trong đó có luật Việt Nam. Nút trên từng liên hệ vẫn dùng được, để quyết định thuộc về người đưa ra nó.",
   "provider.backlog": "Còn phải tra cứu",
-  "provider.backlogRemaining": "{count} liên hệ",
+  "provider.backlogRemaining_one": "{count} liên hệ",
+  "provider.backlogRemaining_other": "{count} liên hệ",
   "provider.backlogWorking":
     "Những liên hệ đã có sẵn khi kết nối nhà cung cấp đang được tra cứu dần.",
   "provider.backlogPaused":
