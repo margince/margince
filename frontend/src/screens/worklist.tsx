@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelRow } from "../design-system/panel";
@@ -57,7 +57,12 @@ const FILTERS: readonly WorklistFilter[] = [
 function WorklistRow({
   item,
   position,
-}: Readonly<{ item: WorklistItem; position: number }>) {
+  onReview,
+}: Readonly<{
+  item: WorklistItem;
+  position: number;
+  onReview: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -106,7 +111,11 @@ function WorklistRow({
             has nothing below it to beat. */}
         {above && <p className="t-caption worklist-row-above">{above}</p>}
       </div>
-      {item.batch ? <BatchVerb /> : <RowVerbs item={item} href={href} />}
+      {item.batch ? (
+        <BatchVerb onReview={onReview} />
+      ) : (
+        <RowVerbs item={item} href={href} />
+      )}
       {decidable(item) && <RowDecision item={item} />}
     </PanelRow>
   );
@@ -144,14 +153,19 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
 //
 // It narrows the queue to decisions rather than opening a screen of its own:
 // that screen is its own piece of work, and a row whose only verb led nowhere
-// would be worse than the pile it replaced. The filter is the door that exists.
-function BatchVerb() {
+// would be worse than the pile it replaced.
+//
+// A button, not a link. The dials live in this screen's state today, so an
+// address carrying `?filter=decisions` would be read by nobody and the control
+// would do nothing — which is the defect it exists to avoid. Moving them into
+// the URL is the right shape and is its own change.
+function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
   const t = useT();
   return (
     <div className="worklist-row-verbs">
-      <a className="worklist-row-verb" href="#/worklist?filter=decisions">
+      <Button small onClick={onReview}>
         {t("worklist.verb.review_batch")}
-      </a>
+      </Button>
     </div>
   );
 }
@@ -352,7 +366,11 @@ function WorklistBody({
           <ol className="worklist-list">
             {day.queue.map((item, index) => (
               <li key={`${item.source}-${item.id}`}>
-                <WorklistRow item={item} position={index + 1} />
+                <WorklistRow
+                  item={item}
+                  position={index + 1}
+                  onReview={() => onFilter("decisions")}
+                />
               </li>
             ))}
           </ol>

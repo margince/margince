@@ -210,6 +210,41 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getByText(/Is noreply@x.com a contact\?/)).toBeTruthy();
   });
 
+  it("opens a group into the work it stands for", async () => {
+    const user = userEvent.setup();
+    stub(
+      day({
+        queue: [
+          row({
+            id: "likely_automated",
+            source: "batch",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
+            batch: { key: "likely_automated", count: 43 },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("43 likely automated senders");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+
+    // A row whose verb led nowhere would be worse than the pile it replaced,
+    // so this asserts the queue actually narrows rather than that a control
+    // exists.
+    await waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const urls = calls.map((call) => {
+        const target = call[0];
+        return target instanceof Request ? target.url : String(target);
+      });
+      expect(urls.some((url) => url.includes("filter=decisions"))).toBe(true);
+    });
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({
