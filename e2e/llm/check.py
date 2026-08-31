@@ -180,7 +180,7 @@ def unrun(path):
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant = False
+    saw_assistant, called_tool = False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -192,11 +192,22 @@ def unrun(path):
             continue
         if event.get("type") == "assistant":
             saw_assistant = True
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    called_tool = True
         if event.get("type") == "result" and event.get("is_error"):
             failure = str(event.get("result") or "")
     if not saw_assistant:
         return "the transcript carries no assistant turn: the model was never reached"
-    if failure and _REFUSALS.search(failure):
+    # A REFUSAL AFTER A TOOL CALL IS NOT A REFUSAL AT THE DOOR. The credential
+    # that shipped this defect produced one assistant turn carrying the error
+    # text and called nothing — the model was never reached. A tool answering
+    # `401 Unauthorized` mid-run is the opposite: the model was reached, chose
+    # a tool, and the product refused it, which is a finding about the product.
+    #
+    # The tool call is what separates them, and it is structural rather than a
+    # guess at wording.
+    if failure and not called_tool and _REFUSALS.search(failure):
         return failure
     return ""
 

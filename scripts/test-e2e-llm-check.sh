@@ -89,6 +89,15 @@ case_is "a run that happened and answered wrongly is not excused" 0 "" <<'JSONL'
 {"type":"result","subtype":"success","is_error":false,"result":"I could not find anything."}
 JSONL
 
+# A tool answering 401 mid-run is a FINDING: the model was reached, chose a
+# tool, and the product refused it. The credential refusal that shipped this
+# defect called nothing at all, and the tool call is what separates them.
+case_is "a 401 from a tool the model called is a run that happened" 0 "" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"result","subtype":"error","is_error":true,"result":"tool call failed: HTTP 401 Unauthorized"}
+JSONL
+
 # A number that merely CONTAINS a refusal code is not one. A bare substring
 # search finds 401 inside 4011, and reading that as "never reached" discards a
 # real finding and abandons the lane after it.
