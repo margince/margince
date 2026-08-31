@@ -72,6 +72,10 @@ func (p peopleEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensure
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
 		SuppressOrg: in.SuppressOrg,
+		// The SINK's ensure, which runs while the sender is still unjudged.
+		// Owner-scoped until something says otherwise; the verdict path is the
+		// only caller that asks for the workspace.
+		OwnerScoped: true,
 	})
 	if errors.Is(err, people.ErrCounterpartySuppressed) {
 		// A13: the erased address stays dead — a deliberate no-op, not a
