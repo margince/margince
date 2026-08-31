@@ -40,22 +40,36 @@ must_mention:
 # Criterion 1 needs it to find the accounts without being told which.
   - "Reply|valantic|Körber"
 
-# The note says "im Oktober" and it is wrong.
+# The note says "im Oktober" and it is wrong, and the answer has to notice.
 #
-# A bare /Oktober|October/ cannot express the thing being tested. An answer
-# SHOULD quote the note — it is a real record and hiding it would be its own
-# defect. What must not happen is the model adopting the note's month as its
-# own finding, which is what all three runs of 2026-08-27 did: each cited the
-# email as 18 Sep 2025, quoted the note correctly, and then wrote "the customer
-# raised it clearly in October" in its own voice, with no mention that the two
-# disagree.
+# Both halves are needed, because either alone passes a bad answer.
 #
-# So the forbidden shape is October asserted OUTSIDE a quotation: "raised it in
-# October", "flagged it in October", "told us in September/October". The
-# quotation itself is allowed through.
+# must_mention — the answer says the record and the note disagree, and names
+# WHAT disagrees. A lone word does not qualify: "conflict" counts only within
+# a clause of a date, record, note or email, or "a conflict of interest
+# between the two managers" would green an answer that never compared the
+# dates. Under-recognition is the one direction a scenario must not fail in,
+# because it reports PASS and leaves no failing assertion to notice.
+#
+# must_not_mention — the answer does not then use October as the date of the
+# complaint in its own voice. check.py matches one flat regex over the whole
+# answer and cannot see where a quotation ends, so this half must not fire on
+# an answer that quotes the German note and translates it — "The customer
+# raised it clearly in October" is a rendering of the record, not a claim.
+# Every alternative therefore needs something the note's own sentence does not
+# say: a noun phrase ("the October complaint"), a verb of complaining, a date
+# range, or an explicit "was raised in October". Both languages, because the
+# note is German and an answer may adopt its month in German.
+#
+# Reproduce either half against a transcript with
+#   python3 check.py --check scenarios/case6-ask-the-company.yaml <run.jsonl>
+# The three runs in records/ are answers that adopted October: two are caught
+# by must_not_mention, and the third, which only ever quotes the German, by
+# must_mention.
+  - "disagree|do(es)? not match|contradict|misremember|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|only logged inbound|no October|by the CRM's own dates"
+
 must_not_mention:
-  - "raised (it|this) (clearly )?in Okt|flagged (it|this) (clearly )?in Okt|told us (clearly )?in (September/)?Okt|complained in Okt"
-  - "raised (it|this) (clearly )?in Octo|flagged (it|this) (clearly )?in Octo|told us (clearly )?in (September/)?Octo|complained in Octo"
+  - "the (?:October|Oktober)\s+(?:complaint|escalation)|(?:complained|escalated)[^.]{0,30}(?:October|Oktober)|(?:beschwert|eskaliert)[^.]{0,30}(?:October|Oktober)|(?:October|Oktober)[^.]{0,30}(?:beschwert|eskaliert)|complaint\s+(?:came|landed|arrived|sat)[^.]{0,25}(?:October|Oktober)|from\s+(?:October|Oktober)\s+to|seit\s+(?:October|Oktober)|(?:was|were|is)\s+raised\s+in\s+(?:October|Oktober)"
 
 runs: 3
 pass_at: 2
