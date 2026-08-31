@@ -349,16 +349,19 @@ var ErrFederatedSignInRefused = errors.New("identity: federated sign-in refused"
 // already-linked identity resolves without touching email at all. Only an
 // UNLINKED subject falls back to email, through LiveMemberSQL AND
 // password_hash IS NOT NULL — the same pair checkCredentials (lockout.go)
-// and reset.go's forgot-password lookup already require. LiveMemberSQL alone
-// is not the password path's actual gate: an INVITED member is written
-// `status = 'active'` at invite time (there is no `invited` status — A97
-// specified one, ADR-0061 Amendment 1 dropped it as never built) and the
-// agent seat is seeded `active` too (installation.go's seedAgentSeat) — both
-// carry a NULL password_hash, which is what actually holds them out of
-// checkCredentials's decoy branch. Skipping that column here would let an
-// unredeemed or abandoned invite, or the agent seat, become reachable by
-// anyone who controls the invited address on the IdP, forever — no token,
-// no expiry, unlike the invite email itself.
+// and reset.go's forgot-password lookup already require.
+//
+// BOTH halves are load-bearing, and neither is redundant now that `invited` is
+// a status the tree actually writes. LiveMemberSQL excludes an unredeemed
+// invitation by status. password_hash IS NOT NULL excludes the AGENT SEAT,
+// which installation.go seeds `active` with a NULL hash and which must never
+// be a thing that signs in — and it also holds the line if a future path ever
+// activates an account without setting a credential.
+//
+// Skipping either would let an unredeemed invitation, or the agent seat,
+// become reachable by anyone who controls that address on the IdP, forever —
+// no token, no expiry, unlike the invitation mail itself. That is the whole
+// reason redemption, and not this branch, is what activates an account.
 func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider, subject, email string) (userID ids.UserID, firstLink bool, err error) {
 	var linkedUser ids.UserID
 	err = tx.QueryRow(ctx,

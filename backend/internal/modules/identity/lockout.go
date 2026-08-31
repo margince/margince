@@ -86,14 +86,14 @@ type loginCredentials struct {
 // then the §27 lock, then the password itself. A verified login resets
 // the §27 streak in the same transaction.
 //
-// Two DIFFERENT gates refuse the two cases that look alike, and it is
-// worth naming which does what. `status = 'active'` refuses a suspended
-// or deactivated member. An INVITED member is not refused by it at all —
-// they are written `active` (there is no `invited` status; A97 specified
-// one and ADR-0061 Amendment 1 dropped it as never built). What holds
-// them out is the NULL `password_hash`, which falls to the same decoy
+// Two DIFFERENT gates refuse cases that look alike, and it is worth
+// naming which does what. `status = 'active'` refuses a suspended or
+// deactivated member, and an INVITED one — an invitation nobody has
+// redeemed is not an account that may sign in. The NULL `password_hash`
+// refuses the AGENT SEAT, which is seeded `active` by construction and
+// must never be a thing that signs in, and it falls to the same decoy
 // branch below. Remove that branch believing the status check covers
-// them and every un-activated member becomes reachable.
+// everything and the agent seat becomes reachable.
 func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaintext string) (loginCredentials, error) {
 	var account loginCredentials
 	var hash *string

@@ -142,6 +142,7 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
+import { SignInMethodsCard } from "./sign-in-methods";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -280,12 +281,24 @@ export function tabContent(id: SettingsTabId): ReactNode {
     case "agents":
       return <AgentsTab />;
     case "general":
+      // The installation's own facts, then the money, then the company profile
+      // the AI reads. The currency pair stays ADJACENT and nothing is allowed
+      // between them: the base currency is declared in the second card of
+      // InstallationSettingsCard and every rate below converts to it, and
+      // before they were merged the lock reason was explained on one tab while
+      // the consequence landed on another.
+      //
+      // The Google app goes LAST for that reason, not because it matters least.
+      // It is here at all because the same OAuth client now serves sign-in as
+      // well as mailbox connection, so filing it under Capture said it belonged
+      // to one of the two.
       return (
         <>
           <InstallationSettingsCard />
-          <GoogleAppCard />
           <FxRatesCard />
           <CompanyContextCard />
+          <SignInMethodsCard />
+          <GoogleAppCard />
         </>
       );
     case "extensions":

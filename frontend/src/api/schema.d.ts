@@ -11333,14 +11333,7 @@ export interface components {
              *     installation always has and the one that cannot be disabled, so there is no state
              *     here that could turn it off and strand everybody.
              */
-            sign_in_providers: {
-                /** @description The provider key the sign-in routes are served under. */
-                key: string;
-                /** @description The provider's display name, as the login screen shows it. */
-                label: string;
-                /** @description Whether this installation currently offers it on the login screen. */
-                enabled: boolean;
-            }[];
+            sign_in_providers: components["schemas"]["SignInProvider"][];
             /**
              * @description True once a conversion rate has been frozen against the base currency — by a closed
              *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
@@ -11650,6 +11643,15 @@ export interface components {
             source: "stored" | "environment" | "none";
             /** @description Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
             redirect_uris: components["schemas"]["GoogleAppRedirectUri"][];
+        };
+        /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
+        SignInProvider: {
+            /** @description The provider key the sign-in routes are served under. */
+            key: string;
+            /** @description The provider's display name, as the login screen shows it. */
+            label: string;
+            /** @description Whether this installation currently offers it on the login screen. */
+            enabled: boolean;
         };
         /** @description One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes. */
         GoogleAppRedirectUri: {

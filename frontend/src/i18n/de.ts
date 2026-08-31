@@ -6091,6 +6091,18 @@ export const de = {
   "installationSettings.edit": "Ändern",
   "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
+  "signInMethods.title": "Anmeldemethoden",
+  "signInMethods.sub":
+    "Wie sich Personen hier anmelden können. Die Liste zeigt, wofür diese Installation Zugangsdaten hat — eine Methode lässt sich abschalten, aber keine hinzufügen.",
+  "signInMethods.password": "E-Mail und Passwort",
+  "signInMethods.passwordAlways":
+    "Immer verfügbar. Jedes Konto ist so erreichbar, und genau das macht das Abschalten der anderen unbedenklich.",
+  "signInMethods.passwordReason":
+    "Die Anmeldung mit Passwort lässt sich nicht abschalten. Sie hält eine Installation zugänglich.",
+  "signInMethods.providerHint":
+    "Diesen Anbieter auf der Anmeldeseite anbieten. Beim Abschalten brechen auch laufende Anmeldungen ab; bestehende Sitzungen bleiben unberührt.",
+  "signInMethods.noneConfigured":
+    "Für diese Installation ist kein externer Anbieter konfiguriert, daher steht außer dem Passwort nichts zur Auswahl.",
   "googleApp.title": "Google-App",
   "googleApp.sub":
     "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",

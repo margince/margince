@@ -657,18 +657,17 @@ function MemberRow({
   // different reason: it holds no password by construction, which is what makes
   // it a thing that signs in nowhere, and the server refuses to mint it one.
   //
-  // Deactivating is offered on an invitation too, and that is not cosmetic: an
-  // unredeemed invitation holds a licensed seat, so without it an invitation
-  // sent to the wrong address consumes a seat with no way to release it.
+  // Invited matters most here: an invitation whose link expired leaves a member
+  // with no password, so the self-service reset refuses them and this is the
+  // only route back into the account. Withholding it would strand them.
   const canMintLink =
     canAdminister &&
     canIssueLink &&
     !member.is_agent &&
     (member.status === "active" || member.status === "invited");
-  // Invited is admitted for a reason the active case does not cover: an
-  // invitation whose link expired leaves a member with no password, so the
-  // self-service reset refuses them and this is the only route back into the
-  // account. Withholding it here would strand them permanently.
+  // Offered on an invitation too, and that is not cosmetic: an unredeemed
+  // invitation holds a licensed seat, so without this an invitation sent to the
+  // wrong address consumes a seat with no way to release it.
   const canDeactivate =
     canAdminister &&
     (member.status === "active" || member.status === "invited");

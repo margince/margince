@@ -83,17 +83,6 @@ function useRemoveGoogleApp() {
   });
 }
 
-// RedirectUris lists the callback URLs an operator must register on their OAuth
-// client, one per purpose this deployment actually serves.
-//
-// The URLs come from the response and are never built here. They have one job —
-// to be byte-identical to what Google receives — and a second spelling in the
-// client is exactly how the two come apart. The backend derives them from the
-// functions that send them, held by a fitness test in both directions.
-//
-// An empty list renders nothing rather than an empty heading: a deployment that
-// serves no Google flow has nothing to register, and a bare heading would read
-// as a list that failed to load.
 // purposeLabel names one callback's flow. A lookup rather than a computed
 // message key, because the catalog is a closed union: a template key would type
 // as any string and a purpose the contract adds later would reach a reader as a
@@ -109,6 +98,17 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
   }
 }
 
+// RedirectUris lists the callback URLs an operator must register on their OAuth
+// client, one per purpose this deployment actually serves.
+//
+// The URLs come from the response and are never built here. They have one job —
+// to be byte-identical to what Google receives — and a second spelling in the
+// client is exactly how the two come apart. The backend derives them from the
+// functions that send them, held by a fitness test in both directions.
+//
+// An empty list renders nothing rather than an empty heading: a deployment that
+// serves no Google flow has nothing to register, and a bare heading would read
+// as a list that failed to load.
 function RedirectUris({
   uris,
 }: Readonly<{
@@ -134,9 +134,14 @@ function RedirectUris({
               <Button
                 small
                 onClick={() => {
-                  void navigator.clipboard.writeText(uri.url).then(() => {
-                    setCopied(uri.purpose);
-                  });
+                  // A denied clipboard permission is a rejected promise, and
+                  // swallowing it would leave the button looking like it did
+                  // nothing. The URL is on screen either way, so the honest
+                  // failure is to stop claiming it was copied.
+                  navigator.clipboard.writeText(uri.url).then(
+                    () => setCopied(uri.purpose),
+                    () => setCopied(""),
+                  );
                 }}
               >
                 {copied === uri.purpose

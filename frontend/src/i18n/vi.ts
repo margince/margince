@@ -6027,6 +6027,18 @@ export const vi = {
   "installationSettings.edit": "Sửa",
   "installationSettings.editField": "Sửa {field}",
   "installationSettings.save": "Lưu",
+  "signInMethods.title": "Phương thức đăng nhập",
+  "signInMethods.sub":
+    "Những cách mọi người có thể đăng nhập tại đây. Danh sách này là những gì bản triển khai có thông tin xác thực, nên quản trị viên có thể tắt một mục nhưng không thể thêm mục mới.",
+  "signInMethods.password": "Email và mật khẩu",
+  "signInMethods.passwordAlways":
+    "Luôn khả dụng. Mọi tài khoản đều vào được theo cách này, và đó là lý do việc tắt các phương thức khác là an toàn.",
+  "signInMethods.passwordReason":
+    "Không thể tắt đăng nhập bằng mật khẩu. Đây là phương thức giữ cho bản cài đặt luôn vào được.",
+  "signInMethods.providerHint":
+    "Cung cấp nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng cả những lượt đăng nhập đang diễn ra; các phiên hiện có không bị ảnh hưởng.",
+  "signInMethods.noneConfigured":
+    "Bản triển khai này chưa cấu hình nhà cung cấp bên ngoài nào, nên ngoài mật khẩu không có lựa chọn khác.",
   "googleApp.title": "Ứng dụng Google",
   "googleApp.sub":
     "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",

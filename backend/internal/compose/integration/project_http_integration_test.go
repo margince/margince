@@ -15,6 +15,7 @@ package integration
 // the store's typed errors onto contract codes.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -660,6 +661,17 @@ func TestProjectOwnershipTransferOverHTTP(t *testing.T) {
 	}, nil, &colleague); status != http.StatusCreated {
 		t.Fatalf("POST /users → %d, want 201", status)
 	}
+	// The colleague is ACTIVATED before anything is handed to them. An invited
+	// seat signs in nowhere, so transfer.go refuses to make one the owner of live
+	// projects — correctly: ownership that its holder cannot open is work
+	// assigned to nobody. Driven over SQL because this test is about the
+	// transfer, not about redeeming a set-password link.
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE app_user SET status = 'active', password_hash = 'x' WHERE id = $1`,
+		colleague.ID); err != nil {
+		t.Fatalf("activating the colleague: %v", err)
+	}
+
 	for _, name := range []string{"Warehouse rollout", "ERP replacement"} {
 		if status := e.Call(t, "POST", "/v1/projects", AnyMap{
 			"name": name, "organization_id": org, "source": "manual", "owner_id": me.User.ID,

@@ -17231,19 +17231,8 @@ components:
             installation always has and the one that cannot be disabled, so there is no state
             here that could turn it off and strand everybody.
           items:
-            type: object
-            additionalProperties: false
-            required: [key, label, enabled]
-            properties:
-              key:
-                type: string
-                description: The provider key the sign-in routes are served under.
-              label:
-                type: string
-                description: The provider's display name, as the login screen shows it.
-              enabled:
-                type: boolean
-                description: Whether this installation currently offers it on the login screen.
+            $ref: '#/components/schemas/SignInProvider'
+
         base_currency_locked:
           type: boolean
           description: |
@@ -17682,7 +17671,26 @@ components:
             composed is absent rather than listed, because telling an operator to register a URL
             nothing answers sends them to debug a mismatch that was never the cause.
           items:
-            $ref: '#/components/schemas/GoogleAppRedirectUri' 
+            $ref: '#/components/schemas/GoogleAppRedirectUri'
+    SignInProvider:
+      type: object
+      additionalProperties: false
+      required: [key, label, enabled]
+      description: >-
+        One external sign-in provider this deployment holds credentials for, and whether the
+        installation currently offers it. An admin can turn one off; they cannot add one, because
+        a client id and secret cannot be invented from a settings screen.
+      properties:
+        key:
+          type: string
+          description: The provider key the sign-in routes are served under.
+        label:
+          type: string
+          description: The provider's display name, as the login screen shows it.
+        enabled:
+          type: boolean
+          description: Whether this installation currently offers it on the login screen.
+
     GoogleAppRedirectUri:
       type: object
       additionalProperties: false

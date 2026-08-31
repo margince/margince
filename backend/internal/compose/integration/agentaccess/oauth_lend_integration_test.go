@@ -332,6 +332,18 @@ func TestAPendingConsentDoesNotSurviveItsHumansDeactivation(t *testing.T) {
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("inviting a second admin → %d", status)
 	}
+	// ACTIVATED, because the invitation alone does not make them an
+	// administrator who can hold the installation open: an invited seat signs in
+	// nowhere, so the last-admin guard rightly refuses to let the only admin who
+	// CAN sign in stand down behind it. Driven over SQL for the same reason the
+	// reactivation below is — this suite is about consent, not about redeeming a
+	// set-password link.
+	secondAdmin := o.userIDByEmail(t, "second-admin@fable.test")
+	if _, err := o.Owner.Exec(context.Background(),
+		`UPDATE app_user SET status = 'active', password_hash = 'x' WHERE id = $1`, secondAdmin); err != nil {
+		t.Fatalf("activating the second admin: %v", err)
+	}
+
 	granter := o.userIDByEmail(t, "granter@fable.test")
 	if status := o.Call(t, "POST", "/v1/users/"+granter+"/deactivate", integration.AnyMap{
 		"reason": "left the company",

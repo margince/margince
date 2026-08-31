@@ -6130,6 +6130,18 @@ export const en = {
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
+  "signInMethods.title": "Sign-in methods",
+  "signInMethods.sub":
+    "Which ways people may sign in here. The list is what this deployment holds credentials for, so an admin can turn one off but cannot add one.",
+  "signInMethods.password": "Email and password",
+  "signInMethods.passwordAlways":
+    "Always available. Every account can be reached this way, which is what makes the others safe to switch off.",
+  "signInMethods.passwordReason":
+    "Password sign-in cannot be turned off. It is the method that keeps an installation enterable.",
+  "signInMethods.providerHint":
+    "Offer this provider on the login screen. Turning it off stops sign-ins already in progress, and existing sessions are unaffected.",
+  "signInMethods.noneConfigured":
+    "This deployment has no external provider configured, so there is nothing to offer besides a password.",
   "googleApp.title": "Google app",
   "googleApp.sub":
     "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",

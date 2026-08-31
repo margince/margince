@@ -19249,16 +19249,7 @@ type InstallationSettings struct {
 	// Password sign-in is deliberately absent from this list. It is the method every
 	// installation always has and the one that cannot be disabled, so there is no state
 	// here that could turn it off and strand everybody.
-	SignInProviders []struct {
-		// Enabled Whether this installation currently offers it on the login screen.
-		Enabled bool `json:"enabled"`
-
-		// Key The provider key the sign-in routes are served under.
-		Key string `json:"key"`
-
-		// Label The provider's display name, as the login screen shows it.
-		Label string `json:"label"`
-	} `json:"sign_in_providers"`
+	SignInProviders []SignInProvider `json:"sign_in_providers"`
 
 	// Timezone IANA zone name every reporting period boundary is computed in (not a user's own
 	// display timezone, which is per-user).
@@ -25599,6 +25590,18 @@ type SetRoleObjectGrantRequest struct {
 type SetSignatureEnrichmentRequest struct {
 	// Enabled true or false is this mailbox's own answer; null follows the tenant default.
 	Enabled *bool `json:"enabled"`
+}
+
+// SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
+type SignInProvider struct {
+	// Enabled Whether this installation currently offers it on the login screen.
+	Enabled bool `json:"enabled"`
+
+	// Key The provider key the sign-in routes are served under.
+	Key string `json:"key"`
+
+	// Label The provider's display name, as the login screen shows it.
+	Label string `json:"label"`
 }
 
 // Signal A surfaced "something changed / worth attention" item. Mirrors the `signal` table:

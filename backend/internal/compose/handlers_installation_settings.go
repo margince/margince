@@ -140,16 +140,8 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 // provider. That is the reading compose applies when it resolves the effective
 // set, and this screen has to apply it too or it would show an operator a
 // provider list their login page does not serve.
-func (h installationSettingsHandlers) signInProviders(chosen []string) []struct {
-	Enabled bool   `json:"enabled"`
-	Key     string `json:"key"`
-	Label   string `json:"label"`
-} {
-	out := make([]struct {
-		Enabled bool   `json:"enabled"`
-		Key     string `json:"key"`
-		Label   string `json:"label"`
-	}, 0, len(h.configuredProviders))
+func (h installationSettingsHandlers) signInProviders(chosen []string) []crmcontracts.SignInProvider {
+	out := make([]crmcontracts.SignInProvider, 0, len(h.configuredProviders))
 	for _, p := range h.configuredProviders {
 		enabled := chosen == nil
 		for _, key := range chosen {
@@ -157,11 +149,7 @@ func (h installationSettingsHandlers) signInProviders(chosen []string) []struct 
 				enabled = true
 			}
 		}
-		out = append(out, struct {
-			Enabled bool   `json:"enabled"`
-			Key     string `json:"key"`
-			Label   string `json:"label"`
-		}{Enabled: enabled, Key: p.Key, Label: p.Label})
+		out = append(out, crmcontracts.SignInProvider{Enabled: enabled, Key: p.Key, Label: p.Label})
 	}
 	return out
 }
