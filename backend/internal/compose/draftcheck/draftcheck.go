@@ -286,8 +286,42 @@ func Body(body string, lang textlang.Lang, band convstate.Band, threaded bool) [
 		})
 	}
 
+	if unbrokenBlock(body) {
+		findings = append(findings, Finding{
+			Rule:   "unbroken-block",
+			Phrase: "the whole message on one line",
+			Why: "the greeting and the message run together as a single block, which " +
+				"reads as a wall of text in every mail client — put the greeting on its " +
+				"own line and separate the paragraphs with a blank line",
+		})
+	}
+
 	return append(findings, bandGated(lowered, lang, band)...)
 }
+
+// unbrokenBlock reports a body written as one run of text.
+//
+// The prompt asks for a greeting on its own line and at least one paragraph
+// after it, and a model that ignores that returns a single block. Nothing
+// downstream can repair it: the composer renders the breaks it is given, so a
+// draft with none is a wall of text by the time a rep sees it.
+//
+// A SHORT single line is not this defect. "Marcus, passt Donnerstag?" is a
+// complete message that wants no paragraph break, and flagging it would spend a
+// model call making a good draft worse.
+func unbrokenBlock(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	if strings.Contains(trimmed, "\n") {
+		return false
+	}
+	return len([]rune(trimmed)) > unbrokenBlockRunes
+}
+
+// unbrokenBlockRunes is where a one-line message stops being a note and starts
+// being a paragraph that should have been two. Set from the drafts this rule
+// was written for: the shortest offender ran to 241 characters, and the longest
+// legitimate one-liner in the same sample was well under half that.
+const unbrokenBlockRunes = 160
 
 // bandGated are the rules the length of the silence decides — every one of them
 // a claim about what the recipient still has in mind, which a live exchange
