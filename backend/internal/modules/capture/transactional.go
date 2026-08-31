@@ -152,6 +152,51 @@ func isMachineLocalpart(localpart string) bool {
 	return false
 }
 
+// hasMachineMarker catches the compound no-reply names an exact match misses:
+// `esignature-noreply@`, `calendar-notification@`, `jira-no-reply@`. The real
+// world writes the marker into a longer local part far more often than it sends
+// from a bare `noreply@`, and the exact list alone let a page of e-signature
+// and calendar notifications open a rep's day.
+//
+// Kept to markers that are unambiguous ON THEIR OWN. "notification" and
+// "no-reply" mean the same thing wherever they appear in a name; "mail" or
+// "info" do not, and a rule that swept those would hide real people.
+// machineMarkers are the words a sending SYSTEM names itself with. Listed once:
+// the three places below ask about the same vocabulary, and three copies of it
+// drift into meaning three different things.
+var machineMarkers = map[string]bool{
+	"noreply": true, "noreplies": true, "donotreply": true, "notreply": true,
+	"nreply": true, "notification": true, "notifications": true, "notify": true,
+	"mailerdaemon": true, "autoreply": true, "automailer": true, "automated": true,
+}
+
+func hasMachineMarker(localpart string) bool {
+	// A marker counts where a sending system puts it: as the whole local part,
+	// or at either END of it. Two rules learned from real addresses.
+	//
+	// Separators are boundaries, not noise: stripping them turned
+	// `connor.eply@` into `connoreply` and matched "noreply" inside a person's
+	// name.
+	//
+	// And position matters. `esignature-noreply@` is a machine while
+	// `anna.notify.weber@` is a person, so a marker buried in the middle of a
+	// name proves nothing — only the ends, where a service names itself.
+	local := strings.ToLower(strings.TrimSpace(localpart))
+	parts := strings.FieldsFunc(local, func(r rune) bool {
+		return r == '.' || r == '-' || r == '_' || r == '+'
+	})
+	if len(parts) == 0 {
+		return false
+	}
+	if machineMarkers[parts[0]] || machineMarkers[parts[len(parts)-1]] {
+		return true
+	}
+	// `no-reply` and `do-not-reply` split into parts that mean nothing alone,
+	// so the whole and its tail are re-joined and asked as one word.
+	return machineMarkers[strings.Join(parts, "")] ||
+		machineMarkers[strings.Join(parts[1:], "")]
+}
+
 // senderPrefix returns the leftmost subdomain label below the registrable
 // domain — the "sender lane" a prefix rule keys on. "event.gitex.com" over base
 // "gitex.com" → "event"; a bare registrable domain has no prefix.
@@ -186,4 +231,33 @@ func normalizedSet(values []string) map[string]struct{} {
 		}
 	}
 	return set
+}
+
+// IsMachineAddress reports whether an address belongs to a machine rather than
+// a person: a no-reply style local part, or a domain that exists to send
+// transactional mail.
+//
+// It is the ADDRESS-ONLY half of Suppress, exported for readers that have an
+// address and no headers — a queue asking "is a customer waiting on me?"
+// cannot ask about `Auto-Submitted` on a row it is ranking, and a notification
+// from `noreply@` is not a customer waiting whatever its headers said.
+//
+// Deliberately NARROWER than Suppress: without the header corroboration a
+// prefix rule needs, the subdomain arm is left out. Under-recognising costs a
+// row in a queue; over-recognising hides a real customer, and only one of those
+// is recoverable by the reader.
+func IsMachineAddress(address string) bool {
+	at := strings.LastIndex(address, "@")
+	if at <= 0 || at == len(address)-1 {
+		return false
+	}
+	if isMachineLocalpart(address[:at]) || hasMachineMarker(address[:at]) {
+		return true
+	}
+	base := freemail.Registrable(address[at+1:])
+	if base == "" {
+		return false
+	}
+	_, transactional := transactionalBaseline[base]
+	return transactional
 }

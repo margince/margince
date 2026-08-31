@@ -290,7 +290,7 @@ describe("company-360 deep read", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Open the Worklist" }),
     );
-    expect(window.location.hash).toBe("#/today");
+    expect(window.location.hash).toBe("#/worklist");
   });
 
   it("renders the honest 422 detail when the org has no website on file", async () => {

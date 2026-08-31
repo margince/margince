@@ -188,7 +188,22 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 			Theirs:     levelValue(b.item.Level),
 		}
 	}
+	// Only when the two sides actually DIFFER. byDeadline can decide on
+	// overdue-versus-not while both dates read the same to a reader, and a row
+	// saying "07:30 against 07:30" claims a reason nobody can check.
+	// Compared at the resolution a READER sees. Two instants a few seconds
+	// apart render as the same minute, and "16:21 against 16:21" is a reason
+	// nobody can check — the live page printed exactly that.
+	//
+	// When the date DID decide but reads alike, the row says so plainly rather
+	// than falling through: the next comparator did not decide anything, and
+	// naming it would be a different lie than the one just fixed.
 	if decided, _ := byDeadline(a, b); decided {
+		if sameMinute(a.deadlineAt, b.deadlineAt) {
+			return crmcontracts.WorklistComparison{
+				Comparator: crmcontracts.WorklistComparisonComparatorDeadline,
+			}
+		}
 		return crmcontracts.WorklistComparison{
 			Comparator: crmcontracts.WorklistComparisonComparatorDeadline,
 			Mine:       dateValue(a),
@@ -218,7 +233,17 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 	// to be named here too. The contract's `order` means every comparator tied,
 	// and a row that reported it while occurrence had actually decided would be
 	// telling the reader something false about its own position.
+	//
+	// The two instants travel only when they READ differently. Thirteen seconds
+	// apart renders as "23:20 against 23:20" under a heading about waiting days,
+	// which is two wrong things at once — so a difference the reader cannot see
+	// names the comparator and stops.
 	if !a.occurredAt.Equal(b.occurredAt) {
+		if sameMinute(a.occurredAt, b.occurredAt) {
+			return crmcontracts.WorklistComparison{
+				Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
+			}
+		}
 		return crmcontracts.WorklistComparison{
 			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
 			Mine:       occurredValue(a),
@@ -229,6 +254,13 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 	// naming a comparator that decided nothing; the client draws no reason line
 	// for this case.
 	return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorOrder}
+}
+
+// sameMinute reports whether two instants read alike on screen. The card shows
+// a date and a time to the minute, so anything finer is a difference the reader
+// cannot see and must not be offered as an explanation.
+func sameMinute(a, b time.Time) bool {
+	return a.Truncate(time.Minute).Equal(b.Truncate(time.Minute))
 }
 
 func levelValue(level int) *crmcontracts.WorklistValue {

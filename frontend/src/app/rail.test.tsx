@@ -341,7 +341,9 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("keeps the Worklist off the bar and in the sheet", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
-    const { container } = render(<WorkspaceRail route={{ screen: "today" }} />);
+    const { container } = render(
+      <WorkspaceRail route={{ screen: "worklist" }} />,
+    );
     expect(container.querySelectorAll(".navwrap.primary")).toHaveLength(3);
     expect(
       container.querySelector(".railmore.active")?.getAttribute("aria-current"),

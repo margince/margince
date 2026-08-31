@@ -172,3 +172,10 @@ describe("routeIdentity", () => {
     }
   });
 });
+
+// The day's surface moved from `today` to `worklist`. A rep's bookmark outlives
+// a rename, and answering it with Not Found teaches them the product lost their
+// page.
+it("answers the old day address with the page that replaced it", () => {
+  expect(parseHash("#/today")).toEqual({ screen: "worklist" });
+});

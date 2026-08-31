@@ -666,7 +666,7 @@ function PersonActions({
       />
       {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
           squaring this one would name the opposite of what it does. */}
-      <Button onClick={() => navigate({ screen: "today" })}>
+      <Button onClick={() => navigate({ screen: "worklist" })}>
         <CheckSquare size={15} aria-hidden="true" />{" "}
         {t("person.action.addTask")}
       </Button>

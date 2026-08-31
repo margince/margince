@@ -93,7 +93,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provMicrosoft",
   "ob.conv.connect.linkedinName",
   // "Email" is the loanword vi uses for the field, as en spells it.
-  "day.merge.fieldEmail",
   // Employee-count bands: digits and an en dash, the same in every locale.
   "lead.signal.employees.1-10",
   "lead.signal.employees.11-50",

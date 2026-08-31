@@ -18,6 +18,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sort"
 	"time"
 
@@ -133,6 +134,11 @@ func (s *Service) waitingCustomers(
 			Source: sourceWaiting, Reason: crmcontracts.Withheld,
 		}
 	case err != nil:
+		// Named on the page AND recorded here. A source reported as failed with
+		// nothing in the log leaves an operator with a warning they cannot act
+		// on — which is how this one went a whole verification round without
+		// anybody being able to say what broke.
+		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
 		return nil, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.Failed,
 		}

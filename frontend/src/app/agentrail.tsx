@@ -639,7 +639,7 @@ function AgentPanel({
                   spoken alone is not a sentence about anything. */}
               <a
                 className="arbox artile"
-                href="#/today"
+                href="#/worklist"
                 aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
               >
                 <b>{formatNumber(signals.waiting, locale)}</b>

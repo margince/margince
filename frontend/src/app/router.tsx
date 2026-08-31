@@ -34,7 +34,6 @@ const SCREENS = [
   "leads",
   "deals",
   "projects",
-  "today",
   "worklist",
   "reports",
   "ai",
@@ -93,6 +92,13 @@ export function parseHash(hash: string): Route {
     return { screen: "home" };
   }
   const [screen, id, id2, id3] = parts;
+  // The day's surface moved from `today` to `worklist`, and a rep's bookmark
+  // outlives the rename. Answering the old address with the page that replaced
+  // it costs one line; answering it with Not Found teaches them the product
+  // lost their page.
+  if (screen === "today") {
+    return { screen: "worklist" };
+  }
   if (!isScreen(screen)) {
     // A hash comes out of the URL bar, so its first segment is text a human
     // typed, not a Screen. An address this app does not answer is a page — the
@@ -149,7 +155,6 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
-  today: WHOLE_ADDRESS,
   worklist: WHOLE_ADDRESS,
   // #/reports/<report> — the picker chooses a view of one screen, so switching
   // reports re-renders the panel instead of throwing the screen away.

@@ -231,3 +231,60 @@ func TestWithEverythingElseEqualTheLongerWaitLeads(t *testing.T) {
 
 	assertOrder(t, got, "waiting-83-days", "waiting-3-days")
 }
+
+// A comparator that "decided" on two equal values decided nothing a reader can
+// check. The live page printed "07:30 against 07:30" and asked them to accept
+// it as a reason.
+func TestARowNeverClaimsADateDecidedWhenTheDatesAreTheSame(t *testing.T) {
+	same := rankInstant.Add(24 * time.Hour)
+	first := candidate("a", levelWaiting, due(same), quiet(9))
+	second := candidate("b", levelWaiting, due(same), quiet(3))
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Comparator == crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatal("the row claims its date beat an identical date")
+	}
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorWaitingDays {
+		t.Fatalf("claimed %q; the longer wait is what actually decided",
+			got[0].AboveNext.Comparator)
+	}
+}
+
+// Two instants a few seconds apart render as the same minute on screen. The
+// live page printed "16:21 against 16:21" and called it the reason.
+func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T) {
+	base := rankInstant.Add(-24 * time.Hour)
+	first := candidate("a", levelAgreed, due(base), quiet(9))
+	second := candidate("b", levelAgreed, due(base.Add(20*time.Second)), quiet(3))
+
+	got := rankAll([]ranked{first, second})
+
+	// The date DID decide, so the row says so — without offering two values a
+	// reader would compare and find equal. Falling through to the next
+	// comparator would name something that decided nothing, which is a
+	// different lie than the one this fixes.
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatalf("claimed %q; the date is what decided", got[0].AboveNext.Comparator)
+	}
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}
+
+// Occurrence decides at the same reader resolution a deadline does. Thirteen
+// seconds apart printed "23:20 against 23:20" under a heading about waiting
+// days — two wrong things at once, and the live page showed it.
+func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
+	base := rankInstant.Add(-90 * 24 * time.Hour)
+	first := candidate("a", levelWaiting)
+	first.occurredAt = base
+	second := candidate("b", levelWaiting)
+	second.occurredAt = base.Add(13 * time.Second)
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}

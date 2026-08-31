@@ -989,7 +989,7 @@ function SiteReadPanel({
               count: formatNumber(report.proposal_ids.length, locale),
             })}
           </span>
-          <Button small onClick={() => navigate({ screen: "today" })}>
+          <Button small onClick={() => navigate({ screen: "worklist" })}>
             {t("enrich.toInbox")}
           </Button>
         </p>

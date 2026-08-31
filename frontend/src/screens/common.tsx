@@ -426,13 +426,7 @@ export function provenanceOf(
     return { kind: "connector", connector: connectorLabel(rest) || source };
   }
   if (source === "agent") {
-    // A passport call stamps `agent:<passport_id>`, and a passport id is a uuid
-    // with no name behind it on this side: the design system holds no record
-    // lookups, so there is nothing here to resolve it to. The tag then says only
-    // what the wire says — an agent produced this — instead of printing an
-    // identifier at a reader. A named tool (`agent:enrich`) keeps its name.
-    const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
-    return { kind: "agent", agent: named };
+    return agentProvenance(rest);
   }
   if (source === "system") {
     // The installation's own processing: a scheduled sweep, a backfill, an
@@ -441,6 +435,33 @@ export function provenanceOf(
     return { kind: "system", job: rest || undefined };
   }
   return { kind: "unknown" };
+}
+
+// What an `agent:<rest>` principal is called on screen.
+//
+// A passport call stamps `agent:<passport_id>`, and a passport id is a uuid with
+// no name behind it on this side: the design system holds no record lookups, so
+// there is nothing here to resolve it to. The tag then says only what the wire
+// says — an agent produced this — instead of printing an identifier. A named
+// tool (`agent:enrich`) keeps its name.
+function agentProvenance(rest: string): Provenance {
+  const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
+  return { kind: "agent", agent: named && humanizeAgent(named) };
+}
+
+// A tool's own name, in words.
+//
+// The wire spells a job the way the code does — `capture_counterparty_verdict`
+// — and printing that at a reader shows them the plumbing and calls it
+// information. The underscores go and the name stays, because the name is what
+// identifies the tool; only the code's punctuation is dropped.
+//
+// The CASE is left alone. A one-word tool has read as `capture` since this tag
+// existed, and changing that is a different decision from removing an
+// identifier's punctuation — one nobody asked for.
+function humanizeAgent(name: string): string {
+  const words = name.replaceAll("_", " ").trim();
+  return words === "" ? name : words;
 }
 
 /** A uuid: an identifier with no name in it, so no tag may print it. */

@@ -7,6 +7,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { ApprovalRow } from "./approvalrow";
 import {
   comparisonText,
   consequenceText,
@@ -16,11 +17,13 @@ import {
   subjectHref,
 } from "./worklist.copy";
 import {
+  useApproval,
   useWorklist,
   type Worklist,
   type WorklistFilter,
   type WorklistItem,
   type WorklistScope,
+  worklistKey,
 } from "./worklist.queries";
 import "./worklist.css";
 
@@ -97,7 +100,36 @@ function WorklistRow({
         {above && <p className="t-caption worklist-row-above">{above}</p>}
       </div>
       <RowVerbs item={item} href={href} />
+      {decidable(item) && <RowDecision item={item} />}
     </PanelRow>
+  );
+}
+
+// Whether this row is a decision a person answers HERE.
+//
+// The queue holds no authority of its own — the card below is the same one the
+// record page draws, posting to the same endpoint. What the queue adds is that
+// the decision is answerable where it was ranked, instead of sending a reader
+// to a second screen to do what the row already described.
+function decidable(item: WorklistItem): boolean {
+  return item.actions.includes("decide") && item.source === "approval";
+}
+
+// The decision itself, fetched whole because a row cannot carry it.
+function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
+  const approval = useApproval(item.id, true);
+  // A body with no `kind` is not a proposal this card can draw: the kind
+  // chooses the label, the tool chip and the autonomy dot. Treated as a failed
+  // read rather than rendered, because the alternative is a throw that takes
+  // the whole day's page down over one malformed answer.
+  const usable = approval.data?.kind ? approval.data : undefined;
+  if (!usable) {
+    return null;
+  }
+  return (
+    <div className="worklist-row-decision">
+      <ApprovalRow approval={usable} extraInvalidateKeys={[worklistKey]} />
+    </div>
   );
 }
 
@@ -116,6 +148,7 @@ function RowVerbs({
   href,
 }: Readonly<{ item: WorklistItem; href: string | undefined }>) {
   const t = useT();
+  const drawn = new Set<string>();
   const verbs = item.actions.flatMap((action) => {
     const route = VERB_DESTINATION[action];
     if (!route) {
@@ -124,7 +157,18 @@ function RowVerbs({
       return [];
     }
     const destination = route(href);
-    return destination ? [{ action, destination }] : [];
+    if (!destination) {
+      return [];
+    }
+    // One control per DESTINATION. `complete` and `snooze` both open the
+    // record this row is about, and two identical "Open" links side by side
+    // ask the reader to choose between the same thing twice.
+    const key = `${VERB_LABEL[action](t)}|${destination}`;
+    if (drawn.has(key)) {
+      return [];
+    }
+    drawn.add(key);
+    return [{ action, destination }];
   });
   if (verbs.length === 0) {
     return null;
@@ -149,10 +193,12 @@ const VERB_DESTINATION: Partial<
     (href: string | undefined) => string | undefined
   >
 > = {
-  // The decision surfaces own their own verbs; this sends the reader to them.
-  decide: () => "#/today",
-  merge: () => "#/today",
-  // Everything else is the record the row is about.
+  // `decide` and `merge` are deliberately absent: the surface that answers
+  // them IS this page, so a link would send the reader where they already are.
+  // They come back when the decision card is drawn inline, which is its own
+  // piece of work.
+  //
+  // Everything routable is the record the row is about.
   open: (href) => href,
   complete: (href) => href,
   snooze: (href) => href,

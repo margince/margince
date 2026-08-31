@@ -37,6 +37,9 @@ type WaitingReply struct {
 	// ActivityID is the message itself — what a draft would reply to.
 	ActivityID ids.UUID
 	Subject    string
+	// Sender is the address the message came from, so a caller can tell a
+	// person waiting from a machine sending. Empty when no sender was recorded.
+	Sender string
 	// OccurredAt is when they wrote, which is what the wait is measured from.
 	OccurredAt time.Time
 	// The record the thread is filed under, when it names one.
@@ -82,7 +85,10 @@ const waitingScanCap = 200
 // unthreaded question at once. Excluding them under-reports, which is the
 // direction that costs a row rather than a customer.
 const waitingRepliesSQL = `
-	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at,
+	SELECT a.id, COALESCE(a.subject, ''),
+	       COALESCE((array_agg(sender.address ORDER BY sender.address)
+	                 FILTER (WHERE sender.address IS NOT NULL))[1], ''),
+	       a.occurred_at,
 	       -- One row per message however many records it is filed under. There
 	       -- is no max(uuid) in Postgres, so the pick is the first by text
 	       -- order: arbitrary but STABLE, which is what a card needs — the same
@@ -99,12 +105,35 @@ const waitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
+	  -- Who wrote. The sender participant is where capture records the address,
+	  -- and it is the only evidence at this level that tells a person apart
+	  -- from a notification service.
+	  LEFT JOIN activity_participant sender
+	         ON sender.activity_id = a.id AND sender.role = 'from'
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
 	   AND a.occurred_at <= $%[1]d
 	   AND %[2]s
 	   AND a.thread_key IS NOT NULL
+	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
+	   -- LIMIT lets two hundred notification threads fill the scan and push a
+	   -- real customer past it, and the page then says nobody is waiting —
+	   -- which is the one answer this source must never get wrong.
+	   --
+	   -- Deliberately coarse: it removes what nothing could mistake for a
+	   -- person, and the caller's own rule (capture's address list, which
+	   -- knows the operator's allowlist) still runs over what survives.
+	   AND NOT EXISTS (
+	         SELECT 1 FROM activity_participant machine
+	          WHERE machine.activity_id = a.id
+	            AND machine.role = 'from'
+	            AND (machine.address ILIKE '%%noreply%%'
+	              OR machine.address ILIKE '%%no-reply%%'
+	              OR machine.address ILIKE '%%do-not-reply%%'
+	              OR machine.address ILIKE '%%donotreply%%'
+	              OR machine.address ILIKE '%%notification%%'
+	              OR machine.address ILIKE '%%mailer-daemon%%'))
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity later
 	          WHERE later.thread_key = a.thread_key
@@ -183,7 +212,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		waiting = []WaitingReply{}
 		for rows.Next() {
 			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.OccurredAt,
+			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID); err != nil {
 				return err
 			}
