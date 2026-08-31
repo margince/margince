@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func namesOver(e *integration.Env) attentionNames {
@@ -218,6 +219,56 @@ func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
 			t.Fatalf("the batch %s a deal the single get %s — the two reads disagree about one record",
 				map[bool]string{true: "named", false: "withheld"}[named],
 				map[bool]string{true: "answered", false: "refused"}[err == nil])
+		}
+	})
+
+	t.Run("lead", func(t *testing.T) {
+		named := integration.SeedIDRow(t, owner,
+			`INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'Ana Ionescu', 'import', 'human:x')`)
+		// A lead captured without a name: its face carries an empty label, so
+		// the batch answers absent rather than putting a blank on a card.
+		nameless := integration.SeedIDRow(t, owner,
+			`INSERT INTO lead (id, source, captured_by) VALUES ($1, 'import', 'human:x')`)
+
+		// A reader holding lead.read: AccountRepPerms does not, and a caller
+		// the grant refuses answers no labels — which is the refusal arm, not
+		// the read this case is about.
+		leadReader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"lead": {Read: true}},
+			RowScope: principal.RowScopeTeam,
+		})
+
+		labels, err := names.Labels(leadReader, "lead", []ids.UUID{named, nameless})
+		if err != nil {
+			t.Fatalf("naming leads: %v", err)
+		}
+		if labels[named] != "Ana Ionescu" {
+			t.Errorf("label = %q for a named lead, want its name", labels[named])
+		}
+		if label, ok := labels[nameless]; ok {
+			t.Errorf("label = %q for a lead captured with no name, want absent", label)
+		}
+	})
+
+	t.Run("project", func(t *testing.T) {
+		org := e.SeedOrg(t, "Weber Projekte", nil)
+		project := integration.SeedIDRow(t, owner,
+			`INSERT INTO project (id, name, organization_id, source, captured_by)
+			 VALUES ($1, 'Depot rollout', '`+org.String()+`', 'manual', 'human:x')`)
+
+		projectReader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"project": {Read: true}},
+			RowScope: principal.RowScopeTeam,
+		})
+
+		labels, err := names.Labels(projectReader, "project", []ids.UUID{project})
+		if err != nil {
+			t.Fatalf("naming projects: %v", err)
+		}
+		if labels[project] != "Depot rollout" {
+			t.Errorf("label = %q for a readable project, want its name", labels[project])
 		}
 	})
 
