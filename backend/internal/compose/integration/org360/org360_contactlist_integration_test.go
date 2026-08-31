@@ -217,3 +217,33 @@ func TestContactPageHidesAnAccountItCannotRead(t *testing.T) {
 		t.Fatalf("got %v, want not-found so existence stays hidden", err)
 	}
 }
+
+// An omitted sort and an explicit `recommended` are one order, so a cursor from
+// either must be accepted by the other. They were two raw strings, and a caller
+// that started paging without naming a sort and then named the one it was
+// already using was refused for a difference it could not see.
+func TestContactPageTreatsAnOmittedSortAsRecommended(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	svc := org360Service(e)
+
+	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	for i := range 5 {
+		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
+		employ(t, e, person, org, "Fleet")
+	}
+	limit := 2
+	first, err := svc.ContactPage(ctx, ids.OrganizationID{UUID: org},
+		org360svc.ContactListQuery{Limit: &limit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Page.NextCursor == nil {
+		t.Fatal("the fixture did not produce a second page")
+	}
+	if _, err := svc.ContactPage(ctx, ids.OrganizationID{UUID: org}, org360svc.ContactListQuery{
+		Limit: &limit, Cursor: first.Page.NextCursor, Sort: "recommended",
+	}); err != nil {
+		t.Fatalf("a cursor minted with no sort was refused by the sort it actually used: %v", err)
+	}
+}

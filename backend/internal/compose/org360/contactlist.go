@@ -103,6 +103,12 @@ func (s *Service) rankedContactRows(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	all []people.ContactStrength, q ContactListQuery, now time.Time,
 ) (crmcontracts.OrganizationContactListResponse, error) {
+	// An omitted sort and an explicit `recommended` are the same order, so they
+	// must mint the same cursor: two spellings of one order would make a token
+	// from either refuse the other, for a difference no caller can see.
+	if q.Sort == "" {
+		q.Sort = string(crmcontracts.Recommended)
+	}
 	kept := filterByStatus(all, q.Status)
 	identity, err := s.matchingIdentity(ctx, tx, orgID, kept, q.Query)
 	if err != nil {

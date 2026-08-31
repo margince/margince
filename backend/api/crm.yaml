@@ -2257,7 +2257,14 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Full-text query over the contact's name and title.
+          description: |
+            Case-insensitive SUBSTRING match over the contact's name and title.
+
+            Deliberately not the accent-folding full-text search `GET /people` runs:
+            this reads the account roster already in hand rather than the person
+            corpus, so `Muller` does not find `Müller` here and does there. Stated
+            because the two endpoints answering one word differently is a thing a
+            caller has to be able to predict.
         - name: sort
           in: query
           schema:

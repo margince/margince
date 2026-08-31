@@ -29747,7 +29747,13 @@ type ListOrganizationContactsParams struct {
 	// Status Keep only contacts in this engagement state. Omitted means every state.
 	Status *ContactEngagement `form:"status,omitempty" json:"status,omitempty"`
 
-	// Q Full-text query over the contact's name and title.
+	// Q Case-insensitive SUBSTRING match over the contact's name and title.
+	//
+	// Deliberately not the accent-folding full-text search `GET /people` runs:
+	// this reads the account roster already in hand rather than the person
+	// corpus, so `Muller` does not find `Müller` here and does there. Stated
+	// because the two endpoints answering one word differently is a thing a
+	// caller has to be able to predict.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
 	// Sort `recommended` is the ranking described above. The others are plain orders for a
