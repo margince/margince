@@ -78,7 +78,6 @@ internal/compose/brain.go#type agentBrain
 internal/compose/captureautoenrich.go#func startAutoEnrichRead
 internal/compose/capturedomaintriage.go#func startDomainTriageRead
 internal/compose/captureofflinedemo.go#method offlineDemoDirectory.accounts
-internal/compose/captureverdict.go#func createCounterpartyRecords
 internal/compose/certcase_agentloop_window.go#type agentLoopToolWindow
 internal/compose/certcase_fieldextract.go#method fieldExtractCases.CertifiedScope
 internal/compose/certcase_ratefx_test.go#type fxCompleterStub

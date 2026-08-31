@@ -16,6 +16,7 @@ package capture
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -132,9 +133,10 @@ func promoteByVerdict(t *testing.T, e *integration.SearchEnv, email string, acti
 		},
 	})
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, domain, _ := strings.Cut(email, "@")
 		_, err := store.EnsureCounterpartyTx(ctx, tx, people.EnsureCounterpartyInput{
 			Email:      email,
-			Domain:     "kunde.example",
+			Domain:     domain,
 			ActivityID: ids.From[ids.ActivityKind](activityID),
 			OwnerID:    e.Rep1,
 			Source:     "verdict",

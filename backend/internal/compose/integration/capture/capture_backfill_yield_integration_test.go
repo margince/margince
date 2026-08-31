@@ -126,6 +126,7 @@ func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink)
 			defer walking.Done()
 			msg, err := mailmap.Parse(raw, captureOwner)
 			if err == nil {
+				msg = msg.AttestSentByOwner(m.sent[msg.ID()])
 				_, err = sink.Upsert(ctx, msg.ToRecord("gmail", raw))
 			}
 			mu.Lock()
@@ -153,15 +154,25 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	registry.Register(&mailPageConnector{
 		raws: [][]byte{
-			// Two free-mail senders: a personal mailbox is a person and never a
-			// company, so each is one person and no organization.
-			email("alice@gmail.com", "Alice Example", captureOwner, "y1@gmail.com", ""),
-			email("bob@gmail.com", "Bob Example", captureOwner, "y2@gmail.com", ""),
-			// The owner's own attested send makes its recipient a counterparty by
-			// demonstrated intent: one person AND their company.
+			// Three attested own-sends: each recipient is a counterparty by
+			// demonstrated intent, so each is one person. All three share ONE
+			// corporate domain, and a domain is asked about once — three people,
+			// one company question.
+			email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
+			email(captureOwner, "", "bob@globex.example", "y2@myco.example", ""),
 			email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
+			// A free-mail sender on the same page, contributing to NEITHER
+			// counter: it defers to the verdict rather than minting, and a
+			// consumer domain is never a company question. Without it both
+			// assertions below would pass for a trivial reason — three people
+			// on one domain is one domain however the counters work.
+			email("zoe@gmail.com", "Zoe Example", captureOwner, "y4@gmail.com", ""),
 		},
-		sent: map[string]bool{"y3@myco.example": true},
+		sent: map[string]bool{
+			"y1@myco.example": true,
+			"y2@myco.example": true,
+			"y3@myco.example": true,
+		},
 	})
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -189,13 +200,14 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 		t.Fatalf("BackfillStatus: %v (run=%v)", err, status)
 	}
 	if status.People != 3 {
-		t.Fatalf("people = %d, want 3 — the two free-mail senders and the attested recipient, and nothing else", status.People)
+		t.Fatalf("people = %d, want 3 — the three attested recipients and NOT the free-mail sender, which defers", status.People)
 	}
 	// The company column counts domains this run QUEUED for a verdict, not
-	// companies it created — capture creates none. Free mail is answered by its
-	// own domain and asks nothing; the corporate domain is the one question.
+	// companies it created — capture creates none. The three recipients share
+	// one domain, and a domain is asked about once; gmail.com asks nothing,
+	// which is what makes this a count of QUESTIONS rather than of senders.
 	if status.Organizations != 1 {
-		t.Fatalf("company questions = %d, want 1 — free mail asks nothing, the corporate domain does", status.Organizations)
+		t.Fatalf("company questions = %d, want 1 — one corporate domain asks, gmail.com does not", status.Organizations)
 	}
 
 	// The persisted columns are the proof the run counted at page-commit time
@@ -216,10 +228,12 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 	seedCaptureRole(t, e)
 	prov := &mailPageConnector{
 		raws: [][]byte{
-			email("alice@gmail.com", "Alice Example", captureOwner, "y1@gmail.com", ""),
+			// Two attested own-sends on ONE corporate domain: two people by
+			// demonstrated intent, and one company question between them.
+			email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
 			email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
 		},
-		sent: map[string]bool{"y3@myco.example": true},
+		sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true},
 	}
 	// The production wiring, because the counters under test are filled by the
 	// real auto-create resolver. Unpaced, because a two-message fixture walks
@@ -255,7 +269,7 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 	// Read after the LAST message but before the commit: both counterparty
 	// kinds were already visible.
 	if midPagePeople != 2 {
-		t.Fatalf("mid-page people = %d, want 2 — the free-mail sender and the attested recipient, before the page committed", midPagePeople)
+		t.Fatalf("mid-page people = %d, want 2 — both attested recipients, before the page committed", midPagePeople)
 	}
 	if midPageOrganizations != 1 {
 		t.Fatalf("mid-page company questions = %d, want 1 — the corporate domain, before the page committed", midPageOrganizations)
@@ -322,10 +336,12 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 	seedCaptureRole(t, e)
 	prov := &mailPageConnector{
 		raws: [][]byte{
-			email("alice@gmail.com", "Alice Example", captureOwner, "y1@gmail.com", ""),
+			// Two attested own-sends on ONE corporate domain: two people by
+			// demonstrated intent, and one company question between them.
+			email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
 			email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
 		},
-		sent: map[string]bool{"y3@myco.example": true},
+		sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true},
 	}
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{}).
 		WithProgressPacing(0)
@@ -372,12 +388,12 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 	}
 }
 
-// yieldFixture is the two-message fixture both edge cases below use: one
-// free-mail sender (a person, no company) and one attested own-send (a person
-// AND their company), so a correct credit is exactly 2 people / 1 organization.
+// yieldFixture is the two-message fixture both edge cases below use: two
+// attested own-sends to two people on ONE corporate domain, so a correct credit
+// is exactly 2 people / 1 company question.
 func yieldFixture() [][]byte {
 	return [][]byte{
-		email("alice@gmail.com", "Alice Example", captureOwner, "y1@gmail.com", ""),
+		email(captureOwner, "", "alice@globex.example", "y1@myco.example", ""),
 		email(captureOwner, "", "dave@globex.example", "y3@myco.example", ""),
 	}
 }
@@ -389,7 +405,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 	// and which no replay will offer again, were credited by nobody.
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
-	prov := &mailPageConnector{raws: yieldFixture(), sent: map[string]bool{"y3@myco.example": true}}
+	prov := &mailPageConnector{raws: yieldFixture(), sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true}}
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{}).
 		WithProgressPacing(0)
 	registry.Register(prov)
@@ -437,7 +453,7 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 	seedCaptureRole(t, e)
 	prov := &mailPageConnector{
 		raws: yieldFixture(),
-		sent: map[string]bool{"y3@myco.example": true},
+		sent: map[string]bool{"y1@myco.example": true, "y3@myco.example": true},
 		// Fail after both counterparties exist, so a double credit is visible.
 		failAfterMessages: 2,
 	}
@@ -520,10 +536,10 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	registry.Register(&mailPageConnector{
 		raws: [][]byte{
-			email("alice@gmail.com", "Alice Example", captureOwner, "l1@gmail.com", ""),
+			email(captureOwner, "", "alice@globex.example", "l1@myco.example", ""),
 			email(captureOwner, "", "dave@globex.example", "l2@myco.example", ""),
 		},
-		sent: map[string]bool{"l2@myco.example": true},
+		sent: map[string]bool{"l1@myco.example": true, "l2@myco.example": true},
 	})
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -582,10 +598,10 @@ func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	conn := &mailPageConnector{
 		raws: [][]byte{
-			email("erin@gmail.com", "Erin Example", captureOwner, "h1@gmail.com", ""),
-			email("frank@gmail.com", "Frank Example", captureOwner, "h2@gmail.com", ""),
+			email(captureOwner, "", "erin@globex.example", "h1@myco.example", ""),
+			email(captureOwner, "", "frank@globex.example", "h2@myco.example", ""),
 		},
-		sent: map[string]bool{},
+		sent: map[string]bool{"h1@myco.example": true, "h2@myco.example": true},
 	}
 	// After the first message's counterparty is created and counted, take its
 	// count away without touching the ledger — the state a failed column update
@@ -700,12 +716,17 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	const counterparties = 8
 	raws := make([][]byte, 0, counterparties)
+	// Attested own-sends, because only a counterparty the ladder admits reaches
+	// the ledger at all: eight recipients on one corporate domain, so the race
+	// is eight person creations recomputing the same run's reach at once.
+	sent := make(map[string]bool, counterparties)
 	for i := range counterparties {
+		msgID := fmt.Sprintf("race%d@myco.example", i)
+		sent[msgID] = true
 		raws = append(raws, email(
-			fmt.Sprintf("racer%d@gmail.com", i), fmt.Sprintf("Racer %d", i),
-			captureOwner, fmt.Sprintf("race%d@gmail.com", i), ""))
+			captureOwner, "", fmt.Sprintf("racer%d@globex.example", i), msgID, ""))
 	}
-	registry.Register(&mailPageConnector{raws: raws, sent: map[string]bool{}, parallel: true})
+	registry.Register(&mailPageConnector{raws: raws, sent: sent, parallel: true})
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
@@ -747,10 +768,10 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	conn := &mailPageConnector{
 		raws: [][]byte{
-			email("gina@gmail.com", "Gina Example", captureOwner, "w1@gmail.com", ""),
-			email("hank@gmail.com", "Hank Example", captureOwner, "w2@gmail.com", ""),
+			email(captureOwner, "", "gina@globex.example", "w1@myco.example", ""),
+			email(captureOwner, "", "hank@globex.example", "w2@myco.example", ""),
 		},
-		sent: map[string]bool{},
+		sent: map[string]bool{"w1@myco.example": true, "w2@myco.example": true},
 	}
 	// Three creations the old binary counted and the seed did not see, added
 	// after the first message so the second one is the recompute that would

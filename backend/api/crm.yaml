@@ -17692,7 +17692,7 @@ components:
           enum: [pending, unsure, real, noise, rejected, suppressed]
         kind:
           type: [string, 'null']
-          description: 'Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam.'
+          description: 'Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally.'
         resolved_at: { type: [string, 'null'], format: date-time }
 
     LicenseEntitlement:
