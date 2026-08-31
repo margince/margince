@@ -386,6 +386,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/capture/counterparty-holds":                                {Op: "createCaptureCounterpartyHold", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/email-domains":                                     {Op: "createWorkspaceEmailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions":                                        {Op: "createCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/capture/exclusions/{id}/purge":                             {Op: "purgeCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/owner-identities":                                  {Op: "createCaptureOwnerIdentity", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/channel-connections":                                       {Op: "connectChannel", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/coldstart":                                                 {Op: "coldStartReadback", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -53,6 +53,8 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// leave every other subject's record untouched — for retention that is the
 	// storage-limitation failure the pass exists to prevent, and for the rest it
 	// would make a hygiene pass silently partial.
+	"internal/modules/privacy:AnonymisePeople":         "an owner destroying the contacts their own mailbox is the only reason the CRM knows. A row-writability probe would ask the wrong question: the record IS workspace-visible — that is the defect being undone — so the probe would pass for any seat and prove nothing. What confines this is the SELECTION, in capture.SelectPurgeablePeopleTx, which admits a person only when every live address matches the caller's own rule, no deal links them, and no other seat imported their mail. The caller is checked for being a person at the entry point above",
+	"internal/modules/privacy:anonymiseOnePerson":      "the per-person half of AnonymisePeople, on its own transaction; the same reasoning and the same selection govern it",
 	"internal/modules/privacy:anonymizePerson":         "the retention engine anonymizes a person in place because their retention clock expired, under a policy that names the table. The subject is chosen by age; there is no caller asking for this row and no authority to test beyond the policy itself",
 	"internal/modules/privacy:anonymizeLead":           "the lead half of the same retention pass, chosen the same way",
 	"internal/modules/privacy:archiveDeal":             "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",

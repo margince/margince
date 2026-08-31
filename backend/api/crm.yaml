@@ -8373,6 +8373,55 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /capture/exclusions/{id}/purge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Capture]
+      operationId: purgeCaptureExclusion
+      summary: Destroy the mail one of your own rules matched.
+      description: |
+        An exclusion stops FUTURE mail. This destroys what already arrived: the message text, the
+        provider original, the attachments and their blobs, the embeddings, the delivery copies and
+        everything derived from them. It is not reversible and there is no undo — the preview exists
+        so the counts are seen before that is true.
+
+        Only mail your own connection brought in. A message a colleague also imported keeps their
+        copy: your import of it is released, theirs stands, and the message stays on their timeline.
+        A message the law still requires keeping survives both and is reported as skipped — a
+        statutory hold, or commercial correspondence inside its retention window. An owner told
+        their mail is gone must not find it still there.
+
+        An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
+        still open is not: nothing marks the messages it will be about until somebody acts on it,
+        so a purge can destroy correspondence a pending request was going to assemble.
+
+        Contacts go too, but only the ones your mail is the sole reason this CRM knows them: a
+        person with an address outside the rule, a deal against their name, or mail another
+        colleague also imported is somebody the workspace knows independently, and destroying that
+        record would take away work somebody did. Those that do go are anonymised rather than
+        deleted, so a colleague's records that reference them do not break.
+
+        Your own rules only. A workspace rule belongs to the workspace, and destroying every
+        colleague's matching mail is not one person's act.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      parameters:
+        - name: preview
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: Report what would be destroyed and change nothing.
+      responses:
+        '200':
+          description: What was destroyed, or what would be.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CapturePurgeOutcome' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /capture/counterparty-holds:
     get:
       tags: [Capture]
@@ -18526,6 +18575,37 @@ components:
             Whether a human vouched for this domain. Only a verified domain — or one the
             installation's own company claims — suppresses storage.
         created_at: { type: string, format: date-time }
+    CapturePurgeOutcome:
+      type: object
+      description: |
+        What a purge destroyed, or what a preview says it would. The four counts are disjoint and
+        together they are every message the rule matched, so a reader can tell "nothing matched"
+        from "everything was somebody else's".
+      required: [destroyed, released, skipped, anonymised, preview]
+      properties:
+        destroyed:
+          type: integer
+          description: Messages gone entirely — text, original, attachments, vectors, delivery copies.
+        released:
+          type: integer
+          description: |
+            Messages a colleague also imported. Your import of them is gone; the message stayed, for
+            them.
+        skipped:
+          type: integer
+          description: |
+            Messages the law still requires keeping: under a statutory hold, or commercial
+            correspondence inside its retention window. Untouched, and reported rather than passed
+            over in silence.
+        anonymised:
+          type: integer
+          description: |
+            Contacts stripped of their identifying columns — only those your mail is the sole reason
+            the CRM knows.
+        preview:
+          type: boolean
+          description: True when nothing was actually done.
+
     CaptureExclusion:
       type: object
       required: [id, scope, kind, value, created_at]

@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -144,6 +145,13 @@ func WithBlobstore(store blobstore.Store) Option {
 		// A buyer's document download reads the same store the seller's
 		// attachment upload wrote to.
 		s.dealroomsHandlers = s.WithDocumentStore(store)
+		// The purge destroys attachment BLOBS along with the rows that name
+		// them, so it is built here rather than at assembly: a role that stores
+		// no objects has no purge, which is honest — destroying the rows and
+		// leaving the files would report mail as gone while its attachments sat
+		// in the bucket.
+		s.captureExclusionHandlers.purger = NewCapturePurger(pool,
+			NewRetentionServiceFor(InstallationDB(pool), store, slog.Default()))
 		// Captured mail carries files too. Recorded as the STORE, which the sink
 		// turns into a writer when it is built: a keeper assigned here would be
 		// dropped by a WithCaptureConfig that runs afterwards and assigns the
