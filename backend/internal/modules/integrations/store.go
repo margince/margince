@@ -212,11 +212,25 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 				// Read inside this transaction, beside the spend, so the card
 				// shows a balance, a history and a backlog from one moment
 				// rather than three.
+				//
+				// A backlog this read cannot produce is ABSENT, not fatal. It
+				// is one line on a card whose other rows — the key, the
+				// posture, the balance, the spend — are what an operator came
+				// for, and a secondary count taking the whole settings page
+				// down with it is the wrong trade. The contract makes it
+				// optional for exactly this.
+				//
+				// A cancelled request is the exception and still aborts: the
+				// caller has gone, so there is nobody to render a degraded card
+				// for, and swallowing it would turn a disconnect into a
+				// pointless read of every remaining provider.
 				backlog, err := s.backlogInTx(ctx, tx, name)
-				if err != nil {
+				if err != nil && ctx.Err() != nil {
 					return err
 				}
-				c.Backlog = &backlog
+				if err == nil {
+					c.Backlog = &backlog
+				}
 				out = append(out, c)
 				continue
 			}

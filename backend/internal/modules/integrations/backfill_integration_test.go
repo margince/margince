@@ -203,3 +203,45 @@ func (e *runsEnv) plantSubjectWithRun(t *testing.T, state string) ids.PersonID {
 	}
 	return id
 }
+
+// TestAHumanCanProbeADegradedConnection is the escape from a trap that shipped.
+//
+// A vendor error flips the connection to provider_error. Execution treats that
+// as recoverable and says so — it authorizes egress precisely because a later
+// success restores `connected`. Admission used to refuse to CREATE that run, so
+// the sentence was unreachable: one bad minute from the vendor left the
+// connection refusing every lookup, and the only way out was a human noticing
+// and re-entering a key that was never at fault.
+//
+// A person pressing the button is the deliberate probe. A sweep is not: nobody
+// is watching it, and retrying a rate limit every minute is how a transient
+// limit becomes a sustained one.
+func TestAHumanCanProbeADegradedConnection(t *testing.T) {
+	e := setupRuns(t, runsConfig{})
+	ctx := context.Background()
+
+	for _, status := range []string{"rate_limited", "insufficient_credits", "provider_error"} {
+		if _, err := e.owner.Exec(ctx,
+			`UPDATE provider_connection SET status = $2 WHERE provider = $1`,
+			e.provider, status); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+			PersonID: e.mine.String(), Provider: e.provider, Trigger: provider.TriggerManual,
+		}); err != nil {
+			t.Errorf("a human's run was refused on a %s connection: %v — the only path back to "+
+				"connected is a run that succeeds, so refusing them all makes the state permanent",
+				status, err)
+		}
+
+		_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
+			PersonID: e.theirsInBook.String(), Provider: e.provider,
+			Trigger: provider.TriggerAutomaticBackfill,
+		})
+		if err == nil {
+			t.Errorf("a sweep queued work on a %s connection; automatic retries are how a "+
+				"transient vendor condition becomes a sustained one", status)
+		}
+	}
+}
