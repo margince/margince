@@ -62,9 +62,14 @@ func (s *SettingsStore) Update(ctx context.Context, automaticLookup *bool) (Sett
 	return s.Get(ctx)
 }
 
-// automaticLookupEnabled is the ONE reader admission and the catch-up sweep
-// share, so the two cannot answer the question differently. Ungated by
-// declaration (see AutomaticLookup): machinery binding its own write.
+// automaticLookupEnabled answers whether the automatic path may queue a run.
+// Ungated by declaration (see AutomaticLookup): machinery binding its own
+// write, inside the transaction that queues.
+//
+// Every automatic caller goes through here rather than reading the entry
+// itself, so admission and the catch-up sweep cannot answer the question
+// differently.
+// Held by: TestOnlyOneReaderAnswersTheAutomaticLookupPosture (settings_test.go)
 func automaticLookupEnabled(ctx context.Context, tx pgx.Tx) (bool, error) {
 	on, err := settings.ApplyTx(ctx, tx, AutomaticLookup)
 	if err != nil {

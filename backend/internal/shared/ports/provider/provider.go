@@ -326,6 +326,8 @@ type Adapter interface {
 // Trigger is what caused a run to be queued (PI-DDL-2).
 type Trigger string
 
+// The closed set of things that queue a run. Every one but TriggerManual is
+// Automatic, and an automatic run buys only the categories that cost nothing.
 const (
 	TriggerAutomaticCreate Trigger = "automatic_create"
 	TriggerAutomaticImport Trigger = "automatic_import"
