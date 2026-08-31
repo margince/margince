@@ -1605,13 +1605,15 @@ export const en = {
   "co.people.map.ourSide": "Our side",
   "co.people.map.account": "Account",
   "co.people.map.missing": "{role} missing",
-  "co.people.map.assign": "Nobody holds this role",
   "co.people.map.awaiting": "awaiting reply",
   "co.people.map.replied": "they replied",
   "co.people.map.never": "never written to",
   "co.people.map.onDeal": "on the deal",
-  "co.people.map.scope":
-    "Showing {shown} of {total} contacts · selected deal only.",
+  "co.people.map.routesWithheld": "Who can reach them is hidden from you",
+  "co.people.map.assignHint": "Nobody is carrying this deal",
+  "co.people.map.scope": "{count} on the buying team · selected deal only.",
+  "co.people.map.scopePartial":
+    "{count} on the buying team · {hidden} more you cannot see.",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",

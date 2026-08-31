@@ -8,6 +8,7 @@ import { type MapCopy, mapModelFromCoverage } from "./mapmodel";
 type Coverage = components["schemas"]["OrganizationCoverage"];
 
 const COPY: MapCopy = {
+  routesWithheld: "Hidden from you",
   ourSide: "Our side",
   account: "Account",
   roles: {
@@ -212,4 +213,99 @@ test("draws nothing at all when the committee was withheld", () => {
   );
   expect(model.nodes).toHaveLength(0);
   expect(model.lanes).toHaveLength(0);
+});
+
+// Absent routes and empty routes are opposite facts: absent means the reader
+// may not ask who can reach this person, empty is the answer that nobody can.
+// Drawing both as a person with no line reports a withholding as an absence.
+test("says routes were withheld rather than showing nobody", () => {
+  const withheld = mapModelFromCoverage(
+    coverage({
+      committee: {
+        seats: [
+          {
+            person_id: "p-1",
+            full_name: "Philipp Königs",
+            role: "economic_buyer",
+            engagement: "untried",
+          },
+        ],
+        gaps: [],
+        unlisted_seats: 0,
+      },
+    } as Partial<Coverage>),
+    "Brandt GmbH",
+    COPY,
+  );
+  expect(withheld.nodes.find((n) => n.id === "p:p-1")?.sublabel).toBe(
+    "Hidden from you",
+  );
+
+  const answered = mapModelFromCoverage(coverage(), "Brandt GmbH", COPY);
+  // A seat whose routes WERE readable says nothing extra.
+  expect(
+    answered.nodes.find((n) => n.id === "p:p-1")?.sublabel,
+  ).toBeUndefined();
+});
+
+// A stakeholder can sit on one deal twice — the table's key is deal, person
+// AND role. Drawing them once per role produced two nodes with the same id,
+// two identical edges and two React keys.
+test("draws a person once even when they hold two roles", () => {
+  const twice = mapModelFromCoverage(
+    coverage({
+      committee: {
+        seats: [
+          {
+            person_id: "p-1",
+            full_name: "Philipp Königs",
+            role: "champion",
+            engagement: "answered",
+          },
+          {
+            person_id: "p-1",
+            full_name: "Philipp Königs",
+            role: "economic_buyer",
+            engagement: "answered",
+          },
+        ],
+        gaps: [],
+        unlisted_seats: 0,
+      },
+    } as Partial<Coverage>),
+    "Brandt GmbH",
+    COPY,
+  );
+  expect(twice.nodes.filter((node) => node.id === "p:p-1")).toHaveLength(1);
+  expect(new Set(twice.edges.map((edge) => edge.id)).size).toBe(
+    twice.edges.length,
+  );
+});
+
+// A stakeholder whose role has no lane of its own is still ON the deal.
+// Leaving the line off drew them floating beside it.
+test("joins an unrecognised role to the deal like every other seat", () => {
+  const model = mapModelFromCoverage(
+    coverage({
+      committee: {
+        seats: [
+          {
+            person_id: "p-9",
+            full_name: "Sam Consultant",
+            role: "technical_advisor",
+            engagement: "answered",
+          },
+        ],
+        gaps: [],
+        unlisted_seats: 0,
+      },
+    } as Partial<Coverage>),
+    "Brandt GmbH",
+    COPY,
+  );
+  expect(
+    model.edges.find(
+      (edge) => edge.kind === "membership" && edge.from === "p:p-9",
+    ),
+  ).toBeDefined();
 });

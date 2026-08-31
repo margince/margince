@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useUrlParams } from "../../app/urlstate";
 import { Badge, SegmentedControl, StatCard } from "../../design-system/atoms";
 import { PipelineBoard } from "../../design-system/composed";
 import { RelationshipMap } from "../../design-system/relationshipmap";
@@ -251,10 +252,21 @@ function CommitteeBoard({
   const t = useT();
   const { locale } = useLocale();
   const [view, setView] = useState<"board" | "map">("board");
-  // The map's own selection. Held here rather than inside the primitive so the
-  // board and the map can agree about who is chosen once the board learns to
-  // read it.
-  const [focusId, setFocusId] = useState<string | null>(null);
+  // The selection lives in the ADDRESS, so the two views agree about who is
+  // chosen and a reload or a pasted link restores it. Held locally it survived
+  // only until the component unmounted, which made the board and the map two
+  // pictures of the same account that could disagree.
+  const [params, setParams] = useUrlParams();
+  const focusId = params.get("focus") ?? null;
+  const setFocusId = (next: string | null) => {
+    const out = new Map(params);
+    if (next) {
+      out.set("focus", next);
+    } else {
+      out.delete("focus");
+    }
+    setParams(out);
+  };
   const model = useMemo(
     () => mapModelFromCoverage(coverage, accountName, mapCopy(t)),
     [coverage, accountName, t],
@@ -312,10 +324,21 @@ function CommitteeBoard({
           model={model}
           focusId={focusId}
           onFocus={setFocusId}
-          completenessText={t("co.people.map.scope", {
-            shown: formatNumber(committee.seats.length, locale),
-            total: formatNumber(coverage.summary.contacts_total, locale),
-          })}
+          // What the map DRAWS is the committee, not the account. Comparing
+          // seats against every contact read as a truncated contact map —
+          // "showing 3 of 100" — when the picture is complete for what it is
+          // about. It says the committee's own size, and names the seats it
+          // could not list.
+          completenessText={
+            committee.unlisted_seats > 0
+              ? t("co.people.map.scopePartial", {
+                  count: formatNumber(committee.seats.length, locale),
+                  hidden: formatNumber(committee.unlisted_seats, locale),
+                })
+              : t("co.people.map.scope", {
+                  count: formatNumber(committee.seats.length, locale),
+                })
+          }
           labels={mapLabels(t, locale)}
         />
       </>
@@ -366,6 +389,7 @@ function mapLabels(t: ReturnType<typeof useT>, locale: Locale) {
 
 function mapCopy(t: ReturnType<typeof useT>) {
   return {
+    routesWithheld: t("co.people.map.routesWithheld"),
     ourSide: t("co.people.map.ourSide"),
     account: t("co.people.map.account"),
     roles: {
@@ -377,7 +401,7 @@ function mapCopy(t: ReturnType<typeof useT>) {
     },
     otherRoles: t("co.people.board.otherRoles"),
     missing: (role: string) => t("co.people.map.missing", { role }),
-    assign: t("co.people.map.assign"),
+    assign: t("co.people.map.assignHint"),
     engagement: {
       answered: t("co.reach.answered"),
       no_reply: t("co.reach.silent"),

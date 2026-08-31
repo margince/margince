@@ -28,6 +28,8 @@ const ROLES = [
 ] as const;
 
 export type MapCopy = Readonly<{
+  /** What a seat says when the reader may not see who can reach them. */
+  routesWithheld: string;
   ourSide: string;
   account: string;
   roles: Record<(typeof ROLES)[number], string>;
@@ -114,6 +116,11 @@ function personNode(seat: Seat, copy: MapCopy): MapNode {
     id: `p:${seat.person_id}`,
     kind: "person",
     label: seat.full_name,
+    // ABSENT routes and EMPTY routes are opposite facts. Absent means the
+    // reader may not ask who can reach this person; empty is the answer that
+    // nobody can. Drawing both as a person with no line would report a
+    // withholding as a recorded absence.
+    sublabel: seat.routes ? undefined : copy.routesWithheld,
     engagement,
     engagementLabel: engagement ? copy.engagement[engagement] : undefined,
   };
@@ -166,22 +173,25 @@ function buildRoleLanes(
   lanes: MapLane[],
   edges: MapEdge[],
 ): void {
-  const known = new Set<string>(ROLES);
+  // One node per PERSON, in the first role they hold. A stakeholder can sit on
+  // a deal twice (the table's key is deal, person AND role), and drawing them
+  // once per role produced two nodes with the same id, two identical edges and
+  // two React keys — a picture that cannot say which of the two a click meant.
+  const drawn = new Set<string>();
   for (const role of ROLES) {
-    const seats = committee.seats.filter((seat) => seat.role === role);
+    const seats = committee.seats.filter(
+      (seat) => seat.role === role && !drawn.has(seat.person_id),
+    );
+    for (const seat of seats) {
+      drawn.add(seat.person_id);
+    }
     const ids: string[] = [];
     for (const seat of seats) {
       nodes.push(personNode(seat, copy));
       ids.push(`p:${seat.person_id}`);
       edges.push(...routeEdges(seat, copy));
       if (deal) {
-        edges.push({
-          id: `m:${seat.person_id}`,
-          from: `p:${seat.person_id}`,
-          to: `d:${deal.deal_id}`,
-          kind: "membership",
-          words: copy.onDeal,
-        });
+        edges.push(dealEdge(seat.person_id, deal.deal_id, copy));
       }
     }
     if (seats.length === 0 && committee.gaps.includes(role)) {
@@ -204,19 +214,55 @@ function buildRoleLanes(
     }
   }
 
-  // A seat with a role this board has no lane for is still a person the
-  // summary counted. It gets a lane of its own rather than vanishing.
-  const other = committee.seats.filter((seat) => !known.has(seat.role));
-  if (other.length > 0) {
-    for (const seat of other) {
-      nodes.push(personNode(seat, copy));
-      edges.push(...routeEdges(seat, copy));
-    }
-    lanes.push({
-      id: "other",
-      column: "right",
-      label: copy.otherRoles,
-      nodeIds: other.map((seat) => `p:${seat.person_id}`),
-    });
+  buildOtherLane(committee, deal, copy, drawn, nodes, lanes, edges);
+}
+
+/**
+ * buildOtherLane catches the seats no named lane claimed.
+ *
+ * `role` is a free string on the wire, and a seat carrying one this board has
+ * no lane for is still a person the summary counted — dropping it sends a
+ * reader looking for somebody the picture never drew.
+ */
+function buildOtherLane(
+  committee: NonNullable<Coverage["committee"]>,
+  deal: Coverage["deals"][number] | undefined,
+  copy: MapCopy,
+  drawn: Set<string>,
+  nodes: MapNode[],
+  lanes: MapLane[],
+  edges: MapEdge[],
+): void {
+  const known = new Set<string>(ROLES);
+  const other = committee.seats.filter(
+    (seat) => !known.has(seat.role) && !drawn.has(seat.person_id),
+  );
+  if (other.length === 0) {
+    return;
   }
+  for (const seat of other) {
+    drawn.add(seat.person_id);
+    nodes.push(personNode(seat, copy));
+    edges.push(...routeEdges(seat, copy));
+    if (deal) {
+      edges.push(dealEdge(seat.person_id, deal.deal_id, copy));
+    }
+  }
+  lanes.push({
+    id: "other",
+    column: "right",
+    label: copy.otherRoles,
+    nodeIds: other.map((seat) => `p:${seat.person_id}`),
+  });
+}
+
+/** dealEdge joins one seat to the deal it sits on. */
+function dealEdge(personId: string, dealId: string, copy: MapCopy): MapEdge {
+  return {
+    id: `m:${personId}`,
+    from: `p:${personId}`,
+    to: `d:${dealId}`,
+    kind: "membership",
+    words: copy.onDeal,
+  };
 }

@@ -1564,13 +1564,16 @@ export const de = {
   "co.people.map.ourSide": "Unsere Seite",
   "co.people.map.account": "Konto",
   "co.people.map.missing": "{role} fehlt",
-  "co.people.map.assign": "Diese Rolle ist unbesetzt",
   "co.people.map.awaiting": "wartet auf Antwort",
   "co.people.map.replied": "sie haben geantwortet",
   "co.people.map.never": "nie angeschrieben",
   "co.people.map.onDeal": "auf dem Deal",
-  "co.people.map.scope":
-    "{shown} von {total} Kontakten · nur der gewählte Deal.",
+  "co.people.map.routesWithheld":
+    "Wer sie erreicht, ist für dich nicht sichtbar",
+  "co.people.map.assignHint": "Niemand trägt diesen Deal",
+  "co.people.map.scope": "{count} im Buying-Team · nur der gewählte Deal.",
+  "co.people.map.scopePartial":
+    "{count} im Buying-Team · {hidden} weitere für dich nicht sichtbar.",
   "co.reach.answered": "Antwortet",
   "co.reach.silent": "Keine Antwort",
   "co.reach.untried": "Nie angesprochen",
