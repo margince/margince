@@ -1075,7 +1075,7 @@ public.capture_thread_verdict.capture_thread_verdict_pkey PRIMARY KEY (id)
 public.capture_thread_verdict.capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
 public.capture_thread_verdict.capture_thread_verdict_thread_user_key UNIQUE (thread_key, user_id)
 public.capture_thread_verdict.capture_thread_verdict_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
-public.capture_thread_verdict.claimed_by text gen=- def=-
+public.capture_thread_verdict.claimed_by uuid gen=- def=-
 public.capture_thread_verdict.claimed_until timestamp with time zone gen=- def=-
 public.capture_thread_verdict.confidence numeric gen=- def=-
 public.capture_thread_verdict.created_at timestamp with time zone NOT NULL gen=- def=now()

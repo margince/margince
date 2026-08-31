@@ -177,6 +177,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		CaptureTraceSweepWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&captureTraceSweepWorkspaceWorker{}).Work(ctx, &river.Job[CaptureTraceSweepWorkspaceArgs]{})
 		},
+		ConfidentialityVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&confidentialityVerdictWorkspaceWorker{}).Work(ctx, &river.Job[ConfidentialityVerdictWorkspaceArgs]{})
+		},
 		CounterpartyVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&counterpartyVerdictWorkspaceWorker{}).Work(ctx, &river.Job[CounterpartyVerdictWorkspaceArgs]{})
 		},

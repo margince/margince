@@ -94,6 +94,16 @@ tasks:
     company_context: none
     doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail."
 
+  capture_confidentiality_verdict:
+    ladder: [local_small]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [thread]
+    no_payload: true
+    company_context: none
+    doc: "Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private."
+
   signal_extract:
     ladder: [cheap_cloud, premium]
     execution_mode: background
@@ -118,6 +128,7 @@ tasks:
     execution_mode: interactive
     on_budget_exhausted: degrade
     status: planned
+    company_context: none
     doc: "PLANNED — the reading and its gate exist (compose/proposeroles) and are tested offline; the site arrives with the endpoint that calls them, because a planned task declares no site and therefore cannot present as certified. Read the buying roles out of what a contact has actually written — who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and a snippet that is not in the source it names is dropped rather than trusted. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the record carries the evidence so a reader can check it and the mark stays until a human confirms."
 
   enrich:

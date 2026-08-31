@@ -5,6 +5,7 @@ package ai
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -181,87 +182,48 @@ func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
 // the ladder it can't reach; a task with at least one bound rung
 // (fallback or primary) is silent.
 func TestUnboundLadderWarnings(t *testing.T) {
-	allTiers := map[Tier]ProviderConfig{
-		TierLocalSmall: {Provider: "fake"},
-		TierCheapCloud: {Provider: "fake"},
-		TierPremium:    {Provider: "fake"},
-		TierLocalLarge: {Provider: "fake"},
+	// The property, not a transcript of the message.
+	//
+	// This used to be a hand-written list of every task and its ladder, which
+	// went stale the moment a ladder changed and failed a new task for
+	// existing. Deriving the expectation from taskLadders fixed the staleness
+	// and bought nothing: re-implementing the same loop over the same map
+	// produces a matching expectation for any behaviour at all. So the test
+	// asks what the warning is FOR — a task with no bound rung is named, a task
+	// with one is not — against tiers chosen so the two sets are non-empty and
+	// different.
+	bound := map[Tier]ProviderConfig{TierPremium: {Provider: "fake"}}
+	got := RoutingConfig{Tiers: bound}.UnboundLadderWarnings()
+
+	var wantNamed, wantSilent []Task
+	for _, task := range AllTasks() {
+		if slices.Contains(taskLadders[task], TierPremium) {
+			wantSilent = append(wantSilent, task)
+			continue
+		}
+		wantNamed = append(wantNamed, task)
 	}
-	cases := []struct {
-		name  string
-		tiers map[Tier]ProviderConfig
-		want  []string
-	}{
-		{
-			name:  "fully bound config warns about nothing",
-			tiers: allTiers,
-			want:  nil,
-		},
-		{
-			name: "one unbound rung but another bound on the same ladder stays silent",
-			// TaskAgentLoop's ladder is {cheap_cloud, premium}: cheap_cloud is
-			// missing but premium is bound, so the task still has a route.
-			tiers: map[Tier]ProviderConfig{
-				TierPremium: {Provider: "fake"},
-			},
-			want: []string{
-				"task capture_classify: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-				"task capture_counterparty_verdict: no bound tier on ladder [local_small]; calls will be refused",
-				"task enrich: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-			},
-		},
-		{
-			name:  "ladder with zero bound rungs warns naming the task and its ladder",
-			tiers: map[Tier]ProviderConfig{},
-			want: []string{
-				"task agent_loop: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task brief_ranking: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
-				"task capture_classify: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-				"task capture_counterparty_verdict: no bound tier on ladder [local_small]; calls will be refused",
-				"task cert_judge: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
-				"task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task corpus_ask: no bound tier on ladder [premium]; calls will be refused",
-				"task deal_health: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task document_extract: no bound tier on ladder [premium]; calls will be refused",
-				"task draft_reply: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task enrich: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-				"task growth_fit: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task nl_search: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task offer_draft: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task rate_extract: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
-				"task signal_extract: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task site_extract: no bound tier on ladder [premium]; calls will be refused",
-				"task site_fact_extract: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task site_triage: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task summarize: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task transcript: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task transcript_propose: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task voice_build: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task weekly_review: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-			},
-		},
+	if len(wantNamed) == 0 || len(wantSilent) == 0 {
+		t.Fatalf("the chosen binding leaves %d tasks unbound and %d bound; the test proves nothing "+
+			"unless both sets have members", len(wantNamed), len(wantSilent))
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := RoutingConfig{Tiers: tc.tiers}
-			got := cfg.UnboundLadderWarnings()
-			if len(got) != len(tc.want) {
-				t.Fatalf("got %d warnings, want %d:\ngot:  %v\nwant: %v", len(got), len(tc.want), got, tc.want)
-			}
-			for i := range got {
-				if got[i] != tc.want[i] {
-					t.Fatalf("warning %d: got %q, want %q", i, got[i], tc.want[i])
-				}
-			}
-		})
+	for _, task := range wantNamed {
+		if !slices.ContainsFunc(got, func(w string) bool { return strings.Contains(w, "task "+string(task)+":") }) {
+			t.Errorf("task %s has no bound rung and no warning names it; its calls will be refused silently", task)
+		}
+	}
+	for _, task := range wantSilent {
+		if slices.ContainsFunc(got, func(w string) bool { return strings.Contains(w, "task "+string(task)+":") }) {
+			t.Errorf("task %s has a bound rung and was warned about anyway", task)
+		}
+	}
+	// And a binding with nothing in it warns about everything, which is the
+	// arm that catches a warning loop that silently stopped running.
+	if none := (RoutingConfig{Tiers: map[Tier]ProviderConfig{}}).UnboundLadderWarnings(); len(none) != len(AllTasks()) {
+		t.Errorf("an empty binding produced %d warnings for %d tasks, want one each", len(none), len(AllTasks()))
 	}
 }
 
-// TestParseRoutingEmbedDimensions pins the embeddings-lane `dimensions`
-// contract (spec ai-operational-spec.md §1.4, embed-identity phase 2): unset
-// (0) defaults to 1536 (a gemini-recommended width) — while anything outside
-// [1,2000] fails at startup, the same boot-loud-not-3am-surprise posture
-// every other routing-config defect gets.
 func TestParseRoutingEmbedDimensions(t *testing.T) {
 	const base = `
 profile: eu_hosted

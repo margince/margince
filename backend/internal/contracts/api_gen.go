@@ -585,32 +585,33 @@ func (e AiActivityItemState) Valid() bool {
 
 // Defines values for AiActivityKind.
 const (
-	AiActivityKindBriefRanking               AiActivityKind = "brief_ranking"
-	AiActivityKindCaptureClassify            AiActivityKind = "capture_classify"
-	AiActivityKindCaptureCounterpartyVerdict AiActivityKind = "capture_counterparty_verdict"
-	AiActivityKindCertJudge                  AiActivityKind = "cert_judge"
-	AiActivityKindColdStart                  AiActivityKind = "cold_start"
-	AiActivityKindCorpusAsk                  AiActivityKind = "corpus_ask"
-	AiActivityKindDealHealth                 AiActivityKind = "deal_health"
-	AiActivityKindDocumentExtract            AiActivityKind = "document_extract"
-	AiActivityKindDraftReply                 AiActivityKind = "draft_reply"
-	AiActivityKindEnrich                     AiActivityKind = "enrich"
-	AiActivityKindGrowthFit                  AiActivityKind = "growth_fit"
-	AiActivityKindMorningBrief               AiActivityKind = "morning_brief"
-	AiActivityKindNlSearch                   AiActivityKind = "nl_search"
-	AiActivityKindOfferDraft                 AiActivityKind = "offer_draft"
-	AiActivityKindOvernightAtRiskSweep       AiActivityKind = "overnight_at_risk_sweep"
-	AiActivityKindProposeRoles               AiActivityKind = "propose_roles"
-	AiActivityKindRateExtract                AiActivityKind = "rate_extract"
-	AiActivityKindSignalExtract              AiActivityKind = "signal_extract"
-	AiActivityKindSiteExtract                AiActivityKind = "site_extract"
-	AiActivityKindSiteFactExtract            AiActivityKind = "site_fact_extract"
-	AiActivityKindSiteTriage                 AiActivityKind = "site_triage"
-	AiActivityKindSummarize                  AiActivityKind = "summarize"
-	AiActivityKindTranscript                 AiActivityKind = "transcript"
-	AiActivityKindTranscriptPropose          AiActivityKind = "transcript_propose"
-	AiActivityKindVoiceBuild                 AiActivityKind = "voice_build"
-	AiActivityKindWeeklyReview               AiActivityKind = "weekly_review"
+	AiActivityKindBriefRanking                  AiActivityKind = "brief_ranking"
+	AiActivityKindCaptureClassify               AiActivityKind = "capture_classify"
+	AiActivityKindCaptureConfidentialityVerdict AiActivityKind = "capture_confidentiality_verdict"
+	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
+	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
+	AiActivityKindColdStart                     AiActivityKind = "cold_start"
+	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
+	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
+	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
+	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
+	AiActivityKindEnrich                        AiActivityKind = "enrich"
+	AiActivityKindGrowthFit                     AiActivityKind = "growth_fit"
+	AiActivityKindMorningBrief                  AiActivityKind = "morning_brief"
+	AiActivityKindNlSearch                      AiActivityKind = "nl_search"
+	AiActivityKindOfferDraft                    AiActivityKind = "offer_draft"
+	AiActivityKindOvernightAtRiskSweep          AiActivityKind = "overnight_at_risk_sweep"
+	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
+	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
+	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
+	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
+	AiActivityKindSiteTriage                    AiActivityKind = "site_triage"
+	AiActivityKindSummarize                     AiActivityKind = "summarize"
+	AiActivityKindTranscript                    AiActivityKind = "transcript"
+	AiActivityKindTranscriptPropose             AiActivityKind = "transcript_propose"
+	AiActivityKindVoiceBuild                    AiActivityKind = "voice_build"
+	AiActivityKindWeeklyReview                  AiActivityKind = "weekly_review"
 )
 
 // Valid indicates whether the value is a known member of the AiActivityKind enum.
@@ -619,6 +620,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindBriefRanking:
 		return true
 	case AiActivityKindCaptureClassify:
+		return true
+	case AiActivityKindCaptureConfidentialityVerdict:
 		return true
 	case AiActivityKindCaptureCounterpartyVerdict:
 		return true

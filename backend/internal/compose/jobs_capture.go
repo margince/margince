@@ -131,6 +131,16 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	addDeclaredWorker[CounterpartyVerdictWorkspaceArgs](reg, &counterpartyVerdictWorkspaceWorker{
 		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, log),
 	})
+	// The confidentiality verdict, registered unconditionally for a related but
+	// distinct reason: a deployment with no model bound holds every thread, and
+	// the RETIRING stage is what moves a thread that spent its attempts to a
+	// terminal `unsure` instead of leaving it claimable forever. Gating the
+	// worker on a brain would leave exactly that deployment with a backlog
+	// nothing ever ends.
+	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{pool: pool})
+	addDeclaredWorker[ConfidentialityVerdictWorkspaceArgs](reg, &confidentialityVerdictWorkspaceWorker{
+		engine: NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
+	})
 	// The trace sweep, registered unconditionally and deliberately so: it is
 	// what makes the 24-hour retention true, and under the trace_payloads
 	// posture that retention is a promise about message content. A deployment

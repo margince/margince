@@ -92,6 +92,14 @@ type ModelPath struct {
 	// classify labels a known contact's mail for attention, this decides
 	// whether a stranger becomes a record at all.
 	CaptureCounterpartyVerdict completer
+	// CaptureConfidentialityVerdict decides what one THREAD is about, so a
+	// classified mailbox can open the ordinary conversations instead of holding
+	// everything. A separate task from CaptureCounterpartyVerdict because it
+	// answers a different question about a different subject: that one decides
+	// whether a stranger becomes a record, this decides whether a colleague may
+	// read a conversation. Its ladder is local-only, so a deployment that binds
+	// no local rung holds every thread rather than sending mail to a cloud.
+	CaptureConfidentialityVerdict completer
 	// SignalExtract is the SIG-F-3 lane that reads the material events out of
 	// a settled conversation. It is a separate task from CaptureClassify
 	// because it answers a different question at a different price: classify
@@ -251,30 +259,31 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		return routerBrain{router: router, task: task, companyContext: companyContext}
 	}
 	return ModelPath{
-		router:                     router,
-		AgentLoop:                  agentBrain{router: router, companyContext: companyContext},
-		ColdStart:                  brain(ai.TaskColdStart),
-		SiteExtract:                brain(ai.TaskSiteExtract),
-		SiteFactExtract:            brain(ai.TaskSiteFactExtract),
-		SiteTriage:                 brain(ai.TaskSiteTriage),
-		RateExtract:                brain(ai.TaskRateExtract),
-		BriefRanking:               brain(ai.TaskBriefRanking),
-		Summarize:                  brain(ai.TaskSummarize),
-		DealHealth:                 brain(ai.TaskDealHealth),
-		CorpusAsk:                  brain(ai.TaskCorpusAsk),
-		GrowthFit:                  brain(ai.TaskGrowthFit),
-		DraftReply:                 brain(ai.TaskDraftReply),
-		OfferDraft:                 brain(ai.TaskOfferDraft),
-		CaptureClassify:            brain(ai.TaskCaptureClassify),
-		CaptureCounterpartyVerdict: brain(ai.TaskCaptureCounterpartyVerdict),
-		SignalExtract:              brain(ai.TaskSignalExtract),
-		WeeklyReview:               brain(ai.TaskWeeklyReview),
-		TranscriptPropose:          brain(ai.TaskTranscriptPropose),
-		DocumentExtract:            brain(ai.TaskDocumentExtract),
-		Enrich:                     brain(ai.TaskEnrich),
-		VoiceBuild:                 brain(ai.TaskVoiceBuild),
-		Embedder:                   router,
-		InvalidateCache:            router.Invalidate,
+		router:                        router,
+		AgentLoop:                     agentBrain{router: router, companyContext: companyContext},
+		ColdStart:                     brain(ai.TaskColdStart),
+		SiteExtract:                   brain(ai.TaskSiteExtract),
+		SiteFactExtract:               brain(ai.TaskSiteFactExtract),
+		SiteTriage:                    brain(ai.TaskSiteTriage),
+		RateExtract:                   brain(ai.TaskRateExtract),
+		BriefRanking:                  brain(ai.TaskBriefRanking),
+		Summarize:                     brain(ai.TaskSummarize),
+		DealHealth:                    brain(ai.TaskDealHealth),
+		CorpusAsk:                     brain(ai.TaskCorpusAsk),
+		GrowthFit:                     brain(ai.TaskGrowthFit),
+		DraftReply:                    brain(ai.TaskDraftReply),
+		OfferDraft:                    brain(ai.TaskOfferDraft),
+		CaptureClassify:               brain(ai.TaskCaptureClassify),
+		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
+		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
+		SignalExtract:                 brain(ai.TaskSignalExtract),
+		WeeklyReview:                  brain(ai.TaskWeeklyReview),
+		TranscriptPropose:             brain(ai.TaskTranscriptPropose),
+		DocumentExtract:               brain(ai.TaskDocumentExtract),
+		Enrich:                        brain(ai.TaskEnrich),
+		VoiceBuild:                    brain(ai.TaskVoiceBuild),
+		Embedder:                      router,
+		InvalidateCache:               router.Invalidate,
 	}
 }
 
