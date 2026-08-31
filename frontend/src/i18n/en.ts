@@ -1696,6 +1696,21 @@ export const en = {
   "co.tech.lane.homepage": "Homepage",
   "signal.kind.technical_change": "Technology changed",
   "co.factField.quantified_outcome": "Result",
+  "co.facts.title": "Facts about this company",
+  "co.facts.empty":
+    "Nothing on file yet. Read the website, or state what you already know.",
+  "co.facts.add": "Add fact",
+  "co.facts.addField": "What kind of fact",
+  "co.facts.addValue": "What it says",
+  "co.facts.addSave": "Save fact",
+  "co.facts.addCancel": "Cancel",
+  "co.facts.addIncomplete":
+    "Pick what kind of fact this is and type what it says.",
+  "co.facts.remove": "Remove {value}",
+  "co.facts.removeTitle": "Remove this fact?",
+  "co.facts.removeConfirm": "Remove",
+  "co.facts.removeAsk":
+    "{field} is recorded as \u201c{value}\u201d. Removing it says this is not a fact about the company. A later read of their website may state it again.",
   "co.facts.showAll": "Show all {count}",
   "co.facts.showLess": "Show fewer",
   "co.tags.lists": "Lists",
@@ -1739,7 +1754,6 @@ export const en = {
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
   "org.domains": "Domains",
-  "org.facts": "Facts read from the site",
   "org.factCategory.company": "Company",
   "org.factCategory.offering": "Offering",
   "org.factCategory.market": "Market",

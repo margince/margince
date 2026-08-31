@@ -1657,6 +1657,21 @@ export const de = {
   "co.tech.lane.homepage": "Startseite",
   "signal.kind.technical_change": "Technik geändert",
   "co.factField.quantified_outcome": "Ergebnis",
+  "co.facts.title": "Fakten über diese Firma",
+  "co.facts.empty":
+    "Noch nichts erfasst. Lesen Sie die Website, oder tragen Sie ein, was Sie bereits wissen.",
+  "co.facts.add": "Fakt hinzufügen",
+  "co.facts.addField": "Art des Fakts",
+  "co.facts.addValue": "Was er besagt",
+  "co.facts.addSave": "Fakt speichern",
+  "co.facts.addCancel": "Abbrechen",
+  "co.facts.addIncomplete":
+    "Wählen Sie die Art des Fakts und tragen Sie ein, was er besagt.",
+  "co.facts.remove": "{value} entfernen",
+  "co.facts.removeTitle": "Diesen Fakt entfernen?",
+  "co.facts.removeConfirm": "Entfernen",
+  "co.facts.removeAsk":
+    "{field} ist als \u201e{value}\u201c erfasst. Ihn zu entfernen bedeutet: Das ist kein Fakt über die Firma. Ein späteres Lesen der Website kann ihn erneut erfassen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
   "co.tags.lists": "Listen",
@@ -1700,7 +1715,6 @@ export const de = {
   "co.overlayFallback":
     "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
   "org.domains": "Domains",
-  "org.facts": "Von der Website gelesene Fakten",
   "org.factCategory.company": "Unternehmen",
   "org.factCategory.offering": "Angebot",
   "org.factCategory.market": "Markt",

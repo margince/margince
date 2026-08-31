@@ -9,6 +9,7 @@ import { Callout } from "../design-system/callout";
 import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid, SidecarFieldRow } from "./companyraildetails";
 import { useOrgProfileFields } from "./evidenceverdict";
@@ -64,9 +65,13 @@ const NARRATIVE_FIELDS = [
  */
 export function CompanyProfileForm({
   org,
+  onOpenHistory,
   tools,
 }: Readonly<{
   org: Organization;
+  // Opens the record's own history drawer, for a reader following an evidence
+  // mark back to what changed.
+  onOpenHistory?: () => void;
   // The account's own tooling — custom fields, group rollup, the site read,
   // the technical profile. Passed in rather than built here: they are the
   // caller's existing cards and this file has no business knowing what is in
@@ -129,6 +134,15 @@ export function CompanyProfileForm({
           </FieldGrid>
         </PanelBody>
       </Panel>
+      {/* Facts are their own panel: many-valued, correctable one row at a
+          time, and now addable and removable — which is a different act from
+          stating a field, and needs the same write state this form derived. */}
+      <CompanyFactsPanel
+        orgId={org.id}
+        canEdit={canEdit}
+        reasonId={reason ? reasonId : undefined}
+        onOpenHistory={onOpenHistory}
+      />
       {tools}
     </div>
   );

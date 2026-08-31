@@ -935,13 +935,13 @@ describe("CompanyScreen — facts card (B6)", () => {
     await openProfile();
 
     await waitFor(() =>
-      expect(screen.getByText("Facts read from the site")).toBeTruthy(),
+      expect(screen.getByText("Facts about this company")).toBeTruthy(),
     );
     // Scoped to the facts card: the right rail carries a Signals card of its
     // own, and "which categories did the site read produce" is a question
     // about this card, not about the page.
     const factsCard = screen
-      .getByText("Facts read from the site")
+      .getByText("Facts about this company")
       .closest("section");
     if (!factsCard) {
       throw new Error("the facts card has no section wrapper");
@@ -2070,7 +2070,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       headings().some((one) => one?.startsWith(title));
     await waitFor(() => expect(opensWith("Details")).toBe(true));
     expect(opensWith("What they do")).toBe(true);
-    expect(opensWith("Where this came from")).toBe(true);
+    expect(opensWith("Facts about this company")).toBe(true);
     expect(opensWith("Data & tools")).toBe(true);
     releaseView?.();
   });
