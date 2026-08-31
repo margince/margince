@@ -21,6 +21,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
 // DigestPayload is the stored CAP-DDL-6 payload — the wire shape verbatim.
@@ -106,6 +108,11 @@ func (r *Registry) BuildDigests(ctx context.Context, digestDate time.Time) error
 
 // connectedUsers lists the workspace's users with a live capture
 // connection — the digest audience.
+//
+// EVERY connected seat, and the counts above are workspace-wide, which is why
+// they carry the audience clause: without it a colleague's held mail would be
+// counted in this seat's digest. Nothing of the message reaches the reader, and
+// the number still says it arrived.
 func connectedUsers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT user_id FROM capture_connection
@@ -137,7 +144,8 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 	// able to see.
 	err := tx.QueryRow(ctx, `
 		SELECT
-		  (SELECT count(*) FROM activity WHERE captured_by LIKE 'connector:%' AND kind = 'email' AND created_at >= $1),
+		  (SELECT count(*) FROM activity a
+		    WHERE a.captured_by LIKE 'connector:%' AND a.kind = 'email' AND a.created_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
 		  (SELECT count(*) FROM person WHERE captured_by LIKE 'connector:%' AND created_at >= $1),
 		  -- Companies now arrive from the domain-triage verdict, not from the
 		  -- connector: capture withholds the organization until a site read
@@ -147,8 +155,10 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		  (SELECT count(*) FROM organization
 		    WHERE (captured_by LIKE 'connector:%' OR source LIKE 'domain\_triage:%')
 		      AND created_at >= $1),
-		  (SELECT count(*) FROM activity WHERE capture_label = 'commitment' AND capture_labeled_at >= $1),
-		  (SELECT count(*) FROM activity WHERE capture_label = 'meeting' AND capture_labeled_at >= $1),
+		  (SELECT count(*) FROM activity a
+		    WHERE a.capture_label = 'commitment' AND a.capture_labeled_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
+		  (SELECT count(*) FROM activity a
+		    WHERE a.capture_label = 'meeting' AND a.capture_labeled_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
 		  (SELECT count(*) FROM activity WHERE capture_label = 'noise' AND capture_labeled_at >= $1)`,
 		since).Scan(
 		&p.Capture.ActivitiesCreated, &p.Capture.PeopleCreated, &p.Capture.OrganizationsCreated,

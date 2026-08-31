@@ -342,13 +342,13 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.person_id = l.person_id
 		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2
+		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
 		           AND ($3::timestamptz IS NULL OR i.occurred_at <= $3)
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.person_id = ANY($1) AND a.kind IN `+strengthKinds+` AND a.archived_at IS NULL
+		WHERE l.person_id = ANY($1) AND a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 		  -- NULL means no upper bound, so the live score is unchanged; an
 		  -- as-of read passes the instant it is asking about.
 		  AND ($3::timestamptz IS NULL OR a.occurred_at <= $3)

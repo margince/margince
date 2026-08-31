@@ -376,7 +376,7 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 	err = tx.QueryRow(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.archived_at IS NULL
+		WHERE a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, in.dealID).Scan(&recent)
 	switch {
@@ -388,7 +388,10 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 		in.mostRecentActivityID = &recent
 	}
 
-	// Commitments evidence: the open overdue tasks on the deal.
+	// Commitments evidence: the open overdue tasks on the deal. No audience
+	// clause, and that is the difference rather than an omission: a task is
+	// hand-logged work, never a captured message, so it has no importing
+	// mailbox and nothing to hold it from.
 	overdue, err := collectIDs(tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
