@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OnboardingStage } from "../design-system/onboarding-stage";
@@ -374,6 +375,44 @@ const REDIRECT_PATHS: ReadonlyArray<{ label: MessageKey; path: string }> = [
   },
 ];
 
+/**
+ * What the organization runs on — ONE answer covering mail and sign-in.
+ *
+ * They are separate mechanisms in the server and the same fact about a company:
+ * an organization on Workspace reads mail through a Google app and signs its
+ * people in with Google accounts, through that same app and the same console
+ * entry. Two questions would ask somebody to state one fact twice and then keep
+ * the two answers agreeing.
+ */
+const PLATFORMS = ["google", "microsoft", "other"] as const;
+type Platform = (typeof PLATFORMS)[number];
+
+// Typed by `Platform` in both directions: an answer with no copy fails, and
+// copy for an answer that does not exist fails too. `operator` is absent on the
+// Google path, and its absence is the statement — that path has nothing for
+// somebody else to do, because the form below it is the whole of the work.
+const PLATFORM_COPY: Readonly<
+  Record<
+    Platform,
+    { label: MessageKey; what: MessageKey; operator?: MessageKey }
+  >
+> = {
+  google: {
+    label: "firstRun.platform.google",
+    what: "firstRun.platform.googleWhat",
+  },
+  microsoft: {
+    label: "firstRun.platform.microsoft",
+    what: "firstRun.platform.microsoftWhat",
+    operator: "firstRun.platform.microsoftOperator",
+  },
+  other: {
+    label: "firstRun.platform.other",
+    what: "firstRun.platform.otherWhat",
+    operator: "firstRun.platform.otherOperator",
+  },
+};
+
 /** Google's own console, where the app is created and the two values are read. */
 const GOOGLE_CREDENTIALS_CONSOLE =
   "https://console.cloud.google.com/apis/credentials";
@@ -421,10 +460,19 @@ function GoogleAppHelp() {
 /** The Google step: the OAuth app a mailbox connection is made through. */
 function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
   const t = useT();
+  const [platform, setPlatform] = useState<Platform>("google");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const save = useSetGoogleApp();
+  // The app is what this step WRITES, whatever the platform answer is — so a
+  // reader on the Microsoft or IMAP path can still finish by pasting one, which
+  // is the only way past the gate today. The fields are theirs to use rather
+  // than hidden: hiding the one control that can complete the step would leave
+  // them with a refusal and no way to answer it.
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
+  // What this answer leaves for whoever runs the server. Absent on the Google
+  // path, which is also what says whether the gap notice below belongs here.
+  const operatorWork = PLATFORM_COPY[platform].operator;
 
   return (
     <StepForm busy={save.isPending} onBusy={onBusy}>
@@ -458,6 +506,33 @@ function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
         }
       >
         <PanelBody>
+          <ChoiceList<Platform>
+            legend={t("firstRun.platform.legend")}
+            hideLegend
+            value={platform}
+            disabled={save.isPending}
+            onChange={setPlatform}
+            choices={PLATFORMS.map((id) => ({
+              value: id,
+              label: t(PLATFORM_COPY[id].label),
+              description: t(PLATFORM_COPY[id].what),
+            }))}
+          />
+          {/* What the two answers that need no app HERE still need, and where.
+              It is not this screen's work to do, so the reader is told whose it
+              is rather than left with an empty form. */}
+          {operatorWork === undefined ? null : (
+            <Callout tone="info">{t(operatorWork)}</Callout>
+          )}
+          {/* The gap, stated. `google_app` is blocking on the server whatever
+              the answer above, so these two paths cannot finish first run — and
+              saying so beside the fields that CAN finish it is the only honest
+              shape while that is true. */}
+          {operatorWork === undefined ? null : (
+            <Callout tone="warn">
+              {t("firstRun.platform.stillNeedsGoogle")}
+            </Callout>
+          )}
           <GoogleAppHelp />
           {save.error && (
             <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
@@ -544,8 +619,8 @@ export function InstallationSetup() {
       lit={modelBound(setup.data)}
       coreState={busy ? "working" : "idle"}
       eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
-      title={t(ai ? "firstRun.ai.title" : "firstRun.google.title")}
-      sub={t(ai ? "firstRun.ai.sub" : "firstRun.google.sub")}
+      title={t(ai ? "firstRun.ai.title" : "firstRun.platform.title")}
+      sub={t(ai ? "firstRun.ai.sub" : "firstRun.platform.sub")}
     >
       {ai ? <AiStep onBusy={setBusy} /> : <GoogleStep onBusy={setBusy} />}
     </OnboardingStage>

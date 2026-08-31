@@ -121,15 +121,19 @@ function mount(
 describe("the first-run setup gate", () => {
   // The order is the product decision the server pins: somebody with no model
   // bound cannot be shown a cold start, while the mailbox can wait.
-  it("asks for the model binding before the Google app", async () => {
+  it("asks for the model binding before the platform question", async () => {
     mount(setupReport(false, false));
     expect(await screen.findByText("Choose a model provider")).toBeTruthy();
-    expect(screen.queryByText("Connect a Google app")).toBeNull();
+    expect(
+      screen.queryByText("What does your organization run on?"),
+    ).toBeNull();
   });
 
-  it("asks for the Google app once the models are bound", async () => {
+  it("asks what the organization runs on once the models are bound", async () => {
     mount(setupReport(true, false));
-    expect(await screen.findByText("Connect a Google app")).toBeTruthy();
+    expect(
+      await screen.findByText("What does your organization run on?"),
+    ).toBeTruthy();
     expect(screen.queryByText("Choose a model provider")).toBeNull();
   });
 
@@ -140,7 +144,9 @@ describe("the first-run setup gate", () => {
     await waitFor(() =>
       expect(screen.queryByText("Choose a model provider")).toBeNull(),
     );
-    expect(screen.queryByText("Connect a Google app")).toBeNull();
+    expect(
+      screen.queryByText("What does your organization run on?"),
+    ).toBeNull();
   });
 
   // The key BEFORE the binding: a binding whose vendor has no key reads as
@@ -232,7 +238,7 @@ describe("the first-run setup gate", () => {
   it("sends the Google app as one pair", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(true, false));
-    await screen.findByText("Connect a Google app");
+    await screen.findByText("What does your organization run on?");
     await user.type(
       screen.getByLabelText("Client ID"),
       "123-abc.apps.googleusercontent.com",

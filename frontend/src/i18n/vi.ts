@@ -6050,6 +6050,25 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
+  "firstRun.platform.title": "Tổ chức của bạn đang chạy trên nền tảng nào?",
+  "firstRun.platform.sub":
+    "Một câu trả lời quyết định cách thư đến Margince và cách mọi người đăng nhập. Có thể đổi sau ở Cài đặt.",
+  "firstRun.platform.legend": "Nền tảng của tổ chức này",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Thư, lịch và đăng nhập qua một app Google của chính bạn. Mọi thứ được đọc bằng thông tin đăng nhập của tổ chức bạn.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Thư và lịch qua Microsoft Graph. Đăng nhập bằng tài khoản Microsoft chưa được xây dựng, nên mọi người đăng nhập bằng email và mật khẩu.",
+  "firstRun.platform.other": "Không dùng cả hai",
+  "firstRun.platform.otherWhat":
+    "Mỗi hộp thư kết nối qua IMAP bằng thông tin riêng, nhập lúc kết nối. Mọi người đăng nhập bằng email và mật khẩu.",
+  "firstRun.platform.microsoftOperator":
+    "Không có gì để nhập ở đây. App Microsoft là cấu hình triển khai: người vận hành server đặt MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET và MARGINCE_GRAPH_TENANT trước khi khởi động.",
+  "firstRun.platform.otherOperator":
+    "Không có gì để nhập ở đây. Hộp thư IMAP tự mang host, user và mật khẩu của nó, và những giá trị đó được nhập trên chính hộp thư ở Cài đặt → Tích hợp.",
+  "firstRun.platform.stillNeedsGoogle":
+    "Lần chạy đầu vẫn hỏi một app Google bất kể bạn chọn gì ở trên, nên hướng này chưa hoàn tất được. Hoặc dán một app Google bên dưới, hoặc để người vận hành server export MARGINCE_GMAIL_CLIENT_ID và MARGINCE_GMAIL_CLIENT_SECRET rồi khởi động lại.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
@@ -6077,9 +6096,6 @@ export const vi = {
   "aiRates.unpricedDetail":
     "Mô hình vẫn phục vụ được. Các lệnh gọi sẽ báo là chưa có giá, nên không xuất hiện trong mức dùng và chi phí cho tới khi ai đó thêm đơn giá ở Cài đặt → AI.",
   "aiRates.priced": "Giá áp dụng từ {date}",
-  "firstRun.google.title": "Kết nối ứng dụng Google",
-  "firstRun.google.sub":
-    "Hộp thư được kết nối qua ứng dụng Google OAuth của bạn, nên thư được đọc bằng thông tin xác thực của tổ chức bạn. Có thể đổi sau trong Cài đặt.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",

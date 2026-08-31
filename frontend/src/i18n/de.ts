@@ -6114,6 +6114,25 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "firstRun.platform.title": "Womit arbeitet Ihre Organisation?",
+  "firstRun.platform.sub":
+    "Eine Antwort entscheidet, wie Mail zu Margince kommt und wie sich Leute anmelden. Später unter Einstellungen änderbar.",
+  "firstRun.platform.legend": "Die Plattform dieser Organisation",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, Kalender und Anmeldung über eine eigene Google-App. Alles wird mit den Zugangsdaten Ihrer Organisation gelesen.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail und Kalender über Microsoft Graph. Anmeldung mit einem Microsoft-Konto ist noch nicht gebaut, daher melden sich Leute mit E-Mail-Adresse und Passwort an.",
+  "firstRun.platform.other": "Keins von beiden",
+  "firstRun.platform.otherWhat":
+    "Jedes Postfach verbindet sich per IMAP mit eigenen Zugangsdaten, die beim Verbinden eingegeben werden. Anmeldung mit E-Mail-Adresse und Passwort.",
+  "firstRun.platform.microsoftOperator":
+    "Hier ist nichts einzutragen. Die Microsoft-App ist Deployment-Konfiguration: wer den Server betreibt, setzt MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET und MARGINCE_GRAPH_TENANT vor dem Start.",
+  "firstRun.platform.otherOperator":
+    "Hier ist nichts einzutragen. Ein IMAP-Postfach bringt Host, Benutzer und Passwort selbst mit, und die werden am Postfach selbst unter Einstellungen → Integrationen eingegeben.",
+  "firstRun.platform.stillNeedsGoogle":
+    "Der Erststart fragt unabhängig von dieser Antwort weiterhin nach einer Google-App, dieser Weg lässt sich also noch nicht abschließen. Entweder unten eine Google-App einfügen, oder wer den Server betreibt exportiert MARGINCE_GMAIL_CLIENT_ID und MARGINCE_GMAIL_CLIENT_SECRET und startet ihn neu.",
   "firstRun.google.helpToggle": "Woher bekomme ich das?",
   "firstRun.google.helpStep1":
     "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
@@ -6141,9 +6160,6 @@ export const de = {
   "aiRates.unpricedDetail":
     "Aufrufe laufen trotzdem. Sie werden als nicht bepreist gemeldet und fehlen damit in Verbrauch und Kosten, bis jemand unter Einstellungen → KI einen Satz hinterlegt.",
   "aiRates.priced": "Preis gültig ab {date}",
-  "firstRun.google.title": "Google-App verbinden",
-  "firstRun.google.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen. Später unter Einstellungen änderbar.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client-ID",

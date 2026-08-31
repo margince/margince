@@ -28,6 +28,12 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Same word in Vietnamese, and it is the right one: the label on the redirect
   // URI an operator copies for mail.
   "firstRun.google.helpRedirectMail",
+  // The two platforms' own names. "Google Workspace" and "Microsoft 365" are
+  // what the vendors call them in every market they sell in, and an operator
+  // matching this answer against their own contract needs the name on the
+  // contract.
+  "firstRun.platform.google",
+  "firstRun.platform.microsoft",
   // Two placeholders and a dash. Every word in the line comes from elsewhere —
   // the dimension's own label and the sentence the server wrote — so there is
   // nothing here for a locale to translate.

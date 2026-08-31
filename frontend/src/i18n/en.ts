@@ -6169,9 +6169,36 @@ export const en = {
   "aiRates.unpricedDetail":
     "It will still serve calls. They report as unpriced, so they are missing from usage and spend until someone adds a rate under Settings → AI.",
   "aiRates.priced": "Priced from {date}",
-  "firstRun.google.title": "Connect a Google app",
-  "firstRun.google.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials. You can change this later under Settings.",
+  // ONE question, not two. Mail and sign-in are separate mechanisms in the
+  // server and the same decision for an organization: a company on Workspace
+  // reads mail through a Google app and signs in with Google accounts, through
+  // that same app. Asking twice would be asking somebody to answer the same
+  // fact in two places and then keep the two agreeing.
+  "firstRun.platform.title": "What does your organization run on?",
+  "firstRun.platform.sub":
+    "One answer decides how mail reaches Margince and how people sign in. You can change it later under Settings.",
+  "firstRun.platform.legend": "The platform this organization runs on",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, calendar and sign-in, through one Google app you own. Everything is read with your organization’s own credentials.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail and calendar through Microsoft Graph. Signing in with a Microsoft account is not built yet, so people sign in with an email address and a password.",
+  "firstRun.platform.other": "Neither",
+  "firstRun.platform.otherWhat":
+    "Each mailbox connects over IMAP with its own credentials, entered when it is connected. People sign in with an email address and a password.",
+  // What the two paths that need no app here still need somewhere else. Named
+  // because it is not this screen's to do and a reader has to know whose it is.
+  "firstRun.platform.microsoftOperator":
+    "Nothing to fill in here. Microsoft’s app is deployment configuration: whoever runs the server sets MARGINCE_GRAPH_CLIENT_ID, MARGINCE_GRAPH_CLIENT_SECRET and MARGINCE_GRAPH_TENANT before it starts.",
+  "firstRun.platform.otherOperator":
+    "Nothing to fill in here. An IMAP mailbox carries its own host, user and password, and those are entered on the mailbox itself under Settings → Integrations.",
+  // The honest statement of a gap this screen cannot close. First run still
+  // requires a Google app whatever the answer above, so the two paths that need
+  // none are held here — and a refusal that says why beats a Continue that
+  // fails with a validation error from the server.
+  "firstRun.platform.stillNeedsGoogle":
+    "First run still asks for a Google app whatever you answer here, so this path cannot finish yet. Either paste a Google app below, or have whoever runs the server export MARGINCE_GMAIL_CLIENT_ID and MARGINCE_GMAIL_CLIENT_SECRET and restart it.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",
