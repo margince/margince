@@ -245,6 +245,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		ProviderRunPollArgs{}.Kind(): func(ctx context.Context) error {
 			return (&providerRunPollWorker{}).Work(ctx, &river.Job[ProviderRunPollArgs]{})
 		},
+		ProviderLookupArgs{}.Kind(): func(ctx context.Context) error {
+			return (&providerLookupWorker{}).Work(ctx, &river.Job[ProviderLookupArgs]{})
+		},
 		ProviderRunSubmitArgs{}.Kind(): func(ctx context.Context) error {
 			// RunID travels through the worker unparsed, so the zero value
 			// would do; a real id keeps the args honest to what a live

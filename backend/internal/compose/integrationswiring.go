@@ -92,6 +92,7 @@ func bindProviderDomain(store *integrations.Store) *integrations.Store {
 	return store.
 		WithDomain(providerFence, people.DuplicateCluster, people.SubjectIdentifiers).
 		WithSubjectHold(providerSubjectHold).
+		WithStoredClaimApplier(providerStoredClaimApplier).
 		WithClaimWriter(providerClaimWriter).
 		WithClaimDeleter(providerClaimDeleter)
 }
@@ -129,6 +130,12 @@ func providerClaimWriter(ctx context.Context, tx pgx.Tx, w integrations.ClaimWri
 		return err
 	}
 	return people.ApplyProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims)
+}
+
+// providerStoredClaimApplier folds a purchase the domain already stored onto
+// the record, for the catch-up sweep.
+func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID string) error {
+	return people.ApplyStoredProviderClaims(ctx, tx, personID, runID)
 }
 
 // providerClaimDeleter is the domain half of the delete-data action.

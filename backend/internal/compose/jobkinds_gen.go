@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "2fee877a3146ccbae8d02f69a4492fbdff39de88aa2e6f208b824966838de2dd"
+const jobContractHash = "eaa14a4a8ca5488a56db88d9fc26312a86c7ce4fcac48f4fb2a9da23341e186a"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -83,6 +83,8 @@ type declaredJobArgs interface {
 		ParticipantBackfillArgs |
 		ParticipantBackfillWorkspaceArgs |
 		PrivacyRetentionArgs |
+		ProviderLookupArgs |
+		ProviderLookupSweepArgs |
 		ProviderRunPollArgs |
 		ProviderRunPollSweepArgs |
 		ProviderRunSubmitArgs |
@@ -153,6 +155,7 @@ var (
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
+	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
@@ -193,6 +196,7 @@ var (
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
 	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = ProviderLookupArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunPollArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SignalScanWorkspaceArgs{}

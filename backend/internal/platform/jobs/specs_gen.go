@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "2fee877a3146ccbae8d02f69a4492fbdff39de88aa2e6f208b824966838de2dd"
+const JobContractHash = "eaa14a4a8ca5488a56db88d9fc26312a86c7ce4fcac48f4fb2a9da23341e186a"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -635,6 +635,29 @@ var specs = map[string]Spec{
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
+	},
+	"provider_lookup": {
+		Kind:         "provider_lookup",
+		GoType:       "ProviderLookupArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  1,
+		OptsOwner:    OptsFanOut,
+		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
+		Args:         []ArgField{{Name: "Workspace"}},
+	},
+	"provider_lookup_sweep": {
+		Kind:         "provider_lookup_sweep",
+		GoType:       "ProviderLookupSweepArgs",
+		Role:         Dispatcher,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutWorkspace,
+		FanOutTo:     "provider_lookup",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Minute},
+		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
 	},
 	"provider_run_poll": {
 		Kind:         "provider_run_poll",

@@ -231,3 +231,30 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 		t.Fatal("no profile must mean no voice block")
 	}
 }
+
+func TestADraftBodyReachesTheCallerAsPlainText(t *testing.T) {
+	// The answer a live model actually returned for a German reply. The
+	// contract says a body is plain text end to end, and nothing downstream
+	// converts markup, so a `<br>` that survives this parse is four visible
+	// characters in the composer, in the sent mail, and in the recipient's
+	// inbox.
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Rechnung",` +
+		`"body":"Guten Tag Dietmar,<br><br>anbei die Aufstellung.<br><br>Viele Grüße"}`}}
+	drafter := replyDrafter{brain: brain}
+
+	draft, err := drafter.complete(context.Background(), replyActivityData{
+		Subject: "Rechnung", Body: "Bitte um die Aufstellung.", Intent: "Bestätigen",
+	}, nil)
+	if err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+	if strings.Contains(draft.Body, "<br") {
+		t.Errorf("body carries markup the reader would see: %q", draft.Body)
+	}
+	// The paragraph the model meant has to survive as a paragraph: deleting
+	// the tag would run the greeting into the sentence after it.
+	want := "Guten Tag Dietmar,\n\nanbei die Aufstellung.\n\nViele Grüße"
+	if draft.Body != want {
+		t.Errorf("body = %q, want %q", draft.Body, want)
+	}
+}
