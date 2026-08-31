@@ -216,6 +216,21 @@ func openTaskAssigneeClause(assignee *ids.UserID, arg func(any) int) string {
 	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee))
 }
 
+// ownQueueClause narrows to the open tasks one person is answerable for:
+// assigned to them, or assigned to NOBODY.
+//
+// The unassigned arm is the difference from openTaskAssigneeClause, and it is
+// the point. A rep who writes themselves a task without filling in an assignee
+// still owns it, and a "my work" queue that dropped it would hide the reader's
+// own to-do from them — worse than carrying one row too many.
+func ownQueueClause(reader *ids.UserID, arg func(any) int) string {
+	if reader == nil {
+		return ""
+	}
+	return sprintf("(a.assignee_id = $%d OR a.assignee_id IS NULL) AND a.kind = 'task' AND NOT a.is_done",
+		arg(*reader))
+}
+
 // listActivitiesFilter builds the timeline query's join, WHERE terms and
 // bind arguments from one list input, plus the per-row audience test the
 // SELECT projects as content_state.
@@ -256,6 +271,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
+	}
+	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
+		where = append(where, clause)
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)

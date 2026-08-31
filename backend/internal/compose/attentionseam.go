@@ -154,8 +154,10 @@ func (t attentionTasks) OpenForViewer(
 			// to prevent.
 			return nil, nil
 		}
+		// Mine, or nobody's: a task the reader wrote themselves without an
+		// assignee is still theirs to do.
 		assignee := ids.From[ids.UserKind](actor.UserID)
-		in.AssigneeID = &assignee
+		in.OwnQueueOf = &assignee
 	}
 	rows, _, err := t.store.ListActivities(ctx, in)
 	if err != nil {

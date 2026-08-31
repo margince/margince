@@ -147,3 +147,33 @@ func TestAnUnknownEntityTypeIsRefusedRatherThanBuiltIntoSQL(t *testing.T) {
 		t.Errorf("refusal names %q, want %q", badType.EntityType, entityType)
 	}
 }
+
+// A "my work" queue is mine OR nobody's. A rep who writes themselves a task
+// without filling in an assignee still owns it, and dropping it would hide the
+// reader's own to-do from them.
+func TestTheOwnQueueClauseAdmitsUnassignedWork(t *testing.T) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	reader := ids.From[ids.UserKind](ids.MustParse("01a05500-0000-7000-8000-000000000001"))
+
+	clause := ownQueueClause(&reader, arg)
+
+	if !strings.Contains(clause, "a.assignee_id IS NULL") {
+		t.Fatalf("the own-queue clause %q drops unassigned work", clause)
+	}
+	if !strings.Contains(clause, "a.assignee_id = $1") {
+		t.Fatalf("the own-queue clause %q does not bind the reader", clause)
+	}
+}
+
+// The exact-assignment clause must stay exact: the task screen filters by it,
+// and widening it there would put unassigned work on somebody's name.
+func TestTheAssigneeClauseStaysExact(t *testing.T) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	assignee := ids.From[ids.UserKind](ids.MustParse("01a05500-0000-7000-8000-000000000001"))
+
+	if clause := openTaskAssigneeClause(&assignee, arg); strings.Contains(clause, "IS NULL") {
+		t.Fatalf("the exact-assignee clause %q now admits unassigned work", clause)
+	}
+}
