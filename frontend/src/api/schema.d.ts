@@ -3079,6 +3079,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/reply-recipient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Who a reply to this message would be addressed to.
+         * @description Asked without drafting, so a composer can show the recipient when it opens
+         *     rather than after a model call. `address` is resolved by the same reply-address
+         *     rule the automation reply path uses, so the address offered here is one that
+         *     path would also compose to.
+         *
+         *     `address` and the two name fields answer DIFFERENT questions, and on our own
+         *     outbound mail they name different people. The names are whoever the message was
+         *     with — the sender of an inbound message, an addressee on our own outbound. The
+         *     address must be a COUNTERPARTY: one of this installation's own people, whether
+         *     by seat or by email domain, is never offered, because a reply composed to a
+         *     colleague is a message to ourselves.
+         *
+         *     Every field may be empty, and empty is an answer rather than a failure: a
+         *     message linked to nobody, a contact with no live address, and a thread whose
+         *     every participant is a colleague all answer empty rather than guessing.
+         *
+         *     The name and the address are withheld on DIFFERENT terms, so a caller may get
+         *     one without the other. Naming a person reads their record, so a person this
+         *     caller cannot read is not named. An address recorded on the message itself is
+         *     on correspondence they can already open, so it is answered whether or not the
+         *     person behind it is readable — which means the two fields can name two
+         *     different people, and a client that greets by `full_name` while sending to
+         *     `address` must not assume they are one.
+         *
+         *     A caller without the person read grant is refused outright (403) rather than
+         *     answered with empty fields; a caller who cannot see the message gets 404,
+         *     whether it is missing or merely withheld.
+         *
+         *     Sending still requires `to` on the send request and gates consent
+         *     independently; this only saves typing an address the record already holds.
+         */
+        get: operations["getReplyRecipient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/send-email": {
         parameters: {
             query?: never;
@@ -17680,6 +17732,21 @@ export interface components {
             readonly draft_ref: string | null;
         };
         /**
+         * @description Who a reply to a message is addressed to: one person, resolved from the
+         *     message's participants by role.
+         *
+         *     One person rather than a list. A reply is written to somebody, and a group
+         *     thread degrades to the most likely counterparty rather than to nobody.
+         */
+        ReplyRecipient: {
+            /** @description The name as recorded, empty when no readable person is on the message. */
+            full_name: string;
+            /** @description What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call. */
+            first_name: string;
+            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own people. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
+            address: string;
+        };
+        /**
          * @description A draft written from an account's records, and what it was written from
          *     (ADR-0087/A132). Never sent by drafting; send via `POST /emails`.
          *
@@ -29458,6 +29525,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailDraft"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getReplyRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recipient a reply would go to, with empty fields where unknown. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyRecipient"];
                 };
             };
             404: components["responses"]["NotFound"];

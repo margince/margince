@@ -24748,6 +24748,22 @@ type ReplaceChannelTokenRequest struct {
 	BotToken string `json:"botToken"`
 }
 
+// ReplyRecipient Who a reply to a message is addressed to: one person, resolved from the
+// message's participants by role.
+//
+// One person rather than a list. A reply is written to somebody, and a group
+// thread degrades to the most likely counterparty rather than to nobody.
+type ReplyRecipient struct {
+	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own people. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
+	Address string `json:"address"`
+
+	// FirstName What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
+	FirstName string `json:"first_name"`
+
+	// FullName The name as recorded, empty when no readable person is on the message.
+	FullName string `json:"full_name"`
+}
+
 // ReportDerivation The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
@@ -39942,6 +39958,9 @@ type ServerInterface interface {
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
+	// Who a reply to this message would be addressed to.
+	// (GET /activities/{id}/reply-recipient)
+	GetReplyRecipient(w http.ResponseWriter, r *http.Request, id Id)
 	// Send a (possibly edited) email draft — runs directly, consent-gated.
 	// (POST /activities/{id}/send-email)
 	SendEmail(w http.ResponseWriter, r *http.Request, id Id, params SendEmailParams)
@@ -41529,6 +41548,12 @@ func (_ Unimplemented) ReadActivityPipelineTrace(w http.ResponseWriter, r *http.
 // Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 // (POST /activities/{id}/relink)
 func (_ Unimplemented) RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Who a reply to this message would be addressed to.
+// (GET /activities/{id}/reply-recipient)
+func (_ Unimplemented) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45331,6 +45356,40 @@ func (siw *ServerInterfaceWrapper) RelinkActivity(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RelinkActivity(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReplyRecipient operation middleware
+func (siw *ServerInterfaceWrapper) GetReplyRecipient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReplyRecipient(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67413,6 +67472,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/reply-recipient", wrapper.GetReplyRecipient)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/send-email", wrapper.SendEmail)

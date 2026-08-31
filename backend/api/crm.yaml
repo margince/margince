@@ -4647,6 +4647,52 @@ paths:
               schema: { $ref: '#/components/schemas/EmailDraft' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /activities/{id}/reply-recipient:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getReplyRecipient
+      summary: Who a reply to this message would be addressed to.
+      description: |
+        Asked without drafting, so a composer can show the recipient when it opens
+        rather than after a model call. `address` is resolved by the same reply-address
+        rule the automation reply path uses, so the address offered here is one that
+        path would also compose to.
+
+        `address` and the two name fields answer DIFFERENT questions, and on our own
+        outbound mail they name different people. The names are whoever the message was
+        with — the sender of an inbound message, an addressee on our own outbound. The
+        address must be a COUNTERPARTY: one of this installation's own people, whether
+        by seat or by email domain, is never offered, because a reply composed to a
+        colleague is a message to ourselves.
+
+        Every field may be empty, and empty is an answer rather than a failure: a
+        message linked to nobody, a contact with no live address, and a thread whose
+        every participant is a colleague all answer empty rather than guessing.
+
+        The name and the address are withheld on DIFFERENT terms, so a caller may get
+        one without the other. Naming a person reads their record, so a person this
+        caller cannot read is not named. An address recorded on the message itself is
+        on correspondence they can already open, so it is answered whether or not the
+        person behind it is readable — which means the two fields can name two
+        different people, and a client that greets by `full_name` while sending to
+        `address` must not assume they are one.
+
+        A caller without the person read grant is refused outright (403) rather than
+        answered with empty fields; a caller who cannot see the message gets 404,
+        whether it is missing or merely withheld.
+
+        Sending still requires `to` on the send request and gates consent
+        independently; this only saves typing an address the record already holds.
+      responses:
+        '200':
+          description: The recipient a reply would go to, with empty fields where unknown.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplyRecipient' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /activities/{id}/send-email:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -24681,6 +24727,33 @@ components:
         ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.' }
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
+
+    ReplyRecipient:
+      type: object
+      description: |
+        Who a reply to a message is addressed to: one person, resolved from the
+        message's participants by role.
+
+        One person rather than a list. A reply is written to somebody, and a group
+        thread degrades to the most likely counterparty rather than to nobody.
+      required: [full_name, first_name, address]
+      properties:
+        full_name:
+          type: string
+          description: The name as recorded, empty when no readable person is on the message.
+        first_name:
+          type: string
+          description: >-
+            What a greeting uses. Split server-side rather than in a prompt: a model asked
+            to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
+        address:
+          type: string
+          description: >-
+            Where the reply is sent: the counterparty's own corresponding address where
+            the thread carries one, else their primary live address. Never one of this
+            installation's own people. Empty when the thread offers none — including a
+            thread whose every participant is a colleague — which the reader fills in
+            themselves.
 
     AccountEmailDraft:
       type: object
