@@ -1195,6 +1195,10 @@ func (stubs) RegenerateOrganizationBrief(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "RegenerateOrganizationBrief")
 }
 
+func (stubs) ListOrganizationContacts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListOrganizationContactsParams) {
+	httperr.NotImplemented(w, r, "ListOrganizationContacts")
+}
+
 func (stubs) ListOrganizationContracts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListOrganizationContractsParams) {
 	httperr.NotImplemented(w, r, "ListOrganizationContracts")
 }

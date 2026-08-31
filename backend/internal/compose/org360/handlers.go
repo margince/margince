@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -64,6 +65,29 @@ func (h Handlers) GetOrganizationGraph(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, graph)
+}
+
+// ListOrganizationContacts implements GET /organizations/{id}/contacts.
+func (h Handlers) ListOrganizationContacts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	params crmcontracts.ListOrganizationContactsParams,
+) {
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	q := ContactListQuery{Query: params.Q, Cursor: params.Cursor, Limit: params.Limit}
+	if params.Status != nil {
+		status := people.Engagement(*params.Status)
+		q.Status = &status
+	}
+	if params.Sort != nil {
+		q.Sort = string(*params.Sort)
+	}
+	page, err := h.svc.ContactPage(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)), q)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, page)
 }
 
 // AcknowledgeOrganizationView implements POST /organizations/{id}/view-ack.
