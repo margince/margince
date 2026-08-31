@@ -50,6 +50,10 @@ type Service struct {
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
 	atRisk AtRisk
+	// waiting is OPTIONAL like the lanes above it: an installation that does
+	// not read the mail stream cannot say who is waiting, which is different
+	// from saying nobody is.
+	waiting Waiting
 	// decay is OPTIONAL for the same reason, and says nothing about atRisk:
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
@@ -104,6 +108,17 @@ func NewService(
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
 		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
+}
+
+// WithWaiting binds the who-is-waiting reader.
+//
+// An option rather than another positional argument: NewService already takes
+// nineteen, and the next reader to add one would be adding the twentieth to a
+// call nobody can read. The lane is absent when it is not bound, which is the
+// same promise every optional lane makes.
+func (s *Service) WithWaiting(w Waiting) *Service {
+	s.waiting = w
+	return s
 }
 
 // Assemble reads every lane and returns the day.

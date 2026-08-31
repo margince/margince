@@ -15,6 +15,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -175,5 +176,85 @@ func TestTheAssigneeClauseStaysExact(t *testing.T) {
 
 	if clause := openTaskAssigneeClause(&assignee, arg); strings.Contains(clause, "IS NULL") {
 		t.Fatalf("the exact-assignee clause %q now admits unassigned work", clause)
+	}
+}
+
+// The waiting read is CONTENT, not a safe marker: everything it answers is
+// derived from thread membership, so it composes the content clause. Reading
+// through the discover gate would publish a wait, its timing and its linked
+// record for a message the reader may not read — and let them watch the row
+// vanish to learn a reply had arrived.
+func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
+	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
+		t.Fatal("the waiting query no longer binds an activity scope clause at all")
+	}
+	source, err := os.ReadFile("waiting.go")
+	if err != nil {
+		t.Fatalf("reading the waiting source: %v", err)
+	}
+	if !strings.Contains(string(source), "auth.ActivityContentClause") {
+		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
+	}
+	if !strings.Contains(string(source), "auth.LinkTargetVisibleClause") {
+		t.Fatal("the waiting read returns links without checking the reader may see what they point at")
+	}
+}
+
+// One message is ONE row however many records it is filed under. An activity
+// linked to a person, a company and a deal is three activity_link rows, and a
+// plain join would ask the reader to answer the same customer three times.
+func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
+	if !strings.Contains(waitingRepliesSQL, "GROUP BY a.id") {
+		t.Fatal("the waiting query does not collapse a message's several links into one row")
+	}
+}
+
+// Ties are broken by id. Mail carries second precision, so two messages in one
+// thread sharing a timestamp are ordinary — and without the tie-break both
+// halves of "newest inbound, no later outbound" are wrong at once.
+func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
+	if strings.Count(waitingRepliesSQL, ".id) > (a.occurred_at, a.id)") != 2 {
+		t.Fatal("the waiting query compares timestamps alone, so equal-second messages answer wrongly")
+	}
+}
+
+// The anti-joins are bounded by the read instant, so the answer is a snapshot.
+// Mail carries the sender's own Date header: a message dated in the future must
+// not suppress a thread that is genuinely waiting now.
+func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
+	if strings.Count(waitingRepliesSQL, "occurred_at <= $%[1]d") != 3 {
+		t.Fatal("a future-dated message can suppress a thread that is waiting now")
+	}
+}
+
+// A thread is matched within one medium. Mail thread keys come from headers the
+// sender controls and share a namespace with channel keys, so comparing keys
+// alone lets a crafted References value silence an unrelated conversation.
+func TestTheWaitingQueryMatchesWithinOneMedium(t *testing.T) {
+	if strings.Count(waitingRepliesSQL, "kind = a.kind") != 2 {
+		t.Fatal("the waiting query matches threads across media")
+	}
+	if strings.Count(waitingRepliesSQL, "channel_provider IS NOT DISTINCT FROM a.channel_provider") != 2 {
+		t.Fatal("the waiting query matches threads across channel providers")
+	}
+}
+
+// An unthreaded message is excluded, not matched loosely.
+//
+// `IS NOT DISTINCT FROM` joins every NULL to every other NULL, so one
+// unthreaded outbound would silence every unthreaded question in the
+// workspace. Plain equality never joins two NULLs, so the rows would all
+// survive and each would be its own thread. Neither is right, so they are
+// excluded — which under-reports by a row rather than by a customer.
+func TestTheWaitingQueryExcludesUnthreadedMessages(t *testing.T) {
+	if !strings.Contains(waitingRepliesSQL, "a.thread_key IS NOT NULL") {
+		t.Fatal("the waiting query admits unthreaded messages, which cross-suppress each other")
+	}
+	// Narrowly: THREAD keys must not be NULL-matched. channel_provider is
+	// matched that way on purpose — a null provider means "not a channel", and
+	// two mail rows both having none is a genuine match rather than an
+	// accidental one.
+	if strings.Contains(waitingRepliesSQL, "thread_key IS NOT DISTINCT FROM") {
+		t.Fatal("the waiting query matches NULL thread keys to each other")
 	}
 }

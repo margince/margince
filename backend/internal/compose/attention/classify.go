@@ -21,6 +21,16 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+// sourceWaiting names the who-is-waiting producer. A named constant rather
+// than the literal at each site: the classifier, the dedupe and the
+// source-unavailable report all reach for it, and a typo in any of them would
+// produce a lane nothing joins up — silently, because each half would still
+// compile.
+const sourceWaiting = "customer_waiting"
+
+// subjectDeal is the subject type a deal-shaped row names.
+const subjectDeal = "deal"
+
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
@@ -235,6 +245,86 @@ func expectedRevenue(item crmcontracts.AttentionItem) (int64, bool) {
 func moneyOf(minor int64) *crmcontracts.WorklistValue {
 	value := minor
 	return &crmcontracts.WorklistValue{Kind: "money", Minor: &value}
+}
+
+// classifyWaiting: somebody wrote and nobody answered.
+//
+// Level 1, the top band below a pin, and the reason is the concept's own: a
+// customer waiting on a reply is the one thing on this page where the cost of
+// doing nothing falls on somebody else. It outranks a promise, a drifting deal
+// and every decision.
+//
+// The draft verb is offered only when the message can be READ. There is no
+// drafting a reply to words this reader may not see, and a button that opened
+// an empty composer would be worse than no button.
+func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
+	subject := waiting.Subject
+	days := int(asOf.Sub(waiting.Since).Hours() / 24)
+	if days < 0 {
+		days = 0
+	}
+	row := crmcontracts.WorklistItem{
+		Id:          waiting.ActivityID.String(),
+		Source:      sourceWaiting,
+		Category:    sourceWaiting,
+		Level:       levelWaiting,
+		Consequence: "buyer_waits",
+		Because: []crmcontracts.WorklistReason{
+			reason("buyer_wrote_last", nil),
+			reason("waiting_days", daysValue(days)),
+		},
+		Actions: []crmcontracts.WorklistItemActions{},
+	}
+	// The subject travels because the row exists at all only for a reader the
+	// content gate admitted: a message this reader may not read produces no
+	// row, rather than a row with its words removed.
+	if subject != "" {
+		row.Title = &subject
+	}
+	// The record the reply would be about, most specific first: the deal a
+	// thread belongs to says more than the company it is filed under.
+	switch {
+	case !waiting.DealID.IsZero():
+		row.Subject = subjectOf(subjectDeal, waiting.DealID)
+	case !waiting.PersonID.IsZero():
+		row.Subject = subjectOf("person", waiting.PersonID)
+	case !waiting.OrganizationID.IsZero():
+		row.Subject = subjectOf("organization", waiting.OrganizationID)
+	}
+	if openableSubject(row.Subject) {
+		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
+	}
+	occurred := waiting.Since
+	row.OccurredAt = &occurred
+	return ranked{item: row, waitingDays: days, occurredAt: waiting.Since}
+}
+
+// dropDealsAlreadyWaiting removes the at-risk row for a deal somebody is
+// already waiting on.
+//
+// One unanswered message must not become two rows. The waiting row is strictly
+// the more urgent and the more actionable of the two — it names the message to
+// reply to — so it wins, and the drifting row's ground rides along as a reason
+// rather than as a second obligation.
+func dropDealsAlreadyWaiting(rows []ranked) []ranked {
+	waitingDeals := map[string]bool{}
+	for _, row := range rows {
+		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
+			row.item.Subject.Type == subjectDeal {
+			waitingDeals[row.item.Subject.Id.String()] = true
+		}
+	}
+	if len(waitingDeals) == 0 {
+		return rows
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+			continue
+		}
+		kept = append(kept, row)
+	}
+	return kept
 }
 
 // classifyBriefItem: what the overnight run put at the top of the day. It is a

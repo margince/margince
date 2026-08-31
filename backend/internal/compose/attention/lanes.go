@@ -296,6 +296,31 @@ type QuietRelationship struct {
 	LastAt time.Time
 }
 
+// Waiting is who has written to this workspace and had no reply.
+//
+// Its own reader rather than a filter over AtRisk, because a fresh inbound
+// makes a deal LESS quiet: deriving "waiting" from "quiet" loses the newest
+// cases, which are the ones a rep most needs. It also reaches a person with no
+// deal at all, whom the deal-shaped lanes never see.
+type Waiting interface {
+	Unanswered(ctx context.Context, asOf time.Time) ([]WaitingCustomer, error)
+}
+
+// WaitingCustomer is one message nobody has answered.
+type WaitingCustomer struct {
+	// ActivityID is the message itself — what a reply would be drafted to.
+	ActivityID ids.UUID
+	Subject    string
+	// Since is when they wrote. The wait is measured from it, and it is what
+	// the card says out loud.
+	Since time.Time
+	// The record the thread is filed under, most specific first. Any may be
+	// zero: a message from a stranger names nobody.
+	PersonID       ids.UUID
+	OrganizationID ids.UUID
+	DealID         ids.UUID
+}
+
 // Meetings is today's booked meetings that have not happened yet.
 //
 // Optional as the other two are: nil means this feed does not read meetings,

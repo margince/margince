@@ -14,7 +14,11 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func item(id string, source crmcontracts.AttentionItemSource, opts ...func(*crmcontracts.AttentionItem)) crmcontracts.AttentionItem {
@@ -321,7 +325,7 @@ func TestThePageIsSummarisedAndExplainedAgainstItself(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3, nil)
 
 	if out.Summary.Total != len(out.Queue) {
 		t.Fatalf("summary totals %d over a page of %d", out.Summary.Total, len(out.Queue))
@@ -388,5 +392,133 @@ func TestTheBiggerOfTwoDealsIsMaterial(t *testing.T) {
 		if row.item.Level != want {
 			t.Fatalf("%q landed at level %d, wanted %d", row.item.Id, row.item.Level, want)
 		}
+	}
+}
+
+// Somebody waiting on a reply is the top of the day, above every decision and
+// every drifting deal. It is the one thing here whose cost of inaction falls on
+// somebody else.
+func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:     rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{item("decision", "approval", withKind("send_email"))},
+		AtRisk:   lane(item("drifting", "deal_at_risk", withDeal(500_000_00))),
+	}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000aaaa"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-83 * 24 * time.Hour),
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Source != "customer_waiting" {
+		t.Fatalf("the day led with %q, not the customer who is waiting", out.Queue[0].Source)
+	}
+	if out.Queue[0].Consequence != "buyer_waits" {
+		t.Fatalf("a waiting customer says %q happens if ignored", out.Queue[0].Consequence)
+	}
+}
+
+// One unanswered message is ONE row. The deal it belongs to must not also
+// appear as drifting, or the rep is asked twice for the same reply.
+func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
+	deal := ids.MustParse("01a05500-0000-7000-8000-00000000bbbb")
+	day := crmcontracts.Attention{
+		AsOf:   rankInstant,
+		AtRisk: lane(item(deal.String(), "deal_at_risk", withDeal(160_100_00))),
+	}
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000cccc"),
+		Since:      rankInstant.Add(-3 * 24 * time.Hour),
+		DealID:     deal,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
+
+	if len(out.Queue) != 1 {
+		t.Fatalf("one unanswered message produced %d rows", len(out.Queue))
+	}
+	if out.Queue[0].Source != "customer_waiting" {
+		t.Fatalf("the surviving row was %q, wanted the waiting one", out.Queue[0].Source)
+	}
+}
+
+// The longer somebody has waited, the higher they sit — among people who are
+// all waiting, the forgotten one is the one at risk.
+func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
+	waiting := []WaitingCustomer{
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000a"), Since: rankInstant.Add(-2 * 24 * time.Hour)},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-83 * 24 * time.Hour)},
+	}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Id != "01a05500-0000-7000-8000-00000000000b" {
+		t.Fatal("the two-day wait outranked the eighty-three-day one")
+	}
+}
+
+// A message the reader may not read produces NO row.
+//
+// The earlier cut kept the row and removed only its subject, which still
+// published the wait, its timing and the record it was filed under — and let a
+// reader watch a row vanish to learn that a reply they may not see had arrived.
+// The content gate now decides whether the row exists, so this is a property of
+// the query and the store test holds it; here we hold the shape that depends on
+// it: every waiting row that arrives may state its subject.
+func TestEveryWaitingRowMayStateItsSubject(t *testing.T) {
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000eeee"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-24 * time.Hour),
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Title == nil || *out.Queue[0].Title != "Re: pricing" {
+		t.Fatal("a waiting row the content gate admitted lost its subject line")
+	}
+}
+
+// Under `mine`, a thread about a colleague's deal is that colleague's to
+// answer. A message filed under nothing stays: an unowned customer writing in
+// is everybody's, and dropping it would leave nobody looking at it.
+func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
+	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
+	theirDeal := ids.MustParse("01a05500-0000-7000-8000-00000000dea1")
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: reader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	at := []crmcontracts.AttentionItem{dealItemOwned(theirDeal, colleague)}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
+	waiting := []WaitingCustomer{
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a1"), Since: rankInstant.Add(-time.Hour), DealID: theirDeal},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a2"), Since: rankInstant.Add(-time.Hour)},
+	}
+
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waiting)
+
+	for _, row := range out.Queue {
+		if row.Id == "01a05500-0000-7000-8000-0000000000a1" {
+			t.Fatal("a thread about a colleague's deal reached a queue scoped to the reader")
+		}
+	}
+	if len(out.Queue) == 0 {
+		t.Fatal("the unfiled message was dropped too, leaving nobody looking at it")
+	}
+}
+
+func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
+	ownerID := openapi_types.UUID(owner)
+	dealID := openapi_types.UUID(deal)
+	return crmcontracts.AttentionItem{
+		Id:      deal.String(),
+		Source:  "deal_at_risk",
+		Subject: &crmcontracts.AttentionSubject{Type: "deal", Id: dealID},
+		Deal:    &crmcontracts.AttentionDealFacts{OwnerId: &ownerID},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 }
