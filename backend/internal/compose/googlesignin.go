@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -185,6 +186,14 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// HERE rather than in assembly because only this option knows what was
 		// composed, and options run after the handlers are assembled.
 		s.configuredProviders = configured
+		// And the sign-in callback, from identity's own builder for the same
+		// reason: an operator who registers only one of the two URLs gets a
+		// redirect_uri_mismatch that names nothing actionable.
+		s.redirectURIs = append(s.redirectURIs,
+			crmcontracts.GoogleAppRedirectUri{
+				Purpose: crmcontracts.SignIn,
+				Url:     s.RedirectURIFor(googleProviderKey),
+			})
 	}
 }
 
@@ -225,7 +234,8 @@ func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured 
 			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
 				Type: principal.PrincipalSystem,
 				ID:   enabledOidcProvidersReadActor,
-			}), ids.NewV7())
+			}), ids.NewV7(),
+		)
 		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
 		if err != nil {
 			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)

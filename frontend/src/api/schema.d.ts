@@ -11608,11 +11608,17 @@ export interface components {
              */
             source: "stored" | "environment" | "none";
             /** @description Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
-            redirect_uris: {
-                /** @enum {string} */
-                purpose: "sign_in" | "mailbox_connect";
-                url: string;
-            }[];
+            redirect_uris: components["schemas"]["GoogleAppRedirectUri"][];
+        };
+        /** @description One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes. */
+        GoogleAppRedirectUri: {
+            /**
+             * @description Which flow uses this URL. `sign_in` is the login callback; `mailbox_connect` is the per-user Gmail and Calendar consent callback. They differ in more than the path, so neither can be derived from the other.
+             * @enum {string}
+             */
+            purpose: "sign_in" | "mailbox_connect";
+            /** @description The absolute URL to register, exactly as it must be pasted. */
+            url: string;
         };
         GoogleAppInput: {
             /** @description Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen. */

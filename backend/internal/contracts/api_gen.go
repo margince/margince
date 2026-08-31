@@ -5074,24 +5074,6 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
-// Defines values for GoogleAppRedirectUrisPurpose.
-const (
-	MailboxConnect GoogleAppRedirectUrisPurpose = "mailbox_connect"
-	SignIn         GoogleAppRedirectUrisPurpose = "sign_in"
-)
-
-// Valid indicates whether the value is a known member of the GoogleAppRedirectUrisPurpose enum.
-func (e GoogleAppRedirectUrisPurpose) Valid() bool {
-	switch e {
-	case MailboxConnect:
-		return true
-	case SignIn:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GoogleAppSource.
 const (
 	GoogleAppSourceEnvironment GoogleAppSource = "environment"
@@ -5107,6 +5089,24 @@ func (e GoogleAppSource) Valid() bool {
 	case GoogleAppSourceNone:
 		return true
 	case GoogleAppSourceStored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GoogleAppRedirectUriPurpose.
+const (
+	MailboxConnect GoogleAppRedirectUriPurpose = "mailbox_connect"
+	SignIn         GoogleAppRedirectUriPurpose = "sign_in"
+)
+
+// Valid indicates whether the value is a known member of the GoogleAppRedirectUriPurpose enum.
+func (e GoogleAppRedirectUriPurpose) Valid() bool {
+	switch e {
+	case MailboxConnect:
+		return true
+	case SignIn:
 		return true
 	default:
 		return false
@@ -18605,17 +18605,11 @@ type GoogleApp struct {
 	Configured bool `json:"configured"`
 
 	// RedirectUris Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
-	RedirectUris []struct {
-		Purpose GoogleAppRedirectUrisPurpose `json:"purpose"`
-		Url     string                       `json:"url"`
-	} `json:"redirect_uris"`
+	RedirectUris []GoogleAppRedirectUri `json:"redirect_uris"`
 
 	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
 	Source GoogleAppSource `json:"source"`
 }
-
-// GoogleAppRedirectUrisPurpose defines model for GoogleApp.RedirectUris.Purpose.
-type GoogleAppRedirectUrisPurpose string
 
 // GoogleAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
 type GoogleAppSource string
@@ -18628,6 +18622,18 @@ type GoogleAppInput struct {
 	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
 	ClientSecret *string `json:"client_secret,omitempty"`
 }
+
+// GoogleAppRedirectUri One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes.
+type GoogleAppRedirectUri struct {
+	// Purpose Which flow uses this URL. `sign_in` is the login callback; `mailbox_connect` is the per-user Gmail and Calendar consent callback. They differ in more than the path, so neither can be derived from the other.
+	Purpose GoogleAppRedirectUriPurpose `json:"purpose"`
+
+	// Url The absolute URL to register, exactly as it must be pasted.
+	Url string `json:"url"`
+}
+
+// GoogleAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback; `mailbox_connect` is the per-user Gmail and Calendar consent callback. They differ in more than the path, so neither can be derived from the other.
+type GoogleAppRedirectUriPurpose string
 
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //

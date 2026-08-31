@@ -42,6 +42,25 @@ func (h Handlers) callbackURI(provider string) string {
 	return h.oidcRoutes.RedirectBase + "/auth/oidc/" + provider + "/callback"
 }
 
+// RedirectURIFor is callbackURI for a caller outside this package: the URL Google
+// must have registered as an Authorized redirect URI for one provider.
+//
+// Exported rather than re-spelled by whoever needs to DISPLAY it. The settings
+// screen tells an operator which URL to paste into the Google console, and a
+// second copy of that string built somewhere else is exactly the drift the
+// unexported original's doc comment already refuses: the value shown and the
+// value sent have to be the same bytes or the flow fails a mismatch that names
+// nothing actionable.
+//
+// Empty when this deployment composed no OIDC routes, so a caller can tell
+// "no sign-in URL to register" from one it should show.
+func (h Handlers) RedirectURIFor(provider string) string {
+	if h.oidcRoutes.RedirectBase == "" {
+		return ""
+	}
+	return h.callbackURI(provider)
+}
+
 // WithOIDCProviders injects the configured external identity providers and
 // their verifiers/exchangers for the /auth/oidc/{provider}/start and
 // /callback routes. Keyed by provider key ("google").

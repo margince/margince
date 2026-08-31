@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -377,6 +378,14 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// WithGmailCapture requires the vault and so always runs after
 		// WithKeyvault, which means a copy taken there would always read false.
 		s.envGoogleApp = s.gmailAppConfigured
+		// The Google-app screen reads the same two-source resolution the connector
+		// performs, so it needs the environment's client id and not merely the
+		// fact that there is one: an operator checking their console against what
+		// this installation actually uses needs the value, and it is not a secret
+		// — it rides in every authorization redirect.
+		if c.canSync() {
+			s.envClientID = c.ClientID
+		}
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the
 		// surface its declared 501 instead. (WithKeyvault must precede this.)
@@ -418,6 +427,16 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			// how the stored app became unreachable while every test still passed.
 			googleCredentials: s.googleAppResolver,
 		}
+		// The Google-app screen tells an operator which callback URLs to register,
+		// and this is the one that serves mailbox consent. Taken from the handler
+		// that BUILDS it, so the URL displayed and the URL sent are the same
+		// bytes — they are not derivable from the sign-in one, which rides a
+		// different base on a split deployment.
+		s.redirectURIs = append(s.redirectURIs,
+			crmcontracts.GoogleAppRedirectUri{
+				Purpose: crmcontracts.MailboxConnect,
+				Url:     s.callbackURL(googleProviderKey),
+			})
 		// The send pre-flight reads the registry the connect flow just wrote to
 		// — the same one, not a second construction: a mailbox the user connects
 		// here must be the mailbox the check asks about. WithKeyvault already

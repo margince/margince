@@ -17603,15 +17603,27 @@ components:
             composed is absent rather than listed, because telling an operator to register a URL
             nothing answers sends them to debug a mismatch that was never the cause.
           items:
-            type: object
-            additionalProperties: false
-            required: [purpose, url]
-            properties:
-              purpose:
-                type: string
-                enum: [sign_in, mailbox_connect]
-              url:
-                type: string
+            $ref: '#/components/schemas/GoogleAppRedirectUri' 
+    GoogleAppRedirectUri:
+      type: object
+      additionalProperties: false
+      required: [purpose, url]
+      description: >-
+        One callback URL that must be registered as an Authorized redirect URI on the Google
+        OAuth client. Built by the code that SENDS it, so the value shown to an operator and the
+        value Google receives cannot be different bytes.
+      properties:
+        purpose:
+          type: string
+          enum: [sign_in, mailbox_connect]
+          description: >-
+            Which flow uses this URL. `sign_in` is the login callback; `mailbox_connect` is the
+            per-user Gmail and Calendar consent callback. They differ in more than the path, so
+            neither can be derived from the other.
+        url:
+          type: string
+          description: The absolute URL to register, exactly as it must be pasted.
+
     GoogleAppInput:
       type: object
       additionalProperties: false

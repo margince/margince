@@ -29,6 +29,22 @@ type googleAppHandlers struct {
 	// 503, because an installation with nowhere to seal a secret is missing
 	// something its operator can supply — see vaultMissing.
 	store *capture.GoogleAppStore
+	// envClientID is the app the DEPLOYMENT composed, empty when it composed
+	// none. It is part of the answer because it is part of what the connector
+	// resolves: a stored app wins and the environment is the fallback
+	// (googleappauthorizer.go), so a read that could see only the database
+	// reported "no app stored" — and told the operator Gmail could not be
+	// connected — on installations where it demonstrably could.
+	//
+	// The same reading GET /installation/setup already takes. The two are not
+	// two sources of truth for STORAGE: a write still lands in exactly one
+	// place, and this is one honest reading of a two-source resolution.
+	envClientID string
+	// redirectURIs are the callback URLs an operator must register on the
+	// Google OAuth client, derived from the functions that BUILD them rather
+	// than restated here — a second spelling of a URL whose whole job is to be
+	// byte-identical to what Google receives is the drift this avoids.
+	redirectURIs []crmcontracts.GoogleAppRedirectUri
 }
 
 func (h googleAppHandlers) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
@@ -41,10 +57,28 @@ func (h googleAppHandlers) GetGoogleApp(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.GoogleApp{
-		Configured: status.Configured,
-		ClientId:   status.ClientID,
-	})
+	// The stored app wins, exactly as it does at the moment of a connect, and
+	// the environment is the fallback rather than an alternative: reporting
+	// anything else here would describe a resolution the connector does not
+	// perform.
+	app := crmcontracts.GoogleApp{
+		Configured:   status.Configured,
+		ClientId:     status.ClientID,
+		Source:       crmcontracts.GoogleAppSourceNone,
+		RedirectUris: h.redirectURIs,
+	}
+	switch {
+	case status.Configured:
+		app.Source = crmcontracts.GoogleAppSourceStored
+	case h.envClientID != "":
+		app.Source = crmcontracts.GoogleAppSourceEnvironment
+		app.Configured = true
+		app.ClientId = h.envClientID
+	}
+	if app.RedirectUris == nil {
+		app.RedirectUris = []crmcontracts.GoogleAppRedirectUri{}
+	}
+	httperr.WriteJSON(w, http.StatusOK, app)
 }
 
 // SetGoogleApp implements (PUT /installation/google-app).
