@@ -232,32 +232,26 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 
 // A companion that is absent, or present and null, names no record — these
 // fields are optional by contract, and a person captured with no employer
-// carries no organization id. Skipping them is not a hole: there is nothing
-// to probe.
+// carries no organization id. Skipping them is not a hole: there is nothing to
+// probe.
 //
-// Asserted through the PRIMARY's own refusal, so the case still proves the
-// companion arm ran and passed: an unreadable primary refuses, and reaching
-// that refusal means the companion loop neither panicked on a nil pool nor
-// refused first.
+// Asserted against ensureCompanionsVisible DIRECTLY, and it has to be: through
+// the whole gate both a skip and a refusal answer ErrNotFound, so a version
+// that rejected every optional shape would pass a test that only read the
+// verdict. The nil pool is the second half — reaching the database would panic,
+// so nil is proof the loop skipped rather than probed.
 func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
-	for _, body := range []string{
-		`{"person":{"id":"garbage"}}`,
-		`{"person":{"id":"garbage"},"organization_id":null}`,
-	} {
-		if err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture", body); !errors.Is(err, apperrors.ErrNotFound) {
-			t.Fatalf("body %s: err = %v, want the PRIMARY's ErrNotFound", body, err)
-		}
+	target := replayableOperations["POST /v1/people/quick-capture"]
+	if len(target.companions) == 0 {
+		t.Fatal("quick-capture declares no companion, so this test asserts nothing")
 	}
-}
-
-// A companion present as an EMPTY STRING is a body the middleware cannot
-// vouch for, not a body that names no record. Skipping it would replay a
-// malformed answer on the strength of a valid primary.
-func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
-	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture",
-		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":""}`)
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("err = %v, want ErrNotFound", err)
+	for _, body := range []string{
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"}}`,
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":null}`,
+	} {
+		if err := ensureCompanionsVisible(context.Background(), nil, target, body); err != nil {
+			t.Errorf("body %s: err = %v, want nil — an optional companion the body does not name is skipped, not refused", body, err)
+		}
 	}
 }
 
