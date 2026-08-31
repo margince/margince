@@ -44,7 +44,15 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	day, err := s.Assemble(ctx)
+	// The producers that CAN be narrowed are narrowed in their own queries,
+	// not filtered afterwards: each store bounds what it returns, so a page
+	// full of colleagues' rows would hide the reader's own work behind a cut
+	// that had already happened.
+	reader := s
+	if mineOnly(resolved) {
+		reader = s.forReader()
+	}
+	day, err := reader.Assemble(ctx)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}

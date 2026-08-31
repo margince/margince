@@ -186,3 +186,40 @@ func ownedDeal(id string, owner ids.UUID) crmcontracts.WorklistItem {
 		Actions: []crmcontracts.WorklistItemActions{},
 	}
 }
+
+// The narrowing has to reach the QUERY. Filtering the answer instead lets a
+// colleague's twelve tasks fill a page bounded at twelve and leave the reader's
+// own overdue task unreachable behind them — the row they most needed.
+func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
+	tasks := &stubTasks{}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	)
+
+	if _, err := svc.forReader().Assemble(context.Background()); err != nil {
+		t.Fatalf("assembling the day: %v", err)
+	}
+
+	if !tasks.mineOnly {
+		t.Fatal("the task lane was asked for every visible task on a read scoped to the reader")
+	}
+}
+
+// And the lane feed keeps its own behaviour: /attention is a different surface
+// with its own promise, and this change must not narrow it.
+func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
+	tasks := &stubTasks{}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	)
+
+	if _, err := svc.Assemble(context.Background()); err != nil {
+		t.Fatalf("assembling the day: %v", err)
+	}
+
+	if tasks.mineOnly {
+		t.Fatal("the lane feed narrowed to the reader, changing a surface this did not set out to change")
+	}
+}

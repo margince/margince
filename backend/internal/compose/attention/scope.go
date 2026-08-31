@@ -74,9 +74,24 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 
 // mineOnly reports whether this read keeps only the reader's own work.
 //
-// Team and all are served by the lanes' own row scope, which already stops at
-// the reader's tier: asking for `all` cannot widen what the database returns,
-// it only stops this surface narrowing it further.
+// WHAT A WIDER SCOPE CAN AND CANNOT DO, because the difference is not obvious
+// and a reader must not be misled by the word on the response.
+//
+// The record-bearing sources — tasks, deals at risk, meetings, duplicate pairs
+// — widen: they are read under the caller's row scope, so `team` and `all`
+// return what that tier reaches and `mine` narrows below it.
+//
+// The intrinsically PER-USER sources do not, and cannot: a notice is addressed
+// to one person, a mailbox belongs to one person, a promise was made by one
+// person, an approved action failed for the person who approved it. Those reads
+// are bound to the acting user inside the modules that own them, so asking for
+// `all` does not reach a colleague's notices — nor should it, since the request
+// is for a wider view of shared work rather than a licence to read another
+// rep's inbox.
+//
+// So `all` means "every shared record I may see, plus my own personal queue",
+// which is the only honest reading available without a per-source authority
+// model the product does not have.
 func mineOnly(scope string) bool { return scope == scopeMine }
 
 // ownedByReader reports whether an item is the reader's own work.

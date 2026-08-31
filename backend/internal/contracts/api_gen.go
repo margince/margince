@@ -31529,6 +31529,15 @@ type GetWorklistParams struct {
 	// A scope the reader's own row scope does not reach is refused with 403 rather
 	// than quietly narrowed — answering a question about the team with facts about
 	// one person, with no way for the reader to tell, is the worse failure.
+	//
+	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
+	// going quiet, meetings and duplicate pairs are read under the caller's row
+	// scope, so `team` and `all` return what that tier reaches and `mine` narrows
+	// below it. The intrinsically per-user sources do not, and cannot: a notice is
+	// addressed to one person, a mailbox belongs to one, a promise was made by one,
+	// and an approved action failed for the person who approved it. `all` therefore
+	// means "every shared record I may see, plus my own personal queue" — not a
+	// licence to read a colleague's inbox.
 	Scope *GetWorklistParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
 
 	// Filter Narrow the queue to one kind of work. Omitted means everything, which is the default view.
