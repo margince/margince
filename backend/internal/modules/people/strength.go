@@ -65,8 +65,21 @@ type RelationshipStrength struct {
 	LastInbound  *time.Time
 	LastOutbound *time.Time
 	// LastInboundActivity is the message a follow-up would answer — the anchor
-	// the composer needs to open a reply rather than a fresh thread. Nil where
-	// nobody has written in, which is exactly when there is nothing to answer.
+	// the composer needs to open a reply rather than a fresh thread.
+	//
+	// Bounded by the SAME 90-day window as the direction counts, unlike the two
+	// dates above. Those are history: "they last wrote in March" is true and
+	// worth showing however old it is. An anchor is an ACTION, and it has to
+	// agree with the state the counts report — a contact whose only message is
+	// eighteen months old reads untried, and offering to "follow up" on that
+	// thread would open a reply to a conversation the same page just said had
+	// never happened. Nil is therefore the common case on a cold account, and
+	// it is the honest one.
+	//
+	// Read as a correlated LIMIT 1 rather than an aggregate over the history:
+	// array_agg(...)[1] materialised every inbound id a contact had ever sent
+	// in order to use one of them, which is the payload growing with history
+	// that this fold exists to avoid.
 	LastInboundActivity *ids.ActivityID
 }
 
@@ -326,8 +339,13 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
-		       (array_agg(a.id ORDER BY a.occurred_at DESC)
-		          FILTER (WHERE a.direction = 'inbound'))[1]
+		       (SELECT i.id FROM activity i
+		          JOIN activity_link il ON il.activity_id = i.id AND il.person_id = l.person_id
+		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
+		           AND i.archived_at IS NULL AND i.occurred_at >= $2
+		           AND ($3::timestamptz IS NULL OR i.occurred_at <= $3)
+		         ORDER BY i.occurred_at DESC, i.id DESC
+		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.person_id = ANY($1) AND a.kind IN `+strengthKinds+` AND a.archived_at IS NULL
@@ -380,8 +398,12 @@ func strengthInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now t
 		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
-		       (array_agg(a.id ORDER BY a.occurred_at DESC)
-		          FILTER (WHERE a.direction = 'inbound'))[1]
+		       (SELECT i.id FROM activity i
+		          JOIN activity_link il ON il.activity_id = i.id AND il.person_id = $1
+		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
+		           AND i.archived_at IS NULL AND i.occurred_at >= $2
+		         ORDER BY i.occurred_at DESC, i.id DESC
+		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
 		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`,
