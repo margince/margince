@@ -483,6 +483,16 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A replayed body re-checks every record it names, not only the one it
+  replays by.** `POST /people/quick-capture` answers the person created plus the
+  `organization_id` they were attached to; the replay gate probed the person and
+  handed the rest back, including an employer id the caller may since have lost
+  sight of. `POST /leads/{id}/promote` and `POST /leads/{id}/demote` have the
+  same shape — the third was found by widening the gate rather than by reading
+  the code. Every record reference a wrapper body carries is probed now, and a
+  gate derived from the contract fails when a response schema grows a reference
+  that nothing re-checks.
+
 - **A refused API key is no longer reported as six broken use cases.** The
   `e2e-llm` lane guarded against an empty transcript but not against one the API
   refused: a `401` produces an init line and an error result, which the checker

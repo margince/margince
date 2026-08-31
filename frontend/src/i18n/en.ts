@@ -1813,7 +1813,10 @@ export const en = {
   "co.vat.noReceipt":
     "None issued. The register issues a receipt only for a check made under your own VAT ID — add yours in the settings and the next check carries proof a tax authority accepts.",
   "co.vat.never":
-    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint.",
+    "This company's VAT ID has not been consulted. It is checked on its own when the number is read from the company's imprint, and you can ask the register now.",
+  "co.vat.askNow": "Check with the register",
+  "co.vat.askAgain": "Check again",
+  "co.vat.asked": "Asked. The register's answer appears here once it replies.",
   "co.tech.title": "Technology",
   "co.tech.sub":
     "What this company publicly runs, read from its DNS records, its certificates and its own homepage.",
@@ -6841,12 +6844,18 @@ export const en = {
   "provider.deleteDataConfirm.body":
     "Every value this provider supplied is removed from every contact. What you spent stays in your records; the data does not. This cannot be undone.",
   "provider.deleteDataConfirm.typed": "Type the provider's name to confirm",
-  "provider.autoEnrich": "Enrich new contacts automatically",
-  "provider.autoEnrichHint":
-    "When somebody adds a contact by hand, buy their details straight away.",
-  "provider.autoImport": "Enrich contacts that arrive from a connection",
-  "provider.autoImportHint":
-    "Every mailbox, channel and other connection adds a contact for each person it sees, and buying one spends credits.",
+  "provider.automaticLookup": "Look up contacts automatically",
+  "provider.automaticLookupHint":
+    "Every contact is looked up once for whatever the connection selects that the provider charges nothing for — typically the professional profile link, the current role and employer, and the work history. Email addresses and mobile numbers are never bought this way: those cost credits and stay a decision you make per contact.",
+  "provider.automaticLookupJurisdiction":
+    "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
+  "provider.backlog": "Still to look up",
+  "provider.backlogRemaining_one": "{count} contact",
+  "provider.backlogRemaining_other": "{count} contacts",
+  "provider.backlogWorking":
+    "Contacts that were already here when the provider was connected are being looked up a few at a time.",
+  "provider.backlogPaused":
+    "Nothing is being looked up right now: automatic lookups are off, the day's limit is spent, or the provider is not usable.",
   "provider.credits": "Credits left with the provider",
   "provider.credits.none": "The provider has not told us a balance yet.",
   "provider.credits.notConnected":

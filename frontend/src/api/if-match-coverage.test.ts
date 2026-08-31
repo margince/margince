@@ -58,7 +58,6 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/evidenceverdict.tsx PATCH /organizations/{id}/facts/{factKey}",
   "screens/evidenceverdict.tsx POST /organizations/{id}/facts/{factKey}/confirm",
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
-  "screens/integrations-provider.tsx PATCH /provider-connections/{provider}",
   "screens/settings.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",
   "screens/taskactions.tsx PATCH /activities/{id}",

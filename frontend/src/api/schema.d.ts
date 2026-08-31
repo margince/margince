@@ -1386,6 +1386,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The account's people, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
+         * @description The company People tab's list. `GET /organizations/{id}/360` carries a people
+         *     SECTION — a 25-row summary with a "there is more" flag — and this is the paging
+         *     surface behind it: the same contacts, the same ranking, over every one of them.
+         *
+         *     **Why a second read rather than a bigger section.** The section is a summary and
+         *     has a fixed cost; this answers a reader who is choosing somebody to contact and
+         *     needs search, filters and the rest of the account. A section that grew filters
+         *     would make every 360 pay for them.
+         *
+         *     **The default order is a recommendation, not an alphabet.** `recommended` puts
+         *     whoever has answered first, because they are the way in; then whoever nobody has
+         *     tried, because on an account where everyone has gone quiet they are the only move
+         *     that is not a fourth follow-up; then whoever we wrote to and heard nothing from.
+         *     Within a state the stronger relationship leads. This is the one ranking, shared
+         *     with the 360's section — a client that re-sorts is answering a different question
+         *     than the server did.
+         *
+         *     **Engagement is three states and they are not degrees of one thing.** `answered`
+         *     means they have written back inside the 90-day window. `no_reply` means we wrote
+         *     and heard nothing. `untried` means nobody has written to them at all. Untried and
+         *     no-reply look alike in a roster and call for opposite next actions, which is why
+         *     they are separate values rather than a boolean plus a date.
+         *
+         *     **Row scope, per contact.** The list carries the caller's person scope, so a
+         *     contact they may not read is absent rather than named — the same answer
+         *     `GET /people` gives. Reading the organization itself is mandatory.
+         *
+         *     Native system-of-record only: a workspace reading from an incumbent mirror gets
+         *     `422 unsupported_in_overlay_mode`, the same refusal the 360 gives.
+         */
+        get: operations["listOrganizationContacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/dossier": {
         parameters: {
             query?: never;
@@ -1941,7 +1992,28 @@ export interface paths {
          */
         get: operations["getOrganizationVatCheck"];
         put?: never;
-        post?: never;
+        /**
+         * Ask the register again about the number this company states.
+         * @description The automatic lanes consult the register only about a number they have not seen: a
+         *     write states a new number and earns one consultation. Nothing re-asks on a schedule,
+         *     which is deliberate — a verdict going stale is not an event the product can observe.
+         *     So a rep who knows a registration changed at the registry had no way to find out, and
+         *     the stored answer stood indefinitely.
+         *
+         *     This is that way. A person pressing it has said the stored answer is not good enough,
+         *     and the consultation runs even though the number has not changed. It is HUMAN-ONLY:
+         *     the register is a shared public service consulted on one worker, and an agent able to
+         *     re-ask in a loop is how an installation gets blocked for everybody.
+         *
+         *     The work is queued, not done here — the register can be slow or decline, and neither
+         *     should hold a request open. `202` means the consultation was accepted; read the
+         *     verdict back from the GET above.
+         *
+         *     `404` when the company states no VAT number to consult, or when this installation
+         *     consults no register at all. `429` when the same number was consulted moments ago:
+         *     the floor is a few minutes, and the answer already on the record is the answer.
+         */
+        post: operations["requestOrganizationVatCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16180,6 +16252,44 @@ export interface components {
              */
             contact_id: string;
         };
+        /**
+         * @description Where one contact stands with us, over the same 90-day window the relationship
+         *     score uses.
+         *
+         *     `answered` — they have written back inside the window. The way in.
+         *     `no_reply` — we have written and had nothing back. Writing again is a decision.
+         *     `untried` — nobody has written to them at all. Free to approach.
+         *
+         *     Untried is deliberately not folded into no-reply: "never asked" and "asked and
+         *     ignored" look identical in a roster and call for opposite next actions.
+         * @enum {string}
+         */
+        ContactEngagement: "answered" | "no_reply" | "untried";
+        OrganizationContact: {
+            /** Format: uuid */
+            person_id: string;
+            full_name: string;
+            /** @description The contact's job title, where one is on file. */
+            title?: string | null;
+            engagement: components["schemas"]["ContactEngagement"];
+            strength: components["schemas"]["RelationshipStrength"];
+            /**
+             * Format: date-time
+             * @description When they last wrote to us, over ALL history rather than the window. A reply
+             *     from two years ago is still the last thing they said, and the page prints it;
+             *     `engagement` is what says whether it counts as current.
+             */
+            last_inbound_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
+             */
+            last_outbound_at?: string | null;
+        };
+        OrganizationContactListResponse: {
+            data: components["schemas"]["OrganizationContact"][];
+            page: components["schemas"]["PageInfo"];
+        };
         /** @description The account's one-hop connection graph, as nodes and edges the client lays out. */
         OrganizationGraph: {
             /**
@@ -26723,6 +26833,65 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listOrganizationContacts: {
+        parameters: {
+            query?: {
+                /** @description Keep only contacts in this engagement state. Omitted means every state. */
+                status?: components["schemas"]["ContactEngagement"];
+                /**
+                 * @description Case-insensitive SUBSTRING match over the contact's name and title.
+                 *
+                 *     Deliberately not the accent-folding full-text search `GET /people` runs:
+                 *     this reads the account roster already in hand rather than the person
+                 *     corpus, so `Muller` does not find `Müller` here and does there. Stated
+                 *     because the two endpoints answering one word differently is a thing a
+                 *     caller has to be able to predict.
+                 */
+                q?: string;
+                /**
+                 * @description `recommended` is the ranking described above. The others are plain orders for a
+                 *     reader who wants the account by one column: most recently in touch, strongest
+                 *     relationship, or alphabetical.
+                 */
+                sort?: "recommended" | "-last_interaction" | "-strength" | "name";
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of the account's contacts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationContactListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getOrganizationDossier: {
         parameters: {
             query?: never;
@@ -27316,6 +27485,39 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    requestOrganizationVatCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The consultation was queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            /** @description Consulted too recently — the answer on the record still stands. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getLatestSiteRead: {

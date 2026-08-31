@@ -1786,7 +1786,11 @@ export const de = {
   "co.vat.noReceipt":
     "Keine vergeben. Das Register vergibt eine Abfrage-Nummer nur für eine Abfrage unter eurer eigenen USt-IdNr. — trag sie in den Einstellungen ein, dann trägt die nächste Abfrage einen Nachweis, den ein Finanzamt akzeptiert.",
   "co.vat.never":
-    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird.",
+    "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird — oder Sie fragen jetzt beim Register nach.",
+  "co.vat.askNow": "Beim Register abfragen",
+  "co.vat.askAgain": "Erneut abfragen",
+  "co.vat.asked":
+    "Angefragt. Die Antwort des Registers erscheint hier, sobald sie vorliegt.",
   "co.tech.title": "Technik",
   "co.tech.sub":
     "Was diese Firma öffentlich betreibt — gelesen aus ihren DNS-Einträgen, ihren Zertifikaten und ihrer eigenen Startseite.",
@@ -6791,12 +6795,18 @@ export const de = {
     "Jeder Wert dieses Anbieters verschwindet von jedem Kontakt. Was du ausgegeben hast, bleibt in den Aufzeichnungen; die Daten nicht. Das lässt sich nicht rückgängig machen.",
   "provider.deleteDataConfirm.typed":
     "Zum Bestätigen den Namen des Anbieters eingeben",
-  "provider.autoEnrich": "Neue Kontakte automatisch anreichern",
-  "provider.autoEnrichHint":
-    "Wenn jemand einen Kontakt von Hand anlegt, dessen Daten gleich mitkaufen.",
-  "provider.autoImport": "Kontakte aus Verbindungen anreichern",
-  "provider.autoImportHint":
-    "Jedes Postfach, jeder Kanal und jede weitere Verbindung legt für jede erkannte Person einen Kontakt an — und jeder Kauf kostet Guthaben.",
+  "provider.automaticLookup": "Kontakte automatisch nachschlagen",
+  "provider.automaticLookupHint":
+    "Jeder Kontakt wird einmal nachgeschlagen — für das, was die Verbindung auswählt und der Anbieter nicht berechnet, in der Regel den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber und den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft: die kosten Guthaben und bleiben eine Entscheidung pro Kontakt.",
+  "provider.automaticLookupJurisdiction":
+    "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
+  "provider.backlog": "Noch nachzuschlagen",
+  "provider.backlogRemaining_one": "{count} Kontakt",
+  "provider.backlogRemaining_other": "{count} Kontakte",
+  "provider.backlogWorking":
+    "Kontakte, die es beim Verbinden schon gab, werden nach und nach nachgeschlagen.",
+  "provider.backlogPaused":
+    "Zurzeit wird nichts nachgeschlagen: automatische Abfragen sind aus, das Tageslimit ist aufgebraucht, oder der Anbieter ist nicht nutzbar.",
   "provider.credits": "Restguthaben beim Anbieter",
   "provider.credits.none": "Der Anbieter hat uns noch keinen Stand genannt.",
   "provider.credits.notConnected":

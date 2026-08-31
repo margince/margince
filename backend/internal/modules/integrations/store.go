@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -74,6 +75,9 @@ type Store struct {
 	// applyStoredClaims folds a purchase already in the domain's table onto the
 	// record, for runs that completed before a record could hold them.
 	applyStoredClaims ApplyStoredClaimsFunc
+	// revertFills takes a purchase back off the records it filled, for the
+	// delete-data action.
+	revertFills RevertFillsFunc
 }
 
 // DeleteClaimsFunc is the owning domain's delete of everything one provider
@@ -82,6 +86,26 @@ type Store struct {
 // package is stdlib-only and cannot name a pgx.Tx — the same shape
 // capture.EnqueueBackfill uses. Returns how many claims went.
 type DeleteClaimsFunc func(ctx context.Context, tx pgx.Tx, provider string) (int64, error)
+
+// RevertFillsFunc takes one provider's purchases back off the records they
+// filled, one contact at a time. It answers which contacts are affected, and
+// then reverts each — two calls rather than one, because the second runs in its
+// own transaction per subject and this module must not hold an unbounded set of
+// people's rows while the eraser wants them.
+type RevertFillsFunc struct {
+	// Subjects names whose records this provider's purchases wrote to.
+	Subjects func(ctx context.Context, tx pgx.Tx, provider string) ([]ids.UUID, error)
+	// RevertOne clears what it can on one contact and reports the fields.
+	RevertOne func(ctx context.Context, tx pgx.Tx, provider string, subject ids.UUID) ([]string, error)
+}
+
+// WithFillReverter binds it. Without it the delete-data action still removes the
+// claims and scrubs the ledger; what it cannot do is take the values back off
+// the records, and it says so rather than reporting a clean sweep.
+func (s *Store) WithFillReverter(fn RevertFillsFunc) *Store {
+	s.revertFills = fn
+	return s
+}
 
 // WithClaimDeleter binds the owning domain's claim delete. Compose calls it;
 // without it, DeleteProviderData still scrubs the run ledger it owns.

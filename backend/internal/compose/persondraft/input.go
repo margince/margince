@@ -85,13 +85,18 @@ type Input struct {
 type RecipientIn struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	// FirstName is what the greeting uses. Split here rather than in the
-	// prompt: a model asked to shorten a name will shorten "Dr. Anne-Marie
+	// FirstName is what a familiar greeting uses. Split here rather than in
+	// the prompt: a model asked to shorten a name will shorten "Dr. Anne-Marie
 	// Weiß-Konrad" differently on every call.
 	FirstName string `json:"first_name"`
-	Title     string `json:"title,omitempty"`
-	Employer  string `json:"employer,omitempty"`
-	Email     string `json:"email,omitempty"`
+	// LastName is what a FORMAL greeting uses. The two registers take
+	// different names, and a formal opening built from a first name is wrong
+	// in every language that has the distinction — so the prompt is given both
+	// and told which is which rather than left to guess one from the other.
+	LastName string `json:"last_name,omitempty"`
+	Title    string `json:"title,omitempty"`
+	Employer string `json:"employer,omitempty"`
+	Email    string `json:"email,omitempty"`
 	// BuyingRole is the seat this person holds on the deal, as recorded. Never
 	// inferred from the title — a seat is relationship data.
 	BuyingRole string `json:"buying_role,omitempty"`

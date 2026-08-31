@@ -462,6 +462,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/organizations/{id}/profile-fields/{field}/confirm":         {Op: "confirmOrganizationProfileField", Access: "tool", Tool: "update_record", RecordType: "organization", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/organizations/{id}/suggestions/dismiss":                    {Op: "dismissOrganizationSuggestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/organizations/{id}/technical-enrich":                       {Op: "technicalEnrichCompany", Access: "tool", Tool: "enrich", RecordType: "organization", Tier: "confirmation_required", Scope: "enrich"},
+	"POST /v1/organizations/{id}/vat-check":                              {Op: "requestOrganizationVatCheck", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/organizations/{id}/view-ack":                               {Op: "acknowledgeOrganizationView", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/overlay/connection":                                        {Op: "connectOverlay", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/overlay/flip":                                              {Op: "executeOverlayFlip", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

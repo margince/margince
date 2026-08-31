@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -58,6 +59,10 @@ const (
 	// nowhere. A receipt without the date it was issued proves nothing.
 	auditKeyVatRegisteredAddr = "vat_registered_address"
 	auditKeyVatCheckedAt      = "vat_checked_at"
+	// The key that tells a person's request apart from the consultation it
+	// caused. Both rows name the same organization and the same number; only
+	// this says which one was somebody pressing a button.
+	auditKeyVatRequested = "vat_requested"
 )
 
 // VatCheck is one company's current VAT standing.
@@ -80,6 +85,19 @@ type VatCheck struct {
 // the other is evidence.
 var ErrVatCheckNotRecorded = errors.New("people: no VAT check is recorded for this organization")
 
+// ErrNoVatNumberStated says there is nothing to consult about. It is separate
+// from ErrVatCheckNotRecorded because they ask different things of the reader:
+// one has never been checked and can be, this one has no number to check and
+// needs somebody to type one. Both answer 404, and a client that showed the
+// same sentence for both would send a person to look for a button that is not
+// the one they need.
+var ErrNoVatNumberStated = errors.New("people: this organization states no VAT number")
+
+// ErrNoVatRegisterConfigured says this deployment consults nothing, so there is
+// no button for an operator to press twice — the thing to change is the
+// installation's configuration, not the record.
+var ErrNoVatRegisterConfigured = errors.New("people: this installation consults no VAT register")
+
 // VatCheckEnqueue hands the consultation to whatever runs jobs, inside the
 // caller's transaction.
 //
@@ -87,7 +105,12 @@ var ErrVatCheckNotRecorded = errors.New("people: no VAT check is recorded for th
 // number still writes, and no job is queued. Same shape as GeocodeEnqueue, and
 // for the same reason — the number is what the page stated; the verification is
 // what this installation can offer.
-type VatCheckEnqueue func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error
+//
+// requested distinguishes a consultation a PERSON asked for from one a write
+// earned. Both queue the same job on the same shared rate; they differ in what
+// the worker does when the stored answer already names this number — a write
+// leaves it alone, a person's request asks again.
+type VatCheckEnqueue func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, requested bool) error
 
 // enqueueVatCheck queues the consultation a VAT-number write earns, on the
 // caller's transaction so the job and the number commit together.
@@ -95,7 +118,89 @@ func (s *Store) enqueueVatCheck(ctx context.Context, tx pgx.Tx, orgID ids.Organi
 	if s.vatCheckEnqueue == nil {
 		return nil
 	}
-	return s.vatCheckEnqueue(ctx, tx, orgID)
+	return s.vatCheckEnqueue(ctx, tx, orgID, false)
+}
+
+// vatRecheckCooldown is how long a person's request stands as the answer before
+// another one is worth spending.
+//
+// The register is a shared public service and the installation consults it on
+// one worker: a button with no floor under it is how an installation gets
+// blocked for everybody. Short enough that a rep who has just fixed a number at
+// the registry can act on it within a coffee, long enough that a double-click or
+// an impatient second press costs nothing.
+const vatRecheckCooldown = 5 * time.Minute
+
+// RequestVatCheck queues the consultation a person asked for.
+//
+// The two refusals are different facts and stay apart: a company that states no
+// number has nothing to consult (ErrVatCheckNotRecorded, so the reader is told
+// to enter one), and a company consulted moments ago is being asked too often
+// (ErrBudgetExceeded → 429, so the reader is told to wait rather than that
+// something is wrong).
+func (s *Store) RequestVatCheck(ctx context.Context, orgID ids.OrganizationID) error {
+	// A consultation spends the installation's shared rate and writes a receipt
+	// onto the record, so it takes the same authority as any other change to
+	// that record rather than mere read access.
+	if err := auth.Require(ctx, entityOrganization, principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureWritableLive(ctx, tx, entityOrganization, orgID.UUID); err != nil {
+			return err
+		}
+		var number string
+		var tooSoon bool
+		// The floor is measured against UPDATED_AT, not checked_at, and the two
+		// are different clocks on purpose. checked_at is the REGISTER's date,
+		// because that is what the receipt attests to — and VIES answers with a
+		// date, no time, which parses to midnight. A cooldown on that column
+		// would expire at 00:05 on the day of the check and admit every request
+		// for the rest of it. updated_at is when this installation wrote the
+		// row, stamped by the same Postgres clock this compares against, so a
+		// drifted container clock cannot move the floor either.
+		const read = `
+			SELECT btrim(f.value),
+			       c.updated_at IS NOT NULL AND c.updated_at > now() - $2::interval
+			  FROM organization_profile_field f
+			  LEFT JOIN organization_vat_check c ON c.organization_id = f.organization_id
+			 WHERE f.organization_id = $1 AND f.field = 'register_vat'`
+		err := tx.QueryRow(ctx, read, orgID.UUID, vatRecheckCooldown.String()).Scan(&number, &tooSoon)
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && number == "") {
+			return ErrNoVatNumberStated
+		}
+		if err != nil {
+			return fmt.Errorf("people: reading the VAT number to request a check for: %w", err)
+		}
+		if tooSoon {
+			return fmt.Errorf(
+				"this number was consulted less than %s ago: %w",
+				vatRecheckCooldown, apperrors.ErrBudgetExceeded)
+		}
+		if s.vatCheckEnqueue == nil {
+			// This deployment consults no register. Refusing is what keeps the
+			// button honest: queueing into a lane nothing reads would answer the
+			// reader with a promise the installation cannot keep.
+			return ErrNoVatRegisterConfigured
+		}
+		if err := s.vatCheckEnqueue(ctx, tx, orgID, true); err != nil {
+			return err
+		}
+		// WHO asked is recorded here, because it is recordable nowhere else.
+		// The worker runs under a confined system principal — it must, since it
+		// reaches rows on nobody's behalf — so the receipt it later writes says
+		// system:vatcheck whatever prompted it. Without this row, "a person
+		// spent a consultation on this company" is answerable from nothing.
+		//
+		// AuditEvent rather than Audit: a request is an occurrence, not a
+		// change to a prior state, and Audit refuses an update carrying no
+		// before-image. No event follows it — the record has not changed yet,
+		// and announcing a question as a change would tell every subscriber
+		// something happened that has not.
+		_, err = storekit.AuditEvent(ctx, tx, "update", entityOrganization, orgID.UUID,
+			map[string]any{auditKeyVatNumber: number, auditKeyVatRequested: true})
+		return err
+	})
 }
 
 // statesAVatNumber reports whether an accepted set of read-back fields carries

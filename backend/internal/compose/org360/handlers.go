@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -64,6 +65,48 @@ func (h Handlers) GetOrganizationGraph(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, graph)
+}
+
+// ListOrganizationContacts implements GET /organizations/{id}/contacts.
+func (h Handlers) ListOrganizationContacts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	params crmcontracts.ListOrganizationContactsParams,
+) {
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	// A value the enum never declared is refused rather than ignored. An
+	// unrecognised status silently matched nothing and answered 200 with an
+	// empty page, which reads as "this account has no such contacts" — the
+	// wrong answer to a typo, and indistinguishable from the right one.
+	q := ContactListQuery{
+		Query:  params.Q,
+		Cursor: params.Cursor,
+		Limit:  params.Limit,
+		Sort:   string(crmcontracts.Recommended),
+	}
+	if params.Status != nil {
+		if !params.Status.Valid() {
+			httperr.Write(w, r, httperr.Validation("status", "invalid_enum",
+				"status is answered, no_reply or untried"))
+			return
+		}
+		status := people.Engagement(*params.Status)
+		q.Status = &status
+	}
+	if params.Sort != nil {
+		if !params.Sort.Valid() {
+			httperr.Write(w, r, httperr.Validation("sort", "invalid_enum",
+				"sort is recommended, -last_interaction, -strength or name"))
+			return
+		}
+		q.Sort = string(*params.Sort)
+	}
+	page, err := h.svc.ContactPage(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)), q)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, page)
 }
 
 // AcknowledgeOrganizationView implements POST /organizations/{id}/view-ack.

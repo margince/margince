@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { VatCheckCard } from "./companyvatcheck";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
 // The four states worth reviewing are the four answers a reader can get, and
 // they differ in what they let a business CLAIM rather than in how they look:
@@ -24,6 +29,12 @@ type VatCheck = components["schemas"]["OrganizationVatCheck"];
 
 const ORG_ID = "00000000-0000-7000-8000-0000000000a1";
 const ROUTE = `GET /organizations/${ORG_ID}/vat-check`;
+const ASK = `POST /organizations/${ORG_ID}/vat-check`;
+
+// The grant the ask button gates on. Without it every story renders as a viewer
+// who may not write, and the button is absent for the correct reason — which is
+// exactly the omission story-utils' own comment warns is invisible.
+const CAN_WRITE = meRoute({ organization: ["read", "update"] });
 
 const CHECKED: VatCheck = {
   organization_id: ORG_ID,
@@ -47,7 +58,11 @@ function card() {
  * evidence a tax authority accepts. */
 export const ValidWithReceipt: Story = {
   render: () => {
-    installFetchStub({ [ROUTE]: () => jsonResponse(CHECKED) });
+    installFetchStub({
+      "GET /me": CAN_WRITE,
+      [ROUTE]: () => jsonResponse(CHECKED),
+      [ASK]: () => new Response(null, { status: 202 }),
+    });
     return card();
   },
 };
@@ -58,6 +73,7 @@ export const ValidWithReceipt: Story = {
 export const ValidWithoutReceipt: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": CAN_WRITE,
       [ROUTE]: () =>
         jsonResponse({
           organization_id: ORG_ID,
@@ -77,6 +93,7 @@ export const ValidWithoutReceipt: Story = {
 export const Invalid: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": CAN_WRITE,
       [ROUTE]: () =>
         jsonResponse({
           organization_id: ORG_ID,
@@ -94,6 +111,7 @@ export const Invalid: Story = {
 export const RegisterSilent: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": CAN_WRITE,
       [ROUTE]: () =>
         jsonResponse({
           organization_id: ORG_ID,
@@ -111,7 +129,45 @@ export const RegisterSilent: Story = {
 export const NeverConsulted: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": CAN_WRITE,
       [ROUTE]: () => jsonResponse({ title: "not found" }, 404),
+      [ASK]: () => new Response(null, { status: 202 }),
+    });
+    return card();
+  },
+};
+
+/** Asked again too soon. The floor exists because the register is a shared
+ * public service consulted on one worker, and the reader is told to wait rather
+ * than that something is wrong — the answer on the card still stands. */
+export const AskedTooSoon: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": CAN_WRITE,
+      [ROUTE]: () => jsonResponse(CHECKED),
+      [ASK]: () =>
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Too Many Requests",
+            status: 429,
+            detail: "Diese Nummer wurde vor weniger als 5 Minuten abgefragt.",
+          },
+          429,
+        ),
+    });
+    return card();
+  },
+};
+
+/** A viewer who may read the company and not change it. The verdict is theirs
+ * to read; consulting the register is not — withholding the ask is not
+ * withholding the record. */
+export const WithoutTheGrantToAsk: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ organization: ["read"] }),
+      [ROUTE]: () => jsonResponse(CHECKED),
     });
     return card();
   },
