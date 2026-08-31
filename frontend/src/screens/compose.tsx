@@ -54,9 +54,12 @@ import {
   problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
+  useViewerId,
 } from "./common";
-import { useOrganization360 } from "./company360";
+import { recordNamesIn, useOrganization360 } from "./company360";
+import { ThreadPane, useThreadMessages } from "./composethread";
 import { useConsentPurposes } from "./consent";
+import { useRoster } from "./entityref";
 import {
   stripEveryKeyTag,
   stripSubjectTag,
@@ -547,10 +550,10 @@ function useReplyRecipient(anchor: string | undefined): string | undefined {
 /**
  * What the composer says it is answering, or null while it does not yet know.
  *
- * A caller that named an activity has already told the reader what they opened
- * — the message is on the page behind this dialog — so the line is for the
- * case that had nothing: opened from a record, where the conversation being
- * continued was decided here and shown nowhere.
+ * Only for the composer with no conversation pane beside it. Where the pane
+ * renders, the messages themselves say what is being answered and this sentence
+ * repeats them. It survives for the case that has nothing to show: a message
+ * opened from a record, where what is being continued was decided here.
  */
 function answeringSentence(
   latest: { activity?: Activity; settled: boolean },
@@ -596,6 +599,7 @@ function answeringSentence(
  * outranks anything the deal says.
  */
 function useThreadProject(activityId?: string): {
+  activity?: Activity;
   projectId?: string;
   settled: boolean;
 } {
@@ -613,6 +617,10 @@ function useThreadProject(activityId?: string): {
     enabled: Boolean(activityId),
   });
   return {
+    // The anchor itself, not only its filing: the conversation pane needs the
+    // `thread_key` this same read already carries, and a second GET of one
+    // activity to reach one field is two answers to "what is being answered".
+    activity: query.data,
     projectId: (query.data?.links ?? []).find(
       (link) => link.entity_type === "project",
     )?.entity_id,
@@ -2223,6 +2231,33 @@ export function ComposeModal({
     // before the lookup answered, both outrank the thread's default.
     setTo((current) => (current.length > 0 ? current : [threadRecipient]));
   }, [threadRecipient]);
+  // The anchor as a RECORD, not just an id: the conversation pane reads its
+  // `thread_key`. A caller-named activity is fetched (that read already runs,
+  // for the thread's filing); a resolved one is the row `latest` is holding.
+  const viewerId = useViewerId();
+  // What the conversation's rows are CALLED. An activity link carries ids, and
+  // "Sent to 8f21c4…" is not a reader telling you who was on a message. Two
+  // sources, because a thread has two sides: colleagues come from the workspace
+  // roster, the account's own people from the record behind this drawer — whose
+  // read is already in cache there, so this costs the composer nothing on the
+  // page it opens over.
+  const roster = useRoster("user", open);
+  const namesOrg = useOrganization360(
+    entityType === "organization" ? entityId : "",
+  );
+  const colleagues = new Map(
+    (roster.data ?? []).flatMap((entry) =>
+      "display_name" in entry ? [[entry.id, entry.display_name] as const] : [],
+    ),
+  );
+  const records = recordNamesIn(
+    namesOrg.data?.state === "ready" ? namesOrg.data.view : undefined,
+  );
+  const nameOf = (linkType: string, linkId: string) =>
+    linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
+  const anchorRead = useThreadProject(activityId);
+  const anchorActivity = activityId ? anchorRead.activity : latest.activity;
+  const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // The sentence the reader reads. Null while the lookup is unsettled: an
   // unanswered read is not "no earlier message", and saying so would tell them
   // this starts a new thread when it may continue one.
@@ -2244,6 +2279,14 @@ export function ComposeModal({
   // thread already knows, in front of a To field the draft would have filled.
   const groundable =
     !answering && entityType === "organization" && !isChannelReply;
+  // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
+  // answer both, so a reply inherited the account path's box — and an account
+  // that had mail lost the drawer that path was given.
+  const asDrawer = entityType === "organization" && !isChannelReply;
+  // The conversation rides beside the form only where there IS one and there is
+  // room for a second column. A channel reply answers a live conversation the
+  // provider owns, and has no thread of its own to draw.
+  const showConversation = asDrawer && conversation.messages.length > 0;
   // Where this send files, and the subject tag that travels with it. The
   // account path keeps its own picker (it chooses a project rather than
   // inheriting one), so this covers the anchored sends: a reply, and a message
@@ -2537,12 +2580,17 @@ export function ComposeModal({
         // The rep is about to send irreversibly, so the body they are
         // confirming has to be readable at a glance rather than through a
         // five-line porthole — and the Send button has to sit above the fold,
-        // not below a scroll.
-        size="wide"
-        // A DRAWER for the account-started message, so the account it is about
-        // stays on screen beside it (mockup State D). A reply keeps the centred
-        // box: its context is the thread in the dialog, not the page behind.
-        placement={groundable ? "right" : "center"}
+        // not below a scroll. A reply takes the split width because it carries
+        // a second column: the conversation it is answering.
+        size={showConversation ? "split" : "wide"}
+        // A DRAWER for every mail on an account, whether it starts a
+        // conversation or answers one, so the record it is about stays on
+        // screen beside it. It used to turn on `groundable`, which is false as
+        // soon as the account has earlier mail — so the same button gave a
+        // drawer on a quiet account and a centred box on a busy one, and an
+        // account whose first message was still loading changed shape under
+        // the reader mid-open.
+        placement={asDrawer ? "right" : "center"}
         confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
         confirmDisabled={!canSend || rejectionInFlight}
         onConfirm={() =>
@@ -2575,126 +2623,143 @@ export function ComposeModal({
           )
         }
       >
-        <div className="compose-fields">
-          {/* Every message says where it files. Mail ASKS — its answer travels
+        {/* The conversation on the left, the reply on the right. Wrapped only
+          when there IS one: an account-started message has no thread, and a
+          lone form inside a two-column grid is a form with an empty half. */}
+        <div className={showConversation ? "compose-split" : undefined}>
+          {showConversation && (
+            <ThreadPane
+              messages={conversation.messages}
+              pending={conversation.pending}
+              viewerUserId={viewerId}
+              nameOf={nameOf}
+            />
+          )}
+          <div className="compose-fields">
+            {/* Every message says where it files. Mail ASKS — its answer travels
             in the subject tag. A channel reply is TOLD: its send carries no
             filing field, so the conversation's own links are inherited
             whatever a control here collected. The condition is the
             transport's own, not the mail-only branch below. */}
-          {isChannelReply ? (
-            <ChannelReplyFiling activityId={activityId} />
-          ) : (
-            <ProjectFiling
-              projects={reachableProjects}
-              projectId={projectFiling.projectId}
-              onChange={projectFiling.setProjectId}
-            />
-          )}
-          {accountContext}
-          {/* AI drafting is mail-only — there is no draft-message endpoint, and
+            {isChannelReply ? (
+              <ChannelReplyFiling activityId={activityId} />
+            ) : (
+              <ProjectFiling
+                projects={reachableProjects}
+                projectId={projectFiling.projectId}
+                onChange={projectFiling.setProjectId}
+              />
+            )}
+            {accountContext}
+            {/* AI drafting is mail-only — there is no draft-message endpoint, and
             a channel reply's recipient is resolved server-side, so neither
             the draft controls nor the To/Cc/Subject fields apply to it. */}
-          {!isChannelReply && (
-            <MailOnlyFields
-              answering={answeringLine}
-              intent={intent}
-              onIntentChange={setIntent}
-              draft={draftControl}
-              draftUnavailable={draftUnavailable}
-              provenance={provenance}
-              voiceMaturity={voiceProfile.data?.maturity}
-              reasons={account.reasoning}
-              to={to}
-              onToChange={setTo}
-              onToEditing={stopOfferingRecipient}
-              cc={cc}
-              onCcChange={setCc}
-              subject={subject}
-              onSubjectChange={setSubject}
-              rejectionInFlight={rejectionInFlight}
+            {!isChannelReply && (
+              <MailOnlyFields
+                // The pane IS the answer to "what am I replying to", in the
+                // messages themselves. The sentence stays for the composer that
+                // has no pane — an account-started message, where what is being
+                // continued was decided here and shown nowhere.
+                answering={showConversation ? null : answeringLine}
+                intent={intent}
+                onIntentChange={setIntent}
+                draft={draftControl}
+                draftUnavailable={draftUnavailable}
+                provenance={provenance}
+                voiceMaturity={voiceProfile.data?.maturity}
+                reasons={account.reasoning}
+                to={to}
+                onToChange={setTo}
+                onToEditing={stopOfferingRecipient}
+                cc={cc}
+                onCcChange={setCc}
+                subject={subject}
+                onSubjectChange={setSubject}
+                rejectionInFlight={rejectionInFlight}
+              />
+            )}
+            <Textarea
+              className="compose-body"
+              aria-label={t("compose.body")}
+              placeholder={t("compose.body")}
+              value={body}
+              disabled={rejectionInFlight}
+              onChange={(event) => editBody(event.target.value)}
             />
-          )}
-          <Textarea
-            className="compose-body"
-            aria-label={t("compose.body")}
-            placeholder={t("compose.body")}
-            value={body}
-            disabled={rejectionInFlight}
-            onChange={(event) => editBody(event.target.value)}
-          />
-          <p className="t-caption">{t("compose.bodyHint")}</p>
-          {/* Only over the machine's OWN untouched words: a rewrite replaces the
+            <p className="t-caption">{t("compose.bodyHint")}</p>
+            {/* Only over the machine's OWN untouched words: a rewrite replaces the
             body, and once the rep has edited it there is no model draft left
             to rewrite — only their work to throw away. */}
-          {body !== "" && body === servedBody && (
-            <RewriteRow
-              // The draft in flight blocks these too, though it does not block
-              // the button that started it: a rewrite REPLACES the body, so a
-              // second request begun beside the first lands whichever answer
-              // returns last over the reader's editor.
-              disabled={draftControl.pending || draftControl.disabled}
-              onRewrite={(instruction) =>
-                draft.mutate({
-                  grounding: {
-                    ...account.grounding,
-                    projectId: projectFiling.projectId,
-                  },
-                  instruction,
-                })
-              }
-            />
-          )}
+            {body !== "" && body === servedBody && (
+              <RewriteRow
+                // The draft in flight blocks these too, though it does not block
+                // the button that started it: a rewrite REPLACES the body, so a
+                // second request begun beside the first lands whichever answer
+                // returns last over the reader's editor.
+                disabled={draftControl.pending || draftControl.disabled}
+                onRewrite={(instruction) =>
+                  draft.mutate({
+                    grounding: {
+                      ...account.grounding,
+                      projectId: projectFiling.projectId,
+                    },
+                    instruction,
+                  })
+                }
+              />
+            )}
 
-          <label className="t-body compose-check">
-            {t("compose.purpose")}
-            <Select
-              aria-label={t("compose.purpose")}
-              options={purposeOptions(purposes.data?.data)}
-              value={purpose}
-              onChange={setPurpose}
-            />
-          </label>
-          <p className="t-caption">{t("compose.purposeHint")}</p>
+            <label className="t-body compose-check">
+              {t("compose.purpose")}
+              <Select
+                aria-label={t("compose.purpose")}
+                options={purposeOptions(purposes.data?.data)}
+                value={purpose}
+                onChange={setPurpose}
+              />
+            </label>
+            <p className="t-caption">{t("compose.purposeHint")}</p>
 
-          {!isChannelReply && (
-            <MailSendNotices to={to} cc={cc} purpose={purpose} />
-          )}
-          {sendUnavailable && (
-            <p className="t-caption">{t("compose.sendUnavailable")}</p>
-          )}
-          {/* The rejection failed, and the rep has to be told: the judgment is
+            {!isChannelReply && (
+              <MailSendNotices to={to} cc={cc} purpose={purpose} />
+            )}
+            {sendUnavailable && (
+              <p className="t-caption">{t("compose.sendUnavailable")}</p>
+            )}
+            {/* The rejection failed, and the rep has to be told: the judgment is
             still open and the words on screen are still the ones it names.
             Announced rather than merely coloured, on the same terms as every
             other failure in this drawer. */}
-          {discardControl?.error && (
-            <p
-              className="t-caption"
-              role="alert"
-              style={{ color: "var(--danger)" }}
-            >
-              {discardControl.error}
-            </p>
-          )}
-          <SendRefusal refusal={refusal} personId={personId} />
-          <p className="t-caption">
-            {t(
-              isChannelReply
-                ? "compose.sendMessageBody"
-                : scheduling
-                  ? "compose.scheduleBody"
-                  : "compose.sendBody",
+            {discardControl?.error && (
+              <p
+                className="t-caption"
+                role="alert"
+                style={{ color: "var(--danger)" }}
+              >
+                {discardControl.error}
+              </p>
             )}
-          </p>
-          {/* The moment in words, under the control that carries it: a rep who
+            <SendRefusal refusal={refusal} personId={personId} />
+            <p className="t-caption">
+              {t(
+                isChannelReply
+                  ? "compose.sendMessageBody"
+                  : scheduling
+                    ? "compose.scheduleBody"
+                    : "compose.sendBody",
+              )}
+            </p>
+            {/* The moment in words, under the control that carries it: a rep who
             picked one three clicks ago has to be able to read it back without
             reopening the picker to find out what they chose. */}
-          {scheduled && (
-            <p className="t-caption">
-              {t("compose.willGoOut", {
-                when: momentLabel(scheduled, locale, zone),
-              })}
-            </p>
-          )}
+            {scheduled && (
+              <p className="t-caption">
+                {t("compose.willGoOut", {
+                  when: momentLabel(scheduled, locale, zone),
+                })}
+              </p>
+            )}
+          </div>
         </div>
       </ConfirmModal>
     </>

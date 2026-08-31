@@ -2296,7 +2296,8 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    // Before the draft the line still answers the first question: WHAT.
+    // WHAT is being continued, in the conversation itself rather than in a
+    // sentence about it: the pane carries the message the draft is answering.
     await screen.findByText(/Rechnung GR-2026-0207/);
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
@@ -2304,10 +2305,10 @@ describe("what the composer says it is answering", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
 
-    // And then WHO, in the same sentence the reader is already reading.
-    expect(
-      await screen.findByText(/dietmar@valantic.test.*Rechnung GR-2026-0207/),
-    ).toBeTruthy();
+    // And WHO, in the field that will actually carry it. The recipient used to
+    // be reported in the answering sentence, which the pane replaced — a
+    // sentence naming the subject beside a pane showing it read as a stutter.
+    expect(await screen.findByText(/dietmar@valantic.test/)).toBeTruthy();
   });
 
   // The project narrows through the list's OWN project_id filter. Asking for
@@ -2461,5 +2462,113 @@ describe("what the composer says it is answering", () => {
 
     await screen.findByRole("combobox");
     expect(screen.queryByText(/Replying to|starts a new thread/i)).toBeNull();
+  });
+});
+
+// The conversation a reply is answering, in the drawer beside it.
+//
+// The composer used to keep the centred box for a reply on the grounds that the
+// message was "on the page behind" — which the box was covering. These pin the
+// shape it takes and what it draws in the second column.
+describe("the composer's conversation pane", () => {
+  const threaded: Activity = {
+    ...activity202,
+    thread_key: "<t-1@mail>",
+    body: "The signed order is attached.",
+    direction: "inbound",
+  };
+  const sibling: Activity = {
+    ...threaded,
+    id: "act-0",
+    subject: "Q3 order",
+    body: "Sending the order over today.",
+    direction: "outbound",
+    occurred_at: "2026-06-28T00:00:00Z",
+  };
+
+  it("takes the drawer on an account whose mail it is answering", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The sibling message arrives in the pane, which is what widens the
+    // drawer — so wait for the conversation, then read the shape.
+    expect(
+      await screen.findByText("Sending the order over today."),
+    ).toBeTruthy();
+    // The drawer, not the centred box: an account's mail keeps the record
+    // beside it whether it opens a conversation or answers one.
+    expect(document.querySelector(".modal-drawer")).not.toBeNull();
+    expect(document.querySelector(".modal-drawer-split")).not.toBeNull();
+  });
+
+  it("draws a message it may not read as a held place, not a gap", async () => {
+    // A thread can run through an audience this reader is not in. Dropping the
+    // row would make the conversation look continuous when it is not, and the
+    // reply would be written into a silence the writer cannot see.
+    const withheld: Activity = {
+      ...sibling,
+      id: "act-2",
+      subject: null,
+      body: null,
+      content_state: "withheld",
+    };
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, withheld], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    const pane = await screen.findByRole("region", {
+      name: /this conversation/i,
+    });
+    expect(pane.querySelectorAll("li")).toHaveLength(2);
+  });
+
+  it("shows a mail with no thread as the one message it is", async () => {
+    // Capture assigns a thread key only where a provider reported a
+    // conversation. A mail without one is a conversation of exactly one
+    // message, and asking the server for every activity that has no thread is
+    // the wrong question.
+    const loose: Activity = { ...threaded, thread_key: null };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(loose),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText("The signed order is attached."),
+    ).toBeTruthy();
+    expect(sent.filter((call) => call.key === "GET /activities")).toHaveLength(
+      0,
+    );
   });
 });

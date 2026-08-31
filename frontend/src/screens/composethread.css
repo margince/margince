@@ -1,0 +1,65 @@
+/* The reply and the conversation it answers, side by side inside the drawer.
+ *
+ * The split is a grid rather than two floated columns because the two halves
+ * scroll independently and must not decide each other's height: a long thread
+ * would otherwise stretch the form's column and push Send below the fold. */
+.compose-split {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+  gap: var(--space-5);
+  /* The drawer is a flex column with a sticky foot; without this the grid
+     takes its content's height and the panes stop scrolling inside it. */
+  min-block-size: 0;
+}
+
+.compose-thread {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  /* The conversation is what the reply is drawn FROM, so it reads as the
+     recessed half: the form is where the work happens. A rule rather than a
+     fill, because a tinted column beside a white one reads as disabled. */
+  border-inline-end: 1px solid var(--borderSubtle);
+  padding-inline-end: var(--space-5);
+}
+
+.compose-thread-head {
+  flex: none;
+  padding-block-end: var(--space-3);
+  color: var(--textMeta);
+}
+
+/* The pane scrolls, the form scrolls, the drawer does not. min-block-size: 0
+   is what lets a grid child shrink below its content and scroll at all. */
+.compose-thread-scroll {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+
+/* The thread is one conversation rather than a record's whole chronology, so
+   the date gutter that keeps an account's timeline in a straight column buys
+   nothing here and costs a third of the measure. */
+.compose-thread-list {
+  padding-inline-start: 0;
+}
+
+/* Below the fold the two columns cannot both be read, so the conversation
+   folds ABOVE the form rather than beside it, keeping its own scroll and a
+   height that leaves the form on screen. A pane that merely narrowed would be
+   two unreadable halves; one that vanished would put the reply back over the
+   thread it answers, which is the failure this exists to fix. */
+@media (max-width: 1100px) {
+  .compose-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .compose-thread {
+    border-inline-end: 0;
+    padding-inline-end: 0;
+    border-block-end: 1px solid var(--borderSubtle);
+    padding-block-end: var(--space-4);
+  }
+  .compose-thread-scroll {
+    max-block-size: 14rem;
+  }
+}

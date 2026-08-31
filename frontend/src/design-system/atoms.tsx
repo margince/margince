@@ -1354,7 +1354,11 @@ export function Modal({
   labelledBy: string;
   // "wide" roomier variant for content-dense dialogs (code/YAML previews);
   // "default" keeps the compact form width every confirm/create modal uses.
-  size?: "default" | "wide";
+  // "split" is a drawer holding TWO columns rather than one — the conversation
+  // being answered beside the reply being written. It is a width because that
+  // is what a second column costs; a drawer at the wide clamp splits into two
+  // unreadable halves.
+  size?: "default" | "wide" | "split";
   // "right" anchors the dialog to the right edge, full height — the drawer
   // form the composer and the evidence receipt use, where the record behind
   // stays visible as context rather than being covered by a centred box.
@@ -1485,17 +1489,29 @@ export function Modal({
 
 // A right-anchored dialog draws its width from the viewport, so the `size`
 // variants — which exist to widen a centred box — do not apply to it.
-function modalClass(size: "default" | "wide", placement: "center" | "right") {
+function modalClass(
+  size: "default" | "wide" | "split",
+  placement: "center" | "right",
+) {
   if (placement === "right") {
     // A drawer's width normally comes from the viewport, but a surface a rep
     // WORKS in — a numbered claim list, a message being written — wraps into an
     // unreadable column at the default clamp. `size` is what asks for the
     // roomier one, and it brings sticky header and footer with it.
+    //
+    // A split drawer is the wide one plus the room its second column needs, so
+    // it keeps the wide band behaviour rather than restating it.
+    if (size === "split") {
+      return "modal modal-drawer modal-drawer-wide modal-drawer-split";
+    }
     return size === "wide"
       ? "modal modal-drawer modal-drawer-wide"
       : "modal modal-drawer";
   }
-  return size === "wide" ? "modal modal-wide" : "modal";
+  // Centred, a split has no second column to hold — the layout that earns the
+  // extra width is the drawer's — so it falls back to the roomy box rather
+  // than to a width nothing on screen uses.
+  return size === "default" ? "modal" : "modal modal-wide";
 }
 
 // Keep Tab inside the dialog. `aria-modal` tells a screen reader the rest of

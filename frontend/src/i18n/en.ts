@@ -2975,6 +2975,8 @@ export const en = {
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
+  "compose.threadHeading": "This conversation",
+  "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "You are sending this email now. This is an outbound, irreversible action.",
   // A moment picked in the field above turns this dialog into a different

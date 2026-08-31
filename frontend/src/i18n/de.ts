@@ -2951,6 +2951,8 @@ export const de = {
   "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "Diese E-Mail senden?",
+  "compose.threadHeading": "Dieser Verlauf",
+  "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
   "compose.schedule": "Einplanen",

@@ -2923,6 +2923,8 @@ export const vi = {
   "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email này?",
+  "compose.threadHeading": "Cuộc trao đổi này",
+  "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
     "Bạn đang gửi email này ngay bây giờ. Đây là hành động gửi ra ngoài, không đảo ngược được.",
   "compose.schedule": "Hẹn giờ",
