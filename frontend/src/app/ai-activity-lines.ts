@@ -145,6 +145,7 @@ export const ACTIVITY_LINE: Readonly<
   },
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
+  capture_confidentiality_verdict: SYSTEM_SWEEP,
   capture_counterparty_verdict: SYSTEM_SWEEP,
   enrich: notDisplayed(
     "it reaches nobody, and it would not be worth showing if it did — recording only the first half is what made this read like a gap somebody should close. Reachability: the one production site is the signature-enrichment pass, which runs under a system principal with no on_behalf_of, so ResolveActor scopes every occurrence to the workspace with a NULL actor_user_id while the personal feed selects on actor_user_id. Worth: it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (api/jobs.yaml capture_enrich, up to 100 candidates in series), and the occurrence key is correlation+task, so every candidate collapses into ONE row — a per-person subject would make that single row flap from one person to the next rather than narrate any of them. What a reader actually wants from this pass is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. The ticker's own `enrich` key names DIFFERENT work (a provider run on a person, and the organization page's Enrich card, which runs cold_start rather than this task), which is what makes this one easy to mistake for visible",
