@@ -247,3 +247,44 @@ func TestContactPageTreatsAnOmittedSortAsRecommended(t *testing.T) {
 		t.Fatalf("a cursor minted with no sort was refused by the sort it actually used: %v", err)
 	}
 }
+
+// Both directions of a column order, because a table header is a toggle.
+//
+// The design system spells the reverse of a column by prefixing a minus onto
+// that column's own field, so a contract declaring one spelling per column
+// answers the second press with a 422 on a control the reader was invited to
+// press. Both spellings are declared, and both have to sort.
+func TestContactPageSortsEachColumnBothWays(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	svc := org360Service(e)
+
+	org := e.SeedOrg(t, "Brandt GmbH", nil)
+	for _, name := range []string{"Zara Zimmer", "Anna Adler", "Mia Mueller"} {
+		person := e.SeedPerson(t, name, nil)
+		employ(t, e, person, org, "Fleet")
+	}
+
+	ascending, err := svc.ContactPage(ctx, ids.OrganizationID{UUID: org},
+		org360svc.ContactListQuery{Sort: "name"})
+	if err != nil {
+		t.Fatalf("sorting by name: %v", err)
+	}
+	descending, err := svc.ContactPage(ctx, ids.OrganizationID{UUID: org},
+		org360svc.ContactListQuery{Sort: "-name"})
+	if err != nil {
+		t.Fatalf("sorting by name reversed: %v", err)
+	}
+	if got := ascending.Data[0].FullName; got != "Anna Adler" {
+		t.Fatalf("ascending opens on %q, want Anna Adler", got)
+	}
+	if got := descending.Data[0].FullName; got != "Zara Zimmer" {
+		t.Fatalf("descending opens on %q, want Zara Zimmer", got)
+	}
+	// The same set either way: a direction reorders the account, it does not
+	// filter it.
+	if len(ascending.Data) != len(descending.Data) {
+		t.Fatalf("the two directions returned %d and %d contacts",
+			len(ascending.Data), len(descending.Data))
+	}
+}

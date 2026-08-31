@@ -24,6 +24,7 @@ import {
 
 type OrganizationContact = components["schemas"]["OrganizationContact"];
 type Engagement = components["schemas"]["ContactEngagement"];
+type ContactStatus = Engagement | undefined;
 type ContactSort =
   | NonNullable<
       NonNullable<
@@ -67,15 +68,20 @@ export function CompanyPeopleList({ orgId }: { readonly orgId: string }) {
         query: ListQuery,
         cursor: string | null,
       ): Promise<ListPage<OrganizationContact>> => {
+        // The declared filters, named one by one rather than spread. `filters`
+        // carries whatever the address holds, and the address is the reader's
+        // to edit: a spread after the paging keys lets `?cursor=` or `?limit=`
+        // from a pasted URL overwrite the ones this function just computed,
+        // which breaks paging with a 422 the reader cannot explain.
         const { data, error } = await api.GET("/organizations/{id}/contacts", {
           params: {
             path: { id: orgId },
             query: {
               q: query.q || undefined,
               sort: (query.sort || undefined) as ContactSort,
+              status: query.filters.status as ContactStatus,
               cursor: cursor || undefined,
               limit: listFetchLimit(query.perPage),
-              ...query.filters,
             },
           },
         });
@@ -153,7 +159,8 @@ export function CompanyPeopleList({ orgId }: { readonly orgId: string }) {
           cell: (contact: OrganizationContact) => (
             <LastTouch contact={contact} />
           ),
-          sort: "-last_interaction",
+          sort: "last_interaction",
+          numeric: true,
         },
         {
           key: "strength",
@@ -163,7 +170,8 @@ export function CompanyPeopleList({ orgId }: { readonly orgId: string }) {
               {t(`strength.bucket.${contact.strength.bucket}`)}
             </span>
           ),
-          sort: "-strength",
+          sort: "strength",
+          numeric: true,
         },
       ]}
       rowKey={(contact: OrganizationContact) => contact.person_id}

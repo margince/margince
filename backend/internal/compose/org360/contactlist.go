@@ -191,8 +191,13 @@ func keepNamed(all []people.ContactStrength, identity map[ids.PersonID]contactCa
 // other three are plain column orders, each ending in the person id so a page
 // boundary falls in the same place every time.
 func sortContacts(all []people.ContactStrength, order string, identity map[ids.PersonID]contactCard) {
-	switch order {
-	case string(crmcontracts.MinusLastInteraction):
+	// Each field in both directions, because a table header is a toggle: the
+	// reader who presses "Last exchange" twice is asking for the reverse, and
+	// the design system spells that by prefixing a minus onto the column's own
+	// field name.
+	ascending := !strings.HasPrefix(order, "-")
+	switch strings.TrimPrefix(order, "-") {
+	case "last_interaction":
 		sort.SliceStable(all, func(i, j int) bool {
 			a, b := all[i].Strength.LastInteraction, all[j].Strength.LastInteraction
 			if (a == nil) != (b == nil) {
@@ -202,22 +207,22 @@ func sortContacts(all []people.ContactStrength, order string, identity map[ids.P
 				return b == nil
 			}
 			if a != nil && !a.Equal(*b) {
-				return a.After(*b)
+				return a.After(*b) == !ascending
 			}
 			return all[i].PersonID.String() < all[j].PersonID.String()
 		})
-	case string(crmcontracts.MinusStrength):
+	case "strength":
 		sort.SliceStable(all, func(i, j int) bool {
 			if all[i].Strength.Strength != all[j].Strength.Strength {
-				return all[i].Strength.Strength > all[j].Strength.Strength
+				return (all[i].Strength.Strength > all[j].Strength.Strength) == !ascending
 			}
 			return all[i].PersonID.String() < all[j].PersonID.String()
 		})
-	case string(crmcontracts.Name):
+	case "name":
 		sort.SliceStable(all, func(i, j int) bool {
 			ai, bi := identity[all[i].PersonID].fullName, identity[all[j].PersonID].fullName
 			if !strings.EqualFold(ai, bi) {
-				return strings.ToLower(ai) < strings.ToLower(bi)
+				return (strings.ToLower(ai) < strings.ToLower(bi)) == ascending
 			}
 			return all[i].PersonID.String() < all[j].PersonID.String()
 		})

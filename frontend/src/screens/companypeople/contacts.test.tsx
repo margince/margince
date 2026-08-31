@@ -3,12 +3,25 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render as rtlRender, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { expect, test } from "vitest";
+import { afterEach, expect, test } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { CompanyPeopleList } from "./contacts";
 import { contactsFixture, stubContacts } from "./contacts.fixtures";
+
+// Each test renders its own list; without this the previous test's rows stay in
+// the document and a name-based query finds two of everything.
+afterEach(() => {
+  cleanup();
+  window.location.hash = "";
+});
 
 function render(ui: ReactNode, locale: "en" | "de" = "en") {
   const client = new QueryClient({
@@ -66,4 +79,35 @@ test("renders the German words under a German locale", async () => {
   // The engagement WORDS, not the column head: "Kontaktstand" labels both the
   // column and its filter, and asserting it would pass on the chrome alone.
   await waitFor(() => expect(screen.getByText("Antwortet")).not.toBeNull());
+});
+
+test("a second press on a column asks for the reverse, and the server accepts it", async () => {
+  const calls = stubContacts(contactsFixture());
+  const user = userEvent.setup();
+  render(<CompanyPeopleList orgId="o-1" />);
+
+  await screen.findByText("Dietmar Rietsch");
+  const header = screen.getByRole("button", { name: "Sort by Last exchange" });
+
+  // A column header is a toggle. The design system spells the reverse by
+  // prefixing a minus onto the column's OWN field, so a column declared as
+  // `-last_interaction` would ask for `--last_interaction` here — a value the
+  // endpoint's enum never declared, answered with a 422 on a control the
+  // reader was invited to press.
+  await user.click(header);
+  await waitFor(() => expect(calls.at(-1)).toContain("sort=-last_interaction"));
+  await user.click(header);
+  await waitFor(() => expect(calls.at(-1)).toContain("sort=last_interaction"));
+  expect(calls.at(-1)).not.toContain("--last_interaction");
+});
+
+test("does not let a pasted cursor or limit override the paging it computed", async () => {
+  const calls = stubContacts(contactsFixture());
+  window.location.hash = "#/companies/o-1/people?cursor=garbage&limit=1";
+  render(<CompanyPeopleList orgId="o-1" />);
+
+  await screen.findByText("Dietmar Rietsch");
+  // The address is the reader's to edit; the paging keys are not theirs to set.
+  expect(calls.at(-1)).not.toContain("cursor=garbage");
+  expect(calls.at(-1)).not.toContain("limit=1&");
 });

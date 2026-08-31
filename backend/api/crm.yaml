@@ -2269,12 +2269,17 @@ paths:
           in: query
           schema:
             type: string
-            enum: [recommended, -last_interaction, -strength, name]
+            enum: [recommended, last_interaction, -last_interaction, strength, -strength, name, -name]
             default: recommended
           description: |
-            `recommended` is the ranking described above. The others are plain orders for a
-            reader who wants the account by one column: most recently in touch, strongest
-            relationship, or alphabetical.
+            `recommended` is the ranking described above. The rest are plain orders for a
+            reader who wants the account by one column, each in both directions: a
+            `-` prefix reverses it.
+
+            Both directions are declared rather than only the useful-looking one because a
+            table header is a TOGGLE — the second press on "Last exchange" asks for the
+            reverse of whatever it sent first, and an enum carrying one spelling per column
+            answers that press with a 422 on a control the reader was invited to press.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
