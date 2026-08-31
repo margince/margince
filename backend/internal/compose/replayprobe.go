@@ -245,7 +245,7 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 func ensureCompanionsVisible(ctx context.Context, pool *pgxpool.Pool, target replayTarget, body string) error {
 	for _, companion := range target.companions {
 		raw, err := stringAt(body, companion.idPath)
-		if err != nil || raw == "" {
+		if err != nil {
 			// Absent, null, or not a string: the body names no record here.
 			continue
 		}

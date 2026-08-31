@@ -249,3 +249,14 @@ func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
 		}
 	}
 }
+
+// A companion present as an EMPTY STRING is a body the middleware cannot
+// vouch for, not a body that names no record. Skipping it would replay a
+// malformed answer on the strength of a valid primary.
+func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
+	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture",
+		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":""}`)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
+	}
+}
