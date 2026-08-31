@@ -409,6 +409,46 @@ func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter
 	httperr.WriteJSON(w, http.StatusOK, toContractConnection(view))
 }
 
+// SetConnectorMailPosture: PUT /connectors/{provider}/mail-posture.
+// What this mailbox asks of the mail it brings in; the registry owns the
+// scoping, the workspace opt-in and the audit, and this is wire-only.
+func (h connectorHandlers) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+	if h.registry == nil {
+		httperr.NotImplemented(w, r, "SetConnectorMailPosture")
+		return
+	}
+	var req crmcontracts.SetMailPostureRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	applyToHistory := req.ApplyToHistory != nil && *req.ApplyToHistory
+	view, err := h.registry.SetMailPosture(r.Context(), string(provider), string(req.Posture), applyToHistory)
+	// A mailbox this caller has not connected is not theirs to configure, and
+	// answers as absent, for the reason the sibling above says.
+	if errors.Is(err, capture.ErrNoConnection) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractConnection(view))
+}
+
+// postureOnWire renders a connection's posture as the contract's optional
+// field. Empty means the row predates the column on a read path that did not
+// select it, which is absence rather than a posture — the alternative, coercing
+// it to a word, would tell a client this mailbox asked for something it never
+// did.
+func postureOnWire(posture string) *crmcontracts.CaptureConnectionMailPosture {
+	if posture == "" {
+		return nil
+	}
+	p := crmcontracts.CaptureConnectionMailPosture(posture)
+	return &p
+}
+
 // toContractConnection maps a registry connection row onto the wire shape.
 // Storage now uses the contract's own status vocabulary (CAP-DDL-2 reconciled
 // capture_connection to it), so status is a straight cast — no translation. The
@@ -424,6 +464,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		// Carried as the pointer it is: null on the wire is this mailbox
 		// following the tenant default, not a field the read forgot.
 		SignatureEnrichEnabled: v.SignatureEnrichEnabled,
+		MailPosture:            postureOnWire(v.MailPosture),
 	}
 	if c.Scopes == nil {
 		c.Scopes = []string{}

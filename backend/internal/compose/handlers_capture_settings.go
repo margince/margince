@@ -49,7 +49,12 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	settings, err := h.store.Update(r.Context(), req.AutoEnrich, req.MailSharing, req.SignatureEnrich)
+	settings, err := h.store.Update(r.Context(), capture.SettingsPatch{
+		AutoEnrich:           req.AutoEnrich,
+		MailSharing:          req.MailSharing,
+		SharedPostureAllowed: req.SharedPostureAllowed,
+		SignatureEnrich:      req.SignatureEnrich,
+	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -60,8 +65,9 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 // toContractCaptureSettings maps the stored posture onto the wire shape.
 func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings {
 	return crmcontracts.CaptureSettings{
-		AutoEnrich:      s.AutoEnrich,
-		MailSharing:     s.MailSharing,
-		SignatureEnrich: s.SignatureEnrich,
+		AutoEnrich:           s.AutoEnrich,
+		MailSharing:          s.MailSharing,
+		SharedPostureAllowed: s.SharedPostureAllowed,
+		SignatureEnrich:      s.SignatureEnrich,
 	}
 }

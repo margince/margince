@@ -28,6 +28,23 @@ type Settings struct {
 	// switch keeps it. See settingsentry.go for why the two are separate.
 	SignatureEnrich bool
 	MailSharing     bool
+	// SharedPostureAllowed is the workspace's answer to whether a seat may put
+	// their mailbox in the `shared` posture at all.
+	SharedPostureAllowed bool
+}
+
+// SettingsPatch is a sparse capture-settings change: a nil field is left
+// unchanged.
+//
+// A struct rather than a positional argument per setting. There are four now,
+// all of them *bool, and a caller that transposed two would compile, pass every
+// test that does not happen to set both, and silently switch mail sharing when
+// it meant to switch enrichment.
+type SettingsPatch struct {
+	AutoEnrich           *bool
+	MailSharing          *bool
+	SharedPostureAllowed *bool
+	SignatureEnrich      *bool
 }
 
 // SettingsStore is the store over the workspace capture posture.
@@ -54,10 +71,15 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 	if err != nil {
 		return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
 	}
+	sharedAllowed, err := settings.Get(ctx, s.settings, SharedPostureAllowed)
+	if err != nil {
+		return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
+	}
 	return Settings{
-		AutoEnrich:      autoEnrich,
-		MailSharing:     mailSharing,
-		SignatureEnrich: signatureEnrich,
+		AutoEnrich:           autoEnrich,
+		MailSharing:          mailSharing,
+		SharedPostureAllowed: sharedAllowed,
+		SignatureEnrich:      signatureEnrich,
 	}, nil
 }
 
@@ -75,7 +97,7 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 // read gets a 403 on an empty patch, because the response comes from Get. No
 // seeded role has that combination — `capture_settings` grants read to every
 // role — so this stays a note rather than a branch.
-func (s *SettingsStore) Update(ctx context.Context, autoEnrich, mailSharing, signatureEnrich *bool) (Settings, error) {
+func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settings, error) {
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionUpdate); err != nil {
 		return Settings{}, err
 	}
@@ -83,18 +105,21 @@ func (s *SettingsStore) Update(ctx context.Context, autoEnrich, mailSharing, sig
 	// neither does — a patch that half-applied would leave the caller's
 	// screen agreeing with neither what they sent nor what stood before.
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
-		if autoEnrich != nil {
-			if err := settings.SetTx(ctx, s.settings, tx, AutoEnrich, *autoEnrich); err != nil {
+		for _, f := range []struct {
+			want  *bool
+			entry *settings.Entry[bool]
+		}{
+			{patch.AutoEnrich, AutoEnrich},
+			{patch.MailSharing, MailSharing},
+			{patch.SharedPostureAllowed, SharedPostureAllowed},
+			{patch.SignatureEnrich, SignatureEnrich},
+		} {
+			if f.want == nil {
+				continue
+			}
+			if err := settings.SetTx(ctx, s.settings, tx, f.entry, *f.want); err != nil {
 				return err
 			}
-		}
-		if mailSharing != nil {
-			if err := settings.SetTx(ctx, s.settings, tx, MailSharing, *mailSharing); err != nil {
-				return err
-			}
-		}
-		if signatureEnrich != nil {
-			return settings.SetTx(ctx, s.settings, tx, SignatureEnrich, *signatureEnrich)
 		}
 		return nil
 	})

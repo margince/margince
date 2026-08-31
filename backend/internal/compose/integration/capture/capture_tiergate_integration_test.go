@@ -106,8 +106,13 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 			t.Fatal("the activity must stand — deferring the record never drops the message")
 		}
 		// Deferred is not terminal: a later verdict may admit the sender and
-		// link the message, so its audience is left at the default.
-		if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = 'rc1@event.realco.example' AND audience = 'workspace'`); n != 1 {
+		// link the message, so the LADDER adds no limit of its own — the row
+		// carries whatever the mailbox's posture asked for and nothing stricter.
+		// The mailbox here is classified, so that is `posture`; a suppressed
+		// sender's message on the same mailbox reads `no_record` instead, which
+		// is the difference this asserts.
+		if n := countRows(t, e, `SELECT count(*) FROM activity
+			 WHERE source_id = 'rc1@event.realco.example' AND audience_reason = 'posture'`); n != 1 {
 			t.Fatal("a deferred sender's message was limited before its verdict")
 		}
 	})

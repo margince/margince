@@ -9,7 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -55,39 +54,28 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 // is held in (platform/auth ActivityContentClause names the arms).
 const audienceParticipants = "participants"
 
-// audienceReasonNoRecord mirrors activities.ReasonNoRecord, which this module
-// cannot import (a module never imports a sibling). The two are one vocabulary
-// and TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay fails if they drift.
-const audienceReasonNoRecord = "no_record"
-
-// audienceReasonWorkspaceFloor mirrors activities.ReasonWorkspaceFloor, for the
-// same reason and held by the same test: the workspace turned mail sharing off,
-// which is not any mailbox's posture and which no verdict clears.
-const audienceReasonWorkspaceFloor = "workspace_floor"
-
-// capturedAudience answers the audience a freshly captured activity is born
-// with. Mail sharing ON (the default) births an email workspace-readable —
-// the point of capturing into a shared CRM. Switched OFF, an email is held to
-// its participants and the capturing mailbox owner from the moment it lands;
-// the setting moves the default for NEW mail only, and non-mail kinds
-// (meetings, channel messages) keep the workspace default either way.
-// It answers a REASON with the audience. The workspace floor is a decision no
-// capture_import row records — it is the workspace's, not any mailbox's — so a
-// derivation reading import rows alone would find nothing asking for a hold and
-// widen the message back on the very capture that just held it. The reason on
-// the row is what carries the floor into every later recompute.
-func capturedAudience(ctx context.Context, tx pgx.Tx, kind string) (audience, reason string, err error) {
-	if kind != "email" {
-		return audienceWorkspace, "", nil
-	}
-	sharing, err := settings.ApplyTx(ctx, tx, MailSharing)
-	if err != nil {
-		return "", "", fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
-	}
-	if sharing {
-		return audienceWorkspace, "", nil
-	}
-	return audienceParticipants, audienceReasonWorkspaceFloor, nil
-}
+// The reasons this module stamps on a held message, mirroring the constants of
+// the same names in activities.
+//
+// Two copies because a module never imports a sibling: capture WRITES these
+// words and activities READS them, and a drift on either side silently un-holds
+// mail — the derivation stops recognising the hold, finds no contributor asking
+// for one, and widens the row. TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay
+// drives the sink and compares what it stamped against the activities constants,
+// so it fails from either side.
+const (
+	// The mailbox asked for it, and a verdict on the thread can clear it.
+	audienceReasonPosture = "posture"
+	// Nothing has judged the thread yet.
+	audienceReasonPendingVerdict = "pending_verdict"
+	// The message is filed under no record at all.
+	audienceReasonNoRecord = "no_record"
+	// The workspace turned mail sharing off. No verdict clears this one.
+	audienceReasonWorkspaceFloor = "workspace_floor"
+	// This seat holds mail with one of the parties, whatever it is about.
+	audienceReasonCounterparty = "counterparty"
+	// The sender said so in the subject line.
+	audienceReasonConfidentialMarker = "explicitly_confidential"
+)
 
 const audienceWorkspace = "workspace"

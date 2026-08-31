@@ -50,6 +50,16 @@ const (
 	// ReasonVerdict: a classifier judged the thread and held it, without saying
 	// which kind. The classifier's own kinds replace this word when it lands.
 	ReasonVerdict = "verdict"
+	// ReasonCounterparty: the importing seat holds mail with one of the parties,
+	// whatever this particular message is about. Their decision, and no verdict
+	// clears it — a classifier concluding a thread is ordinary says nothing
+	// about whether this seat wants their lawyer's mail in a shared CRM.
+	ReasonCounterparty = "counterparty"
+	// ReasonConfidentialMarker: the sender said so in the subject line. The one
+	// confidentiality signal that needs no model, and it outranks a later
+	// verdict for the same reason a counterparty hold does — a person marked
+	// this message, and a classifier disagreeing does not unmark it.
+	ReasonConfidentialMarker = "explicitly_confidential"
 	// ReasonNoRecord: the message is filed under no record, so nobody outside
 	// the people on it has a reason to read it. Written by the capture ladder
 	// rather than derived here, and carried through every recompute.
@@ -145,6 +155,26 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	if stored == audienceSelected {
 		return nil
 	}
+	// A human's decision binds in ONE direction, and it is asked BEFORE anything
+	// is derived.
+	//
+	// Asymmetric on purpose. A person who narrowed their own correspondence has
+	// said something no contribution can rebuild, so nothing here widens past
+	// it. But write authority over an activity is broader than membership of it
+	// — a link-less message admits any content-visible caller — so a colleague
+	// merely cc'd can open a message by hand, and treating that as a veto would
+	// let one seat's click outrank the mailbox owner's own posture.
+	//
+	// Asked FIRST because the contributions that held the message are still
+	// there after a human opens it: the seat's import row still records the
+	// posture it was captured under, and deriving from that would re-narrow the
+	// row on the very next sync, silently undoing what the person did.
+	if deref(storedReason) == ReasonManual {
+		manual, err := manualDecisionStands(ctx, tx, activityID, stored)
+		if err != nil || manual {
+			return err
+		}
+	}
 	derived, reason, ok, err := deriveAudienceTx(ctx, tx, activityID)
 	if err != nil {
 		return err
@@ -162,20 +192,6 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// mailbox's verdict clears.
 	if held, why := rowCarriedHold(stored, storedReason); held && audienceRank[audienceParticipants] >= audienceRank[derived] {
 		derived, reason = audienceParticipants, why
-	}
-	// A human's decision binds in ONE direction: it can hold a message closed,
-	// never hold it open.
-	//
-	// Asymmetric on purpose. A person narrowing their own correspondence has
-	// said something no contribution can rebuild, so nothing here widens past
-	// it. But write authority over an activity is broader than membership of it
-	// — a link-less message admits any content-visible caller — so a colleague
-	// who was merely cc'd can open a message by hand. Treating that as a veto
-	// would let one seat's single click outrank the mailbox owner's own posture
-	// and every verdict that follows, which is exactly the "strictest
-	// contributor wins" property this whole table exists to hold.
-	if deref(storedReason) == ReasonManual && audienceRank[stored] > audienceRank[derived] {
-		return nil
 	}
 	if derived == stored && sameReason(storedReason, reason) {
 		return nil
@@ -235,10 +251,16 @@ func deriveAudienceTx(
 // closed and TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay holds the two
 // modules' spellings together.
 //
-// Two writers place such a hold, and neither is any one mailbox's decision:
+// Three writers place such a hold, and none of them is re-derivable from the
+// row afterwards:
 //
 //   - the WORKSPACE mail-sharing floor, which holds every new email whatever
 //     the mailboxes want (`workspace_floor`);
+//   - an importing seat's COUNTERPARTY hold (`counterparty`) and a sender's own
+//     subject-line marker (`explicitly_confidential`). Both are decided at
+//     capture, per message, and neither is re-derivable afterwards: a hold
+//     lifted next week does not un-hold the mail it caught, and the subject
+//     line is content the derivation deliberately never reads;
 //   - the capture ladder, which holds a message it filed under no record at all
 //     — a suppressed newsletter, an infrastructure notice (`no_record`).
 //
@@ -254,7 +276,7 @@ func rowCarriedHold(stored string, storedReason *string) (bool, string) {
 		return false, ""
 	}
 	switch why := deref(storedReason); why {
-	case ReasonNoRecord, ReasonWorkspaceFloor:
+	case ReasonNoRecord, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker:
 		return true, why
 	}
 	return false, ""
@@ -291,7 +313,16 @@ func contributionOf(posture, status, why *string) (audience, reason string) {
 	}
 	switch deref(posture) {
 	case "held", "classified":
-		return audienceParticipants, ReasonPosture
+		// reasonOr, not a flat ReasonPosture. The capture records WHY this seat's
+		// mailbox held the message — a counterparty hold, the sender's own
+		// marker, the workspace floor — and this is what carries that word onto
+		// the activity row, where rowCarriedHold reads it back on every later
+		// pass. Flattening it to `posture` loses the distinction that matters:
+		// a posture is documented as clearable by a verdict and a hold is not,
+		// so the message would open the moment its thread was judged ordinary.
+		// TestACounterpartyHoldSurvivesAnotherSeatsClearedVerdict fails when
+		// this and rowCarriedHold's recognized set are both weakened.
+		return audienceParticipants, reasonOr(why, ReasonPosture)
 	}
 	return audienceWorkspace, ""
 }
@@ -351,4 +382,26 @@ func reasonOr(s *string, fallback string) string {
 
 func sameReason(stored *string, derived string) bool {
 	return deref(stored) == derived
+}
+
+// manualDecisionStands answers whether a human's audience decision survives
+// what the contributors now ask for.
+//
+// It stands whenever the human's answer is at least as strict as the derived
+// one: a person who narrowed cannot be widened, and a person who opened is
+// overruled only by a contribution that genuinely holds the message. Deriving
+// here rather than trusting the stored reason is what makes the second half
+// true — a seat's own posture must still be able to hold a message a colleague
+// opened by hand.
+func manualDecisionStands(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, stored string,
+) (bool, error) {
+	derived, _, ok, err := deriveAudienceTx(ctx, tx, activityID)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return true, nil
+	}
+	return audienceRank[stored] >= audienceRank[derived], nil
 }

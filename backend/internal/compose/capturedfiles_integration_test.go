@@ -35,6 +35,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// captureSeatID is the seat every captureWorkspace fixture grants its mailbox
+// as. Fixed rather than fresh so a test can read back as the person whose
+// mailbox captured the message — which is who a held message is held FOR.
+var captureSeatID = ids.NewV7()
+
+// captureSeat answers the seat captureWorkspace granted the mailbox as.
+func captureSeat(context.Context) ids.UUID { return captureSeatID }
+
 // captureWorkspace seeds a workspace and returns a context bound to it under
 // the per-user mail connector principal the sync loop mints.
 func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
@@ -46,7 +54,17 @@ func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
 		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seed workspace: %v", err)
 	}
-	ctx = asConnector(principal.WithWorkspaceID(ctx, ws), "connector:imap")
+	// The seat the mailbox is granted as. It has to be a real app_user: the
+	// audit trail carries on_behalf_of as a foreign key, so a principal naming
+	// a seat that does not exist fails the write rather than the read.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO app_user (id, email, display_name)
+		VALUES ($1, $2, 'Capture Seat')
+		ON CONFLICT (id) DO NOTHING`,
+		captureSeatID, "capture-seat-"+captureSeatID.String()+"@fixture.example"); err != nil {
+		t.Fatalf("seed the capturing seat: %v", err)
+	}
+	ctx = asConnectorFor(principal.WithWorkspaceID(ctx, ws), "connector:imap", captureSeatID)
 	// The tag makes every source id unique to this run. The test database is
 	// shared and long-lived, so a fixed id would meet rows an earlier run of
 	// this same suite left behind and count them as this run's.
@@ -59,10 +77,27 @@ func captureWorkspace(t *testing.T) (context.Context, *database.DB, string) {
 // captured_by is not the acting connector — so a test that captures a mail
 // message and a Telegram message has to act as each in turn, and a single
 // hardcoded principal would only be able to prove one of them.
+// The seat is the one captureWorkspace seeded, not a fresh id: every caller of
+// this runs inside such a context, and a principal naming a seat that does not
+// exist fails the audit write (on_behalf_of is a foreign key) rather than the
+// read it was written to exercise.
 func asConnector(ctx context.Context, id string) context.Context {
+	return asConnectorFor(ctx, id, captureSeatID)
+}
+
+// asConnectorFor is asConnector with the granting seat named.
+//
+// The real sync loop always names one — a connection is granted BY somebody,
+// and the sink reads that seat to decide what their mailbox asks of the mail it
+// brings in. A principal without it describes a capture whose provenance the
+// product cannot establish, which is deliberately the most-held case and not
+// the one most tests mean to be in.
+func asConnectorFor(ctx context.Context, id string, seat ids.UUID) context.Context {
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalConnector,
-		ID:   id,
+		Type:       principal.PrincipalConnector,
+		ID:         id,
+		UserID:     seat,
+		OnBehalfOf: seat,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"capture"},
 			Objects: map[string]principal.ObjectGrant{

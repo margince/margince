@@ -367,6 +367,18 @@ func (stubs) RemoveConsumerMailDomain(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "RemoveConsumerMailDomain")
 }
 
+func (stubs) ListCaptureCounterpartyHolds(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCaptureCounterpartyHolds")
+}
+
+func (stubs) CreateCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateCaptureCounterpartyHold")
+}
+
+func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
+}
+
 func (stubs) ListWorkspaceEmailDomains(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListWorkspaceEmailDomains")
 }
@@ -521,6 +533,10 @@ func (stubs) ConnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, prov
 
 func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
 	httperr.NotImplemented(w, r, "DisconnectConnector")
+}
+
+func (stubs) SetConnectorMailPosture(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "SetConnectorMailPosture")
 }
 
 func (stubs) SetConnectorSignatureEnrichment(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {

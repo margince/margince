@@ -104,6 +104,7 @@ type Server struct {
 	blockedDomainHandlers
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
+	captureCounterpartyHoldHandlers
 	claimHandlers
 	importHandlers
 	channelHandlers

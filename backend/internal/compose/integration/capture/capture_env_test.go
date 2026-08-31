@@ -41,6 +41,16 @@ const projectCounterparty = "alice@acme.example"
 // mailBatchConnector replays a fixed batch of RFC822 messages through the
 // production mailmap → Sink path — the provider I/O faked, nothing else.
 type mailBatchConnector struct {
+	// accountLabel is which mailbox this fake authenticates as. Empty means the
+	// workspace owner; a SECOND connected mailbox in one test needs its own,
+	// because a seat's own address is the evidence that their provider actually
+	// delivered a message rather than that they typed its Message-ID.
+	accountLabel string
+	// name is which provider this fake registers as. Empty means gmail; a test
+	// with TWO connected mailboxes for one seat needs a second name, because a
+	// connection is keyed on (user_id, provider).
+	name string
+
 	raws [][]byte
 	sent map[string]bool // Message-IDs the provider filed as the owner's own sent mail
 	// deals are the deal ids a connector files a message under, by Message-ID.
@@ -60,8 +70,12 @@ type mailBatchConnector struct {
 }
 
 func (m *mailBatchConnector) Descriptor() connector.Descriptor {
+	name := m.name
+	if name == "" {
+		name = "gmail"
+	}
 	return connector.Descriptor{
-		Name: "gmail", Version: "1",
+		Name: name, Version: "1",
 		Scopes:   []principal.Scope{principal.ScopeRead},
 		RiskTier: mcp.TierAutoExecute,
 		Produces: []datasource.EntityType{datasource.EntityActivity},
@@ -248,6 +262,15 @@ type captureEnv struct {
 	// syncAsKind is the same pull with the listed Message-IDs landing as another
 	// activity kind, the way a non-mail connector's records do.
 	syncAsKind func(t *testing.T, kinds map[string]string, raws ...[]byte)
+	// registry is the SAME registry the syncs above drive, so a test that
+	// configures a connection and then syncs it is configuring the connection
+	// that sync uses. A second registry would have its own connector set and no
+	// connection at all.
+	registry *capturemod.Registry
+	// conn is the fake this env's syncs pull through, so a test can change what
+	// the provider reports — the account it authenticates as, in particular,
+	// which is what a rebind is.
+	conn *mailBatchConnector
 }
 
 func newCaptureEnv(t *testing.T) captureEnv {
@@ -332,7 +355,7 @@ func newCaptureEnv(t *testing.T) captureEnv {
 	if verified {
 		t.Fatal("a mailbox must not verify its own domain — the company's claim does that")
 	}
-	return captureEnv{e: e, sync: sync, syncSent: syncSent, syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind}
+	return captureEnv{e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind}
 }
 
 // emailCC builds a message that copies a third party — the introduction shape:
@@ -356,5 +379,8 @@ func emailCC(from, fromName, to, cc, msgID string) []byte {
 // it before pulling a single message, so a fake without it would leave every
 // tier below testing against an empty own-domain set.
 func (m *mailBatchConnector) AccountLabel(connector.Auth) (string, error) {
+	if m.accountLabel != "" {
+		return m.accountLabel, nil
+	}
 	return captureOwner, nil
 }

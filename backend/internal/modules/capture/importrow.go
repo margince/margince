@@ -13,13 +13,10 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -35,7 +32,10 @@ import (
 // into the same mailbox is the same import, and the columns a later step writes
 // onto this row (the posture at import, the verdict) are decisions that must not
 // be reset by the mailbox simply syncing again.
-func recordImportTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, ownerUserID ids.UUID) error {
+func recordImportTx(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	ownerUserID ids.UUID, birth birthDecision,
+) error {
 	if ownerUserID == ids.Nil {
 		// No identifiable seat behind this capture. Nothing to attribute the
 		// import to, and a row keyed on a nil user would claim a seat that
@@ -49,10 +49,10 @@ func recordImportTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, o
 	// has two. A seat's decisions are per seat anyway, so the column would have
 	// no reader; it lands with the code that can fill it honestly.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO capture_import (activity_id, user_id)
-		VALUES ($1, $2)
+		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))
 		ON CONFLICT (activity_id, user_id) DO NOTHING`,
-		activityID, ownerUserID); err != nil {
+		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
 	return nil
@@ -87,7 +87,7 @@ func (s *Sink) WithAudienceRecompute(recompute AudienceRecomputer) *Sink {
 // one this seat never had.
 func (s *Sink) recordThisImport(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
-	rec connector.NormalizedRecord, fields ActivityFields,
+	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
 ) error {
 	// actor.UserID, the same seat captured_by names and stampCaptureParticipants
 	// stamps — NOT capturePrincipal's OnBehalfOf fallback. Every connector
@@ -95,33 +95,40 @@ func (s *Sink) recordThisImport(
 	// a future principal that sets only one cannot write an import row naming a
 	// different seat than the one the content gate below just checked.
 	owner := actorUserID(ctx)
-	// The seat must already be able to READ the message before claiming to have
-	// imported it, and the CONTENT gate is the one that asks that — the replay
-	// path above it asks only whether the row may be discovered.
+	// This seat's mailbox must actually have DELIVERED the message before they
+	// are recorded as having imported it.
 	//
-	// This is load-bearing, not defensive. A message's identity is
-	// (source_system, source_id), source_id is the RFC822 Message-ID, and a
-	// Message-ID is a header the sender types: any seat can mint a mail carrying
-	// somebody else's Message-ID and sync it. Without this gate that capture
-	// hits the incumbent, writes an import row and a participant row against a
-	// colleague's held thread, and the audience arm reads both as GRANTS — so a
-	// forged header would buy the content of correspondence the forger was
-	// never on.
+	// A message's identity is (source_system, source_id), source_id is the
+	// RFC822 Message-ID, and a Message-ID is a header the sender types: any seat
+	// can mint a mail carrying somebody else's Message-ID and sync it. Without a
+	// check that capture hits the incumbent, writes an import row and a
+	// participant row against a colleague's held thread, and the audience arm
+	// reads both as GRANTS — so a forged header would buy the content of
+	// correspondence the forger was never on.
 	//
-	// A genuine second recipient passes: they were stamped as a participant when
-	// the message was first captured, from the Cc list of a message their own
-	// provider delivered to them, and the participant arm admits them.
-	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			// Not this seat's message to claim. The capture already stored
-			// nothing (the natural key collided), so there is nothing to undo
-			// and nothing to tell the connector about: the message is on the
-			// timeline, for the people it belongs to.
-			return nil
-		}
+	// The evidence is one of the SEAT'S OWN addresses appearing on the message.
+	// A forger controls every header they write, but not which mailbox a message
+	// was delivered to: they cannot put their own connected address on a message
+	// nobody sent them, and an address they merely claim is not in their identity
+	// set unless they declared it, which is a claim about themselves.
+	//
+	// Not "can this seat already read it": on an INBOUND message the first
+	// capture deliberately refuses to bind a colleague's user_id from a Cc line
+	// the sender wrote (participant.go says why), so a genuine second recipient
+	// has no participant row yet and cannot read a held message — which is
+	// exactly the case this path exists to serve.
+	delivered, err := mailboxWasARecipientTx(ctx, tx, rec)
+	if err != nil {
 		return err
 	}
-	if err := recordImportTx(ctx, tx, id, owner); err != nil {
+	if !delivered {
+		// Not this seat's message to claim. The capture already stored nothing
+		// (the natural key collided), so there is nothing to undo and nothing to
+		// tell the connector: the message is on the timeline, for the people it
+		// belongs to.
+		return nil
+	}
+	if err := recordImportTx(ctx, tx, id, owner, birth); err != nil {
 		return err
 	}
 	if err := stampCaptureParticipants(ctx, tx, id, owner, fields.Kind, fields.Direction, rec.Counterparty.Email); err != nil {
@@ -131,4 +138,31 @@ func (s *Sink) recordThisImport(
 		return nil
 	}
 	return s.recomputeAudience(ctx, tx, id)
+}
+
+// mailboxWasARecipientTx answers whether one of the acting seat's own addresses
+// is on this message — the evidence that their provider delivered it, rather
+// than that they typed its Message-ID.
+//
+// EXACT addresses only, never a declared domain. A seat declares a domain with
+// no proof of control, so a domain arm here would let anybody claim a colleague's
+// domain and then treat any message naming an address on it as delivered to
+// them — which is the forgery this gate exists to refuse, taking the long way
+// round. An exact address is different in kind: it is either the mailbox the
+// provider attested at grant, or one the seat declared about themselves, and
+// neither names a colleague.
+func mailboxWasARecipientTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+	self, err := ownerIdentitiesTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	if self.Empty() {
+		return false, nil
+	}
+	for _, a := range rec.Addresses {
+		if self.CoversAddressExactly(a) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

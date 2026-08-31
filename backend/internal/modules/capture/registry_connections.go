@@ -156,6 +156,12 @@ type ConnectionView struct {
 	// authorized on.
 	AccountLabel *string
 
+	// MailPosture is what this mailbox asks of the mail it brings in
+	// (shared | classified | held). Never empty for a live connection: the
+	// column is NOT NULL with a default, so a row that predates the caller's
+	// binary still answers.
+	MailPosture string
+
 	// Sync health from the CAP-DDL-5 sidecar; all nil before the first sync
 	// (a connection with no sidecar row is simply due immediately).
 	LastSyncedAt   *time.Time
@@ -185,7 +191,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
-			       c.account_label, c.signature_enrich_enabled,
+			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
 			       s.last_synced_at, s.last_error_class, s.next_sync_at
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
@@ -198,7 +204,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 		for rows.Next() {
 			var v ConnectionView
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
-				&v.AccountLabel, &v.SignatureEnrichEnabled,
+				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
 				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt); err != nil {
 				return err
 			}

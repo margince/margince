@@ -5429,6 +5429,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/counterparty-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whose mail the caller keeps out of the shared timeline.
+         * @description A hold is about the CORRESPONDENT rather than about any one message: holding a lawyer's
+         *     domain says that whatever passes between you is nobody else's, without having to read each
+         *     message to decide. Mail from a held party is still captured — it lands on the caller's own
+         *     timeline and is held to the people on it.
+         *
+         *     The caller's own list and nobody else's. Whose mail a person keeps private is itself
+         *     private, so there is no id that reaches a colleague's holds and no admin view of them.
+         *     Distinct from an exclusion, which keeps mail out of the product entirely.
+         */
+        get: operations["listCaptureCounterpartyHolds"];
+        put?: never;
+        /**
+         * Keep one party's mail to the people on it.
+         * @description Any human seat, for their own mail only — the hold names the caller and binds their
+         *     connections. A domain hold covers its subdomains.
+         *
+         *     Holds mail captured from here on. Narrowing what is ALREADY captured is a separate call:
+         *     a hold placed today is a statement about a relationship, and whether it reaches back over a
+         *     year of shared history is a decision made with the count in front of you. Idempotent on the
+         *     folded value.
+         */
+        post: operations["createCaptureCounterpartyHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/counterparty-holds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Lift a counterparty hold.
+         * @description The caller's own hold; another seat's answers 404, so the existence of one stays hidden.
+         *
+         *     Lifting widens NOTHING already captured. Mail held while the hold stood was held for a
+         *     reason that was true at the time, and re-opening a year of correspondence as a side effect
+         *     of tidying a list is not something anybody asked for. New mail from that party is captured
+         *     under the mailbox's ordinary posture again.
+         */
+        delete: operations["deleteCaptureCounterpartyHold"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/owner-identities": {
         parameters: {
             query?: never;
@@ -5645,6 +5710,48 @@ export interface paths {
          *     change to a connection. Human-only: an agent never changes a capture posture.
          */
         put: operations["setConnectorSignatureEnrichment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/connectors/{provider}/mail-posture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
+                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
+                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
+                 *     messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set what this mailbox asks of the mail it brings in.
+         * @description The mailbox owner's own answer, and only for their own mailbox: the write matches on the
+         *     authenticated user, so there is no id that reaches a colleague's connection.
+         *
+         *     `classified` is the default a new connection gets and holds every captured message to its
+         *     participants until a classifier judges the thread ordinary. `held` never opens. `shared`
+         *     opens a message the moment it lands and is refused with 422 unless the workspace allows it
+         *     (`CaptureSettings.shared_posture_allowed`) — narrowing never needs that permission, because
+         *     a seat may always ask for more privacy than the workspace requires.
+         *
+         *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
+         *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
+         *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
+         *     separate, deliberate call. Human-only: an agent never decides what a person's colleagues
+         *     may read of their correspondence.
+         */
+        put: operations["setConnectorMailPosture"];
         post?: never;
         delete?: never;
         options?: never;
@@ -11718,6 +11825,19 @@ export interface components {
              */
             mail_sharing: boolean;
             /**
+             * @description Whether a seat may put their mailbox in the `shared` posture at all — colleagues
+             *     reading a captured message the moment it lands, before anything has judged it.
+             *
+             *     OFF by default, and the only capture setting whose default withholds rather than
+             *     shares. Reading an employee's mailbox into a shared CRM is what a works-council
+             *     agreement covers in Germany and Austria; an admin turning this on is the customer
+             *     saying they hold that agreement. Margince does not verify one exists.
+             *
+             *     Turning it off does not move any mailbox already in `shared`, and does not rewrite
+             *     mail already captured. It governs what a seat may newly ask for.
+             */
+            shared_posture_allowed: boolean;
+            /**
              * @description When true, every organization with a primary domain and no dossier gets a governed
              *     web deep-read under a daily spend cap — however it was named. The anchor is
              *     excluded (cold start reads it). Default is ON (the testing posture).
@@ -11888,6 +12008,8 @@ export interface components {
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it. */
             signature_enrich?: boolean;
+            /** @description Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts. */
+            shared_posture_allowed?: boolean;
         };
         /**
          * @description One domain carrying a standing admission decision. `suppressed` refuses it a company —
@@ -12023,6 +12145,24 @@ export interface components {
              *     never reads it, rather than reading it and discarding the result.
              */
             signature_enrich_enabled?: boolean | null;
+            /**
+             * @description What this mailbox asks of the mail it brings in. `shared` — a captured message is
+             *     readable by colleagues the moment it lands. `classified` — held to its participants
+             *     until a classifier judges the thread ordinary. `held` — held whatever any classifier
+             *     concludes.
+             *
+             *     `classified` is the default for a new connection, and a rebind to a different account
+             *     resets to `held`: the previous mailbox's answer is not the new one's to inherit.
+             *     `shared` additionally needs the workspace to allow it
+             *     (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
+             *     is what the works-council agreement in the DACH package is about.
+             *
+             *     Set through PUT /connectors/{provider}/mail-posture. Moving it governs mail captured
+             *     AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
+             *     for `apply_to_history`.
+             * @enum {string}
+             */
+            readonly mail_posture?: "shared" | "classified" | "held";
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -12032,6 +12172,22 @@ export interface components {
         SetSignatureEnrichmentRequest: {
             /** @description true or false is this mailbox's own answer; null follows the tenant default. */
             enabled: boolean | null;
+        };
+        /** @description What one mailbox asks of the mail it brings in. */
+        SetMailPostureRequest: {
+            /**
+             * @description See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
+             * @enum {string}
+             */
+            posture: "shared" | "classified" | "held";
+            /**
+             * @description Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
+             *     narrows: a move towards `shared` leaves history where it is, because opening what was
+             *     captured under a stricter answer is a separate decision from what to do next. Rows a
+             *     human set to `selected` are never touched.
+             * @default false
+             */
+            apply_to_history: boolean;
         };
         WorkspaceEmailDomain: {
             /** @description The domain, IDNA-folded and lowercased. Covers its subdomains. */
@@ -12093,6 +12249,33 @@ export interface components {
          * @enum {string}
          */
         CaptureOwnerIdentitySource: "user" | "provider";
+        /**
+         * @description One seat's decision that their mail with a party is nobody else's. Per user, never
+         *     workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
+         *     would let anyone keep a colleague's customer out of the CRM by naming their domain.
+         */
+        CaptureCounterpartyHold: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * @description A domain hold covers its subdomains, the way the own-domain matcher reads one.
+             * @enum {string}
+             */
+            kind: "address" | "domain";
+            /** @description The folded address or registrable domain. */
+            value: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        CaptureCounterpartyHoldListResponse: {
+            data: components["schemas"]["CaptureCounterpartyHold"][];
+        };
+        CreateCaptureCounterpartyHoldRequest: {
+            /** @enum {string} */
+            kind: "address" | "domain";
+            /** @description An email address or a registrable domain; folded before it is stored. */
+            value: string;
+        };
         CaptureOwnerIdentityListResponse: {
             data: components["schemas"]["CaptureOwnerIdentity"][];
         };
@@ -34057,6 +34240,79 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listCaptureCounterpartyHolds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureCounterpartyHoldListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createCaptureCounterpartyHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCaptureCounterpartyHoldRequest"];
+            };
+        };
+        responses: {
+            /** @description The hold. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureCounterpartyHold"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteCaptureCounterpartyHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lifted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listCaptureOwnerIdentities: {
         parameters: {
             query?: never;
@@ -34283,6 +34539,43 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    setConnectorMailPosture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
+                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
+                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
+                 *     messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMailPostureRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection, with its posture as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     previewConnectorBackfill: {

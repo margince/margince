@@ -8295,6 +8295,81 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /capture/counterparty-holds:
+    get:
+      tags: [Capture]
+      operationId: listCaptureCounterpartyHolds
+      summary: Whose mail the caller keeps out of the shared timeline.
+      description: |
+        A hold is about the CORRESPONDENT rather than about any one message: holding a lawyer's
+        domain says that whatever passes between you is nobody else's, without having to read each
+        message to decide. Mail from a held party is still captured — it lands on the caller's own
+        timeline and is held to the people on it.
+
+        The caller's own list and nobody else's. Whose mail a person keeps private is itself
+        private, so there is no id that reaches a colleague's holds and no admin view of them.
+        Distinct from an exclusion, which keeps mail out of the product entirely.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The caller's holds.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureCounterpartyHoldListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Capture]
+      operationId: createCaptureCounterpartyHold
+      summary: Keep one party's mail to the people on it.
+      description: |
+        Any human seat, for their own mail only — the hold names the caller and binds their
+        connections. A domain hold covers its subdomains.
+
+        Holds mail captured from here on. Narrowing what is ALREADY captured is a separate call:
+        a hold placed today is a statement about a relationship, and whether it reaches back over a
+        year of shared history is a decision made with the count in front of you. Idempotent on the
+        folded value.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCaptureCounterpartyHoldRequest' }
+      responses:
+        '201':
+          description: The hold.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureCounterpartyHold' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /capture/counterparty-holds/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Capture]
+      operationId: deleteCaptureCounterpartyHold
+      summary: Lift a counterparty hold.
+      description: |
+        The caller's own hold; another seat's answers 404, so the existence of one stays hidden.
+
+        Lifting widens NOTHING already captured. Mail held while the hold stood was held for a
+        reason that was true at the time, and re-opening a year of correspondence as a side effect
+        of tidying a list is not something anybody asked for. New mail from that party is captured
+        under the mailbox's ordinary posture again.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '204': { description: Lifted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /capture/owner-identities:
     get:
       tags: [Capture]
@@ -8494,6 +8569,46 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /connectors/{provider}/mail-posture:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    put:
+      tags: [Connectors]
+      operationId: setConnectorMailPosture
+      summary: Set what this mailbox asks of the mail it brings in.
+      description: |
+        The mailbox owner's own answer, and only for their own mailbox: the write matches on the
+        authenticated user, so there is no id that reaches a colleague's connection.
+
+        `classified` is the default a new connection gets and holds every captured message to its
+        participants until a classifier judges the thread ordinary. `held` never opens. `shared`
+        opens a message the moment it lands and is refused with 422 unless the workspace allows it
+        (`CaptureSettings.shared_posture_allowed`) — narrowing never needs that permission, because
+        a seat may always ask for more privacy than the workspace requires.
+
+        The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
+        this mailbox already brought in, which emits one `activity.updated` per row whose audience
+        moved; it never widens, and `selected` rows are left alone. Widening history back is a
+        separate, deliberate call. Human-only: an agent never decides what a person's colleagues
+        may read of their correspondence.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetMailPostureRequest' }
+      responses:
+        '200':
+          description: The connection, with its posture as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /connectors/{provider}/backfill/preview:
     parameters:
@@ -17737,7 +17852,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, signature_enrich]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich]
       properties:
         mail_sharing:
           type: boolean
@@ -17747,6 +17862,19 @@ components:
             is held to its participants and the capturing mailbox owner — already-captured mail keeps
             the audience it has. Turning it off makes shared pipeline work hard; the setting exists
             for installations that accept that cost.
+        shared_posture_allowed:
+          type: boolean
+          description: |
+            Whether a seat may put their mailbox in the `shared` posture at all — colleagues
+            reading a captured message the moment it lands, before anything has judged it.
+
+            OFF by default, and the only capture setting whose default withholds rather than
+            shares. Reading an employee's mailbox into a shared CRM is what a works-council
+            agreement covers in Germany and Austria; an admin turning this on is the customer
+            saying they hold that agreement. Margince does not verify one exists.
+
+            Turning it off does not move any mailbox already in `shared`, and does not rewrite
+            mail already captured. It governs what a seat may newly ask for.
         auto_enrich:
           type: boolean
           description: |
@@ -18033,6 +18161,7 @@ components:
         auto_enrich: { type: boolean, description: Toggle captured-organization auto-enrichment. }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects mail captured from now on.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.' }
+        shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
 
     BlockedDomain:
       type: object
@@ -18148,6 +18277,25 @@ components:
 
             False means no mail from this mailbox is ever SELECTED for enrichment — the pass
             never reads it, rather than reading it and discarding the result.
+        mail_posture:
+          type: string
+          enum: [shared, classified, held]
+          readOnly: true
+          description: |
+            What this mailbox asks of the mail it brings in. `shared` — a captured message is
+            readable by colleagues the moment it lands. `classified` — held to its participants
+            until a classifier judges the thread ordinary. `held` — held whatever any classifier
+            concludes.
+
+            `classified` is the default for a new connection, and a rebind to a different account
+            resets to `held`: the previous mailbox's answer is not the new one's to inherit.
+            `shared` additionally needs the workspace to allow it
+            (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
+            is what the works-council agreement in the DACH package is about.
+
+            Set through PUT /connectors/{provider}/mail-posture. Moving it governs mail captured
+            AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
+            for `apply_to_history`.
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
     SetSignatureEnrichmentRequest:
@@ -18159,6 +18307,25 @@ components:
         enabled:
           type: [boolean, 'null']
           description: 'true or false is this mailbox''s own answer; null follows the tenant default.'
+
+    SetMailPostureRequest:
+      type: object
+      additionalProperties: false
+      required: [posture]
+      description: What one mailbox asks of the mail it brings in.
+      properties:
+        posture:
+          type: string
+          enum: [shared, classified, held]
+          description: 'See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.'
+        apply_to_history:
+          type: boolean
+          default: false
+          description: |
+            Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
+            narrows: a move towards `shared` leaves history where it is, because opening what was
+            captured under a stricter answer is a separate decision from what to do next. Rows a
+            human set to `selected` are never touched.
 
     WorkspaceEmailDomain:
       type: object
@@ -18225,6 +18392,36 @@ components:
         Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
         provider attests; nothing writes it yet, because reading a provider's send-as list needs a
         scope the connection grant does not request.
+    CaptureCounterpartyHold:
+      type: object
+      description: |
+        One seat's decision that their mail with a party is nobody else's. Per user, never
+        workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
+        would let anyone keep a colleague's customer out of the CRM by naming their domain.
+      required: [id, kind, value, created_at]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        kind:
+          type: string
+          enum: [address, domain]
+          description: 'A domain hold covers its subdomains, the way the own-domain matcher reads one.'
+        value: { type: string, description: 'The folded address or registrable domain.' }
+        created_at: { type: string, format: date-time, readOnly: true }
+    CaptureCounterpartyHoldListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureCounterpartyHold' }
+    CreateCaptureCounterpartyHoldRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, value]
+      properties:
+        kind: { type: string, enum: [address, domain] }
+        value: { type: string, description: 'An email address or a registrable domain; folded before it is stored.' }
+
     CaptureOwnerIdentityListResponse:
       type: object
       required: [data]
