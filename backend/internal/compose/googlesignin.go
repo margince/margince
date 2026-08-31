@@ -19,7 +19,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,26 +79,11 @@ func (cfg GoogleSignInConfig) Enabled() bool {
 // MissingFields names what's absent — used by cmd/api/googlesignin.go for
 // the three-state boot-log line.
 func (cfg GoogleSignInConfig) MissingFields() []string {
-	var missing []string
-	if cfg.ClientID == "" {
-		missing = append(missing, "client id")
-	}
-	if cfg.ClientSecret == "" {
-		missing = append(missing, "client secret")
-	}
-	if len(cfg.StateKey) < minStateKeyLen {
-		missing = append(missing, "state key (>=32B)")
-	}
-	if cfg.RedirectBase == "" {
-		missing = append(missing, "redirect base URL")
-	}
-	if cfg.PostLoginURL == "" {
-		missing = append(missing, "post-login URL")
-	}
-	if cfg.FailureURL == "" {
-		missing = append(missing, "failure URL")
-	}
-	return missing
+	// A conversion, not a field-by-field copy: this config IS the shared shape —
+	// Google's sign-in asks for no vendor knob of its own, where Microsoft's adds
+	// a directory. Spelling the fields out again would be a second place for the
+	// two to drift.
+	return signInFields(cfg).missingSignInFields()
 }
 
 // googleSignInMatchIdentity is the login flow's matchIdentity: the token's
@@ -131,13 +115,6 @@ func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (
 	return claims.Email, claims.Sub, claims.EmailVerified, nil
 }
 
-// googleTokenExchangerAdapter satisfies identity.OIDCExchanger.
-type googleTokenExchangerAdapter struct{ ex googleTokenExchanger }
-
-func (a googleTokenExchangerAdapter) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
-	return a.ex.Exchange(ctx, code, codeVerifier, redirectURI)
-}
-
 // loginStateSignerAdapter satisfies identity.OIDCStateSigner over
 // loginStateSigner (oidcloginstate.go).
 type loginStateSignerAdapter struct{ s loginStateSigner }
@@ -152,24 +129,6 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 		return "", "", "", err
 	}
 	return st.Provider, st.Nonce, st.CodeVerifier, nil
-}
-
-// signInRedirectBase is the origin the sign-in callback is served on: the
-// deployment's own, plus the `/v1` the API mounts its contract under.
-//
-// It is used twice — once to WIRE the routes and once to tell an operator what
-// to register — and the two must be the same bytes, or the value they paste into
-// the Google console fails the very flow it was meant to enable.
-//
-// Held by: TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured and
-// TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends
-// (internal/compose/googleappredirect_test.go), which compare the two in both
-// directions.
-func signInRedirectBase(cfg GoogleSignInConfig) string {
-	if cfg.RedirectBase == "" {
-		return ""
-	}
-	return strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1"
 }
 
 // WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when cfg
@@ -189,7 +148,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// them: RedirectBase is this deployment's own externally-reachable
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
-		if base := signInRedirectBase(cfg); base != "" {
+		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
 			s.redirectURIs = append(s.redirectURIs, crmcontracts.GoogleAppRedirectUri{
 				Purpose: crmcontracts.SignIn,
 				Url:     identity.SignInRedirectURI(base, googleProviderKey),
@@ -201,9 +160,9 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		registerSignInProvider(s, pool, signInProvider{
 			config:    identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
 			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))},
-			exchanger: googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
+			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
 		}, identity.OIDCRoutes{
-			RedirectBase: signInRedirectBase(cfg),
+			RedirectBase: signInRedirectBase(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,
 			FailureURL:   cfg.FailureURL,
 		}, cfg.StateKey)

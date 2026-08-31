@@ -129,7 +129,7 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	adapter := googleTokenExchangerAdapter{ex: googleTokenExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}}
+	adapter := oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: "cid", ClientSecret: "secret", TokenURL: srv.URL, HTTPClient: srv.Client()}}
 	idToken, err := adapter.Exchange(context.Background(), "code", "verifier", "https://app.example.com/cb")
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)

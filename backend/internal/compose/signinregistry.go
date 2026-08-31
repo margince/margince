@@ -15,10 +15,81 @@ package compose
 // cmd/api cannot change what gets mounted.
 
 import (
+	"context"
+	"strings"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
+
+// signInFields are the parts of a sign-in configuration that are the SAME
+// question for every provider: which OAuth client, which key signs the state
+// cookie, and the three URLs the round trip travels through. Only the vendor's
+// own knob — Google has none, Microsoft has its directory — sits outside this.
+//
+// A named-field struct rather than six string parameters, for the reason
+// identity.OIDCRoutes gives about itself: a transposed pair of same-typed
+// arguments compiles clean and ships a login that lands every success on the
+// failure page.
+type signInFields struct {
+	ClientID     string
+	ClientSecret string
+	StateKey     string
+	RedirectBase string
+	PostLoginURL string
+	FailureURL   string
+}
+
+// missingSignInFields names what is absent, in the order an operator would
+// supply it. Both providers' MissingFields call it and then append whatever
+// their own vendor demands, so the shared half cannot come to be reported two
+// different ways.
+func (f signInFields) missingSignInFields() []string {
+	var missing []string
+	if f.ClientID == "" {
+		missing = append(missing, "client id")
+	}
+	if f.ClientSecret == "" {
+		missing = append(missing, "client secret")
+	}
+	if len(f.StateKey) < minStateKeyLen {
+		missing = append(missing, "state key (>=32B)")
+	}
+	if f.RedirectBase == "" {
+		missing = append(missing, "redirect base URL")
+	}
+	if f.PostLoginURL == "" {
+		missing = append(missing, "post-login URL")
+	}
+	if f.FailureURL == "" {
+		missing = append(missing, "failure URL")
+	}
+	return missing
+}
+
+// signInRedirectBase is the origin a sign-in callback is served on: the
+// deployment's own, plus the `/v1` the API mounts its contract under.
+//
+// One spelling for every provider, because it is used twice for each — once to
+// WIRE the routes and once to tell an operator what to register — and the two
+// must be the same bytes, or the value pasted into the vendor's console fails
+// the very flow it was meant to enable.
+func signInRedirectBase(base string) string {
+	if base == "" {
+		return ""
+	}
+	return strings.TrimSuffix(base, "/") + "/v1"
+}
+
+// oidcExchangerAdapter satisfies identity.OIDCExchanger over the shared PKCE
+// code exchange. One adapter for every provider: the request is the OAuth2 one
+// and only the endpoint differs, which the exchanger already carries.
+type oidcExchangerAdapter struct{ ex oidcCodeExchanger }
+
+func (a oidcExchangerAdapter) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
+	return a.ex.Exchange(ctx, code, codeVerifier, redirectURI)
+}
 
 // signInProvider is one provider's whole contribution: what the login screen
 // calls it, where to send the browser, and how to redeem and verify what comes

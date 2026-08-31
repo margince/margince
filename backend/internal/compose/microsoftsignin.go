@@ -93,27 +93,12 @@ func (cfg MicrosoftSignInConfig) Enabled() bool { return len(cfg.MissingFields()
 // "sign-in is off because your authority is multi-tenant" send an operator to
 // two different places.
 func (cfg MicrosoftSignInConfig) MissingFields() []string {
-	var missing []string
-	if cfg.ClientID == "" {
-		missing = append(missing, "client id")
-	}
-	if cfg.ClientSecret == "" {
-		missing = append(missing, "client secret")
-	}
+	missing := signInFields{
+		ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, StateKey: cfg.StateKey,
+		RedirectBase: cfg.RedirectBase, PostLoginURL: cfg.PostLoginURL, FailureURL: cfg.FailureURL,
+	}.missingSignInFields()
 	if !isDirectoryID(cfg.Tenant) {
 		missing = append(missing, "tenant (the Entra directory id — sign-in cannot run on common/organizations/consumers)")
-	}
-	if len(cfg.StateKey) < minStateKeyLen {
-		missing = append(missing, "state key (>=32B)")
-	}
-	if cfg.RedirectBase == "" {
-		missing = append(missing, "redirect base URL")
-	}
-	if cfg.PostLoginURL == "" {
-		missing = append(missing, "post-login URL")
-	}
-	if cfg.FailureURL == "" {
-		missing = append(missing, "failure URL")
 	}
 	return missing
 }
@@ -209,29 +194,10 @@ func (a microsoftOIDCVerifierAdapter) Verify(ctx context.Context, idToken string
 	return address, claims.Sub, address != "", nil
 }
 
-// microsoftTokenExchangerAdapter satisfies identity.OIDCExchanger over the same
-// PKCE code exchange the Google flow uses — the request is the OAuth2 one, and
-// only the endpoint differs.
-type microsoftTokenExchangerAdapter struct{ ex googleTokenExchanger }
-
-func (a microsoftTokenExchangerAdapter) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
-	return a.ex.Exchange(ctx, code, codeVerifier, redirectURI)
-}
-
 // microsoftAuthorityURL builds one of the directory's endpoints. One function
 // so the authorize, token and JWKS URLs cannot come to name different tenants.
 func microsoftAuthorityURL(tenant, path string) string {
 	return microsoftIdentityHost + tenant + path
-}
-
-// microsoftSignInRedirectBase is the origin the sign-in callback is served on,
-// built exactly as the Google flow's is (googlesignin.go) so an operator
-// registering both redirect URIs reads one convention, not two.
-func microsoftSignInRedirectBase(cfg MicrosoftSignInConfig) string {
-	if cfg.RedirectBase == "" {
-		return ""
-	}
-	return strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1"
 }
 
 // MicrosoftSignInRedirectURI is the callback URL an operator must register on
@@ -240,10 +206,7 @@ func microsoftSignInRedirectBase(cfg MicrosoftSignInConfig) string {
 // while they are creating the app registration, which is precisely when no
 // client id exists yet.
 func MicrosoftSignInRedirectURI(redirectBase string) string {
-	return identity.SignInRedirectURI(
-		microsoftSignInRedirectBase(MicrosoftSignInConfig{RedirectBase: redirectBase}),
-		microsoftProviderKey,
-	)
+	return identity.SignInRedirectURI(signInRedirectBase(redirectBase), microsoftProviderKey)
 }
 
 // WithMicrosoftSignIn wires /auth/oidc/microsoft/* into identity.Handlers when
@@ -265,12 +228,12 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 				microsoftIssuer(cfg.Tenant),
 				microsoftSignInMatchIdentity(cfg.ClientID),
 			)},
-			exchanger: microsoftTokenExchangerAdapter{ex: googleTokenExchanger{
+			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{
 				ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret,
 				TokenURL: microsoftAuthorityURL(cfg.Tenant, "/oauth2/v2.0/token"),
 			}},
 		}, identity.OIDCRoutes{
-			RedirectBase: microsoftSignInRedirectBase(cfg),
+			RedirectBase: signInRedirectBase(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,
 			FailureURL:   cfg.FailureURL,
 		}, cfg.StateKey)

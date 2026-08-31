@@ -3,12 +3,15 @@
 
 package compose
 
-// The Google authorization-code -> ID-token exchange for the sign-in login
-// flow. Deliberately separate from capture/oauthflow.Client.Exchange: that
-// method requires a refresh token back (offline access) and never parses
-// id_token — login requests neither offline access nor a refresh token, and
-// needs exactly the field oauthflow never reads. See googlesignin.go for
-// where this is wired in.
+// The authorization-code -> ID-token exchange for the sign-in login flow, for
+// EVERY provider: the request is the OAuth2 one and only the endpoint differs,
+// which the caller supplies.
+//
+// Deliberately separate from capture/oauthflow.Client.Exchange: that method
+// requires a refresh token back (offline access) and never parses id_token —
+// login requests neither offline access nor a refresh token, and needs exactly
+// the field oauthflow never reads. See googlesignin.go and microsoftsignin.go
+// for where this is wired in.
 
 import (
 	"context"
@@ -24,16 +27,16 @@ import (
 	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
-const googleTokenExchangeTimeout = 30 * time.Second
+const oidcTokenExchangeTimeout = 30 * time.Second
 
-type googleTokenExchanger struct {
+type oidcCodeExchanger struct {
 	ClientID     string
 	ClientSecret string
 	TokenURL     string
 	HTTPClient   *http.Client
 }
 
-type googleTokenResponse struct {
+type oidcTokenResponse struct {
 	IDToken string `json:"id_token"`
 	Error   string `json:"error"`
 }
@@ -42,10 +45,10 @@ type googleTokenResponse struct {
 // No refresh token is requested and none is read back: the authorization
 // request StartOidcSignIn builds asks for no access_type=offline, so Google
 // issues no refresh token here either, and this flow never mints one.
-func (ex googleTokenExchanger) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
+func (ex oidcCodeExchanger) Exchange(ctx context.Context, code, codeVerifier, redirectURI string) (string, error) {
 	client := ex.HTTPClient
 	if client == nil {
-		client = &http.Client{Timeout: googleTokenExchangeTimeout}
+		client = &http.Client{Timeout: oidcTokenExchangeTimeout}
 	}
 	form := url.Values{
 		"grant_type":    {"authorization_code"},
@@ -72,7 +75,7 @@ func (ex googleTokenExchanger) Exchange(ctx context.Context, code, codeVerifier,
 	if readErr != nil {
 		return "", fmt.Errorf("oidc token exchange: read response: %w", readErr)
 	}
-	var parsed googleTokenResponse
+	var parsed oidcTokenResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return "", fmt.Errorf("oidc token exchange: parse response: %w", err)
 	}
