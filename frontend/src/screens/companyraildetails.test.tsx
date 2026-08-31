@@ -217,6 +217,51 @@ describe("the legal identity a person can state", () => {
     expect(row).toContainElement(mark);
   });
 
+  // A profile-field read that has NOT answered says nothing about whether the
+  // field has a row. Treating its empty stand-in as "no row yet" sends the
+  // correction with no If-Match, and the server's patch is a locked
+  // last-write-wins — so the reader overwrites a value they never saw, with no
+  // version conflict to stop them. The row waits for the answer instead.
+  it("refuses the edit until the sidecar read has actually answered", async () => {
+    let releaseFields: ((value: Response) => void) | undefined;
+    const held = new Promise<Response>((resolve) => {
+      releaseFields = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname.endsWith("/profile-fields")) {
+          return held;
+        }
+        if (url.pathname.endsWith("/me")) {
+          return json(
+            meFixture({ allow: { organization: ["read", "update"] } }),
+          );
+        }
+        if (url.pathname.endsWith("/vat-check")) {
+          return new Response(null, { status: 404 });
+        }
+        return json({});
+      }),
+    );
+    renderGrid(ORG);
+    await screen.findByRole("button", { name: "Change Industry" });
+
+    // The industry row edits (it reads the organization, which HAS answered);
+    // the sidecar rows do not, because their own read has not.
+    expect(
+      screen.queryByRole("button", { name: "Change Register / VAT ID" }),
+    ).toBeNull();
+
+    releaseFields?.(
+      json({ data: [profileField("register_vat", "DE811907980")] }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Change Register / VAT ID" }),
+    ).toBeTruthy();
+  });
+
   it("carries no verdict on the registry address, which no register answers for", async () => {
     // BOTH sidecar fields, and the VAT one answered: the mark draws nothing
     // until its read settles, so a fixture with only the address would find no

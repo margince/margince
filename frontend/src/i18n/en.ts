@@ -1553,7 +1553,10 @@ export const en = {
   "co.profileField.register_number": "Register number",
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
-  "co.profile.title": "Company profile",
+  "co.narrative.title": "What they do",
+  "co.narrative.sub":
+    "The account's own story, as its website tells it. Correct anything wrong - a correction sticks, and the next read will not overwrite it.",
+  "co.narrative.add": "Add",
   "co.people.engagement": "Engagement",
   "co.people.lastInteraction": "Last exchange",
   "co.people.strength": "Relationship",
@@ -1736,8 +1739,6 @@ export const en = {
   "co.overlayFallback":
     "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
   "org.domains": "Domains",
-  "org.firmographicsEmpty":
-    "Nothing read yet — grounded profile fields appear here once a site read confirms them.",
   "org.facts": "Facts read from the site",
   "org.factCategory.company": "Company",
   "org.factCategory.offering": "Offering",
@@ -2598,6 +2599,7 @@ export const en = {
   "today.draft.to": "Draft follow-up to {name}",
   "today.draft.act": "Draft",
 
+  "evidence.mark": "read",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
   "evidence.save": "Save",

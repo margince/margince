@@ -12,7 +12,6 @@ import {
   Badge,
   Button,
   Card,
-  Disclosure,
   EmptyState,
   Modal,
   Skeleton,
@@ -88,6 +87,7 @@ import {
 } from "./companylookups";
 import { CompanyPeopleList } from "./companypeople/contacts";
 import { CoverageBand } from "./companypeople/summary";
+import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { CompanyRecentList } from "./companyrecent";
@@ -115,12 +115,7 @@ import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
 import { derivedSource } from "./evidencesource";
-import {
-  EvidenceVerdict,
-  factClaim,
-  profileFieldClaim,
-  useOrgProfileFields,
-} from "./evidenceverdict";
+import { EvidenceVerdict, factClaim } from "./evidenceverdict";
 import { type FactGroup, factFieldLabelKey, groupFacts } from "./factview";
 import { RecordHistoryTab } from "./history";
 import {
@@ -188,7 +183,6 @@ type CreateOrganizationRequest =
   components["schemas"]["CreateOrganizationRequest"];
 type UpdateOrganizationRequest =
   components["schemas"]["UpdateOrganizationRequest"];
-type CompanyProfileField = components["schemas"]["CompanyProfileField"];
 type Organization360View = components["schemas"]["Organization360"];
 type OrganizationFact = components["schemas"]["OrganizationFact"];
 
@@ -1225,80 +1219,12 @@ const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
 
 // The onboarding wording is the fallback, so a field added there still reads
 // as words rather than as a column name here.
-function profileFieldLabel(field: string, t: ReturnType<typeof useT>): string {
+export function profileFieldLabel(
+  field: string,
+  t: ReturnType<typeof useT>,
+): string {
   const key = PROFILE_FIELD_LABELS[field];
   return key ? t(key) : coldFieldLabel(field, t);
-}
-
-function ProfileFieldRow({
-  orgId,
-  field,
-  onOpenHistory,
-}: Readonly<{
-  orgId: string;
-  field: CompanyProfileField;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const canEdit = useCan("organization", "update");
-  return (
-    <div className="co-field">
-      <span className="t-label">{profileFieldLabel(field.field, t)}</span>
-      <div>
-        <EvidenceMark
-          value={field.value}
-          source={derivedSource(field, locale, recordZone)}
-          onOpenHistory={onOpenHistory}
-        />
-        {/* The verdict beside the value, not inside the mark: the mark says
-            where the value came from, and this says what the reader makes of
-            it. Folding the second into the first would hide the only action on
-            the page that stops a wrong extraction being rewritten tomorrow. */}
-        <EvidenceVerdict
-          orgId={orgId}
-          claim={profileFieldClaim(orgId, field)}
-          canEdit={canEdit}
-        />
-      </div>
-    </div>
-  );
-}
-
-// The Firmographics & legal card: the org's confirmed profile fields, rendered
-// evidence-or-omit — a field with no stored value is simply absent, never
-// guessed. An empty read is stated honestly ("nothing read yet"), never
-// fabricated into blank rows. This card carries the region's loading/error
-// surface; the sibling facts card stays silent when it has nothing to add.
-function ProfileFieldsCard({
-  orgId,
-  onOpenHistory,
-}: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
-  const t = useT();
-  const fieldsQuery = useOrgProfileFields(orgId);
-
-  return (
-    <Card
-      title={t("co.profile.title")}
-      style={{ marginBottom: "var(--space-4)" }}
-    >
-      <QueryStates query={fieldsQuery}>
-        {fieldsQuery.data && fieldsQuery.data.length === 0 ? (
-          <p className="t-caption">{t("org.firmographicsEmpty")}</p>
-        ) : (
-          (fieldsQuery.data ?? []).map((field) => (
-            <ProfileFieldRow
-              key={field.field}
-              orgId={orgId}
-              field={field}
-              onOpenHistory={onOpenHistory}
-            />
-          ))
-        )}
-      </QueryStates>
-    </Card>
-  );
 }
 
 // Facts read from the site, grouped into the four fixed categories. Empty
@@ -3182,48 +3108,44 @@ function ReferenceDisclosures({
   t: ReturnType<typeof useT>;
 }>): ReactNode {
   return (
-    <>
-      <Disclosure summary={t("co.profile.title")}>
-        <ProfileFieldsCard orgId={org.id} onOpenHistory={onOpenHistory} />
-      </Disclosure>
-      {/* The VAT verdict is NOT here. It used to be, one disclosure under the
-          profile, on the reasoning that a reader who had just read the number
-          wanted to know whether it held up — which was right about the reader
-          and wrong about where they are. The number itself lives in the record
-          rail, two tabs from this card and behind a fold, so somebody looking
-          straight at a VAT ID never met the thing that checks it. The verdict
-          is now a mark beside the number (companyvatmark.tsx), which is the
-          only place both facts are in one glance. */}
-      {/* Documents are deliberately NOT here: they have their own tab, and a
-          reader given the same list in two places has two lists to
-          reconcile. */}
-      <Disclosure summary={t("co.evidence.title")}>
-        <FactsCard orgId={org.id} onOpenHistory={onOpenHistory} />
-      </Disclosure>
-      {/* Who this account is connected to, and the account's own tools and
-          configuration. Neither reads like an "overview" or a "deal" or a
-          "task" — both are reference material about the RECORD itself, which
-          is exactly what the rest of this tab already is, so a reader who
-          wants any of it checks one place rather than a scatter across
-          others. */}
-      <Disclosure summary={t("co.relationships.title")}>
-        <RelationshipsTab scope={{ organization_id: org.id }} />
-      </Disclosure>
-      <Disclosure summary={t("co.tools.title")}>
-        <CustomFieldsCard object="organization" record={org} />
-        <HierarchyRollupCard orgId={org.id} />
-        {/* Only where the Brief is not already offering it: an account with
-            nothing on file meets the offer at the top of its own column, and
-            two offers to research the same company is none. */}
-        {!offerOnOverview && <DeepReadCard orgId={org.id} />}
-        {/* What the company RUNS, beside what it SAYS — read from public
-            records the company never wrote for us: DNS, certificates, the
-            markup of their own homepage. It sits under the read that produces
-            it rather than in a disclosure of its own, because the site read
-            above is what queues it and a reader who just started one looks
-            here for what it brought back. */}
-        <TechnicalProfileCard orgId={org.id} />
-      </Disclosure>
-    </>
+    <CompanyProfileForm
+      org={org}
+      tools={
+        <>
+          {/* Facts stay their own panel: they are what a machine READ about the
+              company, many-valued and correctable one row at a time, which is a
+              different act from stating a field. */}
+          <Panel title={t("co.evidence.title")}>
+            <PanelBody>
+              <FactsCard orgId={org.id} onOpenHistory={onOpenHistory} />
+            </PanelBody>
+          </Panel>
+          {/* Documents are deliberately NOT here: they have their own tab, and a
+              reader given the same list in two places has two lists to
+              reconcile. */}
+          <Panel title={t("co.relationships.title")}>
+            <PanelBody>
+              <RelationshipsTab scope={{ organization_id: org.id }} />
+            </PanelBody>
+          </Panel>
+          <Panel title={t("co.tools.title")}>
+            <PanelBody>
+              <CustomFieldsCard object="organization" record={org} />
+              <HierarchyRollupCard orgId={org.id} />
+              {/* Only where the Brief is not already offering it: an account
+                  with nothing on file meets the offer at the top of its own
+                  column, and two offers to research the same company is none. */}
+              {!offerOnOverview && <DeepReadCard orgId={org.id} />}
+              {/* What the company RUNS, beside what it SAYS — read from public
+                  records the company never wrote for us: DNS, certificates, the
+                  markup of their own homepage. It sits under the read that
+                  produces it rather than in a section of its own, because the
+                  site read above is what queues it. */}
+              <TechnicalProfileCard orgId={org.id} />
+            </PanelBody>
+          </Panel>
+        </>
+      }
+    />
   );
 }
