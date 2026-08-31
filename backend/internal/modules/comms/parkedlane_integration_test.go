@@ -57,6 +57,22 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 		t.Fatalf("recording the send: %v", err)
 	}
 
+	// A CHANNEL send given up on wears the same stamp and must not reach this
+	// lane: it has no subject line, so the card would carry nothing but a
+	// reason. That it tells its sender nothing either is a separate gap.
+	channel := e.stageChannel(t, StageChannelInput{
+		ActivityID: e.telegramActivity(t),
+		Provider:   "telegram",
+		Recipient: connector.ChannelIdentity{
+			Provider: "telegram", ChannelUserID: "778899", Username: "buyer",
+		},
+		Body:           "On its way today.",
+		ConsentPurpose: "transactional",
+	})
+	if err := e.store.Park(e.ctx, channel, "the bot was removed from the chat"); err != nil {
+		t.Fatalf("parking the channel delivery: %v", err)
+	}
+
 	since := e.clockValue.Add(-7 * 24 * time.Hour)
 	reader := readerCtx(e.ws, e.user)
 	parked, err := e.store.ParkedSendsFor(reader, since, 8)
@@ -64,7 +80,7 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 		t.Fatalf("ParkedSendsFor: %v", err)
 	}
 	if len(parked) != 1 {
-		t.Fatalf("ParkedSendsFor = %+v, want only the send that was given up on", parked)
+		t.Fatalf("ParkedSendsFor = %+v, want only the MAIL send that was given up on", parked)
 	}
 	got := parked[0]
 	if got.ID != abandoned {

@@ -28,7 +28,7 @@ func (s *stubNotices) Unread(context.Context, int) ([]UnreadNotice, error) {
 func noticesLaneService(n Notices) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, n, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, n, nil, fixedClock)
 }
 
 func TestANoticeCarriesItsOwnWordsAndItsOneVerb(t *testing.T) {

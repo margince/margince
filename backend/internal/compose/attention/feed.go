@@ -127,11 +127,11 @@ func (s *Service) forReader() *Service {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, p Undelivered, u AutomationHealth, e Notices, n Names, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
-		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, undelivered: p, automations: u, notices: e, names: n, now: now,
+		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
 }
 
@@ -143,6 +143,14 @@ func NewService(
 // same promise every optional lane makes.
 func (s *Service) WithWaiting(w Waiting) *Service {
 	s.waiting = w
+	return s
+}
+
+// WithUndelivered binds the given-up-on-sends reader — an option for the reason
+// WithWaiting is one, which this lane would otherwise have been the first to
+// disprove.
+func (s *Service) WithUndelivered(u Undelivered) *Service {
+	s.undelivered = u
 	return s
 }
 

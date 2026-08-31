@@ -460,9 +460,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The reader's own sends that never arrived, from the bounce stamp
 		// comms records on the row.
 		attentionBounces{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
-		// The reader's own sends that never left, from the stamp the
-		// dispatcher's park records on the row.
-		attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
 		// The rules that stopped doing their work, through the automation
 		// store's own gate.
 		attentionAutomations{store: automation.NewAutomationStore(db)},
@@ -479,5 +476,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		},
 		now,
 	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
+		// The reader's own sends that never left, from the stamp the
+		// dispatcher's park records on the row.
+		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress)
 }

@@ -947,3 +947,39 @@ func aiFailure(seq int, taskKind string) crmcontracts.AttentionItem {
 		OccurredAt: rankInstant,
 	})
 }
+
+// A lane the feed renders and the queue never reads is a lane nobody sees: the
+// rows are the page, and an item that reaches no row reaches no reader. This is
+// the arm that would have caught an undelivered card rendered into a lane the
+// classifier walked straight past.
+func TestAGivenUpSendReachesTheQueueAndSaysWhatItCost(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf:        rankInstant,
+		Undelivered: lane(item("u1", "undelivered")),
+		Bounces:     lane(item("b1", "bounce")),
+	}
+
+	rows := classifyDay(day, rankInstant)
+
+	var undelivered, bounced *ranked
+	for i := range rows {
+		switch rows[i].item.Id {
+		case "u1":
+			undelivered = &rows[i]
+		case "b1":
+			bounced = &rows[i]
+		}
+	}
+	if undelivered == nil {
+		t.Fatalf("the undelivered lane produced no row; the queue carries %d row(s) and none of them is the send", len(rows))
+	}
+	// Not the bounce's consequence: nobody received this one because nobody
+	// was ever sent it, and the reader's move is to send it rather than to
+	// fix an address.
+	if undelivered.item.Consequence != crmcontracts.WorklistItemConsequence("you_believe_it_happened") {
+		t.Errorf("a send that never left says %q, want you_believe_it_happened", undelivered.item.Consequence)
+	}
+	if bounced == nil || bounced.item.Consequence == undelivered.item.Consequence {
+		t.Errorf("the two send failures read alike (%v), and they are not the same news", bounced)
+	}
+}

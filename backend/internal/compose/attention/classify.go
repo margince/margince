@@ -50,6 +50,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
 	})
 	rows = appendLane(rows, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
+	rows = appendLane(rows, day.Undelivered, asOf, classifyUndelivered)
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
@@ -402,6 +403,20 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // row rather than disappearing into an aggregate.
 func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "system", "customer_never_received")
+	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
+	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+}
+
+// classifyUndelivered: a message the rep believes they sent and which never
+// left. The belief is the damage — they are waiting on a reply to something
+// nobody has — so it sits with the broken promises rather than with the system
+// news, exactly where a bounce sits.
+//
+// It is a separate consequence from the bounce beside it: nobody received this
+// one because nobody was ever sent it, and the reader's move is to send it
+// rather than to fix an address.
+func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }

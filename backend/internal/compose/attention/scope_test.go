@@ -194,7 +194,7 @@ func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
 	tasks := &stubTasks{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
 	)
 
 	if _, err := svc.forReader().Assemble(context.Background()); err != nil {
@@ -212,7 +212,7 @@ func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
 	tasks := &stubTasks{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
 	)
 
 	if _, err := svc.Assemble(context.Background()); err != nil {

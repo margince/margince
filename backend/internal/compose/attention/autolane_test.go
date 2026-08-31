@@ -31,7 +31,7 @@ func (s *stubAutomations) TroubledRuns(_ context.Context, since time.Time, _ int
 func automationLaneService(health AutomationHealth) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, fixedClock)
 }
 
 func TestATroubledFiringNamesItsRuleAndItsReason(t *testing.T) {

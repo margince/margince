@@ -31,7 +31,8 @@ func (s *stubUndelivered) ParkedSends(_ context.Context, since time.Time, _ int)
 func undeliveredLaneService(undelivered Undelivered) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, undelivered, nil, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	).WithUndelivered(undelivered)
 }
 
 func TestAGivenUpSendNamesItselfAndOpensThePerson(t *testing.T) {

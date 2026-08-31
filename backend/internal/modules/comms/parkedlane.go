@@ -54,7 +54,14 @@ type ParkedSend struct {
 var undeliveredLane = sendLane{
 	reasonColumn: parkReasonColumn,
 	atColumn:     "parked_at",
-	only:         "o.parked_at IS NOT NULL",
+	// MAIL only. This table also carries channel sends — Telegram and its
+	// kind — which have no subject line, so one on this lane would be a card
+	// with nothing on it but a reason. The bounce lane beside it is mail-only
+	// by accident of its own predicate (a channel send has no bounce report);
+	// here it has to be said. A channel send given up on still tells nobody,
+	// which is its own gap and needs a name for a message that has no subject
+	// — not a blank card here.
+	only: "o.channel_user_id IS NULL AND o.parked_at IS NOT NULL",
 }
 
 // ParkedSendsFor answers the calling person's own abandoned sends since
