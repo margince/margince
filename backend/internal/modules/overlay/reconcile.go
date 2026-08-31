@@ -27,6 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
+// mirrorConflictAction names the system_log rows the reconcile sweep writes
+// for an overwrite, under `detail.object_class`. The sync-health lane reads
+// them back by that name and that key (synchealth.go): the log outlives the
+// outbox, so it is what remains of an overwrite after the event has shipped.
+const mirrorConflictAction = "mirror.conflict"
+
 // mirrorConflictPayload builds the mirror.conflict wire payload — the
 // subject travels separately (rec.ObjectClass/id, passed to
 // storekit.EmitEventForEntity), since this event's entity is dynamic (the
@@ -304,7 +310,7 @@ func emitMirrorConflict(ctx context.Context, ms *MirrorStore, rec Record, prior 
 		if err := ms.assertFence(ctx, tx); err != nil {
 			return err
 		}
-		logID, err := storekit.LogSystem(ctx, tx, "mirror.conflict", detail)
+		logID, err := storekit.LogSystem(ctx, tx, mirrorConflictAction, detail)
 		if err != nil {
 			return fmt.Errorf("overlay: reconcile: logging the mirror.conflict system event: %w", err)
 		}

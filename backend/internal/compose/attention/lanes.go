@@ -337,7 +337,8 @@ type Meeting struct {
 }
 
 // SyncHealth is the overlay sync's current concerns: the poller backing off,
-// the incumbent budget degraded, mirror classes stale or still backfilling.
+// the incumbent budget degraded, mirror classes stale or still backfilling,
+// and the classes an incumbent-driven write overwrote here.
 // Aggregated by the owning module (one concern per condition, never one per
 // row), so a broken connector is one card and not a flood.
 //
