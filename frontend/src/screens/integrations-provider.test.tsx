@@ -91,7 +91,7 @@ const ME_CONNECT_ONLY = meResponse("full", {
   delete: false,
 });
 
-function backend(principal: Me) {
+function backend(principal: Me, connection: ProviderConnection = CONNECTION) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const request = input instanceof Request ? input : undefined;
     const path = new URL(String(request ? request.url : input)).pathname;
@@ -99,23 +99,27 @@ function backend(principal: Me) {
     // back into its cache. Routed by METHOD as well as path: the same path
     // serves the list this card reads on the way in.
     if (request?.method === "PATCH") {
-      return new Response(JSON.stringify(CONNECTION), {
+      return new Response(JSON.stringify(connection), {
         headers: { "Content-Type": "application/json" },
       });
     }
-    const body = routeBody(path, principal);
+    const body = routeBody(path, principal, connection);
     return new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
     });
   });
 }
 
-function routeBody(path: string, principal: Me): unknown {
+function routeBody(
+  path: string,
+  principal: Me,
+  connection: ProviderConnection,
+): unknown {
   if (path === "/v1/me") {
     return principal;
   }
   if (path === "/v1/provider-connections") {
-    return { data: [CONNECTION] };
+    return { data: [connection] };
   }
   if (path === "/v1/integrations/settings") {
     // Off, which is the state the flip below moves away from. The installation
@@ -186,8 +190,11 @@ describe("ProviderCard write posture", () => {
     await user.click(screen.getByRole("button", { name: MORE }));
   }
 
-  async function renderAs(principal: Me) {
-    const fetch = backend(principal);
+  async function renderAs(
+    principal: Me,
+    connection: ProviderConnection = CONNECTION,
+  ) {
+    const fetch = backend(principal, connection);
     vi.stubGlobal("fetch", fetch);
     render(
       <Providers>
@@ -322,6 +329,34 @@ describe("ProviderCard write posture", () => {
       expect(
         screen.getAllByRole("switch", { name: /^Allow buying / }),
       ).toHaveLength(1);
+    },
+    RENDER_TEST_MS,
+  );
+
+  // A provider nobody has connected is listed anyway, with its catalog, so the
+  // card can say what it sells before a key exists. It has no row, so the server
+  // sends no version — while the contract declares `version` required, which is
+  // why nothing in the types objects to reading it. The switches would render
+  // enabled, and every press would send `If-Match: undefined` and be refused as
+  // malformed: a control that can never work, in the state a first-time admin
+  // meets first.
+  it(
+    "offers no purchase switch before a key exists, since there is nothing to patch",
+    async () => {
+      const { version: _version, ...neverConnected } = CONNECTION;
+      await renderAs(ME_OPERATOR, {
+        ...neverConnected,
+        status: "disconnected",
+        credential_present: false,
+      } as ProviderConnection);
+
+      expect(
+        screen.queryAllByRole("switch", { name: /^Allow buying / }),
+      ).toHaveLength(0);
+      // The catalog IS present on this connection, so an empty catalog is not
+      // what made the switches absent — without this the case would pass over a
+      // card that simply had nothing to list.
+      expect(screen.getByRole("meter", { name: "email" })).toBeTruthy();
     },
     RENDER_TEST_MS,
   );

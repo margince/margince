@@ -460,7 +460,18 @@ function PricedCategoryRows({
   const { locale } = useLocale();
   const patch = usePatchCategories();
   const priced = (connection.catalog ?? []).filter((entry) => !entry.free);
-  if (priced.length === 0) {
+  // A provider nobody has connected is listed anyway — with its catalog, so the
+  // card can say what it sells before a key exists — but it has no row, and the
+  // server omits the version for one. The contract declares `version` required,
+  // so nothing in the types objects to reading it; at runtime the patch would
+  // carry `If-Match: undefined` and be refused as malformed every time.
+  //
+  // Absent rather than disabled: there is no connection to decide about yet, and
+  // a dead switch beside a key field reads as a permission the reader lacks.
+  // The switches appear with the connection, which is the order the decision
+  // actually has — a key, then what it may be spent on.
+  const version = connection.version;
+  if (priced.length === 0 || version === undefined) {
     return null;
   }
   const selection = connection.configuration.categories ?? {};
@@ -486,7 +497,7 @@ function PricedCategoryRows({
               onChange={(next) =>
                 patch.mutate({
                   provider: connection.provider,
-                  version: connection.version,
+                  version,
                   categories: { ...selection, [entry.category]: next },
                 })
               }
