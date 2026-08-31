@@ -173,12 +173,41 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 }
 
+// waitingStaleDays is when an unanswered message stops being today's work.
+//
+// Past it the wait is still real, but acting on it is no longer urgent in the
+// way the top band means: two weeks of silence has already cost whatever it was
+// going to cost, and a fortnight-old row sitting above a meeting in an hour is
+// the page lying about what matters now. Such a row moves to the review band —
+// still visible, still answerable, no longer claiming the day.
+//
+// Unless money is still on it. An open deal keeps a long wait in execution,
+// because there the silence is the problem rather than a closed chapter.
+const waitingStaleDays = 14
+
+// waitingDaysCeiling bounds what age contributes to the ORDER.
+//
+// Age breaks ties between rows the bands could not separate; it does not earn
+// precedence on its own. Uncapped it does exactly that — every additional day
+// of silence outranks every newer wait forever, so the oldest thread in the
+// workspace leads the page permanently and the queue becomes an archive sorted
+// by how long it has been ignored. That is the live page's own defect: eight
+// half-year-old threads holding the top of a working rep's day.
+//
+// Past the ceiling all waits tie on age and the next tie-break decides, which
+// is the honest answer — at six months versus seven, age has stopped saying
+// anything about what to do first.
+const waitingDaysCeiling = 30
+
 // classifyWaiting: somebody wrote and nobody answered.
 //
 // Level 1, the top band below a pin, and the reason is the concept's own: a
 // customer waiting on a reply is the one thing on this page where the cost of
 // doing nothing falls on somebody else. It outranks a promise, a drifting deal
 // and every decision.
+//
+// That top band is for a LIVE wait. A stale one keeps its row and loses the
+// band, because a queue where nothing ever ages out is one a rep stops reading.
 //
 // The draft verb is offered only when the message can be READ. There is no
 // drafting a reply to words this reader may not see, and a button that opened
@@ -189,17 +218,27 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if days < 0 {
 		days = 0
 	}
+	// Stale and unfunded: the row belongs to review, not to today.
+	level := levelWaiting
+	stale := days > waitingStaleDays && !waiting.HasOpenDeal
+	if stale {
+		level = levelRoutine
+	}
+	because := []crmcontracts.WorklistReason{
+		reason("buyer_wrote_last", nil),
+		reason("waiting_days", daysValue(days)),
+	}
+	if stale {
+		because = append(because, reason("stale", nil))
+	}
 	row := crmcontracts.WorklistItem{
 		Id:          waiting.ActivityID.String(),
 		Source:      sourceWaiting,
 		Category:    sourceWaiting,
-		Level:       levelWaiting,
+		Level:       level,
 		Consequence: "buyer_waits",
-		Because: []crmcontracts.WorklistReason{
-			reason("buyer_wrote_last", nil),
-			reason("waiting_days", daysValue(days)),
-		},
-		Actions: []crmcontracts.WorklistItemActions{},
+		Because:     because,
+		Actions:     []crmcontracts.WorklistItemActions{},
 	}
 	// The subject travels because the row exists at all only for a reader the
 	// content gate admitted: a message this reader may not read produces no
@@ -230,7 +269,14 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Action:     "draft_reply",
 		ActivityId: openapi_types.UUID(waiting.ActivityID),
 	}
-	return ranked{item: row, waitingDays: days, occurredAt: waiting.Since}
+	// The row SAYS the true age and SORTS on the capped one. A rep reading
+	// "waiting 180 days" is being told something true; the queue placing that
+	// row above everything for the rest of its life is not.
+	ordering := days
+	if ordering > waitingDaysCeiling {
+		ordering = waitingDaysCeiling
+	}
+	return ranked{item: row, waitingDays: ordering, occurredAt: waiting.Since}
 }
 
 // dropDealsAlreadyWaiting removes the at-risk row for a deal somebody is

@@ -46,14 +46,43 @@ type WaitingReply struct {
 	PersonID       ids.UUID
 	OrganizationID ids.UUID
 	DealID         ids.UUID
+	// OwnerID is who answers for the linked record, by the precedence the query
+	// declares. Zero means nobody does — which routes the wait to the unassigned
+	// queue rather than to whoever happens to be reading.
+	OwnerID ids.UUID
+	// HasOpenDeal reports whether an open deal is on this thread. It is what
+	// lets a caller keep an old wait that still has money behind it, and drop
+	// one that does not.
+	HasOpenDeal bool
 }
 
 // waitingScanCap bounds the work one read does. Beyond this the answer is
 // "there are more", never a silent truncation reported as a total.
 const waitingScanCap = 200
 
+// waitingHorizonDays is how far back a wait can reach and still be work.
+//
+// Past this, an unanswered message is history rather than an obligation: the
+// conversation it belonged to has ended one way or another, and nobody is
+// sitting at the other end of it. The horizon is coarse on purpose — the bands
+// that separate an urgent wait from a stale one are the caller's, and they
+// judge what survives this.
+//
+// Applied BEFORE the cap for the same reason the machine rule is, and the
+// reason is worth restating because it is the whole shape of this query: a
+// filter after LIMIT lets two hundred rows nobody wants fill the scan and push
+// a real customer past it, and the page then says nobody is waiting.
+const waitingHorizonDays = 90
+
 // waitingRepliesSQL finds, per thread, the newest inbound with no later
-// outbound in the same thread.
+// outbound in the same thread — where the thread is a SALES conversation the
+// workspace is answerable for, recent enough to still be one.
+//
+// Every eligibility rule is applied before ORDER BY and LIMIT, so the cap falls
+// on qualified rows only. A rule applied after the cap reads as a working
+// filter and fails as a silent one: the scan fills with rows the rule would
+// have removed, the customer behind them never arrives, and the page reports an
+// empty queue with nothing to say it was truncated.
 //
 // NOT EXISTS rather than a window function or a join: it expresses the question
 // directly — "nobody wrote back after this" — and it stops at the first later
@@ -102,7 +131,31 @@ const waitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       -- Who answers for this wait, by ONE declared precedence:
+	       -- deal, then lead, then person, then organization.
+	       --
+	       -- Nearest-to-the-money first. A thread filed under both a deal and
+	       -- the person on it belongs to whoever owns the deal, because that is
+	       -- who the reply changes an outcome for. Without a stated order the
+	       -- answer would follow whichever link happened to sort first, and one
+	       -- message would change hands between reads.
+	       --
+	       -- Absent is a real answer, not a missing one: nobody owns it, and the
+	       -- caller routes it to the unassigned queue rather than to everyone.
+	       COALESCE(
+	         (array_agg(dealOwner.owner_id ORDER BY dealOwner.id::text)
+	          FILTER (WHERE dealOwner.owner_id IS NOT NULL))[1],
+	         (array_agg(leadOwner.owner_id ORDER BY leadOwner.id::text)
+	          FILTER (WHERE leadOwner.owner_id IS NOT NULL))[1],
+	         (array_agg(personOwner.owner_id ORDER BY personOwner.id::text)
+	          FILTER (WHERE personOwner.owner_id IS NOT NULL))[1],
+	         (array_agg(orgOwner.owner_id ORDER BY orgOwner.id::text)
+	          FILTER (WHERE orgOwner.owner_id IS NOT NULL))[1],
+	         '00000000-0000-0000-0000-000000000000'::uuid),
+	       -- Whether an OPEN deal is on this thread, which is what lets the
+	       -- caller keep an old wait that still has money on it.
+	       bool_or(dealOwner.id IS NOT NULL)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -110,12 +163,59 @@ const waitingRepliesSQL = `
 	  -- from a notification service.
 	  LEFT JOIN activity_participant sender
 	         ON sender.activity_id = a.id AND sender.role = 'from'
+	  -- The owner joins walk the links WITHOUT the visibility clause the wl
+	  -- join carries. Who answers for a record is a fact about the record; if it
+	  -- were read through what this reader may see, a message would look
+	  -- unowned to one colleague and owned to another, and "mine" would mean a
+	  -- different set of rows per reader for the same underlying truth.
+	  --
+	  -- Only the id and the owner leave these joins. No name, no amount, no
+	  -- subject — nothing a reader could not otherwise reach — so this widens
+	  -- what the query KNOWS without widening what it discloses.
+	  LEFT JOIN activity_link ownerLink ON ownerLink.activity_id = a.id
+	  LEFT JOIN deal dealOwner ON dealOwner.id = ownerLink.deal_id
+	                          AND dealOwner.status = 'open'
+	                          AND dealOwner.archived_at IS NULL
+	  LEFT JOIN lead leadOwner ON leadOwner.id = ownerLink.lead_id
+	                          AND leadOwner.status IN ('new', 'contacted', 'engaged')
+	                          AND leadOwner.archived_at IS NULL
+	  LEFT JOIN person personOwner ON personOwner.id = ownerLink.person_id
+	                              AND personOwner.archived_at IS NULL
+	  LEFT JOIN organization orgOwner ON orgOwner.id = ownerLink.organization_id
+	                                 AND orgOwner.archived_at IS NULL
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
 	   AND a.occurred_at <= $%[1]d
 	   AND %[2]s
 	   AND a.thread_key IS NOT NULL
+	   -- Old enough and it is history, not work. Before the cap, like every
+	   -- other exclusion here.
+	   AND a.occurred_at >= $%[1]d - make_interval(days => %[5]d)
+	   -- A SALES link, or it is not this queue's business.
+	   --
+	   -- The rule that was missing: this read used to answer "somebody wrote and
+	   -- nobody replied", which is true of a rep's dentist. Unanswered is a fact
+	   -- about a mailbox; waiting is a fact about a customer, and only a link to
+	   -- a record the workspace sells to tells the two apart.
+	   --
+	   -- Its own EXISTS rather than a predicate on the wl join above, because
+	   -- that join is filtered by what the reader may SEE. Qualifying through it
+	   -- would make eligibility depend on the reader, so the same message would
+	   -- be work for one colleague and personal mail for another.
+	   AND EXISTS (
+	         SELECT 1 FROM activity_link sales
+	          WHERE sales.activity_id = a.id
+	            AND (sales.person_id IS NOT NULL
+	              OR sales.organization_id IS NOT NULL
+	              OR EXISTS (SELECT 1 FROM deal d
+	                          WHERE d.id = sales.deal_id
+	                            AND d.status = 'open'
+	                            AND d.archived_at IS NULL)
+	              OR EXISTS (SELECT 1 FROM lead ld
+	                          WHERE ld.id = sales.lead_id
+	                            AND ld.status IN ('new', 'contacted', 'engaged')
+	                            AND ld.archived_at IS NULL)))
 	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
 	   -- LIMIT lets two hundred notification threads fill the scan and push a
 	   -- real customer past it, and the page then says nobody is waiting —
@@ -204,7 +304,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			linkVisible = scopeUnbounded
 		}
 		rows, err := tx.Query(ctx,
-			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap), args...)
+			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap,
+				waitingHorizonDays), args...)
 		if err != nil {
 			return err
 		}
@@ -213,7 +314,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		for rows.Next() {
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.PersonID, &row.OrganizationID, &row.DealID); err != nil {
+				&row.PersonID, &row.OrganizationID, &row.DealID,
+				&row.OwnerID, &row.HasOpenDeal); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

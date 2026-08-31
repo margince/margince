@@ -264,6 +264,8 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 			PersonID:       row.PersonID,
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
+			OwnerID:        row.OwnerID,
+			HasOpenDeal:    row.HasOpenDeal,
 		})
 	}
 	return out, nil

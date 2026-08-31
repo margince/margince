@@ -26,7 +26,36 @@ var waitingInstant = time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
 
 // seedMessage writes one captured message through the owner connection, the
 // way capture would leave it: a thread key, an audience, a direction.
+//
+// It also files the message under a PERSON, because that is what makes it sales
+// mail. The lane requires a link to a record the workspace sells to, so a
+// message seeded without one is a rep's private correspondence and correctly
+// never appears — every case in this file that is about something else has to
+// clear that bar first or it would pass for the wrong reason.
 func seedWaitingMessage(t *testing.T, e *Env, thread, direction, subject string, at time.Time) {
+	t.Helper()
+	seedWaitingMessageLinked(t, e, thread, direction, subject, at, seedWaitingPerson(t, e))
+}
+
+// seedWaitingPerson creates one person for a message to be filed under.
+func seedWaitingPerson(t *testing.T, e *Env) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := OwnerConn(t).Exec(context.Background(), `
+		INSERT INTO person (id, full_name, source, captured_by, version, created_at, updated_at)
+		VALUES ($1, 'Waiting Customer', 'system', $2, 1, now(), now())`,
+		id, "human:"+e.AdminUser.String()); err != nil {
+		t.Fatalf("seeding the person a thread is filed under: %v", err)
+	}
+	return id
+}
+
+// seedWaitingMessageLinked writes the message and files it under one person.
+// Pass a zero person to seed mail linked to NOTHING, which is how the personal
+// -mail case is built.
+func seedWaitingMessageLinked(
+	t *testing.T, e *Env, thread, direction, subject string, at time.Time, person ids.UUID,
+) {
 	t.Helper()
 	id := ids.NewV7()
 	owner := OwnerConn(t)
@@ -37,6 +66,14 @@ func seedWaitingMessage(t *testing.T, e *Env, thread, direction, subject string,
 		VALUES ($1, 'email', $2, $3, $4, false, 'system', $5, 1, now(), now(), false, $6, 'workspace')`,
 		id, direction, subject, at, "human:"+e.AdminUser.String(), thread); err != nil {
 		t.Fatalf("seeding a %s message: %v", direction, err)
+	}
+	if person.IsZero() {
+		return
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, id, person); err != nil {
+		t.Fatalf("filing the message under a person: %v", err)
 	}
 }
 
@@ -109,6 +146,103 @@ func TestAFutureDatedMessageDoesNotSuppressTheWaitingOne(t *testing.T) {
 	if !containsSubject(waiting, "Waiting now") {
 		t.Fatal("a message dated a year ahead silenced a thread that is waiting today")
 	}
+}
+
+// Mail linked to nothing is not sales work. This is the reported defect in its
+// simplest form: a rep's dentist wrote, nobody replied, and the queue called it
+// a customer waiting because unanswered was the only test it applied.
+func TestMailLinkedToNothingIsNotWaitingWork(t *testing.T) {
+	e := Setup(t)
+	seedWaitingMessageLinked(t, e, "thread-personal", "inbound", "Your appointment",
+		waitingInstant.Add(-3*24*time.Hour), ids.UUID{})
+
+	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+
+	if containsSubject(waiting, "Your appointment") {
+		t.Fatal("mail filed under no record at all was reported as a customer waiting")
+	}
+}
+
+// Past the horizon a wait is history. The bands decide what is urgent among
+// what survives; this decides what is still a wait at all.
+func TestAWaitOlderThanTheHorizonIsNotReported(t *testing.T) {
+	e := Setup(t)
+	seedWaitingMessage(t, e, "thread-ancient", "inbound", "Six months ago",
+		waitingInstant.Add(-200*24*time.Hour))
+	seedWaitingMessage(t, e, "thread-recent", "inbound", "Last week",
+		waitingInstant.Add(-7*24*time.Hour))
+
+	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+
+	if containsSubject(waiting, "Six months ago") {
+		t.Fatal("a two-hundred-day-old thread was still reported as a wait")
+	}
+	// The admission half: the horizon must not have swallowed everything.
+	if !containsSubject(waiting, "Last week") {
+		t.Fatal("the horizon removed a week-old wait, which is ordinary work")
+	}
+}
+
+// The wait carries whoever answers for the record, so "mine" can mean mine.
+// Without this the queue has no owner to compare against and falls back to
+// showing unowned work to everybody.
+func TestAWaitCarriesTheOwnerOfItsRecord(t *testing.T) {
+	e := Setup(t)
+	person := seedWaitingPerson(t, e)
+	if _, err := OwnerConn(t).Exec(context.Background(),
+		`UPDATE person SET owner_id = $1 WHERE id = $2`, e.AdminUser, person); err != nil {
+		t.Fatalf("giving the person an owner: %v", err)
+	}
+	seedWaitingMessageLinked(t, e, "thread-owned", "inbound", "Owned thread",
+		waitingInstant.Add(-2*24*time.Hour), person)
+
+	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+
+	for _, row := range waiting {
+		if row.Subject != "Owned thread" {
+			continue
+		}
+		if row.OwnerID != ids.UUID(e.AdminUser) {
+			t.Fatalf("the wait came back owned by %v, wanted the person's owner %v",
+				row.OwnerID, e.AdminUser)
+		}
+		return
+	}
+	t.Fatal("the owned thread never reached the reader at all")
+}
+
+// An unowned record yields an unowned wait. Zero is the routing answer that
+// sends it to the unassigned queue; guessing an owner here is what put every
+// colleague's mail on everybody's page.
+func TestAWaitOnAnUnownedRecordHasNoOwner(t *testing.T) {
+	e := Setup(t)
+	seedWaitingMessage(t, e, "thread-unowned", "inbound", "Unowned thread",
+		waitingInstant.Add(-2*24*time.Hour))
+
+	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+
+	for _, row := range waiting {
+		if row.Subject != "Unowned thread" {
+			continue
+		}
+		if !row.OwnerID.IsZero() {
+			t.Fatalf("an unowned record produced owner %v", row.OwnerID)
+		}
+		return
+	}
+	t.Fatal("the unowned thread never reached the reader at all")
 }
 
 func containsSubject(rows []activities.WaitingReply, subject string) bool {

@@ -142,6 +142,7 @@ const KNOWN_REASONS = {
   repeated_failure: true,
   legal_deadline: true,
   meeting_soon: true,
+  stale: true,
 } as const;
 
 type KnownReason = keyof typeof KNOWN_REASONS;
