@@ -32253,15 +32253,19 @@ components:
         It DECIDES nothing. The verb routes to the endpoint that owns it, the same way
         the deal page's own next-step card does, and a row offering a move is not the
         product taking one.
-      required: [action]
+      required: [action, activity_id]
       properties:
         action:
           type: string
-          enum: [draft_reply, open_record]
+          enum: [draft_reply]
           description: |
-            `draft_reply` drafts an answer to the message in `activity_id` — offered only
-            where the reader may READ that message, because there is no drafting a reply
-            to words they cannot see. `open_record` is the fallback that decides nothing.
+            `draft_reply` answers the message in `activity_id` — offered only where the
+            reader may READ that message, because there is no replying to words they
+            cannot see.
+
+            One value, and the message is required with it: a move naming no message is
+            not a move, and a contract that allowed one would let a client draw a control
+            with nothing behind it. A row with no step to suggest sends no `move` at all.
         activity_id:
           type: string
           format: uuid

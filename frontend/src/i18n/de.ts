@@ -7083,6 +7083,6 @@ export const de = {
   "worklist.batch.held_draft": "{count} Entwürfe warten auf Freigabe",
   "worklist.untitled.batch": "Eine Gruppe Routineentscheidungen",
   "worklist.verb.review_batch": "Durchsehen",
-  "worklist.verb.draft_reply": "Antwort entwerfen",
+  "worklist.verb.draft_reply": "Zum Antworten öffnen",
   "worklist.deal.closes": "Abschluss {date}",
 } as const satisfies Record<MessageKey, string>;

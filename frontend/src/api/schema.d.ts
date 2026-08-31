@@ -24427,17 +24427,21 @@ export interface components {
          */
         WorklistMove: {
             /**
-             * @description `draft_reply` drafts an answer to the message in `activity_id` — offered only
-             *     where the reader may READ that message, because there is no drafting a reply
-             *     to words they cannot see. `open_record` is the fallback that decides nothing.
+             * @description `draft_reply` answers the message in `activity_id` — offered only where the
+             *     reader may READ that message, because there is no replying to words they
+             *     cannot see.
+             *
+             *     One value, and the message is required with it: a move naming no message is
+             *     not a move, and a contract that allowed one would let a client draw a control
+             *     with nothing behind it. A row with no step to suggest sends no `move` at all.
              * @enum {string}
              */
-            action: "draft_reply" | "open_record";
+            action: "draft_reply";
             /**
              * Format: uuid
              * @description The message a reply would answer, for `draft_reply`.
              */
-            activity_id?: string;
+            activity_id: string;
         };
         /**
          * @description A group of routine decisions that read alike, standing on the queue as one row.

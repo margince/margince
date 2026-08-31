@@ -11638,15 +11638,12 @@ func (e WorklistItemSource) Valid() bool {
 // Defines values for WorklistMoveAction.
 const (
 	DraftReply WorklistMoveAction = "draft_reply"
-	OpenRecord WorklistMoveAction = "open_record"
 )
 
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
 	case DraftReply:
-		return true
-	case OpenRecord:
 		return true
 	default:
 		return false
@@ -27823,18 +27820,26 @@ type WorklistItemSource string
 // the deal page's own next-step card does, and a row offering a move is not the
 // product taking one.
 type WorklistMove struct {
-	// Action `draft_reply` drafts an answer to the message in `activity_id` — offered only
-	// where the reader may READ that message, because there is no drafting a reply
-	// to words they cannot see. `open_record` is the fallback that decides nothing.
+	// Action `draft_reply` answers the message in `activity_id` — offered only where the
+	// reader may READ that message, because there is no replying to words they
+	// cannot see.
+	//
+	// One value, and the message is required with it: a move naming no message is
+	// not a move, and a contract that allowed one would let a client draw a control
+	// with nothing behind it. A row with no step to suggest sends no `move` at all.
 	Action WorklistMoveAction `json:"action"`
 
 	// ActivityId The message a reply would answer, for `draft_reply`.
-	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+	ActivityId openapi_types.UUID `json:"activity_id"`
 }
 
-// WorklistMoveAction `draft_reply` drafts an answer to the message in `activity_id` — offered only
-// where the reader may READ that message, because there is no drafting a reply
-// to words they cannot see. `open_record` is the fallback that decides nothing.
+// WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the
+// reader may READ that message, because there is no replying to words they
+// cannot see.
+//
+// One value, and the message is required with it: a move naming no message is
+// not a move, and a contract that allowed one would let a client draw a control
+// with nothing behind it. A row with no step to suggest sends no `move` at all.
 type WorklistMoveAction string
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the

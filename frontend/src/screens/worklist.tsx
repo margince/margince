@@ -70,7 +70,7 @@ function WorklistRow({
   const zone = viewerZone();
   const href = subjectHref(item);
   const title = itemTitle(item, t, locale);
-  const facts = dealFactsText(item, t, locale);
+  const facts = dealFactsText(item, t, locale, zone);
   const because = item.because
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)
@@ -224,12 +224,12 @@ function RowVerbs({
       {/* The step the product already worked out, offered where the reader is
           standing rather than on a screen they have to go and find. */}
       {move && (
-        <a className="worklist-row-verb" href={move}>
+        <a className="link-button" href={move}>
           {t("worklist.verb.draft_reply")}
         </a>
       )}
       {verbs.map(({ action, destination }) => (
-        <a key={action} className="worklist-row-verb" href={destination}>
+        <a key={action} className="link-button" href={destination}>
           {VERB_LABEL[action](t)}
         </a>
       ))}

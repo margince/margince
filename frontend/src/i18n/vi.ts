@@ -7017,6 +7017,6 @@ export const vi = {
   "worklist.batch.held_draft": "{count} bản nháp đang chờ gửi",
   "worklist.untitled.batch": "Một nhóm quyết định thường lệ",
   "worklist.verb.review_batch": "Xem lại",
-  "worklist.verb.draft_reply": "Soạn trả lời",
+  "worklist.verb.draft_reply": "Mở để trả lời",
   "worklist.deal.closes": "chốt {date}",
 } as const satisfies Record<MessageKey, string>;

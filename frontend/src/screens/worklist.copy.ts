@@ -1,6 +1,11 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { formatDateTime, formatMoney, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import type { Locale, useT } from "../i18n";
 import type {
   Worklist,
@@ -214,6 +219,7 @@ export function dealFactsText(
   item: WorklistItem,
   t: T,
   locale: Locale,
+  zone: string,
 ): string | null {
   const deal = item.deal;
   if (!deal) {
@@ -225,7 +231,9 @@ export function dealFactsText(
   }
   if (deal.expected_close_date) {
     parts.push(
-      t("worklist.deal.closes", { date: String(deal.expected_close_date) }),
+      t("worklist.deal.closes", {
+        date: formatDate(deal.expected_close_date, locale, zone),
+      }),
     );
   }
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -235,11 +243,17 @@ export function dealFactsText(
 //
 // The RECORD the thread belongs to, not the message: an activity is a timeline
 // entry with no page of its own — `app/entity.ts` says so in as many words —
-// and a link to `#/activities/<id>` would be a control that goes nowhere. The
-// draft is composed from the person or deal the conversation is filed under,
-// which is where the composer lives.
+// so `#/activities/<id>` would be a control that goes nowhere.
 //
-// A move on a row that names no record offers nothing rather than a dead link.
+// WHAT THIS IS NOT. It does not open a composer. The composer lives on the
+// record page behind its own button, and no route opens it, so a link labelled
+// "Draft the reply" would promise something the click does not do. The verb
+// therefore says where it goes — the reader lands on the record with the
+// message on its timeline, one press from the draft — and naming the step
+// honestly is worth more than a label that overstates it.
+//
+// Opening the composer from here needs a deep link the app does not have. That
+// is its own change, and the label moves back when it lands.
 export function moveHref(item: WorklistItem): string | undefined {
   if (item.move?.action !== "draft_reply") {
     return undefined;
