@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -40,26 +41,28 @@ const sweepTickBudget = 25
 // One workspace, one tick. Returns how many runs it queued so the caller can
 // log a fleet total rather than one line per workspace.
 func (s *Store) BackfillSweep(ctx context.Context) (int, error) {
-	var queued int
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	var name string
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		on, err := automaticLookupEnabled(ctx, tx)
 		if err != nil || !on {
 			return err
 		}
-		name, err := s.sweepableProvider(ctx, tx)
-		if err != nil || name == "" {
-			return err
-		}
-		if err := s.applyStoredPurchases(ctx, tx, name); err != nil {
-			return err
-		}
-		queued, err = s.queueUncoveredSubjects(ctx, tx, name)
+		name, err = s.sweepableProvider(ctx, tx)
 		return err
-	})
-	if err != nil {
+	}); err != nil || name == "" {
 		return 0, err
 	}
-	return queued, nil
+	// ONE SUBJECT PER TRANSACTION, for both halves. The eraser is subject-first,
+	// so a transaction holding two people's rows can close a cycle against it —
+	// and the transaction that loses is the erasure, which is somebody's Art. 17
+	// deadline rather than a pass that simply runs again in a minute.
+	//
+	// It also stops one bad contact from costing the other twenty-four: a
+	// constraint failure on the fifth subject rolls back only the fifth.
+	if err := s.applyStoredPurchases(ctx, name); err != nil {
+		return 0, err
+	}
+	return s.queueUncoveredSubjects(ctx, name)
 }
 
 // sweepableProvider names the one connected provider a sweep may spend
@@ -98,27 +101,50 @@ func (s *Store) sweepableProvider(ctx context.Context, tx pgx.Tx) (string, error
 // two ticks overlapping would each read the budget before either queued, and
 // both would spend it. It must not be the egress lease, which every submit and
 // poll holds — the sweep would then block the very work it just created.
-func (s *Store) queueUncoveredSubjects(ctx context.Context, tx pgx.Tx, name string) (int, error) {
-	if err := storekit.LockWriteIdentity(ctx, tx, sweepLockIdentity, name); err != nil {
-		return 0, err
-	}
-	budget, err := s.sweepBudget(ctx, tx, name)
-	if err != nil || budget == 0 {
-		return 0, err
-	}
-	subjects, err := s.uncoveredSubjects(ctx, tx, name, budget)
-	if err != nil {
+func (s *Store) queueUncoveredSubjects(ctx context.Context, name string) (int, error) {
+	var subjects []string
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := storekit.LockWriteIdentity(ctx, tx, sweepLockIdentity, name); err != nil {
+			return err
+		}
+		budget, err := s.sweepBudget(ctx, tx, name)
+		if err != nil || budget == 0 {
+			return err
+		}
+		subjects, err = s.uncoveredSubjects(ctx, tx, name, budget)
+		return err
+	}); err != nil {
 		return 0, err
 	}
 	var queued int
 	for _, personID := range subjects {
-		_, err := s.queueForSweep(ctx, tx, name, personID)
+		landed, err := s.queueOneSwept(ctx, name, personID)
 		if err != nil {
 			return queued, err
 		}
-		queued++
+		if landed {
+			queued++
+		}
 	}
 	return queued, nil
+}
+
+// queueOneSwept queues one contact in its own transaction, and reports whether
+// a run was actually written.
+//
+// The bool is not decoration: a connection whose permitted categories are all
+// priced leaves an automatic run nothing to buy, and runCategories refuses
+// BEFORE any row is inserted. Counting those as queued would report a sweep
+// working through the backlog while the same twenty-five contacts were selected
+// every minute and nothing was written.
+func (s *Store) queueOneSwept(ctx context.Context, name, personID string) (bool, error) {
+	var landed bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		landed, err = s.queueForSweep(ctx, tx, name, personID)
+		return err
+	})
+	return landed, err
 }
 
 // sweepLockIdentity is this sweep's advisory key, deliberately distinct from
@@ -161,29 +187,51 @@ func (s *Store) sweepBudget(ctx context.Context, tx pgx.Tx, name string) (int, e
 	return remaining, nil
 }
 
-// queueForSweep queues one subject, treating every refusal the platform makes
-// as a normal outcome.
+// queueForSweep queues one subject and says whether a run was written.
 //
-// A sweep that stopped on the first fenced or unidentifiable contact would
-// never reach the ones behind it, and those refusals are exactly what a sweep
-// over an entire installation runs into: an archived record, a standing
-// objection, a contact with nothing to match on.
-func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, personID string) (provider.Run, error) {
+// The refusals it treats as ordinary are the CONFIGURATION ones: a posture
+// switched off, and a connection that leaves an automatic run nothing free to
+// buy. Both mean nothing was written and neither is a failure.
+//
+// A fenced subject is not handled here and does not need to be — queueOne
+// writes a skipped run for it and returns cleanly, which also gives the
+// contact a cooldown row so the next tick looks past them. Anything that
+// escapes as an error costs this one contact and no other: each runs in its
+// own transaction.
+func (s *Store) queueForSweep(ctx context.Context, tx pgx.Tx, name, personID string) (bool, error) {
 	desc, err := s.registry.Descriptor(name)
 	if err != nil {
-		return provider.Run{}, provider.ErrNotConnected
+		return false, provider.ErrNotConnected
+	}
+	// The row gate QueueRun takes, taken here for the same reason: person is an
+	// identity table whose visibility arm answers true for everyone, and LIVE
+	// because a run's claims are new rows on the subject. The sweep's principal
+	// passes both, but a writer that relies on its caller's principal to be
+	// unbounded is one refactor away from being wrong.
+	if err := auth.EnsureWritableLive(ctx, tx, entitySubject, uuidOf(&personID)); err != nil {
+		return false, err
 	}
 	conn, err := s.admit(ctx, tx, name, provider.TriggerAutomaticBackfill)
 	if err != nil {
-		return provider.Run{}, err
+		return false, err
 	}
-	run, err := s.queueOne(ctx, tx, desc, conn, provider.QueueInput{
+	if _, err := s.queueOne(ctx, tx, desc, conn, provider.QueueInput{
 		PersonID: personID,
 		Provider: name,
 		Trigger:  provider.TriggerAutomaticBackfill,
-	})
-	if IsTriggerNotAdmitted(err) {
-		return provider.Run{}, nil
+	}); err != nil {
+		// A configuration that leaves an automatic run nothing to buy, and a
+		// posture switched off between the selection and now. Neither is a
+		// failure and neither wrote a row.
+		if IsTriggerNotAdmitted(err) {
+			return false, nil
+		}
+		return false, err
 	}
-	return run, err
+	return true, nil
 }
+
+// entitySubject is the table the sweep's row gate names. Spelled here because
+// this package gates on it once and the string would otherwise be a literal
+// beside a call that decides whether money is spent.
+const entitySubject = "person"

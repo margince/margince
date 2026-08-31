@@ -23,9 +23,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sweepRetryAfter is how long a refused contact waits before the sweep tries
@@ -51,12 +48,14 @@ func (s *Store) uncoveredSubjects(ctx context.Context, tx pgx.Tx, name string, l
 		       -- an answer and not a reason to ask again tomorrow.
 		       SELECT 1 FROM provider_run r
 		        WHERE r.person_id = p.id AND r.provider = $1
-		          AND (r.state IN ('queued', 'submitting', 'in_progress', 'submission_unknown',
-		                           'completed', 'no_match')
-		               -- A refusal or a failure holds the contact back only for
-		               -- as long as the cooldown, because what caused it is
-		               -- usually something somebody can fix.
-		               OR (r.state IN ('skipped', 'failed', 'cancelled')
+		          AND (r.state IN ('queued', 'submitting', 'in_progress', 'completed', 'no_match')
+		               -- A refusal, a failure or a submission whose outcome was
+		               -- never learned holds the contact back only for as long
+		               -- as the cooldown. submission_unknown is terminal and
+		               -- nothing ever moves it, so treating it as an answer
+		               -- would exclude the contact for good — and it is not an
+		               -- answer, it is the absence of one.
+		               OR (r.state IN ('skipped', 'failed', 'cancelled', 'submission_unknown')
 		                   AND r.created_at > now() - interval '`+sweepRetryAfter+`')))
 		 ORDER BY p.created_at
 		 LIMIT $2`, name, limit)
@@ -86,28 +85,18 @@ type BacklogCount struct {
 	Paused    bool
 }
 
-// LookupBacklog answers the settings card.
+// backlogInTx answers the settings card, inside the transaction the connection
+// list already holds — so a card shows a balance, a spend history and a backlog
+// from one moment rather than three.
 //
-// It shares uncoveredSubjects' predicate through the same helper rather than
-// restating it, because a count that disagreed with what the sweep actually
-// queues is worse than no count: it would report zero while contacts went
-// unenriched, or count contacts the sweep will never reach.
-func (s *Store) LookupBacklog(ctx context.Context, name string) (BacklogCount, error) {
-	if err := auth.Require(ctx, objectIntegrations, principal.ActionRead); err != nil {
-		return BacklogCount{}, err
-	}
-	var out BacklogCount
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = s.backlogInTx(ctx, tx, name)
-		return err
-	})
-	return out, err
-}
-
-// backlogInTx is the count inside a transaction the caller already holds, so
-// the connection list can read it beside the spend rather than opening a second
-// one and reporting two different moments.
+// It shares uncoveredSubjects' predicate rather than restating it, because a
+// count that disagreed with what the sweep actually queues is worse than no
+// count: it would report zero while contacts went unenriched.
+//
+// Read under the connection list's own integrations:read gate. It counts
+// PEOPLE, which is a person-table read reached through a different object —
+// defensible because the answer is one aggregate an ops seat can already
+// derive, and because the card that shows it is the integrations card.
 func (s *Store) backlogInTx(ctx context.Context, tx pgx.Tx, name string) (BacklogCount, error) {
 	var out BacklogCount
 	on, err := automaticLookupEnabled(ctx, tx)
@@ -151,11 +140,18 @@ func (s *Store) backlogInTx(ctx context.Context, tx pgx.Tx, name string) (Backlo
 // by applied_at, a column of this module's own table, so the sweep never reads
 // what the domain owns: which purchases exist is integrations' question, and
 // what they mean is the domain's.
-func (s *Store) applyStoredPurchases(ctx context.Context, tx pgx.Tx, name string) error {
-	if s.applyStoredClaims == nil {
+func (s *Store) applyStoredPurchases(ctx context.Context, name string) error {
+	// Both callbacks, because applyOneStored needs the hold as much as the
+	// applier: a build binding one without the other would panic on the first
+	// pending purchase rather than doing nothing, which is what an unbound
+	// domain is supposed to mean here.
+	if s.applyStoredClaims == nil || s.holdSubject == nil {
 		return nil
 	}
-	rows, err := tx.Query(ctx, `
+	type pending struct{ runID, personID string }
+	var due []pending
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
 		SELECT id::text, person_id::text
 		  FROM provider_run
 		 WHERE provider = $1
@@ -166,24 +162,28 @@ func (s *Store) applyStoredPurchases(ctx context.Context, tx pgx.Tx, name string
 		   AND person_id IS NOT NULL
 		 ORDER BY completed_at DESC
 		 LIMIT $2`, name, sweepTickBudget)
-	if err != nil {
-		return fmt.Errorf("integrations: reading the purchases that never reached a record: %w", err)
-	}
-	defer rows.Close()
-	type pending struct{ runID, personID string }
-	var due []pending
-	for rows.Next() {
-		var p pending
-		if err := rows.Scan(&p.runID, &p.personID); err != nil {
-			return err
+		if err != nil {
+			return fmt.Errorf("integrations: reading the purchases that never reached a record: %w", err)
 		}
-		due = append(due, p)
-	}
-	if err := rows.Err(); err != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var p pending
+			if err := rows.Scan(&p.runID, &p.personID); err != nil {
+				return err
+			}
+			due = append(due, p)
+		}
+		return rows.Err()
+	}); err != nil {
 		return fmt.Errorf("integrations: reading the purchases that never reached a record: %w", err)
 	}
+	// One transaction per subject. Holding several people's rows at once is
+	// what closes a deadlock cycle against the eraser, which takes the subject
+	// first and would be the transaction Postgres kills.
 	for _, p := range due {
-		if err := s.applyOneStored(ctx, tx, p.runID, p.personID); err != nil {
+		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+			return s.applyOneStored(ctx, tx, p.runID, p.personID)
+		}); err != nil {
 			return err
 		}
 	}
