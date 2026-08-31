@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -42,26 +43,13 @@ func (s *Store) ProjectLabels(ctx context.Context, want []ids.UUID) (map[ids.UUI
 		scope = "true"
 	}
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
 			SELECT p.id, coalesce(p.name, '')
 			  FROM project p
 			 WHERE p.id = ANY($%d) AND p.archived_at IS NULL AND (%s)`,
 			idsPos, scope), args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			var label string
-			if err := rows.Scan(&id, &label); err != nil {
-				return err
-			}
-			if label != "" {
-				labels[id] = label
-			}
-		}
-		return rows.Err()
+		labels = found
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("projects: reading project names: %w", err)

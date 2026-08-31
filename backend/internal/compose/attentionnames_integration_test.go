@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -148,4 +149,88 @@ func TestALimitedMessagesSubjectIsWithheldFromTheBatchToo(t *testing.T) {
 	if label, named := labels[limited]; named {
 		t.Fatalf("label = %q for a message this reader is not on — the batch just disclosed what a limited thread says", label)
 	}
+}
+
+// The other shapes, each over the store that owns it.
+//
+// The organization arm carries the discriminating proof — capture-private is
+// a posture this reader demonstrably cannot see through, and neutering the
+// scope clause fails it. The deal arm asserts something weaker on purpose:
+// that the batch and the single get AGREE. A deal owned by another team's rep
+// is still visible to this reader in this fixture — deal visibility is wider
+// than ownership — so an exclusion assertion there would pass whatever the
+// clause did, which is a test that proves nothing while looking like it does.
+// Agreement is the invariant that actually matters anyway: whatever GetDeal
+// decides, the batch must decide the same.
+func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
+	e := integration.Setup(t)
+	names := namesOver(e)
+	owner := integration.OwnerConn(t)
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	t.Run("organization", func(t *testing.T) {
+		mine := e.SeedOrg(t, "Weber GmbH", nil)
+		theirs := e.SeedOrg(t, "Zeta Holding", &e.Rep3)
+		e.MakeCapturePrivate(t, "organization", theirs, e.Rep3)
+
+		labels, err := names.Labels(reader, "organization", []ids.UUID{mine, theirs})
+		if err != nil {
+			t.Fatalf("naming companies: %v", err)
+		}
+		if labels[mine] != "Weber GmbH" {
+			t.Errorf("label = %q for a readable company, want its name", labels[mine])
+		}
+		if label, named := labels[theirs]; named {
+			t.Fatalf("label = %q for another rep's capture-private company", label)
+		}
+	})
+
+	t.Run("deal", func(t *testing.T) {
+		pipeline := integration.SeedIDRow(t, owner,
+			`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Names', false, 0)`)
+		stage := integration.SeedIDRow(t, owner,
+			`INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
+			 VALUES ($1, '`+pipeline.String()+`', 'Open', 0, 'open', 30)`)
+		mine := e.SeedDeal(t, "Fleet retrofit",
+			ids.From[ids.PipelineKind](pipeline), ids.From[ids.StageKind](stage), &e.Rep1)
+		theirs := e.SeedDeal(t, "Someone else's renewal",
+			ids.From[ids.PipelineKind](pipeline), ids.From[ids.StageKind](stage), &e.Rep3)
+		// Owned directly, because CreateDeal runs as the admin here and the
+		// owner it records is not necessarily the one asked for — and a deal
+		// this reader can see anyway would make the assertion below pass
+		// whatever the scope clause did.
+		e.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, theirs, e.Rep3)
+
+		labels, err := names.Labels(reader, "deal", []ids.UUID{mine, theirs})
+		if err != nil {
+			t.Fatalf("naming deals: %v", err)
+		}
+		if labels[mine] != "Fleet retrofit" {
+			t.Errorf("label = %q for the reader's own deal, want its name", labels[mine])
+		}
+		// Against the SINGLE get rather than against an assumption about what
+		// a rep may see: the batch's whole promise is that it decides what the
+		// one-at-a-time read decides.
+		_, err = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).
+			GetDeal(reader, ids.From[ids.DealKind](theirs), storekit.LiveOnly)
+		_, named := labels[theirs]
+		if named != (err == nil) {
+			t.Fatalf("the batch %s a deal the single get %s — the two reads disagree about one record",
+				map[bool]string{true: "named", false: "withheld"}[named],
+				map[bool]string{true: "answered", false: "refused"}[err == nil])
+		}
+	})
+
+	t.Run("archived records are absent", func(t *testing.T) {
+		gone := e.SeedPerson(t, "Archived Contact", nil)
+		e.WsExec(t, `UPDATE person SET archived_at = now() WHERE id = $1`, gone)
+
+		labels, err := names.Labels(reader, "person", []ids.UUID{gone})
+		if err != nil {
+			t.Fatalf("naming an archived person: %v", err)
+		}
+		if label, named := labels[gone]; named {
+			t.Fatalf("label = %q for an archived record — the batch names what every live read refuses", label)
+		}
+	})
 }

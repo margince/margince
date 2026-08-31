@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -46,26 +47,13 @@ func (s *Store) DealLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]s
 		scope = "true"
 	}
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
 			SELECT d.id, coalesce(d.name, '')
 			  FROM %s d
 			 WHERE d.id = ANY($%d) AND d.archived_at IS NULL AND (%s)`,
 			dealTable, idsPos, scope), args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			var label string
-			if err := rows.Scan(&id, &label); err != nil {
-				return err
-			}
-			if label != "" {
-				labels[id] = label
-			}
-		}
-		return rows.Err()
+		labels = found
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading deal names: %w", err)

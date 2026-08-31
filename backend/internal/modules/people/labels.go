@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -71,28 +72,13 @@ func (s *Store) labelsOf(ctx context.Context, object, table, column string, want
 		scope = sqlAlwaysVisible
 	}
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
 			SELECT r.id, coalesce(r.%s, '')
 			  FROM %s r
 			 WHERE r.id = ANY($%d) AND r.archived_at IS NULL AND (%s)`,
 			column, table, idsPos, scope), args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			var label string
-			if err := rows.Scan(&id, &label); err != nil {
-				return err
-			}
-			// An empty name is no name: a card showing a blank where a record
-			// should be says less than one showing nothing.
-			if label != "" {
-				labels[id] = label
-			}
-		}
-		return rows.Err()
+		labels = found
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("people: reading %s display names: %w", table, err)
