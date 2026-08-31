@@ -21170,8 +21170,11 @@ export interface components {
             readonly suspect_reason?: null | "phone_shaped_location" | "not_a_phone" | "not_a_year" | "not_an_email" | "not_a_size";
             /** Format: date-time */
             updated_at: string;
-            /** @description The row's version, for the `If-Match` a correction or a removal sends. The write path has always honoured the precondition; without the version on the read no client could send one, so two readers editing the same fact silently overwrote each other. */
-            version?: components["schemas"]["RowVersion"];
+            /**
+             * Format: int64
+             * @description The row's version, for the `If-Match` a correction or a removal sends. The write path has always honoured the precondition; without the version on the read no client could send one, so two readers editing the same fact silently overwrote each other. Spelled inline rather than as a $ref to RowVersion: a $ref with sibling keys drops them under OpenAPI 3.0, and the generator then emitted no property at all — the field was in the contract and absent from every client that reads it.
+             */
+            readonly version?: number;
         };
         OrganizationFactListResponse: {
             data: components["schemas"]["OrganizationFact"][];

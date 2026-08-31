@@ -22462,12 +22462,8 @@ type OrganizationFact struct {
 	// VerifiedBy The human who confirmed the claim. Server-stamped, never accepted from a request body.
 	VerifiedBy *string `json:"verified_by,omitempty"`
 
-	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
-	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
-	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
-	Version *RowVersion `json:"version,omitempty"`
+	// Version The row's version, for the `If-Match` a correction or a removal sends. The write path has always honoured the precondition; without the version on the read no client could send one, so two readers editing the same fact silently overwrote each other. Spelled inline rather than as a $ref to RowVersion: a $ref with sibling keys drops them under OpenAPI 3.0, and the generator then emitted no property at all — the field was in the contract and absent from every client that reads it.
+	Version *int64 `json:"version,omitempty"`
 }
 
 // OrganizationFactCategory defines model for OrganizationFact.Category.

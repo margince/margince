@@ -491,6 +491,24 @@
 
 /* Facts read from the site. The rhythm is tighter than the profile card above
    because these are scanned, not read: the reader is looking for one thing. */
+/* The add-a-fact row: a chooser, a value and the two verbs, on one line until
+   the panel is too narrow to hold them — at which point the value takes the
+   full width rather than shrinking to a box nobody can read their own typing
+   in. */
+.co-facts-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--bgCard);
+  border-radius: var(--r-sm);
+}
+.co-facts-add > :nth-child(4) {
+  flex: 1 1 12rem;
+}
+
 .co-facts-group {
   margin-bottom: var(--space-4);
 }

@@ -1650,6 +1650,20 @@ export const vi = {
   "co.tech.lane.homepage": "Trang chủ",
   "signal.kind.technical_change": "Công nghệ đã thay đổi",
   "co.factField.quantified_outcome": "Kết quả",
+  "co.facts.title": "Thông tin về công ty này",
+  "co.facts.empty":
+    "Chưa có gì được ghi nhận. Hãy đọc trang web, hoặc ghi lại điều bạn đã biết.",
+  "co.facts.add": "Thêm thông tin",
+  "co.facts.addField": "Loại thông tin",
+  "co.facts.addValue": "Nội dung",
+  "co.facts.addSave": "Lưu thông tin",
+  "co.facts.addCancel": "Hủy",
+  "co.facts.addIncomplete": "Hãy chọn loại thông tin và nhập nội dung của nó.",
+  "co.facts.remove": "Xóa {value}",
+  "co.facts.removeTitle": "Xóa thông tin này?",
+  "co.facts.removeConfirm": "Xóa",
+  "co.facts.removeAsk":
+    "{field} được ghi là \u201c{value}\u201d. Xóa nó nghĩa là đây không phải thông tin về công ty. Một lần đọc trang web sau này có thể ghi lại nó.",
   "co.facts.showAll": "Hiện tất cả {count}",
   "co.facts.showLess": "Hiện bớt",
   "co.tags.lists": "Danh sách",
@@ -1693,7 +1707,6 @@ export const vi = {
   "co.overlayFallback":
     "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
   "org.domains": "Tên miền",
-  "org.facts": "Dữ kiện đọc từ website",
   "org.factCategory.company": "Công ty",
   "org.factCategory.offering": "Sản phẩm dịch vụ",
   "org.factCategory.market": "Thị trường",

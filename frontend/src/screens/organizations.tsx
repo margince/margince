@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, useRoute } from "../app/router";
@@ -21,7 +20,6 @@ import {
   type TimelineEntry,
   type TimelineGroup,
 } from "../design-system/composed";
-import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -45,7 +43,6 @@ import {
   coldFieldLabel,
   problemMessageOf,
   QueryGate,
-  QueryStates,
   throwProblem,
   useSorMode,
   useViewerId,
@@ -97,7 +94,7 @@ import {
   companyTabRoute,
   isCompanyTab,
 } from "./companytab";
-import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
+import { TechnicalProfileCard } from "./companytechnical";
 import { TodayOnThisAccount } from "./companytoday";
 import {
   CompanyWorkCard,
@@ -114,9 +111,6 @@ import {
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
-import { derivedSource } from "./evidencesource";
-import { EvidenceVerdict, factClaim } from "./evidenceverdict";
-import { type FactGroup, factFieldLabelKey, groupFacts } from "./factview";
 import { RecordHistoryTab } from "./history";
 import {
   type ListPage,
@@ -184,7 +178,6 @@ type CreateOrganizationRequest =
 type UpdateOrganizationRequest =
   components["schemas"]["UpdateOrganizationRequest"];
 type Organization360View = components["schemas"]["Organization360"];
-type OrganizationFact = components["schemas"]["OrganizationFact"];
 
 // Lives in companylookups.ts, same reason as LIFECYCLE_LABELS above: the
 // rail's Details grid (companyraildetails.tsx) builds a size-band picker off
@@ -1225,187 +1218,6 @@ export function profileFieldLabel(
 ): string {
   const key = PROFILE_FIELD_LABELS[field];
   return key ? t(key) : coldFieldLabel(field, t);
-}
-
-// Facts read from the site, grouped into the four fixed categories. Empty
-// categories are omitted and an empty read renders nothing at all — the
-// profile card above already carries the region's honest empty state, so a
-// second "nothing here" would only be noise.
-//
-// Ordering and duplicate collapsing live in factview.ts; the category order
-// comes from there too, so the card has one source for what it draws.
-//
-// FACT_PREVIEW is how many rows of a category are shown before the reader asks
-// for the rest. A real account returns ninety-odd facts, and rendering them all
-// made this card taller than the page it sits beside — at which point nobody
-// reads any of it.
-const FACT_PREVIEW = 5;
-
-const FACT_CATEGORY_LABELS: Record<OrganizationFact["category"], MessageKey> = {
-  company: "org.factCategory.company",
-  offering: "org.factCategory.offering",
-  market: "org.factCategory.market",
-  signal: "org.factCategory.signal",
-};
-
-// One fact row: the value carries its own evidence mark, the same
-// affordance every derived value on this page uses.
-// Why a fact looks wrong, in the words a reader can act on. Typed against the
-// schema union, so a rule added upstream fails the build here rather than
-// rendering a raw reason code.
-type FactSuspectReason = NonNullable<OrganizationFact["suspect_reason"]>;
-
-const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
-  phone_shaped_location: "co.factSuspect.phoneShapedLocation",
-  not_a_phone: "co.factSuspect.notAPhone",
-  not_a_year: "co.factSuspect.notAYear",
-  not_an_email: "co.factSuspect.notAnEmail",
-  not_a_size: "co.factSuspect.notASize",
-};
-
-function FactRow({
-  orgId,
-  fact,
-  onOpenHistory,
-}: Readonly<{
-  orgId: string;
-  fact: OrganizationFact;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const canEdit = useCan("organization", "update");
-  return (
-    <div className="co-field">
-      <span className="t-label">{t(factFieldLabelKey(fact.field))}</span>
-      <div>
-        <EvidenceMark
-          value={fact.value}
-          source={derivedSource(fact, locale, recordZone)}
-          onOpenHistory={onOpenHistory}
-        />
-        {/* The value contradicts its own field — a phone number filed as a
-            location, a register number filed as a headcount. The fact is still
-            shown with its evidence: hiding it would be a worse answer than
-            flagging it, and the reader is the one who can tell. */}
-        {fact.suspect_reason && (
-          <span className="co-fact-suspect">
-            <Badge tone="warn">
-              {t(FACT_SUSPECT_LABELS[fact.suspect_reason])}
-            </Badge>
-          </span>
-        )}
-        {/* A flagged fact is exactly the one a reader should be able to fix
-            without leaving the page — the flag says the machine doubts itself,
-            and only a person can settle it. */}
-        <EvidenceVerdict
-          orgId={orgId}
-          claim={factClaim(orgId, fact)}
-          canEdit={canEdit}
-        />
-      </div>
-    </div>
-  );
-}
-
-// One category of facts. Only the first few rows are drawn until the reader
-// asks for the rest, and the count of what is hidden is on the button — a
-// truncated list with no number reads as "that is everything".
-function FactCategory({
-  orgId,
-  group,
-  onOpenHistory,
-}: Readonly<{
-  orgId: string;
-  group: FactGroup;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [expanded, setExpanded] = useState(false);
-  const hidden = group.facts.length - FACT_PREVIEW;
-  const shown = expanded ? group.facts : group.facts.slice(0, FACT_PREVIEW);
-  return (
-    <div className="co-facts-group">
-      <div className="t-label co-facts-heading">
-        {t(FACT_CATEGORY_LABELS[group.category])}
-      </div>
-      {shown.map((fact) => (
-        <FactRow
-          key={`${fact.field}:${fact.value_key}`}
-          orgId={orgId}
-          fact={fact}
-          onOpenHistory={onOpenHistory}
-        />
-      ))}
-      {hidden > 0 && (
-        <Button small onClick={() => setExpanded(!expanded)}>
-          {expanded
-            ? t("co.facts.showLess")
-            : t("co.facts.showAll", {
-                count: formatNumber(group.facts.length, locale),
-              })}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function FactsCard({
-  orgId,
-  onOpenHistory,
-}: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const factsQuery = useQuery({
-    queryKey: ["org-facts", orgId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/facts", {
-        params: { path: { id: orgId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data ?? [];
-    },
-  });
-
-  // A read that failed is surfaced, never swallowed as "no facts" — an empty
-  // read and a 404/network error must stay distinguishable and retryable.
-  if (factsQuery.isError) {
-    return (
-      <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-        <QueryStates query={factsQuery}>{null}</QueryStates>
-      </Card>
-    );
-  }
-
-  // Otherwise facts are supplementary: while the read is in flight, or if it
-  // has nothing to show, the card stays absent rather than flashing a skeleton
-  // or an empty shell next to the profile card that owns the region's states.
-  //
-  // The technical fields are excluded because the technical card claims them.
-  // Both cards read the same endpoint, so without this every mail provider and
-  // operated service would render twice on one tab, and a reader correcting
-  // one copy would watch the other disagree.
-  const facts = factsQuery.data?.filter((fact) => !isTechnicalFact(fact));
-  if (!facts || facts.length === 0) {
-    return null;
-  }
-
-  return (
-    <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-      {groupFacts(facts, t, locale).map((group) => (
-        <FactCategory
-          key={group.category}
-          orgId={orgId}
-          group={group}
-          onOpenHistory={onOpenHistory}
-        />
-      ))}
-    </Card>
-  );
 }
 
 // Overview · People · Deals · Tasks · History · Documents · Profile, the
@@ -3110,16 +2922,9 @@ function ReferenceDisclosures({
   return (
     <CompanyProfileForm
       org={org}
+      onOpenHistory={onOpenHistory}
       tools={
         <>
-          {/* Facts stay their own panel: they are what a machine READ about the
-              company, many-valued and correctable one row at a time, which is a
-              different act from stating a field. */}
-          <Panel title={t("co.evidence.title")}>
-            <PanelBody>
-              <FactsCard orgId={org.id} onOpenHistory={onOpenHistory} />
-            </PanelBody>
-          </Panel>
           {/* Documents are deliberately NOT here: they have their own tab, and a
               reader given the same list in two places has two lists to
               reconcile. */}
