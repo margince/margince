@@ -128,6 +128,13 @@ func TestAPersonIsNeverTakenForAMachine(t *testing.T) {
 	for _, address := range []string{
 		"anna.weber@acme.com", "lars@gradion.com", "sales@acme.com",
 		"info@acme.com", "kontakt@acme.de", "", "not-an-address",
+		// Separator-created false positives. Stripping dots and dashes before
+		// matching turned a person's name into a marker: `connor.eply` became
+		// `connoreply`, which contains "noreply".
+		"connor.eply@customer.example",
+		"anna.notify.weber@customer.example",
+		"automatedcontrols@buyer.example",
+		"reply@customer.example",
 	} {
 		if IsMachineAddress(address) {
 			t.Errorf("%q was taken for a machine", address)

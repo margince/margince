@@ -548,12 +548,13 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   // and a queue that has to rank things across producers names each one by
   // what it actually is. Answering it stays the approvals surface's own job,
   // so the verbs are asserted where they live rather than here.
+  // The sentence appears twice on purpose: once as the row, and once on the
+  // card the row opens to answer it. That the decision is ANSWERABLE here is
+  // the claim worth making, so this asserts the verb rather than the text.
   await expect(
-    page.getByText(/Send the follow-up to Anna Weber/),
+    page.getByText(/Send the follow-up to Anna Weber/).first(),
   ).toBeVisible();
-  await expect(
-    page.getByText("Entscheidung", { exact: true }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Übernehmen" })).toBeVisible();
 });
 
 test("AC-book: the booking page renders rail-less with live slots", async ({
@@ -1153,7 +1154,7 @@ test.describe("§3.8: 390px mobile", () => {
   }) => {
     await page.goto("/#/worklist");
     await expect(
-      page.getByText(/Send the follow-up to Anna Weber/),
+      page.getByText(/Send the follow-up to Anna Weber/).first(),
     ).toBeVisible();
   });
 

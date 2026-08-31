@@ -37,3 +37,25 @@ export function useWorklist(scope: WorklistScope, filter: WorklistFilter) {
     },
   });
 }
+
+// One staged proposal, whole.
+//
+// The queue sends a ROW's worth of each item — a sentence, a category, a
+// reason. Deciding one needs the rest: the payload a reader may edit, who
+// staged it, the evidence behind it. So the row that is being decided fetches
+// the approval it is showing, which is the same read the record page makes.
+export function useApproval(id: string, enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: ["approvals", "one", id],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/approvals/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}

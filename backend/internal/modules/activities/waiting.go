@@ -116,6 +116,24 @@ const waitingRepliesSQL = `
 	   AND a.occurred_at <= $%[1]d
 	   AND %[2]s
 	   AND a.thread_key IS NOT NULL
+	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
+	   -- LIMIT lets two hundred notification threads fill the scan and push a
+	   -- real customer past it, and the page then says nobody is waiting —
+	   -- which is the one answer this source must never get wrong.
+	   --
+	   -- Deliberately coarse: it removes what nothing could mistake for a
+	   -- person, and the caller's own rule (capture's address list, which
+	   -- knows the operator's allowlist) still runs over what survives.
+	   AND NOT EXISTS (
+	         SELECT 1 FROM activity_participant machine
+	          WHERE machine.activity_id = a.id
+	            AND machine.role = 'from'
+	            AND (machine.address ILIKE '%%noreply%%'
+	              OR machine.address ILIKE '%%no-reply%%'
+	              OR machine.address ILIKE '%%do-not-reply%%'
+	              OR machine.address ILIKE '%%donotreply%%'
+	              OR machine.address ILIKE '%%notification%%'
+	              OR machine.address ILIKE '%%mailer-daemon%%'))
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity later
 	          WHERE later.thread_key = a.thread_key

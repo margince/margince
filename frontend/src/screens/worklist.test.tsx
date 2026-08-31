@@ -23,13 +23,19 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-function stub(day: Worklist) {
+// The queue, plus the one approval a decision row fetches whole. A row sends a
+// sentence; deciding needs the payload, the stager and the evidence, so the row
+// being decided reads the approval it is showing.
+function stub(day: Worklist, approval?: unknown) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/worklist")) {
         return jsonResponse(day);
+      }
+      if (approval && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
+        return jsonResponse(approval);
       }
       return jsonResponse({ data: [] });
     }),
@@ -302,11 +308,50 @@ describe("what the ranked queue tells a reader", () => {
     );
     renderWorklist();
 
-    // The row that names a record gets its verb…
+    // The row that names a record gets its verb.
     expect(await screen.findByRole("link", { name: "Open" })).toBeTruthy();
-    // …and the one whose verb leads nowhere draws no control at all. A button
-    // that looks pressable and does nothing is worse than no button.
-    expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
+  });
+
+  it("lets a staged decision be answered on the page", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "ap-1",
+            title: "Send the follow-up to Anna Weber",
+            source: "approval",
+            category: "decisions",
+            level: 5,
+            consequence: "work_blocked",
+            actions: ["decide"],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+      {
+        id: "ap-1",
+        workspace_id: "w",
+        kind: "send_email",
+        status: "pending",
+        proposed_by: "agent:runner",
+        summary: "Send the follow-up to Anna Weber",
+        proposed_change: { subject: "Follow-up", body: "Hi Anna" },
+        confidence: 0.62,
+        created_at: "2026-08-31T08:00:00Z",
+      },
+    );
+    const { container } = renderWorklist();
+
+    // The row arrives first; the decision it carries is a second read, so the
+    // card appears after it.
+    await screen.findByText(/Send the follow-up/);
+    // A queue that can rank a decision and not answer it sends the reader to a
+    // second screen to do what the row already described. The card is the same
+    // one the record page draws, posting to the same endpoint.
+    await waitFor(() => {
+      expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
+    });
+    expect(await screen.findByRole("button", { name: "Accept" })).toBeTruthy();
   });
 
   it("names the source it could not read rather than counting it", async () => {

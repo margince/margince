@@ -161,20 +161,40 @@ func isMachineLocalpart(localpart string) bool {
 // Kept to markers that are unambiguous ON THEIR OWN. "notification" and
 // "no-reply" mean the same thing wherever they appear in a name; "mail" or
 // "info" do not, and a rule that swept those would hide real people.
+// machineMarkers are the words a sending SYSTEM names itself with. Listed once:
+// the three places below ask about the same vocabulary, and three copies of it
+// drift into meaning three different things.
+var machineMarkers = map[string]bool{
+	"noreply": true, "noreplies": true, "donotreply": true, "notreply": true,
+	"nreply": true, "notification": true, "notifications": true, "notify": true,
+	"mailerdaemon": true, "autoreply": true, "automailer": true, "automated": true,
+}
+
 func hasMachineMarker(localpart string) bool {
+	// A marker counts where a sending system puts it: as the whole local part,
+	// or at either END of it. Two rules learned from real addresses.
+	//
+	// Separators are boundaries, not noise: stripping them turned
+	// `connor.eply@` into `connoreply` and matched "noreply" inside a person's
+	// name.
+	//
+	// And position matters. `esignature-noreply@` is a machine while
+	// `anna.notify.weber@` is a person, so a marker buried in the middle of a
+	// name proves nothing — only the ends, where a service names itself.
 	local := strings.ToLower(strings.TrimSpace(localpart))
-	local = strings.ReplaceAll(local, ".", "")
-	local = strings.ReplaceAll(local, "-", "")
-	local = strings.ReplaceAll(local, "_", "")
-	for _, marker := range []string{
-		"noreply", "donotreply", "notification", "notifications",
-		"mailerdaemon", "automated", "autoreply",
-	} {
-		if strings.Contains(local, marker) {
-			return true
-		}
+	parts := strings.FieldsFunc(local, func(r rune) bool {
+		return r == '.' || r == '-' || r == '_' || r == '+'
+	})
+	if len(parts) == 0 {
+		return false
 	}
-	return false
+	if machineMarkers[parts[0]] || machineMarkers[parts[len(parts)-1]] {
+		return true
+	}
+	// `no-reply` and `do-not-reply` split into parts that mean nothing alone,
+	// so the whole and its tail are re-joined and asked as one word.
+	return machineMarkers[strings.Join(parts, "")] ||
+		machineMarkers[strings.Join(parts[1:], "")]
 }
 
 // senderPrefix returns the leftmost subdomain label below the registrable

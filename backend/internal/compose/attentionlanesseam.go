@@ -278,11 +278,18 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 // notice and a booking confirmation opened a rep's day, and a queue that asks
 // somebody to answer a no-reply address teaches them to stop reading it.
 //
-// One subject is one row. A notification service sends the same request on
-// several threads, and two rows reading identically are two obligations to
-// somebody scanning the page. An UNTITLED message is never folded, because
-// several untitled waits are several customers and collapsing them would hide
-// all but one behind an empty string.
+// One subject FROM ONE SENDER is one row. A notification service sends the same
+// request on several threads, and two rows reading identically are two
+// obligations to somebody scanning the page.
+//
+// Keyed on sender AND subject, never subject alone: two customers both writing
+// "Re: proposal" are two people waiting, and folding them would drop the second
+// one silently — the worst failure this queue has, because nothing on the page
+// would say a customer had been hidden.
+//
+// An UNTITLED message is never folded, because several untitled waits are
+// several customers and collapsing them would hide all but one behind an empty
+// string.
 func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
 	kept := make([]activities.WaitingReply, 0, len(rows))
 	seen := make(map[string]bool, len(rows))
@@ -291,10 +298,11 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 			continue
 		}
 		if row.Subject != "" {
-			if seen[row.Subject] {
+			key := row.Sender + "\x00" + row.Subject
+			if seen[key] {
 				continue
 			}
-			seen[row.Subject] = true
+			seen[key] = true
 		}
 		kept = append(kept, row)
 	}

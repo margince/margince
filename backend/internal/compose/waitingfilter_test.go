@@ -34,6 +34,19 @@ func TestAMachineSenderIsNotACustomerWaiting(t *testing.T) {
 	}
 }
 
+// Two customers can write the same words. Folding on the subject alone made
+// the second one vanish with nothing on the page to say so.
+func TestTwoCustomersSharingASubjectAreTwoWaits(t *testing.T) {
+	rows := []activities.WaitingReply{
+		{Subject: "Re: proposal", Sender: "anna@a.example"},
+		{Subject: "Re: proposal", Sender: "bob@b.example"},
+	}
+
+	if kept := keepWaitingCustomers(rows); len(kept) != 2 {
+		t.Fatalf("two customers writing the same subject collapsed to %d", len(kept))
+	}
+}
+
 func TestTheSameSubjectIsOneRowHoweverManyThreadsCarriedIt(t *testing.T) {
 	at := time.Now()
 	rows := []activities.WaitingReply{

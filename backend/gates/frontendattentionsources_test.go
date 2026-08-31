@@ -64,13 +64,13 @@ type contract struct {
 			// PascalCase. A snake_case tag would match no key in the document
 			// and leave this gate reading an empty enum.
 			//nolint:tagliatelle // the key is the contract's schema name, not ours to style
-			AttentionItem struct {
+			WorklistItem struct {
 				Properties struct {
 					Source struct {
 						Enum []string `yaml:"enum"`
 					} `yaml:"source"`
 				} `yaml:"properties"`
-			} `yaml:"AttentionItem"`
+			} `yaml:"WorklistItem"`
 		} `yaml:"schemas"`
 	} `yaml:"components"`
 }
@@ -86,12 +86,12 @@ func contractSources(t *testing.T) []string {
 	if err := yaml.Unmarshal(document, &parsed); err != nil {
 		t.Fatalf("parsing the API contract: %v", err)
 	}
-	sources := parsed.Components.Schemas.AttentionItem.Properties.Source.Enum
+	sources := parsed.Components.Schemas.WorklistItem.Properties.Source.Enum
 	if len(sources) == 0 {
 		// Not "no sources" — there is no such contract. The schema was renamed
 		// or the property moved, and a gate that shrugged at that would report
 		// PASS over a list it had stopped reading.
-		t.Fatalf("components.schemas.AttentionItem.properties.source declares no enum in %s: this gate no longer knows what it is guarding", attentionContract)
+		t.Fatalf("components.schemas.WorklistItem.properties.source declares no enum in %s: this gate no longer knows what it is guarding", attentionContract)
 	}
 	slices.Sort(sources)
 	return slices.Compact(sources)
@@ -111,7 +111,7 @@ func surfacedSources(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading the frontend focus-surface map: %v", err)
 	}
-	const opener = "const KNOWN_SOURCES"
+	const opener = "const KNOWN_SOURCES = {"
 	start := strings.Index(string(source), opener)
 	if start < 0 {
 		t.Fatalf("no %s declaration in %s", opener, frontendAttentionMap)

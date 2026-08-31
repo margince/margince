@@ -260,7 +260,31 @@ func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T)
 
 	got := rankAll([]ranked{first, second})
 
-	if got[0].AboveNext.Comparator == crmcontracts.WorklistComparisonComparatorDeadline {
+	// The date DID decide, so the row says so — without offering two values a
+	// reader would compare and find equal. Falling through to the next
+	// comparator would name something that decided nothing, which is a
+	// different lie than the one this fixes.
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatalf("claimed %q; the date is what decided", got[0].AboveNext.Comparator)
+	}
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}
+
+// Occurrence decides at the same reader resolution a deadline does. Thirteen
+// seconds apart printed "23:20 against 23:20" under a heading about waiting
+// days — two wrong things at once, and the live page showed it.
+func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
+	base := rankInstant.Add(-90 * 24 * time.Hour)
+	first := candidate("a", levelWaiting)
+	first.occurredAt = base
+	second := candidate("b", levelWaiting)
+	second.occurredAt = base.Add(13 * time.Second)
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
 		t.Fatal("the row offers two identical-looking times as its reason")
 	}
 }
