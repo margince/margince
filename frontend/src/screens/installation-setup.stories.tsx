@@ -134,12 +134,14 @@ export const ChoosingThePlatform: Story = {
 // The ignition, driven the way a reader reaches it: type a key, press Continue,
 // and the screen becomes the sequence rather than the next question.
 //
-// The play waits for the sequence to SETTLE before it hands back, because a
-// still frame taken partway through is a nearly empty column — every line here
-// arrives on an `animation-delay`, and the capture would show the one moment
-// that says least. Waiting on the last element's own opacity rather than on a
-// duration: the condition is "the sequence has finished", and a sleep long
-// enough to cover it today is a sleep that lies the day a beat moves.
+// The play waits the sequence out, which asserts the timeline completes but does
+// NOT decide what the capture shows: `fe-uat` screenshots a play story 1.5s
+// after mount and this settles at about 4s, so its still frame is mid-sequence
+// by construction. `Onboarding/Ignition` holds the same sequence with the room
+// around it; either way this one is watched rather than read from a PNG.
+//
+// The wait reads the last element's own opacity rather than sleeping, so the day
+// a beat moves it still knows what "finished" means.
 export const TheIgnition: Story = {
   ...BindingTheModel,
   play: async ({ canvasElement }) => {

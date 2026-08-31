@@ -76,10 +76,17 @@ export const Running: Story = {
   },
 };
 
-// The same sequence, looked at once it has settled — every line present, the
-// room lit, the orb back at rest. Waiting on the last element's own opacity
-// rather than on a duration: the condition is "finished", and a sleep long
-// enough to cover it today is one that lies the day a beat moves.
+// The same sequence, waited out to its end.
+//
+// ITS CAPTURED FRAME IS STILL MID-SEQUENCE, and that is a fact about the render
+// gate rather than about this story: `fe-uat` screenshots a play story 1.5s
+// after mount, and this settles at about 4s. There is no fixing that from here
+// and it should not be fixed by shortening the sequence — reviewing this one
+// means watching it in Storybook, which is what the wait below makes reliable.
+//
+// What the wait IS good for: it asserts the timeline completes at all. It reads
+// the last element's own opacity rather than sleeping, so the day a beat moves
+// the check still knows what "finished" means.
 export const Settled: Story = {
   render: () => <Scene />,
   play: async ({ canvasElement }) => {
