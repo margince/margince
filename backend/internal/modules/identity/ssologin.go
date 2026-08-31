@@ -136,10 +136,20 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	// A provider the admin has turned off answers exactly like one that was
-	// never configured, so the response does not disclose that it exists but is
-	// off. A failed policy read is NOT that answer: reporting an outage as
-	// absence would send an operator to debug a configuration that is fine.
+	// The budget is spent BEFORE the policy read, because that read goes to the
+	// database: checking it first would let an unauthenticated caller drive
+	// unlimited settings queries without ever consuming their allowance.
+	//
+	// Ordering it this way discloses nothing. Exhaustion answers the same 429
+	// whether or not the provider exists, so a caller learns only that they were
+	// noisy — the 404 below stays the single answer for "no such provider" and
+	// "the admin turned it off" alike.
+	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
+		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		return
+	}
+	// A failed policy read is NOT the 404: reporting an outage as absence would
+	// send an operator to debug a configuration that is fine.
 	enabled, policyErr := h.oidcProviderEnabled(r.Context(), provider)
 	if policyErr != nil {
 		httperr.Write(w, r, policyErr)
@@ -147,10 +157,6 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 	}
 	if !enabled {
 		httperr.Write(w, r, apperrors.ErrNotFound)
-		return
-	}
-	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
 	nonce, err := randomTokenOfLength(oidcNonceBytes)
@@ -207,10 +213,15 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	// Checked on the CALLBACK too, not only at the start. A provider disabled
-	// while a browser was away at the consent screen must not be able to
-	// complete: filtering the button row alone would leave this route minting
-	// sessions for every flow already in flight.
+	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
+		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		return
+	}
+	// Checked on the CALLBACK too, not only at the start, and after the budget
+	// for the same reason it is there. A provider disabled while a browser was
+	// away at the consent screen must not be able to complete: filtering the
+	// button row alone would leave this route minting sessions for every flow
+	// already in flight.
 	enabled, policyErr := h.oidcProviderEnabled(ctx, provider)
 	if policyErr != nil {
 		fail(ctx, "provider policy", policyErr)
@@ -218,10 +229,6 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	}
 	if !enabled {
 		httperr.Write(w, r, apperrors.ErrNotFound)
-		return
-	}
-	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
 

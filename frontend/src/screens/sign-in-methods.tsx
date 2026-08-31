@@ -1,6 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
+import {
+  INSTALLATION_SETTINGS_KEY,
+  useInstallationSettings,
+} from "../app/uploadlimit";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -16,25 +20,16 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
  * invented from a settings screen. The effective answer is the intersection, so
  * this screen can only ever narrow what is configured.
  *
+ * The read is the SHARED installation-settings query, not a second one under the
+ * same cache key: two query functions on one key let observer order decide whose
+ * error and retry behaviour every reader of that key gets.
+ *
  * Password is rendered and is permanently on. It is not a member of the stored
  * set at all — there is no value of the setting that removes it — so the row
  * carries a `reason` rather than a flippable switch, which is the honest way to
  * show a control that exists and cannot be moved. Hiding the row instead would
  * leave an admin wondering whether password sign-in was configured at all.
  */
-function useSignInProviders() {
-  return useQuery({
-    queryKey: ["installation-settings"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/installation/settings");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
 function useSetEnabledProviders() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -52,7 +47,7 @@ function useSetEnabledProviders() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["installation-settings"],
+        queryKey: INSTALLATION_SETTINGS_KEY,
       });
     },
   });
@@ -61,7 +56,7 @@ function useSetEnabledProviders() {
 export function SignInMethodsCard() {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
-  const settings = useSignInProviders();
+  const settings = useInstallationSettings();
   const save = useSetEnabledProviders();
 
   return (
@@ -113,7 +108,11 @@ export function SignInMethodsCard() {
                           checked={provider.enabled}
                           describedBy={control["aria-describedby"]}
                           pending={save.isPending}
-                          disabled={!canManage}
+                          // Disabled while ANY save is in flight, not just for
+                          // a reader who may not write. The list travels whole,
+                          // so a second flip computed from the still-stale cache
+                          // would send a list that undoes the first one.
+                          disabled={!canManage || save.isPending}
                           onChange={(next) =>
                             save.mutate(
                               next

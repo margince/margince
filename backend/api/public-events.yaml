@@ -2647,16 +2647,27 @@ components:
       x-entity-type: user
       x-version: 1
       description: >-
-        Payload for user.reactivated — a deactivated member was returned to
-        active (identity/users.go's ReactivateUser).
+        Payload for user.reactivated — a deactivated member was lifted out of
+        deactivation (identity/users.go's ReactivateUser).
+
+        `status` says what they were returned TO, and it is not always `active`:
+        a member deactivated before redeeming their invitation comes back
+        `invited`, because they still hold no password and still sign in
+        nowhere. A subscriber that assumed "reactivated means active" would
+        restate exactly the falsehood the invited status exists to remove.
       required:
         - user_id
         - by
+        - status
       properties:
         user_id:
           type: string
           format: uuid
           description: The reactivated member.
+        status:
+          type: string
+          enum: [invited, active]
+          description: The status the member was restored to.
         by:
           type: string
           format: uuid

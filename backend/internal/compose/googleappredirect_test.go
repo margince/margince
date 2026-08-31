@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -96,31 +97,46 @@ func TestNoSignInRedirectIsAdvertisedWithoutABase(t *testing.T) {
 	}
 }
 
-// The connector's URI is published on the same terms and for the same reason:
-// an operator registers BOTH while creating the OAuth client, and registering
-// only one fails at the consent screen with an error that does not say which.
+// Every connector this Google app backs is advertised, under the key its own
+// route is served on.
 //
-// It is not derivable from the sign-in URI. This one prefers the API's own
-// origin and falls back to the SPA's, while sign-in rides a base that already
-// carries /v1 — on a split deployment they do not even share a host.
-func TestTheConnectorRedirectIsAdvertisedAndIsNotTheSignInOne(t *testing.T) {
+// The earlier version of this test compared the advertised URI against the same
+// builder that produced it, which is a tautology — it passed while the URI named
+// provider `google`, a path no route answers. It now asserts against the
+// PROVIDER KEYS ConnectConnector actually dispatches on, so a key that drifts
+// from a route fails here.
+func TestEveryGoogleBackedConnectorIsAdvertisedUnderItsOwnRouteKey(t *testing.T) {
 	var s Server
 	WithGmailCapture(GmailConfig{
 		PublicBaseURL: "https://app.example.com",
 		APIBaseURL:    "https://api.example.com",
 	}, CaptureConfig{})(&s, nil)
 
-	shown, ok := advertised(s.redirectURIs, crmcontracts.MailboxConnect)
-	if !ok {
-		t.Fatal("an operator is told no mailbox-connect URI to register, so half the OAuth client stays unconfigured")
+	for purpose, provider := range map[crmcontracts.GoogleAppRedirectUriPurpose]string{
+		crmcontracts.MailboxConnect:  providerGmail,
+		crmcontracts.CalendarConnect: providerGcal,
+	} {
+		shown, ok := advertised(s.redirectURIs, purpose)
+		if !ok {
+			t.Errorf("%s is not advertised, so that half of the OAuth client stays unregistered", purpose)
+			continue
+		}
+		// The path ConnectConnector serves for this provider, spelled from the
+		// same constant the dispatch switch reads.
+		if want := "/v1/connectors/" + provider + "/callback"; !strings.HasSuffix(shown, want) {
+			t.Errorf("%s advertises %q, which does not end in %q — nothing answers that URL",
+				purpose, shown, want)
+		}
 	}
-	// The value the connect flow itself builds, from the same two bases.
-	want := connectorCallbackURL("https://api.example.com", "https://app.example.com", "google")
-	if shown != want {
-		t.Errorf("advertised connector URI %q, but the connect flow sends %q", shown, want)
-	}
-	if signIn, _ := advertised(s.redirectURIs, crmcontracts.SignIn); signIn == shown {
-		t.Error("the two purposes advertise the same URL, so one of them is wrong on a split deployment")
+
+	// And they are three distinct URLs. Registering one and assuming it covers
+	// the others is the mistake this list exists to prevent.
+	seen := map[string]bool{}
+	for _, u := range s.redirectURIs {
+		if seen[u.Url] {
+			t.Errorf("two purposes advertise the same URL %q, so one of them is wrong", u.Url)
+		}
+		seen[u.Url] = true
 	}
 }
 

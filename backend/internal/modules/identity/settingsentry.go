@@ -203,6 +203,14 @@ var EnabledOidcProviders = settings.Define[[]string](
 			if strings.TrimSpace(key) == "" {
 				return fmt.Errorf("a provider key cannot be blank")
 			}
+			// Refused rather than trimmed, because the match downstream is
+			// exact: a key saved as " google" would store cleanly, report
+			// success, and enable nothing — a setting that lies about having
+			// been applied. Saying so is better than silently repairing it,
+			// since the repaired value may not be the one they meant.
+			if strings.TrimSpace(key) != key {
+				return fmt.Errorf("the provider key %q carries surrounding whitespace, which would match no provider", key)
+			}
 		}
 		return nil
 	},

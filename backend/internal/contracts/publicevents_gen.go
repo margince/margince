@@ -120,6 +120,24 @@ func (e PublicEventTeamChangedChange) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventUserReactivatedStatus.
+const (
+	Active  PublicEventUserReactivatedStatus = "active"
+	Invited PublicEventUserReactivatedStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventUserReactivatedStatus enum.
+func (e PublicEventUserReactivatedStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Invited:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SubscribableEventType.
 const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
@@ -1598,14 +1616,21 @@ type PublicEventUserPasswordLinkIssued struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventUserReactivated Payload for user.reactivated — a deactivated member was returned to active (identity/users.go's ReactivateUser).
+// PublicEventUserReactivated Payload for user.reactivated — a deactivated member was lifted out of deactivation (identity/users.go's ReactivateUser).
+// `status` says what they were returned TO, and it is not always `active`: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that assumed "reactivated means active" would restate exactly the falsehood the invited status exists to remove.
 type PublicEventUserReactivated struct {
 	// By The admin who reactivated the member.
 	By openapi_types.UUID `json:"by"`
 
+	// Status The status the member was restored to.
+	Status PublicEventUserReactivatedStatus `json:"status"`
+
 	// UserId The reactivated member.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// PublicEventUserReactivatedStatus The status the member was restored to.
+type PublicEventUserReactivatedStatus string
 
 // PublicEventVoiceBuildChanged Payload for voice.build_changed — a Voice DNA build was queued or an already-pending one was returned in place of a duplicate request (ai/voice_lifecycle.go's RequestBuild). stage/result_version/ status_code/next_attempt_at describe an in-flight or deferred build and are therefore absent on a freshly-queued one.
 type PublicEventVoiceBuildChanged struct {

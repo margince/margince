@@ -11708,11 +11708,15 @@ export interface components {
         /** @description One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes. */
         GoogleAppRedirectUri: {
             /**
-             * @description Which flow uses this URL. `sign_in` is the login callback; `mailbox_connect` is the per-user Gmail and Calendar consent callback. They differ in more than the path, so neither can be derived from the other.
+             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
+             *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
              * @enum {string}
              */
-            purpose: "sign_in" | "mailbox_connect";
-            /** @description The absolute URL to register, exactly as it must be pasted. */
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect";
+            /**
+             * Format: uri
+             * @description The absolute URL to register, exactly as it must be pasted.
+             */
             url: string;
         };
         GoogleAppInput: {

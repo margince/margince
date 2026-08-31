@@ -399,9 +399,18 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// deployment's origins rather than of anything the operator has yet
 		// configured, and it is not derivable from the sign-in one — that rides a
 		// different base on a split deployment.
-		if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, googleProviderKey); uri != "" {
-			s.redirectURIs = append(s.redirectURIs,
-				crmcontracts.GoogleAppRedirectUri{Purpose: crmcontracts.MailboxConnect, Url: uri})
+		// BOTH connectors, under the keys their own routes are served on. Gmail
+		// and Calendar are separate flows sharing one Google app, so an operator
+		// who registers only one gets redirect_uri_mismatch on the other — and
+		// the key is `gmail`/`gcal`, never the `google` the sign-in route uses.
+		for purpose, provider := range map[crmcontracts.GoogleAppRedirectUriPurpose]string{
+			crmcontracts.MailboxConnect:  providerGmail,
+			crmcontracts.CalendarConnect: providerGcal,
+		} {
+			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, provider); uri != "" {
+				s.redirectURIs = append(s.redirectURIs,
+					crmcontracts.GoogleAppRedirectUri{Purpose: purpose, Url: uri})
+			}
 		}
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the

@@ -17748,13 +17748,19 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect]
           description: >-
-            Which flow uses this URL. `sign_in` is the login callback; `mailbox_connect` is the
-            per-user Gmail and Calendar consent callback. They differ in more than the path, so
-            neither can be derived from the other.
+            Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
+            `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are
+            SEPARATE connectors served on different paths — one Google app backs all three, and
+            registering only some of them fails the others with `redirect_uri_mismatch`.
+
+            None is derivable from another: the sign-in callback rides a base that already carries
+            `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on
+            a split deployment those are different hosts.
         url:
           type: string
+          format: uri
           description: The absolute URL to register, exactly as it must be pasted.
 
     GoogleAppInput:

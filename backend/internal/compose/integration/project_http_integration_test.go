@@ -637,9 +637,13 @@ func callDescription(t *testing.T, e *apptest.AppEnv, id string) string {
 	return *out.Description
 }
 
-// The bulk handover over HTTP: two of the admin's projects move to an invited
-// colleague and the answer counts them; a handover onto a deactivated member
-// is a 422 naming to_owner_id, and moves nothing.
+// The bulk handover over HTTP: two of the admin's projects move to a colleague
+// and the answer counts them; a handover onto a deactivated member is a 422
+// naming to_owner_id, and moves nothing.
+//
+// The colleague is invited and then ACTIVATED before the handover, because an
+// invited seat is refused here for the same reason a deactivated one is: work
+// assigned to somebody who signs in nowhere is work assigned to nobody.
 func TestProjectOwnershipTransferOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

@@ -107,12 +107,20 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		// returning them to active would restate in the roster the very
 		// falsehood this status exists to remove — and their invitation link,
 		// which redemption admits either way, is still the route in.
+		//
+		// EXCEPT the agent seat, which carries a NULL password_hash by
+		// construction and is never invited to anything: it holds no credential
+		// because it does not sign in, and its authority comes from the passport
+		// granting it. Sending it to 'invited' would leave extension dispatch
+		// unable to find the seat it requires, on a row nobody could redeem.
 		// RETURNING carries the NEW status, which is what the audit image below
 		// needs, so the branch is decided once in SQL rather than recomputed in
 		// Go from a column this function would otherwise have to re-read.
 		var restored string
 		if err := tx.QueryRow(ctx,
-			`UPDATE app_user SET status = CASE WHEN password_hash IS NULL THEN 'invited' ELSE 'active' END
+			`UPDATE app_user
+			    SET status = CASE WHEN password_hash IS NULL AND NOT is_agent
+			                      THEN 'invited' ELSE 'active' END
 			 WHERE id = $1 RETURNING status`, userID).Scan(&restored); err != nil {
 			return err
 		}
@@ -122,15 +130,20 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 			return err
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
-			userReactivatedPayload(userID, actor.UserID))
+			userReactivatedPayload(userID, actor.UserID, restored))
 	})
 }
 
 // userReactivatedPayload builds user.reactivated's typed payload.
-func userReactivatedPayload(userID ids.UserID, by ids.UserID) crmcontracts.PublicEventUserReactivated {
+//
+// The status travels because it is not always 'active': a member deactivated
+// before redeeming their invitation comes back 'invited', and a subscriber that
+// assumed otherwise would record somebody as able to sign in who cannot.
+func userReactivatedPayload(userID, by ids.UserID, status string) crmcontracts.PublicEventUserReactivated {
 	return crmcontracts.PublicEventUserReactivated{
 		UserId: openapi_types.UUID(userID.UUID),
 		By:     openapi_types.UUID(by.UUID),
+		Status: crmcontracts.PublicEventUserReactivatedStatus(status),
 	}
 }
 

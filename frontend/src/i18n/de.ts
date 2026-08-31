@@ -4760,7 +4760,7 @@ export const de = {
   "auth.noticeSessionExpired":
     "Deine Sitzung ist abgelaufen. Melde dich erneut an, um fortzufahren.",
   "auth.noticeOidcFailed":
-    "Die Anmeldung mit Google hat nicht geklappt. Falls Sie eingeladen wurden, öffnen Sie den Link in Ihrer Einladungs-E-Mail, um Ihr Konto fertig einzurichten.",
+    "Die Anmeldung mit Google hat nicht geklappt. Falls du eingeladen wurdest, öffne den Link in deiner Einladungs-E-Mail, um dein Konto fertig einzurichten.",
   "auth.connectionTitle": "Margince ist nicht erreichbar",
   "auth.connectionBody":
     "Prüfe deine Verbindung und versuche es erneut. Besteht das Problem weiter, startet der Server womöglich gerade neu.",

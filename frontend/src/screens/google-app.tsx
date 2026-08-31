@@ -6,7 +6,7 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { SettingRow } from "../design-system/settingrow";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -128,35 +128,43 @@ function RedirectUris({
     <div className="stack-sm">
       <p className="t-label">{t("googleApp.redirectTitle")}</p>
       <p className="t-caption">{t("googleApp.redirectSub")}</p>
-      {uris.map((uri) => {
-        const purpose = purposeLabel(uri.purpose, t);
-        return (
-          <SettingRow
-            key={uri.purpose}
-            label={purpose}
-            value={<code className="t-mono">{uri.url}</code>}
-            control={
-              <Button
-                small
-                onClick={() => {
-                  // A denied clipboard permission is a rejected promise, and
-                  // swallowing it would leave the button looking like it did
-                  // nothing. The URL is on screen either way, so the honest
-                  // failure is to stop claiming it was copied.
-                  navigator.clipboard.writeText(uri.url).then(
-                    () => setCopied(uri.purpose),
-                    () => setCopied(""),
-                  );
-                }}
-              >
-                {copied === uri.purpose
-                  ? t("googleApp.redirectCopied")
-                  : t("googleApp.redirectCopy", { purpose })}
-              </Button>
-            }
-          />
-        );
-      })}
+      <SettingList>
+        {uris.map((uri) => {
+          const purpose = purposeLabel(uri.purpose, t);
+          return (
+            <SettingRow
+              key={uri.purpose}
+              label={purpose}
+              value={<code className="t-mono">{uri.url}</code>}
+              control={
+                <Button
+                  small
+                  onClick={() => {
+                    // The object itself is guarded, not just the promise: the
+                    // Clipboard API is absent outside a secure context, so on a
+                    // plain-HTTP deployment this THROWS rather than rejecting and
+                    // the rejection handler never runs. A denied permission is
+                    // the rejecting case. Either way the URL stays on screen to
+                    // copy by hand, so the honest failure is to stop claiming it
+                    // was copied.
+                    if (!navigator.clipboard) {
+                      return;
+                    }
+                    navigator.clipboard.writeText(uri.url).then(
+                      () => setCopied(uri.purpose),
+                      () => setCopied(""),
+                    );
+                  }}
+                >
+                  {copied === uri.purpose
+                    ? t("googleApp.redirectCopied")
+                    : t("googleApp.redirectCopy", { purpose })}
+                </Button>
+              }
+            />
+          );
+        })}
+      </SettingList>
     </div>
   );
 }

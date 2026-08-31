@@ -552,3 +552,34 @@ func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
 		t.Errorf("with a redeemed second admin the first may stand down: %v", err)
 	}
 }
+
+// The agent seat carries a NULL password_hash by construction — it holds no
+// credential because it does not sign in — so the passwordless rule that returns
+// an unredeemed invitation to 'invited' must not reach it. Sending it there
+// would leave extension dispatch unable to find the seat it requires, on a row
+// nobody can redeem.
+func TestReactivatingTheAgentSeatRestoresItToActive(t *testing.T) {
+	e := setupRevocationEnv(t, "reactivate-agent-seat")
+
+	var agentID ids.UserID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM app_user WHERE is_agent`).Scan(&agentID); err != nil {
+		t.Fatalf("the installation has no agent seat, so this proves nothing: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, agentID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.svc.ReactivateUser(e.wsCtx(e.admin), e.admin, agentID); err != nil {
+		t.Fatalf("reactivate the agent seat: %v", err)
+	}
+	var status string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT status FROM app_user WHERE id = $1`, agentID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "active" {
+		t.Errorf("agent seat restored to %q, want active — it has no password by design and cannot be invited", status)
+	}
+}

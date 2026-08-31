@@ -44,9 +44,11 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 			value.Elem().SetInt(7)
 		case reflect.Slice:
 			// NON-EMPTY, for the same reason the scalars above are non-zero: an
-			// encoder that wrote the type's zero would be indistinguishable from
-			// one that wrote what it was given, and for a slice the zero value
-			// is the empty list a caller can legitimately send.
+			// encoder that wrote a slice the caller did not give it would be
+			// indistinguishable from one that passed theirs through. The empty
+			// list matters here beyond the usual zero-value argument, because it
+			// is a legitimate CHOICE on this field — offer password only — and a
+			// fixture that used it could not tell the two apart.
 			filledSlice := reflect.MakeSlice(value.Elem().Type(), 1, 1)
 			if filledSlice.Index(0).Kind() != reflect.String {
 				t.Fatalf("%s is a slice of %s, which this test does not know how to fill",

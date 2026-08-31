@@ -378,6 +378,12 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 // A policy read that FAILS is not the same answer as a provider that is off.
 // 404 means "no such provider", so reporting an outage that way would send an
 // operator to debug a configuration that is perfectly fine.
+//
+// This holds the START route, which can answer a caller directly. The CALLBACK
+// cannot: it is a browser redirect target, so every refusal there — including
+// this one — lands on the neutral failure page, and what distinguishes an
+// outage from a genuine refusal is the system_log reason the fail() path
+// writes ("provider policy"), not the response.
 func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	h := Handlers{
 		oidcProviders: map[string]OIDCProviderConfig{

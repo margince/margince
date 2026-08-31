@@ -1184,13 +1184,21 @@ export interface components {
             /** @description The operator-supplied reason (absent when none was given). */
             reason?: string;
         };
-        /** @description Payload for user.reactivated — a deactivated member was returned to active (identity/users.go's ReactivateUser). */
+        /**
+         * @description Payload for user.reactivated — a deactivated member was lifted out of deactivation (identity/users.go's ReactivateUser).
+         *     `status` says what they were returned TO, and it is not always `active`: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that assumed "reactivated means active" would restate exactly the falsehood the invited status exists to remove.
+         */
         PublicEventUserReactivated: {
             /**
              * Format: uuid
              * @description The reactivated member.
              */
             user_id: string;
+            /**
+             * @description The status the member was restored to.
+             * @enum {string}
+             */
+            status: "invited" | "active";
             /**
              * Format: uuid
              * @description The admin who reactivated the member.
@@ -1434,6 +1442,7 @@ export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<co
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventCommsDeliveryBouncedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventCommsDeliveryBounced"]["kind"]> = ["hard", "soft"];
 export const publicEventRetentionRestrictedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionRestricted"]["action"]> = ["restrict", "release", "pin"];
+export const publicEventUserReactivatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventUserReactivated"]["status"]> = ["invited", "active"];
 export const publicEventTeamChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventTeamChanged"]["change"]> = ["created", "renamed", "archived", "restored", "member_added", "member_removed"];
 export const publicEventApprovalDecidedVerdictValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventApprovalDecided"]["verdict"]> = ["approved", "rejected", "expired"];
 export type operations = Record<string, never>;
