@@ -44,16 +44,14 @@ func (e *revocationEnv) connectOAuth(t *testing.T) connectFixture {
 // access, and an admin is the one human deactivation refuses to touch.
 func (e *revocationEnv) connectOAuthFor(t *testing.T, consenter Identity) connectFixture {
 	t.Helper()
-	// No lent passport: the pre-0172 shape, and the one the lock-order suite
-	// wants — nothing here depends on provenance.
-	return e.connectOAuthLent(t, consenter, nil, "lock order")
+	// The lock-order suite tests revoke/rotation races, not lend races.
+	return e.connectOAuth(t, consenter, "lock order")
 }
 
-// connectOAuthLent is the ONE fixture that builds a connection, so the two
-// callers cannot drift apart in how they consent. lent is the passport the
-// human handed over, nil for a connection with no provenance recorded.
-func (e *revocationEnv) connectOAuthLent(
-	t *testing.T, consenter Identity, lent *ids.PassportID, clientName string,
+// connectOAuth is the ONE fixture that builds a connection, so the callers
+// cannot drift apart in how they consent.
+func (e *revocationEnv) connectOAuth(
+	t *testing.T, consenter Identity, clientName string,
 ) connectFixture {
 	t.Helper()
 	// The full id, not a prefix: consecutive v7 ids share their leading bytes
@@ -74,7 +72,7 @@ func (e *revocationEnv) connectOAuthLent(
 		var err error
 		out.grantID, out.refresh, err = issueGrant(ctx, tx, issueGrantInput{
 			WorkspaceID: consenter.WorkspaceID, UserID: consenter.UserID, ClientID: clientID,
-			Scopes: []string{"read"}, RefreshAllowed: true, LentPassportID: lent,
+			Scopes: []string{"read"}, RefreshAllowed: true,
 		})
 		return err
 	}); err != nil {

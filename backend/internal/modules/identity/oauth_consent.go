@@ -19,23 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// lentPassport is one resolved lend: WHICH passport the human handed to the
-// client, and the scopes the connection actually receives from it. This is
-// a stub definition for oauth_lend.go to use; the full implementation is
-// Task 3's responsibility.
-type lentPassport struct {
-	ID     interface{}
-	Scopes []string
-}
-
-// lockLentPassport is a stub for oauth_lend.go; full implementation is Task 3's
-// responsibility.
-func lockLentPassport(
-	ctx context.Context, tx interface{}, id Identity, rawID string,
-) (lent lentPassport, lendable bool, err error) {
-	return lentPassport{}, false, errors.New("lockLentPassport is not implemented")
-}
-
 // liveClient resolves client_id to the name a consent screen may show. An
 // unknown, disabled, or soft-deleted client all read as apperrors.ErrNotFound
 // — the same answer for all three, because which one it is would tell a
