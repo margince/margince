@@ -36,7 +36,6 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The activity and stated intent are the authoritative reason for this reply.
 - Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
-- Write the body as plain text. No markdown, no HTML, no bullet characters. Separate paragraphs with a blank line.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
 
 // firstDraftSystem is the draft_reply/first site: a message that OPENS a
@@ -58,7 +57,6 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - Nothing has been sent or received yet. There is no thread, no earlier message and no shared history: never refer to one, and never open with a follow-up phrase.
 - The stated intent is the whole brief. Write the message it describes; if it is thin, keep the message short rather than inventing a reason for it.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities — and never a prior meeting, call or email.
-- Write the body as plain text. No markdown, no HTML, no bullet characters.
 - Do NOT write a sign-off or a sender name. A name you guessed would go out over the wrong signature.
 - Say one thing and ask for one thing. Three short paragraphs at most.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`

@@ -87,6 +87,7 @@ func recipientOf(view crmcontracts.Person360) RecipientIn {
 		ID:           person.Id.String(),
 		Name:         person.FullName,
 		FirstName:    greetingName(person),
+		LastName:     surname(person),
 		Employer:     currentEmployer(view),
 		LastInbound:  stamp(view.LastInboundAt),
 		LastOutbound: stamp(view.LastOutboundAt),
@@ -109,6 +110,20 @@ func greetingName(person crmcontracts.Person) string {
 		return cut
 	}
 	return full
+}
+
+// surname is what a formal greeting takes: the record's own last name, or what
+// follows the given name in the display name. A one-word name has no surname,
+// and empty is the answer that keeps the greeting familiar rather than
+// producing a formal one addressed to a first name.
+func surname(person crmcontracts.Person) string {
+	if person.LastName != nil && strings.TrimSpace(*person.LastName) != "" {
+		return strings.TrimSpace(*person.LastName)
+	}
+	if _, rest, found := strings.Cut(strings.TrimSpace(person.FullName), " "); found {
+		return strings.TrimSpace(rest)
+	}
+	return ""
 }
 
 // primaryEmail takes the address the record marks primary, and otherwise the

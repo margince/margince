@@ -51,6 +51,18 @@ to its own author. Where no recipient is given, open without a name ("Hallo," /
 "Hello,") rather than reaching for whatever name is nearest: the names inside a
 quoted message are its participants, and the one you want may not be among them.
 
+A formal greeting takes the recipient's SURNAME, given as "recipient_last_name";
+the familiar greeting takes their first name, given as "recipient". The two are
+not interchangeable, and a formal opening built from a first name is wrong in
+every language that has the distinction. Where no surname is given, use the
+familiar greeting. Never invent a title, an honorific or a gender to complete a
+formal one, and never hedge with both.
+
+FORMATTING
+Write the body as plain text. No markdown, no HTML, no bullet characters.
+Separate paragraphs with a blank line — not with a tag, and not with an
+invisible character.
+
 RELATIONSHIPS
 Never state who introduced whom, who referred whom, or who first made contact,
 unless that exact directed fact is given to you as data. It is not something to

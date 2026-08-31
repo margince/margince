@@ -258,3 +258,46 @@ func TestADraftBodyReachesTheCallerAsPlainText(t *testing.T) {
 		t.Errorf("body = %q, want %q", draft.Body, want)
 	}
 }
+
+func TestTheDraftIsGivenBothNamesAGreetingCanTake(t *testing.T) {
+	// A formal German greeting takes a surname. Handed only "Dietmar", a model
+	// writing formal German cannot be right — it either drops the register or
+	// fills the gap itself, and "Sehr geehrte Frau/Herr Dietmar" is what
+	// filling it looks like in a draft a rep was about to send.
+	data := replyActivityData{
+		Recipient:         "Dietmar",
+		RecipientLastName: "Rietsch",
+		Subject:           "Rechnung",
+	}
+	req, err := replyDraftRequest(replyDraftSystem, data, nil, "")
+	if err != nil {
+		t.Fatalf("replyDraftRequest: %v", err)
+	}
+	payload := req.Messages[0].Content
+	if !strings.Contains(payload, `"recipient_last_name":"Rietsch"`) {
+		t.Errorf("the surname a formal greeting needs is not in the payload: %q", payload)
+	}
+	// The rule that says which name goes with which register travels with
+	// every drafting surface, so a prompt carrying the names and not the rule
+	// leaves the model to guess the pairing.
+	if !strings.Contains(req.System, "recipient_last_name") {
+		t.Error("the system prompt does not say which greeting takes the surname")
+	}
+}
+
+func TestAVoicedDraftIsToldTheGreetingRuleToo(t *testing.T) {
+	// The voiced prompt is the one a rep with a ready profile actually gets.
+	// A rule that reaches only the plain variant fixes the drafts nobody is
+	// looking at and leaves the ones they are.
+	req, err := replyDraftRequest(replyDraftSystem, replyActivityData{Recipient: "Dietmar"},
+		func(promptfence.Fence) string { return "VOICE" }, "")
+	if err != nil {
+		t.Fatalf("replyDraftRequest: %v", err)
+	}
+	if !strings.Contains(req.System, "recipient_last_name") {
+		t.Error("the voiced system prompt does not carry the greeting rule")
+	}
+	if !strings.Contains(req.System, "plain text") {
+		t.Error("the voiced system prompt does not carry the plain-text rule")
+	}
+}

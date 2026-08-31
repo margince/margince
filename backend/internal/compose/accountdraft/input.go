@@ -66,12 +66,17 @@ type Input struct {
 type RecipientIn struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	// FirstName is what the greeting uses. Split here rather than in the
-	// prompt: a model asked to shorten a name will shorten "Dr. Anne-Marie
+	// FirstName is what a familiar greeting uses. Split here rather than in
+	// the prompt: a model asked to shorten a name will shorten "Dr. Anne-Marie
 	// Weiß-Konrad" differently on every call.
 	FirstName string `json:"first_name"`
-	Title     string `json:"title,omitempty"`
-	Email     string `json:"email,omitempty"`
+	// LastName is what a FORMAL greeting uses. The two registers take
+	// different names, and a formal opening built from a first name is wrong
+	// in every language that has the distinction — so the prompt is given both
+	// and told which is which rather than left to guess one from the other.
+	LastName string `json:"recipient_last_name,omitempty"`
+	Title    string `json:"title,omitempty"`
+	Email    string `json:"email,omitempty"`
 	// Bucket is the relationship's own reading (strong/moderate/weak/none),
 	// which tells the writer how familiar to be. Never a score: a number would
 	// invite the prose to quote it.
@@ -271,6 +276,7 @@ func recipientOf(contact crmcontracts.Organization360Contact) RecipientIn {
 		ID:        contact.PersonId.String(),
 		Name:      contact.FullName,
 		FirstName: firstName(contact.FullName),
+		LastName:  lastName(contact.FullName),
 	}
 	if contact.Title != nil {
 		out.Title = *contact.Title
@@ -294,6 +300,17 @@ func firstName(full string) string {
 		return cut
 	}
 	return strings.TrimSpace(full)
+}
+
+// lastName is firstName's mirror: what remains after the given name, which is
+// what a formal greeting takes. A single-word name has no surname to offer,
+// and empty is the answer that sends the greeting to the familiar form rather
+// than to a formal one addressed to a first name.
+func lastName(full string) string {
+	if _, rest, found := strings.Cut(strings.TrimSpace(full), " "); found {
+		return strings.TrimSpace(rest)
+	}
+	return ""
 }
 
 // foldCommitment takes the soonest open task. `next_steps.data` arrives
