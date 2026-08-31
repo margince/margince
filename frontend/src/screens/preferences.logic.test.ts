@@ -13,6 +13,10 @@ const purposes: PurposeView[] = [
     label: "Deal & service messages",
     state: "granted",
     locked: true,
+    // A locked purpose cannot be offered a grant from this surface, which is
+    // what can_opt_in says; the choice is what the recipient decided.
+    choice: "opted_in",
+    can_opt_in: false,
     grant_needs_confirmation: false,
   },
   {
@@ -20,6 +24,8 @@ const purposes: PurposeView[] = [
     label: "Product updates",
     state: "granted",
     locked: false,
+    choice: "opted_in",
+    can_opt_in: true,
     grant_needs_confirmation: false,
   },
   {
@@ -27,6 +33,8 @@ const purposes: PurposeView[] = [
     label: "Events",
     state: "withdrawn",
     locked: false,
+    choice: "opted_out",
+    can_opt_in: true,
     grant_needs_confirmation: false,
   },
   {
@@ -34,6 +42,10 @@ const purposes: PurposeView[] = [
     label: "Surveys",
     state: "unknown",
     locked: false,
+    // "unknown" reads differently either side of the consent line, which is
+    // why the server derives `choice` at all: nobody has objected here.
+    choice: "no_objection",
+    can_opt_in: true,
     grant_needs_confirmation: false,
   },
 ];
@@ -47,6 +59,10 @@ const doiPurposes: PurposeView[] = [
     label: "Newsletter",
     state: "withdrawn",
     locked: false,
+    choice: "opted_out",
+    // A purpose needing a confirmation round-trip cannot be granted from
+    // here either, for the same reason a locked one cannot.
+    can_opt_in: false,
     grant_needs_confirmation: true,
   },
   {
@@ -54,6 +70,8 @@ const doiPurposes: PurposeView[] = [
     label: "Already subscribed",
     state: "granted",
     locked: false,
+    choice: "opted_in",
+    can_opt_in: false,
     grant_needs_confirmation: true,
   },
 ];
