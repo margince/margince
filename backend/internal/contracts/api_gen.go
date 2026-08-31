@@ -5074,6 +5074,45 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
+// Defines values for GoogleAppRedirectUrisPurpose.
+const (
+	MailboxConnect GoogleAppRedirectUrisPurpose = "mailbox_connect"
+	SignIn         GoogleAppRedirectUrisPurpose = "sign_in"
+)
+
+// Valid indicates whether the value is a known member of the GoogleAppRedirectUrisPurpose enum.
+func (e GoogleAppRedirectUrisPurpose) Valid() bool {
+	switch e {
+	case MailboxConnect:
+		return true
+	case SignIn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GoogleAppSource.
+const (
+	GoogleAppSourceEnvironment GoogleAppSource = "environment"
+	GoogleAppSourceNone        GoogleAppSource = "none"
+	GoogleAppSourceStored      GoogleAppSource = "stored"
+)
+
+// Valid indicates whether the value is a known member of the GoogleAppSource enum.
+func (e GoogleAppSource) Valid() bool {
+	switch e {
+	case GoogleAppSourceEnvironment:
+		return true
+	case GoogleAppSourceNone:
+		return true
+	case GoogleAppSourceStored:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -10547,6 +10586,7 @@ func (e UserLocale) Valid() bool {
 const (
 	UserStatusActive      UserStatus = "active"
 	UserStatusDeactivated UserStatus = "deactivated"
+	UserStatusInvited     UserStatus = "invited"
 	UserStatusSuspended   UserStatus = "suspended"
 )
 
@@ -10556,6 +10596,8 @@ func (e UserStatus) Valid() bool {
 	case UserStatusActive:
 		return true
 	case UserStatusDeactivated:
+		return true
+	case UserStatusInvited:
 		return true
 	case UserStatusSuspended:
 		return true
@@ -12513,22 +12555,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -18556,12 +18598,27 @@ type FxRateListResponse struct {
 
 // GoogleApp defines model for GoogleApp.
 type GoogleApp struct {
-	// ClientId Google's public identifier for the app, or empty when none is stored. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
+	// ClientId Google's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
 	ClientId string `json:"client_id"`
 
-	// Configured Whether both the client id and a sealed client secret are held.
+	// Configured Whether a Google app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can Gmail and Calendar be connected", which is a different question from where the app came from.
 	Configured bool `json:"configured"`
+
+	// RedirectUris Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
+	RedirectUris []struct {
+		Purpose GoogleAppRedirectUrisPurpose `json:"purpose"`
+		Url     string                       `json:"url"`
+	} `json:"redirect_uris"`
+
+	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+	Source GoogleAppSource `json:"source"`
 }
+
+// GoogleAppRedirectUrisPurpose defines model for GoogleApp.RedirectUris.Purpose.
+type GoogleAppRedirectUrisPurpose string
+
+// GoogleAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+type GoogleAppSource string
 
 // GoogleAppInput defines model for GoogleAppInput.
 type GoogleAppInput struct {
@@ -26389,7 +26446,10 @@ type User struct {
 	Locale *UserLocale `json:"locale,omitempty"`
 
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
-	Roles  *[]string  `json:"roles,omitempty"`
+	Roles *[]string `json:"roles,omitempty"`
+
+	// Status `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
+	// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 	Status UserStatus `json:"status"`
 
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
@@ -26404,7 +26464,8 @@ type User struct {
 // Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
 type UserLocale string
 
-// UserStatus defines model for User.Status.
+// UserStatus `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
+// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 type UserStatus string
 
 // UserListResponse defines model for UserListResponse.
