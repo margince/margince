@@ -326,7 +326,7 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 // can nonetheless be asked to perform, because the operation carries an operand
 // the verb's arguments have no member for.
 //
-// Each of the eight is one of the bespoke confirm-first operations
+// Each of the ten is one of the bespoke confirm-first operations
 // (agentcommandoperand.go): a second operand that update_record's
 // {record_type, id, fields} cannot express is exactly what put them there, and
 // it is the same reason they cannot be twinned here. The other two ride a record
@@ -337,6 +337,10 @@ var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 		"an update_record call has no member to put it in and no fields to send",
 	"updateOrganizationFact": "the fact key is a path segment naming WHICH fact, where update_record's " +
 		"fields name an organization's own columns — the key is not one of them",
+	"createOrganizationFact": "a fact is a category, a field and a value in the fact vocabulary — a row in " +
+		"a sidecar table, not a column of the organization, so update_record's fields cannot name it",
+	"deleteOrganizationFact": "the fact key is a path segment naming WHICH row to remove, and update_record " +
+		"writes columns rather than removing sidecar rows — there is no field whose absence deletes one",
 	"confirmOrganizationProfileField": "the profile field name is a path segment, and the confirm sends no " +
 		"fields — update_record has no argument that says which field is being confirmed rather than written",
 	"updateOrganizationProfileField": "the path segment selects a CORRECTION of one profile field, and " +

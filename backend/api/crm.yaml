@@ -3204,6 +3204,47 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+    post:
+      tags: [Organizations]
+      operationId: createOrganizationFact
+      summary: State a fact about this company by hand.
+      description: |
+        The half the fact store never had. Facts arrived only from a site read, so a rep who knew
+        the company runs a product the crawl never found had nowhere to record it — and the
+        correction path cannot help, because there is no row to correct.
+
+        The row is human-owned from birth (`source: human`, `captured_by` from the authenticated
+        principal), which is also what protects it: both enrichment upserts decline to overwrite a
+        row a person captured, so the next site read leaves it alone.
+
+        A live duplicate is refused with 409 rather than silently upserted — if the fact is already
+        stated, the honest verbs are confirm and correct, and an upsert here would let a hand write
+        quietly overwrite a machine claim without the correction's audit before-image.
+      x-mcp-tool: { verb: update_record, record_type: organization, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrganizationFactRequest' }
+      responses:
+        '201':
+          description: The stated fact.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationFact' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The company already states this fact; confirm or correct it instead.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /organizations/{id}/profile-fields:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -16613,6 +16654,33 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+    delete:
+      tags: [Organizations]
+      operationId: deleteOrganizationFact
+      summary: Remove a fact this company does not state.
+      description: |
+        A crawl reads what a page says, and a page says wrong things: a phone number filed as a
+        location, a customer who left three years ago. Correction answers "this value is wrong";
+        this answers "this is not a fact about this company at all", which correction cannot say.
+
+        The row is deleted rather than tombstoned, so **a later site read may state the fact
+        again** — the enrichment upserts skip rows a human captured, and a deleted row leaves
+        nothing to skip. Removal means "not true today", not "never show this again". The audit
+        before-image keeps what was removed, so the deletion is answerable either way.
+      x-mcp-tool: { verb: update_record, record_type: organization, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: The fact is gone.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /organizations/{id}/facts/{factKey}/confirm:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -17289,6 +17357,22 @@ components:
       description: The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
       required: [value]
       properties:
+        value: { type: string, minLength: 1 }
+
+    CreateOrganizationFactRequest:
+      type: object
+      description: >-
+        A fact a person states about a company. The category and field come from the same closed
+        vocabulary a site read writes (org_fact_field_vocab), so a hand-stated fact and a read one
+        are the same kind of row and the same readers find both. The dedupe key is derived from the
+        value on the server, never supplied: a caller-chosen key could collide with an unrelated
+        fact or slip past the uniqueness the store depends on.
+      required: [category, field, value]
+      properties:
+        category: { type: string, enum: [company, offering, market, signal] }
+        field:
+          type: string
+          description: A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back.
         value: { type: string, minLength: 1 }
 
     # ---- rates & costs (admin/ops-only effective-dated price sheets) ----
@@ -28629,6 +28713,12 @@ components:
             value's shape; it never gates the fact, because a heuristic that hid data would be
             worse than one that flags it.
         updated_at: { type: string, format: date-time }
+        version:
+          $ref: '#/components/schemas/RowVersion'
+          description: >-
+            The row's version, for the `If-Match` a correction or a removal sends. The write path
+            has always honoured the precondition; without the version on the read no client could
+            send one, so two readers editing the same fact silently overwrote each other.
 
     OrganizationFactListResponse:
       type: object

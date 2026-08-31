@@ -177,7 +177,9 @@ var replayableOperations = map[string]replayTarget{
 	// replayed body is the sidecar row, which has no id of its own on the wire.
 	"PATCH /v1/organizations/{id}/profile-fields/{field}":        {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"POST /v1/organizations/{id}/profile-fields/{field}/confirm": {object: tableOrganization, table: tableOrganization, pathParam: "id"},
+	"POST /v1/organizations/{id}/facts":                          {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"PATCH /v1/organizations/{id}/facts/{factKey}":               {object: tableOrganization, table: tableOrganization, pathParam: "id"},
+	"DELETE /v1/organizations/{id}/facts/{factKey}":              {object: tableOrganization, rowNote: "the removal answers 204: the row is gone, so a replay has no record to re-probe — what the original write was gated on was the organization named in the path, and that gate ran then"},
 	"POST /v1/organizations/{id}/facts/{factKey}/confirm":        {object: tableOrganization, table: tableOrganization, pathParam: "id"},
 	"POST /v1/deals":                       {object: tableDeal, table: tableDeal, idPath: "id"},
 	"PATCH /v1/deals/{id}":                 {object: tableDeal, table: tableDeal, idPath: "id"},

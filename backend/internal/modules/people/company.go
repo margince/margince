@@ -155,6 +155,10 @@ type CompanyFact struct {
 	Source          string
 	CapturedBy      string
 	UpdatedAt       time.Time
+	// Carried because this fact reaches the browser as the same
+	// OrganizationFact the account endpoints return, and that schema promises a
+	// version for the If-Match a correction or removal sends.
+	Version int64
 }
 
 // Company is the installation's own company as the form reads and writes it.
@@ -467,7 +471,7 @@ func readCompany(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (Comp
 
 	facts, err := tx.Query(ctx,
 		`SELECT category, field, value, value_key, evidence_snippet, source_url,
-		        confidence, source, captured_by, updated_at
+		        confidence, source, captured_by, updated_at, version
 		   FROM organization_fact
 		  WHERE organization_id = $1
 		  ORDER BY category, field, value_key, value`,
@@ -480,7 +484,7 @@ func readCompany(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (Comp
 		var fact CompanyFact
 		if err := facts.Scan(&fact.Category, &fact.Field, &fact.Value, &fact.ValueKey,
 			&fact.EvidenceSnippet, &fact.SourceURL, &fact.Confidence, &fact.Source,
-			&fact.CapturedBy, &fact.UpdatedAt); err != nil {
+			&fact.CapturedBy, &fact.UpdatedAt, &fact.Version); err != nil {
 			return Company{}, fmt.Errorf("scan company fact: %w", err)
 		}
 		out.Facts = append(out.Facts, fact)
