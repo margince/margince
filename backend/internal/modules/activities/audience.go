@@ -81,7 +81,20 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE activity SET audience = $2 WHERE id = $1`, id, in.Audience); err != nil {
+		// The reason moves with the audience, and becomes `manual`.
+		//
+		// Not NULL, and not the previous reason. Leaving the previous one would
+		// re-narrow the row: RecomputeAudienceTx reads audience_reason to
+		// recognise a hold no capture_import row records, so a stale
+		// `workspace_floor` on a row a person just opened is read as a live hold
+		// on the next sync of any mailbox that has the message. Clearing it to
+		// NULL loses the opposite thing — that a HUMAN decided this — and the
+		// derivation would widen the row back for the same reason.
+		//
+		// `manual` says both: a person set this, and no derivation may move it.
+		if _, err := tx.Exec(ctx,
+			`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
+			id, in.Audience, ReasonManual); err != nil {
 			return err
 		}
 		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {
@@ -121,7 +134,9 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 // over, and an order difference is not a change anyone made.
 func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[string]any, error) {
 	var audience string
-	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1`, id).Scan(&audience); err != nil {
+	var reason *string
+	if err := tx.QueryRow(ctx,
+		`SELECT audience, audience_reason FROM activity WHERE id = $1`, id).Scan(&audience, &reason); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx,
@@ -143,7 +158,11 @@ func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[s
 		return nil, err
 	}
 	slices.Sort(members)
-	return map[string]any{"audience": audience, "members": members}, nil
+	why := ""
+	if reason != nil {
+		why = *reason
+	}
+	return map[string]any{auditFieldAudience: audience, auditFieldAudienceReason: why, "members": members}, nil
 }
 
 // audienceMembersFor validates the member set: read only for `selected`,

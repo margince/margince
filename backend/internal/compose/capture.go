@@ -225,6 +225,12 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
 		}).
+		// The audience derivation, from the module that owns `activity`. It
+		// runs INSIDE the capture transaction because the audience it derives
+		// is the answer to "may a colleague read this", and a message that is
+		// briefly readable before a later pass narrows it has already been
+		// readable.
+		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

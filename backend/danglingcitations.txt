@@ -124,7 +124,6 @@ backend/internal/modules/capture/channelsend.go core 0217
 backend/internal/modules/capture/pending.go migration 0222
 backend/internal/modules/capture/pendingsweeps.go migration 0137
 backend/internal/modules/capture/projectkeytoken.go migration 0131
-backend/internal/modules/capture/sink.go migration 0137
 backend/internal/modules/collections/vocab.go core 0217
 backend/internal/modules/collections/vocab_test.go migration 0228
 backend/internal/modules/comms/store_test.go core 0136
