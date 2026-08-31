@@ -96,11 +96,12 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	// the server owns, so the sequence is pinned by
 	// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem.
 	//
-	// ONLY THE MODEL BINDING BLOCKS. Without one the product cannot perform the
-	// cold-start read that first run is, so there is nothing to let a reader
-	// through to. A Google app buys mailbox capture and nothing else: an
-	// installation signing in with passwords and no external provider is fully
-	// usable without one.
+	// ONLY THE MODEL BINDING BLOCKS, pinned by
+	// TestOnlyTheModelBindingBlocksFirstRun. Without one the product cannot
+	// perform the cold-start read that first run is, so there is nothing to let
+	// a reader through to. A Google app buys mailbox capture and nothing else:
+	// an installation signing in with passwords and no external provider is
+	// fully usable without one.
 	//
 	// The app is configured from settings, where the card carries the redirect
 	// URIs Google's console asks for. The step stays in the report because that
@@ -167,8 +168,7 @@ func (h installationSetupHandlers) aiConfigured(ctx context.Context) (bool, erro
 // The environment's copy counts, in the same precedence the connect transport
 // applies — see envGoogleApp. A nil store is a role that composed no vault, and
 // then only the environment can answer: it reads as unconfigured rather than
-// erroring, because a reader on that installation genuinely cannot complete this
-// step and the gate has to say so rather than fail.
+// erroring, so the report can still name the step outstanding.
 func (h installationSetupHandlers) googleConfigured(ctx context.Context) (bool, error) {
 	if h.envGoogleApp {
 		return true, nil

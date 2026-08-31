@@ -196,12 +196,7 @@ func setupStep(t *testing.T, e *apptest.AppEnv, which crmcontracts.InstallationS
 func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 	e := setupGoogleAppHTTP(t)
 
-	googleStep := func(t *testing.T) crmcontracts.InstallationSetupStep {
-		t.Helper()
-		return setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp)
-	}
-
-	if step := googleStep(t); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); step.Configured {
 		t.Fatal("a fresh installation reports the Google app as configured")
 	}
 	secret := httpSecret
@@ -209,13 +204,13 @@ func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 		crmcontracts.GoogleAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("PUT google-app → %d, want 204", status)
 	}
-	if step := googleStep(t); !step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); !step.Configured {
 		t.Fatal("the setup report still calls the Google app unconfigured after it was stored")
 	}
 	if status := e.Call(t, "DELETE", "/v1/installation/google-app", nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("DELETE google-app → %d, want 204", status)
 	}
-	if step := googleStep(t); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepGoogleApp); step.Configured {
 		t.Fatal("the setup report still calls the Google app configured after it was removed")
 	}
 }
@@ -367,10 +362,11 @@ func storeCloudProviderKey(t *testing.T, e *apptest.AppEnv) {
 // sign-in, no external provider — so a Google app has no place gating the
 // company form onboarding writes from.
 //
-// The step is still REPORTED, so a surface can say it is outstanding, and it is
-// still second, so nothing here weakens the order above. What this pins is the
-// policy: unconfigured and non-blocking, and an installation that has bound a
-// model is complete without ever touching Google.
+// The step is still REPORTED, so a surface can say it is outstanding, and it
+// is still second, so nothing here weakens the order
+// TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem pins. What this
+// pins is the policy: unconfigured and non-blocking, and an installation that
+// has bound a model is complete without ever touching Google.
 //
 // It reads every step rather than only the Google one on purpose. The frontend
 // draws nothing for a blocking step it has no panel for, and `ai_models` is the
@@ -380,13 +376,13 @@ func storeCloudProviderKey(t *testing.T, e *apptest.AppEnv) {
 func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 	e := setupGoogleAppHTTP(t)
 
-	for _, step := range readSetup(t, e).Steps {
+	fresh := readSetup(t, e)
+	for _, step := range fresh.Steps {
 		if step.Blocking && step.Step != crmcontracts.InstallationSetupStepStepAiModels {
 			t.Errorf("step %q blocks first run; only ai_models may, because it is the only one onboarding can ask for", step.Step)
 		}
 	}
-
-	if setup := readSetup(t, e); setup.Complete {
+	if fresh.Complete {
 		t.Fatal("a fresh installation reports setup complete with no model bound")
 	}
 	bindCloudRouting(t, e)
@@ -410,26 +406,21 @@ func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 	e := setupGoogleAppHTTP(t)
 
-	aiStep := func(t *testing.T) crmcontracts.InstallationSetupStep {
-		t.Helper()
-		return setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels)
-	}
-
-	if step := aiStep(t); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
 		t.Fatal("a fresh installation reports the AI step as configured with nothing bound")
 	}
 
 	bindCloudRouting(t, e)
 
 	// Bound, and still NOT configured: the vendor has no key.
-	if step := aiStep(t); step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
 		t.Error("the AI step reads configured with a cloud vendor bound and no key for it — onboarding would wave the admin through into a cold start that cannot make a call")
 	}
 
 	storeCloudProviderKey(t, e)
 
 	// Both halves present: now it is configured.
-	if step := aiStep(t); !step.Configured {
+	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); !step.Configured {
 		t.Error("the AI step still reads unconfigured with a binding AND its key stored")
 	}
 }
