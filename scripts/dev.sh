@@ -607,6 +607,46 @@ margince_server_pids() {
   done
 }
 
+# stack_server_pids names THIS stack's api and worker wherever they came from —
+# including a run whose pid the state file no longer holds.
+#
+# The state file records one BACKEND_PID/WORKER_PID and every `make dev`
+# overwrites it, so a worker that outlived its own start is invisible to the
+# only thing that would kill it. The api is caught anyway, by its port; a worker
+# binds none, so nothing looked for it and they accumulated — four against one
+# database, three of them stale builds. They share a River leader election, and
+# the leader is what inserts the periodic jobs: an old leader renewing its lease
+# schedules only the job kinds ITS binary knows, so a job kind added since is
+# never enqueued at all. Every other lane keeps running, which is what makes a
+# stale worker read as a broken feature rather than as a process nobody stopped.
+#
+# Matched on the DSN, and on the Redis address when the caller knows it. The
+# database name is already one-to-one with the slug — `margince` for the primary
+# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
+# stack. The Redis address narrows it further and is passed whenever a record
+# supplies it.
+#
+# It is OMITTED rather than guessed when there is no record. A stack whose state
+# file is gone has no claim to read, and the registry's fallback for "no claim"
+# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
+# linked worktree's database on the primary's Redis database, match nothing, and
+# clean up nothing, silently: the same shape of miss this function exists to
+# close.
+# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
+# of every `margince_dev_<slug>`, so a substring test run from the primary
+# worktree matches every linked worktree's servers — and the primary is the one
+# whose cleanup would then kill all of them at once.
+stack_server_pids() { # dsn [redis_addr]
+  local pid cmd
+  for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
+    [[ "$pid" == "$$" ]] && continue
+    cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
+    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
+    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
+    echo "$pid"
+  done
+}
+
 # Vite resolves out of <repo>/frontend/node_modules, so its command line carries
 # the worktree path — that is what distinguishes our dev server from any other
 # Vite project the developer happens to be running.
@@ -1123,20 +1163,46 @@ stop)
   if [[ -f "$state" ]]; then
     # shellcheck disable=SC1090
     . "$state"
-    kill "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}" 2>/dev/null || true
+    victims=()
+    for p in "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}"; do
+      [[ -n "$p" ]] && victims+=("$p")
+    done
     # Backstop: free the recorded ports by listener (reaps vite, pnpm's child).
     for p in "${API_PORT:-}" "${FE_PORT:-}"; do
       [[ -n "$p" ]] || continue
-      pids=$(lsof -ti "tcp:${p}" 2>/dev/null || true)
-      [[ -n "$pids" ]] && kill $pids 2>/dev/null || true
+      for q in $(port_listeners "$p"); do victims+=("$q"); done
     done
+    # And this stack's servers whatever their pid — the state file holds ONE
+    # worker and every `make dev` overwrites it, so an earlier run's worker is
+    # reachable by nothing else. It binds no port, so the port backstop above
+    # misses it too; stack_server_pids says what that cost.
+    for q in $(stack_server_pids "$(with_database "$APP_DSN" "${DB:-$db}")" \
+                                 "localhost:${REDIS_PORT}/${REDIS_DB:-0}"); do
+      victims+=("$q")
+    done
+    # kill_pids, not a bare `kill`: TERM alone leaves a server that ignores it
+    # standing after its record is gone, which is the orphan this is for.
+    stopped=$(printf '%s\n' "${victims[@]+"${victims[@]}"}" | grep -E '^[0-9]+$' | sort -u || true)
+    # shellcheck disable=SC2086
+    [[ -n "$stopped" ]] && kill_pids $stopped
     rm -rf "$rundir"
     echo "stopped $label (freed :${API_PORT:-?} :${FE_PORT:-?})"
   else
-    # Ports are CLAIMED now, not derived from the slug, so there is nothing to
-    # guess at for a stack that was never recorded: naming a port here would
-    # print `:0`. Say what is true instead.
-    echo "no recorded stack for $label — nothing to stop"
+    # No claim, which does not mean no processes: the record is what a crash or
+    # an interrupted boot loses first, and its servers keep running against this
+    # database with nothing left pointing at them. Ports are CLAIMED now rather
+    # than derived from the slug, so there is nothing to guess at there — but the
+    # DATABASE is the slug's, so the servers can still be named.
+    # No Redis address: see stack_server_pids. Without a claim, REDIS_ADDR here
+    # names logical database 0 whatever the slug, which is the primary stack's.
+    orphans=$(stack_server_pids "$(with_database "$APP_DSN" "$db")" | sort -u || true)
+    if [[ -n "$orphans" ]]; then
+      # shellcheck disable=SC2086
+      kill_pids $orphans
+      echo "stopped $label ($(printf '%s\n' $orphans | wc -l | tr -d ' ') process(es) whose claim was gone)"
+    else
+      echo "no recorded stack for $label — nothing to stop"
+    fi
   fi
   if [[ "$drop" == "1" ]]; then
     if [[ -z "$slug" ]]; then
