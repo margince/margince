@@ -1227,6 +1227,41 @@ kinds:
       tick resumes whatever a cut-off pass left, so two minutes bounds one
       pass rather than the backlog.
 
+  provider_lookup_sweep:
+    role: dispatcher
+    go_type: ProviderLookupSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
+    fans_out_to: provider_lookup
+    fan_out_unit: workspace
+    reason: >-
+      The catch-up pass over contacts a run never covered — everybody who
+      existed before the provider was connected. A minute, not the poll
+      sweep's thirty seconds: this one CREATES work rather than draining it,
+      and its per-tick budget is what paces spending, so a faster tick would
+      only make the ceiling arrive sooner. A caught-up workspace costs one
+      indexed probe.
+
+  provider_lookup:
+    role: worker
+    go_type: ProviderLookupArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: fan_out
+    registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
+    args:
+      Workspace: id
+    reason: >-
+      One workspace's catch-up tick: queue up to the budget, and apply the
+      purchases that completed before a record could hold them. ONE attempt on
+      purpose — a retry would queue a second batch for the same tick, and the
+      next tick a minute later is the retry. Nothing is lost by not retrying:
+      whatever this pass did not reach is still uncovered when it runs again.
+
   signal_scan:
     role: dispatcher
     go_type: SignalScanArgs

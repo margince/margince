@@ -161,3 +161,68 @@ func auditApplied(ctx context.Context, tx pgx.Tx, subject, run ids.UUID, provide
 // connectorCapturedBy is who a bought value is attributed to. One spelling,
 // shared with the claim writer, so a reader filtering on either finds both.
 func connectorCapturedBy(providerName string) string { return "connector:" + providerName }
+
+// ApplyStoredProviderClaims folds a purchase already in this module's table
+// onto the subject's record.
+//
+// The catch-up sweep's half of the applier. Its runs completed before a record
+// could hold their values, so there is no payload to hand over — the claims are
+// already stored, and the run id is what finds them.
+//
+// One statement's difference from the hand-off path, and everything after it is
+// shared: a purchase applied late must land exactly as one applied on arrival,
+// or the record would depend on when the sweep happened to reach it.
+func ApplyStoredProviderClaims(ctx context.Context, tx pgx.Tx, personID, runID string) error {
+	claims, err := storedClaimsOfRun(ctx, tx, runID)
+	if err != nil {
+		return err
+	}
+	if len(claims) == 0 {
+		return nil
+	}
+	providerName, err := claimProviderOfRun(ctx, tx, runID)
+	if err != nil {
+		return err
+	}
+	return ApplyProviderClaims(ctx, tx, runID, personID, providerName, claims)
+}
+
+// storedClaimsOfRun reads back what one run bought, in the shape the applier
+// takes.
+func storedClaimsOfRun(ctx context.Context, tx pgx.Tx, runID string) ([]provider.Claim, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT claim_key, value_json, confidence
+		  FROM person_provider_claim
+		 WHERE run_id = $1
+		 ORDER BY claim_key`, runID)
+	if err != nil {
+		return nil, fmt.Errorf("people: reading a stored purchase: %w", err)
+	}
+	defer rows.Close()
+	var claims []provider.Claim
+	for rows.Next() {
+		var c provider.Claim
+		var key string
+		if err := rows.Scan(&key, &c.Value, &c.Confidence); err != nil {
+			return nil, err
+		}
+		c.Key = provider.ClaimKey(key)
+		claims = append(claims, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("people: reading a stored purchase: %w", err)
+	}
+	return claims, nil
+}
+
+// claimProviderOfRun names who sold the claims, read from the claims rather
+// than from the run: the run belongs to another module's table, and the claim
+// rows carry the same name.
+func claimProviderOfRun(ctx context.Context, tx pgx.Tx, runID string) (string, error) {
+	var name string
+	if err := tx.QueryRow(ctx,
+		`SELECT provider FROM person_provider_claim WHERE run_id = $1 LIMIT 1`, runID).Scan(&name); err != nil {
+		return "", fmt.Errorf("people: reading which provider sold a stored purchase: %w", err)
+	}
+	return name, nil
+}
