@@ -29,14 +29,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 const connectorName = "graphcal"
@@ -119,16 +116,10 @@ func AuthRequestFrom(code, redirectURI string) (connector.AuthRequest, error) {
 	return graphconn.AuthRequestFrom(connectorName, code, redirectURI)
 }
 
-// Descriptor is the connector's static metadata: name "graphcal", read-only
-// (TierAutoExecute), producing activities. Read at registration.
+// Descriptor is the connector's static metadata — the shared Microsoft shape,
+// named "graphcal".
 func (c *Connector) Descriptor() connector.Descriptor {
-	return connector.Descriptor{
-		Name:     connectorName,
-		Version:  "1",
-		Scopes:   []principal.Scope{principal.ScopeRead},
-		RiskTier: mcp.TierAutoExecute, // read-only capture
-		Produces: []datasource.EntityType{datasource.EntityActivity},
-	}
+	return graphconn.Descriptor(connectorName)
 }
 
 // Authenticate exchanges the authorization code for a refresh token, resolves
@@ -209,7 +200,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	access := refreshed.AccessToken
 	// Reported before the pull: the replacement is already issued and the old
 	// token already spent by the time Graph answers.
-	c.reportRotation(ctx, st, refreshed.Rotated)
+	graphconn.ReportRotation(ctx, connectorName, c.rotations, st, refreshed.Rotated)
 
 	prior, err := parseCursor(cursor)
 	if err != nil {
@@ -224,7 +215,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}
 
 	for _, raw := range events {
-		if err := captureOne(ctx, raw, sink, owner); err != nil {
+		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
 			return nil, err
 		}
 	}
@@ -240,26 +231,6 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		anchoredAt = c.now()
 	}
 	return marshalCursor(nextDelta, owner, anchoredAt), nil
-}
-
-// reportRotation hands the replacement credential to the sink, if there is one
-// and if the provider actually issued one. A failure is logged, never returned:
-// the old token stays valid for its own lifetime, so a missed rotation costs
-// one cycle's freshness where failing the sync would cost the calendar.
-func (c *Connector) reportRotation(ctx context.Context, st graphconn.AuthState, rotated string) {
-	if c.rotations == nil || rotated == "" {
-		return
-	}
-	st.RefreshToken = rotated
-	//nolint:gosec // G117: re-sealing the connector's own rotated refresh token into the opaque Auth bundle IS the intended path — the registry stores it encrypted in the vault, never logged or returned
-	next, err := json.Marshal(st)
-	if err != nil {
-		slog.WarnContext(ctx, "graphcal: encoding the rotated credential", "err", err)
-		return
-	}
-	if err := c.rotations.Rotated(ctx, next); err != nil {
-		slog.WarnContext(ctx, "graphcal: recording the rotated credential", "err", err)
-	}
 }
 
 // selectEvents resolves which events to pull and the deltaLink to advance to,
@@ -292,42 +263,10 @@ func (c *Connector) windowIsStale(anchoredAt time.Time) bool {
 	return anchoredAt.IsZero() || c.now().Sub(anchoredAt) >= reanchorAfter
 }
 
-// captureOne parses, drops, or upserts one raw event — the same discipline the
-// mail connectors use. A parse failure or a deliberate skip (cancelled, solo,
-// or inside the owner's domain) is a no-op; only a real Sink write fault
-// returns a non-nil error (which stops the pull). It is a package function (no
-// receiver) so a pull holds no shared state.
-func captureOne(ctx context.Context, raw []byte, sink connector.Sink, owner string) error {
-	m, err := parseEvent(raw, owner)
-	if err != nil {
-		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors the mail connectors)
-	}
-	if _, drop := m.SkipReason(); drop {
-		return nil
-	}
-	if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// Normalize maps ONE raw Graph event resource to its meeting activity. Pure —
-// no I/O — so the mapping is the test-guarded surface; it returns an
-// ErrSkip-wrapped error for an event this connector intentionally drops
-// (cancelled, naming nobody but the owner, or wholly inside the owner's
-// domain).
+// Normalize maps ONE raw Graph event resource to its meeting activity — the
+// shared calendar mapping over this connector's own decode.
 func (c *Connector) Normalize(_ context.Context, raw connector.RawRecord) ([]connector.NormalizedRecord, error) {
-	m, err := parseEvent(raw, c.owner)
-	if err != nil {
-		return nil, err
-	}
-	if reason, drop := m.SkipReason(); drop {
-		return nil, fmt.Errorf("graphcal: dropping %s (%s): %w", m.ID(), reason, connector.ErrSkip)
-	}
-	return []connector.NormalizedRecord{m.ToRecord(connectorName, raw)}, nil
+	return meetingmap.NormalizeOne(raw, c.owner, connectorName, decodeEvent)
 }
 
 // HealthCheck confirms the stored credential still mints a token and the

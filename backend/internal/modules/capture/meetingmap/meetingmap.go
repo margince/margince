@@ -23,6 +23,9 @@
 package meetingmap
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -329,4 +332,60 @@ func eventAddresses(ev Event, owner string) []string {
 	}
 	add(owner)
 	return out
+}
+
+// Decode turns one provider's raw event bytes into the neutral Event. Each
+// calendar connector supplies its own; it is the only part of reading an event
+// that is genuinely the vendor's.
+type Decode func(raw []byte) (Event, error)
+
+// CaptureOne parses, drops, or upserts ONE raw event: the whole of what happens
+// to a single event, for whichever calendar decoded it.
+//
+// A parse failure or a deliberate skip (cancelled, solo, or inside the owner's
+// domain) is a no-op; only a real Sink write fault returns a non-nil error,
+// which stops the pull. A package function rather than a method so a pull holds
+// no shared state.
+func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connectorName string, decode Decode) error {
+	ev, err := decode(raw)
+	if err != nil {
+		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors the mail connectors)
+	}
+	m := Classify(ev, owner)
+	if _, drop := m.SkipReason(); drop {
+		return nil
+	}
+	if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
+		if errors.Is(err, connector.ErrSkip) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// NormalizeOne maps ONE raw event to its meeting activity, reporting a
+// deliberate drop as an ErrSkip-wrapped refusal. Pure — the test-guarded
+// surface a connector's Normalize composes.
+func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]connector.NormalizedRecord, error) {
+	ev, err := decode(raw)
+	if err != nil {
+		return nil, err
+	}
+	m := Classify(ev, owner)
+	if reason, drop := m.SkipReason(); drop {
+		return nil, fmt.Errorf("%s: dropping %s (%s): %w", connectorName, m.ID(), reason, connector.ErrSkip)
+	}
+	return []connector.NormalizedRecord{m.ToRecord(connectorName, raw)}, nil
+}
+
+// ParticipantsOf reads the organizer and attendees out of one stored event
+// resource — the calendar twin of mailmap.ParticipantsOf, for the replay pass
+// that recovers meetings captured before participants were recorded.
+func ParticipantsOf(raw []byte, owner string, decode Decode) ([]connector.MessageParticipant, error) {
+	ev, err := decode(raw)
+	if err != nil {
+		return nil, err
+	}
+	return Classify(ev, owner).Participants(), nil
 }

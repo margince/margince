@@ -68,14 +68,14 @@ func (a eventActor) isRoom() bool {
 	return dom == roomResourceDomain || strings.HasSuffix(dom, "."+roomResourceDomain)
 }
 
-// parseEvent reads one raw Calendar event resource and classifies it against
-// the mailbox owner (whose domain marks "internal").
-func parseEvent(raw []byte, owner string) (meetingmap.Meeting, error) {
+// decodeEvent reads one raw Calendar event resource into the neutral shape —
+// this connector's whole contribution to the calendar mapping.
+func decodeEvent(raw []byte) (meetingmap.Event, error) {
 	var ev rawEvent
 	if err := json.Unmarshal(raw, &ev); err != nil {
-		return meetingmap.Meeting{}, fmt.Errorf("gcal: parsing calendar event: %w", err)
+		return meetingmap.Event{}, fmt.Errorf("gcal: parsing calendar event: %w", err)
 	}
-	return meetingmap.Classify(decode(ev), owner), nil
+	return decode(ev), nil
 }
 
 // decode maps Google's event resource onto the neutral shape.
@@ -96,14 +96,10 @@ func decode(ev rawEvent) meetingmap.Event {
 }
 
 // ParticipantsOf reads the organizer and attendees out of one stored event
-// resource — the calendar twin of mailmap.ParticipantsOf, for the replay pass
-// that recovers meetings captured before participants were recorded.
+// resource, for the replay pass that recovers meetings captured before
+// participants were recorded.
 func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
-	m, err := parseEvent(raw, owner)
-	if err != nil {
-		return nil, err
-	}
-	return m.Participants(), nil
+	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
 // parseStart reads the event's start: a timed dateTime (RFC3339) preferred,

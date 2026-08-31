@@ -42,9 +42,9 @@ func eventJSON(t *testing.T, id, status, summary, start, organizer string, atten
 func TestParseEventMapsMeetingActivity(t *testing.T) {
 	raw := eventJSON(t, "evt-1", "confirmed", "Kickoff", "2026-07-16T10:00:00Z",
 		gcalOwner, gcalOwner, "client@acme.com")
-	m, err := parseEvent(raw, gcalOwner)
+	m, err := classifyRaw(raw, gcalOwner)
 	if err != nil {
-		t.Fatalf("parseEvent: %v", err)
+		t.Fatalf("decodeEvent: %v", err)
 	}
 	if reason, skip := m.SkipReason(); skip {
 		t.Fatalf("a meeting with an external attendee must not skip, got %q", reason)
@@ -229,8 +229,8 @@ func TestAttendeeWithoutDomainCountsAsExternal(t *testing.T) {
 }
 
 func TestParseEventRejectsMalformedJSON(t *testing.T) {
-	if _, err := parseEvent([]byte("}not json{"), gcalOwner); err == nil {
-		t.Fatal("parseEvent must reject malformed event bytes")
+	if _, err := classifyRaw([]byte("}not json{"), gcalOwner); err == nil {
+		t.Fatal("decodeEvent must reject malformed event bytes")
 	}
 }
 
@@ -240,9 +240,9 @@ const gcalOwner = "rep@myco.com"
 
 func mustParse(t *testing.T, raw []byte) meetingmap.Meeting {
 	t.Helper()
-	m, err := parseEvent(raw, gcalOwner)
+	m, err := classifyRaw(raw, gcalOwner)
 	if err != nil {
-		t.Fatalf("parseEvent: %v", err)
+		t.Fatalf("decodeEvent: %v", err)
 	}
 	return m
 }
@@ -330,4 +330,15 @@ func TestABookedRoomIsNeitherAnAddressNorAParticipant(t *testing.T) {
 	if len(rec.Participants) != 1 || rec.Participants[0].Email != "client@acme.com" {
 		t.Errorf("Participants = %+v, want the one guest", rec.Participants)
 	}
+}
+
+// classifyRaw is the connector's own path in one call — decode this vendor's
+// bytes, then apply the shared meeting rules — so a fixture asserts on the
+// result rather than on either half.
+func classifyRaw(raw []byte, owner string) (meetingmap.Meeting, error) {
+	ev, err := decodeEvent(raw)
+	if err != nil {
+		return meetingmap.Meeting{}, err
+	}
+	return meetingmap.Classify(ev, owner), nil
 }

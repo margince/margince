@@ -22,11 +22,15 @@
 package graphconn
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // AuthState is the persisted credential bundle (the opaque connector.Auth).
@@ -99,4 +103,39 @@ func ScopeStrings(scopes []principal.Scope) []string {
 		out = append(out, string(s))
 	}
 	return out
+}
+
+// Descriptor is the static metadata every read-only Microsoft 365 capture
+// connector reports: read-only (TierAutoExecute), producing activities, named
+// by the caller. Read at registration.
+func Descriptor(connectorName string) connector.Descriptor {
+	return connector.Descriptor{
+		Name:     connectorName,
+		Version:  "1",
+		Scopes:   []principal.Scope{principal.ScopeRead},
+		RiskTier: mcp.TierAutoExecute, // read-only capture
+		Produces: []datasource.EntityType{datasource.EntityActivity},
+	}
+}
+
+// ReportRotation hands a replacement credential to the sink, if there is one
+// and if Microsoft actually issued one.
+//
+// A failure is LOGGED, never returned. The old token stays valid for its own
+// lifetime, which is what makes a missed rotation cost one cycle's freshness
+// rather than the connection — where failing the sync over it would cost the
+// mail to save the bookkeeping.
+func ReportRotation(ctx context.Context, provider string, sink connector.CredentialSink, st AuthState, rotated string) {
+	if sink == nil || rotated == "" {
+		return
+	}
+	st.RefreshToken = rotated
+	next, err := Seal(provider, st)
+	if err != nil {
+		slog.WarnContext(ctx, "encoding the rotated credential", "provider", provider, "err", err)
+		return
+	}
+	if err := sink.Rotated(ctx, next); err != nil {
+		slog.WarnContext(ctx, "recording the rotated credential", "provider", provider, "err", err)
+	}
 }

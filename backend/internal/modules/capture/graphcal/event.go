@@ -58,14 +58,14 @@ type graphActor struct {
 	} `json:"emailAddress"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 }
 
-// parseEvent reads one raw Graph event resource and classifies it against the
-// calendar owner (whose domain marks "internal").
-func parseEvent(raw []byte, owner string) (meetingmap.Meeting, error) {
+// decodeEvent reads one raw Graph event resource into the neutral shape — this
+// connector's whole contribution to the calendar mapping.
+func decodeEvent(raw []byte) (meetingmap.Event, error) {
 	var ev rawEvent
 	if err := json.Unmarshal(raw, &ev); err != nil {
-		return meetingmap.Meeting{}, fmt.Errorf("graphcal: parsing calendar event: %w", err)
+		return meetingmap.Event{}, fmt.Errorf("graphcal: parsing calendar event: %w", err)
 	}
-	return meetingmap.Classify(decode(ev), owner), nil
+	return decode(ev), nil
 }
 
 // decode maps Microsoft's event resource onto the neutral shape.
@@ -89,14 +89,10 @@ func decode(ev rawEvent) meetingmap.Event {
 }
 
 // ParticipantsOf reads the organizer and attendees out of one stored event
-// resource — the calendar twin of mailmap.ParticipantsOf, for the replay pass
-// that recovers meetings captured before participants were recorded.
+// resource, for the replay pass that recovers meetings captured before
+// participants were recorded.
 func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
-	m, err := parseEvent(raw, owner)
-	if err != nil {
-		return nil, err
-	}
-	return m.Participants(), nil
+	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
 // graphLocalLayouts are the wall-clock forms Graph states a calendar time in.

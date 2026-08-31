@@ -21,15 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 const (
@@ -116,16 +112,10 @@ func AuthRequestFrom(code, redirectURI string) (connector.AuthRequest, error) {
 	return graphconn.AuthRequestFrom(connectorName, code, redirectURI)
 }
 
-// Descriptor is the connector's static metadata: name "graph", read-only
-// (TierAutoExecute), producing activities. Read at registration.
+// Descriptor is the connector's static metadata — the shared Microsoft shape,
+// named "graph".
 func (c *Connector) Descriptor() connector.Descriptor {
-	return connector.Descriptor{
-		Name:     connectorName,
-		Version:  "1",
-		Scopes:   []principal.Scope{principal.ScopeRead},
-		RiskTier: mcp.TierAutoExecute, // read-only capture
-		Produces: []datasource.EntityType{datasource.EntityActivity},
-	}
+	return graphconn.Descriptor(connectorName)
 }
 
 // Authenticate exchanges the authorization code for a refresh token, resolves
@@ -207,7 +197,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	// waiting for the pull to succeed would drop the rotation on every sync
 	// that fails for an unrelated reason — which is exactly the mailbox that
 	// most needs its credential kept fresh.
-	c.reportRotation(ctx, st, refreshed.Rotated)
+	graphconn.ReportRotation(ctx, connectorName, c.rotations, st, refreshed.Rotated)
 
 	start, err := parseCursor(cursor)
 	if err != nil {
@@ -246,29 +236,6 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		nextDelta = start // provider closed the round without a new link; keep the prior watermark
 	}
 	return marshalCursor(nextDelta, owner), nil
-}
-
-// reportRotation hands the replacement credential to the sink, if there is one
-// and if the provider actually issued one.
-//
-// A failure is LOGGED, never returned. The old token stays valid for its own
-// lifetime, which is what makes a missed rotation cost one cycle's freshness
-// rather than the mailbox — where failing the sync over it would cost the mail
-// to save the bookkeeping.
-func (c *Connector) reportRotation(ctx context.Context, st graphconn.AuthState, rotated string) {
-	if c.rotations == nil || rotated == "" {
-		return
-	}
-	st.RefreshToken = rotated
-	//nolint:gosec // G117: re-sealing the connector's own rotated refresh token into the opaque Auth bundle IS the intended path — the registry stores it encrypted in the vault, never logged or returned
-	next, err := json.Marshal(st)
-	if err != nil {
-		slog.WarnContext(ctx, "graph: encoding the rotated credential", "err", err)
-		return
-	}
-	if err := c.rotations.Rotated(ctx, next); err != nil {
-		slog.WarnContext(ctx, "graph: recording the rotated credential", "err", err)
-	}
 }
 
 // selectMessages resolves which message ids to pull and the deltaLink to
