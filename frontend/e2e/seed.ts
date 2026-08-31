@@ -1709,25 +1709,30 @@ export async function mockApi(
     if (path === "/approvals") {
       return json(page([approval]));
     }
-    // The day's surface. One staged decision, so the focus lane has something
-    // to draw and the approve path has something to answer — the same approval
-    // the queue serves, because two fixtures for one row is how a screen comes
-    // to pass a test against a decision the product never staged.
-    if (path === "/attention" && method === "GET") {
+    // The day's surface: one ranked queue. The staged decision is the same
+    // approval the approvals queue serves, because two fixtures for one row is
+    // how a screen comes to pass a test against a decision the product never
+    // staged.
+    if (path === "/worklist" && method === "GET") {
       return json({
         as_of: "2026-07-05T06:00:00Z",
-        needs_you: [
+        scope: "mine",
+        scope_options: ["mine"],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+        sources_unavailable: [],
+        queue: [
           {
             id: approval.id,
             source: "approval",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
             kind: approval.kind,
             title: approval.summary,
+            because: [{ kind: "routine" }],
             actions: ["decide"],
           },
         ],
-        planned: [],
-        done_for_you: [],
-        counts: { needs_you: 1, planned: 0 },
       });
     }
     // The decision lane reads the ONE approval it is showing, whole.
