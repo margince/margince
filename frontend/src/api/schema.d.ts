@@ -5560,6 +5560,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/senders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every decision this product made about your senders.
+         * @description What was decided about each address your mailbox brought in — the classifier's answer, and
+         *     yours where you gave one. A product that decides silently and shows nobody is one you have
+         *     to trust rather than check, and the whole posture rests on being able to check.
+         *
+         *     Your own senders and nobody else's. Whose mail a person keeps out is itself private, so
+         *     there is no id here that reaches a colleague's list and no admin view of one.
+         */
+        get: operations["listCaptureSenders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/senders/{address}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sender's email address. */
+                address: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Overrule what the classifier decided about a sender.
+         * @description The classifier judges every new sender and is sometimes wrong. This is how you correct it,
+         *     and the correction is permanent: the machine consults your answer before it asks a model
+         *     and never writes over it. A decision the next message overwrote would not be a decision.
+         *
+         *     `business` readmits a sender: they are a counterparty after all, and their mail belongs in
+         *     the CRM like anyone else's. `keep_out` ends it — no record, and the mail this sender
+         *     already brought in is destroyed.
+         *
+         *     Your own mailbox only. A sender is personal to the person who knows them: one rep's family
+         *     member is another rep's customer.
+         */
+        put: operations["setCaptureSenderDecision"];
+        post?: never;
+        /** Withdraw your decision and hand the sender back to the classifier. */
+        delete: operations["deleteCaptureSenderDecision"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/counterparty-holds": {
         parameters: {
             query?: never;
@@ -12405,6 +12463,34 @@ export interface components {
             verified: boolean;
             /** Format: date-time */
             created_at?: string;
+        };
+        CaptureSenderListResponse: {
+            data: components["schemas"]["CaptureSenderDecision"][];
+        };
+        /** @description One sender your mailbox produced, and what became of them. */
+        CaptureSenderDecision: {
+            address: string;
+            /**
+             * @description What the classifier concluded — person, role_mailbox, organization_sender, newsletter,
+             *     transactional, spam, personal, advisor — or absent when it has not answered yet.
+             */
+            kind?: string;
+            /** @description The ledger's own lifecycle for this sender. */
+            status?: string;
+            /**
+             * @description What YOU decided instead, absent when you have not.
+             * @enum {string}
+             */
+            decision?: "business" | "keep_out";
+            /**
+             * @description What your decision overruled. Present so the page can say you corrected something,
+             *     rather than showing only the answer that now stands.
+             */
+            overruled_kind?: string;
+            /** @description Whether your own decision is what governs this sender. */
+            overruled: boolean;
+            /** @description Whether a contact actually exists for this address. */
+            record_exists: boolean;
         };
         /** @description What an owner's decision about a thread reached. */
         ThreadAudienceOutcome: {
@@ -34952,6 +35038,85 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ThreadAudienceOutcome"];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCaptureSenders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's senders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureSenderListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setCaptureSenderDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sender's email address. */
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "business" | "keep_out";
+                };
+            };
+        };
+        responses: {
+            /** @description The decision as recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureSenderDecision"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteCaptureSenderDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sender's email address. */
+                address: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
