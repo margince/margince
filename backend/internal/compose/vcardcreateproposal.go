@@ -188,6 +188,14 @@ func vcardCreatePrecheck() approvals.ReleasePrecheck {
 		if strings.TrimSpace(proposal.Entry.FullName) == "" {
 			return errors.New("the card names nobody: a person needs a name before they can be created")
 		}
+		// The same question the create asks, asked while the row is still
+		// re-decidable. Without it a card carrying a number the writer refuses
+		// is approved, the create fails after the decision, and the decider
+		// learns about it from the did-not-run lane instead of from the
+		// decision they were making.
+		if err := people.ValidateVCardContacts(proposal.Entry); err != nil {
+			return fmt.Errorf("this card carries a contact detail that cannot be stored: %w", err)
+		}
 		return nil
 	}
 }
