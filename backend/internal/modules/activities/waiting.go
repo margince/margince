@@ -83,14 +83,22 @@ const waitingScanCap = 200
 // direction that costs a row rather than a customer.
 const waitingRepliesSQL = `
 	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at,
-	       COALESCE(MAX(l.person_id) FILTER (WHERE l.entity_type = 'person'),
+	       -- One row per message however many records it is filed under. There
+	       -- is no max(uuid) in Postgres, so the pick is the first by text
+	       -- order: arbitrary but STABLE, which is what a card needs — the same
+	       -- message must not point at the person on one read and the company
+	       -- on the next.
+	       COALESCE((array_agg(wl.person_id ORDER BY wl.person_id::text)
+	                 FILTER (WHERE wl.person_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
-	       COALESCE(MAX(l.organization_id) FILTER (WHERE l.entity_type = 'organization'),
+	       COALESCE((array_agg(wl.organization_id ORDER BY wl.organization_id::text)
+	                 FILTER (WHERE wl.organization_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
-	       COALESCE(MAX(l.deal_id) FILTER (WHERE l.entity_type = 'deal'),
+	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
+	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
-	  LEFT JOIN activity_link l ON l.activity_id = a.id AND (%[3]s)
+	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -153,12 +161,18 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		// The links come back only where the reader may see what they point at.
 		// One visible person must not expose a colleague's deal, which is the
 		// disclosure the timeline's own link read guards against.
-		linkVisible, err := auth.LinkTargetVisibleClause(ctx, "l", arg)
+		//
+		// Aliased `wl`, not `l`: the discover gate composed above renders its
+		// OWN correlated subquery over activity_link using `l`, and a second
+		// `l` in this query's FROM shadows it — the gate's subquery then reads
+		// our joined row instead of the activity's own links, and admits or
+		// refuses on the wrong evidence.
+		linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
 		if err != nil {
 			return err
 		}
 		if linkVisible == "" {
-			linkVisible = "TRUE"
+			linkVisible = scopeUnbounded
 		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap), args...)

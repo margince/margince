@@ -2031,6 +2031,7 @@ public.idx_activity_restricted_until CREATE INDEX idx_activity_restricted_until 
 public.idx_activity_search CREATE INDEX idx_activity_search ON public.activity USING gin (search_tsv)
 public.idx_activity_tasks CREATE INDEX idx_activity_tasks ON public.activity USING btree (assignee_id, due_at) WHERE ((kind = 'task'::text) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_thread CREATE INDEX idx_activity_thread ON public.activity USING btree (thread_key) WHERE (thread_key IS NOT NULL)
+public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_seek ON public.activity USING btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL))
 public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
 public.idx_activity_ws_time CREATE INDEX idx_activity_ws_time ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_agent_run_awaiting CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text)
