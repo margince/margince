@@ -2212,6 +2212,82 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /organizations/{id}/contacts:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Organizations]
+      operationId: listOrganizationContacts
+      summary: The account's people, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
+      description: |
+        The company People tab's list. `GET /organizations/{id}/360` carries a people
+        SECTION — a 25-row summary with a "there is more" flag — and this is the paging
+        surface behind it: the same contacts, the same ranking, over every one of them.
+
+        **Why a second read rather than a bigger section.** The section is a summary and
+        has a fixed cost; this answers a reader who is choosing somebody to contact and
+        needs search, filters and the rest of the account. A section that grew filters
+        would make every 360 pay for them.
+
+        **The default order is a recommendation, not an alphabet.** `recommended` puts
+        whoever has answered first, because they are the way in; then whoever nobody has
+        tried, because on an account where everyone has gone quiet they are the only move
+        that is not a fourth follow-up; then whoever we wrote to and heard nothing from.
+        Within a state the stronger relationship leads. This is the one ranking, shared
+        with the 360's section — a client that re-sorts is answering a different question
+        than the server did.
+
+        **Engagement is three states and they are not degrees of one thing.** `answered`
+        means they have written back inside the 90-day window. `no_reply` means we wrote
+        and heard nothing. `untried` means nobody has written to them at all. Untried and
+        no-reply look alike in a roster and call for opposite next actions, which is why
+        they are separate values rather than a boolean plus a date.
+
+        **Row scope, per contact.** The list carries the caller's person scope, so a
+        contact they may not read is absent rather than named — the same answer
+        `GET /people` gives. Reading the organization itself is mandatory.
+
+        Native system-of-record only: a workspace reading from an incumbent mirror gets
+        `422 unsupported_in_overlay_mode`, the same refusal the 360 gives.
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ContactEngagement' }
+          description: Keep only contacts in this engagement state. Omitted means every state.
+        - name: q
+          in: query
+          schema: { type: string }
+          description: |
+            Case-insensitive SUBSTRING match over the contact's name and title.
+
+            Deliberately not the accent-folding full-text search `GET /people` runs:
+            this reads the account roster already in hand rather than the person
+            corpus, so `Muller` does not find `Müller` here and does there. Stated
+            because the two endpoints answering one word differently is a thing a
+            caller has to be able to predict.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recommended, -last_interaction, -strength, name]
+            default: recommended
+          description: |
+            `recommended` is the ranking described above. The others are plain orders for a
+            reader who wants the account by one column: most recently in touch, strongest
+            relationship, or alphabetical.
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of the account's contacts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizationContactListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /organizations/{id}/dossier:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23092,6 +23168,52 @@ components:
           format: uuid
           description: 'The route-in contact. Always present in `nodes`, carrying `intro_path: true`.'
 
+    ContactEngagement:
+      type: string
+      enum: [answered, no_reply, untried]
+      description: |
+        Where one contact stands with us, over the same 90-day window the relationship
+        score uses.
+
+        `answered` — they have written back inside the window. The way in.
+        `no_reply` — we have written and had nothing back. Writing again is a decision.
+        `untried` — nobody has written to them at all. Free to approach.
+
+        Untried is deliberately not folded into no-reply: "never asked" and "asked and
+        ignored" look identical in a roster and call for opposite next actions.
+    OrganizationContact:
+      type: object
+      required: [person_id, full_name, engagement, strength]
+      properties:
+        person_id: { type: string, format: uuid }
+        full_name: { type: string }
+        title:
+          type: string
+          nullable: true
+          description: The contact's job title, where one is on file.
+        engagement: { $ref: '#/components/schemas/ContactEngagement' }
+        strength: { $ref: '#/components/schemas/RelationshipStrength' }
+        last_inbound_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            When they last wrote to us, over ALL history rather than the window. A reply
+            from two years ago is still the last thing they said, and the page prints it;
+            `engagement` is what says whether it counts as current.
+        last_outbound_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
+    OrganizationContactListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/OrganizationContact' }
+        page: { $ref: '#/components/schemas/PageInfo' }
     OrganizationGraph:
       type: object
       description: The account's one-hop connection graph, as nodes and edges the client lays out.

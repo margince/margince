@@ -3358,6 +3358,27 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	}
 }
 
+// Defines values for ContactEngagement.
+const (
+	ContactEngagementAnswered ContactEngagement = "answered"
+	ContactEngagementNoReply  ContactEngagement = "no_reply"
+	ContactEngagementUntried  ContactEngagement = "untried"
+)
+
+// Valid indicates whether the value is a known member of the ContactEngagement enum.
+func (e ContactEngagement) Valid() bool {
+	switch e {
+	case ContactEngagementAnswered:
+		return true
+	case ContactEngagementNoReply:
+		return true
+	case ContactEngagementUntried:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContextEntityRefType.
 const (
 	ContextEntityRefTypeActivity     ContextEntityRefType = "activity"
@@ -12508,6 +12529,30 @@ func (e ListOrganizationsParamsSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for ListOrganizationContactsParamsSort.
+const (
+	MinusLastInteraction ListOrganizationContactsParamsSort = "-last_interaction"
+	MinusStrength        ListOrganizationContactsParamsSort = "-strength"
+	Name                 ListOrganizationContactsParamsSort = "name"
+	Recommended          ListOrganizationContactsParamsSort = "recommended"
+)
+
+// Valid indicates whether the value is a known member of the ListOrganizationContactsParamsSort enum.
+func (e ListOrganizationContactsParamsSort) Valid() bool {
+	switch e {
+	case MinusLastInteraction:
+		return true
+	case MinusStrength:
+		return true
+	case Name:
+		return true
+	case Recommended:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListOrganizationContractsParamsStatus.
 const (
 	ListOrganizationContractsParamsStatusActive     ListOrganizationContractsParamsStatus = "active"
@@ -16482,6 +16527,17 @@ type ConsumerMailDomainKind string
 type ConsumerMailDomainListResponse struct {
 	Data []ConsumerMailDomain `json:"data"`
 }
+
+// ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
+// score uses.
+//
+// `answered` — they have written back inside the window. The way in.
+// `no_reply` — we have written and had nothing back. Writing again is a decision.
+// `untried` — nobody has written to them at all. Free to approach.
+//
+// Untried is deliberately not folded into no-reply: "never asked" and "asked and
+// ignored" look identical in a roster and call for opposite next actions.
+type ContactEngagement string
 
 // ContextEntityRef defines model for ContextEntityRef.
 type ContextEntityRef struct {
@@ -21666,6 +21722,45 @@ type OrganizationBriefSentence struct {
 // that motivates it; the "why us" half cites nothing, because our own profile is not a
 // record the reader can open and pretending otherwise would invent a citation.
 type OrganizationBriefSentenceNature string
+
+// OrganizationContact defines model for OrganizationContact.
+type OrganizationContact struct {
+	// Engagement Where one contact stands with us, over the same 90-day window the relationship
+	// score uses.
+	//
+	// `answered` — they have written back inside the window. The way in.
+	// `no_reply` — we have written and had nothing back. Writing again is a decision.
+	// `untried` — nobody has written to them at all. Free to approach.
+	//
+	// Untried is deliberately not folded into no-reply: "never asked" and "asked and
+	// ignored" look identical in a roster and call for opposite next actions.
+	Engagement ContactEngagement `json:"engagement"`
+	FullName   string            `json:"full_name"`
+
+	// LastInboundAt When they last wrote to us, over ALL history rather than the window. A reply
+	// from two years ago is still the last thing they said, and the page prints it;
+	// `engagement` is what says whether it counts as current.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastOutboundAt When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
+	LastOutboundAt *time.Time         `json:"last_outbound_at,omitempty"`
+	PersonId       openapi_types.UUID `json:"person_id"`
+
+	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
+	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
+	// interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
+	// `contributing_activity_ids` are the receipts, so the UI can show its inputs — no mystery number.
+	Strength RelationshipStrength `json:"strength"`
+
+	// Title The contact's job title, where one is on file.
+	Title *string `json:"title,omitempty"`
+}
+
+// OrganizationContactListResponse defines model for OrganizationContactListResponse.
+type OrganizationContactListResponse struct {
+	Data []OrganizationContact `json:"data"`
+	Page PageInfo              `json:"page"`
+}
 
 // OrganizationDomain defines model for OrganizationDomain.
 type OrganizationDomain struct {
@@ -29646,6 +29741,42 @@ type RegenerateOrganizationBriefParams struct {
 	// ProjectId Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`.
 	ProjectId *BriefProjectId `form:"project_id,omitempty" json:"project_id,omitempty"`
 }
+
+// ListOrganizationContactsParams defines parameters for ListOrganizationContacts.
+type ListOrganizationContactsParams struct {
+	// Status Keep only contacts in this engagement state. Omitted means every state.
+	Status *ContactEngagement `form:"status,omitempty" json:"status,omitempty"`
+
+	// Q Case-insensitive SUBSTRING match over the contact's name and title.
+	//
+	// Deliberately not the accent-folding full-text search `GET /people` runs:
+	// this reads the account roster already in hand rather than the person
+	// corpus, so `Muller` does not find `Müller` here and does there. Stated
+	// because the two endpoints answering one word differently is a thing a
+	// caller has to be able to predict.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Sort `recommended` is the ranking described above. The others are plain orders for a
+	// reader who wants the account by one column: most recently in touch, strongest
+	// relationship, or alphabetical.
+	Sort *ListOrganizationContactsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListOrganizationContactsParamsSort defines parameters for ListOrganizationContacts.
+type ListOrganizationContactsParamsSort string
 
 // ListOrganizationContractsParams defines parameters for ListOrganizationContracts.
 type ListOrganizationContractsParams struct {
@@ -40810,6 +40941,9 @@ type ServerInterface interface {
 	// Regenerate this account's brief, ignoring the cached one.
 	// (POST /organizations/{id}/brief)
 	RegenerateOrganizationBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateOrganizationBriefParams)
+	// The account's people, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
+	// (GET /organizations/{id}/contacts)
+	ListOrganizationContacts(w http.ResponseWriter, r *http.Request, id Id, params ListOrganizationContactsParams)
 	// The agreements this account holds, newest first (CONTRACT-WIRE-1).
 	// (GET /organizations/{id}/contracts)
 	ListOrganizationContracts(w http.ResponseWriter, r *http.Request, id Id, params ListOrganizationContractsParams)
@@ -43243,6 +43377,12 @@ func (_ Unimplemented) GetOrganizationBrief(w http.ResponseWriter, r *http.Reque
 // Regenerate this account's brief, ignoring the cached one.
 // (POST /organizations/{id}/brief)
 func (_ Unimplemented) RegenerateOrganizationBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateOrganizationBriefParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The account's people, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
+// (GET /organizations/{id}/contacts)
+func (_ Unimplemented) ListOrganizationContacts(w http.ResponseWriter, r *http.Request, id Id, params ListOrganizationContactsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56914,6 +57054,108 @@ func (siw *ServerInterfaceWrapper) RegenerateOrganizationBrief(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// ListOrganizationContacts operation middleware
+func (siw *ServerInterfaceWrapper) ListOrganizationContacts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListOrganizationContactsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOrganizationContacts(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOrganizationContracts operation middleware
 func (siw *ServerInterfaceWrapper) ListOrganizationContracts(w http.ResponseWriter, r *http.Request) {
 
@@ -68324,6 +68566,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/brief", wrapper.RegenerateOrganizationBrief)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/contacts", wrapper.ListOrganizationContacts)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/contracts", wrapper.ListOrganizationContracts)
