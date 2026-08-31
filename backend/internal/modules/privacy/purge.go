@@ -200,8 +200,9 @@ func StatutoryFloorShield(intervalArg, anchorArg int) string {
 	return handelsbriefShielded(intervalArg, anchorArg)
 }
 
-// StatutoryFloorArgs are the two values StatutoryFloorClause's placeholders
-// take, read from the installation's configured retention period.
-func StatutoryFloorArgs() (any, any) {
+// StatutoryFloorArgs are the two values StatutoryFloorShield's placeholders
+// take, read from the installation's configured retention period: the interval
+// itself, and whether the window is anchored to the end of the calendar year.
+func StatutoryFloorArgs() (interval string, yearEndAnchor bool) {
 	return statutoryFloorArgs()
 }

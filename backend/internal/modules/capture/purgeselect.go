@@ -37,9 +37,10 @@ type StatutoryFloor struct {
 	// Clause filters an activity aliased `a`, in the positive form: it is TRUE
 	// for a row the law still requires the installation to keep.
 	Clause func(intervalArg, anchorArg int) string
-	// Interval and Anchor are the two values Clause's placeholders take.
-	Interval any
-	Anchor   any
+	// Interval is the retention period, as a SQL interval literal; Anchor says
+	// whether the window runs from the end of the calendar year.
+	Interval string
+	Anchor   bool
 }
 
 // column renders the shield as a boolean expression and appends its two
