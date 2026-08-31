@@ -31,14 +31,25 @@ function render(ui: ReactNode, locale: "en" | "de" = "en") {
   );
 }
 
-function stub(coverage: Partial<Coverage>) {
-  const body: Coverage = {
+/** What the writes answered, and every URL the component actually sent. */
+type Writes = {
+  proposals?: unknown;
+  proposalStatus?: number;
+  calls: string[];
+};
+
+function coverageBody(coverage: Partial<Coverage>): Coverage {
+  return {
     as_of: "2026-08-31T09:00:00Z",
     summary: { contacts_total: 3, answered: 1, no_reply: 0, untried: 2 },
     deals: [],
     completeness: { committee_read: true },
     ...coverage,
   } as Coverage;
+}
+
+function stub(coverage: Partial<Coverage>, writes?: Writes) {
+  const body = coverageBody(coverage);
   vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
     const url =
       typeof input === "string"
@@ -46,11 +57,25 @@ function stub(coverage: Partial<Coverage>) {
         : input instanceof URL
           ? input.href
           : input.url;
+    writes?.calls.push(url);
     if (url.includes("/coverage")) {
       return Promise.resolve(
         new Response(JSON.stringify(body), {
           status: 200,
           headers: { "content-type": "application/json" },
+        }),
+      );
+    }
+    if (url.includes("/role-proposals")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(writes?.proposals ?? {}), {
+          status: writes?.proposalStatus ?? 200,
+          headers: {
+            "content-type":
+              (writes?.proposalStatus ?? 200) >= 400
+                ? "application/problem+json"
+                : "application/json",
+          },
         }),
       );
     }
@@ -339,4 +364,250 @@ test("marks a seat the product read, and only that one", async () => {
   expect(marks).toHaveLength(1);
   // The mark sits on the seat that was read, not the one that was typed.
   expect(marks[0]?.closest("[data-suggested='true']")).not.toBeNull();
+});
+
+/** An account with one open deal and one seat the product read. */
+function suggestedCoverage(): Partial<Coverage> {
+  return {
+    deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
+    selected_deal_id: "d-1",
+    committee: {
+      seats: [
+        {
+          person_id: "p-1",
+          full_name: "Ute Sommer",
+          role: "economic_buyer",
+          engagement: "answered",
+          relationship_id: "r-1",
+          relationship_version: 1,
+          ai_suggested: true,
+        },
+      ],
+      gaps: [],
+      unlisted_seats: 0,
+    },
+  } as Partial<Coverage>;
+}
+
+test("reads the roles from the deal, and refreshes the board after", async () => {
+  const writes: Writes = {
+    calls: [],
+    proposals: {
+      written: [
+        {
+          person_id: "p-1",
+          full_name: "Ute Sommer",
+          role: "economic_buyer",
+          evidence_snippet: "I sign off the budget for this, so send",
+          source_activity_id: "a-1",
+          confidence: 0.9,
+        },
+      ],
+      skipped: 0,
+      generated_by: "model",
+    },
+  };
+  stub(suggestedCoverage(), writes);
+  const user = userEvent.setup();
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+
+  await user.click(
+    await screen.findByRole("button", { name: /Suggest roles/i }),
+  );
+  await screen.findByText(/Seated 1 from what they wrote/);
+  // The POST goes to the DEAL; the refresh reads the ACCOUNT. A component that
+  // refreshed the deal instead would show the board as it was before the write.
+  expect(
+    writes.calls.some((url) => url.includes("/deals/d-1/role-proposals")),
+  ).toBe(true);
+  expect(
+    writes.calls.filter((url) => url.includes("/organizations/o-1/coverage"))
+      .length,
+  ).toBeGreaterThan(1);
+});
+
+// The two empty answers are DIFFERENT facts. "Nothing was said" sends a reader
+// to the correspondence; "everything was refused" tells them the product looked
+// and would not stand behind what it found.
+test("tells nothing-proposed apart from everything-refused", async () => {
+  stub(suggestedCoverage(), {
+    calls: [],
+    proposals: { written: [], skipped: 0, generated_by: "model" },
+  });
+  const user = userEvent.setup();
+  const first = render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: /Suggest roles/i }),
+  );
+  await screen.findByText(/Nothing in their messages says who buys/);
+  first.unmount();
+
+  stub(suggestedCoverage(), {
+    calls: [],
+    proposals: { written: [], skipped: 3, generated_by: "model" },
+  });
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: /Suggest roles/i }),
+  );
+  await screen.findByText(/3 reading\(s\) were dropped/);
+});
+
+// A role is recorded on a deal. Hidden, the button teaches nothing; disabled
+// with the reason, it says what the account is missing.
+test("says why it cannot read roles when the account has no open deal", async () => {
+  stub({ committee: { seats: [], gaps: ["champion"], unlisted_seats: 0 } });
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  const button = await screen.findByRole("button", { name: /Suggest roles/i });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  expect(await screen.findByText(/Roles are recorded on a deal/)).toBeTruthy();
+});
+
+// Confirming writes the SAME role back. That looks like a no-op and is not:
+// the store reassigns captured_by to the editing human, which is what turns
+// the machine's reading into a person's answer.
+test("confirming patches the seat's own row with the role unchanged", async () => {
+  const writes: Writes = { calls: [] };
+  stub(suggestedCoverage(), writes);
+  const user = userEvent.setup();
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
+  await waitFor(() =>
+    expect(writes.calls.some((url) => url.includes("/relationships/r-1"))).toBe(
+      true,
+    ),
+  );
+});
+
+// The verbs belong to an UNCONFIRMED seat only. A seat a colleague typed is
+// already theirs and nothing about it is waiting for an answer, so offering to
+// confirm it would be agreeing with them on their behalf.
+test("offers no verbs on a seat a person typed", async () => {
+  stub({
+    deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
+    selected_deal_id: "d-1",
+    committee: {
+      seats: [
+        {
+          person_id: "p-2",
+          full_name: "Jan Roth",
+          role: "champion",
+          engagement: "answered",
+          relationship_id: "r-2",
+          relationship_version: 1,
+        },
+      ],
+      gaps: [],
+      unlisted_seats: 0,
+    },
+  } as Partial<Coverage>);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  await screen.findByText("Jan Roth");
+  expect(screen.queryByRole("button", { name: /^Confirm$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Change role/i })).toBeNull();
+});
+
+// A seat with no version cannot be patched conditionally, and an unconditional
+// confirm would overwrite whatever a colleague changed. The verbs are not
+// offered rather than offered and silently dropped: a button that reports
+// nothing and does nothing is worse than one that is not there.
+test("offers no verbs when the seat carries no version to pin the write", async () => {
+  stub({
+    deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
+    selected_deal_id: "d-1",
+    committee: {
+      seats: [
+        {
+          person_id: "p-1",
+          full_name: "Ute Sommer",
+          role: "economic_buyer",
+          engagement: "answered",
+          relationship_id: "r-1",
+          ai_suggested: true,
+        },
+      ],
+      gaps: [],
+      unlisted_seats: 0,
+    },
+  } as Partial<Coverage>);
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  await screen.findByText("Ute Sommer");
+  expect(screen.queryByRole("button", { name: /^Confirm$/ })).toBeNull();
+});
+
+// A concurrent edit must say so in words a reader can act on. The sentinel's
+// own text is "version skew", which tells them nothing about what to do.
+test("says a concurrent edit happened rather than printing the sentinel", async () => {
+  const writes: Writes = { calls: [] };
+  stub(suggestedCoverage(), writes);
+  vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    if (url.includes("/relationships/")) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ code: "version_skew", detail: "version skew" }),
+          {
+            status: 409,
+            headers: { "content-type": "application/problem+json" },
+          },
+        ),
+      );
+    }
+    return Promise.resolve(
+      new Response(JSON.stringify(coverageBody(suggestedCoverage())), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  });
+  const user = userEvent.setup();
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
+  await screen.findByText(/changed since you opened it/);
+  expect(screen.queryByText("version skew")).toBeNull();
+});
+
+// An installation with no model lane answers 501, and the handler's own words
+// name a Go function. A reader is owed a sentence about the product.
+test("says the reading needs a model rather than naming a handler", async () => {
+  stub(suggestedCoverage(), {
+    calls: [],
+    proposalStatus: 501,
+    proposals: {
+      code: "not_implemented",
+      detail:
+        "operation ProposeDealRoles (no model path configured) is specified but not yet implemented",
+    },
+  });
+  const user = userEvent.setup();
+  render(
+    <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: /Suggest roles/i }),
+  );
+  await screen.findByText(/Reading roles needs a model/);
+  expect(screen.queryByText(/ProposeDealRoles/)).toBeNull();
 });

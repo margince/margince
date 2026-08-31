@@ -140,3 +140,62 @@ export const SeatsHidden: Story = {
     }),
   ),
 };
+
+/**
+ * A seat the product read out of the contact's own messages, beside one a
+ * colleague typed.
+ *
+ * The whole point of the treatment is the CONTRAST: dashed indigo says a
+ * machine decided this and nobody has confirmed it, and the seat next to it
+ * carries none of the marking because a person already answered. Only the read
+ * one offers Confirm and Change role — agreeing with a colleague on their
+ * behalf is not a verb this page has.
+ */
+export const SeatReadFromMessages: Story = {
+  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  render: story(
+    coverage({
+      deals: [{ deal_id: "d-1", name: "Retrofit 2026" }],
+      selected_deal_id: "d-1",
+      committee: {
+        seats: [
+          {
+            person_id: "p-1",
+            full_name: "Ute Sommer",
+            role: "economic_buyer",
+            engagement: "answered",
+            relationship_id: "r-1",
+            relationship_version: 1,
+            ai_suggested: true,
+          },
+          {
+            person_id: "p-2",
+            full_name: "Jan Roth",
+            role: "champion",
+            engagement: "no_reply",
+            relationship_id: "r-2",
+            relationship_version: 1,
+          },
+        ],
+        gaps: [],
+        unlisted_seats: 0,
+      },
+    }),
+  ),
+};
+
+/**
+ * No open deal, so the reading has nowhere to record a role.
+ *
+ * The button stays visible and says why. Hidden, it would teach a reader
+ * nothing about what the account is missing.
+ */
+export const NoDealToReadRolesOnto: Story = {
+  args: { orgId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  render: story(
+    coverage({
+      deals: [],
+      committee: { seats: [], gaps: [], unlisted_seats: 0 },
+    }),
+  ),
+};
