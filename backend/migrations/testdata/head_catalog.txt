@@ -1053,6 +1053,21 @@ public.capture_pending_counterparty.resolved_at timestamp with time zone gen=- d
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
+public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_sender_override.address text NOT NULL gen=- def=-
+public.capture_sender_override.capture_sender_override_decision_check CHECK ((decision = ANY (ARRAY['business'::text, 'keep_out'::text])))
+public.capture_sender_override.capture_sender_override_pkey PRIMARY KEY (id)
+public.capture_sender_override.capture_sender_override_user_address_key UNIQUE (user_id, address)
+public.capture_sender_override.capture_sender_override_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_sender_override.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_sender_override.decision text NOT NULL gen=- def=-
+public.capture_sender_override.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_sender_override.overruled_kind text gen=- def=-
+public.capture_sender_override.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_sender_override.user_id uuid NOT NULL gen=- def=-
+public.capture_sender_override_pkey CREATE UNIQUE INDEX capture_sender_override_pkey ON public.capture_sender_override USING btree (id)
+public.capture_sender_override_user_address_key CREATE UNIQUE INDEX capture_sender_override_user_address_key ON public.capture_sender_override USING btree (user_id, address)
+public.capture_sender_override_user_idx CREATE INDEX capture_sender_override_user_idx ON public.capture_sender_override USING btree (user_id, created_at DESC)
 public.capture_sync_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sync_state.backfill_active boolean NOT NULL gen=- def=false
 public.capture_sync_state.capture_sync_state_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
