@@ -43,12 +43,18 @@ func (r *vatCheckRecorder) enqueue() VatCheckEnqueue {
 	}
 }
 
+// statedNumber is the one VAT ID this suite consults about. A real, publicly
+// valid German number, so a reader checking the fixture against the register
+// finds what the tests assume.
+const statedNumber = "DE811907980"
+
 // orgStatingVat seeds a company whose VAT number a person stated — the real
 // writer, so the profile-field row is the one production makes. Both id shapes
 // come back because the store takes one and the handler takes the other.
 func orgStatingVat(
-	ctx context.Context, t *testing.T, e *dedupeEnv, number string,
+	ctx context.Context, t *testing.T, e *dedupeEnv,
 ) (ids.OrganizationID, crmcontracts.Id) {
+	number := statedNumber
 	t.Helper()
 	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
 		DisplayName: "Belegpflicht GmbH", Source: "manual",
@@ -72,7 +78,7 @@ func TestAPersonCanAskTheRegisterAgainAboutAnUnchangedNumber(t *testing.T) {
 	ctx := e.as()
 	var recorder vatCheckRecorder
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
-	orgID, _ := orgStatingVat(ctx, t, e, "DE811907980")
+	orgID, _ := orgStatingVat(ctx, t, e)
 
 	// The number is already answered, so the automatic rule would decline.
 	if err := e.store.RecordVatCheck(ctx, VatCheck{
@@ -108,7 +114,7 @@ func TestAskingAgainWithinTheCooldownIsRefused(t *testing.T) {
 	ctx := e.as()
 	var recorder vatCheckRecorder
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
-	orgID, _ := orgStatingVat(ctx, t, e, "DE811907980")
+	orgID, _ := orgStatingVat(ctx, t, e)
 
 	// Consulted now, by the database's own clock — the one the cooldown is
 	// measured against.
@@ -167,7 +173,7 @@ func TestAskingOnADeploymentThatConsultsNoRegisterIsRefused(t *testing.T) {
 	ctx := e.as()
 	var recorder vatCheckRecorder
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
-	orgID, _ := orgStatingVat(ctx, t, e, "DE811907980")
+	orgID, _ := orgStatingVat(ctx, t, e)
 
 	// The deployment loses its register between the write and the request.
 	e.store.WithVatCheckEnqueue(nil)
@@ -184,7 +190,7 @@ func TestAskingTakesTheAuthorityToChangeTheRecord(t *testing.T) {
 	e := setupDedupe(t)
 	var recorder vatCheckRecorder
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
-	orgID, _ := orgStatingVat(e.as(), t, e, "DE811907980")
+	orgID, _ := orgStatingVat(e.as(), t, e)
 
 	if err := e.store.RequestVatCheck(e.asOrgReader(), orgID); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("got %v, want permission denied", err)
@@ -217,7 +223,7 @@ func TestRequestOrganizationVatCheckHandler(t *testing.T) {
 	ctx := e.as()
 	var recorder vatCheckRecorder
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
-	orgID, wireID := orgStatingVat(ctx, t, e, "DE811907980")
+	orgID, wireID := orgStatingVat(ctx, t, e)
 	h := Handlers{store: e.store}
 	req := httptest.NewRequest(http.MethodPost, "/organizations/x/vat-check", nil).WithContext(ctx)
 

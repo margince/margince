@@ -94,7 +94,7 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	t.Helper()
 	err := v.worker.Work(context.Background(), &river.Job[CheckOrganizationVatArgs]{
 		Args: CheckOrganizationVatArgs{
-			Workspace:      v.Env.WS,
+			Workspace:      v.WS,
 			OrganizationID: v.orgID.UUID,
 			Requested:      requested,
 		},
@@ -137,8 +137,8 @@ func TestAPersonsRequestReAsksAnAnsweredNumber(t *testing.T) {
 // the flag would send the register an empty string.
 func TestAPersonsRequestStillAsksNothingWhenNoNumberIsStated(t *testing.T) {
 	v := setupVatRecheck(t)
-	ctx := v.Env.Admin()
-	if _, err := v.Env.Pool.Exec(ctx,
+	ctx := v.Admin()
+	if _, err := v.Pool.Exec(ctx,
 		`DELETE FROM organization_profile_field WHERE organization_id = $1 AND field = 'register_vat'`,
 		v.orgID.UUID); err != nil {
 		t.Fatalf("clear the stated number: %v", err)
