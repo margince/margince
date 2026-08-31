@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,10 +36,18 @@ const enrichCapturedBy = "agent:enrich"
 
 // SignatureField is one gated, evidence-carrying extraction.
 type SignatureField struct {
-	Name       string // title | phone | role | linkedin | org_name
+	Name       string // title | phone | role | linkedin | org_name | address | website
 	Value      string
 	Evidence   string // verbatim snippet — the caller's gate already verified it
 	Confidence float64
+	// CorrectedAt is when a human last corrected THIS field, when one has. It
+	// is the one thing a newer statement does not outrank: somebody read the
+	// machine's answer and ruled on it, and the contract promises them it will
+	// not be silently re-inferred. Nil where nobody has ruled.
+	//
+	// Supplied by the caller because the ruling lives in another module's
+	// ledger, which this one may not read.
+	CorrectedAt *time.Time
 }
 
 // SignatureApplyResult counts what one apply did — honest numbers for the
@@ -114,13 +123,21 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// narrowing commit in that gap and the fields land anyway — and these
 		// fields are the ones no later correction reaches, because the audience
 		// rescope does not retract them.
+		// occurred_at rides the same read: it is WHEN the person stated these
+		// values, and the writer compares it against what the record already
+		// holds. Taken from the message and not the clock, because this pass
+		// may run days after the mail arrived and re-delivery is ordinary — a
+		// processing time would let a replayed old signature outrank a recent
+		// one.
 		var sourceLimited bool
+		var observedAt time.Time
 		if err := tx.QueryRow(ctx, `
 			SELECT audience <> 'workspace'
 			       OR restricted_at IS NOT NULL
-			       OR archived_at IS NOT NULL
+			       OR archived_at IS NOT NULL,
+			       occurred_at
 			  FROM activity WHERE id = $1 FOR SHARE`,
-			sourceActivity).Scan(&sourceLimited); err != nil {
+			sourceActivity).Scan(&sourceLimited, &observedAt); err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("people: reading the signature's source message: %w", err)
 			}
@@ -145,7 +162,7 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// histories.
 		before, after := map[string]any{}, map[string]any{}
 		for _, f := range fields {
-			verdict, err := s.applySignatureField(ctx, tx, personID, sourceRef, f)
+			verdict, err := s.applySignatureField(ctx, tx, personID, sourceRef, observedAt, f)
 			if err != nil {
 				return err
 			}
@@ -162,9 +179,10 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 			// the bought-claim writers make, for the same reason and the same
 			// closed vocabulary of field names.
 			//
-			// Fill-only-empty: the evidence row lands on ON CONFLICT DO NOTHING
-			// and each column write carries its own emptiness predicate, so a
-			// field this pass filled is one that held nothing.
+			// nil rather than the replaced value, even though this pass can now
+			// replace one: the before image is subject to the same refusal as
+			// the after image. What was there is recoverable from the field
+			// row's own undo buffer, which erasure clears with the record.
 			before[f.Name] = nil
 			after[f.Name] = signatureFieldFilled
 		}
@@ -242,82 +260,40 @@ type signatureVerdict struct {
 // field moved and does not carry what it moved to.
 const signatureFieldFilled = "filled"
 
-func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef string, f SignatureField) (signatureVerdict, error) {
+func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef string, observedAt time.Time, f SignatureField) (signatureVerdict, error) {
 	value, readable := readSignatureValue(f)
 	if !readable {
 		return signatureVerdict{}, nil
 	}
 
-	// A machine fill: the signature claims a field nobody has answered and
-	// never replaces one — writePersonProfileField carries that rule.
-	landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
-		Field: f.Name, Value: value, EvidenceSnippet: f.Evidence, SourceRef: sourceRef,
-		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
-	}, claimUnanswered)
-	if err != nil || !landed {
-		return signatureVerdict{}, err
-	}
-
-	verdict := signatureVerdict{applied: true, value: value}
-	switch f.Name {
-	case "title":
-		// Fill-only-empty: the NULL predicate is the CAS — an occupied
-		// title (human or otherwise) is never touched (GATE-AI-4).
-		//
-		// archived_at, for the same reason writePersonProfileField carries it:
-		// this column is the DISPLAY half of the evidence row above, and the
-		// two must refuse together. An erasure that commits between them would
-		// otherwise leave the evidence refused and the erased person's title
-		// written back — the fill split across two statements, and only one of
-		// them looking.
-		tag, err := tx.Exec(ctx, `
-			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, personID, value)
-		if err != nil {
-			return signatureVerdict{}, fmt.Errorf("people: signature title fill: %w", err)
+	// The person's own dated statement, applied by the writer both this pass
+	// and the card import share. A phone goes to the number list, because a
+	// contact has several and a signature names one of them; everything else is
+	// a single answer that the newer statement replaces.
+	if f.Name == "phone" {
+		outcome, err := applyObservedPhone(ctx, tx, personID, observedPhone{
+			Phone: value, PhoneType: "work", SourceRef: sourceRef,
+			Source: enrichSource, CapturedBy: enrichCapturedBy, ObservedAt: observedAt,
+		})
+		if err != nil || outcome != observedApplied {
+			return signatureVerdict{}, err
 		}
-		if tag.RowsAffected() == 0 {
-			// A concurrent writer filled the title after the candidate
-			// query: the evidence row must not claim a value that never
-			// applied — withdraw it and count the field skipped.
-			return signatureVerdict{}, revokeSignatureEvidence(ctx, tx, personID, f.Name)
-		}
-	case "phone":
-		// A first phone only — a person with any live phone row keeps it.
-		//
-		// archived_at on the PERSON as well, and this arm needs it said rather
-		// than inferred, because its own emptiness predicate argues the wrong
-		// way round: Art. 17 erasure DELETEs person_phone outright, so an
-		// erased subject is exactly what "no live phone row" answers true for.
-		//
-		// Not reachable that way today — the evidence row above refuses first
-		// and this returns before here. But that safety is a row lock
-		// writePersonProfileField takes for a person COLUMN's sake, which its
-		// own doc says in those words, and a child-table row is not one. The
-		// predicate is what stops this arm's correctness depending on a
-		// sentence written about something else.
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by)
-			SELECT $1, $2, 'work', true, 0, $3, $4
-			WHERE NOT EXISTS (
-				SELECT 1 FROM person_phone WHERE person_id = $1 AND archived_at IS NULL)
-			  AND EXISTS (
-				SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)`,
-			personID, value, enrichSource, enrichCapturedBy)
-		if err != nil {
-			return signatureVerdict{}, fmt.Errorf("people: signature phone fill: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return signatureVerdict{}, revokeSignatureEvidence(ctx, tx, personID, f.Name)
+	} else {
+		outcome, err := applyObservedField(ctx, tx, personID, observedField{
+			Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,
+			Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
+			ObservedAt: observedAt, CorrectionAt: f.CorrectedAt,
+		})
+		if err != nil || outcome != observedApplied {
+			return signatureVerdict{}, err
 		}
 	}
-	// role / linkedin / org_name live only in the sidecar: no record column
-	// to fill, and org_name in particular must never touch an organization.
 
 	if err := storekit.StampFields(ctx, tx, entityPerson, personID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: f.Name}}); err != nil {
 		return signatureVerdict{}, err
 	}
-	return verdict, nil
+	return signatureVerdict{applied: true, value: value}, nil
 }
 
 // revokeSignatureEvidence withdraws the just-inserted evidence row when
@@ -379,9 +355,8 @@ func (s *Store) MarkSignatureRead(ctx context.Context, personID ids.PersonID, ac
 	return nil
 }
 
-// SignatureCandidate is one person the enrich pass should look at: a
-// connector-created person with an unanswered signature field, and the mail to
-// read the signature from.
+// SignatureCandidate is one person the enrich pass should look at, and the
+// mail to read their signature from.
 type SignatureCandidate struct {
 	PersonID   ids.PersonID
 	FullName   string
@@ -390,22 +365,21 @@ type SignatureCandidate struct {
 	Body       string // the latest inbound email's stored body
 }
 
-// SignatureCandidates lists connector-created people whose signature still
-// has something to say, each with their most recent inbound linked email —
-// the §2.9 candidate set, bounded for one pass.
+// SignatureCandidates lists the people whose latest inbound mail this pass has
+// not read yet, each with that message — bounded for one pass.
 //
-// "Something to say" is per FIELD, not per person (the PO-F-2a amendment): a
-// person is a candidate while they lack a title AND a phone, OR while they
-// lack the `org_name` evidence the name-promotion rule reads. The predicate
-// used to retire a person the moment ANY profile-field row existed, so one
-// accepted title permanently silenced the company name their signature also
-// states.
+// Candidacy is arrival, not absence. A person whose title and phone are already
+// on the record is still a candidate when new mail comes in, because a contact
+// who changed jobs or numbers says so in a signature and the record is stale
+// until somebody reads it. This is what the fill-only-empty predicate that used
+// to sit here could not express: it asked "is anything missing", which stops
+// being true after the first answer and never becomes true again.
 //
 // Asking is bounded by person_signature_enrich_state: the pass watermarks the
-// mail it read, and a person returns as a candidate only when mail newer than
-// the watermark arrives. Without that a person whose signature simply never
-// states a company would be re-read every night forever, paying a model call
-// each time. The comparison is on occurred_at, not on the activity id — an
+// mail it read, and a person returns only when mail NEWER than the watermark
+// arrives. That is what keeps the cost proportional to correspondence rather
+// than to the size of the address book — one model call per person per new
+// message, however often the pass runs. The comparison is on occurred_at, not on the activity id — an
 // identity check would reopen the person the moment the mail it names is
 // archived, and the query would then pay to re-read an OLDER signature.
 // defaultEnabled is the workspace answer for a mailbox that never made its own
@@ -439,15 +413,14 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 				LIMIT 1
 			) a ON true
 			LEFT JOIN person_signature_enrich_state st ON st.person_id = p.id
-			WHERE p.captured_by LIKE 'connector:%' AND p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND (
-				(p.title IS NULL
-				  AND NOT EXISTS (SELECT 1 FROM person_phone ph WHERE ph.person_id = p.id AND ph.archived_at IS NULL)
-				  AND NOT EXISTS (SELECT 1 FROM person_profile_field f
-				                  WHERE f.person_id = p.id AND f.field IN ('title', 'phone')))
-				OR NOT EXISTS (SELECT 1 FROM person_profile_field f
-				               WHERE f.person_id = p.id AND f.field = 'org_name')
-			  )
+			-- Anyone the workspace still corresponds with, and no longer only
+			-- the people whose details are missing. A contact changes jobs and
+			-- numbers, so a filled field is a question this pass must keep
+			-- asking; the emptiness test that used to live here would answer it
+			-- once and never again. The watermark below is what keeps that
+			-- affordable: it is arrival of NEW mail, not absence of an answer,
+			-- that makes somebody a candidate.
+			WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL
 			  AND (st.last_activity_at IS NULL OR a.occurred_at > st.last_activity_at)
 			  -- The mailbox that captured THIS mail decides whether it may be
 			  -- read for a signature, and the test is here rather than in the
@@ -467,7 +440,12 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 				 WHERE ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
 				   AND cc.archived_at IS NULL
 			  ), $2)
-			ORDER BY p.created_at
+			-- Freshest mail first. The pass is capped, and it now runs within
+			-- minutes of a message arriving, so ordering by person age would
+			-- put a contact who just wrote behind every older one still waiting
+			-- — the person whose details a rep is about to look at is the one
+			-- who would wait longest.
+			ORDER BY a.occurred_at DESC
 			LIMIT $1`, limit, defaultEnabled)
 		if err != nil {
 			return err

@@ -8217,16 +8217,20 @@ func (e PersonPhonePhoneType) Valid() bool {
 
 // Defines values for PersonProfileFieldField.
 const (
+	PersonProfileFieldFieldAddress  PersonProfileFieldField = "address"
 	PersonProfileFieldFieldLinkedin PersonProfileFieldField = "linkedin"
 	PersonProfileFieldFieldOrgName  PersonProfileFieldField = "org_name"
 	PersonProfileFieldFieldPhone    PersonProfileFieldField = "phone"
 	PersonProfileFieldFieldRole     PersonProfileFieldField = "role"
 	PersonProfileFieldFieldTitle    PersonProfileFieldField = "title"
+	PersonProfileFieldFieldWebsite  PersonProfileFieldField = "website"
 )
 
 // Valid indicates whether the value is a known member of the PersonProfileFieldField enum.
 func (e PersonProfileFieldField) Valid() bool {
 	switch e {
+	case PersonProfileFieldFieldAddress:
+		return true
 	case PersonProfileFieldFieldLinkedin:
 		return true
 	case PersonProfileFieldFieldOrgName:
@@ -8236,6 +8240,8 @@ func (e PersonProfileFieldField) Valid() bool {
 	case PersonProfileFieldFieldRole:
 		return true
 	case PersonProfileFieldFieldTitle:
+		return true
+	case PersonProfileFieldFieldWebsite:
 		return true
 	default:
 		return false
@@ -9309,16 +9315,20 @@ func (e SaveMyLocaleRequestLocale) Valid() bool {
 
 // Defines values for SavePersonResearchClaimField.
 const (
+	SavePersonResearchClaimFieldAddress  SavePersonResearchClaimField = "address"
 	SavePersonResearchClaimFieldLinkedin SavePersonResearchClaimField = "linkedin"
 	SavePersonResearchClaimFieldOrgName  SavePersonResearchClaimField = "org_name"
 	SavePersonResearchClaimFieldPhone    SavePersonResearchClaimField = "phone"
 	SavePersonResearchClaimFieldRole     SavePersonResearchClaimField = "role"
 	SavePersonResearchClaimFieldTitle    SavePersonResearchClaimField = "title"
+	SavePersonResearchClaimFieldWebsite  SavePersonResearchClaimField = "website"
 )
 
 // Valid indicates whether the value is a known member of the SavePersonResearchClaimField enum.
 func (e SavePersonResearchClaimField) Valid() bool {
 	switch e {
+	case SavePersonResearchClaimFieldAddress:
+		return true
 	case SavePersonResearchClaimFieldLinkedin:
 		return true
 	case SavePersonResearchClaimFieldOrgName:
@@ -9328,6 +9338,8 @@ func (e SavePersonResearchClaimField) Valid() bool {
 	case SavePersonResearchClaimFieldRole:
 		return true
 	case SavePersonResearchClaimFieldTitle:
+		return true
+	case SavePersonResearchClaimFieldWebsite:
 		return true
 	default:
 		return false
@@ -11028,16 +11040,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	Text       VoiceCorpusPreviewRequestFormat = "text"
-	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
+	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
+	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case Text:
+	case VoiceCorpusPreviewRequestFormatText:
 		return true
-	case Transcript:
+	case VoiceCorpusPreviewRequestFormatTranscript:
 		return true
 	default:
 		return false
@@ -24318,14 +24330,29 @@ type PersonProfileField struct {
 	EvidenceSnippet string                  `json:"evidence_snippet"`
 	Field           PersonProfileFieldField `json:"field"`
 
+	// ObservedAt When the SOURCE stated this value — the mail's own date, not when the pass read
+	// it. Recency is judged on this, so a re-delivered old message cannot outrank a
+	// recent one.
+	ObservedAt *time.Time `json:"observed_at,omitempty"`
+
 	// Source The channel that produced it, e.g. `capture_enrich` or `site_read`.
 	Source string `json:"source"`
 
 	// SourceRef What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page.
 	SourceRef *string `json:"source_ref,omitempty"`
-	Value     string  `json:"value"`
 
-	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
+	// SupersededObservedAt When the replaced value was itself stated, so a reader can see which of the two is older.
+	SupersededObservedAt *time.Time `json:"superseded_observed_at,omitempty"`
+
+	// SupersededValue What this field held before a newer statement replaced it. The contact's own
+	// signature or business card, carrying a later date than the value on record,
+	// replaces what is older than it — including a value a colleague typed, because a
+	// number stated last week outranks one typed in March. Present only where
+	// something was actually replaced, and it is what the undo control restores.
+	SupersededValue *string `json:"superseded_value,omitempty"`
+	Value           string  `json:"value"`
+
+	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
 	Verdict *PersonProfileFieldVerdict `json:"verdict,omitempty"`
 
 	// VerdictNote Why, in the human's own words, when they gave a reason.
@@ -24335,7 +24362,7 @@ type PersonProfileField struct {
 // PersonProfileFieldField defines model for PersonProfileField.Field.
 type PersonProfileFieldField string
 
-// PersonProfileFieldVerdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
+// PersonProfileFieldVerdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
 type PersonProfileFieldVerdict string
 
 // PersonProviderEmail defines model for PersonProviderEmail.
