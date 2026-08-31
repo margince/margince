@@ -44,7 +44,10 @@ func addProviderRunJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfi
 	addDeclaredWorker[ProviderRunSubmitArgs](reg, &providerRunSubmitWorker{pool: pool, cfg: cfg.ProviderRuns})
 	addDeclaredWorker[ProviderRunPollSweepArgs](reg, &providerRunPollSweepWorker{pool: pool})
 	addDeclaredWorker[ProviderRunPollArgs](reg, &providerRunPollWorker{pool: pool, cfg: cfg.ProviderRuns})
-	return periodicFor(cfg, ProviderRunPollSweepArgs{})
+	addDeclaredWorker[ProviderLookupSweepArgs](reg, &providerLookupSweepWorker{pool: pool})
+	addDeclaredWorker[ProviderLookupArgs](reg, &providerLookupWorker{pool: pool, cfg: cfg.ProviderRuns})
+	return append(periodicFor(cfg, ProviderRunPollSweepArgs{}),
+		periodicFor(cfg, ProviderLookupSweepArgs{})...)
 }
 
 // providerRunStore builds the store bound to ONE workspace's DB, the way

@@ -71,6 +71,9 @@ type Store struct {
 	// compose binds it; every hand-off then waits on the sweep and exhausts
 	// into claims_unwritten, the honest record for a build with no domain.
 	writeClaims WriteClaimsFunc
+	// applyStoredClaims folds a purchase already in the domain's table onto the
+	// record, for runs that completed before a record could hold them.
+	applyStoredClaims ApplyStoredClaimsFunc
 }
 
 // DeleteClaimsFunc is the owning domain's delete of everything one provider
@@ -129,7 +132,11 @@ type Connection struct {
 	Budgets           []PoolBudget
 	// Spend is what THIS installation consumed, per month per pool — our
 	// ledger, never the provider's balance beside it (PI-FORM-3).
-	Spend          []MonthlySpend
+	Spend []MonthlySpend
+	// Backlog is how many contacts still owe a lookup, and whether the sweep
+	// is moving. Present only for a connected provider: a card offering to
+	// connect has no backlog to report.
+	Backlog        *BacklogCount
 	Version        int64
 	SafeStatusCode string
 	ConnectedAt    *time.Time
@@ -178,6 +185,14 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 				}
 				c.Spend = spend
 				c.Catalog = catalogOf(d)
+				// Read inside this transaction, beside the spend, so the card
+				// shows a balance, a history and a backlog from one moment
+				// rather than three.
+				backlog, err := s.backlogInTx(ctx, tx, name)
+				if err != nil {
+					return err
+				}
+				c.Backlog = &backlog
 				out = append(out, c)
 				continue
 			}

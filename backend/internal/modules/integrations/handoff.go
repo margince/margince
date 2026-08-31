@@ -66,6 +66,25 @@ func (s *Store) retrievedAt(ctx context.Context, tx pgx.Tx, runID string) (time.
 // needs a pgx.Tx and that package is stdlib-only.
 type WriteClaimsFunc func(ctx context.Context, tx pgx.Tx, w ClaimWrite) error
 
+// ApplyStoredClaimsFunc folds a purchase that is ALREADY stored onto the
+// subject's record. The same domain work the claim writer does at hand-off,
+// reached by run id instead of by a payload, because the sweep's runs completed
+// before this build could hold their values and their claims are already in the
+// domain's own table.
+//
+// Its own callback rather than a second use of WriteClaimsFunc: that one takes
+// the claims it is about to store, and a sweep has none to hand over. Passing an
+// empty slice would make the writer's contract depend on which caller it was.
+type ApplyStoredClaimsFunc func(ctx context.Context, tx pgx.Tx, personID, runID string) error
+
+// WithStoredClaimApplier binds it. Without it the sweep applies nothing and
+// says so by leaving applied_at NULL, which is the honest record for a build
+// with no domain bound.
+func (s *Store) WithStoredClaimApplier(fn ApplyStoredClaimsFunc) *Store {
+	s.applyStoredClaims = fn
+	return s
+}
+
 // WithClaimWriter binds the owning domain's claim write. Compose supplies it;
 // without it every hand-off attempt fails and the ladder exhausts into
 // claims_unwritten — the honest record for a build with no domain bound.
