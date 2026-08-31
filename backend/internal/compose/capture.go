@@ -386,6 +386,17 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		if c.canSync() {
 			s.envClientID = c.ClientID
 		}
+		// Published BEFORE the vault gate below, and for the same reason the
+		// sign-in URI is published before its own completeness gate: an operator
+		// registers both URLs while CREATING the OAuth client, which is before
+		// either flow can possibly work. The URL is a property of this
+		// deployment's origins rather than of anything the operator has yet
+		// configured, and it is not derivable from the sign-in one — that rides a
+		// different base on a split deployment.
+		if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, googleProviderKey); uri != "" {
+			s.redirectURIs = append(s.redirectURIs,
+				crmcontracts.GoogleAppRedirectUri{Purpose: crmcontracts.MailboxConnect, Url: uri})
+		}
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the
 		// surface its declared 501 instead. (WithKeyvault must precede this.)
@@ -427,16 +438,6 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			// how the stored app became unreachable while every test still passed.
 			googleCredentials: s.googleAppResolver,
 		}
-		// The Google-app screen tells an operator which callback URLs to register,
-		// and this is the one that serves mailbox consent. Taken from the handler
-		// that BUILDS it, so the URL displayed and the URL sent are the same
-		// bytes — they are not derivable from the sign-in one, which rides a
-		// different base on a split deployment.
-		s.redirectURIs = append(s.redirectURIs,
-			crmcontracts.GoogleAppRedirectUri{
-				Purpose: crmcontracts.MailboxConnect,
-				Url:     s.callbackURL(googleProviderKey),
-			})
 		// The send pre-flight reads the registry the connect flow just wrote to
 		// — the same one, not a second construction: a mailbox the user connects
 		// here must be the mailbox the check asks about. WithKeyvault already

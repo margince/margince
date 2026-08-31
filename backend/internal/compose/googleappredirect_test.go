@@ -62,12 +62,36 @@ func TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends(t *testing.T) {
 	}
 }
 
-func TestASignInRedirectIsNotAdvertisedWhenSignInIsNotComposed(t *testing.T) {
+// The case an operator is actually in when they need this: they are CREATING
+// the OAuth client, so no client id exists yet. Withholding the URI until one
+// does would hide it exactly when it is needed, and leave them guessing the one
+// string Google matches byte for byte.
+func TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured(t *testing.T) {
 	var s Server
-	// An incomplete config composes no routes; advertising a URL nothing serves
-	// would send an operator to register a callback that answers 404.
+	WithGoogleSignIn(GoogleSignInConfig{RedirectBase: "https://api.example.com"})(&s, nil)
+
+	shown, ok := advertised(s.redirectURIs, crmcontracts.SignIn)
+	if !ok {
+		t.Fatal("an operator with no Google app yet is told no sign-in URI to register, which is the one they need to create it")
+	}
+	// And it is the SAME string the composed flow will send once they finish.
+	var configured Server
+	WithGoogleSignIn(GoogleSignInConfig{
+		ClientID: "cid", ClientSecret: "secret", StateKey: "0123456789012345678901234567890123",
+		RedirectBase: "https://api.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	})(&configured, nil)
+	willSend, _ := advertised(configured.redirectURIs, crmcontracts.SignIn)
+	if shown != willSend {
+		t.Errorf("the URI advertised before configuration is %q but after it is %q; an operator would register the wrong one", shown, willSend)
+	}
+}
+
+// A deployment that knows no origin of its own advertises nothing, rather than a
+// URL built on an empty base.
+func TestNoSignInRedirectIsAdvertisedWithoutABase(t *testing.T) {
+	var s Server
 	WithGoogleSignIn(GoogleSignInConfig{ClientID: "cid"})(&s, nil)
 	if _, ok := advertised(s.redirectURIs, crmcontracts.SignIn); ok {
-		t.Error("a deployment with no sign-in composed still advertises a sign-in redirect URI")
+		t.Error("a deployment with no redirect base advertises a URI built on nothing")
 	}
 }

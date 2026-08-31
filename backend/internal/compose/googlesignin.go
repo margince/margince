@@ -152,12 +152,47 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 	return st.Provider, st.Nonce, st.CodeVerifier, nil
 }
 
+// signInRedirectBase is the origin the sign-in callback is served on: the
+// deployment's own, plus the `/v1` the API mounts its contract under.
+//
+// It is used twice — once to WIRE the routes and once to tell an operator what
+// to register — and the two must be the same bytes, or the value they paste into
+// the Google console fails the very flow it was meant to enable.
+//
+// Held by: TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured and
+// TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends
+// (internal/compose/googleappredirect_test.go), which compare the two in both
+// directions.
+func signInRedirectBase(cfg GoogleSignInConfig) string {
+	if cfg.RedirectBase == "" {
+		return ""
+	}
+	return strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1"
+}
+
 // WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when cfg
 // is complete; an incomplete cfg still returns a valid Option, it just
 // injects nothing, so oidc_providers stays [] and the routes 404 (identity's
 // own per-provider lookup).
 func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
+		// The redirect URI is published BEFORE the completeness gate, and that
+		// ordering is the whole point of publishing it. An operator needs this
+		// value while they are creating the OAuth client — which is precisely
+		// when no client id exists yet — so withholding it until one is
+		// configured would hide it exactly when it is needed and leave them to
+		// guess the one string Google matches byte for byte.
+		//
+		// It is knowable without credentials because it is not derived from
+		// them: RedirectBase is this deployment's own externally-reachable
+		// origin. What an incomplete config withholds is the ROUTE, not the URL
+		// the route will answer on once the operator finishes.
+		if base := signInRedirectBase(cfg); base != "" {
+			s.redirectURIs = append(s.redirectURIs, crmcontracts.GoogleAppRedirectUri{
+				Purpose: crmcontracts.SignIn,
+				Url:     identity.SignInRedirectURI(base, googleProviderKey),
+			})
+		}
 		if !cfg.Enabled() {
 			return
 		}
@@ -174,7 +209,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
 			signer,
 			identity.OIDCRoutes{
-				RedirectBase: strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1",
+				RedirectBase: signInRedirectBase(cfg),
 				PostLoginURL: cfg.PostLoginURL,
 				FailureURL:   cfg.FailureURL,
 			},
@@ -186,14 +221,6 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// HERE rather than in assembly because only this option knows what was
 		// composed, and options run after the handlers are assembled.
 		s.configuredProviders = configured
-		// And the sign-in callback, from identity's own builder for the same
-		// reason: an operator who registers only one of the two URLs gets a
-		// redirect_uri_mismatch that names nothing actionable.
-		s.redirectURIs = append(s.redirectURIs,
-			crmcontracts.GoogleAppRedirectUri{
-				Purpose: crmcontracts.SignIn,
-				Url:     s.RedirectURIFor(googleProviderKey),
-			})
 	}
 }
 

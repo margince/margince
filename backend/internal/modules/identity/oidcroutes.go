@@ -33,32 +33,27 @@ type OIDCRoutes struct {
 	FailureURL string
 }
 
-// callbackURI is the one place /auth/oidc/{provider}/callback's absolute URL
-// is built, so the authorization request (StartOidcSignIn) and the token
-// exchange (OidcSignInCallback) can never drift apart — Google requires the
-// two to be byte-identical, and a redirect_uri_mismatch from a future edit to
-// only one call site would explain itself to nobody.
-func (h Handlers) callbackURI(provider string) string {
-	return h.oidcRoutes.RedirectBase + "/auth/oidc/" + provider + "/callback"
-}
-
-// RedirectURIFor is callbackURI for a caller outside this package: the URL Google
-// must have registered as an Authorized redirect URI for one provider.
+// SignInRedirectURI is the one place /auth/oidc/{provider}/callback's absolute
+// URL is built, so the authorization request (StartOidcSignIn), the token
+// exchange (OidcSignInCallback) and the value shown to an OPERATOR can never
+// drift apart — Google matches the registered value byte for byte, and a
+// mismatch from a future edit to only one of the three would explain itself to
+// nobody.
 //
-// Exported rather than re-spelled by whoever needs to DISPLAY it. The settings
-// screen tells an operator which URL to paste into the Google console, and a
-// second copy of that string built somewhere else is exactly the drift the
-// unexported original's doc comment already refuses: the value shown and the
-// value sent have to be the same bytes or the flow fails a mismatch that names
-// nothing actionable.
-//
-// Empty when this deployment composed no OIDC routes, so a caller can tell
-// "no sign-in URL to register" from one it should show.
-func (h Handlers) RedirectURIFor(provider string) string {
-	if h.oidcRoutes.RedirectBase == "" {
+// It takes the base rather than reading a composed Handlers, because the
+// operator who most needs this string is the one who has not configured the
+// provider yet: the URL is a property of this deployment's own origin, not of
+// the credentials that will later be used against it.
+func SignInRedirectURI(redirectBase, provider string) string {
+	if redirectBase == "" {
 		return ""
 	}
-	return h.callbackURI(provider)
+	return redirectBase + "/auth/oidc/" + provider + "/callback"
+}
+
+// callbackURI is what the flow itself sends, from the composed routes.
+func (h Handlers) callbackURI(provider string) string {
+	return SignInRedirectURI(h.oidcRoutes.RedirectBase, provider)
 }
 
 // WithOIDCProviders injects the configured external identity providers and
