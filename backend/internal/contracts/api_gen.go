@@ -40839,7 +40839,7 @@ type ServerInterface interface {
 	// The organization's confirmed profile fields (organization_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 	// (GET /organizations/{id}/profile-fields)
 	ListOrganizationProfileFields(w http.ResponseWriter, r *http.Request, id Id)
-	// Correct a profile field — the canonical value changes, the machine's proposal survives.
+	// State or correct a profile field — the canonical value changes, the machine's proposal survives.
 	// (PATCH /organizations/{id}/profile-fields/{field})
 	UpdateOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params UpdateOrganizationProfileFieldParams)
 	// Confirm a profile field without changing its value.
@@ -43332,7 +43332,7 @@ func (_ Unimplemented) ListOrganizationProfileFields(w http.ResponseWriter, r *h
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Correct a profile field — the canonical value changes, the machine's proposal survives.
+// State or correct a profile field — the canonical value changes, the machine's proposal survives.
 // (PATCH /organizations/{id}/profile-fields/{field})
 func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params UpdateOrganizationProfileFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)

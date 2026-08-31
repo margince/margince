@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -19,6 +19,7 @@ import {
   useCompanyReadOnlyReason,
 } from "./companyheader";
 import { SIZE_BAND_OPTIONS } from "./companylookups";
+import { profileFieldsKey, useOrgProfileFields } from "./evidenceverdict";
 
 // The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
 // this file so the rail file stays under the 500-line ceiling: one panel
@@ -492,9 +493,7 @@ function SidecarFieldRow({
     // The record read and the profile-fields read both now describe the write
     // that just landed, and the 360 summarises it.
     await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["org-profile-fields", orgId],
-      }),
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
       queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
       queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
     ]);
@@ -520,22 +519,10 @@ function DetailsGridBody({
   const canUpdate = useCan("organization", "update");
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   const patch = useCompanyFieldPatch(organization);
-  // The same key the Overview's own profile-field card registers, so a
-  // correction made here settles that card too rather than leaving the two
-  // surfaces disagreeing about what the record says.
-  const sidecarQuery = useQuery({
-    queryKey: ["org-profile-fields", organization.id],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/organizations/{id}/profile-fields",
-        { params: { path: { id: organization.id } } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data ?? [];
-    },
-  });
+  // The same read the Overview's own profile-field card uses, so a correction
+  // made here settles that card too rather than leaving the two surfaces
+  // disagreeing about what the record says.
+  const sidecarQuery = useOrgProfileFields(organization.id);
   // A read that has not answered yet leaves both rows empty rather than absent:
   // the grid's rule is that every known field draws a row, and a row that
   // appears once its value arrives would make the panel jump under the reader.

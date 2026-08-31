@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -45,6 +45,36 @@ export type EvidenceClaim = {
   confirmPath: () => Promise<void>;
   correctPath: (value: string) => Promise<void>;
 };
+
+// The one read of a company's profile fields, and the one key everything that
+// writes them invalidates.
+//
+// Two surfaces show these claims — the Overview's own card and the record
+// rail's identity rows — and both write through the same endpoint. Spelled
+// twice, the two would drift the first time either added a `staleTime` or a
+// `select`, and the two surfaces would then disagree about a record they are
+// showing side by side.
+export function useOrgProfileFields(orgId: string) {
+  return useQuery({
+    queryKey: profileFieldsKey(orgId),
+    queryFn: async () => {
+      const { data, error } = await api.GET(
+        "/organizations/{id}/profile-fields",
+        { params: { path: { id: orgId } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data.data ?? [];
+    },
+  });
+}
+
+// React Query matches key segments exactly, so a near-miss spelling invalidates
+// nothing and a surface goes on showing a claim the human already settled.
+export function profileFieldsKey(orgId: string) {
+  return ["org-profile-fields", orgId] as const;
+}
 
 export function profileFieldClaim(
   orgId: string,
@@ -148,9 +178,7 @@ export function EvidenceVerdict({
       // key segments exactly, so a near-miss spelling invalidates nothing and
       // the page keeps offering a verdict on a claim the human already settled.
       queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
-      queryClient.invalidateQueries({
-        queryKey: ["org-profile-fields", orgId],
-      }),
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
       queryClient.invalidateQueries({ queryKey: ["org-facts", orgId] }),
     ]);
   };

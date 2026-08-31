@@ -36,14 +36,34 @@ type evidenceWrite[T any] struct {
 	value     *string
 	ifVersion *int64
 	// readBefore locates the row and returns the machine's claim in full, which
-	// becomes the audit before-image.
-	readBefore func(context.Context, pgx.Tx) (evidenceRow, error)
+	// becomes the audit before-image. The bool says the row did not exist and
+	// this write minted it: there is then no prior state, and the audit records
+	// a creation rather than an update against an image nobody ever wrote.
+	readBefore func(context.Context, pgx.Tx) (evidenceRow, bool, error)
 	// canonical moves the corrected value out of the sidecar and onto the
 	// record it describes. Nil for a claim that lives only in the sidecar and
 	// so has nothing to keep in step.
 	canonical func(context.Context, pgx.Tx) error
 	// readAfter re-reads the written row as its wire shape.
 	readAfter func(context.Context, pgx.Tx) (T, error)
+}
+
+// auditEvidenceWrite records the write under the verb it actually is.
+//
+// The two doors differ in what they REFUSE, which is why the choice is made
+// here rather than by passing a verb string: Audit refuses an update with no
+// before-image, and AuditEvent is the one that records an occurrence having
+// none. A creation sent through Audit would have to invent an image to satisfy
+// it, which is the defect this exists to avoid.
+//
+//craft:ignore naked-any the audit seam: an after image is the entity's own snapshot shape
+func auditEvidenceWrite(
+	ctx context.Context, tx pgx.Tx, table string, before evidenceRow, after any, created bool,
+) (ids.UUID, error) {
+	if created {
+		return storekit.AuditEvent(ctx, tx, "create", table, before.ID, after)
+	}
+	return storekit.Audit(ctx, tx, "update", table, before.ID, before.auditImage(), after)
 }
 
 // writeEvidence is the one way a human correction or confirmation reaches an
@@ -86,7 +106,7 @@ func writeEvidence[T any](
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
 			return fmt.Errorf("read transaction time: %w", err)
 		}
-		before, err := w.readBefore(ctx, tx)
+		before, created, err := w.readBefore(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -119,8 +139,12 @@ func writeEvidence[T any](
 			}
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", w.table,
-			before.ID, before.auditImage(), p.After())
+		// A row this write minted has no before-image, and calling it an update
+		// against the empty row we just inserted would put a state nobody ever
+		// wrote into the audit trail — the one record that answers "what did it
+		// say before I changed it". AuditEvent is the door for a write with no
+		// prior state; Audit refuses an update carrying no before-image.
+		auditID, err := auditEvidenceWrite(ctx, tx, w.table, before, p.After(), created)
 		if err != nil {
 			return fmt.Errorf("audit %s write: %w", w.table, err)
 		}

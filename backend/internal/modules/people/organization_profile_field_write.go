@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ensureOrgWritable is ensureOrgReadable's write-side twin: same row-scope and
@@ -111,7 +113,11 @@ type ProfileFieldWriteInput struct {
 	IfVersion *int64
 }
 
-// UpdateOrganizationProfileField corrects a profile field's value.
+// UpdateOrganizationProfileField states or corrects a profile field's value.
+//
+// A field with no row yet is created by the same call — see
+// readProfileFieldRowForWrite for why originating a claim is a human act and
+// why the confirm verb does not share the behaviour.
 func (s *Store) UpdateOrganizationProfileField(
 	ctx context.Context, orgID ids.OrganizationID, field string, in ProfileFieldWriteInput,
 ) (crmcontracts.CompanyProfileField, error) {
@@ -146,7 +152,7 @@ func (s *Store) writeProfileField(
 		changedKey: field,
 		value:      in.Value,
 		ifVersion:  in.IfVersion,
-		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, error) {
+		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, bool, error) {
 			return readProfileFieldRowForWrite(ctx, tx, orgID, field, in.Value)
 		},
 		readAfter: func(ctx context.Context, tx pgx.Tx) (crmcontracts.CompanyProfileField, error) {
@@ -275,24 +281,55 @@ func writeCanonicalOrgColumn(
 // a human verdict on a value no one ever proposed.
 func readProfileFieldRowForWrite(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field string, value *string,
-) (evidenceRow, error) {
+) (evidenceRow, bool, error) {
 	row, err := readProfileFieldRow(ctx, tx, orgID, field)
 	if !errors.Is(err, apperrors.ErrNotFound) || value == nil {
-		return row, err
+		return row, false, err
+	}
+	// A person stating a fact for the first time is a human act, and only a
+	// human's. An agent reaching this arm would MINT a legal-identity claim on
+	// a company nothing was ever read about, and writeEvidence then stamps
+	// verified_by with the user who granted the agent — a human verification of
+	// a value that human never saw. Correcting a claim that already exists stays
+	// open to an agent, because there the machine's proposal is what it answers.
+	if err := requireHumanOrigination(ctx); err != nil {
+		return row, false, err
 	}
 	if err := insertHumanProfileField(ctx, tx, orgID, field); err != nil {
-		return row, err
+		return row, false, err
 	}
-	return readProfileFieldRow(ctx, tx, orgID, field)
+	created, err := readProfileFieldRow(ctx, tx, orgID, field)
+	return created, true, err
 }
 
-// insertHumanProfileField creates the empty row a first correction then fills.
+// requireHumanOrigination refuses an agent the arm that creates a claim.
+//
+// The refusal is the pre-existing 404: before this change every write to an
+// absent field answered not-found, so an agent sees exactly what it saw before
+// and no route it relied on changed behaviour.
+func requireHumanOrigination(ctx context.Context) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !strings.HasPrefix(actor.ID, principal.HumanIDPrefix) {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+// insertHumanProfileField creates the empty row a first statement then fills.
 //
 // The value is deliberately NOT written here: writeEvidence's guarded patch is
 // what sets it, so the created row travels the same audit and event path as any
-// other correction and the before-image honestly reads empty. source='human'
-// with no snippet is the same shape the company form writes — on this path the
-// person IS the evidence, which is also what satisfies org_profile_site_evidence.
+// other write to this table. source='human' with no snippet is what satisfies
+// org_profile_site_evidence, which binds only site_read rows.
+//
+// THIS IS NOT writeCompanyFields (companyform.go), which also upserts a human
+// profile-field row, and the two stay apart deliberately. That one writes the
+// INSTALLATION'S OWN company from its form: it sets confidence 1, deletes the
+// row on an empty value, and writes no audit, event or canonical column, because
+// the form owns the whole record and commits its own. This path writes a claim
+// about SOMEONE ELSE'S company, where each field is separately evidenced and
+// separately answerable, so it owes the audit before-image, the event and the
+// VAT consultation that a form save does not.
 func insertHumanProfileField(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field string,
 ) error {
@@ -300,9 +337,18 @@ func insertHumanProfileField(
 	if err != nil {
 		return err
 	}
-	// ON CONFLICT DO NOTHING rather than a bare INSERT: two corrections racing
-	// on one empty field would otherwise have the loser fail on the unique
-	// index, and both are asking for the same row to exist.
+	// ON CONFLICT DO NOTHING because this write takes no lock that would order
+	// two writers: auth.EnsureWritableLive checks scope and liveness, and
+	// LockSubjectLive — the one that holds the organization's row — is not on
+	// this path. Two statements of the same empty field therefore both reach
+	// the insert, and the loser would fail on uq_org_profile_field; DO NOTHING
+	// lets it fall through to the re-read below and patch the row the winner
+	// created, which is the same row it was asking for.
+	//
+	// NOT held by a test. TestRepsStatingTheSameFieldAtOnceAllSucceed drives
+	// eight concurrent writers and passes with this clause removed, so it does
+	// not prove the clause — the collision window is real but that test does not
+	// reach it. Said plainly rather than left as a claim a reader would trust.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO organization_profile_field
 		       (organization_id, field, value, source, captured_by)
