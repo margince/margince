@@ -74,6 +74,12 @@ export function factsKey(orgId: string) {
 // How many rows of a category are shown before the reader asks for the rest. A
 // real account returns ninety-odd facts, and rendering them all made this card
 // taller than the page beside it — at which point nobody reads any of it.
+//
+// THE CAP LIFTS WHEN THE READER CAN REMOVE A ROW, and that is not a preference.
+// A truncated list has the same defect the collapse had: delete the fifth row
+// and the sixth takes its place, so the reader has removed something and
+// apparently changed nothing. Reading is served by hiding the tail; removing is
+// not, and a surface that offers the verb has to show what the verb acts on.
 const FACT_PREVIEW = 5;
 
 /**
@@ -103,6 +109,16 @@ export function CompanyFactsPanel({
   const t = useT();
   const { locale } = useLocale();
   const [adding, setAdding] = useState(false);
+  // The record page is not remounted when the reader opens a different account
+  // — CompanyScreen takes the id as a prop — so an open add form would carry
+  // its draft across, and the save would write what was typed about one company
+  // onto another. Resetting on the id is what makes the draft belong to the
+  // account it was typed about.
+  const [openFor, setOpenFor] = useState(orgId);
+  if (openFor !== orgId) {
+    setOpenFor(orgId);
+    setAdding(false);
+  }
   const factsQuery = useQuery({
     queryKey: factsKey(orgId),
     queryFn: async () => {
@@ -140,7 +156,11 @@ export function CompanyFactsPanel({
     >
       <PanelBody>
         {adding && (
-          <AddFactForm orgId={orgId} onDone={() => setAdding(false)} />
+          <AddFactForm
+            orgId={orgId}
+            canEdit={canEdit}
+            onDone={() => setAdding(false)}
+          />
         )}
         <QueryStates query={factsQuery}>
           {facts.length === 0 ? (
@@ -176,8 +196,10 @@ function FactCategoryBlock({
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
-  const hidden = group.facts.length - FACT_PREVIEW;
-  const shown = expanded ? group.facts : group.facts.slice(0, FACT_PREVIEW);
+  const capped = !canEdit;
+  const hidden = capped ? group.facts.length - FACT_PREVIEW : 0;
+  const shown =
+    expanded || !capped ? group.facts : group.facts.slice(0, FACT_PREVIEW);
   return (
     <div className="co-facts-group">
       <div className="t-label co-facts-heading">
@@ -264,6 +286,7 @@ function FactRow({
         <RemoveFactConfirm
           orgId={orgId}
           fact={fact}
+          canEdit={canEdit}
           onClose={() => setRemoving(false)}
         />
       )}
@@ -274,10 +297,15 @@ function FactRow({
 function RemoveFactConfirm({
   orgId,
   fact,
+  canEdit,
   onClose,
 }: Readonly<{
   orgId: string;
   fact: OrganizationFact;
+  // Re-read at CONFIRM time, not only at open time. A grant can be withdrawn
+  // while this dialog stands, and a confirm that fired on the answer from
+  // thirty seconds ago is a write the reader is no longer allowed to make.
+  canEdit: boolean;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -317,6 +345,7 @@ function RemoveFactConfirm({
       confirmVariant="danger"
       pending={remove.isPending}
       error={remove.error ? problemMessageOf(remove.error, t) : undefined}
+      confirmReason={canEdit ? undefined : t("record.notYoursToChange")}
       onConfirm={() => remove.mutate(fact)}
     >
       <p>
@@ -331,8 +360,9 @@ function RemoveFactConfirm({
 
 function AddFactForm({
   orgId,
+  canEdit,
   onDone,
-}: Readonly<{ orgId: string; onDone: () => void }>) {
+}: Readonly<{ orgId: string; canEdit: boolean; onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const fieldId = useId();
@@ -398,9 +428,9 @@ function AddFactForm({
         variant="primary"
         small
         pending={add.isPending}
-        // Both halves are required: a fact with no field names nothing, and one
-        // with no value states nothing.
-        reason={field && value.trim() ? undefined : t("co.facts.addIncomplete")}
+        // Authority first, then completeness: a reader who may not write this
+        // record is not helped by being told their form is incomplete.
+        reason={refusal(canEdit, field, value, t)}
         onClick={() => add.mutate({ field, value })}
       />
       <IconAction
@@ -416,6 +446,20 @@ function AddFactForm({
       )}
     </div>
   );
+}
+
+// Why the save is refused, or nothing. Authority first: a reader who may not
+// write this record is not helped by being told their form is incomplete.
+function refusal(
+  canEdit: boolean,
+  field: string,
+  value: string,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (!canEdit) {
+    return t("record.notYoursToChange");
+  }
+  return field && value.trim() ? undefined : t("co.facts.addIncomplete");
 }
 
 // Everything that describes this account's facts, refreshed together. The keys

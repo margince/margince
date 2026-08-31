@@ -47,14 +47,24 @@ function fact(seed: FactSeed) {
 }
 
 function stub(facts: readonly unknown[]) {
-  const calls: { method: string; url: string; body: unknown }[] = [];
+  const calls: {
+    method: string;
+    url: string;
+    body: unknown;
+    ifMatch: string | null;
+  }[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     // A DELETE carries no body, and asking one for JSON throws before the
     // stub can answer — which reads exactly like the code failing to send the
     // request at all.
     const body =
       request.method === "POST" ? await request.clone().json() : undefined;
-    calls.push({ method: request.method, url: request.url, body });
+    calls.push({
+      method: request.method,
+      url: request.url,
+      body,
+      ifMatch: request.headers.get("If-Match"),
+    });
     if (request.method === "GET") {
       return new Response(JSON.stringify({ data: facts }), {
         status: 200,
@@ -93,11 +103,12 @@ afterEach(() => {
 });
 
 describe("the facts a person can state and take away", () => {
-  it("draws every stored row, including duplicate spellings of one offering", async () => {
-    // The card this replaces collapsed these two into the better one. That is
-    // right for reading and wrong here: a reader who removes the winner would
-    // watch the loser appear in its place, having deleted something and
-    // apparently changed nothing.
+  it("draws every stored row a reader may remove, past the preview cap", async () => {
+    // Two rules could each uncover a row after a delete, and both have to be
+    // off where the verb is offered: the COLLAPSE (these two spellings of one
+    // offering are one row to groupFacts) and the PREVIEW CAP (five rows a
+    // category). Seven rows in one category, two of them colliding, exercises
+    // both — with five or fewer the cap could stay on unnoticed.
     stub([
       fact({
         category: "offering",
@@ -111,11 +122,31 @@ describe("the facts a person can state and take away", () => {
         value: "Fleet Manager rollout",
         valueKey: "fleet manager",
       }),
+      ...["Depot", "Routing", "Telematics", "Fuel", "Driver"].map((one) =>
+        fact({
+          category: "offering",
+          field: "capability",
+          value: one,
+          valueKey: one.toLowerCase(),
+        }),
+      ),
     ]);
     mount(<CompanyFactsPanel orgId="o-1" canEdit />);
 
     expect(await screen.findByText("Fleet Manager — telematics")).toBeTruthy();
-    expect(screen.getByText("Fleet Manager rollout")).toBeTruthy();
+    // Counted rather than sampled: an assertion on one row passes whenever the
+    // cap happens to keep that row, which is the accident this rules out.
+    const drawn = [
+      "Fleet Manager — telematics",
+      "Fleet Manager rollout",
+      "Depot",
+      "Routing",
+      "Telematics",
+      "Fuel",
+      "Driver",
+    ].filter((one) => screen.queryByText(one) !== null);
+    expect(drawn).toHaveLength(7);
+    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
   });
 
   it("removes a fact through the endpoint, with the version it was shown", async () => {
@@ -140,6 +171,9 @@ describe("the facts a person can state and take away", () => {
       expect(calls.some((one) => one.method === "DELETE")).toBe(true),
     );
     const removal = calls.find((one) => one.method === "DELETE");
+    // The precondition, not just the address: without If-Match the removal is
+    // last-write-wins and would delete a row somebody has since corrected.
+    expect(removal?.ifMatch).toBe("7");
     // The fact key addresses the row; the version is what stops this removal
     // landing on a row somebody else has since corrected.
     // The whole key, not just the field: a multi-value fact has several rows
