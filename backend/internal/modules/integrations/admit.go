@@ -41,12 +41,32 @@ type admittedConnection struct {
 // trigger the customer switched off must not spend on their behalf.
 func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provider.Trigger) (admittedConnection, error) {
 	var c admittedConnection
+	// A MANUAL run is admitted on a degraded connection; an automatic one is
+	// not. The two are different questions.
+	//
+	// rate_limited, insufficient_credits and provider_error are recoverable
+	// vendor conditions, and execution already says so in as many words: it
+	// authorizes egress on them because "a later success is exactly what proves
+	// recovery and restores connected". Admission refusing to CREATE that run
+	// made the sentence unreachable — one bad minute from the vendor left the
+	// connection refusing everything, with the only path out a human noticing
+	// and re-entering a key that was never the problem.
+	//
+	// Automatic work stays refused: nobody is watching it, and a sweep retrying
+	// a rate limit every minute is how a transient limit becomes a sustained
+	// one. A person pressing the button on a contact is the deliberate probe
+	// this needs — they chose to spend it, and their run is what heals the
+	// connection for everybody else.
+	statuses := []string{"connected"}
+	if !trigger.Automatic() {
+		statuses = append(statuses, "rate_limited", "insufficient_credits", "provider_error")
+	}
 	err := tx.QueryRow(ctx, `
 		SELECT id::text, version, execution_epoch, mode, automatic_individual_create,
 		       automatic_import, categories, refresh_after_days, daily_run_limit
 		  FROM provider_connection
-		 WHERE provider = $1 AND status = 'connected'
-		 FOR SHARE`, name).
+		 WHERE provider = $1 AND status = ANY($2)
+		 FOR SHARE`, name, statuses).
 		Scan(&c.id, &c.version, &c.epoch, &c.mode, &c.autoCreate,
 			&c.autoImport, &c.categories, &c.refreshAge, &c.dailyLimit)
 	if errors.Is(err, pgx.ErrNoRows) {
