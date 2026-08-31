@@ -16,12 +16,20 @@
 -- one thing: this send was given up on and nobody has been told.
 -- ACCESS EXCLUSIVE, then a write-blocking index build, on a table this
 -- migration did not create. Adding a nullable column with no default is
--- instant and the partial index is small, but an unbounded WAIT for the lock
--- turns one open transaction into a total stall on outbound mail — so the wait
--- is bounded and a migration that cannot get in fails the deploy loudly
--- instead of holding the door. Not CONCURRENTLY: a migration runs in one
--- transaction and CONCURRENTLY forbids that (1787320004 records the same
--- point).
+-- instant; the index build is not, and this is the honest cost — the partial
+-- predicate makes the INDEX small, not the SCAN short, because the heap is
+-- read in full either way, and the build runs under the ACCESS EXCLUSIVE the
+-- ALTER TABLE already took (this migration is one transaction), so outbound
+-- mail is fully blocked for it, reads as well as writes.
+--
+-- Not CONCURRENTLY: a migration runs in one transaction and CONCURRENTLY
+-- forbids that (1787320004 records the same point, and 1787650813 made the
+-- same call for the same reason).
+--
+-- The timeout bounds the WAIT, not the hold: without it an open transaction
+-- holding a conflicting lock stalls every write to this table for as long as
+-- the migration is willing to queue, which is forever. A migration that cannot
+-- get in fails the deploy loudly instead of holding the door.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE comms_outbound ADD COLUMN parked_at timestamptz;
