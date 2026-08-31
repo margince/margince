@@ -35,6 +35,11 @@ type InstallationSettings struct {
 	// operator types a currency they cannot save.
 	BaseCurrencyLocked       bool
 	BaseCurrencyLockedReason string
+	// EnabledOidcProviders is the admin's chosen provider list, or nil when they
+	// have never chosen — which means every provider the deployment configured.
+	// It is the STORED answer and not the effective one: the deployment decides
+	// what is possible, and compose intersects the two.
+	EnabledOidcProviders []string
 }
 
 // InstallationPatch is a sparse installation-settings write: a nil field is
@@ -47,6 +52,10 @@ type InstallationPatch struct {
 	BaseCurrency         *string
 	BaseLanguage         *string
 	FiscalYearStartMonth *int
+	// EnabledOidcProviders replaces the whole list. A nil pointer leaves it
+	// unchanged; a pointer to an empty slice is a real choice — offer password
+	// only — so the two cannot be collapsed.
+	EnabledOidcProviders *[]string
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -121,6 +130,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	providers, err := settings.Get(ctx, s.settings, EnabledOidcProviders)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	locked, why, err := s.baseCurrencyLock(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
@@ -129,6 +142,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language,
 		FiscalYearStartMonth: fiscalStart,
 		BaseCurrencyLocked:   locked, BaseCurrencyLockedReason: why,
+		EnabledOidcProviders: providers,
 	}, nil
 }
 
@@ -187,7 +201,11 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal}, nil
+	providers, err := encodePatchField(EnabledOidcProviders, in.EnabledOidcProviders)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{name, zone, currency, language, fiscal, providers}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

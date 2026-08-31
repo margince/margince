@@ -29,6 +29,22 @@ type googleAppHandlers struct {
 	// 503, because an installation with nowhere to seal a secret is missing
 	// something its operator can supply — see vaultMissing.
 	store *capture.GoogleAppStore
+	// envClientID is the app the DEPLOYMENT composed, empty when it composed
+	// none. It is part of the answer because it is part of what the connector
+	// resolves: a stored app wins and the environment is the fallback
+	// (googleappauthorizer.go), so a read that could see only the database
+	// reported "no app stored" — and told the operator Gmail could not be
+	// connected — on installations where it demonstrably could.
+	//
+	// The same reading GET /installation/setup already takes. The two are not
+	// two sources of truth for STORAGE: a write still lands in exactly one
+	// place, and this is one honest reading of a two-source resolution.
+	envClientID string
+	// redirectURIs are the callback URLs an operator must register on the
+	// Google OAuth client, derived from the functions that BUILD them rather
+	// than restated here — a second spelling of a URL whose whole job is to be
+	// byte-identical to what Google receives is the drift this avoids.
+	redirectURIs []crmcontracts.GoogleAppRedirectUri
 }
 
 func (h googleAppHandlers) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
@@ -41,10 +57,8 @@ func (h googleAppHandlers) GetGoogleApp(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.GoogleApp{
-		Configured: status.Configured,
-		ClientId:   status.ClientID,
-	})
+	httperr.WriteJSON(w, http.StatusOK,
+		googleAppView(status.Configured, status.ClientID, h.envClientID, h.redirectURIs))
 }
 
 // SetGoogleApp implements (PUT /installation/google-app).
@@ -115,4 +129,42 @@ func sentSecret(sent *string) string {
 		return ""
 	}
 	return *sent
+}
+
+// googleAppView answers WHICH app this installation will actually use, split
+// from the transport so the rule can be read and tested on its own.
+//
+// The stored app wins, exactly as it does at the moment of a connect, and the
+// environment is the fallback rather than an alternative — reporting anything
+// else would describe a resolution the connector does not perform.
+//
+// `configured` answers "can Gmail be connected at all", which is a different
+// question from where the app came from: it is true for both sources, and the
+// surface used to conflate them and tell an operator that mail could not be
+// connected on an installation where it could.
+func googleAppView(
+	stored bool,
+	storedClientID, envClientID string,
+	redirectURIs []crmcontracts.GoogleAppRedirectUri,
+) crmcontracts.GoogleApp {
+	app := crmcontracts.GoogleApp{
+		Configured:   stored,
+		ClientId:     storedClientID,
+		Source:       crmcontracts.GoogleAppSourceNone,
+		RedirectUris: redirectURIs,
+	}
+	switch {
+	case stored:
+		app.Source = crmcontracts.GoogleAppSourceStored
+	case envClientID != "":
+		app.Source = crmcontracts.GoogleAppSourceEnvironment
+		app.Configured = true
+		app.ClientId = envClientID
+	}
+	// An empty LIST and not null: the field is contract-required, and a client
+	// that has to test for null before iterating is one the contract lied to.
+	if app.RedirectUris == nil {
+		app.RedirectUris = []crmcontracts.GoogleAppRedirectUri{}
+	}
+	return app
 }

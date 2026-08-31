@@ -4772,7 +4772,7 @@ export const de = {
   "auth.noticeSessionExpired":
     "Deine Sitzung ist abgelaufen. Melde dich erneut an, um fortzufahren.",
   "auth.noticeOidcFailed":
-    "Die Anmeldung mit Google hat nicht funktioniert. Versuche es erneut oder verwende dein Passwort.",
+    "Die Anmeldung mit Google hat nicht geklappt. Falls du eingeladen wurdest, öffne den Link in deiner Einladungs-E-Mail, um dein Konto fertig einzurichten.",
   "auth.connectionTitle": "Margince ist nicht erreichbar",
   "auth.connectionBody":
     "Prüfe deine Verbindung und versuche es erneut. Besteht das Problem weiter, startet der Server womöglich gerade neu.",
@@ -5795,6 +5795,7 @@ export const de = {
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
   "users.status.active": "Aktiv",
+  "users.status.invited": "Eingeladen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
   "users.link.action": "Passwort-Link erstellen",
@@ -6102,12 +6103,24 @@ export const de = {
   "installationSettings.edit": "Ändern",
   "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
+  "signInMethods.title": "Anmeldemethoden",
+  "signInMethods.sub":
+    "Wie sich Personen hier anmelden können. Die Liste zeigt, wofür diese Installation Zugangsdaten hat — eine Methode lässt sich abschalten, aber keine hinzufügen.",
+  "signInMethods.password": "E-Mail und Passwort",
+  "signInMethods.passwordAlways":
+    "Immer verfügbar. Jedes Konto ist so erreichbar, und genau das macht das Abschalten der anderen unbedenklich.",
+  "signInMethods.passwordReason":
+    "Die Anmeldung mit Passwort lässt sich nicht abschalten. Sie hält eine Installation zugänglich.",
+  "signInMethods.providerHint":
+    "Diesen Anbieter auf der Anmeldeseite anbieten. Beim Abschalten brechen auch laufende Anmeldungen ab; bestehende Sitzungen bleiben unberührt.",
+  "signInMethods.noneConfigured":
+    "Für diese Installation ist kein externer Anbieter konfiguriert, daher steht außer dem Passwort nichts zur Auswahl.",
   "googleApp.title": "Google-App",
   "googleApp.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen, nicht mit unseren.",
+    "Postfächer werden über eine eigene Google-OAuth-App verbunden, und die Anmeldung mit Google läuft ebenfalls darüber. Dabei werden die Zugangsdaten Ihrer Organisation verwendet und nicht unsere.",
   "googleApp.configured": "In Verwendung: {clientId}",
   "googleApp.absent":
-    "Keine App hinterlegt. Gmail und Kalender lassen sich erst danach verbinden.",
+    "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
   "googleApp.replaceHint":
     "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
   "googleApp.store": "App hinterlegen",
@@ -6116,6 +6129,15 @@ export const de = {
   "googleApp.removeConfirmBody":
     "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
   "googleApp.remove": "App entfernen",
+  "googleApp.redirectCopied": "Kopiert",
+  "googleApp.redirectCopy": "URI für {purpose} kopieren",
+  "googleApp.redirect.mailbox_connect": "Postfach und Kalender",
+  "googleApp.redirect.sign_in": "Anmeldung",
+  "googleApp.redirectSub":
+    "Tragen Sie jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine, scheitert die Zustimmung mit redirect_uri_mismatch, ohne zu nennen, welche URI falsch war.",
+  "googleApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
+  "googleApp.fromEnvironment":
+    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App ersetzt sie, solange eine gespeichert ist.",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":

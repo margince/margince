@@ -142,6 +142,7 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
+import { SignInMethodsCard } from "./sign-in-methods";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -280,7 +281,26 @@ export function tabContent(id: SettingsTabId): ReactNode {
     case "agents":
       return <AgentsTab />;
     case "general":
-      return <GeneralTab />;
+      // The installation's own facts, then the money, then the company profile
+      // the AI reads. The currency pair stays ADJACENT and nothing is allowed
+      // between them: the base currency is declared in the second card of
+      // InstallationSettingsCard and every rate below converts to it, and
+      // before they were merged the lock reason was explained on one tab while
+      // the consequence landed on another.
+      //
+      // The Google app goes LAST for that reason, not because it matters least.
+      // It is here at all because the same OAuth client now serves sign-in as
+      // well as mailbox connection, so filing it under Capture said it belonged
+      // to one of the two.
+      return (
+        <>
+          <InstallationSettingsCard />
+          <FxRatesCard />
+          <CompanyContextCard />
+          <SignInMethodsCard />
+          <GoogleAppCard />
+        </>
+      );
     case "extensions":
       // Its own entry rather than a third card under Users & teams: that page
       // answers who holds which role, and this one answers what an installed
@@ -310,13 +330,6 @@ export function tabContent(id: SettingsTabId): ReactNode {
     case "capture":
       return (
         <>
-          {/* First, because everything below presupposes it: the Google app
-              every mailbox on this installation is connected THROUGH. One app
-              per installation, supplied by whoever operates it, so it belongs
-              to the operator rather than to the rep whose mailbox rides it —
-              which is why it is here and not beside a person's own
-              connections. */}
-          <GoogleAppCard />
           {/* Which domains are OURS, then what to do with mail from the rest,
               then which of the rest are consumer mailboxes — the posture, then
               the two judgements that read it. Before this they sat on two
@@ -444,25 +457,6 @@ function IntegrationsTab() {
           Connections page. Which page a unit lands on is its manifest's
           decision, never this file's. */}
       <ExtensionUnitsCard scope="workspace" />
-    </>
-  );
-}
-
-// The organization, once: the installation's own settings, the currency table,
-// and the company profile the AI reads.
-//
-// The currency pair is ADJACENT, which is the whole reason these were merged: the
-// base currency is declared in the second card of InstallationSettingsCard and
-// every rate below converts to it, and before the merge the lock reason was
-// explained on one tab while the consequence landed on another. The company
-// profile stood between them until now, so the claim of adjacency was made by a
-// comment and not by the page.
-function GeneralTab() {
-  return (
-    <>
-      <InstallationSettingsCard />
-      <FxRatesCard />
-      <CompanyContextCard />
     </>
   );
 }

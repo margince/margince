@@ -6,6 +6,7 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -82,6 +83,92 @@ function useRemoveGoogleApp() {
   });
 }
 
+// purposeLabel names one callback's flow. A lookup rather than a computed
+// message key, because the catalog is a closed union: a template key would type
+// as any string and a purpose the contract adds later would reach a reader as a
+// raw key rather than as words.
+function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
+  switch (purpose) {
+    case "sign_in":
+      return t("googleApp.redirect.sign_in");
+    case "mailbox_connect":
+      return t("googleApp.redirect.mailbox_connect");
+    default:
+      return purpose;
+  }
+}
+
+// RedirectUris lists the callback URLs an operator must register on their OAuth
+// client, one per purpose this deployment actually serves.
+//
+// The URLs come from the response and are never built here. They have one job —
+// to be byte-identical to what Google receives — and a second spelling in the
+// client is exactly how the two come apart. The backend derives them from the
+// functions that send them, held by a fitness test in both directions.
+//
+// An empty list renders nothing rather than an empty heading: a deployment that
+// serves no Google flow has nothing to register, and a bare heading would read
+// as a list that failed to load.
+function RedirectUris({
+  uris,
+}: Readonly<{
+  uris: readonly { purpose: string; url: string }[] | undefined;
+}>) {
+  const t = useT();
+  const [copied, setCopied] = useState("");
+  // Absent and empty are the same answer here — nothing to register — and the
+  // field is contract-required, but a body that lost one hands over `undefined`
+  // anyway. This card shares a screen with the installation's own settings, so
+  // reading a length off nothing would take that whole page down over a list
+  // the reader could not have acted on.
+  if (!uris || uris.length === 0) {
+    return null;
+  }
+  return (
+    <div className="stack-sm">
+      <p className="t-label">{t("googleApp.redirectTitle")}</p>
+      <p className="t-caption">{t("googleApp.redirectSub")}</p>
+      <SettingList>
+        {uris.map((uri) => {
+          const purpose = purposeLabel(uri.purpose, t);
+          return (
+            <SettingRow
+              key={uri.purpose}
+              label={purpose}
+              value={<code className="t-mono">{uri.url}</code>}
+              control={
+                <Button
+                  small
+                  onClick={() => {
+                    // The object itself is guarded, not just the promise: the
+                    // Clipboard API is absent outside a secure context, so on a
+                    // plain-HTTP deployment this THROWS rather than rejecting and
+                    // the rejection handler never runs. A denied permission is
+                    // the rejecting case. Either way the URL stays on screen to
+                    // copy by hand, so the honest failure is to stop claiming it
+                    // was copied.
+                    if (!navigator.clipboard) {
+                      return;
+                    }
+                    navigator.clipboard.writeText(uri.url).then(
+                      () => setCopied(uri.purpose),
+                      () => setCopied(""),
+                    );
+                  }}
+                >
+                  {copied === uri.purpose
+                    ? t("googleApp.redirectCopied")
+                    : t("googleApp.redirectCopy", { purpose })}
+                </Button>
+              }
+            />
+          );
+        })}
+      </SettingList>
+    </div>
+  );
+}
+
 export function GoogleAppCard() {
   const t = useT();
   const canManage = useCanWrite("capture_settings", "update");
@@ -111,15 +198,27 @@ export function GoogleAppCard() {
               {failure && (
                 <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
               )}
+              {/* Three states, because there are three answers. `configured`
+                  alone could not tell "nothing anywhere" from "the deployment
+                  supplies one", and the card said the former in both — telling
+                  an operator Gmail could not be connected on installations
+                  where it demonstrably could. */}
               <p className="t-body">
-                {status.configured
-                  ? t("googleApp.configured", { clientId: status.client_id })
-                  : t("googleApp.absent")}
+                {status.source === "stored" &&
+                  t("googleApp.configured", { clientId: status.client_id })}
+                {status.source === "environment" &&
+                  t("googleApp.fromEnvironment", {
+                    clientId: status.client_id,
+                  })}
+                {status.source === "none" && t("googleApp.absent")}
               </p>
+              <RedirectUris uris={status.redirect_uris} />
               <Field
                 label={t("firstRun.google.clientId")}
                 hint={
-                  status.configured ? t("googleApp.replaceHint") : undefined
+                  status.source === "stored"
+                    ? t("googleApp.replaceHint")
+                    : undefined
                 }
               >
                 {(control) => (
@@ -170,11 +269,11 @@ export function GoogleAppCard() {
                     );
                   }}
                 >
-                  {status.configured
+                  {status.source === "stored"
                     ? t("googleApp.replace")
                     : t("googleApp.store")}
                 </Button>
-                {status.configured && (
+                {status.source === "stored" && (
                   <Button
                     variant="danger"
                     pending={remove.isPending}

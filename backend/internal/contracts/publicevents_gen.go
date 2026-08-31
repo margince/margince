@@ -211,6 +211,7 @@ const (
 	StageCreated                          SubscribableEventType = "stage.created"
 	StageUpdated                          SubscribableEventType = "stage.updated"
 	TeamChanged                           SubscribableEventType = "team.changed"
+	UserActivated                         SubscribableEventType = "user.activated"
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
@@ -406,6 +407,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case TeamChanged:
 		return true
+	case UserActivated:
+		return true
 	case UserDeactivated:
 		return true
 	case UserInvited:
@@ -429,6 +432,24 @@ func (e SubscribableEventType) Valid() bool {
 	case VoiceProfileUpdated:
 		return true
 	case VoiceVersionChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserReactivatedStatus.
+const (
+	Active  UserReactivatedStatus = "active"
+	Invited UserReactivatedStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the UserReactivatedStatus enum.
+func (e UserReactivatedStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Invited:
 		return true
 	default:
 		return false
@@ -1542,6 +1563,14 @@ type PublicEventTeamChanged struct {
 // PublicEventTeamChangedChange defines model for PublicEventTeamChanged.Change.
 type PublicEventTeamChangedChange string
 
+// PublicEventUserActivated Payload for user.activated — an invited member redeemed their set-password link and became active (identity/reset.go's RedeemPasswordReset). This is the completion of `user.invited`: until it arrives the seat exists and holds its licence, but nobody can sign in as it.
+// There is no `by`. Possession of the single-use token IS the authority on this path, so the member activated themselves and there is no admin actor to name — unlike user.reactivated, which an admin performs.
+// A member resetting a FORGOTTEN password does not emit this: they were already active, and nothing transitioned.
+type PublicEventUserActivated struct {
+	// UserId The member who became active.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // PublicEventUserDeactivated Payload for user.deactivated — a member's sessions and passports were hard-revoked (identity/users.go's DeactivateUser). reason is the operator-supplied free text, absent when none was given.
 type PublicEventUserDeactivated struct {
 	// By The admin who deactivated the member.
@@ -1587,10 +1616,15 @@ type PublicEventUserPasswordLinkIssued struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventUserReactivated Payload for user.reactivated — a deactivated member was returned to active (identity/users.go's ReactivateUser).
+// PublicEventUserReactivated Payload for user.reactivated — a deactivated member was lifted out of deactivation (identity/users.go's ReactivateUser).
+// `status` says what they were returned TO, and it is not always `active`: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that assumed "reactivated means active" would restate exactly the falsehood the invited status exists to remove.
 type PublicEventUserReactivated struct {
 	// By The admin who reactivated the member.
 	By openapi_types.UUID `json:"by"`
+
+	// Status The status a reactivated member was restored to.
+	// It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+	Status UserReactivatedStatus `json:"status"`
 
 	// UserId The reactivated member.
 	UserId openapi_types.UUID `json:"user_id"`
@@ -1742,6 +1776,10 @@ type PublicEventVoiceVersionChanged struct {
 
 // SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, person/organization, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
+
+// UserReactivatedStatus The status a reactivated member was restored to.
+// It is not always `active`, which is the whole reason it travels: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that read the event type alone would record somebody as able to sign in who cannot.
+type UserReactivatedStatus string
 
 func (PublicEventActivityArchived) EventType() string { return "activity.archived" }
 
@@ -2105,6 +2143,10 @@ func (PublicEventTeamChanged) EventType() string { return "team.changed" }
 
 func (PublicEventTeamChanged) EntityType() string { return "team" }
 
+func (PublicEventUserActivated) EventType() string { return "user.activated" }
+
+func (PublicEventUserActivated) EntityType() string { return "user" }
+
 func (PublicEventUserDeactivated) EventType() string { return "user.deactivated" }
 
 func (PublicEventUserDeactivated) EntityType() string { return "user" }
@@ -2248,6 +2290,7 @@ var PublicEventVersions = map[string]int{
 	"stage.created":                             1,
 	"stage.updated":                             1,
 	"team.changed":                              1,
+	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
 	"user.password_link_issued":                 1,

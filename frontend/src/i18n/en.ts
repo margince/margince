@@ -4832,7 +4832,7 @@ export const en = {
   "auth.noticeSessionExpired":
     "Your session expired. Sign in again to continue.",
   "auth.noticeOidcFailed":
-    "Sign-in with Google didn't work. Try again or use your password.",
+    "Sign-in with Google didn't work. If you were invited, open the link in your invitation email to finish setting up your account.",
   "auth.connectionTitle": "Margince couldn't be reached",
   "auth.connectionBody":
     "Check your connection and try again. If the problem persists, the server may be restarting.",
@@ -5837,6 +5837,7 @@ export const en = {
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
+  "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
   "users.link.action": "Get set-password link",
@@ -6140,12 +6141,24 @@ export const en = {
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
+  "signInMethods.title": "Sign-in methods",
+  "signInMethods.sub":
+    "Which ways people may sign in here. The list is what this deployment holds credentials for, so an admin can turn one off but cannot add one.",
+  "signInMethods.password": "Email and password",
+  "signInMethods.passwordAlways":
+    "Always available. Every account can be reached this way, which is what makes the others safe to switch off.",
+  "signInMethods.passwordReason":
+    "Password sign-in cannot be turned off. It is the method that keeps an installation enterable.",
+  "signInMethods.providerHint":
+    "Offer this provider on the login screen. Turning it off stops sign-ins already in progress, and existing sessions are unaffected.",
+  "signInMethods.noneConfigured":
+    "This deployment has no external provider configured, so there is nothing to offer besides a password.",
   "googleApp.title": "Google app",
   "googleApp.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials rather than ours.",
+    "Mailboxes are connected, and people sign in with Google, through a Google OAuth app you own. Your organization’s own credentials are used rather than ours.",
   "googleApp.configured": "In use: {clientId}",
   "googleApp.absent":
-    "No app stored. Gmail and Calendar cannot be connected until one is.",
+    "No app is available from any source. Gmail and Calendar cannot be connected, and Google sign-in cannot be offered.",
   "googleApp.replaceHint":
     "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
   "googleApp.store": "Store app",
@@ -6154,6 +6167,15 @@ export const en = {
   "googleApp.removeConfirmBody":
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "googleApp.remove": "Remove app",
+  "googleApp.redirectCopied": "Copied",
+  "googleApp.redirectCopy": "Copy {purpose} URI",
+  "googleApp.redirect.mailbox_connect": "Mailbox and calendar",
+  "googleApp.redirect.sign_in": "Sign-in",
+  "googleApp.redirectSub":
+    "Register every URI below on the OAuth client in the Google console. A missing one fails at the consent screen with redirect_uri_mismatch, which does not say which URI was wrong.",
+  "googleApp.redirectTitle": "Authorized redirect URIs",
+  "googleApp.fromEnvironment":
+    "In use from this deployment’s configuration: {clientId}. Storing an app here replaces it for as long as one is stored.",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":

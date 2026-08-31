@@ -24,7 +24,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -148,12 +152,47 @@ func (a loginStateSignerAdapter) Verify(token string) (provider, nonce, codeVeri
 	return st.Provider, st.Nonce, st.CodeVerifier, nil
 }
 
+// signInRedirectBase is the origin the sign-in callback is served on: the
+// deployment's own, plus the `/v1` the API mounts its contract under.
+//
+// It is used twice — once to WIRE the routes and once to tell an operator what
+// to register — and the two must be the same bytes, or the value they paste into
+// the Google console fails the very flow it was meant to enable.
+//
+// Held by: TestTheSignInRedirectIsAdvertisedBeforeTheAppIsConfigured and
+// TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends
+// (internal/compose/googleappredirect_test.go), which compare the two in both
+// directions.
+func signInRedirectBase(cfg GoogleSignInConfig) string {
+	if cfg.RedirectBase == "" {
+		return ""
+	}
+	return strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1"
+}
+
 // WithGoogleSignIn wires /auth/oidc/google/* into identity.Handlers when cfg
 // is complete; an incomplete cfg still returns a valid Option, it just
 // injects nothing, so oidc_providers stays [] and the routes 404 (identity's
 // own per-provider lookup).
 func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
+	return func(s *Server, pool *pgxpool.Pool) {
+		// The redirect URI is published BEFORE the completeness gate, and that
+		// ordering is the whole point of publishing it. An operator needs this
+		// value while they are creating the OAuth client — which is precisely
+		// when no client id exists yet — so withholding it until one is
+		// configured would hide it exactly when it is needed and leave them to
+		// guess the one string Google matches byte for byte.
+		//
+		// It is knowable without credentials because it is not derived from
+		// them: RedirectBase is this deployment's own externally-reachable
+		// origin. What an incomplete config withholds is the ROUTE, not the URL
+		// the route will answer on once the operator finishes.
+		if base := signInRedirectBase(cfg); base != "" {
+			s.redirectURIs = append(s.redirectURIs, crmcontracts.GoogleAppRedirectUri{
+				Purpose: crmcontracts.SignIn,
+				Url:     identity.SignInRedirectURI(base, googleProviderKey),
+			})
+		}
 		if !cfg.Enabled() {
 			return
 		}
@@ -170,13 +209,90 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			map[string]identity.OIDCExchanger{googleProviderKey: exchanger},
 			signer,
 			identity.OIDCRoutes{
-				RedirectBase: strings.TrimSuffix(cfg.RedirectBase, "/") + "/v1",
+				RedirectBase: signInRedirectBase(cfg),
 				PostLoginURL: cfg.PostLoginURL,
 				FailureURL:   cfg.FailureURL,
 			},
 		)
-		s.authHandlers = s.WithOIDCCapabilitiesFn(func() []identity.OIDCProviderConfig {
-			return []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
-		})
+		configured := []identity.OIDCProviderConfig{{Key: googleProviderKey, Label: googleProviderLabel}}
+		s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, identity.NewService(pool), configured))
+		// The settings screen needs the same list, so an admin sees the providers
+		// this deployment can actually offer rather than a free-text field. Set
+		// HERE rather than in assembly because only this option knows what was
+		// composed, and options run after the handlers are assembled.
+		s.configuredProviders = configured
 	}
+}
+
+// enabledOidcProvidersReadActor names the read in the audit trail. A SYSTEM
+// actor because no human asked for this: a browser rendered a login screen, and
+// this is the configuration that decides what it may offer. The same shape as
+// the installation-setup and google-app reads, for the same reason.
+const enabledOidcProvidersReadActor = "system:enabled_oidc_providers_read"
+
+// enabledOidcProviders answers which providers may be used right now:
+// the deployment's configured set INTERSECTED with the admin's chosen list.
+//
+// The intersection, and never the setting alone, because an operator cannot
+// invent a client id and secret from a settings screen — the deployment is what
+// makes a provider possible and the setting only narrows it. Absent (nil) means
+// every configured provider, so an installation that upgrades into this setting
+// keeps the login screen it had.
+//
+// This is reached from an ANONYMOUS endpoint, so it resolves the installation
+// and reads as a system actor: the settings read takes an RBAC gate, and there
+// is no human on a login screen to satisfy it. It is only ever wired when the
+// deployment composed a provider at all, which is what keeps /auth/capabilities
+// off the database entirely on an installation that has none.
+func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured []identity.OIDCProviderConfig) func(context.Context) ([]identity.OIDCProviderConfig, error) {
+	return func(ctx context.Context) ([]identity.OIDCProviderConfig, error) {
+		// No pool means no settings store, so there is no admin policy to read
+		// and the deployment's list IS the whole answer — the same reading an
+		// absent setting gets below. Only a role composed without a database
+		// reaches this; every role that serves /v1 has one.
+		if pool == nil {
+			return configured, nil
+		}
+		wsID, err := svc.InstallationWorkspace(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("resolving the installation for the sign-in provider policy: %w", err)
+		}
+		readCtx := principal.WithCorrelationID(
+			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
+				Type: principal.PrincipalSystem,
+				ID:   enabledOidcProvidersReadActor,
+			}), ids.NewV7(),
+		)
+		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
+		if err != nil {
+			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)
+		}
+		return offeredProviders(configured, chosen), nil
+	}
+}
+
+// offeredProviders is the intersection itself, split from the read around it so
+// the rule can be examined without a database: what an admin chose can only
+// ever NARROW what the deployment composed, because a key nobody holds
+// credentials for enables nothing.
+//
+// A nil chosen list is "never chosen", which is every configured provider — an
+// installation that upgrades into this setting keeps the login screen it had.
+// An EMPTY list is a choice and means none, which is why the two cannot be
+// collapsed into a length check.
+func offeredProviders(configured []identity.OIDCProviderConfig, chosen []string) []identity.OIDCProviderConfig {
+	if chosen == nil {
+		return configured
+	}
+	allowed := make(map[string]bool, len(chosen))
+	for _, key := range chosen {
+		allowed[key] = true
+	}
+	enabled := make([]identity.OIDCProviderConfig, 0, len(configured))
+	for _, p := range configured {
+		if allowed[p.Key] {
+			enabled = append(enabled, p)
+		}
+	}
+	return enabled
 }

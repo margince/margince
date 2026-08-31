@@ -154,13 +154,17 @@ func TestResolveFederatedUserRefusesADeactivatedLinkedSubject(t *testing.T) {
 }
 
 // TestResolveFederatedUserRefusesAnUnactivatedInvite is the HIGH-severity
-// finding the security review surfaced: an invited-never-activated member is
-// written `status = 'active'` at invite time (there is no `invited` status —
-// A97 specified one, ADR-0061 Amendment 1 dropped it as never built) and
-// carries a NULL password_hash until the invite is redeemed. Without the
-// password_hash check, that row's email is reachable by federated sign-in
-// forever — no token, no expiry, unlike the invite email itself — the moment
-// anyone controls that address on the IdP.
+// finding the security review surfaced: an invitation nobody has redeemed
+// carries no password, and without the password_hash check that row's email
+// would be reachable by federated sign-in forever — no token, no expiry,
+// unlike the invitation mail itself — the moment anyone controls that address
+// on the IdP.
+//
+// The invitation is now refused by its STATUS as well, which is a second lock
+// on the same door rather than a reason to drop this one: the password_hash
+// check is what still refuses the agent seat, and what would hold the line if
+// a future path ever activated an account without setting a credential. The
+// fixture below sets the status explicitly so it keeps testing THIS gate.
 func TestResolveFederatedUserRefusesAnUnactivatedInvite(t *testing.T) {
 	svc, conn, _, _ := seedSSOEnv(t, "sso-unactivated-invite")
 	invitedEmail := "invited-never-activated@example.com"

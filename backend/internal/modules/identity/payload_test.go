@@ -117,7 +117,13 @@ func TestUserDeactivatedPayload_NoReason(t *testing.T) {
 }
 
 func TestUserReactivatedPayload(t *testing.T) {
-	payload := userReactivatedPayload(payloadTestUserID, payloadTestActorID)
+	payload := userReactivatedPayload(payloadTestUserID, payloadTestActorID, userStatusActive)
+
+	// The status travels, because reactivation does not always mean active: a
+	// member deactivated before redeeming their invitation comes back invited.
+	if string(payload.Status) != userStatusActive {
+		t.Errorf("status = %q, want %q", payload.Status, userStatusActive)
+	}
 
 	if !reflect.DeepEqual(payload.EventType(), "user.reactivated") {
 		t.Errorf("got %v, want %v", payload.EventType(), "user.reactivated")

@@ -7848,8 +7848,13 @@ export interface paths {
          *     Admin-only and human-only — an agent may never mint a credential for a human. Available
          *     ONLY where it is needed and can work: refused when an outbound-email channel IS configured
          *     (that installation mails the link), when no public base URL is configured (a
-         *     credential-bearing link is never derived from a request `Host`), and when the target is not
-         *     active (redemption requires an active account, so the link would be dead on arrival).
+         *     credential-bearing link is never derived from a request `Host`), and when the target is
+         *     suspended or deactivated (redemption refuses them, so the link would be dead on arrival).
+         *
+         *     An `invited` member IS a valid target, and this is how an expired invitation is recovered:
+         *     they have no password, so `requestPasswordReset` refuses them, leaving this the only way
+         *     back in. Issuance admits exactly whom redemption admits — spelling the two sides
+         *     differently would strand the account with no route to a credential.
          *
          *     A link may be minted for a member who ALREADY has a password, which is an account takeover.
          *     Admins are the trust boundary and can already re-role and deactivate members, but this is a
@@ -11443,6 +11448,17 @@ export interface components {
              */
             fiscal_year_start_month: number;
             /**
+             * @description Every external sign-in provider this deployment holds credentials for, and whether
+             *     the installation currently offers it on the login screen. The list is what the
+             *     DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
+             *     a client id and secret cannot be invented from a settings screen.
+             *
+             *     Password sign-in is deliberately absent from this list. It is the method every
+             *     installation always has and the one that cannot be disabled, so there is no state
+             *     here that could turn it off and strand everybody.
+             */
+            sign_in_providers: components["schemas"]["SignInProvider"][];
+            /**
              * @description True once a conversion rate has been frozen against the base currency — by a closed
              *     deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
              *     rate sheet — after which it can no longer be changed (ADR-0085 §7).
@@ -11489,6 +11505,16 @@ export interface components {
              *     once and re-means no stored row.
              */
             fiscal_year_start_month?: number;
+            /**
+             * @description The provider keys the login screen may offer, of those this deployment configured.
+             *     Sending a key the deployment has no credentials for enables nothing: the effective
+             *     list is the intersection, so this can only ever narrow what is possible.
+             *
+             *     Password sign-in is not a member of this list and cannot be removed by any value of
+             *     it. Omit the field to leave the choice unchanged; send an empty array to offer
+             *     password only.
+             */
+            enabled_oidc_providers?: string[];
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -11730,10 +11756,40 @@ export interface components {
             blocking: boolean;
         };
         GoogleApp: {
-            /** @description Whether both the client id and a sealed client secret are held. */
+            /** @description Whether a Google app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can Gmail and Calendar be connected", which is a different question from where the app came from. */
             configured: boolean;
-            /** @description Google's public identifier for the app, or empty when none is stored. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
+            /** @description Google's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
             client_id: string;
+            /**
+             * @description Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+             * @enum {string}
+             */
+            source: "stored" | "environment" | "none";
+            /** @description Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
+            redirect_uris: components["schemas"]["GoogleAppRedirectUri"][];
+        };
+        /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
+        SignInProvider: {
+            /** @description The provider key the sign-in routes are served under. */
+            key: string;
+            /** @description The provider's display name, as the login screen shows it. */
+            label: string;
+            /** @description Whether this installation currently offers it on the login screen. */
+            enabled: boolean;
+        };
+        /** @description One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes. */
+        GoogleAppRedirectUri: {
+            /**
+             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
+             *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
+             * @enum {string}
+             */
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect";
+            /**
+             * Format: uri
+             * @description The absolute URL to register, exactly as it must be pasted.
+             */
+            url: string;
         };
         GoogleAppInput: {
             /** @description Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen. */
@@ -19290,10 +19346,12 @@ export interface components {
              */
             locale?: "en" | "de" | "vi";
             /**
+             * @description `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
+             *     An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
              * @default active
              * @enum {string}
              */
-            status: "active" | "suspended" | "deactivated";
+            status: "invited" | "active" | "suspended" | "deactivated";
             /**
              * @description First-party Agent Runner identity vs a human seat.
              * @default false
@@ -37366,7 +37424,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `email_channel_configured` (this installation mails the link — use the invite flow), `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (redemption requires an active member). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `email_channel_configured` (this installation mails the link — use the invite flow), `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint). */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -376,6 +377,17 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 // at transmission, where only an operator sees it. The CHANNEL half — a reply on
 // a channel this workspace bound no bot for — does not depend on this option;
 // WithKeyvault installs it unconditionally (comment below).
+// googleBackedConnectors are the connect flows one Google OAuth app serves, in
+// the order an operator registers them. Each is a SEPARATE route under its own
+// provider key, so registering one does not cover the other.
+var googleBackedConnectors = []struct {
+	purpose  crmcontracts.GoogleAppRedirectUriPurpose
+	provider string
+}{
+	{crmcontracts.MailboxConnect, providerGmail},
+	{crmcontracts.CalendarConnect, providerGcal},
+}
+
 func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.gmailAppConfigured = c.canSync() // the send pre-flight's fact, recorded before the gate below
@@ -383,6 +395,34 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// WithGmailCapture requires the vault and so always runs after
 		// WithKeyvault, which means a copy taken there would always read false.
 		s.envGoogleApp = s.gmailAppConfigured
+		// The Google-app screen reads the same two-source resolution the connector
+		// performs, so it needs the environment's client id and not merely the
+		// fact that there is one: an operator checking their console against what
+		// this installation actually uses needs the value, and it is not a secret
+		// — it rides in every authorization redirect.
+		if s.gmailAppConfigured {
+			s.envClientID = c.ClientID
+		}
+		// Published BEFORE the vault gate below, and for the same reason the
+		// sign-in URI is published before its own completeness gate: an operator
+		// registers both URLs while CREATING the OAuth client, which is before
+		// either flow can possibly work. The URL is a property of this
+		// deployment's origins rather than of anything the operator has yet
+		// configured, and it is not derivable from the sign-in one — that rides a
+		// different base on a split deployment.
+		// BOTH connectors, under the keys their own routes are served on. Gmail
+		// and Calendar are separate flows sharing one Google app, so an operator
+		// who registers only one gets redirect_uri_mismatch on the other — and
+		// the key is `gmail`/`gcal`, never the `google` the sign-in route uses.
+		// A SLICE, not a map: this list is a contract array an operator reads
+		// top to bottom, and Go randomizes map iteration — the two connector
+		// rows would swap places between boots of the same binary.
+		for _, connector := range googleBackedConnectors {
+			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, connector.provider); uri != "" {
+				s.redirectURIs = append(s.redirectURIs,
+					crmcontracts.GoogleAppRedirectUri{Purpose: connector.purpose, Url: uri})
+			}
+		}
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the
 		// surface its declared 501 instead. (WithKeyvault must precede this.)

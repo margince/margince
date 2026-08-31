@@ -316,6 +316,7 @@ var catalog = map[string]struct {
 	// passport are identity-owned facts, so all three ride the identity
 	// stream rather than gaining per-entity streams of their own.
 	"user.invited":              {identityStreamEntity, 1},
+	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},
 	"user.deactivated":          {identityStreamEntity, 1},
 	"user.reactivated":          {identityStreamEntity, 1},

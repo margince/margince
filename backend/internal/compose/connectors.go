@@ -108,9 +108,24 @@ type connectorHandlers struct {
 func (h connectorHandlers) wired() bool { return h.registry != nil && h.oauth != nil }
 
 func (h connectorHandlers) callbackURL(provider string) string {
-	base := h.apiBaseURL
+	return connectorCallbackURL(h.apiBaseURL, h.publicBaseURL, provider)
+}
+
+// connectorCallbackURL builds a connector's redirect_uri from the two bases
+// rather than from a built handler, so the value shown to an OPERATOR and the
+// value sent to the provider are produced by the same code — the settings screen
+// has to name this URL before any handler exists to ask.
+//
+// The api's own origin wins and the SPA's is the fallback, because the callback
+// must resolve to where the API serves it: on a split deployment those are
+// different hosts, which is why this cannot be derived from the sign-in URI.
+func connectorCallbackURL(apiBaseURL, publicBaseURL, provider string) string {
+	base := apiBaseURL
 	if base == "" {
-		base = h.publicBaseURL
+		base = publicBaseURL
+	}
+	if base == "" {
+		return ""
 	}
 	return strings.TrimRight(base, "/") + "/v1/connectors/" + provider + "/callback"
 }

@@ -984,6 +984,30 @@ export async function mockApi(
         system_of_record: { mode: sorMode },
       });
     }
+    if (path === "/installation/google-app" && method === "GET") {
+      // Answered explicitly: the catch-all would hand back a list envelope, and
+      // the Google-app card would then read a source and a redirect list off a
+      // body that carries neither — taking the whole settings screen down.
+      //
+      // `environment` because it is the state the card was rewritten for: an app
+      // the deployment supplies rather than one stored here, which the surface
+      // used to report as no app at all.
+      return json({
+        configured: true,
+        client_id: "000000000000-brandt.apps.googleusercontent.com",
+        source: "environment",
+        redirect_uris: [
+          {
+            purpose: "sign_in",
+            url: "https://api.brandt.example/v1/auth/oidc/google/callback",
+          },
+          {
+            purpose: "mailbox_connect",
+            url: "https://api.brandt.example/v1/connectors/google/callback",
+          },
+        ],
+      });
+    }
     if (path === "/installation/settings" && method === "GET") {
       // The authenticated shell holds its first paint on this read, because
       // `installation.timezone` is the clock every record date is rendered in
@@ -1000,6 +1024,12 @@ export async function mockApi(
         base_language: "de",
         base_currency_locked: false,
         max_upload_bytes: 25_000_000,
+        // Two providers, one of each state, so the sign-in methods card renders
+        // both an offered and a withheld row rather than only the empty case.
+        sign_in_providers: [
+          { key: "google", label: "Google", enabled: true },
+          { key: "microsoft", label: "Microsoft", enabled: false },
+        ],
       });
     }
     // The two anonymous reads the unauthenticated surface makes. Both answer

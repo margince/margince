@@ -535,6 +535,23 @@ function MemberVerbs({
   );
 }
 
+// statusTone maps a member's status onto the badge vocabulary.
+//
+// Invited is deliberately NEUTRAL rather than a warning. An invitation in
+// flight is the ordinary first state of every seat, and painting a whole
+// column of new colleagues amber tells an admin something is wrong when
+// nothing is. Warn is kept for the states somebody has to act on.
+function statusTone(status: string): "success" | "warn" | "danger" | undefined {
+  switch (status) {
+    case "active":
+      return "success";
+    case "invited":
+      return undefined;
+    default:
+      return "warn";
+  }
+}
+
 function MemberRow({
   member,
   canIssueLink,
@@ -634,18 +651,26 @@ function MemberRow({
   const pending =
     setRole.isPending || deactivate.isPending || reactivate.isPending;
 
-  // Only an ACTIVE member can redeem a link — redemption updates an active
-  // account and refuses otherwise — so offering one on a deactivated row would
-  // hand the admin a link that is dead on arrival. The agent seat is excluded
-  // for a different reason: it holds no password by construction, which is what
-  // makes it a thing that signs in nowhere, and the server refuses to mint it
-  // one.
+  // Issuance admits exactly whom redemption admits — an active member, and an
+  // invited one who has not redeemed yet — so a deactivated row is excluded
+  // because the link would be dead on arrival. The agent seat is excluded for a
+  // different reason: it holds no password by construction, which is what makes
+  // it a thing that signs in nowhere, and the server refuses to mint it one.
+  //
+  // Invited matters most here: an invitation whose link expired leaves a member
+  // with no password, so the self-service reset refuses them and this is the
+  // only route back into the account. Withholding it would strand them.
   const canMintLink =
     canAdminister &&
     canIssueLink &&
     !member.is_agent &&
-    member.status === "active";
-  const canDeactivate = canAdminister && member.status === "active";
+    (member.status === "active" || member.status === "invited");
+  // Offered on an invitation too, and that is not cosmetic: an unredeemed
+  // invitation holds a licensed seat, so without this an invitation sent to the
+  // wrong address consumes a seat with no way to release it.
+  const canDeactivate =
+    canAdminister &&
+    (member.status === "active" || member.status === "invited");
   const canReactivate = canAdminister && member.status === "deactivated";
 
   return (
@@ -667,7 +692,7 @@ function MemberRow({
         // every row, sits after the picker now.
         control={
           <>
-            <Badge tone={member.status === "active" ? "success" : "warn"}>
+            <Badge tone={statusTone(member.status)}>
               {t(`users.status.${member.status}`)}
             </Badge>
             {/* The workspace's agent identity sits in this roster because it

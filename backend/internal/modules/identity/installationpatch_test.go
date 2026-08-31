@@ -42,6 +42,20 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 			value.Elem().SetString("x")
 		case reflect.Int:
 			value.Elem().SetInt(7)
+		case reflect.Slice:
+			// NON-EMPTY, for the same reason the scalars above are non-zero: an
+			// encoder that wrote a slice the caller did not give it would be
+			// indistinguishable from one that passed theirs through. The empty
+			// list matters here beyond the usual zero-value argument, because it
+			// is a legitimate CHOICE on this field — offer password only — and a
+			// fixture that used it could not tell the two apart.
+			filledSlice := reflect.MakeSlice(value.Elem().Type(), 1, 1)
+			if filledSlice.Index(0).Kind() != reflect.String {
+				t.Fatalf("%s is a slice of %s, which this test does not know how to fill",
+					patchType.Field(i).Name, filledSlice.Index(0).Kind())
+			}
+			filledSlice.Index(0).SetString("x")
+			value.Elem().Set(filledSlice)
 		default:
 			t.Fatalf("%s holds %s, which this test does not know how to fill — "+
 				"give it a case rather than letting the field go unchecked",

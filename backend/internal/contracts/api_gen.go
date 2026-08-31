@@ -5098,6 +5098,48 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
+// Defines values for GoogleAppSource.
+const (
+	GoogleAppSourceEnvironment GoogleAppSource = "environment"
+	GoogleAppSourceNone        GoogleAppSource = "none"
+	GoogleAppSourceStored      GoogleAppSource = "stored"
+)
+
+// Valid indicates whether the value is a known member of the GoogleAppSource enum.
+func (e GoogleAppSource) Valid() bool {
+	switch e {
+	case GoogleAppSourceEnvironment:
+		return true
+	case GoogleAppSourceNone:
+		return true
+	case GoogleAppSourceStored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GoogleAppRedirectUriPurpose.
+const (
+	CalendarConnect GoogleAppRedirectUriPurpose = "calendar_connect"
+	MailboxConnect  GoogleAppRedirectUriPurpose = "mailbox_connect"
+	SignIn          GoogleAppRedirectUriPurpose = "sign_in"
+)
+
+// Valid indicates whether the value is a known member of the GoogleAppRedirectUriPurpose enum.
+func (e GoogleAppRedirectUriPurpose) Valid() bool {
+	switch e {
+	case CalendarConnect:
+		return true
+	case MailboxConnect:
+		return true
+	case SignIn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -10577,6 +10619,7 @@ func (e UserLocale) Valid() bool {
 const (
 	UserStatusActive      UserStatus = "active"
 	UserStatusDeactivated UserStatus = "deactivated"
+	UserStatusInvited     UserStatus = "invited"
 	UserStatusSuspended   UserStatus = "suspended"
 )
 
@@ -10586,6 +10629,8 @@ func (e UserStatus) Valid() bool {
 	case UserStatusActive:
 		return true
 	case UserStatusDeactivated:
+		return true
+	case UserStatusInvited:
 		return true
 	case UserStatusSuspended:
 		return true
@@ -12621,22 +12666,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -18702,12 +18747,21 @@ type FxRateListResponse struct {
 
 // GoogleApp defines model for GoogleApp.
 type GoogleApp struct {
-	// ClientId Google's public identifier for the app, or empty when none is stored. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
+	// ClientId Google's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
 	ClientId string `json:"client_id"`
 
-	// Configured Whether both the client id and a sealed client secret are held.
+	// Configured Whether a Google app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can Gmail and Calendar be connected", which is a different question from where the app came from.
 	Configured bool `json:"configured"`
+
+	// RedirectUris Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
+	RedirectUris []GoogleAppRedirectUri `json:"redirect_uris"`
+
+	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+	Source GoogleAppSource `json:"source"`
 }
+
+// GoogleAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+type GoogleAppSource string
 
 // GoogleAppInput defines model for GoogleAppInput.
 type GoogleAppInput struct {
@@ -18717,6 +18771,20 @@ type GoogleAppInput struct {
 	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
 	ClientSecret *string `json:"client_secret,omitempty"`
 }
+
+// GoogleAppRedirectUri One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes.
+type GoogleAppRedirectUri struct {
+	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
+	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
+	Purpose GoogleAppRedirectUriPurpose `json:"purpose"`
+
+	// Url The absolute URL to register, exactly as it must be pasted.
+	Url string `json:"url"`
+}
+
+// GoogleAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
+// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
+type GoogleAppRedirectUriPurpose string
 
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
@@ -19245,6 +19313,16 @@ type InstallationSettings struct {
 
 	// Name The organization's display name.
 	Name string `json:"name"`
+
+	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
+	// the installation currently offers it on the login screen. The list is what the
+	// DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
+	// a client id and secret cannot be invented from a settings screen.
+	//
+	// Password sign-in is deliberately absent from this list. It is the method every
+	// installation always has and the one that cannot be disabled, so there is no state
+	// here that could turn it off and strand everybody.
+	SignInProviders []SignInProvider `json:"sign_in_providers"`
 
 	// Timezone IANA zone name every reporting period boundary is computed in (not a user's own
 	// display timezone, which is per-user).
@@ -25648,6 +25726,18 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
+// SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
+type SignInProvider struct {
+	// Enabled Whether this installation currently offers it on the login screen.
+	Enabled bool `json:"enabled"`
+
+	// Key The provider key the sign-in routes are served under.
+	Key string `json:"key"`
+
+	// Label The provider's display name, as the login screen shows it.
+	Label string `json:"label"`
+}
+
 // Signal A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
 // company-level and consent-gated by construction — the only mandatory attribution is
 // organizational (`resolved_org_id` after resolution); `resolved_person_id` is optional
@@ -26312,6 +26402,15 @@ type UpdateInstallationSettingsRequest struct {
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
+	// EnabledOidcProviders The provider keys the login screen may offer, of those this deployment configured.
+	// Sending a key the deployment has no credentials for enables nothing: the effective
+	// list is the intersection, so this can only ever narrow what is possible.
+	//
+	// Password sign-in is not a member of this list and cannot be removed by any value of
+	// it. Omit the field to leave the choice unchanged; send an empty array to offer
+	// password only.
+	EnabledOidcProviders *[]string `json:"enabled_oidc_providers,omitempty"`
+
 	// FiscalYearStartMonth The month the installation's business year begins, 1..12. Never frozen: it cuts
 	// reports on read and stores nothing, so moving it re-labels every period report at
 	// once and re-means no stored row.
@@ -26658,7 +26757,10 @@ type User struct {
 	Locale *UserLocale `json:"locale,omitempty"`
 
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
-	Roles  *[]string  `json:"roles,omitempty"`
+	Roles *[]string `json:"roles,omitempty"`
+
+	// Status `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
+	// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 	Status UserStatus `json:"status"`
 
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
@@ -26673,7 +26775,8 @@ type User struct {
 // Absent is not the same as `en`. A person who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
 type UserLocale string
 
-// UserStatus defines model for User.Status.
+// UserStatus `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
+// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 type UserStatus string
 
 // UserListResponse defines model for UserListResponse.
