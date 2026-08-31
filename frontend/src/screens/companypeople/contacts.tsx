@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { api } from "../../api/client";
 import type { components, paths } from "../../api/schema";
@@ -58,7 +59,19 @@ const ENGAGEMENT_LABELS: Record<
   untried: "co.reach.untried",
 };
 
-export function CompanyPeopleList({ orgId }: { readonly orgId: string }) {
+export function CompanyPeopleList({
+  orgId,
+  bandSlot,
+}: Readonly<{
+  orgId: string;
+  /**
+   * Drawn above the table, inside this component, so the band's doors can
+   * narrow the list without the two sharing state through the screen. It
+   * receives the narrowing function rather than the state: a door sets a
+   * filter, and nothing else about the list is any of the band's business.
+   */
+  bandSlot?: (narrow: (status: string | null) => void) => ReactNode;
+}>) {
   const t = useT();
 
   // Bound to the account, so switching company starts its own list rather than
@@ -112,79 +125,90 @@ export function CompanyPeopleList({ orgId }: { readonly orgId: string }) {
     fetchPage,
   });
 
+  const narrow = (status: string | null) => {
+    state.setQuery((prev) => ({
+      ...prev,
+      q: "",
+      filters: status ? { status } : ({} as Record<string, string>),
+    }));
+  };
+
   return (
-    <ListTable
-      state={state}
-      unit="unit.contacts"
-      searchable
-      showArchivedToggle={false}
-      // The colleague-by-contact comparison, kept as the diagnostic it is
-      // rather than a headline: it answers "where are we thin across the
-      // team", which a reader asks after choosing somebody, not before.
-      tools={<CoverageExplorer orgId={orgId} />}
-      chips={[
-        {
-          key: "status",
-          label: "co.people.filter.status",
-          allLabel: "co.people.filter.statusAll",
-          options: [
-            { value: "answered", label: "co.reach.answered" },
-            { value: "no_reply", label: "co.reach.silent" },
-            { value: "untried", label: "co.reach.untried" },
-          ],
-        },
-      ]}
-      columns={[
-        {
-          key: "name",
-          header: t("people.name"),
-          cell: (contact: OrganizationContact) => (
-            <span>
-              <strong>{contact.full_name}</strong>
-              {contact.title && (
-                <span className="t-caption"> · {contact.title}</span>
-              )}
-            </span>
-          ),
-          sort: "name",
-          fixed: true,
-        },
-        {
-          key: "engagement",
-          header: t("co.people.engagement"),
-          cell: (contact: OrganizationContact) => (
-            <Badge tone={ENGAGEMENT_TONES[contact.engagement]}>
-              {t(ENGAGEMENT_LABELS[contact.engagement])}
-            </Badge>
-          ),
-        },
-        {
-          key: "last_interaction",
-          header: t("co.people.lastInteraction"),
-          cell: (contact: OrganizationContact) => (
-            <LastTouch contact={contact} />
-          ),
-          sort: "last_interaction",
-          numeric: true,
-        },
-        {
-          key: "strength",
-          header: t("co.people.strength"),
-          cell: (contact: OrganizationContact) => (
-            <span className="t-caption">
-              {t(`strength.bucket.${contact.strength.bucket}`)}
-            </span>
-          ),
-          sort: "strength",
-          numeric: true,
-        },
-      ]}
-      rowKey={(contact: OrganizationContact) => contact.person_id}
-      rowRoute={(contact: OrganizationContact) => ({
-        screen: "contacts",
-        id: contact.person_id,
-      })}
-    />
+    <>
+      {bandSlot?.(narrow)}
+      <ListTable
+        state={state}
+        unit="unit.contacts"
+        searchable
+        showArchivedToggle={false}
+        // The colleague-by-contact comparison, kept as the diagnostic it is
+        // rather than a headline: it answers "where are we thin across the
+        // team", which a reader asks after choosing somebody, not before.
+        tools={<CoverageExplorer orgId={orgId} />}
+        chips={[
+          {
+            key: "status",
+            label: "co.people.filter.status",
+            allLabel: "co.people.filter.statusAll",
+            options: [
+              { value: "answered", label: "co.reach.answered" },
+              { value: "no_reply", label: "co.reach.silent" },
+              { value: "untried", label: "co.reach.untried" },
+            ],
+          },
+        ]}
+        columns={[
+          {
+            key: "name",
+            header: t("people.name"),
+            cell: (contact: OrganizationContact) => (
+              <span>
+                <strong>{contact.full_name}</strong>
+                {contact.title && (
+                  <span className="t-caption"> · {contact.title}</span>
+                )}
+              </span>
+            ),
+            sort: "name",
+            fixed: true,
+          },
+          {
+            key: "engagement",
+            header: t("co.people.engagement"),
+            cell: (contact: OrganizationContact) => (
+              <Badge tone={ENGAGEMENT_TONES[contact.engagement]}>
+                {t(ENGAGEMENT_LABELS[contact.engagement])}
+              </Badge>
+            ),
+          },
+          {
+            key: "last_interaction",
+            header: t("co.people.lastInteraction"),
+            cell: (contact: OrganizationContact) => (
+              <LastTouch contact={contact} />
+            ),
+            sort: "last_interaction",
+            numeric: true,
+          },
+          {
+            key: "strength",
+            header: t("co.people.strength"),
+            cell: (contact: OrganizationContact) => (
+              <span className="t-caption">
+                {t(`strength.bucket.${contact.strength.bucket}`)}
+              </span>
+            ),
+            sort: "strength",
+            numeric: true,
+          },
+        ]}
+        rowKey={(contact: OrganizationContact) => contact.person_id}
+        rowRoute={(contact: OrganizationContact) => ({
+          screen: "contacts",
+          id: contact.person_id,
+        })}
+      />
+    </>
   );
 }
 

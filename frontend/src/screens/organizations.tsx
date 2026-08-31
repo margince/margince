@@ -87,6 +87,7 @@ import {
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
 import { CompanyPeopleList } from "./companypeople/contacts";
+import { CoverageBand } from "./companypeople/summary";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { CompanyRecentList } from "./companyrecent";
@@ -2410,7 +2411,12 @@ function CompanyRecordBody({
               answered "who works here" again in a different shape, and the
               reader's question is which of them to write to. */}
           {!overlay && !view?.sections_omitted?.includes("people") && (
-            <CompanyPeopleList orgId={org.id} />
+            <CompanyPeopleList
+              orgId={org.id}
+              bandSlot={(narrow) => (
+                <CoverageBand orgId={org.id} onNarrow={narrow} />
+              )}
+            />
           )}
         </div>
       )}
