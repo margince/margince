@@ -287,7 +287,7 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, personID 
 	// would be the ordering the eraser deadlocks against. person_social is a
 	// declared PII table Art. 17 deletes, and the hold is what stops a handle
 	// landing after the erasure cleared it.
-	landed, err := insertSocialHandle(ctx, tx, personID, socialLinkedIn, *handle)
+	_, landed, err := insertSocialHandle(ctx, tx, personID, socialLinkedIn, *handle)
 	if err != nil || !landed {
 		return false, err
 	}

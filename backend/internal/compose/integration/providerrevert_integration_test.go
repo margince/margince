@@ -101,6 +101,61 @@ func TestDeletingBoughtDataForgetsWhatItFilled(t *testing.T) {
 	}
 }
 
+// TestDeletingBoughtDataReachesAnArchivedContact holds the promise the action's
+// own comment makes.
+//
+// Archiving is not erasure: the record stays, and so does everything a purchase
+// wrote on it. An admin deleting bought data means those too — and the failure
+// this guards is silent, because a revert that refuses an archived subject
+// rolls back and the endpoint still answers 204.
+func TestDeletingBoughtDataReachesAnArchivedContact(t *testing.T) {
+	e := Setup(t)
+	store := providerStoreFor(t, e)
+
+	// A bought PROFILE LINK, not just a title: the social and child-row reverts
+	// are the ones that bump the aggregate afterwards, and that bump is what
+	// used to refuse an archived subject and roll the whole revert back.
+	archived := plantBoughtTitle(t, e, "Head of Partnerships")
+	handle := plantBoughtHandle(t, e, archived, "linkedin.com/in/archived-one")
+	execAsOwner(t, e, `UPDATE person SET archived_at = now() WHERE id = $1`, archived)
+
+	if err := store.DeleteProviderData(providerAdmin(e), "surfe"); err != nil {
+		t.Fatal(err)
+	}
+
+	var handles int
+	queryAsOwner(t, e, `SELECT count(*) FROM person_social WHERE id = $1`, &handles, handle)
+	if handles != 0 {
+		t.Error("an archived contact kept its bought profile link — archiving is not erasure, " +
+			"so the purchase is still on the record and the action said it was gone")
+	}
+	if got := titleOf(t, e, archived); got != "" {
+		t.Errorf("an archived contact kept its bought title %q, for the same reason", got)
+	}
+}
+
+// plantBoughtHandle adds a bought profile link to an existing contact, recorded
+// by ROW as the applier records it.
+func plantBoughtHandle(t *testing.T, e *Env, person ids.UUID, handle string) ids.UUID {
+	t.Helper()
+	var rowID ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			INSERT INTO person_social (person_id, platform, handle)
+			VALUES ($1, 'linkedin', $2) RETURNING id`, person, handle).Scan(&rowID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var run ids.UUID
+	queryAsOwner(t, e, `SELECT id FROM provider_run WHERE person_id = $1 LIMIT 1`, &run, person)
+	execAsOwner(t, e, `
+		INSERT INTO provider_applied_field
+		       (person_id, run_id, provider, target_table, target_field, target_row_id, captured_by)
+		VALUES ($1, $2, 'surfe', 'person_social', 'linkedin', $3, 'connector:surfe')`,
+		person, run, rowID)
+	return rowID
+}
+
 // providerStoreFor builds the store over the real cross-module binding.
 func providerStoreFor(t *testing.T, e *Env) *integrations.Store {
 	t.Helper()

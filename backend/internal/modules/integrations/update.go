@@ -155,7 +155,8 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 	// touched, and the eraser locks those rows subject-first — a single
 	// transaction over all of them is a deadlock against somebody's Art. 17
 	// request, with an unbounded lock set on top.
-	if err := s.revertProviderFills(ctx, name); err != nil {
+	skipped, err := s.revertProviderFills(ctx, name)
+	if err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -184,7 +185,7 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 			return fmt.Errorf("integrations: scrubbing run metadata: %w", err)
 		}
 		if _, err := storekit.LogSystem(ctx, tx, "provider_data_deleted",
-			map[string]any{auditKeyProvider: name}); err != nil {
+			map[string]any{auditKeyProvider: name, "records_not_cleared": skipped}); err != nil {
 			return err
 		}
 		return nil
@@ -258,12 +259,15 @@ func applyPatch(current currentConfig, patch ConfigPatch) currentConfig {
 // A contact the caller may not write is skipped rather than failing the action:
 // admin and ops are unbounded so this does not arise for a seeded role, but a
 // custom role holding integrations:delete without write authority over every
-// record should still get the claims and the ledger cleared. What it cannot do
-// is silently report having cleared the records too, which is why the skip is
-// counted into the system log below.
-func (s *Store) revertProviderFills(ctx context.Context, name string) error {
+// record should still get the claims and the ledger cleared.
+//
+// It returns how many it skipped, and the caller puts that in the system log.
+// Reporting a clean sweep over records it could not reach is the one outcome
+// this must not produce — an admin reading "deleted" would have no way to learn
+// that some contacts still carry the values.
+func (s *Store) revertProviderFills(ctx context.Context, name string) (int, error) {
 	if s.revertFills.Subjects == nil || s.revertFills.RevertOne == nil {
-		return nil
+		return 0, nil
 	}
 	var subjects []ids.UUID
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -271,18 +275,20 @@ func (s *Store) revertProviderFills(ctx context.Context, name string) error {
 		subjects, err = s.revertFills.Subjects(ctx, tx, name)
 		return err
 	}); err != nil {
-		return fmt.Errorf("integrations: reading whose records this provider filled: %w", err)
+		return 0, fmt.Errorf("integrations: reading whose records this provider filled: %w", err)
 	}
+	var skipped int
 	for _, subject := range subjects {
 		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 			_, err := s.revertFills.RevertOne(ctx, tx, name, subject)
 			return err
 		}); err != nil {
 			if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+				skipped++
 				continue
 			}
-			return fmt.Errorf("integrations: clearing what this provider filled: %w", err)
+			return skipped, fmt.Errorf("integrations: clearing what this provider filled: %w", err)
 		}
 	}
-	return nil
+	return skipped, nil
 }
