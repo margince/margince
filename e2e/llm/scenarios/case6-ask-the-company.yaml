@@ -42,30 +42,34 @@ must_mention:
 
 # The note says "im Oktober" and it is wrong, and the answer has to notice.
 #
-# This needs both halves, because either alone is satisfied by a bad answer.
+# Both halves are needed, because either alone passes a bad answer.
 #
 # must_mention — the answer says the record and the note disagree, and names
-# WHAT disagrees. No lone word qualifies: "conflict" counts only next to a
-# date, record, note or email, because "a conflict of interest between the two
-# managers" would otherwise earn a green from an answer that never compared
-# the dates. Under-recognition is the one direction a scenario must not fail
-# in: it reports PASS and leaves no failing assertion to notice.
+# WHAT disagrees. A lone word does not qualify: "conflict" counts only within
+# a clause of a date, record, note or email, or "a conflict of interest
+# between the two managers" would green an answer that never compared the
+# dates. Under-recognition is the one direction a scenario must not fail in,
+# because it reports PASS and leaves no failing assertion to notice.
 #
-# must_not_mention — the answer does not then adopt October as its own
-# conclusion. Every alternative requires a conclusion verb, so an answer that
-# translates the German note it just quoted ("The customer raised it clearly
-# in October") does not trip it. That is the distinction the assertion turns
-# on: a bare /raised (it|this) in Octo/ cannot draw it, because check.py
-# matches one flat regex over the whole answer and cannot see where a
-# quotation ends.
+# must_not_mention — the answer does not then use October as the date of the
+# complaint in its own voice. check.py matches one flat regex over the whole
+# answer and cannot see where a quotation ends, so this half must not fire on
+# an answer that quotes the German note and translates it — "The customer
+# raised it clearly in October" is a rendering of the record, not a claim.
+# Every alternative therefore needs something the note's own sentence does not
+# say: a noun phrase ("the October complaint"), a verb of complaining, a date
+# range, or an explicit "was raised in October". Both languages, because the
+# note is German and an answer may adopt its month in German.
 #
-# Both directions are checked against real transcripts with check.py --check:
-# answers that flag the contradiction pass, and answers that adopt October as
-# their own finding ("the October complaint sat too long") fail.
+# Reproduce either half against a transcript with
+#   python3 check.py --check scenarios/case6-ask-the-company.yaml <run.jsonl>
+# The three runs in records/ are answers that adopted October: two are caught
+# by must_not_mention, and the third, which only ever quotes the German, by
+# must_mention.
   - "disagree|do(es)? not match|contradict|misremember|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|only logged inbound|no October|by the CRM's own dates"
 
 must_not_mention:
-  - "the (complaint|escalation|customer)[^.]{0,30}(was|were) raised in Octo|complaint (came|landed|arrived) in Octo"
+  - "the (?:October|Oktober)\s+(?:complaint|escalation)|(?:complained|escalated)[^.]{0,30}(?:October|Oktober)|(?:beschwert|eskaliert)[^.]{0,30}(?:October|Oktober)|(?:October|Oktober)[^.]{0,30}(?:beschwert|eskaliert)|complaint\s+(?:came|landed|arrived|sat)[^.]{0,25}(?:October|Oktober)|from\s+(?:October|Oktober)\s+to|seit\s+(?:October|Oktober)|(?:was|were|is)\s+raised\s+in\s+(?:October|Oktober)"
 
 runs: 3
 pass_at: 2
