@@ -50,6 +50,7 @@ const CHECKED: VatCheck = {
   registered_name: "Muster Handels GmbH",
   registered_address: "Musterstraße 1, 10115 Berlin",
   checked_at: "2026-08-14T09:12:00Z",
+  recorded_at: "2026-08-14T09:12:31Z",
 };
 
 // The row as the rail draws it: the label, the value, the mark. The mark has to
@@ -161,6 +162,23 @@ export const AskedTooSoon: Story = {
           },
           429,
         ),
+    });
+    return inRow(NUMBER);
+  },
+};
+
+/** Asked, and waiting. The button stays busy until the register replies rather
+ * than until the request is accepted — the POST answers in milliseconds and the
+ * answer arrives seconds later, so a button that cleared on the 202 invited a
+ * second consultation for a check already running. Press it here: it refuses,
+ * keeps focus, and says what it is doing. */
+export const AskedAndWaiting: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": CAN_WRITE,
+      // The register never answers, which is what holds the wait open.
+      [ROUTE]: () => jsonResponse(CHECKED),
+      [ASK]: () => new Response(null, { status: 202 }),
     });
     return inRow(NUMBER);
   },

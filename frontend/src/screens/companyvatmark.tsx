@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -163,6 +163,13 @@ export function VatMark({
     },
   });
 
+  // Called BEFORE the early returns below, because a hook that runs on some
+  // renders and not others breaks the Rules of Hooks the moment the read flips
+  // between pending and settled — which it does on every mount. It also has to
+  // outlive the popover: the wait it holds is the reason a closed panel no
+  // longer forgets a consultation still running.
+  const ask = useAskTheRegister(orgId, check.data?.recorded_at ?? null);
+
   // A read still in flight draws nothing rather than a third state: the mark
   // sits inside a value the reader is already looking at, and a glyph that
   // appears a beat later under the eye is worse than one that appears with the
@@ -214,7 +221,7 @@ export function VatMark({
         ) : (
           <VatReceipt check={answer} locale={locale} zone={zone} />
         )}
-        <AskTheRegister orgId={orgId} consulted={answer !== null} />
+        <AskTheRegister consulted={answer !== null} ask={ask} />
         {/* The number this mark answers for, last: a receipt names what it was
             issued for, and the row above the mark can be edited after a check
             — so a mark that showed only a verdict could sit beside a number
@@ -295,30 +302,48 @@ function VatReceipt({
 }
 
 /**
- * AskTheRegister consults the register again about the number on record.
+ * useAskTheRegister owns the consultation a person asks for, and it lives on
+ * the MARK rather than inside the popover panel.
+ *
+ * That placement is the whole point. `Popover` unmounts its children on close
+ * and says so — nothing in there is meant to hold state a reader expects to
+ * find again. A wait held inside it dies when the panel shuts, so reopening it
+ * offered an enabled button for a consultation still running on the server,
+ * which is the duplicate press this exists to refuse.
  *
  * Nothing re-asks on a schedule — a verdict going stale is not an event the
  * product can observe — so without this a stored answer stood forever, and a
  * rep who knew a registration had changed at the registry could not act on it.
  */
-function AskTheRegister({
-  orgId,
-  consulted,
-}: Readonly<{ orgId: string; consulted: boolean }>): ReactNode {
-  const t = useT();
+function useAskTheRegister(orgId: string, answeredAt: string | null) {
   const queryClient = useQueryClient();
-  const canEdit = useCan("organization", "update");
-  // The organization whose answer we are waiting for, or null. Set by the
-  // mutation and cleared once the poll below has run its course.
-  const [waitingFor, setWaitingFor] = useState<string | null>(null);
+  // The organization whose answer is outstanding, and what the record said when
+  // the wait began. Null when nothing is in flight.
+  //
+  // The date is what ENDS the wait: the worker writes a new one when the
+  // register replies. Waiting on the poll's own schedule instead would hold the
+  // button for the full fifteen seconds after an answer that arrived in two.
+  const [waitingFor, setWaitingFor] = useState<{
+    orgId: string;
+    since: string | null;
+  } | null>(null);
+  useEffect(() => {
+    if (waitingFor !== null && answeredAt !== waitingFor.since) {
+      setWaitingFor(null);
+    }
+  }, [answeredAt, waitingFor]);
+
   const ask = useMutation({
-    // The organization is a VARIABLE rather than a closure over this render: a
-    // click landing between the commit and React Query re-arming the options
-    // would otherwise run against the previous render's id.
-    mutationFn: async (id: string) => {
+    // Both the organization and the BASELINE travel as mutation variables. The
+    // id for the reason every mutationFn here takes one — a click landing
+    // before React Query re-arms its options would otherwise run against the
+    // previous render's value — and the baseline for a sharper version of the
+    // same hazard: closed over, a stale `answeredAt` makes the effect above see
+    // a mismatch immediately and clear a wait that had not started.
+    mutationFn: async (asked: { orgId: string; since: string | null }) => {
       const { error, response } = await api.POST(
         "/organizations/{id}/vat-check",
-        { params: { path: { id } } },
+        { params: { path: { id: asked.orgId } } },
       );
       // `response.ok` as well as `error`, and the second is what catches a
       // failure here: this endpoint answers 202 with NO BODY, so a bodiless
@@ -327,28 +352,20 @@ function AskTheRegister({
       if (error || !response.ok) {
         throwProblem(error);
       }
-      return id;
+      return asked;
     },
-    // Deliberately NOT invalidating here. The consultation is QUEUED — 202,
-    // no body — and the worker has not asked the register yet, so a refetch on
+    // Deliberately NOT invalidating here. The consultation is QUEUED — 202, no
+    // body — and the worker has not asked the register yet, so a refetch on
     // success re-reads the OLD verdict and caches it as though it were the
-    // answer to this request. The reader would then watch a stale word settle
-    // under a line saying the register had been asked.
-    //
-    // Waiting is the honest surface instead: the panel says the answer appears
-    // once it replies, and the poll below is what makes that true. Keyed on
-    // what the mutation RETURNED rather than this render's orgId, so a click in
-    // React Query's re-arming window cannot poll the company the reader was
-    // looking at a moment ago.
+    // answer to this request. The poll below is what makes the panel's promise
+    // true instead.
     onSuccess: (asked) => setWaitingFor(asked),
   });
 
   // The register answers out of band, so the only way the mark learns is to
   // look again. A few spaced attempts rather than a subscription: the whole
   // exchange is one HTTP call the worker makes, usually inside a second or two,
-  // and a socket for that would be machinery nobody needs. The attempts stop
-  // whether or not an answer arrived — a poll that ran forever would keep
-  // asking about a company the reader left.
+  // and a socket for that would be machinery nobody needs.
   useEffect(() => {
     if (waitingFor === null) {
       return;
@@ -356,11 +373,15 @@ function AskTheRegister({
     const timers = VAT_POLL_DELAYS_MS.map((delay, attempt) =>
       setTimeout(() => {
         // refetchQueries, not invalidateQueries: the second marks the entry
-        // stale and refetches only where an observer is currently mounted, and
-        // this poll lives inside a popover panel the reader may have closed. A
-        // request that answered nothing because a panel shut is the shape of
-        // bug this whole change exists to stop.
-        void queryClient.refetchQueries({ queryKey: vatCheckKey(waitingFor) });
+        // stale and refetches only where an observer is mounted, and the panel
+        // that displays this may be closed while the wait runs on.
+        void queryClient.refetchQueries({
+          queryKey: vatCheckKey(waitingFor.orgId),
+        });
+        // The last attempt ends the wait whether or not an answer came. A
+        // register that never replies must not leave the button busy forever:
+        // the reader is then stuck with a control they cannot press and no
+        // reason given.
         if (attempt === VAT_POLL_DELAYS_MS.length - 1) {
           setWaitingFor(null);
         }
@@ -373,20 +394,75 @@ function AskTheRegister({
     };
   }, [waitingFor, queryClient]);
 
+  const waiting = ask.isPending || waitingFor !== null;
+  // Every state React holds — `isPending`, `waitingFor` — is a fact about a
+  // render that has already happened, so two clicks inside one frame both read
+  // "not busy" and both sent a consultation. This ref is set in the handler
+  // itself, which is the only thing that can refuse the second click of a
+  // double-click.
+  const inFlight = useRef(false);
+  useEffect(() => {
+    if (!waiting) {
+      inFlight.current = false;
+    }
+  }, [waiting]);
+  return {
+    waiting,
+    error: ask.error,
+    press: () => {
+      if (waiting || inFlight.current) {
+        return;
+      }
+      inFlight.current = true;
+      ask.mutate({ orgId, since: answeredAt });
+    },
+  };
+}
+
+/** AskTheRegister draws the verb and what the wait is doing. The state lives on
+ * the mark above, so closing the panel does not forget an outstanding
+ * consultation. */
+function AskTheRegister({
+  consulted,
+  ask,
+}: Readonly<{
+  consulted: boolean;
+  ask: ReturnType<typeof useAskTheRegister>;
+}>): ReactNode {
+  const t = useT();
+  const canEdit = useCan("organization", "update");
   if (!canEdit) {
     return null;
   }
   return (
     <div className="vatmark-ask">
+      {/* Busy until the ANSWER lands, not until the request is accepted. The
+          POST returns a 202 in milliseconds and the register replies seconds
+          later, so a button that cleared on the 202 was pressable again for
+          the whole wait — and a second press queues a second consultation, or
+          meets the five-minute floor and shows a rate-limit refusal for a check
+          that is already running. Either way the reader is told something
+          false about a request they made correctly. */}
       <Button
         variant="ghost"
         small
-        pending={ask.isPending}
-        onClick={() => ask.mutate(orgId)}
+        pending={ask.waiting}
+        busyLabel={t("co.vat.askingBusy")}
+        onClick={ask.press}
       >
         {t(consulted ? "co.vat.askAgain" : "co.vat.askNow")}
       </Button>
-      {ask.isSuccess && <p className="t-caption">{t("co.vat.asked")}</p>}
+      {/* Said in WORDS as well as in the button's busy mark: a spinner beside
+          an unchanged label leaves a sighted reader guessing whether their
+          press landed, while `busyLabel` reaches only a screen reader.
+          Deliberately not the SAME sentence as that one — a reader who gets
+          both would hear the fact twice, so the description is short ("Asking
+          the register") and this carries what happens next. */}
+      {ask.waiting && (
+        <p className="t-caption" role="status">
+          {t("co.vat.asking")}
+        </p>
+      )}
       {ask.error !== null && (
         <p className="t-caption" role="status">
           {problemMessageOf(ask.error, t)}

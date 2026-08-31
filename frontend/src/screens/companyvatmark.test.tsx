@@ -37,6 +37,7 @@ const CHECKED = {
   consultation_number: "WAPIAAAAXk3rN2p9",
   registered_name: "Muster Handels GmbH",
   checked_at: "2026-08-14T09:12:00Z",
+  recorded_at: "2026-08-14T09:12:31Z",
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -206,7 +207,7 @@ describe("the VAT mark beside the number", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByText(/answer appears here once it replies/),
+        screen.queryByText(/the answer appears here once it replies/),
       ).toBeNull();
     });
   });
@@ -335,7 +336,7 @@ describe("the VAT mark beside the number", () => {
       await screen.findByRole("button", { name: "VAT ID: Not valid" }),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
-    await screen.findByText(/answer appears here once it replies/);
+    await screen.findByText(/the answer appears here once it replies/);
 
     // The timers have to be fake BEFORE the poll schedules itself, or the
     // setTimeout it registers belongs to the real clock and advancing a fake
@@ -352,6 +353,187 @@ describe("the VAT mark beside the number", () => {
     // after the register replied. A single read would mean the answer only
     // arrived because something else remounted the mark.
     expect(gets).toEqual(["invalid", "valid"]);
+  });
+
+  it("refuses a second press while the register is still being asked", async () => {
+    // The window the reader actually meets: the POST answers 202 in
+    // milliseconds and the register replies seconds later, so a button that
+    // cleared on the 202 was live again for the whole wait. A second press
+    // queues a second consultation, or meets the five-minute floor and shows a
+    // rate-limit refusal for a check that is already running.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      // The register never replies, which is what holds the wait open.
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    fireEvent.click(ask);
+    await screen.findByText(/the answer appears here once it replies/);
+
+    // Pressed four more times while the answer is outstanding.
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(posts).toHaveLength(1);
+    // Refused by being BUSY, not by being disabled: focus stays where the
+    // reader put it, which is what aria-disabled is for.
+    expect(ask).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("takes a press again once the register has answered", async () => {
+    // The other half, and the one that stops the fix being a control nobody can
+    // use twice: the wait ends when the answer lands, not when the poll runs
+    // out of attempts.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // The verdict does not change; `answered` is what the register replying
+    // moves, and it is the only thing this test varies.
+    let answered = false;
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        answered = true;
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse({
+        ...CHECKED,
+        // The VERDICT is held constant on purpose: an implementation that
+        // cleared the wait on any change to the answer would pass while reading
+        // the wrong field. Only recorded_at moves — which is also the honest
+        // case, since re-checking usually confirms what the register said last
+        // time.
+        status: "invalid",
+        // The date MOVES with the answer, which is the signal the wait reads.
+        // checked_at deliberately does NOT move: VIES answers with a date and
+        // no time, so a same-day re-check carries the one it already had. Only
+        // recorded_at moves, and a wait reading the wrong field would hang here
+        // exactly as it would in front of a reader.
+        checked_at: CHECKED.checked_at,
+        recorded_at: answered ? "2026-08-14T09:20:00Z" : CHECKED.recorded_at,
+      });
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    // The answer landed, so the button is pressable again — well before the
+    // poll's own last attempt fifteen seconds out.
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    expect(ask).not.toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(posts).toHaveLength(2);
+  });
+
+  it("still refuses after the panel is closed and reopened", async () => {
+    // Popover unmounts its children on close, and its own comment says nothing
+    // inside is meant to hold state a reader expects to find again. A wait held
+    // in there died with the panel, so reopening offered an enabled button for
+    // a consultation still running on the server — the duplicate press this
+    // whole change refuses.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      // The register never replies, so the wait is still outstanding.
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    const glyph = await screen.findByRole("button", { name: "VAT ID: Valid" });
+    fireEvent.click(glyph);
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    // Shut the panel and open it again.
+    fireEvent.click(glyph);
+    fireEvent.click(glyph);
+
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    expect(ask).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(posts).toHaveLength(1);
+  });
+
+  it("sends one consultation for two clicks in the same frame", async () => {
+    // The button's busy state is computed from a LATER render, so two clicks
+    // inside one frame both passed it. The guard on the press reads the value
+    // this render already holds.
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    // No await between them: this is the double-click a reader actually makes.
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    await screen.findByText(/the answer appears here once it replies/);
+
+    expect(posts).toHaveLength(1);
   });
 
   it("draws nothing while the read is in flight", () => {

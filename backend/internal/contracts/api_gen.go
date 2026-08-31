@@ -22721,6 +22721,13 @@ type OrganizationVatCheck struct {
 	ConsultationNumber *string            `json:"consultation_number,omitempty"`
 	OrganizationId     openapi_types.UUID `json:"organization_id"`
 
+	// RecordedAt When this installation WROTE the consultation, on its own clock. Distinct from
+	// `checked_at` on purpose, and the distinction is load-bearing: VIES answers with a
+	// date and no time, so two consultations on one day carry the same `checked_at`. A
+	// client waiting for a re-check to land would wait forever on that field, and the
+	// server's own rate floor reads this one for the same reason.
+	RecordedAt *time.Time `json:"recorded_at,omitempty"`
+
 	// RegisteredAddress The address the register holds, when it returned one.
 	RegisteredAddress *string `json:"registered_address,omitempty"`
 
