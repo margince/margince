@@ -19,6 +19,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode, RefObject } from "react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { beginModelCall, endModelCall } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { clearAgentEdge, currentAgentEdge } from "./agent-edge-signal";
@@ -1033,6 +1034,47 @@ describe("AgentRail", () => {
     withRuns(RUN());
     const { container } = render(ROUTE);
     await settlesOnLine(container, BRIEF_RUNNING);
+  });
+
+  // The window the feed cannot cover. The projection is written from an event
+  // the router publishes, so between the press of "Draft with AI" and the read
+  // that first carries the occurrence there is a live model call and an orb at
+  // rest, which for a task that runs in seconds was most of the run, and at
+  // the idle cadence was the whole of it.
+  it("moves the Core to working while this tab holds a model call open", async () => {
+    withRuns();
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
+
+    act(() => {
+      beginModelCall();
+    });
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("working"),
+    );
+
+    act(() => {
+      endModelCall();
+    });
+  });
+
+  // The feed is the only thing that may NAME the work, so the moment it carries
+  // the occurrence it outranks the bare fact that a request is open. Both are
+  // true here at once, and the sentence has to be the run's own.
+  it("lets the feed name the work as soon as it carries the run", async () => {
+    withRuns(RUN());
+    const { container } = render(ROUTE);
+    act(() => {
+      beginModelCall();
+    });
+
+    await settlesOnLine(container, BRIEF_RUNNING);
+
+    act(() => {
+      endModelCall();
+    });
   });
 
   // Two subjects, two slots. They used to share one, so the agent's sentence
