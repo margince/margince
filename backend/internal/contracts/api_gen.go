@@ -28006,8 +28006,11 @@ type WorklistReach struct {
 	// Considered How many candidates from this source were read and ranked.
 	Considered int `json:"considered"`
 
-	// MoreAvailable True when this source was read to its work bound, so candidates exist past what
-	// was considered. The client renders `considered` as "200+" rather than "200".
+	// MoreAvailable True when this source was read to its work bound, so candidates MAY exist past what
+	// was considered. A lane that came back exactly full cannot tell a full page from a
+	// page that stopped one short of more, and it says the cautious thing rather than
+	// claiming a source is complete when it is not. The client renders `considered` as
+	// "200+" rather than "200".
 	MoreAvailable bool `json:"more_available"`
 
 	// Shown How many of them the queue is carrying after folding, filtering and the page cut.

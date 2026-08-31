@@ -38,6 +38,13 @@ func reachOf(considered, shown []ranked, bounds map[crmcontracts.WorklistItemSou
 		order = append(order, source)
 		return row
 	}
+	// A source read successfully and found empty is not the same as a source
+	// never read: one says "nothing today", the other says nothing at all. The
+	// bounds table names every lane this read asked, so a zero row here is the
+	// honest answer rather than an absence the reader has to interpret.
+	for source := range bounds {
+		at(source)
+	}
 	for _, row := range considered {
 		at(row.item.Source).Considered++
 	}
