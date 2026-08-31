@@ -4,7 +4,7 @@
 package identity
 
 // What a consent COMMITS: the scopes the human ticked, the single-use code the
-// client redeems, and the audit row naming the grant — one transaction, so a
+// client redeems, and the audit row naming the code — one transaction, so a
 // code the audit trail cannot explain is a state this flow cannot reach.
 //
 // There is no re-check and no row lock here, and that is the whole difference
@@ -73,7 +73,7 @@ func parseConsentedScopes(raw string) ([]string, error) {
 }
 
 // mintConsentedAuthorizationCode writes the single-use code the client will
-// redeem, and the audit row naming the grant — all in ONE transaction, so a
+// redeem, and the audit row naming the code — all in ONE transaction, so a
 // code the audit trail cannot explain is a state this flow cannot reach.
 //
 // The code is the ONLY row written here. The grant and passport follow from
