@@ -661,8 +661,11 @@ describe("ComposeModal", () => {
     expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
   });
 
-  it("keeps Send disabled until To, subject, body, and purpose are set", async () => {
-    stubRoutes();
+  // Send stays live with fields outstanding, and answers the press by naming
+  // them. Grey, it refused and said nothing about what for, which left the
+  // reader comparing the form against a control that would not talk to them.
+  it("names every field it is waiting for, and sends nothing", async () => {
+    const sent = stubRoutes();
     render(
       <ComposeModal
         activityId="act-1"
@@ -674,13 +677,28 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox");
 
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send.hasAttribute("disabled")).toBe(false);
+
+    // Nothing is said before the reader has asked to send: a form reporting
+    // what is missing while they are still typing is scolding them.
+    expect(screen.queryByText("Give this email a subject.")).toBeNull();
+
+    await userEvent.click(send);
+
+    expect(screen.getByText("Add at least one recipient.")).toBeTruthy();
+    expect(screen.getByText("Give this email a subject.")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
-    ).toBe(true);
+      screen.getByText("Write the message before sending it."),
+    ).toBeTruthy();
+    expect(screen.getByText("Choose what this message is for.")).toBeTruthy();
+    expect(
+      sent.filter((call) => call.key.startsWith("POST /activities")),
+    ).toHaveLength(0);
+
+    // And they stop being said as the fields are answered.
     await fillSendableForm();
-    expect(
-      screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
-    ).toBe(false);
+    expect(screen.queryByText("Give this email a subject.")).toBeNull();
   });
 
   it("sends the edited email with no approval token or idempotency key", async () => {
@@ -2543,6 +2561,66 @@ describe("the composer's conversation pane", () => {
       name: /this conversation/i,
     });
     expect(pane.querySelectorAll("li")).toHaveLength(2);
+  });
+
+  it("does not call a conversation the reader never opened theirs", async () => {
+    // Started from the record, the composer anchors the mail to the account's
+    // latest exchange. The thread is worth showing — the send really will join
+    // it — but the reader did not open it, so the heading says which it is.
+    stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("region", {
+        name: /the last exchange, which this will continue/i,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("region", { name: /^this conversation$/i }),
+    ).toBeNull();
+  });
+
+  it("draws no conversation beside a reply to a note", async () => {
+    // A timeline row offers Reply on a note as readily as on a mail. One filed
+    // note under the heading "this conversation" claims to be an exchange.
+    const note: Activity = { ...threaded, kind: "note" };
+    const second: Activity = { ...sibling, kind: "note" };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(note),
+      "GET /activities": () =>
+        jsonResponse({ data: [note, second], page: { has_more: false } }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The composer has read the anchor and its siblings — so the pane's
+    // absence is a decision, not a list that had not arrived yet.
+    await waitFor(() =>
+      expect(
+        sent.filter((call) => call.key === "GET /activities"),
+      ).not.toHaveLength(0),
+    );
+    await screen.findByRole("combobox");
+    expect(
+      screen.queryByRole("region", { name: /this conversation/i }),
+    ).toBeNull();
   });
 
   it("shows a mail with no thread as the one message it is", async () => {

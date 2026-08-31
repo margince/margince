@@ -2924,6 +2924,7 @@ export const vi = {
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email này?",
   "compose.threadHeading": "Cuộc trao đổi này",
+  "compose.threadContinuing": "Lần trao đổi gần nhất, mà thư này tiếp nối",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
     "Bạn đang gửi email này ngay bây giờ. Đây là hành động gửi ra ngoài, không đảo ngược được.",
@@ -2966,6 +2967,9 @@ export const vi = {
   "compose.relinkThreadHint":
     "Mọi tin nhắn trong chuỗi này mà bạn được phép sửa sẽ được chuyển cùng, trong một bước.",
   "compose.emptyRecipients": "Hãy thêm ít nhất một người nhận.",
+  "compose.missingSubject": "Hãy đặt tiêu đề cho email này.",
+  "compose.missingBody": "Hãy viết nội dung trước khi gửi.",
+  "compose.missingPurpose": "Hãy chọn mục đích của tin nhắn này.",
   "compose.removeRecipient": "Gỡ {recipient}",
   "compose.actionFailed": "Yêu cầu thất bại. Hãy thử lại.",
 

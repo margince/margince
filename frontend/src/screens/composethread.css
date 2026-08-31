@@ -7,9 +7,28 @@
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
   gap: var(--space-5);
-  /* The drawer is a flex column with a sticky foot; without this the grid
-     takes its content's height and the panes stop scrolling inside it. */
+  /* The drawer is a flex column, so this has to CLAIM the height between the
+     title and the actions — without the grow it sizes to its content and the
+     drawer ends in a band of empty white with the send buttons stranded in the
+     middle of the screen. `min-block-size: 0` is what then lets each column
+     shrink below its own content and scroll instead of pushing the actions off
+     the bottom. */
+  flex: 1 1 auto;
   min-block-size: 0;
+}
+
+/* The form column carries the height it is given: the body grows into whatever
+   the fields above it leave, so a drawer on a tall screen writes a long message
+   in one view rather than through a 220px porthole with white space under it.
+   Scoped to the split, because the composer's fields are also drawn in a plain
+   drawer that has no such height to share out. */
+.compose-split > .compose-fields {
+  min-block-size: 0;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+.compose-split > .compose-fields > .compose-body {
+  flex: 1 1 auto;
 }
 
 .compose-thread {

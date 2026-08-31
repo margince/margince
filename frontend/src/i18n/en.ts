@@ -2976,6 +2976,7 @@ export const en = {
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
   "compose.threadHeading": "This conversation",
+  "compose.threadContinuing": "The last exchange, which this will continue",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "You are sending this email now. This is an outbound, irreversible action.",
@@ -3024,6 +3025,9 @@ export const en = {
   "compose.relinkThreadHint":
     "Every message in this thread you can edit moves with it, in one step.",
   "compose.emptyRecipients": "Add at least one recipient.",
+  "compose.missingSubject": "Give this email a subject.",
+  "compose.missingBody": "Write the message before sending it.",
+  "compose.missingPurpose": "Choose what this message is for.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 

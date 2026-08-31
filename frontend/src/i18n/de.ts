@@ -2952,6 +2952,7 @@ export const de = {
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "Diese E-Mail senden?",
   "compose.threadHeading": "Dieser Verlauf",
+  "compose.threadContinuing": "Der letzte Austausch, den dies fortsetzt",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
@@ -2996,6 +2997,9 @@ export const de = {
   "compose.relinkThreadHint":
     "Jede Nachricht dieses Threads, die Sie bearbeiten dürfen, wird in einem Schritt mit verschoben.",
   "compose.emptyRecipients": "Fügen Sie mindestens einen Empfänger hinzu.",
+  "compose.missingSubject": "Gib dieser E-Mail einen Betreff.",
+  "compose.missingBody": "Schreibe die Nachricht, bevor du sie sendest.",
+  "compose.missingPurpose": "Wähle, wozu diese Nachricht dient.",
   "compose.removeRecipient": "{recipient} entfernen",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",

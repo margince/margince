@@ -87,11 +87,23 @@ export function ThreadPane({
   pending,
   viewerUserId,
   nameOf,
+  named,
 }: Readonly<{
   messages: readonly Activity[];
   pending: boolean;
   viewerUserId?: string;
   nameOf: NameOf;
+  /**
+   * Whether the reader OPENED this conversation, or the composer found it.
+   *
+   * A reply names its activity: the reader pressed Reply on a message and the
+   * pane is that message's thread. A mail started from the record names none,
+   * and the composer anchors it to the account's latest exchange — so the pane
+   * is a conversation the reader never asked for, and calling it "this
+   * conversation" claimed they had. It is still worth showing, because the
+   * send really will continue it; the heading is what has to say so.
+   */
+  named: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -106,7 +118,7 @@ export function ThreadPane({
   return (
     <section className="compose-thread" aria-labelledby="compose-thread-head">
       <h3 id="compose-thread-head" className="compose-thread-head t-eyebrow">
-        {t("compose.threadHeading")}
+        {t(named ? "compose.threadHeading" : "compose.threadContinuing")}
       </h3>
       <div className="compose-thread-scroll">
         {pending ? (

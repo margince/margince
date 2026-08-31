@@ -1011,6 +1011,15 @@
 .input[aria-invalid="true"]:focus {
   box-shadow: var(--focus-glow-danger);
 }
+/* A textarea carries its own class rather than `.input`, so the boundary above
+   never reached one: a refused body sat unmarked beside a refused subject that
+   was outlined, and the pair read as though only one of them was the problem. */
+.textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.textarea[aria-invalid="true"]:focus {
+  box-shadow: var(--focus-glow-danger);
+}
 .field-shell:has([aria-invalid="true"]) {
   border-color: var(--danger);
 }
