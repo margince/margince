@@ -572,3 +572,47 @@ func TestARunAuditsTheProviderItIsFor(t *testing.T) {
 		}
 	}
 }
+
+// A vendor that finds the person but has no number for them charges for what it
+// found and nothing for what it did not — through the REAL pipeline, not a
+// direct call to the settlement.
+//
+// This is the shape a rep meets by pressing "buy mobile": the contact is
+// placed, the other categories answer, and the mobile pool is silent. The run
+// COMPLETES, so the whole-run release never fires, and the mobile hold used to
+// settle at its reserved value. A credit for a number nobody received.
+//
+// Driven end to end — queue, submit, poll, settle — because the unit case can
+// only prove reconcile honours a spend map handed to it. What decides the
+// charge in production is that the adapter OMITS a pool it found nothing for,
+// and only the whole path shows those two halves meeting.
+func TestAPartialAnswerChargesOnlyForWhatCameBack(t *testing.T) {
+	// The fake reads its case out of the subject's last name, which is how a
+	// test names one without reaching into the adapter.
+	e := setupRuns(t, runsConfig{subjectLastName: "NoMobile"})
+	sealCredential(t, e)
+	run := queueFor(t, e, e.mine.String())
+
+	if err := e.store.ExecuteSubmit(e.ctx, run.ID); err != nil {
+		t.Fatal(err)
+	}
+	// The hand-off fails on an unbound claim writer, as in every execution test
+	// here; the terminal write and the settlement have committed by then.
+	if err := e.store.RunDueSweep(e.ctx); err == nil ||
+		!strings.Contains(err.Error(), "no claim writer is bound") {
+		t.Fatalf("the sweep failed for a reason this test does not model: %v", err)
+	}
+	if state, _, _ := runRow(t, e, run.ID); state != string(provider.RunCompleted) {
+		t.Fatalf("the run is %s, want completed: a no_match takes the whole-run release "+
+			"and would prove nothing about the per-pool rule", state)
+	}
+
+	if _, actual := creditsFor(t, e, run.ID, "email"); actual == nil || *actual != 1 {
+		t.Errorf("email actual_credits = %s, want 1 — the vendor answered, so it is owed", charged(actual))
+	}
+	_, actual := creditsFor(t, e, run.ID, "mobile")
+	if actual == nil || *actual != 0 {
+		t.Errorf("mobile actual_credits = %s, want 0: the provider had no number for this "+
+			"contact and charges only for a match, so the hold is released", charged(actual))
+	}
+}
