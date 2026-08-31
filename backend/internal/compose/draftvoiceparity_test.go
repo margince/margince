@@ -65,10 +65,22 @@ func aiVoiceProfileWithPersonality(personality string) ai.VoiceProfile {
 	return ai.VoiceProfile{PersonalityMD: personality}
 }
 
-// aiVoiceVersionWithProfile is a fixture active version carrying the derived
-// profile the builder writes.
-func aiVoiceVersionWithProfile(profileMD string) ai.VoiceProfileVersion {
-	return ai.VoiceProfileVersion{ProfileVersion: 1, VoiceProfileMD: profileMD}
+// aiVoiceVersionWithExemplar is a fixture active version carrying the derived
+// profile the builder writes AND one verbatim excerpt of the author's own mail.
+//
+// The exemplar is stored the way the voice store hands it back — inside
+// profile_json — so the block under test is assembled by the same decoder
+// production assembles it with, rather than by a shape only this test produces.
+func aiVoiceVersionWithExemplar(profileMD, exemplar string) ai.VoiceProfileVersion {
+	return ai.VoiceProfileVersion{
+		ProfileVersion: 1,
+		VoiceProfileMD: profileMD,
+		ProfileJSON: map[string]any{
+			"exemplars": []any{map[string]any{
+				"register": "du", "kind": "email", "text": exemplar,
+			}},
+		},
+	}
 }
 
 // Every drafting surface reaches the sender's voice seam.
@@ -95,23 +107,28 @@ func TestEveryDraftingSurfaceLoadsTheSenderVoice(t *testing.T) {
 			"empty tree rather than a governed one")
 	}
 	for _, where := range surfaces {
-		if !packageCalls(t, where, "draftvoice", "Load") {
+		if !packagePassesOnALoadedVoice(t, where) {
 			t.Errorf("%s drafts correspondence a person sends under their own name, but nothing in its "+
-				"package calls draftvoice.Load — so a rep who has built a voice profile is written by a "+
-				"generic writer here and by their own voice elsewhere. Load it with draftvoice.Load and "+
-				"render it into the call's user turn with Context.Block", where)
+				"package passes a draftvoice.Load result on to anything — so a rep who has built a voice "+
+				"profile is written by a generic writer here and by their own voice elsewhere. Load it "+
+				"with draftvoice.Load and hand the result to the call that renders the prompt", where)
 		}
 	}
 }
 
-// packageCalls reports whether any production file in the package holding path
-// calls pkg.fn.
+// packagePassesOnALoadedVoice reports whether some production file in the
+// package holding path calls draftvoice.Load AND uses the result — as an
+// argument, or assigned to a name that is later used.
 //
-// The CALL, not the import. A surface that imports draftvoice for its Context
-// type and never loads one compiles, reads as governed to an import census, and
-// sends every draft with an empty profile — which is the exact defect this gate
-// was written for, so an import check would pass on the bug it is named after.
-func packageCalls(t *testing.T, path, pkg, fn string) bool {
+// The USE, not just the call. A bare draftvoice.Load(...) whose answer is
+// discarded compiles, satisfies a call census, and leaves every draft unvoiced;
+// so does a live call sitting in a function the drafting path never reaches.
+// This cannot chase the second case — a static reader does not know which
+// functions run — and it is not the whole guarantee on its own. The behaviour
+// is pinned by TestAVoicedComposerPromptCarriesTheProfile, which drives each
+// composer's real request builder; this sweep is what notices a NEW surface
+// that never wired the seam at all.
+func packagePassesOnALoadedVoice(t *testing.T, path string) bool {
 	t.Helper()
 	dir := filepath.Dir(path)
 	entries, err := os.ReadDir(dir)
@@ -124,40 +141,125 @@ func packageCalls(t *testing.T, path, pkg, fn string) bool {
 			strings.HasSuffix(name, "_test.go") || strings.HasSuffix(name, "_gen.go") {
 			continue
 		}
-		if fileCalls(t, filepath.Join(dir, name), pkg, fn) {
+		if fileUsesALoadedVoice(t, filepath.Join(dir, name)) {
 			return true
 		}
 	}
 	return false
 }
 
-// fileCalls reports whether the file holds a pkg.fn call expression.
-func fileCalls(t *testing.T, path, pkg, fn string) bool {
+// fileUsesALoadedVoice reports whether the file calls draftvoice.Load in a
+// position where its answer goes somewhere: returned to a caller, passed as an
+// argument to another call, or bound to a name that is read again.
+func fileUsesALoadedVoice(t *testing.T, path string) bool {
 	t.Helper()
 	parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
-	found := false
+	used := false
 	ast.Inspect(parsed, func(n ast.Node) bool {
-		if found {
+		if used {
 			return false
 		}
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		selector, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || selector.Sel.Name != fn {
-			return true
-		}
-		ident, ok := selector.X.(*ast.Ident)
-		if ok && ident.Name == pkg {
-			found = true
+		switch node := n.(type) {
+		case *ast.ReturnStmt:
+			// Handed back to a caller: return draftvoice.Load(...). The reply
+			// drafter's loadVoice is this shape, and a reader that knew only
+			// about arguments and assignments would report it as unwired.
+			for _, result := range node.Results {
+				if isVoiceLoadCall(result) {
+					used = true
+					return false
+				}
+			}
+		case *ast.CallExpr:
+			// Passed straight into another call: Write(ctx, lane, in, Load(...)).
+			for _, arg := range node.Args {
+				if isVoiceLoadCall(arg) {
+					used = true
+					return false
+				}
+			}
+		case *ast.AssignStmt:
+			// Bound to a name, which must then be read somewhere in the file.
+			for i, rhs := range node.Rhs {
+				if !isVoiceLoadCall(rhs) || i >= len(node.Lhs) {
+					continue
+				}
+				name, ok := node.Lhs[i].(*ast.Ident)
+				if ok && name.Name != "_" && identReadElsewhere(parsed, name) {
+					used = true
+					return false
+				}
+			}
 		}
 		return true
 	})
-	return found
+	return used
+}
+
+// isVoiceLoadCall reports whether an expression is a draftvoice.Load call.
+func isVoiceLoadCall(expr ast.Expr) bool {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "Load" {
+		return false
+	}
+	pkg, ok := selector.X.(*ast.Ident)
+	return ok && pkg.Name == "draftvoice"
+}
+
+// identReadElsewhere reports whether the name is genuinely read again away from
+// where it was defined — a value assigned and never read is a value discarded.
+//
+// A mention under `_ = name` does not count. That statement exists to silence
+// the compiler about an unused variable, so counting it would let the one shape
+// it appears in — a loaded voice deliberately parked — read as a voice in use.
+func identReadElsewhere(file *ast.File, defined *ast.Ident) bool {
+	discards := blankAssignedNames(file)
+	read := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if read {
+			return false
+		}
+		ident, ok := n.(*ast.Ident)
+		if !ok || ident.Name != defined.Name || ident.Pos() == defined.Pos() {
+			return true
+		}
+		if discards[ident.Pos()] {
+			return true
+		}
+		read = true
+		return false
+	})
+	return read
+}
+
+// blankAssignedNames collects the positions of identifiers that appear only as
+// the right-hand side of a `_ = name` statement.
+func blankAssignedNames(file *ast.File) map[token.Pos]bool {
+	out := map[token.Pos]bool{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		assign, ok := n.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		for i, lhs := range assign.Lhs {
+			name, ok := lhs.(*ast.Ident)
+			if !ok || name.Name != "_" || i >= len(assign.Rhs) {
+				continue
+			}
+			if rhs, ok := assign.Rhs[i].(*ast.Ident); ok {
+				out[rhs.Pos()] = true
+			}
+		}
+		return true
+	})
+	return out
 }
 
 // A voiced composer prompt actually carries the profile.
@@ -168,10 +270,19 @@ func fileCalls(t *testing.T, path, pkg, fn string) bool {
 // are checked, because both were written from the same template and a fix
 // applied to one of them is the failure this pair exists to catch.
 func TestAVoicedComposerPromptCarriesTheProfile(t *testing.T) {
-	const personality = "I write short. I never say circling back."
+	// Every field that descends from the author's corpus, each with its own
+	// recognisable text: an exemplar IS a verbatim excerpt of somebody's mail,
+	// so a gate that checked only the hand-written personality would leave the
+	// two fields most likely to quote a third party unwatched.
+	const (
+		personality = "I write short. I never say circling back."
+		derived     = "Sentences run under twelve words."
+		exemplar    = "Servus Martin, das Angebot geht morgen raus."
+	)
+	corpus := []string{personality, derived, exemplar}
 	voice := draftvoice.Context{
 		Profile: aiVoiceProfileWithPersonality(personality),
-		Version: aiVoiceVersionWithProfile("Sentences run under twelve words."),
+		Version: aiVoiceVersionWithExemplar(derived, exemplar),
 		OK:      true,
 	}
 	// Through each composer's OWN request builder, not through Block alone: a
@@ -180,7 +291,7 @@ func TestAVoicedComposerPromptCarriesTheProfile(t *testing.T) {
 	for what, req := range voicedComposerRequests(t, voice) {
 		sent := userTurn(t, what, req)
 		missing := false
-		for _, want := range []string{personality, "Sentences run under twelve words.", draftvoice.VocabularyRule} {
+		for _, want := range append(append([]string{}, corpus...), draftvoice.VocabularyRule) {
 			if !strings.Contains(sent, want) {
 				t.Errorf("%s sends no %q to the model, so it is told to write in a voice it was never "+
 					"shown", what, want)
@@ -200,9 +311,20 @@ func TestAVoicedComposerPromptCarriesTheProfile(t *testing.T) {
 		// Read structurally rather than against a fence built here: each
 		// request mints its OWN nonce, so a marker this test constructed would
 		// never match the one the request carries.
-		if !fencedIn(t, sent, personality) {
-			t.Errorf("%s carries the author's own text outside this call's fence, so a profile built "+
-				"from a mail somebody sent them could instruct the model", what)
+		for _, text := range corpus {
+			if !fencedIn(t, sent, text) {
+				t.Errorf("%s carries the author's own %q outside this call's fence, so a profile built "+
+					"from a mail somebody sent them could instruct the model", what, text)
+			}
+		}
+		// The system turn is where instructions live. Corpus text there is an
+		// instruction whatever it says, and no fence in the user turn can
+		// undo that.
+		for _, text := range corpus {
+			if strings.Contains(req.System, text) {
+				t.Errorf("%s copies the author's own %q into the system turn, where it reads as an "+
+					"instruction rather than as data", what, text)
+			}
 		}
 	}
 }
@@ -231,7 +353,12 @@ func voicedComposerRequests(t *testing.T, voice draftvoice.Context) map[string]m
 }
 
 // fencedIn reports whether every occurrence of text in turn sits inside a
-// fenced span — after an opening marker and before that span's close.
+// CLOSED fenced span: after an opening marker, and with that span's close
+// still to come.
+//
+// Both halves are required. A check that only looked backwards would accept an
+// opening marker never closed, which is not a boundary — everything after it,
+// including the rest of the prompt, would read as one unterminated span.
 //
 // The markers are read OFF THE TURN, because the nonce is minted per call and a
 // marker this test constructed would never match the one the request carries.
@@ -251,6 +378,14 @@ func fencedIn(t *testing.T, turn, text string) bool {
 		lastOpen := strings.LastIndex(before, opening)
 		lastClose := strings.LastIndex(before, closing)
 		if lastOpen < 0 || lastClose > lastOpen {
+			return false
+		}
+		// The span must also END. Without this, fence.Open()+text — an opening
+		// marker with no close — passes as fenced.
+		after := turn[idx+len(text):]
+		nextClose := strings.Index(after, closing)
+		nextOpen := strings.Index(after, opening)
+		if nextClose < 0 || (nextOpen >= 0 && nextOpen < nextClose) {
 			return false
 		}
 		next := strings.Index(turn[idx+len(text):], text)
@@ -331,9 +466,16 @@ func TestAnUnvoicedComposerPromptNamesNoProfile(t *testing.T) {
 // stated reason can be false, and this is the one that would be expensive.
 func TestNoComposerPromptCarriesMargincesOwnVoice(t *testing.T) {
 	fence := newDraftFence()
-	prompts := voicedComposerPrompts(fence)
+	// Merged under DISTINCT keys. Both maps are keyed by composer, so writing
+	// one into the other replaced every voiced prompt with its unvoiced twin
+	// and left the voiced half untested — which is the half a Margince-voice
+	// regression would land in.
+	prompts := map[string]string{}
+	for what, system := range voicedComposerPrompts(fence) {
+		prompts[what+" (voiced)"] = system
+	}
 	for what, system := range unvoicedComposerPrompts(fence) {
-		prompts[what] = system
+		prompts[what+" (unvoiced)"] = system
 	}
 	for what, system := range prompts {
 		if strings.Contains(system, promptvoice.Heading) {

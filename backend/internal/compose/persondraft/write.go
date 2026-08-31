@@ -158,11 +158,18 @@ func writeChecked(ctx context.Context, lane Completer, in Input, voice draftvoic
 // shared rules and by draftcheck, and running a second retry over every draft
 // would double the model spend of the common case to fix the rare one.
 //
-// A draft that still trips the floor after all of that is served anyway, with
-// the sanitizer's edits kept. The alternative is the deterministic floor — a
-// two-line opener — and a rep who asked for a draft is better served by an
-// imperfect real message than by a stub, which is the same trade Write makes
-// when the model is down.
+// Every step can only improve the draft, never replace it with a worse one.
+// The retry is kept only if it clears MORE violations than the attempt it
+// replaces — a retry is one more model answer, not a better one by definition,
+// and it is written without the draftcheck findings the first pass already
+// cleared. The sanitizer's edits are kept only if what survives them is still a
+// draft: it deletes characters, so a subject that was nothing but an em dash
+// comes back empty, and an empty subject is not a message the contract allows.
+//
+// A draft that still trips the floor after all of that is served anyway. The
+// alternative is the deterministic floor — a two-line opener — and a rep who
+// asked for a draft is better served by an imperfect real message than by a
+// stub, which is the same trade Write makes when the model is down.
 func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, draft Draft) (Draft, error) {
 	if !voice.OK {
 		return draft, nil
@@ -173,12 +180,23 @@ func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftv
 	violations := draftvoice.Violations(draft.Subject, draft.Body)
 	if len(violations) > 0 {
 		retried, retryErr := writeWithModel(ctx, lane, in, voice, draftvoice.Feedback(violations))
-		if retryErr == nil {
+		if retryErr == nil && len(draftvoice.Violations(retried.Subject, retried.Body)) < len(violations) {
 			draft = retried
 		}
 	}
-	draft.Subject, draft.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
-	return draft, nil
+	sanitized := draft
+	sanitized.Subject, sanitized.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
+	if !servable(sanitized) {
+		return draft, nil
+	}
+	return sanitized, nil
+}
+
+// servable reports whether a draft is still one the contract can carry. The
+// sanitizer removes characters, so a draft made only of what it removes comes
+// back empty — and an empty subject or body is not a message.
+func servable(draft Draft) bool {
+	return strings.TrimSpace(draft.Subject) != "" && strings.TrimSpace(draft.Body) != ""
 }
 
 func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, correction string) (Draft, error) {
