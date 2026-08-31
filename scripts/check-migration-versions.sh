@@ -75,10 +75,16 @@ migrations_in_tree() {
 # matches nothing — its exit 1 is not an error, and under set -eo pipefail an
 # unguarded grep would otherwise abort the whole gate with no FAIL printed the
 # first time a PR adds a namespace, which the header above says is supported.
+# `sed 's#.*/##'`, not `xargs basename`: GNU xargs runs its command once with
+# ZERO arguments on empty input unless told not to, and `basename` with no
+# operand exits 1, which xargs then reports as its own exit 123 — invisible on
+# a Mac, where the default is the other way, and set -e turns that 123 into
+# the same silent whole-gate abort as the two hazards above. sed on empty
+# input just produces no output.
 migrations_at_base() {
   local ns="$1"
   git ls-tree --name-only "$BASE_REF" "$MIGRATIONS_DIR/$ns/" 2>/dev/null |
-    { grep '\.up\.sql$' || true; } | xargs -n1 basename 2>/dev/null | sed 's/\.up\.sql$//' |
+    { grep '\.up\.sql$' || true; } | sed 's#.*/##; s/\.up\.sql$//' |
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
 
@@ -199,7 +205,8 @@ fail() {
 # otherwise turn into a silent abort instead of the FAIL this case exists to
 # print. No namespace in the tree is exactly what should be read here.
 tree_namespaces="$(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null || true)"
-base_namespaces="$(git ls-tree --name-only -d "$BASE_REF" "$MIGRATIONS_DIR/" 2>/dev/null | xargs -n1 basename 2>/dev/null)"
+# sed, not xargs basename: same empty-input hazard as migrations_at_base above.
+base_namespaces="$(git ls-tree --name-only -d "$BASE_REF" "$MIGRATIONS_DIR/" 2>/dev/null | sed 's#.*/##')"
 all_namespaces="$(printf '%s\n%s\n' "$tree_namespaces" "$base_namespaces" | sort -u)"
 
 for ns in $all_namespaces; do
