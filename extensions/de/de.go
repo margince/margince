@@ -8,9 +8,9 @@
 // classes; further obligations (the XRechnung/ZUGFeRD fiscal formats,
 // the CRA conformity regime) return to the seam when their work packages
 // land. Core code never contains a jurisdiction string — this unit is
-// where Germany lives. The legal position behind the product's German and
-// European compliance posture, including why no scraping-based enrichment
-// ships, is docs/explanation/data-enrichment-position.md.
+// where Germany lives. The product ships no scraping-based enrichment; the
+// legal position behind that is a whitepaper kept with the company's business
+// material, not in this tree.
 package de
 
 import (
