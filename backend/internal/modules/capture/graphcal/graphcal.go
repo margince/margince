@@ -32,6 +32,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -92,22 +93,6 @@ var (
 	_ connector.CredentialRotator = (*Connector)(nil)
 )
 
-// authState is the persisted credential bundle (the opaque connector.Auth) —
-// the same shape the Outlook mail connector seals, because it is the same
-// handshake. The refresh token is the durable secret; the short-lived access
-// token is re-minted from it each Sync and never stored.
-type authState struct {
-	RefreshToken string `json:"refresh_token"`
-	Owner        string `json:"owner_email"`
-	// Scopes is this system's INTERNAL permission vocabulary (the connector's
-	// declared principal scopes), frozen at grant time.
-	Scopes []string `json:"scopes"`
-	// Granted is what MICROSOFT says it granted, in Microsoft's own vocabulary.
-	// A separate field because the two vocabularies mean different things and
-	// must never overwrite one another.
-	Granted []string `json:"granted_scopes,omitempty"`
-}
-
 // cursorState is the persisted incremental watermark: Graph's deltaLink, plus
 // the account the watermark belongs to — mirroring the mail cursor shape so
 // anything that routes on sync_cursor->>'email' works unchanged.
@@ -127,21 +112,11 @@ type cursorState struct {
 	AnchoredAt time.Time `json:"anchored_at,omitzero"`
 }
 
-// authPayload is the connect request the transport hands to Authenticate: the
-// OAuth authorization code and the redirect URI it was issued against.
-type authPayload struct {
-	Code        string `json:"code"`
-	RedirectURI string `json:"redirect_uri"`
-}
-
 // AuthRequestFrom packages an OAuth callback's code into the opaque connector
-// AuthRequest the callback handler passes to Authenticate.
+// AuthRequest the callback handler passes to Authenticate — the shared
+// Microsoft payload.
 func AuthRequestFrom(code, redirectURI string) (connector.AuthRequest, error) {
-	payload, err := json.Marshal(authPayload{Code: code, RedirectURI: redirectURI})
-	if err != nil {
-		return connector.AuthRequest{}, fmt.Errorf("graphcal: encoding auth payload: %w", err)
-	}
-	return connector.AuthRequest{Payload: payload}, nil
+	return graphconn.AuthRequestFrom(connectorName, code, redirectURI)
 }
 
 // Descriptor is the connector's static metadata: name "graphcal", read-only
@@ -160,14 +135,14 @@ func (c *Connector) Descriptor() connector.Descriptor {
 // the calendar owner, and returns the opaque Auth the registry seals into the
 // vault. The access token is discarded — only the refresh token persists.
 func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest) (connector.Auth, error) {
-	var p authPayload
-	if err := json.Unmarshal(req.Payload, &p); err != nil {
-		return nil, fmt.Errorf("graphcal: malformed auth payload: %w", err)
+	code, redirectURI, err := graphconn.ReadAuthRequest(connectorName, req)
+	if err != nil {
+		return nil, err
 	}
-	if p.Code == "" {
+	if code == "" {
 		return nil, fmt.Errorf("graphcal: authorization code required: %w", ErrAuthRejected)
 	}
-	grant, err := c.oauth.Exchange(ctx, p.Code, p.RedirectURI)
+	grant, err := c.oauth.Exchange(ctx, code, redirectURI)
 	if err != nil {
 		return nil, err
 	}
@@ -179,16 +154,11 @@ func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest)
 	if err != nil {
 		return nil, err
 	}
-	state := authState{
+	state := graphconn.AuthState{
 		RefreshToken: grant.RefreshToken, Owner: owner,
-		Scopes: scopeStrings(c.Descriptor().Scopes), Granted: grant.Scopes,
+		Scopes: graphconn.ScopeStrings(c.Descriptor().Scopes), Granted: grant.Scopes,
 	}
-	//nolint:gosec // G117: sealing the connector's own refresh token into the opaque Auth bundle IS the intended path — the registry stores it encrypted in the vault, never logged or returned
-	auth, err := json.Marshal(state)
-	if err != nil {
-		return nil, fmt.Errorf("graphcal: encoding auth state: %w", err)
-	}
-	return auth, nil
+	return graphconn.Seal(connectorName, state)
 }
 
 // AccountLabel reports the authorizing account, read from the sealed bundle the
@@ -229,7 +199,10 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}
 	owner := st.Owner // local — never stored on the shared instance
 
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken)
+	// The grant's own scopes, never the deployment's configured list: asking an
+	// older calendar grant for a permission it never consented to is refused by
+	// Microsoft at the REFRESH, which stops it syncing rather than narrowing it.
+	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +246,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // and if the provider actually issued one. A failure is logged, never returned:
 // the old token stays valid for its own lifetime, so a missed rotation costs
 // one cycle's freshness where failing the sync would cost the calendar.
-func (c *Connector) reportRotation(ctx context.Context, st authState, rotated string) {
+func (c *Connector) reportRotation(ctx context.Context, st graphconn.AuthState, rotated string) {
 	if c.rotations == nil || rotated == "" {
 		return
 	}
@@ -376,10 +349,10 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 
 // readAuth opens the sealed bundle. One reader so every entry point reports a
 // malformed bundle the same way rather than four spellings of one failure.
-func readAuth(auth connector.Auth) (authState, error) {
-	var st authState
+func readAuth(auth connector.Auth) (graphconn.AuthState, error) {
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
-		return authState{}, fmt.Errorf("graphcal: malformed auth bundle: %w", err)
+		return graphconn.AuthState{}, fmt.Errorf("graphcal: malformed auth bundle: %w", err)
 	}
 	return st, nil
 }
@@ -408,12 +381,4 @@ func marshalCursor(deltaLink, email string, anchoredAt time.Time) connector.Curs
 	// cursorState carries only strings and a time, so Marshal cannot fail here.
 	b, _ := json.Marshal(cursorState{DeltaLink: deltaLink, Email: email, AnchoredAt: anchoredAt}) //nolint:errchkjson // no unsupported types
 	return b
-}
-
-func scopeStrings(scopes []principal.Scope) []string {
-	out := make([]string, 0, len(scopes))
-	for _, s := range scopes {
-		out = append(out, string(s))
-	}
-	return out
 }

@@ -387,7 +387,7 @@ The pipeline is live; these were scoped out, not missed:
 | Google Calendar connector (OAuth, syncToken) | `internal/modules/capture/gcal/` |
 | Microsoft 365 calendar connector (OAuth, calendarView delta) | `internal/modules/capture/graphcal/` |
 | The shared meeting rules both calendars compose | `internal/modules/capture/meetingmap/` |
-| Shared OAuth handshake (authorize URL, code/refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/` |
+| Shared OAuth handshake (authorize URL, code/refresh exchange) | `internal/modules/capture/oauthflow/oauthflow.go`, `capture/googleconn/`, `capture/graphconn/` |
 | Connect surface + state signing + CSRF (api) | `internal/compose/connectors.go`, `connectors_imap.go` |
 | Backfill + digest HTTP surface | `internal/compose/backfilltransport.go` |
 | Gmail push webhook (token + OIDC) | `internal/compose/gmailpush.go`, `capture/push.go` |

@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -100,22 +101,6 @@ var (
 	_ connector.CredentialRotator = (*Connector)(nil)
 )
 
-// authState is the persisted credential bundle (the opaque connector.Auth).
-// The refresh token is the durable secret; the short-lived access token is
-// re-minted from it each Sync and never stored.
-type authState struct {
-	RefreshToken string `json:"refresh_token"`
-	Owner        string `json:"owner_email"`
-	// Scopes is this system's INTERNAL permission vocabulary (the connector's
-	// declared principal scopes), frozen at grant time.
-	Scopes []string `json:"scopes"`
-	// Granted is what MICROSOFT says it granted, in Microsoft's own
-	// vocabulary. A separate field because the two vocabularies mean different
-	// things and must never overwrite one another; empty for a bundle sealed
-	// before the grant was recorded.
-	Granted []string `json:"granted_scopes,omitempty"`
-}
-
 // cursorState is the persisted incremental watermark: Graph's deltaLink, plus
 // the mailbox address the watermark belongs to — mirroring the Gmail cursor
 // shape so anything that routes on sync_cursor->>'email' works unchanged.
@@ -124,21 +109,11 @@ type cursorState struct {
 	Email     string `json:"email"`
 }
 
-// authPayload is the connect request the transport hands to Authenticate:
-// the OAuth authorization code and the redirect URI it was issued against.
-type authPayload struct {
-	Code        string `json:"code"`
-	RedirectURI string `json:"redirect_uri"`
-}
-
-// AuthRequestFrom packages an OAuth callback's code into the opaque
-// connector AuthRequest the callback handler passes to Authenticate.
+// AuthRequestFrom packages an OAuth callback's code into the opaque connector
+// AuthRequest the callback handler passes to Authenticate — the shared
+// Microsoft payload.
 func AuthRequestFrom(code, redirectURI string) (connector.AuthRequest, error) {
-	payload, err := json.Marshal(authPayload{Code: code, RedirectURI: redirectURI})
-	if err != nil {
-		return connector.AuthRequest{}, fmt.Errorf("graph: encoding auth payload: %w", err)
-	}
-	return connector.AuthRequest{Payload: payload}, nil
+	return graphconn.AuthRequestFrom(connectorName, code, redirectURI)
 }
 
 // Descriptor is the connector's static metadata: name "graph", read-only
@@ -157,14 +132,14 @@ func (c *Connector) Descriptor() connector.Descriptor {
 // the mailbox owner, and returns the opaque Auth the registry seals into the
 // vault. The access token is discarded — only the refresh token persists.
 func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest) (connector.Auth, error) {
-	var p authPayload
-	if err := json.Unmarshal(req.Payload, &p); err != nil {
-		return nil, fmt.Errorf("graph: malformed auth payload: %w", err)
+	code, redirectURI, err := graphconn.ReadAuthRequest(connectorName, req)
+	if err != nil {
+		return nil, err
 	}
-	if p.Code == "" {
+	if code == "" {
 		return nil, fmt.Errorf("graph: authorization code required: %w", ErrAuthRejected)
 	}
-	grant, err := c.oauth.Exchange(ctx, p.Code, p.RedirectURI)
+	grant, err := c.oauth.Exchange(ctx, code, redirectURI)
 	if err != nil {
 		return nil, err
 	}
@@ -177,16 +152,11 @@ func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest)
 	if err != nil {
 		return nil, err
 	}
-	state := authState{
+	state := graphconn.AuthState{
 		RefreshToken: refresh, Owner: owner,
-		Scopes: scopeStrings(c.Descriptor().Scopes), Granted: grant.Scopes,
+		Scopes: graphconn.ScopeStrings(c.Descriptor().Scopes), Granted: grant.Scopes,
 	}
-	//nolint:gosec // G117: sealing the connector's own refresh token into the opaque Auth bundle IS the intended path — the registry stores it encrypted in the vault, never logged or returned
-	auth, err := json.Marshal(state)
-	if err != nil {
-		return nil, fmt.Errorf("graph: encoding auth state: %w", err)
-	}
-	return auth, nil
+	return graphconn.Seal(connectorName, state)
 }
 
 // AccountLabel reports the authorizing mailbox, read from the sealed bundle the
@@ -195,7 +165,7 @@ func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest)
 // connection's cursor to an account rather than a row. A bundle that names no
 // mailbox reports none: absence is not a failure.
 func (c *Connector) AccountLabel(auth connector.Auth) (string, error) {
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return "", fmt.Errorf("graph: malformed auth bundle: %w", err)
 	}
@@ -207,7 +177,7 @@ func (c *Connector) AccountLabel(auth connector.Auth) (string, error) {
 // never this system's. A bundle sealed before the grant was recorded reports
 // none.
 func (c *Connector) GrantedScopes(auth connector.Auth) ([]string, error) {
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("graph: malformed auth bundle: %w", err)
 	}
@@ -221,7 +191,7 @@ func (c *Connector) GrantedScopes(auth connector.Auth) ([]string, error) {
 // rather than a full re-scan. The advanced deltaLink is returned as the new
 // cursor; the registry persists it only on a fully-successful Sync.
 func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connector.Cursor, sink connector.Sink) (connector.Cursor, error) {
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
@@ -285,7 +255,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // lifetime, which is what makes a missed rotation cost one cycle's freshness
 // rather than the mailbox — where failing the sync over it would cost the mail
 // to save the bookkeeping.
-func (c *Connector) reportRotation(ctx context.Context, st authState, rotated string) {
+func (c *Connector) reportRotation(ctx context.Context, st graphconn.AuthState, rotated string) {
 	if c.rotations == nil || rotated == "" {
 		return
 	}
@@ -359,7 +329,7 @@ func (c *Connector) Normalize(_ context.Context, raw connector.RawRecord) ([]con
 // HealthCheck confirms the stored credential still mints a token and the
 // mailbox answers. An outage degrades capture but never blocks core CRM.
 func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error {
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("graph: malformed auth state: %w", err)
 	}
@@ -394,12 +364,4 @@ func marshalCursor(deltaLink, email string) connector.Cursor {
 	// cursorState has only string fields, so Marshal cannot fail here.
 	b, _ := json.Marshal(cursorState{DeltaLink: deltaLink, Email: email}) //nolint:errchkjson // string-only struct never errors
 	return b
-}
-
-func scopeStrings(scopes []principal.Scope) []string {
-	out := make([]string, 0, len(scopes))
-	for _, s := range scopes {
-		out = append(out, string(s))
-	}
-	return out
 }

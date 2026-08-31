@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -238,7 +239,7 @@ func TestAuthenticateBindsRefreshTokenAndOwner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Authenticate: %v", err)
 	}
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		t.Fatalf("auth is not authState json: %v", err)
 	}
@@ -454,7 +455,7 @@ func TestAccountLabelNamesTheAuthorizedMailbox(t *testing.T) {
 
 func TestAccountLabelOfAnOwnerlessBundleIsAbsentNotAnError(t *testing.T) {
 	c := New(&fakeOAuth{}, &fakeAPI{})
-	bundle, err := json.Marshal(authState{RefreshToken: "r"})
+	bundle, err := json.Marshal(graphconn.AuthState{RefreshToken: "r"})
 	if err != nil {
 		t.Fatal(err)
 	}

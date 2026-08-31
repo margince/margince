@@ -17,10 +17,10 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailwire"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -96,9 +96,9 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 	if err := msg.Validate(); err != nil {
 		return connector.SendReceipt{}, err
 	}
-	var st authState
-	if err := json.Unmarshal(auth, &st); err != nil {
-		return connector.SendReceipt{}, fmt.Errorf("graph: malformed auth bundle: %w", err)
+	st, err := graphconn.Read(connectorName, auth)
+	if err != nil {
+		return connector.SendReceipt{}, err
 	}
 	if !slices.Contains(st.Granted, SendScope) {
 		return connector.SendReceipt{}, ErrSendScopeMissing

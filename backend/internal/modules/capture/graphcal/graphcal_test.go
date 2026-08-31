@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -37,15 +38,19 @@ type fakeOAuth struct {
 	// rotated is what Microsoft hands back in place of the stored refresh
 	// token; empty means it rotated nothing this round.
 	rotated string
+	// askedFor records the scopes the last refresh requested — a refresh must
+	// ask for the grant's own, never the deployment's configured list.
+	askedFor []string
 }
 
-func (f fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
-func (f fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
+func (f *fakeOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
+func (f *fakeOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
 	return oauthflow.TokenGrant{RefreshToken: f.refresh, Scopes: f.granted}, nil
 }
-func (f fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
+func (f *fakeOAuth) AccessToken(context.Context, string) (string, error) { return f.access, nil }
 
-func (f fakeOAuth) Refresh(context.Context, string) (oauthflow.TokenRefresh, error) {
+func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oauthflow.TokenRefresh, error) {
+	f.askedFor = granted
 	return oauthflow.TokenRefresh{AccessToken: f.access, Rotated: f.rotated}, nil
 }
 
@@ -89,7 +94,7 @@ func (s *recordingSink) Upsert(_ context.Context, rec connector.NormalizedRecord
 // sealedAuth is the credential bundle a connected calendar holds.
 func sealedAuth(t *testing.T) connector.Auth {
 	t.Helper()
-	b, err := json.Marshal(authState{RefreshToken: "r", Owner: owner, Granted: Scopes()})
+	b, err := json.Marshal(graphconn.AuthState{RefreshToken: "r", Owner: owner, Granted: Scopes()})
 	if err != nil {
 		t.Fatalf("marshal auth: %v", err)
 	}
@@ -99,7 +104,7 @@ func sealedAuth(t *testing.T) connector.Auth {
 // --- the connector -------------------------------------------------------
 
 func TestDescriptorIsReadOnlyAndProducesActivities(t *testing.T) {
-	d := newAt(fakeOAuth{}, &fakeAPI{}, fixedNow).Descriptor()
+	d := newAt(&fakeOAuth{}, &fakeAPI{}, fixedNow).Descriptor()
 	if d.Name != connectorName {
 		t.Errorf("Name = %q, want %q", d.Name, connectorName)
 	}
@@ -112,7 +117,7 @@ func TestDescriptorIsReadOnlyAndProducesActivities(t *testing.T) {
 }
 
 func TestAuthenticateSealsTheRefreshTokenAndTheOwner(t *testing.T) {
-	c := newAt(fakeOAuth{refresh: "r-1", access: "a-1", granted: Scopes()}, &fakeAPI{email: owner}, fixedNow)
+	c := newAt(&fakeOAuth{refresh: "r-1", access: "a-1", granted: Scopes()}, &fakeAPI{email: owner}, fixedNow)
 	req, err := AuthRequestFrom("code-1", "https://api.example.com/v1/connectors/graphcal/callback")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -121,7 +126,7 @@ func TestAuthenticateSealsTheRefreshTokenAndTheOwner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Authenticate: %v", err)
 	}
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		t.Fatalf("unmarshal sealed auth: %v", err)
 	}
@@ -145,7 +150,7 @@ func TestAuthenticateSealsTheRefreshTokenAndTheOwner(t *testing.T) {
 }
 
 func TestAuthenticateRefusesAnEmptyCode(t *testing.T) {
-	c := newAt(fakeOAuth{}, &fakeAPI{email: owner}, fixedNow)
+	c := newAt(&fakeOAuth{}, &fakeAPI{email: owner}, fixedNow)
 	req, err := AuthRequestFrom("", "https://api.example.com/cb")
 	if err != nil {
 		t.Fatalf("AuthRequestFrom: %v", err)
@@ -161,7 +166,7 @@ func TestSyncWithNoCursorAnchorsAndCapturesTheWindow(t *testing.T) {
 	api := &fakeAPI{email: owner, initEvents: [][]byte{kept, internal}, initDelta: "https://graph/delta?$1"}
 	sink := &recordingSink{}
 
-	cur, err := newAt(fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), nil, sink)
+	cur, err := newAt(&fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), nil, sink)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -181,7 +186,7 @@ func TestSyncWithACursorResumesFromIt(t *testing.T) {
 	sink := &recordingSink{}
 	prior := marshalCursor("https://graph/delta?$1", owner, fixedNow)
 
-	cur, err := newAt(fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), prior, sink)
+	cur, err := newAt(&fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), prior, sink)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -200,7 +205,7 @@ func TestAnExpiredDeltaReAnchorsRatherThanFailing(t *testing.T) {
 	}
 	prior := marshalCursor("https://graph/delta?stale", owner, fixedNow)
 
-	cur, err := newAt(fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), prior, &recordingSink{})
+	cur, err := newAt(&fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), prior, &recordingSink{})
 	if err != nil {
 		t.Fatalf("Sync after an expired delta = %v, want a bounded re-anchor", err)
 	}
@@ -223,7 +228,7 @@ func TestAnUnreadableCursorStopsRatherThanReAnchoring(t *testing.T) {
 		"wrong keys": connector.Cursor(`{"sync_token":"x"}`),
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := newAt(fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), cur, &recordingSink{}); err == nil {
+			if _, err := newAt(&fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), cur, &recordingSink{}); err == nil {
 				t.Fatal("Sync must stop on an unreadable cursor rather than re-anchor over the watermark")
 			}
 			if api.initCalls != 0 {
@@ -241,7 +246,7 @@ func TestASinkSkipDropsOneEventAndKeepsPulling(t *testing.T) {
 	api := &fakeAPI{email: owner, initEvents: [][]byte{first, second}, initDelta: "https://graph/delta?$1"}
 
 	sink := &skippingSink{skipID: "evt-a"}
-	if _, err := newAt(fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), nil, sink); err != nil {
+	if _, err := newAt(&fakeOAuth{access: "a"}, api, fixedNow).Sync(context.Background(), sealedAuth(t), nil, sink); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 	if sink.seen != 2 {
@@ -263,7 +268,7 @@ func (s *skippingSink) Upsert(_ context.Context, rec connector.NormalizedRecord)
 }
 
 func TestHealthCheckMintsATokenAndAsksWhoTheAccountIs(t *testing.T) {
-	c := newAt(fakeOAuth{access: "a"}, &fakeAPI{email: owner}, fixedNow)
+	c := newAt(&fakeOAuth{access: "a"}, &fakeAPI{email: owner}, fixedNow)
 	if err := c.HealthCheck(context.Background(), sealedAuth(t)); err != nil {
 		t.Fatalf("HealthCheck: %v", err)
 	}
@@ -273,7 +278,7 @@ func TestHealthCheckMintsATokenAndAsksWhoTheAccountIs(t *testing.T) {
 }
 
 func TestNormalizeReportsADroppedEventAsASkip(t *testing.T) {
-	c := newAt(fakeOAuth{}, &fakeAPI{}, fixedNow)
+	c := newAt(&fakeOAuth{}, &fakeAPI{}, fixedNow)
 	c.owner = owner
 	solo := eventJSON(t, "evt-solo", "Focus time", "2026-07-16T09:00:00.0000000", "UTC", owner)
 	if _, err := c.Normalize(context.Background(), solo); !errors.Is(err, connector.ErrSkip) {
@@ -309,7 +314,7 @@ func TestAStaleWindowIsReopenedEvenThoughTheDeltaStillWorks(t *testing.T) {
 
 	t.Run("fresh window resumes", func(t *testing.T) {
 		api := &fakeAPI{email: owner, deltaLink: "https://graph/delta?$2"}
-		_, err := newAt(fakeOAuth{access: "a"}, api, anchored.Add(reanchorAfter-time.Hour)).
+		_, err := newAt(&fakeOAuth{access: "a"}, api, anchored.Add(reanchorAfter-time.Hour)).
 			Sync(context.Background(), sealedAuth(t), prior, &recordingSink{})
 		if err != nil {
 			t.Fatalf("Sync: %v", err)
@@ -322,7 +327,7 @@ func TestAStaleWindowIsReopenedEvenThoughTheDeltaStillWorks(t *testing.T) {
 	t.Run("stale window re-anchors and redates itself", func(t *testing.T) {
 		api := &fakeAPI{email: owner, initDelta: "https://graph/delta?fresh", deltaLink: "https://graph/delta?$2"}
 		at := anchored.Add(reanchorAfter)
-		cur, err := newAt(fakeOAuth{access: "a"}, api, at).
+		cur, err := newAt(&fakeOAuth{access: "a"}, api, at).
 			Sync(context.Background(), sealedAuth(t), prior, &recordingSink{})
 		if err != nil {
 			t.Fatalf("Sync: %v", err)
@@ -341,7 +346,7 @@ func TestAStaleWindowIsReopenedEvenThoughTheDeltaStillWorks(t *testing.T) {
 
 	t.Run("an incremental round keeps the original anchor", func(t *testing.T) {
 		api := &fakeAPI{email: owner, deltaLink: "https://graph/delta?$2"}
-		cur, err := newAt(fakeOAuth{access: "a"}, api, anchored.Add(time.Hour)).
+		cur, err := newAt(&fakeOAuth{access: "a"}, api, anchored.Add(time.Hour)).
 			Sync(context.Background(), sealedAuth(t), prior, &recordingSink{})
 		if err != nil {
 			t.Fatalf("Sync: %v", err)
@@ -360,7 +365,7 @@ func TestACursorWithNoAnchorReopensOnceAndThenKeepsOne(t *testing.T) {
 	api := &fakeAPI{email: owner, initDelta: "https://graph/delta?fresh"}
 	legacy := connector.Cursor(`{"delta_link":"https://graph/delta?old","email":"` + owner + `"}`)
 
-	cur, err := newAt(fakeOAuth{access: "a"}, api, fixedNow).
+	cur, err := newAt(&fakeOAuth{access: "a"}, api, fixedNow).
 		Sync(context.Background(), sealedAuth(t), legacy, &recordingSink{})
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
