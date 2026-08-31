@@ -118,7 +118,10 @@ connector off; the code default is off, so an absent block exposes nothing.
 **Decide the retention posture before first boot if the installation must keep
 everything.** By default the shipped storage-limitation ladder runs: an
 unconverted lead is anonymized after a year, a meeting transcript and an AI
-payload are erased after a year (Art. 5(1)(e), compliant out of the box). An
+payload are erased after a year, which is the storage-limitation obligation of
+Art. 5(1)(e) and only that one — see the [compliance
+handbook](handbook/compliance.md) for what an installation reading employee
+mailboxes still owes, none of which this product checks. An
 installation under a contractual or statutory keep-everything obligation sets
 
 ```yaml
