@@ -26791,11 +26791,16 @@ export interface operations {
                  */
                 q?: string;
                 /**
-                 * @description `recommended` is the ranking described above. The others are plain orders for a
-                 *     reader who wants the account by one column: most recently in touch, strongest
-                 *     relationship, or alphabetical.
+                 * @description `recommended` is the ranking described above. The rest are plain orders for a
+                 *     reader who wants the account by one column, each in both directions: a
+                 *     `-` prefix reverses it.
+                 *
+                 *     Both directions are declared rather than only the useful-looking one because a
+                 *     table header is a TOGGLE — the second press on "Last exchange" asks for the
+                 *     reverse of whatever it sent first, and an enum carrying one spelling per column
+                 *     answers that press with a 422 on a control the reader was invited to press.
                  */
-                sort?: "recommended" | "-last_interaction" | "-strength" | "name";
+                sort?: "recommended" | "last_interaction" | "-last_interaction" | "strength" | "-strength" | "name" | "-name";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset

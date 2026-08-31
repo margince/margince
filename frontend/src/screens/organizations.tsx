@@ -87,6 +87,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyPeopleList } from "./companypeople/contacts";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { CompanyRecentList } from "./companyrecent";
@@ -2408,6 +2409,18 @@ function CompanyRecordBody({
           side, is the duplication this page's own rule forbids. */}
       {tab === "people" && (
         <div className="co-panel-stack">
+          {/* The list first: a rep opens this tab to choose somebody to write
+              to, and the ranked list over the WHOLE account is what answers
+              that. The card below still summarises the roster.
+
+              Not in overlay mode, and not when the 360 already said the people
+              section is withheld. Both are reads that can only fail — the
+              mirror does not hold these edges, and a reader refused the roster
+              is refused this too — and a failed table under a notice explaining
+              the refusal replaces an honest empty state with an error. */}
+          {!overlay && !view?.sections_omitted?.includes("people") && (
+            <CompanyPeopleList orgId={org.id} />
+          )}
           <PeopleCard
             view={view}
             writable={orgWritable}

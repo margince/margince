@@ -12531,22 +12531,31 @@ func (e ListOrganizationsParamsSizeBand) Valid() bool {
 
 // Defines values for ListOrganizationContactsParamsSort.
 const (
+	LastInteraction      ListOrganizationContactsParamsSort = "last_interaction"
 	MinusLastInteraction ListOrganizationContactsParamsSort = "-last_interaction"
+	MinusName            ListOrganizationContactsParamsSort = "-name"
 	MinusStrength        ListOrganizationContactsParamsSort = "-strength"
 	Name                 ListOrganizationContactsParamsSort = "name"
 	Recommended          ListOrganizationContactsParamsSort = "recommended"
+	Strength             ListOrganizationContactsParamsSort = "strength"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationContactsParamsSort enum.
 func (e ListOrganizationContactsParamsSort) Valid() bool {
 	switch e {
+	case LastInteraction:
+		return true
 	case MinusLastInteraction:
+		return true
+	case MinusName:
 		return true
 	case MinusStrength:
 		return true
 	case Name:
 		return true
 	case Recommended:
+		return true
+	case Strength:
 		return true
 	default:
 		return false
@@ -29756,9 +29765,14 @@ type ListOrganizationContactsParams struct {
 	// caller has to be able to predict.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
-	// Sort `recommended` is the ranking described above. The others are plain orders for a
-	// reader who wants the account by one column: most recently in touch, strongest
-	// relationship, or alphabetical.
+	// Sort `recommended` is the ranking described above. The rest are plain orders for a
+	// reader who wants the account by one column, each in both directions: a
+	// `-` prefix reverses it.
+	//
+	// Both directions are declared rather than only the useful-looking one because a
+	// table header is a TOGGLE — the second press on "Last exchange" asks for the
+	// reverse of whatever it sent first, and an enum carrying one spelling per column
+	// answers that press with a 422 on a control the reader was invited to press.
 	Sort *ListOrganizationContactsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
