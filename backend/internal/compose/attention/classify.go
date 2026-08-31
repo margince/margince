@@ -248,7 +248,7 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		consequence = "mailbox_blind"
 	}
 	if item.Source == "notice" {
-		consequence = "none"
+		consequence = valueNone
 	}
 	row := base(item, levelBlocking, "system", consequence)
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}

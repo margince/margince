@@ -54,9 +54,11 @@ const (
 	levelRoutine = 6
 )
 
-// deadlineHorizon is how near a date has to be before it counts as a deadline
-// worth leading on. A month out is a plan; a week out is a deadline.
-const deadlineHorizon = 7 * 24 * time.Hour
+// valueNone is the comparator value for a side that has nothing to compare —
+// no date, or no amount. A named constant rather than the literal at each site,
+// because "nothing to compare" is a decision about the ordering and reads as one
+// here, where a bare "none" in three places reads as a coincidence.
+const valueNone = "none"
 
 // meetingHorizon is how soon a meeting must start to become the reader's most
 // urgent item. Two hours is the window in which preparing is still possible and
@@ -222,7 +224,7 @@ func levelValue(level int) *crmcontracts.WorklistValue {
 
 func dateValue(r ranked) *crmcontracts.WorklistValue {
 	if r.deadlineAt.IsZero() {
-		return &crmcontracts.WorklistValue{Kind: "none"}
+		return &crmcontracts.WorklistValue{Kind: valueNone}
 	}
 	at := r.deadlineAt
 	return &crmcontracts.WorklistValue{Kind: "date", Date: &at}
@@ -230,7 +232,7 @@ func dateValue(r ranked) *crmcontracts.WorklistValue {
 
 func moneyValue(r ranked) *crmcontracts.WorklistValue {
 	if !r.hasExpected {
-		return &crmcontracts.WorklistValue{Kind: "none"}
+		return &crmcontracts.WorklistValue{Kind: valueNone}
 	}
 	minor := r.expectedBase
 	return &crmcontracts.WorklistValue{Kind: "money", Minor: &minor}

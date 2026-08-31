@@ -84,6 +84,9 @@ func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranke
 // Every figure counts items the queue actually CARRIES, so a number above the
 // list and the rows below it cannot disagree — which is the defect the lane
 // feed shipped, reporting a twelve-item page as a total.
+//
+// Held by: TestTheSummaryCountsTheSameItemsTheQueueCarries
+// (backend/internal/compose/attention/worklist_test.go).
 func summarize(items []crmcontracts.WorklistItem) crmcontracts.WorklistSummary {
 	summary := crmcontracts.WorklistSummary{Total: len(items)}
 	for _, item := range items {
