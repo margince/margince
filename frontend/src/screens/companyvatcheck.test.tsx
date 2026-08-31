@@ -260,6 +260,43 @@ describe("VatCheckCard", () => {
     expect(screen.getByText("DE811907980")).toBeInTheDocument();
   });
 
+  it("does not report a refused request as asked", async () => {
+    const user = userEvent.setup();
+    // 403 with NO BODY, which is the shape that matters: openapi-fetch has
+    // nothing to parse, so `error` comes back falsy and a handler checking it
+    // alone renders a refusal as success. The endpoint's own happy answer is a
+    // bodiless 202, so this is the same shape one status apart.
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        return new Response(null, { status: 403 });
+      }
+      return jsonResponse({
+        organization_id: ORG_ID,
+        vat_number: "DE811907980",
+        status: "valid",
+        checked_at: "2026-08-14T09:12:00Z",
+      });
+    });
+    render(<VatCheckCard orgId={ORG_ID} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Check again" }),
+    );
+
+    // A reader told "asked" waits for an answer nobody requested.
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/answer appears here once it replies/),
+      ).toBeNull();
+    });
+  });
+
   it("offers no ask to a reader who cannot change the company", async () => {
     stubFetch(async (request) =>
       new URL(request.url).pathname.endsWith("/me")

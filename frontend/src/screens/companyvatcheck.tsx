@@ -138,18 +138,29 @@ function AskTheRegister({
     // a click landing between the commit and React Query re-arming the options
     // would otherwise run against the previous render's id.
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/organizations/{id}/vat-check", {
-        params: { path: { id } },
-      });
-      if (error) {
+      const { error, response } = await api.POST(
+        "/organizations/{id}/vat-check",
+        { params: { path: { id } } },
+      );
+      // `response.ok` as well as `error`, and the second is what actually
+      // catches a failure here: this endpoint answers 202 with NO BODY, and a
+      // bodiless non-2xx leaves openapi-fetch with nothing to parse, so `error`
+      // comes back falsy. Checked alone it would render a refused request as
+      // "Asked" and leave a reader waiting for an answer nobody requested.
+      if (error || !response.ok) {
         throwProblem(error);
       }
+      return id;
     },
     // The consultation is QUEUED, so there is nothing to read back yet. The
     // card is invalidated anyway: the answer lands out of band, and a reader
     // who navigates back is the one who sees it.
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["org-vat-check", orgId] }),
+    //
+    // Keyed on what the mutation RETURNED rather than on this render's orgId:
+    // between the commit and React Query re-arming the options, a closure here
+    // could invalidate the company the reader was looking at a moment ago.
+    onSuccess: (asked) =>
+      queryClient.invalidateQueries({ queryKey: ["org-vat-check", asked] }),
   });
 
   if (!canEdit) {

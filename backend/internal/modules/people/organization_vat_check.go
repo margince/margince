@@ -59,6 +59,10 @@ const (
 	// nowhere. A receipt without the date it was issued proves nothing.
 	auditKeyVatRegisteredAddr = "vat_registered_address"
 	auditKeyVatCheckedAt      = "vat_checked_at"
+	// The key that tells a person's request apart from the consultation it
+	// caused. Both rows name the same organization and the same number; only
+	// this says which one was somebody pressing a button.
+	auditKeyVatRequested = "vat_requested"
 )
 
 // VatCheck is one company's current VAT standing.
@@ -80,6 +84,19 @@ type VatCheck struct {
 // Distinct from a check that came back invalid: one is an absence of evidence,
 // the other is evidence.
 var ErrVatCheckNotRecorded = errors.New("people: no VAT check is recorded for this organization")
+
+// ErrNoVatNumberStated says there is nothing to consult about. It is separate
+// from ErrVatCheckNotRecorded because they ask different things of the reader:
+// one has never been checked and can be, this one has no number to check and
+// needs somebody to type one. Both answer 404, and a client that showed the
+// same sentence for both would send a person to look for a button that is not
+// the one they need.
+var ErrNoVatNumberStated = errors.New("people: this organization states no VAT number")
+
+// ErrNoVatRegisterConfigured says this deployment consults nothing, so there is
+// no button for an operator to press twice — the thing to change is the
+// installation's configuration, not the record.
+var ErrNoVatRegisterConfigured = errors.New("people: this installation consults no VAT register")
 
 // VatCheckEnqueue hands the consultation to whatever runs jobs, inside the
 // caller's transaction.
@@ -134,20 +151,23 @@ func (s *Store) RequestVatCheck(ctx context.Context, orgID ids.OrganizationID) e
 		}
 		var number string
 		var tooSoon bool
-		// The cooldown is measured against the DATABASE's clock, the same one
-		// that stamped checked_at. Comparing a stored timestamp to this
-		// process's own wall clock makes the floor depend on how far a
-		// container's clock has drifted from Postgres's.
+		// The floor is measured against UPDATED_AT, not checked_at, and the two
+		// are different clocks on purpose. checked_at is the REGISTER's date,
+		// because that is what the receipt attests to — and VIES answers with a
+		// date, no time, which parses to midnight. A cooldown on that column
+		// would expire at 00:05 on the day of the check and admit every request
+		// for the rest of it. updated_at is when this installation wrote the
+		// row, stamped by the same Postgres clock this compares against, so a
+		// drifted container clock cannot move the floor either.
 		const read = `
 			SELECT btrim(f.value),
-			       c.checked_at IS NOT NULL AND c.checked_at > now() - $2::interval
+			       c.updated_at IS NOT NULL AND c.updated_at > now() - $2::interval
 			  FROM organization_profile_field f
 			  LEFT JOIN organization_vat_check c ON c.organization_id = f.organization_id
 			 WHERE f.organization_id = $1 AND f.field = 'register_vat'`
 		err := tx.QueryRow(ctx, read, orgID.UUID, vatRecheckCooldown.String()).Scan(&number, &tooSoon)
 		if errors.Is(err, pgx.ErrNoRows) || (err == nil && number == "") {
-			return fmt.Errorf(
-				"this company states no VAT number to check: %w", ErrVatCheckNotRecorded)
+			return ErrNoVatNumberStated
 		}
 		if err != nil {
 			return fmt.Errorf("people: reading the VAT number to request a check for: %w", err)
@@ -161,10 +181,25 @@ func (s *Store) RequestVatCheck(ctx context.Context, orgID ids.OrganizationID) e
 			// This deployment consults no register. Refusing is what keeps the
 			// button honest: queueing into a lane nothing reads would answer the
 			// reader with a promise the installation cannot keep.
-			return fmt.Errorf(
-				"this installation consults no VAT register: %w", ErrVatCheckNotRecorded)
+			return ErrNoVatRegisterConfigured
 		}
-		return s.vatCheckEnqueue(ctx, tx, orgID, true)
+		if err := s.vatCheckEnqueue(ctx, tx, orgID, true); err != nil {
+			return err
+		}
+		// WHO asked is recorded here, because it is recordable nowhere else.
+		// The worker runs under a confined system principal — it must, since it
+		// reaches rows on nobody's behalf — so the receipt it later writes says
+		// system:vatcheck whatever prompted it. Without this row, "a person
+		// spent a consultation on this company" is answerable from nothing.
+		//
+		// AuditEvent rather than Audit: a request is an occurrence, not a
+		// change to a prior state, and Audit refuses an update carrying no
+		// before-image. No event follows it — the record has not changed yet,
+		// and announcing a question as a change would tell every subscriber
+		// something happened that has not.
+		_, err = storekit.AuditEvent(ctx, tx, "update", entityOrganization, orgID.UUID,
+			map[string]any{auditKeyVatNumber: number, auditKeyVatRequested: true})
+		return err
 	})
 }
 

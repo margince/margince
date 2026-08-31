@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,13 +81,17 @@ func TestAPersonCanAskTheRegisterAgainAboutAnUnchangedNumber(t *testing.T) {
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
 	orgID, _ := orgStatingVat(ctx, t, e)
 
-	// The number is already answered, so the automatic rule would decline.
+	// The number is already answered, so the automatic rule would decline. The
+	// row is aged past the floor: this case is about the ANSWER standing, not
+	// about the cooldown, and a row written a moment ago would fail here for
+	// the other reason and prove nothing about this one.
 	if err := e.store.RecordVatCheck(ctx, VatCheck{
-		OrganizationID: orgID, Number: "DE811907980", Status: VatCheckValid,
+		OrganizationID: orgID, Number: statedNumber, Status: VatCheckValid,
 		CheckedAt: consultedAt,
 	}); err != nil {
 		t.Fatalf("record the standing answer: %v", err)
 	}
+	ageTheStandingAnswer(ctx, t, e, orgID)
 
 	if err := e.store.RequestVatCheck(ctx, orgID); err != nil {
 		t.Fatalf("request a fresh consultation: %v", err)
@@ -103,6 +108,42 @@ func TestAPersonCanAskTheRegisterAgainAboutAnUnchangedNumber(t *testing.T) {
 	}
 	if !recorder.calls[1] {
 		t.Error("the person's request was queued unmarked, so the worker will decline it as already answered")
+	}
+}
+
+// Who asked has to be recoverable. The worker runs under a confined system
+// principal — it reaches rows on nobody's behalf — so the receipt it writes
+// says system:vatcheck whatever prompted it. If the request itself records
+// nothing, "a person spent a consultation on this company" is answerable from
+// nothing at all.
+func TestARequestRecordsWhoAskedForIt(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	var recorder vatCheckRecorder
+	e.store.WithVatCheckEnqueue(recorder.enqueue())
+	orgID, _ := orgStatingVat(ctx, t, e)
+
+	if err := e.store.RequestVatCheck(ctx, orgID); err != nil {
+		t.Fatalf("request a consultation: %v", err)
+	}
+
+	var actorID string
+	var after map[string]any
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT actor_id, after
+			  FROM audit_log
+			 WHERE entity_id = $1 AND after ? 'vat_requested'
+			 ORDER BY occurred_at DESC LIMIT 1`, orgID.UUID).Scan(&actorID, &after)
+	}); err != nil {
+		t.Fatalf("read the request's audit row: %v", err)
+	}
+
+	if actorID != "human:"+e.rep.String() {
+		t.Errorf("actor_id = %q, want the rep who pressed the button", actorID)
+	}
+	if after[auditKeyVatNumber] != statedNumber {
+		t.Errorf("the row does not say which number was asked about: %v", after[auditKeyVatNumber])
 	}
 }
 
@@ -140,6 +181,42 @@ func TestAskingAgainWithinTheCooldownIsRefused(t *testing.T) {
 	}
 }
 
+// The defect the floor would have had if it read checked_at: VIES answers with
+// a DATE and no time, so the receipt's timestamp is midnight. Measured against
+// that, the cooldown expires at 00:05 and admits every request for the rest of
+// the day — on a column that exists to say what the register attested to, not
+// when we last asked.
+func TestTheFloorHoldsWhenTheRegisterDatedTheReceiptMidnight(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	var recorder vatCheckRecorder
+	e.store.WithVatCheckEnqueue(recorder.enqueue())
+	orgID, _ := orgStatingVat(ctx, t, e)
+
+	// Midnight TODAY, by the database's own calendar — the shape VIES produces,
+	// and hours in the past by the time a rep presses the button.
+	var midnight time.Time
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT date_trunc('day', now())`).Scan(&midnight)
+	}); err != nil {
+		t.Fatalf("read today's midnight: %v", err)
+	}
+	if err := e.store.RecordVatCheck(ctx, VatCheck{
+		OrganizationID: orgID, Number: statedNumber, Status: VatCheckValid,
+		CheckedAt: midnight,
+	}); err != nil {
+		t.Fatalf("record the answer the register dated: %v", err)
+	}
+
+	queuedBefore := len(recorder.calls)
+	if err := e.store.RequestVatCheck(ctx, orgID); !errors.Is(err, apperrors.ErrBudgetExceeded) {
+		t.Fatalf("got %v, want the rate refusal — the row was written moments ago whatever date it carries", err)
+	}
+	if len(recorder.calls) != queuedBefore {
+		t.Error("the refused request queued a consultation anyway")
+	}
+}
+
 // A company nobody has stated a number for has nothing to consult, and that is
 // a different fact from asking too often: one needs a number typed, the other
 // needs a wait. Told apart, or the reader is sent to do the wrong thing.
@@ -157,8 +234,8 @@ func TestAskingAboutACompanyWithNoNumberIsNotFound(t *testing.T) {
 	}
 	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
 
-	if err := e.store.RequestVatCheck(ctx, orgID); !errors.Is(err, ErrVatCheckNotRecorded) {
-		t.Fatalf("got %v, want not-recorded — there is no number to consult", err)
+	if err := e.store.RequestVatCheck(ctx, orgID); !errors.Is(err, ErrNoVatNumberStated) {
+		t.Fatalf("got %v, want no-number — the reader has to type one, which is not what a missing register asks of them", err)
 	}
 	if len(recorder.calls) != 0 {
 		t.Error("a company with no number queued a consultation")
@@ -178,8 +255,8 @@ func TestAskingOnADeploymentThatConsultsNoRegisterIsRefused(t *testing.T) {
 	// The deployment loses its register between the write and the request.
 	e.store.WithVatCheckEnqueue(nil)
 
-	if err := e.store.RequestVatCheck(ctx, orgID); !errors.Is(err, ErrVatCheckNotRecorded) {
-		t.Fatalf("got %v, want not-recorded — this installation consults nothing", err)
+	if err := e.store.RequestVatCheck(ctx, orgID); !errors.Is(err, ErrNoVatRegisterConfigured) {
+		t.Fatalf("got %v, want no-register — an operator configures this, the reader cannot", err)
 	}
 }
 
@@ -244,6 +321,35 @@ func TestRequestOrganizationVatCheckHandler(t *testing.T) {
 	h.RequestOrganizationVatCheck(rec, req, wireID)
 	if rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("second request status = %d, want 429 (body: %s)", rec.Code, rec.Body.String())
+	}
+	// The refusal is written for the person who pressed the button. The default
+	// error path would pass the wrapped sentinel's own text through, and a rep
+	// reading "budget exceeded" learns nothing they can act on and something
+	// about our internals.
+	body := rec.Body.String()
+	if !strings.Contains(body, "try again shortly") {
+		t.Errorf("the refusal does not tell the reader what to do: %s", body)
+	}
+	if strings.Contains(body, "budget exceeded") {
+		t.Errorf("the refusal leaks the error sentinel's name: %s", body)
+	}
+}
+
+// ageTheStandingAnswer moves the row's own write time past the cooldown, which
+// is the one thing a test cannot do by choosing CheckedAt: that column is the
+// register's date, and the floor deliberately reads updated_at instead.
+func ageTheStandingAnswer(
+	ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.OrganizationID,
+) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE organization_vat_check
+			   SET updated_at = now() - interval '1 hour'
+			 WHERE organization_id = $1`, orgID)
+		return err
+	}); err != nil {
+		t.Fatalf("age the standing answer: %v", err)
 	}
 }
 
