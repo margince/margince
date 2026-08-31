@@ -5,12 +5,13 @@ package overlay
 
 // The sync-health read: the handful of overlay conditions a rep can see at a
 // glance — the poller backing off, the incumbent budget degraded, mirror
-// classes stale or still backfilling. It aggregates rather than enumerates
-// (one concern per condition, never one per row) so a broken connector is one
-// card, not a flood. The facts come from the surfaces that already own them:
-// overlay_sync_state for the poller's ladder (syncbackoff.go writes it),
-// SyncStatus for per-class freshness, and the OVB meter for the budget — this
-// read derives nothing of its own.
+// classes stale or still backfilling, records overwritten from the other side.
+// It aggregates rather than enumerates (one concern per condition, never one
+// per row) so a broken connector is one card, not a flood. The facts come from
+// the surfaces that already own them: overlay_sync_state for the poller's
+// ladder (syncbackoff.go writes it), SyncStatus for per-class freshness, the
+// OVB meter for the budget, and the system_log ledger the reconcile sweep
+// writes for an overwrite — this read derives nothing of its own.
 
 import (
 	"context"
@@ -41,7 +42,23 @@ const (
 	// ConcernBackfillIncomplete: at least one mirrored class has not confirmed
 	// its initial backfill converged.
 	ConcernBackfillIncomplete = "backfill_incomplete"
+	// ConcernRecordsOverwritten: an incumbent-driven write overwrote a mirror
+	// row somebody had edited here. The one concern about work already lost
+	// rather than work not happening, which is why it is on the lane at all:
+	// the overwrite is committed and the reader's only move is to go and look.
+	ConcernRecordsOverwritten = "records_overwritten"
 )
+
+// overwriteWindow bounds how far back the overwrite concern looks.
+//
+// Every other concern on this lane is a CONDITION that is still true — a
+// ladder still climbing, a budget still shed — and clears itself when it
+// stops. An overwrite is a past act that never stops being true, so without a
+// window the lane would carry the first conflict a workspace ever had for the
+// rest of its life. A day is the Worklist's own rhythm: it is read each
+// morning against what happened since the last one, and an overwrite older
+// than that is the record's history, which the record's page holds.
+const overwriteWindow = 24 * time.Hour
 
 // SyncConcern is one health condition worth a rep's glance. Kind says which;
 // the remaining fields carry that kind's facts and are zero for the others.
@@ -104,11 +121,74 @@ func (s *Service) SyncHealth(ctx context.Context) ([]SyncConcern, error) {
 		}
 	}
 
+	overwrite, overwritten, err := s.overwrittenConcern(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if overwritten {
+		concerns = append(concerns, overwrite)
+	}
+
 	objectConcerns, err := s.objectConcerns(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return append(concerns, objectConcerns...), nil
+}
+
+// overwrittenConcern names the mirror classes an incumbent-driven write
+// overwrote inside the window, aggregated to one concern the way every other
+// one here is: a sweep that overwrote four hundred rows is a card saying which
+// KINDS of record to go and check, not four hundred cards.
+//
+// It reads the system_log ledger the reconcile sweep writes beside each
+// mirror.conflict event, not the event stream: the outbox is drained and gone,
+// and the log is append-only, so the log is the only durable record that the
+// overwrite happened. Rows carrying no object_class are skipped rather than
+// reported as an unnamed class — a card that says "something was overwritten"
+// sends the reader nowhere.
+//
+// The lane is assembled on every render and a bad sweep writes one row per
+// record, so the class is carried in a partial index on the ledger keyed by
+// exactly this predicate: the scan arrives ordered by the class being made
+// distinct, and the duplicates collapse without a sort or a heap fetch.
+func (s *Service) overwrittenConcern(ctx context.Context) (concern SyncConcern, overwritten bool, err error) {
+	var classes []string
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The action is CONCATENATED rather than bound: the index this read
+		// depends on is partial on that value, and a partial index is only
+		// used where the planner can prove the query implies its predicate.
+		// Bound as a parameter, a generic plan cannot prove it — the read
+		// silently falls back to a heap fetch per row. Concatenated, the
+		// predicate is a literal in every plan, and the value still has one
+		// spelling in this package.
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT detail->>'object_class'
+			FROM system_log
+			WHERE action = '`+mirrorConflictAction+`'
+			  AND occurred_at > now() - $1::interval
+			  AND detail->>'object_class' IS NOT NULL
+			ORDER BY 1`, overwriteWindow)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var class string
+			if err := rows.Scan(&class); err != nil {
+				return err
+			}
+			classes = append(classes, class)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return SyncConcern{}, false, fmt.Errorf("overlay: reading the overwrite ledger for sync health: %w", err)
+	}
+	if len(classes) == 0 {
+		return SyncConcern{}, false, nil
+	}
+	return SyncConcern{Kind: ConcernRecordsOverwritten, Objects: classes}, true, nil
 }
 
 // objectConcerns derives the per-class concerns: stale mirror classes, and an

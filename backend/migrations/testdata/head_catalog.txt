@@ -2297,6 +2297,7 @@ public.idx_site_read_retry_due CREATE INDEX idx_site_read_retry_due ON public.si
 public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id) WHERE (archived_at IS NULL)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
+public.idx_system_log_mirror_conflict_class CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
 public.idx_taggable_tag CREATE INDEX idx_taggable_tag ON public.taggable USING btree (tag_id)
