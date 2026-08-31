@@ -183,6 +183,14 @@ func (v *oidcTokenVerifier) Verify(ctx context.Context, bearer string) (oidcClai
 }
 
 func (v *oidcTokenVerifier) checkClaims(c oidcClaims) error {
+	// Fail CLOSED on a missing issuer check rather than calling through a nil
+	// and panicking. Both constructors supply one, so this cannot happen today
+	// — but the consequence of it happening is a token nobody has established
+	// the issuer of, and the safe reading of "I was not told whose tokens to
+	// accept" is none.
+	if v.checkIssuer == nil {
+		return fmt.Errorf("%w: no issuer check wired", errOIDCRejected)
+	}
 	if err := v.checkIssuer(c); err != nil {
 		return err
 	}

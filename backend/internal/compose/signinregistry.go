@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,6 +81,27 @@ func signInRedirectBase(base string) string {
 		return ""
 	}
 	return strings.TrimSuffix(base, "/") + "/v1"
+}
+
+// audienceIs checks the token's audience against the OAuth client THIS
+// deployment configured. A token minted for somebody else's app says nothing
+// about who may sign in here, whoever issued it.
+//
+// It lives in the shared file because the question does not vary by vendor.
+// WHOSE token this is (the issuer) and what a verified address means (Google
+// publishes email_verified, Microsoft does not) genuinely do vary, and those
+// stay in their providers' own files.
+//
+// email_verified is deliberately NOT checked here — identity's own callback
+// handler does that, and the Pub/Sub push caller has no such requirement, so it
+// is not baked into the shared contract.
+func audienceIs(clientID string) func(oidcClaims) error {
+	return func(c oidcClaims) error {
+		if c.Aud != clientID {
+			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
+		}
+		return nil
+	}
 }
 
 // oidcExchangerAdapter satisfies identity.OIDCExchanger over the shared PKCE

@@ -153,18 +153,6 @@ func microsoftIssuer(tenant string) func(oidcClaims) error {
 	}
 }
 
-// microsoftSignInMatchIdentity is the login flow's matchIdentity: the token's
-// audience must be the Microsoft app this deployment configured. WHOSE
-// directory issued it is microsoftIssuer's question, checked first.
-func microsoftSignInMatchIdentity(clientID string) func(oidcClaims) error {
-	return func(c oidcClaims) error {
-		if c.Aud != clientID {
-			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-		}
-		return nil
-	}
-}
-
 // microsoftOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
 // compose-level oidcTokenVerifier.
 //
@@ -226,7 +214,7 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 			verifier: microsoftOIDCVerifierAdapter{v: newOIDCVerifier(
 				microsoftAuthorityURL(cfg.Tenant, "/discovery/v2.0/keys"),
 				microsoftIssuer(cfg.Tenant),
-				microsoftSignInMatchIdentity(cfg.ClientID),
+				audienceIs(cfg.ClientID),
 			)},
 			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{
 				ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret,

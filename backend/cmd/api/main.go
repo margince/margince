@@ -246,7 +246,11 @@ func validateBareOrigin(flagName, raw string) error {
 	case parsed.Path != "" && parsed.Path != "/":
 		return fmt.Errorf("api: %s %q must be a bare origin: a URL is derived by appending "+
 			"a path to it, so a path here produces one nothing resolves", flagName, raw)
-	case parsed.RawQuery != "" || parsed.Fragment != "":
+	// ForceQuery as well as RawQuery: a bare trailing "?" parses to an EMPTY
+	// RawQuery, so a query check alone admits it — and the origin is then
+	// published with a "?" that swallows every path appended to it, producing a
+	// redirect_uri no browser ever comes back to.
+	case parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "":
 		return fmt.Errorf("api: %s %q must be a bare origin, with no query or fragment", flagName, raw)
 	}
 	return nil

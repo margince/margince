@@ -86,21 +86,6 @@ func (cfg GoogleSignInConfig) MissingFields() []string {
 	return signInFields(cfg).missingSignInFields()
 }
 
-// googleSignInMatchIdentity is the login flow's matchIdentity: the token's
-// audience must be the shared Gmail-capture client this deployment
-// configured. email_verified is checked by identity's own callback handler,
-// not here — the Pub/Sub push caller (oidcverify.go's other user of
-// oidcTokenVerifier) has no such requirement, so it is not baked into the
-// shared matchIdentity contract.
-func googleSignInMatchIdentity(clientID string) func(oidcClaims) error {
-	return func(c oidcClaims) error {
-		if c.Aud != clientID {
-			return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
-		}
-		return nil
-	}
-}
-
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
 // compose-level oidcTokenVerifier (generalized in oidcverify.go). Google's own
 // adapter because it reads Google's own `email_verified` claim; Microsoft
@@ -159,7 +144,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		}
 		registerSignInProvider(s, pool, signInProvider{
 			config:    identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel, ClientID: cfg.ClientID, AuthURL: googleAuthURL},
-			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, googleSignInMatchIdentity(cfg.ClientID))},
+			verifier:  googleOIDCVerifierAdapter{v: newGoogleOIDCVerifier(googleJWKSURL, audienceIs(cfg.ClientID))},
 			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, TokenURL: googleTokenURL}},
 		}, identity.OIDCRoutes{
 			RedirectBase: signInRedirectBase(cfg.RedirectBase),
