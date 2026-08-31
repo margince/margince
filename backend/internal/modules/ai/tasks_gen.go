@@ -81,7 +81,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "46875e88404bca352bfc28138c8cbe1de47a46375a6679f8b3dbb46172dd6f02"
+const TaskContractHash = "dd95ae802145e4177a40bc778cb3963c29addf056d16aede6c1f676b46b6fb45"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -398,6 +398,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskGrowthFit:                  {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
 	TaskNlSearch:                   {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
 	TaskOfferDraft:                 {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
+	TaskProposeRoles:               {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:              {TokenBudget: 0, Conditional: false},
 	TaskSiteExtract:                {TokenBudget: 0, Conditional: false},
