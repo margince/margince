@@ -48,24 +48,6 @@ type evidenceWrite[T any] struct {
 	readAfter func(context.Context, pgx.Tx) (T, error)
 }
 
-// auditEvidenceWrite records the write under the verb it actually is.
-//
-// The two doors differ in what they REFUSE, which is why the choice is made
-// here rather than by passing a verb string: Audit refuses an update with no
-// before-image, and AuditEvent is the one that records an occurrence having
-// none. A creation sent through Audit would have to invent an image to satisfy
-// it, which is the defect this exists to avoid.
-//
-//craft:ignore naked-any the audit seam: an after image is the entity's own snapshot shape
-func auditEvidenceWrite(
-	ctx context.Context, tx pgx.Tx, table string, before evidenceRow, after any, created bool,
-) (ids.UUID, error) {
-	if created {
-		return storekit.AuditEvent(ctx, tx, "create", table, before.ID, after)
-	}
-	return storekit.Audit(ctx, tx, "update", table, before.ID, before.auditImage(), after)
-}
-
 // writeEvidence is the one way a human correction or confirmation reaches an
 // evidence sidecar (PO-AC-N-2).
 //
@@ -144,7 +126,18 @@ func writeEvidence[T any](
 		// wrote into the audit trail — the one record that answers "what did it
 		// say before I changed it". AuditEvent is the door for a write with no
 		// prior state; Audit refuses an update carrying no before-image.
-		auditID, err := auditEvidenceWrite(ctx, tx, w.table, before, p.After(), created)
+		//
+		// Spelled inline rather than behind a helper: the audit and the emit
+		// below are one obligation, and a helper holding only the audit half
+		// puts them in separate functions where nothing local shows they travel
+		// together — which is exactly what the write-shape gate reads.
+		var auditID ids.UUID
+		if created {
+			auditID, err = storekit.AuditEvent(ctx, tx, "create", w.table, before.ID, p.After())
+		} else {
+			auditID, err = storekit.Audit(ctx, tx, "update", w.table,
+				before.ID, before.auditImage(), p.After())
+		}
 		if err != nil {
 			return fmt.Errorf("audit %s write: %w", w.table, err)
 		}
