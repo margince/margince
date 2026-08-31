@@ -107,6 +107,12 @@ function routeBody(path: string, principal: Me): unknown {
   if (path === "/v1/provider-connections") {
     return { data: [CONNECTION] };
   }
+  if (path === "/v1/integrations/settings") {
+    // Off, which is the state the flip below moves away from. The installation
+    // default is ON, but a fixture that started there could not tell a working
+    // switch from one wired to a constant.
+    return { automatic_lookup: false };
+  }
   throw new Error(`unstubbed request: ${path}`);
 }
 
@@ -159,7 +165,7 @@ describe("ProviderCard write posture", () => {
   const DISCONNECT = "Disconnect";
   const DELETE_DATA = "Delete bought data";
   const KEY_FIELD = "Replace the API key";
-  const AUTO_IMPORT = "Enrich contacts that arrive from a connection";
+  const AUTOMATIC_LOOKUP = "Look up contacts automatically";
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
   // destroys purchased contact data. The trigger's presence is what the grant
@@ -242,17 +248,16 @@ describe("ProviderCard write posture", () => {
   );
 
   it(
-    "buys captured contacts only once the import switch is flipped",
+    "buys nothing automatically until the lookup switch is flipped",
     async () => {
       const user = userEvent.setup();
       const fetch = await renderAs(ME_OPERATOR);
 
-      const importSwitch = screen.getByRole("switch", { name: AUTO_IMPORT });
-      // The fixture has it off, which is the state the server defaults to: a
-      // mailbox sync mints a person per counterparty, so nobody is billed for
-      // capture until somebody says so here.
-      expect(importSwitch.getAttribute("aria-checked")).toBe("false");
-      await user.click(importSwitch);
+      const lookupSwitch = await screen.findByRole("switch", {
+        name: AUTOMATIC_LOOKUP,
+      });
+      expect(lookupSwitch.getAttribute("aria-checked")).toBe("false");
+      await user.click(lookupSwitch);
 
       // Waited on rather than read straight after the click: the write leaves
       // on a promise, so the call is recorded a tick later than the event. The
@@ -266,15 +271,12 @@ describe("ProviderCard write posture", () => {
         timeout: SETTLE_MS,
       });
       const request = patched() as Request;
-      expect(await request.clone().json()).toEqual({
-        // Only the switch that moved. Sending the whole configuration would
-        // carry a stale copy of the OTHER switch back to the server, so one
-        // reader's flip would silently revert a colleague's.
-        configuration: { automatic_import: true },
-      });
-      // The row it overwrites is pinned, so a colleague's concurrent edit is a
-      // 409 rather than a silent loss.
-      expect(request.headers.get("If-Match")).toBe(String(CONNECTION.version));
+      // The INSTALLATION's surface, not the connection's. The three
+      // per-connection fields that used to carry this answer are deprecated and
+      // ignored by admission, so a card still patching them would save, answer
+      // 200, and change nothing.
+      expect(new URL(request.url).pathname).toBe("/v1/integrations/settings");
+      expect(await request.clone().json()).toEqual({ automatic_lookup: true });
     },
     // Two waiters, not one: the card has to settle before the switch exists,
     // and the write it sends is awaited after. The ceiling covers the sum, or

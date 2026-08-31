@@ -6697,12 +6697,18 @@ export const vi = {
   "provider.deleteDataConfirm.body":
     "Mọi giá trị nhà cung cấp này đã cấp sẽ bị gỡ khỏi mọi liên hệ. Khoản bạn đã chi vẫn được ghi lại; dữ liệu thì không. Không thể hoàn tác.",
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
-  "provider.autoEnrich": "Tự động làm giàu liên hệ mới",
-  "provider.autoEnrichHint":
-    "Khi ai đó thêm một liên hệ thủ công, mua luôn thông tin của họ.",
-  "provider.autoImport": "Làm giàu liên hệ đến từ kết nối",
-  "provider.autoImportHint":
-    "Mỗi hộp thư, kênh và kết nối khác đều thêm một liên hệ cho từng người nó thấy, và mỗi lần mua đều tốn tín dụng.",
+  "provider.automaticLookup": "Tự động tra cứu liên hệ",
+  "provider.automaticLookupHint":
+    "Mỗi liên hệ được tra cứu một lần — cho những mục mà kết nối chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, cùng quá trình công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này: chúng tốn tín dụng và vẫn là quyết định cho từng liên hệ.",
+  "provider.automaticLookupJurisdiction":
+    "Hãy tắt mục này nếu liên hệ của bạn thuộc phạm vi luật cấm mua bán dữ liệu cá nhân, trong đó có luật Việt Nam. Nút trên từng liên hệ vẫn dùng được, để quyết định thuộc về người đưa ra nó.",
+  "provider.backlog": "Còn phải tra cứu",
+  "provider.backlogRemaining_one": "{count} liên hệ",
+  "provider.backlogRemaining_other": "{count} liên hệ",
+  "provider.backlogWorking":
+    "Những liên hệ đã có sẵn khi kết nối nhà cung cấp đang được tra cứu dần.",
+  "provider.backlogPaused":
+    "Hiện không tra cứu gì: tra cứu tự động đang tắt, đã hết hạn mức trong ngày, hoặc nhà cung cấp không dùng được.",
   "provider.credits": "Tín dụng còn lại ở nhà cung cấp",
   "provider.credits.none": "Nhà cung cấp chưa cho biết số dư.",
   "provider.credits.notConnected":
