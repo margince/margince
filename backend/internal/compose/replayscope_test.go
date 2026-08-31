@@ -196,3 +196,56 @@ func TestReplayRefusesBeforeQueryingWhenTheIDIsUnreadable(t *testing.T) {
 		})
 	}
 }
+
+// A companion reference the body carries but cannot be read as an id refuses
+// before any transaction opens, exactly as the primary does.
+//
+// The nil pool is the assertion: reaching the database would panic, so
+// surviving the call is proof the refusal came first. It is also what makes
+// this case readable — a companion whose value is garbage is a body the
+// middleware cannot vouch for, and "cannot tell" is not "allowed".
+func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
+	for _, tc := range []struct{ name, route, body string }{
+		{
+			name:  "quick capture names an unreadable employer",
+			route: "POST /v1/people/quick-capture",
+			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"organization_id":"garbage"}`,
+		},
+		{
+			name:  "a promotion names an unreadable deal",
+			route: "POST /v1/leads/{id}/promote",
+			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"deal_id":"garbage"}`,
+		},
+		{
+			name:  "a demotion names an unreadable person",
+			route: "POST /v1/leads/{id}/demote",
+			body:  `{"lead":{"id":"01a00000-0000-7000-8000-000000000001"},"person_id":"garbage"}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ensureReplayVisible(context.Background(), nil, nil, tc.route, tc.body); !errors.Is(err, apperrors.ErrNotFound) {
+				t.Fatalf("err = %v, want ErrNotFound", err)
+			}
+		})
+	}
+}
+
+// A companion that is absent, or present and null, names no record — these
+// fields are optional by contract, and a person captured with no employer
+// carries no organization id. Skipping them is not a hole: there is nothing
+// to probe.
+//
+// Asserted through the PRIMARY's own refusal, so the case still proves the
+// companion arm ran and passed: an unreadable primary refuses, and reaching
+// that refusal means the companion loop neither panicked on a nil pool nor
+// refused first.
+func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
+	for _, body := range []string{
+		`{"person":{"id":"garbage"}}`,
+		`{"person":{"id":"garbage"},"organization_id":null}`,
+	} {
+		if err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture", body); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("body %s: err = %v, want the PRIMARY's ErrNotFound", body, err)
+		}
+	}
+}
