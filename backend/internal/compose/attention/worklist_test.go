@@ -14,8 +14,11 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func item(id string, source crmcontracts.AttentionItemSource, opts ...func(*crmcontracts.AttentionItem)) crmcontracts.AttentionItem {
@@ -405,7 +408,6 @@ func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
 		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000aaaa"),
 		Subject:    "Re: pricing",
 		Since:      rankInstant.Add(-83 * 24 * time.Hour),
-		Readable:   true,
 	}}
 
 	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
@@ -429,7 +431,6 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 	waiting := []WaitingCustomer{{
 		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000cccc"),
 		Since:      rankInstant.Add(-3 * 24 * time.Hour),
-		Readable:   true,
 		DealID:     deal,
 	}}
 
@@ -447,8 +448,8 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 // all waiting, the forgotten one is the one at risk.
 func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
 	waiting := []WaitingCustomer{
-		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000a"), Since: rankInstant.Add(-2 * 24 * time.Hour), Readable: true},
-		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-83 * 24 * time.Hour), Readable: true},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000a"), Since: rankInstant.Add(-2 * 24 * time.Hour)},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-83 * 24 * time.Hour)},
 	}
 
 	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
@@ -458,40 +459,66 @@ func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
 	}
 }
 
-// Being told somebody is waiting is not permission to read what they wrote.
-// A withheld message travels without its subject line, and the client names it
-// generically.
-func TestAWithheldWaitingMessageTravelsWithoutItsSubject(t *testing.T) {
-	waiting := []WaitingCustomer{{
-		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000dddd"),
-		Subject:    "Re: our confidential pricing",
-		Since:      rankInstant.Add(-24 * time.Hour),
-		Readable:   false,
-	}}
-
-	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
-
-	if out.Queue[0].Title != nil {
-		t.Fatalf("a message this reader may not read published its subject %q", *out.Queue[0].Title)
-	}
-	if len(out.Queue) != 1 {
-		t.Fatal("the withheld message stopped being reported at all — the wait is still a fact")
-	}
-}
-
-// A readable one keeps its subject: withholding everything would make the lane
-// useless to the reader it is for.
-func TestAReadableWaitingMessageKeepsItsSubject(t *testing.T) {
+// A message the reader may not read produces NO row.
+//
+// The earlier cut kept the row and removed only its subject, which still
+// published the wait, its timing and the record it was filed under — and let a
+// reader watch a row vanish to learn that a reply they may not see had arrived.
+// The content gate now decides whether the row exists, so this is a property of
+// the query and the store test holds it; here we hold the shape that depends on
+// it: every waiting row that arrives may state its subject.
+func TestEveryWaitingRowMayStateItsSubject(t *testing.T) {
 	waiting := []WaitingCustomer{{
 		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000eeee"),
 		Subject:    "Re: pricing",
 		Since:      rankInstant.Add(-24 * time.Hour),
-		Readable:   true,
 	}}
 
 	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
 
 	if out.Queue[0].Title == nil || *out.Queue[0].Title != "Re: pricing" {
-		t.Fatal("a readable message lost its subject line")
+		t.Fatal("a waiting row the content gate admitted lost its subject line")
+	}
+}
+
+// Under `mine`, a thread about a colleague's deal is that colleague's to
+// answer. A message filed under nothing stays: an unowned customer writing in
+// is everybody's, and dropping it would leave nobody looking at it.
+func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
+	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
+	theirDeal := ids.MustParse("01a05500-0000-7000-8000-00000000dea1")
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: reader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	at := []crmcontracts.AttentionItem{dealItemOwned(theirDeal, colleague)}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
+	waiting := []WaitingCustomer{
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a1"), Since: rankInstant.Add(-time.Hour), DealID: theirDeal},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a2"), Since: rankInstant.Add(-time.Hour)},
+	}
+
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waiting)
+
+	for _, row := range out.Queue {
+		if row.Id == "01a05500-0000-7000-8000-0000000000a1" {
+			t.Fatal("a thread about a colleague's deal reached a queue scoped to the reader")
+		}
+	}
+	if len(out.Queue) == 0 {
+		t.Fatal("the unfiled message was dropped too, leaving nobody looking at it")
+	}
+}
+
+func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
+	ownerID := openapi_types.UUID(owner)
+	dealID := openapi_types.UUID(deal)
+	return crmcontracts.AttentionItem{
+		Id:      deal.String(),
+		Source:  "deal_at_risk",
+		Subject: &crmcontracts.AttentionSubject{Type: "deal", Id: dealID},
+		Deal:    &crmcontracts.AttentionDealFacts{OwnerId: &ownerID},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 }

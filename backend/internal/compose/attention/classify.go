@@ -275,12 +275,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
 	}
-	// The subject line is CONTENT. A reader admitted to know that somebody is
-	// waiting is not thereby admitted to read what they wrote, so a withheld
-	// message travels without its words and the client names it generically.
-	// `readable` is the same arm the timeline applies; this only refuses to
-	// undo it.
-	if subject != "" && waiting.Readable {
+	// The subject travels because the row exists at all only for a reader the
+	// content gate admitted: a message this reader may not read produces no
+	// row, rather than a row with its words removed.
+	if subject != "" {
 		row.Title = &subject
 	}
 	// The record the reply would be about, most specific first: the deal a

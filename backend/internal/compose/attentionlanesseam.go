@@ -246,8 +246,11 @@ type attentionWaiting struct {
 	now   attention.Clock
 }
 
-func (w attentionWaiting) Unanswered(ctx context.Context) ([]attention.WaitingCustomer, error) {
-	rows, err := w.store.WaitingReplies(ctx, w.now())
+// The instant comes from the caller so the whole read is one snapshot. Asking
+// the clock again here would let the anti-joins judge against a moment the rest
+// of the day was not read at.
+func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]attention.WaitingCustomer, error) {
+	rows, err := w.store.WaitingReplies(ctx, asOf)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +260,6 @@ func (w attentionWaiting) Unanswered(ctx context.Context) ([]attention.WaitingCu
 			ActivityID:     row.ActivityID,
 			Subject:        row.Subject,
 			Since:          row.OccurredAt,
-			Readable:       row.Readable,
 			PersonID:       row.PersonID,
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,

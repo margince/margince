@@ -39,10 +39,6 @@ type WaitingReply struct {
 	Subject    string
 	// OccurredAt is when they wrote, which is what the wait is measured from.
 	OccurredAt time.Time
-	// Readable says whether this reader may see the message's CONTENT. A
-	// withheld message still proves somebody is waiting; it cannot be drafted
-	// a reply, so the card offers none.
-	Readable bool
 	// The record the thread is filed under, when it names one.
 	PersonID       ids.UUID
 	OrganizationID ids.UUID
@@ -65,6 +61,20 @@ const waitingScanCap = 200
 // message as unanswered because the answer was somebody else's to see — the
 // worst failure available here, since it sends a rep to write a second reply.
 //
+// A thread is matched within ONE medium: same kind, same channel provider. A
+// mail thread key comes from headers the sender controls, and channel keys
+// share the flat namespace with them, so comparing keys alone lets a crafted
+// References value silence an unrelated conversation. The capture side's own
+// reply detector matches the same way.
+//
+// The anti-joins are bounded by the read instant too, so the answer is a
+// snapshot: a message dated in the future — mail carries the sender's own Date
+// header — cannot suppress a thread that is genuinely waiting now.
+//
+// Equal timestamps are broken by id, because second-precision mail makes ties
+// ordinary and both halves of "newest inbound, no later outbound" would
+// otherwise be wrong at once.
+//
 // A message with NO thread_key is excluded rather than matched loosely. SQL
 // equality would never join two NULLs, and IS NOT DISTINCT FROM joins them ALL
 // — so an unthreaded message would be silenced by any other unthreaded
@@ -72,32 +82,42 @@ const waitingScanCap = 200
 // unthreaded question at once. Excluding them under-reports, which is the
 // direction that costs a row rather than a customer.
 const waitingRepliesSQL = `
-	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at, %s AS readable,
-	       COALESCE(l.person_id, '00000000-0000-0000-0000-000000000000'::uuid),
-	       COALESCE(l.organization_id, '00000000-0000-0000-0000-000000000000'::uuid),
-	       COALESCE(l.deal_id, '00000000-0000-0000-0000-000000000000'::uuid)
+	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at,
+	       COALESCE(MAX(l.person_id) FILTER (WHERE l.entity_type = 'person'),
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       COALESCE(MAX(l.organization_id) FILTER (WHERE l.entity_type = 'organization'),
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       COALESCE(MAX(l.deal_id) FILTER (WHERE l.entity_type = 'deal'),
+	                '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
-	  LEFT JOIN activity_link l ON l.activity_id = a.id
+	  LEFT JOIN activity_link l ON l.activity_id = a.id AND (%[3]s)
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
-	   AND a.occurred_at <= $%d
-	   AND %s
+	   AND a.occurred_at <= $%[1]d
+	   AND %[2]s
 	   AND a.thread_key IS NOT NULL
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity later
 	          WHERE later.thread_key = a.thread_key
+	            AND later.kind = a.kind
+	            AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	            AND later.direction = 'outbound'
 	            AND later.archived_at IS NULL
-	            AND later.occurred_at > a.occurred_at)
+	            AND later.occurred_at <= $%[1]d
+	            AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity newer
 	          WHERE newer.thread_key = a.thread_key
+	            AND newer.kind = a.kind
+	            AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	            AND newer.direction = 'inbound'
 	            AND newer.archived_at IS NULL
-	            AND newer.occurred_at > a.occurred_at)
+	            AND newer.occurred_at <= $%[1]d
+	            AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
+	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at ASC
-	 LIMIT %d`
+	 LIMIT %[4]d`
 
 // WaitingReplies answers who is waiting on this reader for a reply.
 //
@@ -113,20 +133,35 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		instant := arg(asOf)
-		// The DISCOVER gate decides which rows are listed at all; the audience
-		// arm decides whether their words come too. Both come from the one
-		// place that spells them, so this read and the timeline cannot come to
-		// disagree about what a reader may see.
-		discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+		// The CONTENT gate, not the discover one. Everything this read answers
+		// — who wrote last, that nobody replied, how long they have waited — is
+		// derived from thread membership, and inheritedscope.go states the rule
+		// plainly: a reader that shows anything derived from a thread composes
+		// ActivityContentClause. Discover admits the safe markers only, and a
+		// caller that picks it for content is the defect restrictedreaders_test
+		// exists to catch.
+		//
+		// So a message this reader may not read produces no row at all. The
+		// earlier cut kept the row and withheld only its subject, which still
+		// published the wait, the timing and the linked record — and let a
+		// reader watch a row vanish to learn that a reply they may not see had
+		// arrived.
+		content, err := auth.ActivityContentClause(ctx, "a", arg)
 		if err != nil {
 			return err
 		}
-		readable, err := auth.ActivityAudienceArm(ctx, "a", arg)
+		// The links come back only where the reader may see what they point at.
+		// One visible person must not expose a colleague's deal, which is the
+		// disclosure the timeline's own link read guards against.
+		linkVisible, err := auth.LinkTargetVisibleClause(ctx, "l", arg)
 		if err != nil {
 			return err
+		}
+		if linkVisible == "" {
+			linkVisible = "TRUE"
 		}
 		rows, err := tx.Query(ctx,
-			fmt.Sprintf(waitingRepliesSQL, readable, instant, discover, waitingScanCap), args...)
+			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap), args...)
 		if err != nil {
 			return err
 		}
@@ -134,7 +169,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		waiting = []WaitingReply{}
 		for rows.Next() {
 			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.OccurredAt, &row.Readable,
+			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID); err != nil {
 				return err
 			}

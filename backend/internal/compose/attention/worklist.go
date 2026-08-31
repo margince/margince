@@ -19,9 +19,11 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -61,7 +63,7 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
-	waiting, waitingErr := s.waitingCustomers(ctx)
+	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
 	out := s.worklistFrom(ctx, day, resolved, filter, limit, waiting)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
@@ -118,11 +120,13 @@ func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
 // one. Neither takes the rest of the day down with it — a page that answered
 // nothing because one source stumbled is less useful than a page that says
 // which part it could not read.
-func (s *Service) waitingCustomers(ctx context.Context) ([]WaitingCustomer, *crmcontracts.WorklistSourceUnavailable) {
+func (s *Service) waitingCustomers(
+	ctx context.Context, asOf time.Time,
+) ([]WaitingCustomer, *crmcontracts.WorklistSourceUnavailable) {
 	if s.waiting == nil {
 		return nil, nil
 	}
-	rows, err := s.waiting.Unanswered(ctx)
+	rows, err := s.waiting.Unanswered(ctx, asOf)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return nil, &crmcontracts.WorklistSourceUnavailable{
@@ -148,7 +152,15 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
+	// A waiting message has no owner of its own, so under `mine` its ownership
+	// is the ownership of the record it is filed under: a thread about a
+	// colleague's deal is that colleague's to answer. Judged against the deals
+	// this reader owns in THIS day, which is the set `mine` already narrowed.
+	owned := ownedDealsIn(ctx, day, scope)
 	for _, customer := range waiting {
+		if mineOnly(scope) && !waitingIsMine(customer, owned) {
+			continue
+		}
 		rows = append(rows, classifyWaiting(customer, day.AsOf))
 	}
 	// One unanswered message is one row: the deal it belongs to does not also
@@ -176,6 +188,31 @@ func (s *Service) worklistFrom(
 		out.Filter = &narrowed
 	}
 	return out
+}
+
+// ownedDealsIn is the set of deals on this day that the reader owns.
+//
+// Read off the assembled day rather than queried again: the at-risk lane has
+// already returned the deals under the reader's own scope, so this is the
+// answer that surface already has rather than a second opinion about it.
+func ownedDealsIn(ctx context.Context, day crmcontracts.Attention, scope string) map[ids.UUID]bool {
+	owned := map[ids.UUID]bool{}
+	if !mineOnly(scope) || day.AtRisk == nil {
+		return owned
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return owned
+	}
+	for _, item := range *day.AtRisk {
+		if item.Deal == nil || item.Deal.OwnerId == nil || item.Subject == nil {
+			continue
+		}
+		if ids.UUID(*item.Deal.OwnerId) == actor.UserID {
+			owned[ids.UUID(item.Subject.Id)] = true
+		}
+	}
+	return owned
 }
 
 // page cuts the candidates to what one read carries.

@@ -108,3 +108,18 @@ func ownedByReader(item crmcontracts.WorklistItem, reader principal.Principal) b
 	}
 	return ids.UUID(*item.Deal.OwnerId) == reader.UserID
 }
+
+// waitingIsMine reports whether an unanswered message belongs to the reader's
+// own work.
+//
+// A message has no owner column, so the question is answered by the RECORD it
+// is filed under: a thread about a colleague's deal is that colleague's to
+// answer. A message filed under nothing names nobody, and stays — an unowned
+// customer writing in is everybody's, and dropping it would leave nobody
+// looking at it.
+func waitingIsMine(waiting WaitingCustomer, ownedDeals map[ids.UUID]bool) bool {
+	if waiting.DealID.IsZero() {
+		return true
+	}
+	return ownedDeals[waiting.DealID]
+}
