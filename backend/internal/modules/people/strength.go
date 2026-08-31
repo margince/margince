@@ -55,6 +55,19 @@ type RelationshipStrength struct {
 	Inbound90d          int
 	Outbound90d         int
 	ContributingIDs     []ids.ActivityID
+
+	// The two directions dated separately, because "they answered" and "we
+	// wrote and heard nothing" are opposite next moves and the counts above
+	// cannot tell them apart once both are non-zero: a contact who replied in
+	// March and was chased in August has inbound and outbound alike, and only
+	// the dates say which way the conversation is owed. EngagementOf reads the
+	// counts; a caller deciding whether a reply is outstanding reads these.
+	LastInbound  *time.Time
+	LastOutbound *time.Time
+	// LastInboundActivity is the message a follow-up would answer — the anchor
+	// the composer needs to open a reply rather than a fresh thread. Nil where
+	// nobody has written in, which is exactly when there is nothing to answer.
+	LastInboundActivity *ids.ActivityID
 }
 
 // strengthKinds are the activity kinds that count as contact, from the one
@@ -310,7 +323,11 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 		       max(a.occurred_at),
 		       count(*) FILTER (WHERE a.occurred_at >= $2),
 		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound')
+		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
+		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
+		       (array_agg(a.id ORDER BY a.occurred_at DESC)
+		          FILTER (WHERE a.direction = 'inbound'))[1]
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.person_id = ANY($1) AND a.kind IN `+strengthKinds+` AND a.archived_at IS NULL
@@ -327,7 +344,8 @@ func contactStrengths(ctx context.Context, tx pgx.Tx, contacts []ids.PersonID, n
 		var personID ids.PersonID
 		var rs RelationshipStrength
 		if err := rows.Scan(&personID, &rs.LastInteraction, &rs.InteractionCount90d,
-			&rs.Inbound90d, &rs.Outbound90d); err != nil {
+			&rs.Inbound90d, &rs.Outbound90d, &rs.LastInbound, &rs.LastOutbound,
+			&rs.LastInboundActivity); err != nil {
 			return nil, err
 		}
 		byPerson[personID] = &rs
@@ -359,11 +377,17 @@ func strengthInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now t
 		SELECT max(a.occurred_at),
 		       count(*) FILTER (WHERE a.occurred_at >= $2),
 		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound')
+		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
+		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
+		       (array_agg(a.id ORDER BY a.occurred_at DESC)
+		          FILTER (WHERE a.direction = 'inbound'))[1]
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
 		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`,
-		personID, windowStart).Scan(&out.LastInteraction, &out.InteractionCount90d, &out.Inbound90d, &out.Outbound90d); err != nil {
+		personID, windowStart).Scan(&out.LastInteraction, &out.InteractionCount90d,
+		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
+		&out.LastInboundActivity); err != nil {
 		return err
 	}
 
