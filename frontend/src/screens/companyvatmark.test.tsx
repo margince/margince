@@ -354,6 +354,100 @@ describe("the VAT mark beside the number", () => {
     expect(gets).toEqual(["invalid", "valid"]);
   });
 
+  it("refuses a second press while the register is still being asked", async () => {
+    // The window the reader actually meets: the POST answers 202 in
+    // milliseconds and the register replies seconds later, so a button that
+    // cleared on the 202 was live again for the whole wait. A second press
+    // queues a second consultation, or meets the five-minute floor and shows a
+    // rate-limit refusal for a check that is already running.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        return new Response(null, { status: 202 });
+      }
+      // The register never replies, which is what holds the wait open.
+      return jsonResponse(CHECKED);
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    fireEvent.click(ask);
+    await screen.findByText(/answer appears here once it replies/);
+
+    // Pressed four more times while the answer is outstanding.
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(posts).toHaveLength(1);
+    // Refused by being BUSY, not by being disabled: focus stays where the
+    // reader put it, which is what aria-disabled is for.
+    expect(ask).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("takes a press again once the register has answered", async () => {
+    // The other half, and the one that stops the fix being a control nobody can
+    // use twice: the wait ends when the answer lands, not when the poll runs
+    // out of attempts.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let verdict = "invalid";
+    const posts: string[] = [];
+    stubFetch(async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        posts.push(pathname);
+        verdict = "valid";
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse({
+        ...CHECKED,
+        status: verdict,
+        // The date MOVES with the answer, which is the signal the wait reads.
+        checked_at:
+          verdict === "valid" ? "2026-08-15T10:00:00Z" : CHECKED.checked_at,
+      });
+    });
+    render(mark());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    // The answer landed, so the button is pressable again — well before the
+    // poll's own last attempt fifteen seconds out.
+    const ask = await screen.findByRole("button", { name: "Check again" });
+    expect(ask).not.toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(ask);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(posts).toHaveLength(2);
+  });
+
   it("draws nothing while the read is in flight", () => {
     stubFetch(
       () =>

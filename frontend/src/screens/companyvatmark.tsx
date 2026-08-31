@@ -214,7 +214,11 @@ export function VatMark({
         ) : (
           <VatReceipt check={answer} locale={locale} zone={zone} />
         )}
-        <AskTheRegister orgId={orgId} consulted={answer !== null} />
+        <AskTheRegister
+          orgId={orgId}
+          consulted={answer !== null}
+          answeredAt={answer?.checked_at ?? null}
+        />
         {/* The number this mark answers for, last: a receipt names what it was
             issued for, and the row above the mark can be edited after a check
             — so a mark that showed only a verdict could sit beside a number
@@ -304,13 +308,34 @@ function VatReceipt({
 function AskTheRegister({
   orgId,
   consulted,
-}: Readonly<{ orgId: string; consulted: boolean }>): ReactNode {
+  answeredAt,
+}: Readonly<{
+  orgId: string;
+  consulted: boolean;
+  // When the consultation on record was last written. The wait ends when this
+  // MOVES: that is the register having replied, and it is the only signal the
+  // client gets — the answer arrives out of band, in a worker.
+  answeredAt: string | null;
+}>): ReactNode {
   const t = useT();
   const queryClient = useQueryClient();
   const canEdit = useCan("organization", "update");
-  // The organization whose answer we are waiting for, or null. Set by the
-  // mutation and cleared once the poll below has run its course.
-  const [waitingFor, setWaitingFor] = useState<string | null>(null);
+  // The organization whose answer we are waiting for, and what the record said
+  // when the wait began. Null when nothing is outstanding.
+  //
+  // The date is what ENDS the wait: a consultation the worker completes writes
+  // a new one, so the moment it differs the register has replied. Waiting on
+  // the poll's own schedule instead would hold the button for the full fifteen
+  // seconds after an answer that arrived in two.
+  const [waitingFor, setWaitingFor] = useState<{
+    orgId: string;
+    since: string | null;
+  } | null>(null);
+  useEffect(() => {
+    if (waitingFor !== null && answeredAt !== waitingFor.since) {
+      setWaitingFor(null);
+    }
+  }, [answeredAt, waitingFor]);
   const ask = useMutation({
     // The organization is a VARIABLE rather than a closure over this render: a
     // click landing between the commit and React Query re-arming the options
@@ -340,7 +365,7 @@ function AskTheRegister({
     // what the mutation RETURNED rather than this render's orgId, so a click in
     // React Query's re-arming window cannot poll the company the reader was
     // looking at a moment ago.
-    onSuccess: (asked) => setWaitingFor(asked),
+    onSuccess: (asked) => setWaitingFor({ orgId: asked, since: answeredAt }),
   });
 
   // The register answers out of band, so the only way the mark learns is to
@@ -360,7 +385,13 @@ function AskTheRegister({
         // this poll lives inside a popover panel the reader may have closed. A
         // request that answered nothing because a panel shut is the shape of
         // bug this whole change exists to stop.
-        void queryClient.refetchQueries({ queryKey: vatCheckKey(waitingFor) });
+        void queryClient.refetchQueries({
+          queryKey: vatCheckKey(waitingFor.orgId),
+        });
+        // The last attempt ends the wait whether or not an answer came. A
+        // register that never replies must not leave the button busy forever:
+        // the reader is then stuck with a control they cannot press and no
+        // reason given.
         if (attempt === VAT_POLL_DELAYS_MS.length - 1) {
           setWaitingFor(null);
         }
@@ -378,15 +409,27 @@ function AskTheRegister({
   }
   return (
     <div className="vatmark-ask">
+      {/* Busy until the ANSWER lands, not until the request is accepted. The
+          POST returns a 202 in milliseconds and the register replies seconds
+          later, so a button that cleared on the 202 was pressable again for
+          the whole wait — and a second press queues a second consultation, or
+          meets the five-minute floor and shows a rate-limit refusal for a check
+          that is already running. Either way the reader is told something
+          false about a request they made correctly. */}
       <Button
         variant="ghost"
         small
-        pending={ask.isPending}
+        pending={ask.isPending || waitingFor !== null}
+        busyLabel={t("co.vat.asked")}
         onClick={() => ask.mutate(orgId)}
       >
         {t(consulted ? "co.vat.askAgain" : "co.vat.askNow")}
       </Button>
-      {ask.isSuccess && <p className="t-caption">{t("co.vat.asked")}</p>}
+      {/* The wait is NOT stated twice. `busyLabel` above already puts this
+          sentence in the button's own description, where a reader with focus on
+          it hears it; a paragraph repeating it is a second copy that a screen
+          reader reads out again and that can disagree with the button's state
+          the moment either changes. */}
       {ask.error !== null && (
         <p className="t-caption" role="status">
           {problemMessageOf(ask.error, t)}

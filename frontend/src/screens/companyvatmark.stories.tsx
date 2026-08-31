@@ -166,6 +166,23 @@ export const AskedTooSoon: Story = {
   },
 };
 
+/** Asked, and waiting. The button stays busy until the register replies rather
+ * than until the request is accepted — the POST answers in milliseconds and the
+ * answer arrives seconds later, so a button that cleared on the 202 invited a
+ * second consultation for a check already running. Press it here: it refuses,
+ * keeps focus, and says what it is doing. */
+export const AskedAndWaiting: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": CAN_WRITE,
+      // The register never answers, which is what holds the wait open.
+      [ROUTE]: () => jsonResponse(CHECKED),
+      [ASK]: () => new Response(null, { status: 202 }),
+    });
+    return inRow(NUMBER);
+  },
+};
+
 /** A viewer who may read the company and not change it. The verdict and the
  * receipt are theirs to read; consulting the register is not. */
 export const WithoutTheGrantToAsk: Story = {
