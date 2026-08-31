@@ -9,6 +9,7 @@ package compose
 // recovery) is platform/httpserver; what lives here is the wiring.
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -116,7 +117,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		jobHealthHandlers: jobHealthHandlers{pool: pool},
 		// DSR fulfillment executes privacy's erase path — injected here so
 		// consent never imports its sibling.
-		consentHandlers:     consent.NewHandlers(InstallationDB(pool)).WithEraser(privacy.NewEraser(InstallationDB(pool))),
+		consentHandlers: consent.NewHandlers(InstallationDB(pool)).
+			WithEraser(privacy.NewEraser(InstallationDB(pool))).
+			WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
+				return identity.InstallationNameForPublicPage(ctx, pool)
+			})),
 		collectionsHandlers: newCollectionsHandlers(pool),
 		// The warm room ranks its contact edges by the §4 relationship
 		// strength owned by people; injected through the adapter below so

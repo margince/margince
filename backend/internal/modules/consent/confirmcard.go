@@ -95,9 +95,7 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 			                    AND (r.ended_at IS NULL OR r.ended_at > current_date)
 			                    AND r.archived_at IS NULL
 			                  ORDER BY r.created_at DESC LIMIT 1), ''),
-			       coalesce((SELECT pe.email FROM person_email pe
-			                  WHERE pe.person_id = p.id AND pe.archived_at IS NULL
-			                  ORDER BY pe.is_primary DESC, pe.created_at LIMIT 1), ''),
+			       `+primaryEmailSQL("p.id")+`,
 			       coalesce((SELECT pp.phone FROM person_phone pp
 			                  WHERE pp.person_id = p.id AND pp.archived_at IS NULL
 			                  ORDER BY pp.is_primary DESC, pp.created_at LIMIT 1), '')

@@ -358,3 +358,36 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 	}
 	return lang
 }
+
+// InstallationNameOf reads the installation's own display label inside a
+// transaction the caller already holds.
+//
+// The setting row is read directly rather than through platform/settings:
+// this answers surfaces that run with no principal to judge the
+// installation_settings object gate — the login that has not built one
+// yet, and the public preference page, which has no seat at all. The name
+// is the installation's own label, not tenant data.
+//
+// Coalesced to the empty string rather than an error, for the same reason
+// the login does it: this is a display label, and an installation with no
+// stored name is a misconfiguration that must not turn a working page
+// into a 500.
+func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	var name string
+	err := tx.QueryRow(ctx,
+		`SELECT coalesce((SELECT value #>> '{}' FROM setting WHERE key = $1), '')`, Name.Key(),
+	).Scan(&name)
+	return name, err
+}
+
+// InstallationNameForPublicPage answers the installation's label for a
+// surface holding only a pool — the public preference centre's seam.
+func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (string, error) {
+	var name string
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		name, err = InstallationNameOf(ctx, tx)
+		return err
+	})
+	return name, err
+}
