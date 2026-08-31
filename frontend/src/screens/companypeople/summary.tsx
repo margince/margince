@@ -69,7 +69,24 @@ export function CoverageBand({
   // was not the one this reads — a stub, a proxy, a version skew. Rendering
   // half a band off a payload this does not recognise is worse than rendering
   // none, and reading through it crashes the whole tab.
-  if (query.isPending || query.isError || !query.data?.summary) {
+  if (query.isPending) {
+    return null;
+  }
+  // A read that FAILED says so. Rendering nothing makes a server error look
+  // like a band this account does not offer, and the reader then works from a
+  // list with no reading above it and no reason to doubt it.
+  if (query.isError) {
+    return (
+      <StatStrip testId="coverage-band">
+        <StatCard
+          label={t("co.people.band.coverage")}
+          value={t("co.people.band.unavailable")}
+          detail={t("co.people.band.unavailableWhy")}
+        />
+      </StatStrip>
+    );
+  }
+  if (!query.data?.summary) {
     return null;
   }
   const coverage = query.data;
@@ -134,7 +151,15 @@ function WayIn({
           )}
         </span>
       }
-      openLabel={t("co.people.band.showAnswered")}
+      // The label names what the press DOES. A way in who has not answered
+      // yet narrows to nothing in particular, so the door says "show everyone"
+      // rather than promising a list of people who answered and clearing the
+      // filter instead.
+      openLabel={t(
+        way.engagement === "answered"
+          ? "co.people.band.showAnswered"
+          : "co.people.band.showAll",
+      )}
       onOpen={() => onNarrow(way.engagement === "answered" ? "answered" : null)}
     />
   );
@@ -151,12 +176,25 @@ function WayIn({
 function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
   const t = useT();
   const { locale } = useLocale();
+  // A committee can be absent for two OPPOSITE reasons, and the flag is the
+  // only thing that tells them apart: the reader may not look, or there is
+  // nothing to look at. Reading absence alone as "hidden from you" accuses the
+  // reader's own role on every account that simply has no open deal.
   if (!coverage.committee) {
+    const withheld = !coverage.completeness.committee_read;
     return (
       <StatCard
         label={t("co.people.band.committee")}
-        value={t("co.people.band.committeeUnread")}
-        detail={t("co.people.band.committeeUnreadWhy")}
+        value={t(
+          withheld
+            ? "co.people.band.committeeUnread"
+            : "co.people.band.noOpenDeal",
+        )}
+        detail={t(
+          withheld
+            ? "co.people.band.committeeUnreadWhy"
+            : "co.people.band.noOpenDealWhy",
+        )}
       />
     );
   }
@@ -170,7 +208,16 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
           ? t("co.people.band.missing", {
               role: t(ROLE_LABELS[gaps[0] as keyof typeof ROLE_LABELS]),
             })
-          : t("co.people.band.committeeComplete")
+          : // No gaps means one of two things, and only one is good news. The
+            // server empties `gaps` whenever a seat is hidden, precisely
+            // because it cannot tell whether the role is held — so reading the
+            // empty list as "both roles named" turns a suppressed answer into
+            // a confident one.
+            t(
+              unlisted > 0
+                ? "co.people.band.committeePartial"
+                : "co.people.band.committeeComplete",
+            )
       }
       detail={
         unlisted > 0
@@ -198,13 +245,34 @@ function CommitteeBoard({ coverage }: Readonly<{ coverage: Coverage }>) {
   if (!committee) {
     return null;
   }
-  const columns = ROLES.map((role) => ({
-    stage: role,
-    label: t(ROLE_LABELS[role]),
-    deals: committee.seats
-      .filter((seat) => seat.role === role)
-      .map((seat) => ({ id: seat.person_id, name: seat.full_name, seat })),
-  }));
+  // `role` is a free string on the wire, so a seat can carry one this board
+  // has no column for. It goes in a column of its own rather than being
+  // dropped: a person the summary counted and the board does not draw is a
+  // reader looking for somebody who is not there.
+  const known = new Set<string>(ROLES);
+  const other = committee.seats.filter((seat) => !known.has(seat.role));
+  const columns = [
+    ...ROLES.map((role) => ({
+      stage: role,
+      label: t(ROLE_LABELS[role]),
+      deals: committee.seats
+        .filter((seat) => seat.role === role)
+        .map((seat) => ({ id: seat.person_id, name: seat.full_name, seat })),
+    })),
+    ...(other.length > 0
+      ? [
+          {
+            stage: "other",
+            label: t("co.people.board.otherRoles"),
+            deals: other.map((seat) => ({
+              id: seat.person_id,
+              name: seat.full_name,
+              seat,
+            })),
+          },
+        ]
+      : []),
+  ];
   return (
     <PipelineBoard
       variant="plain"

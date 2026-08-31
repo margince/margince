@@ -152,3 +152,80 @@ test("renders the German words under a German locale", async () => {
 
   await waitFor(() => expect(screen.getByText("Abdeckung")).not.toBeNull());
 });
+
+// An account with no open deal has no committee to READ, which is not the same
+// as one the reader may not read. Collapsing the two accuses the reader's own
+// role on every account that simply has nothing open.
+test("tells no-open-deal apart from withheld", async () => {
+  stub({ deals: [], completeness: { committee_read: true } });
+  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+
+  expect(await screen.findByText("No open deal")).not.toBeNull();
+  expect(screen.queryByText("Hidden from you")).toBeNull();
+});
+
+// The server empties `gaps` whenever a seat is hidden, because it cannot tell
+// whether the role is held. Reading that empty list as "both roles named" turns
+// a suppressed answer into a confident one.
+test("does not claim a complete committee when seats are hidden", async () => {
+  stub({ committee: { seats: [], gaps: [], unlisted_seats: 2 } });
+  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+
+  expect(await screen.findByText("Cannot be judged")).not.toBeNull();
+  expect(screen.queryByText("Champion and economic buyer named")).toBeNull();
+});
+
+// The door's label has to name what pressing it does. A way in who has not
+// answered clears the filter, so promising "who answered" would be a label for
+// a different press.
+test("labels the way-in door by what it actually does", async () => {
+  stub({
+    best_way_in: {
+      person_id: "p-1",
+      full_name: "Philipp Koenigs",
+      engagement: "untried",
+    },
+  });
+  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+
+  expect(
+    await screen.findByRole("button", { name: "Show everyone" }),
+  ).not.toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Show who answered" }),
+  ).toBeNull();
+});
+
+// A seat carrying a role this board has no column for is still a person the
+// summary counted. Dropping it silently sends a reader looking for somebody
+// the board never drew.
+test("draws a seat whose role has no column of its own", async () => {
+  stub({
+    committee: {
+      seats: [
+        {
+          person_id: "p-9",
+          full_name: "Sam Consultant",
+          role: "technical_advisor",
+          engagement: "answered",
+        },
+      ],
+      gaps: [],
+      unlisted_seats: 0,
+    },
+  });
+  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+
+  expect(await screen.findByText("Sam Consultant")).not.toBeNull();
+});
+
+// A read that failed says so. Rendering nothing makes a server error look like
+// a band this account does not offer.
+test("says the reading failed rather than vanishing", async () => {
+  vi.stubGlobal("fetch", () =>
+    Promise.resolve(new Response("{}", { status: 500 })),
+  );
+  render(<CoverageBand orgId="o-1" onNarrow={() => {}} />);
+
+  expect(await screen.findByText("Could not be read")).not.toBeNull();
+});
