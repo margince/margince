@@ -5504,8 +5504,13 @@ export interface paths {
          *
          *     Only mail your own connection brought in. A message a colleague also imported keeps their
          *     copy: your import of it is released, theirs stands, and the message stays on their timeline.
-         *     A message under a statutory hold or an open erasure request survives both and is reported as
-         *     skipped, because an owner told their mail is gone must not find it still there.
+         *     A message the law still requires keeping survives both and is reported as skipped — a
+         *     statutory hold, or commercial correspondence inside its retention window. An owner told
+         *     their mail is gone must not find it still there.
+         *
+         *     An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
+         *     still open is not: nothing marks the messages it will be about until somebody acts on it,
+         *     so a purge can destroy correspondence a pending request was going to assemble.
          *
          *     Contacts go too, but only the ones your mail is the sole reason this CRM knows them: a
          *     person with an address outside the rule, a deal against their name, or mail another
@@ -12383,8 +12388,9 @@ export interface components {
              */
             released: number;
             /**
-             * @description Messages under a statutory hold or an open erasure request. Untouched, and reported
-             *     rather than passed over in silence.
+             * @description Messages the law still requires keeping: under a statutory hold, or commercial
+             *     correspondence inside its retention window. Untouched, and reported rather than passed
+             *     over in silence.
              */
             skipped: number;
             /**
