@@ -37,8 +37,7 @@ type Completer interface {
 // never attributed back to them as an accusation.
 const draftSystem = `You draft an email to one contact, for a salesperson to send under their own name, from a JSON summary of that contact in their CRM.
 Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation","label":"...","entity_type":"deal|activity|person","entity_id":"..."}]}.
-Write the body as plain text. No markdown, no HTML, no bullet characters.
-Open by name using the recipient's first name exactly as given; never invent or shorten it.
+Open by name using the name the shared greeting rule selects, exactly as given; never invent, shorten or complete it.
 Do NOT write a sign-off or a sender name. The composer adds the sender's own; a name you guessed would go out over the wrong signature.
 Say one thing and ask for one thing. Three short paragraphs at most.
 If a meeting is given, this contact is already booked to speak with us. Do not ask for a call — that reads as not knowing. Refer to the meeting the way a person would ("nächste Woche", "am Donnerstag"), never as a timestamp, and use it: something to send or confirm before it is a better ask than another meeting.
