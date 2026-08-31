@@ -16,6 +16,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -599,62 +600,24 @@ func setMailSharing(t *testing.T, e *integration.SearchEnv, on bool) {
 	}
 }
 
-func TestAHumanNarrowingStandsAndAHumanWideningDoesNot(t *testing.T) {
+// A captured row refuses the direct write #3388 retired, and a manual
+// WIDENING already on the row — the shape a pre-#3388 database can still
+// carry — does not outrank the workspace floor on the next recompute. Both
+// halves of manualDecisionStands' asymmetry need a fixture now: narrowing is
+// covered by TestARowNarrowedBeforeThisFeatureIsNotPublishedByTheFirstRecompute,
+// and this is the other one — SetAudience itself cannot build it any more, so
+// the row is shaped by hand the same way that test's backfillReasons does.
+func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
-
-	// A person OPENING a message does not outrank a contributor that holds it.
-	//
-	// Write authority over an activity is broader than membership of it — a
-	// link-less message admits any content-visible caller — so a colleague
-	// merely cc'd can open one by hand. Treating that as final would let one
-	// click overrule the workspace's own floor and the mailbox owner's posture,
-	// which is the property this whole feature exists to hold.
 	setMailSharing(t, e, false)
-	sync(t, customerMail("manual-1@acme.example"))
+	sync(t, customerMail("manual-widen-1@acme.example"))
 	activityID := oneActivityID(t, e)
 	if got, reason := audienceOf(t, e, activityID); got != "participants" || reason != "workspace_floor" {
 		t.Fatalf("the fixture needs a floor-held message, got %q / %q", got, reason)
 	}
 
-	openByHand(t, e, activityID, "workspace")
-	if got, reason := audienceOf(t, e, activityID); got != "workspace" || reason != "manual" {
-		t.Fatalf("a human opening a message should mark it manual, got %q / %q", got, reason)
-	}
-
-	// The floor has not moved. The next sync of any mailbox that has this
-	// message holds it again, and the person is not silently overruling an
-	// admin's decision that colleagues do not read captured mail.
-	recompute(t, e, activityID)
-	if got, _ := audienceOf(t, e, activityID); got != "participants" {
-		t.Fatalf("one seat's click outranked the workspace floor, got %q", got)
-	}
-
-	// A person NARROWING an open message is a different case: they have said
-	// something no contribution can rebuild, so nothing widens past it.
-	sync(t, customerMail("manual-2@acme.example"))
-	var second ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT id FROM activity WHERE source_id = $1`, "manual-2@acme.example").Scan(&second)
-	}); err != nil {
-		t.Fatalf("reading the second activity: %v", err)
-	}
-	openByHand(t, e, second, "participants")
-	setImportDecision(t, e, second, e.Rep1, "shared", "cleared")
-	recompute(t, e, second)
-	if got, _ := audienceOf(t, e, second); got != "participants" {
-		t.Fatalf("a derivation widened a message a person narrowed, got %q", got)
-	}
-}
-
-// openByHand is one human's audience decision, through the real store, so the
-// fixture exercises the writer the product ships.
-func openByHand(t *testing.T, e *integration.SearchEnv, activityID ids.UUID, audience string) {
-	t.Helper()
-	// The mailbox owner's own seat, with the activity grants an audience write
-	// takes. Not e.Admin(): the audience is a decision about correspondence a
-	// person has write authority over, and the fixture must exercise that.
+	store := activities.NewStore(e.DB())
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -665,10 +628,28 @@ func openByHand(t *testing.T, e *integration.SearchEnv, activityID ids.UUID, aud
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	store := activities.NewStore(e.DB())
-	if _, err := store.SetAudience(ctx, ids.From[ids.ActivityKind](activityID),
-		activities.SetAudienceInput{Audience: audience}); err != nil {
-		t.Fatalf("setting the audience to %s by hand: %v", audience, err)
+	_, err := store.SetAudience(ctx, ids.From[ids.ActivityKind](activityID),
+		activities.SetAudienceInput{Audience: "workspace"})
+	var captured *activities.CapturedAudienceError
+	if !errors.As(err, &captured) {
+		t.Fatalf("SetAudience on a captured row returned %v, want a *CapturedAudienceError", err)
+	}
+
+	// The row this refusal exists to protect: a widening already recorded as
+	// `manual`, the only shape a database migrated from before #3388 can still
+	// carry. Written directly, since the store above no longer will.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET audience = 'workspace', audience_reason = 'manual' WHERE id = $1`,
+			activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("shaping the legacy widened row: %v", err)
+	}
+
+	recompute(t, e, activityID)
+	if got, _ := audienceOf(t, e, activityID); got != "participants" {
+		t.Fatalf("a legacy manual widening outranked the workspace floor, got %q", got)
 	}
 }
 
