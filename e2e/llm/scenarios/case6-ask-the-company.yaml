@@ -40,22 +40,28 @@ must_mention:
 # Criterion 1 needs it to find the accounts without being told which.
   - "Reply|valantic|Körber"
 
-# The note says "im Oktober" and it is wrong.
+# The note says "im Oktober" and it is wrong, and the answer has to notice.
 #
-# A bare /Oktober|October/ cannot express the thing being tested. An answer
-# SHOULD quote the note — it is a real record and hiding it would be its own
-# defect. What must not happen is the model adopting the note's month as its
-# own finding, which is what all three runs of 2026-08-27 did: each cited the
-# email as 18 Sep 2025, quoted the note correctly, and then wrote "the customer
-# raised it clearly in October" in its own voice, with no mention that the two
-# disagree.
+# Two spellings of this assertion have now been tried and both were wrong.
 #
-# So the forbidden shape is October asserted OUTSIDE a quotation: "raised it in
-# October", "flagged it in October", "told us in September/October". The
-# quotation itself is allowed through.
-must_not_mention:
-  - "raised (it|this) (clearly )?in Okt|flagged (it|this) (clearly )?in Okt|told us (clearly )?in (September/)?Okt|complained in Okt"
-  - "raised (it|this) (clearly )?in Octo|flagged (it|this) (clearly )?in Octo|told us (clearly )?in (September/)?Octo|complained in Octo"
+# A bare /Oktober|October/ cannot express the thing being tested: an answer
+# SHOULD quote the note, because it is a real record and hiding it would be its
+# own defect.
+#
+# Forbidding October only OUTSIDE a quotation cannot be spelled either. check.py
+# matches one flat regex over the whole answer and has no idea where a quotation
+# starts, so /raised (it|this) in Octo/ fires on the English translation an
+# answer writes directly under the German it just quoted — which is the correct
+# thing to do. That cost two of three runs on 2026-08-28: both had found the
+# contradiction and said so, and failed on the wording of their own translation.
+#
+# So assert the finding instead of policing the wording. An answer that noticed
+# the disagreement says so, in one of a small number of ways: the dates do not
+# match, the note misremembers, the October conversation is not in the CRM. The
+# three runs of 2026-08-27 — each of which adopted October as its own finding
+# ("the October complaint sat too long", "the complaint sat from October to
+# December") with no mention that the email says September — match none of them.
+  - "disagree|do(es)? not match|contradict|misremember|conflict|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|unrecorded|only logged inbound|no October|by the CRM's own dates|hearsay"
 
 runs: 3
 pass_at: 2
