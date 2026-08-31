@@ -371,6 +371,39 @@ kinds:
       judging stage leases and commits in claims of eight, so a cut-off pass
       keeps every verdict it paid for.
 
+  capture_confidentiality_verdict:
+    role: dispatcher
+    go_type: ConfidentialityVerdictArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10m
+    fans_out_to: capture_confidentiality_verdict_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Ten minutes, faster than the sender verdict's hour, because this decides
+      whether mail a colleague is waiting on is readable at all. Under the
+      classified posture every captured message is born held, so the interval
+      is how long an ordinary thread stays invisible to the team; an hour of
+      that reads as the product being broken. An empty pass is one cheap probe
+      against the ledger's due-index.
+
+  capture_confidentiality_verdict_workspace:
+    role: worker
+    go_type: ConfidentialityVerdictWorkspaceArgs
+    queue: ai_capture
+    timeout: 20m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+    reason: >-
+      Up to confidentialityCatchUpCap (40) threads judged one model call each,
+      leased and committed in claims of eight, so a cut-off pass keeps every
+      verdict it paid for. Then one database-only stage that retires the
+      threads which spent every attempt, which must run after judging so a
+      thread exhausted this tick is retired in the same pass.
+
   capture_trace_sweep:
     role: dispatcher
     go_type: CaptureTraceSweepArgs

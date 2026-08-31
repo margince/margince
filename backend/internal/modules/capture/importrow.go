@@ -134,6 +134,19 @@ func (s *Sink) recordThisImport(
 	if err := stampCaptureParticipants(ctx, tx, id, owner, fields.Kind, fields.Direction, rec.Counterparty.Email); err != nil {
 		return err
 	}
+	// The confidentiality question for THIS seat's view of the thread, opened
+	// in the same transaction as the message it is about. A message that landed
+	// with nobody scheduled to judge it would stay held forever under the
+	// classified posture, which is indistinguishable from the product being
+	// broken.
+	//
+	// Only for a message this seat's posture actually holds: an already-open
+	// message has nothing for the verdict to open, and asking anyway would
+	// spend a model call per message on a `shared` mailbox to reach the answer
+	// it already has.
+	if err := openConfidentialityQuestionTx(ctx, tx, id, owner, rec, fields, birth); err != nil {
+		return err
+	}
 	if s.recomputeAudience == nil {
 		return nil
 	}

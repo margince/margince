@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "b7f838c9a2c45adc1d1592e4fed24493cd81202fad971af93e20bd34dfd4b804"
+const JobContractHash = "c630f11fd404a20608ec05cfb8964fd56aec009817d46a35d16967f440c016d8"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -163,6 +163,27 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsFanOut,
 		Registration: Registration{When: []string{"ClassifyBrain"}},
 		Args:         []ArgField{{Name: "Workspace"}},
+	},
+	"capture_confidentiality_verdict": {
+		Kind:       "capture_confidentiality_verdict",
+		GoType:     "ConfidentialityVerdictArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "capture_confidentiality_verdict_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 10 * time.Minute},
+	},
+	"capture_confidentiality_verdict_workspace": {
+		Kind:        "capture_confidentiality_verdict_workspace",
+		GoType:      "ConfidentialityVerdictWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "ai_capture",
+		Timeout:     TimeoutPolicy{Fixed: 20 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"capture_counterparty_verdict": {
 		Kind:       "capture_counterparty_verdict",

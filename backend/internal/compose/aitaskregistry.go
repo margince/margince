@@ -43,6 +43,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 
 	oneShot(ai.TaskCaptureClassify, "classify", captureClassifyCases{})
 	oneShot(ai.TaskCaptureCounterpartyVerdict, "verdict", counterpartyVerdictCases{})
+	oneShot(ai.TaskCaptureConfidentialityVerdict, "thread", confidentialityCases{})
 	oneShot(ai.TaskEnrich, "signature", signatureEnrichCases{})
 	oneShot(ai.TaskDraftReply, "reply", replyDraftCases{})
 	oneShot(ai.TaskDraftReply, "person", personDraftCases{})

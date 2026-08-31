@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "b7f838c9a2c45adc1d1592e4fed24493cd81202fad971af93e20bd34dfd4b804"
+const jobContractHash = "c630f11fd404a20608ec05cfb8964fd56aec009817d46a35d16967f440c016d8"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -39,6 +39,8 @@ type declaredJobArgs interface {
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
 		CaptureClassifyWorkspaceArgs |
+		ConfidentialityVerdictArgs |
+		ConfidentialityVerdictWorkspaceArgs |
 		CounterpartyVerdictArgs |
 		CounterpartyVerdictWorkspaceArgs |
 		CaptureDigestArgs |
@@ -139,6 +141,7 @@ var (
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
 	_ jobs.FleetWide = CaptureClassifyArgs{}
+	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
 	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
@@ -172,6 +175,7 @@ var (
 	_ jobs.WorkspaceScoped = CaptureAutoEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureClassifyWorkspaceArgs{}
+	_ jobs.WorkspaceScoped = ConfidentialityVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CounterpartyVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureDigestWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureEnrichWorkspaceArgs{}

@@ -161,6 +161,10 @@ type JobRunnerConfig struct {
 	// deferred rather than being created on sight. An installation without a
 	// model keeps the old junk OUT, it does not fall back to letting it in.
 	VerdictBrain completer
+	// ConfidentialityBrain is the thread-confidentiality lane. Nil = no AI
+	// bound, and the engine then holds every thread rather than failing: a
+	// deployment without a local model gets privacy, not an error.
+	ConfidentialityBrain completer
 	// SignalExtractBrain is the signal-extract lane the hourly signal pass
 	// reads settled conversations with. Nil = no AI configured, and the
 	// consequence is stated rather than hidden: the deterministic

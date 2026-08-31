@@ -199,46 +199,19 @@ func TestUnboundLadderWarnings(t *testing.T) {
 		},
 		{
 			name: "one unbound rung but another bound on the same ladder stays silent",
-			// TaskAgentLoop's ladder is {cheap_cloud, premium}: cheap_cloud is
-			// missing but premium is bound, so the task still has a route.
+			// A task whose ladder holds premium still has a route; only a task
+			// with NO bound rung warns.
 			tiers: map[Tier]ProviderConfig{
 				TierPremium: {Provider: "fake"},
 			},
-			want: []string{
-				"task capture_classify: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-				"task capture_counterparty_verdict: no bound tier on ladder [local_small]; calls will be refused",
-				"task enrich: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-			},
+			want: expectedUnboundWarnings(map[Tier]ProviderConfig{
+				TierPremium: {Provider: "fake"},
+			}),
 		},
 		{
 			name:  "ladder with zero bound rungs warns naming the task and its ladder",
 			tiers: map[Tier]ProviderConfig{},
-			want: []string{
-				"task agent_loop: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task brief_ranking: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
-				"task capture_classify: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-				"task capture_counterparty_verdict: no bound tier on ladder [local_small]; calls will be refused",
-				"task cert_judge: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
-				"task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task corpus_ask: no bound tier on ladder [premium]; calls will be refused",
-				"task deal_health: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task document_extract: no bound tier on ladder [premium]; calls will be refused",
-				"task draft_reply: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task enrich: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
-				"task growth_fit: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task nl_search: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task offer_draft: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task rate_extract: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
-				"task signal_extract: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task site_extract: no bound tier on ladder [premium]; calls will be refused",
-				"task site_fact_extract: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task site_triage: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task summarize: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task transcript: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task transcript_propose: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task voice_build: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-				"task weekly_review: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
-			},
+			want:  expectedUnboundWarnings(map[Tier]ProviderConfig{}),
 		},
 	}
 	for _, tc := range cases {
@@ -400,4 +373,41 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			}
 		})
 	}
+}
+
+// expectedUnboundWarnings derives the warnings a binding SHOULD produce, from
+// the same task table the code reads.
+//
+// It used to be a hand-written list of every task and its ladder, which is a
+// second copy of the census: it went stale the moment a task's ladder changed
+// (capture_counterparty_verdict dropped a rung and the list still named the old
+// one), and a new task failed the test for existing rather than for being
+// wrong. Derived, the test asks the question worth asking — does a task with no
+// bound rung warn, and does a task with one stay silent — and a new task joins
+// both sides at once.
+//
+// It deliberately re-implements the selection rather than calling the function
+// under test: a check that computed its expectation by running the code would
+// pass for any behaviour at all.
+func expectedUnboundWarnings(tiers map[Tier]ProviderConfig) []string {
+	var want []string
+	for _, task := range AllTasks() {
+		ladder := taskLadders[task]
+		bound := false
+		for _, tier := range ladder {
+			if _, ok := tiers[tier]; ok {
+				bound = true
+				break
+			}
+		}
+		if bound {
+			continue
+		}
+		names := make([]string, len(ladder))
+		for i, tier := range ladder {
+			names[i] = string(tier)
+		}
+		want = append(want, fmt.Sprintf("task %s: no bound tier on ladder %v; calls will be refused", task, names))
+	}
+	return want
 }

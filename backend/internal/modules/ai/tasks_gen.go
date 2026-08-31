@@ -12,6 +12,8 @@ const (
 	// TaskBriefRanking is the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning
 	TaskBriefRanking    Task = "brief_ranking"
 	TaskCaptureClassify Task = "capture_classify"
+	// TaskCaptureConfidentialityVerdict is Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private.
+	TaskCaptureConfidentialityVerdict Task = "capture_confidentiality_verdict"
 	// TaskCaptureCounterpartyVerdict is ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail.
 	TaskCaptureCounterpartyVerdict Task = "capture_counterparty_verdict"
 	// TaskCertJudge is the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding
@@ -81,7 +83,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "46875e88404bca352bfc28138c8cbe1de47a46375a6679f8b3dbb46172dd6f02"
+const TaskContractHash = "679cc4f64f21dd538682a3470e23c525b11f8916f3a0039ebe7f1a7bb821886b"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -91,6 +93,7 @@ func AllTasks() []Task {
 		TaskAgentLoop,
 		TaskBriefRanking,
 		TaskCaptureClassify,
+		TaskCaptureConfidentialityVerdict,
 		TaskCaptureCounterpartyVerdict,
 		TaskCertJudge,
 		TaskColdStart,
@@ -119,31 +122,32 @@ func AllTasks() []Task {
 // taskLadders is the §1.2 routing table: primary tier first, then the
 // fallback rungs fired on provider error or schema-validation failure.
 var taskLadders = map[Task][]Tier{
-	TaskAgentLoop:                  {TierCheapCloud, TierPremium},
-	TaskBriefRanking:               {TierPremium, TierCheapCloud},
-	TaskCaptureClassify:            {TierLocalSmall, TierCheapCloud},
-	TaskCaptureCounterpartyVerdict: {TierLocalSmall},
-	TaskCertJudge:                  {TierPremium, TierCheapCloud},
-	TaskColdStart:                  {TierCheapCloud, TierPremium},
-	TaskCorpusAsk:                  {TierPremium},
-	TaskDealHealth:                 {TierCheapCloud, TierPremium},
-	TaskDocumentExtract:            {TierPremium},
-	TaskDraftReply:                 {TierCheapCloud, TierPremium},
-	TaskEnrich:                     {TierLocalSmall, TierCheapCloud},
-	TaskGrowthFit:                  {TierCheapCloud, TierPremium},
-	TaskNlSearch:                   {TierCheapCloud, TierPremium},
-	TaskOfferDraft:                 {TierCheapCloud, TierPremium},
-	TaskProposeRoles:               {TierCheapCloud, TierPremium},
-	TaskRateExtract:                {TierPremium, TierCheapCloud},
-	TaskSignalExtract:              {TierCheapCloud, TierPremium},
-	TaskSiteExtract:                {TierPremium},
-	TaskSiteFactExtract:            {TierCheapCloud, TierPremium},
-	TaskSiteTriage:                 {TierCheapCloud, TierPremium},
-	TaskSummarize:                  {TierCheapCloud, TierPremium},
-	TaskTranscript:                 {TierCheapCloud, TierPremium},
-	TaskTranscriptPropose:          {TierCheapCloud, TierPremium},
-	TaskVoiceBuild:                 {TierCheapCloud, TierPremium},
-	TaskWeeklyReview:               {TierCheapCloud, TierPremium},
+	TaskAgentLoop:                     {TierCheapCloud, TierPremium},
+	TaskBriefRanking:                  {TierPremium, TierCheapCloud},
+	TaskCaptureClassify:               {TierLocalSmall, TierCheapCloud},
+	TaskCaptureConfidentialityVerdict: {TierLocalSmall},
+	TaskCaptureCounterpartyVerdict:    {TierLocalSmall},
+	TaskCertJudge:                     {TierPremium, TierCheapCloud},
+	TaskColdStart:                     {TierCheapCloud, TierPremium},
+	TaskCorpusAsk:                     {TierPremium},
+	TaskDealHealth:                    {TierCheapCloud, TierPremium},
+	TaskDocumentExtract:               {TierPremium},
+	TaskDraftReply:                    {TierCheapCloud, TierPremium},
+	TaskEnrich:                        {TierLocalSmall, TierCheapCloud},
+	TaskGrowthFit:                     {TierCheapCloud, TierPremium},
+	TaskNlSearch:                      {TierCheapCloud, TierPremium},
+	TaskOfferDraft:                    {TierCheapCloud, TierPremium},
+	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
+	TaskRateExtract:                   {TierPremium, TierCheapCloud},
+	TaskSignalExtract:                 {TierCheapCloud, TierPremium},
+	TaskSiteExtract:                   {TierPremium},
+	TaskSiteFactExtract:               {TierCheapCloud, TierPremium},
+	TaskSiteTriage:                    {TierCheapCloud, TierPremium},
+	TaskSummarize:                     {TierCheapCloud, TierPremium},
+	TaskTranscript:                    {TierCheapCloud, TierPremium},
+	TaskTranscriptPropose:             {TierCheapCloud, TierPremium},
+	TaskVoiceBuild:                    {TierCheapCloud, TierPremium},
+	TaskWeeklyReview:                  {TierCheapCloud, TierPremium},
 }
 
 // degradeTo is the one-tier-down move economy mode applies at 80–100%
@@ -159,31 +163,32 @@ var degradeTo = map[Tier]Tier{
 // taskExecutionModes is the scheduling contract compiled from
 // execution_mode. Every task is present by construction.
 var taskExecutionModes = map[Task]ExecutionMode{
-	TaskAgentLoop:                  ExecutionModeBackground,
-	TaskBriefRanking:               ExecutionModeBackground,
-	TaskCaptureClassify:            ExecutionModeBackground,
-	TaskCaptureCounterpartyVerdict: ExecutionModeBackground,
-	TaskCertJudge:                  ExecutionModeBackground,
-	TaskColdStart:                  ExecutionModeInteractive,
-	TaskCorpusAsk:                  ExecutionModeInteractive,
-	TaskDealHealth:                 ExecutionModeInteractive,
-	TaskDocumentExtract:            ExecutionModeBackground,
-	TaskDraftReply:                 ExecutionModeInteractive,
-	TaskEnrich:                     ExecutionModeBackground,
-	TaskGrowthFit:                  ExecutionModeInteractive,
-	TaskNlSearch:                   ExecutionModeInteractive,
-	TaskOfferDraft:                 ExecutionModeInteractive,
-	TaskProposeRoles:               ExecutionModeInteractive,
-	TaskRateExtract:                ExecutionModeBackground,
-	TaskSignalExtract:              ExecutionModeBackground,
-	TaskSiteExtract:                ExecutionModeBackground,
-	TaskSiteFactExtract:            ExecutionModeBackground,
-	TaskSiteTriage:                 ExecutionModeBackground,
-	TaskSummarize:                  ExecutionModeInteractive,
-	TaskTranscript:                 ExecutionModeInteractive,
-	TaskTranscriptPropose:          ExecutionModeBackground,
-	TaskVoiceBuild:                 ExecutionModeBackground,
-	TaskWeeklyReview:               ExecutionModeBackground,
+	TaskAgentLoop:                     ExecutionModeBackground,
+	TaskBriefRanking:                  ExecutionModeBackground,
+	TaskCaptureClassify:               ExecutionModeBackground,
+	TaskCaptureConfidentialityVerdict: ExecutionModeBackground,
+	TaskCaptureCounterpartyVerdict:    ExecutionModeBackground,
+	TaskCertJudge:                     ExecutionModeBackground,
+	TaskColdStart:                     ExecutionModeInteractive,
+	TaskCorpusAsk:                     ExecutionModeInteractive,
+	TaskDealHealth:                    ExecutionModeInteractive,
+	TaskDocumentExtract:               ExecutionModeBackground,
+	TaskDraftReply:                    ExecutionModeInteractive,
+	TaskEnrich:                        ExecutionModeBackground,
+	TaskGrowthFit:                     ExecutionModeInteractive,
+	TaskNlSearch:                      ExecutionModeInteractive,
+	TaskOfferDraft:                    ExecutionModeInteractive,
+	TaskProposeRoles:                  ExecutionModeInteractive,
+	TaskRateExtract:                   ExecutionModeBackground,
+	TaskSignalExtract:                 ExecutionModeBackground,
+	TaskSiteExtract:                   ExecutionModeBackground,
+	TaskSiteFactExtract:               ExecutionModeBackground,
+	TaskSiteTriage:                    ExecutionModeBackground,
+	TaskSummarize:                     ExecutionModeInteractive,
+	TaskTranscript:                    ExecutionModeInteractive,
+	TaskTranscriptPropose:             ExecutionModeBackground,
+	TaskVoiceBuild:                    ExecutionModeBackground,
+	TaskWeeklyReview:                  ExecutionModeBackground,
 }
 
 // knownTiers is the routing config's tier-name validation set: the
@@ -206,31 +211,32 @@ const (
 )
 
 var taskStatus = map[Task]string{
-	TaskAgentLoop:                  "shipped",
-	TaskBriefRanking:               "shipped",
-	TaskCaptureClassify:            "shipped",
-	TaskCaptureCounterpartyVerdict: "shipped",
-	TaskCertJudge:                  "shipped",
-	TaskColdStart:                  "shipped",
-	TaskCorpusAsk:                  "shipped",
-	TaskDealHealth:                 "shipped",
-	TaskDocumentExtract:            "shipped",
-	TaskDraftReply:                 "shipped",
-	TaskEnrich:                     "shipped",
-	TaskGrowthFit:                  "shipped",
-	TaskNlSearch:                   "planned",
-	TaskOfferDraft:                 "shipped",
-	TaskProposeRoles:               "planned",
-	TaskRateExtract:                "shipped",
-	TaskSignalExtract:              "shipped",
-	TaskSiteExtract:                "shipped",
-	TaskSiteFactExtract:            "shipped",
-	TaskSiteTriage:                 "shipped",
-	TaskSummarize:                  "shipped",
-	TaskTranscript:                 "planned",
-	TaskTranscriptPropose:          "shipped",
-	TaskVoiceBuild:                 "shipped",
-	TaskWeeklyReview:               "shipped",
+	TaskAgentLoop:                     "shipped",
+	TaskBriefRanking:                  "shipped",
+	TaskCaptureClassify:               "shipped",
+	TaskCaptureConfidentialityVerdict: "shipped",
+	TaskCaptureCounterpartyVerdict:    "shipped",
+	TaskCertJudge:                     "shipped",
+	TaskColdStart:                     "shipped",
+	TaskCorpusAsk:                     "shipped",
+	TaskDealHealth:                    "shipped",
+	TaskDocumentExtract:               "shipped",
+	TaskDraftReply:                    "shipped",
+	TaskEnrich:                        "shipped",
+	TaskGrowthFit:                     "shipped",
+	TaskNlSearch:                      "planned",
+	TaskOfferDraft:                    "shipped",
+	TaskProposeRoles:                  "planned",
+	TaskRateExtract:                   "shipped",
+	TaskSignalExtract:                 "shipped",
+	TaskSiteExtract:                   "shipped",
+	TaskSiteFactExtract:               "shipped",
+	TaskSiteTriage:                    "shipped",
+	TaskSummarize:                     "shipped",
+	TaskTranscript:                    "planned",
+	TaskTranscriptPropose:             "shipped",
+	TaskVoiceBuild:                    "shipped",
+	TaskWeeklyReview:                  "shipped",
 }
 
 // Status returns the declared status, or "" for a task this table does
@@ -261,6 +267,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskCaptureClassify: {
 		{Name: "classify", Kind: "one_shot"},
+	},
+	TaskCaptureConfidentialityVerdict: {
+		{Name: "thread", Kind: "one_shot"},
 	},
 	TaskCaptureCounterpartyVerdict: {
 		{Name: "verdict", Kind: "one_shot"},
@@ -363,10 +372,11 @@ func AgentsFor(t Task) []Agent { return taskAgents[t] }
 // ai_call_payload, whatever the deployment's capture posture says. The
 // contract pins the prohibition as a hard property, not a default.
 var noPayloadTasks = map[Task]bool{
-	TaskCaptureClassify:            true,
-	TaskCaptureCounterpartyVerdict: true,
-	TaskDocumentExtract:            true,
-	TaskSignalExtract:              true,
+	TaskCaptureClassify:               true,
+	TaskCaptureConfidentialityVerdict: true,
+	TaskCaptureCounterpartyVerdict:    true,
+	TaskDocumentExtract:               true,
+	TaskSignalExtract:                 true,
 }
 
 // NoPayload reports the contract's payload prohibition for a task.
@@ -384,30 +394,31 @@ type CompanyContextPolicy struct {
 }
 
 var taskCompanyContext = map[Task]CompanyContextPolicy{
-	TaskAgentLoop:                  {Scopes: []string{"identity", "positioning", "sales", "offer"}, TokenBudget: 1200, Conditional: false},
-	TaskBriefRanking:               {TokenBudget: 0, Conditional: false},
-	TaskCaptureClassify:            {TokenBudget: 0, Conditional: false},
-	TaskCaptureCounterpartyVerdict: {TokenBudget: 0, Conditional: false},
-	TaskCertJudge:                  {TokenBudget: 0, Conditional: false},
-	TaskColdStart:                  {TokenBudget: 0, Conditional: false},
-	TaskCorpusAsk:                  {TokenBudget: 0, Conditional: false},
-	TaskDealHealth:                 {TokenBudget: 0, Conditional: false},
-	TaskDocumentExtract:            {TokenBudget: 0, Conditional: false},
-	TaskDraftReply:                 {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
-	TaskEnrich:                     {TokenBudget: 0, Conditional: false},
-	TaskGrowthFit:                  {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
-	TaskNlSearch:                   {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
-	TaskOfferDraft:                 {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
-	TaskRateExtract:                {TokenBudget: 0, Conditional: false},
-	TaskSignalExtract:              {TokenBudget: 0, Conditional: false},
-	TaskSiteExtract:                {TokenBudget: 0, Conditional: false},
-	TaskSiteFactExtract:            {TokenBudget: 0, Conditional: false},
-	TaskSiteTriage:                 {TokenBudget: 0, Conditional: false},
-	TaskSummarize:                  {Scopes: []string{"identity"}, TokenBudget: 300, Conditional: true},
-	TaskTranscript:                 {TokenBudget: 0, Conditional: false},
-	TaskTranscriptPropose:          {TokenBudget: 0, Conditional: false},
-	TaskVoiceBuild:                 {TokenBudget: 0, Conditional: false},
-	TaskWeeklyReview:               {TokenBudget: 0, Conditional: false},
+	TaskAgentLoop:                     {Scopes: []string{"identity", "positioning", "sales", "offer"}, TokenBudget: 1200, Conditional: false},
+	TaskBriefRanking:                  {TokenBudget: 0, Conditional: false},
+	TaskCaptureClassify:               {TokenBudget: 0, Conditional: false},
+	TaskCaptureConfidentialityVerdict: {TokenBudget: 0, Conditional: false},
+	TaskCaptureCounterpartyVerdict:    {TokenBudget: 0, Conditional: false},
+	TaskCertJudge:                     {TokenBudget: 0, Conditional: false},
+	TaskColdStart:                     {TokenBudget: 0, Conditional: false},
+	TaskCorpusAsk:                     {TokenBudget: 0, Conditional: false},
+	TaskDealHealth:                    {TokenBudget: 0, Conditional: false},
+	TaskDocumentExtract:               {TokenBudget: 0, Conditional: false},
+	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
+	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
+	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
+	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
+	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
+	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
+	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},
+	TaskSiteExtract:                   {TokenBudget: 0, Conditional: false},
+	TaskSiteFactExtract:               {TokenBudget: 0, Conditional: false},
+	TaskSiteTriage:                    {TokenBudget: 0, Conditional: false},
+	TaskSummarize:                     {Scopes: []string{"identity"}, TokenBudget: 300, Conditional: true},
+	TaskTranscript:                    {TokenBudget: 0, Conditional: false},
+	TaskTranscriptPropose:             {TokenBudget: 0, Conditional: false},
+	TaskVoiceBuild:                    {TokenBudget: 0, Conditional: false},
+	TaskWeeklyReview:                  {TokenBudget: 0, Conditional: false},
 }
 
 // CompanyContextFor returns the task's declared policy. The bool reports

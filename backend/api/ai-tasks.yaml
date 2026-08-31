@@ -94,6 +94,16 @@ tasks:
     company_context: none
     doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail."
 
+  capture_confidentiality_verdict:
+    ladder: [local_small]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [thread]
+    no_payload: true
+    company_context: none
+    doc: "Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private."
+
   signal_extract:
     ladder: [cheap_cloud, premium]
     execution_mode: background
