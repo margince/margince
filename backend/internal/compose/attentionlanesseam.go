@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -255,7 +256,7 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 		return nil, err
 	}
 	out := make([]attention.WaitingCustomer, 0, len(rows))
-	for _, row := range rows {
+	for _, row := range keepWaitingCustomers(rows) {
 		out = append(out, attention.WaitingCustomer{
 			ActivityID:     row.ActivityID,
 			Subject:        row.Subject,
@@ -266,6 +267,38 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 		})
 	}
 	return out, nil
+}
+
+// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
+//
+// Two rules, both learned from the live page.
+//
+// A machine is not a customer. Judged by capture's own address rule rather than
+// a second one spelled here: an e-signature notification, a shared-folder
+// notice and a booking confirmation opened a rep's day, and a queue that asks
+// somebody to answer a no-reply address teaches them to stop reading it.
+//
+// One subject is one row. A notification service sends the same request on
+// several threads, and two rows reading identically are two obligations to
+// somebody scanning the page. An UNTITLED message is never folded, because
+// several untitled waits are several customers and collapsing them would hide
+// all but one behind an empty string.
+func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
+	kept := make([]activities.WaitingReply, 0, len(rows))
+	seen := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		if capture.IsMachineAddress(row.Sender) {
+			continue
+		}
+		if row.Subject != "" {
+			if seen[row.Subject] {
+				continue
+			}
+			seen[row.Subject] = true
+		}
+		kept = append(kept, row)
+	}
+	return kept
 }
 
 // attentionMeetings reads today's remaining meetings through the activities
@@ -319,12 +352,16 @@ func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
 }
 
-// subjectOfMeeting is the line a meeting shows. Unlike a task, a meeting may
-// honestly have no subject — a calendar event with a blank title is a real
-// thing a provider hands over — so the fallback is a routine case here.
+// subjectOfMeeting is the line a meeting shows, or NOTHING.
+//
+// A calendar event with a blank title is a real thing a provider hands over,
+// and the empty answer is the honest one: the product ships three languages, so
+// a placeholder composed here reaches a German reader in English — and
+// "(untitled meeting)" is a parenthetical stand-in rather than a sentence
+// anybody wrote. The client writes "A meeting" in the reader's own words.
 func subjectOfMeeting(row crmcontracts.Activity) string {
-	if row.Subject != nil && *row.Subject != "" {
+	if row.Subject != nil {
 		return *row.Subject
 	}
-	return "(untitled meeting)"
+	return ""
 }

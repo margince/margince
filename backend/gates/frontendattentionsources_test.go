@@ -42,11 +42,11 @@ import (
 
 const (
 	attentionContract    = "api/crm.yaml"
-	frontendAttentionMap = "../frontend/src/screens/attentionsource.ts"
+	frontendAttentionMap = "../frontend/src/screens/worklist.copy.ts"
 )
 
 // focusSurfaceEntry reads one `source: "surface"` pair out of the map.
-var focusSurfaceEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*["']([a-z]+)["']`)
+var focusSurfaceEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*(?:["'][a-z]+["']|true)`)
 
 // tsCommentInSources strips comments before the entries are read: the map is
 // commented and the prose names sources, so a source deleted from the map but
@@ -97,14 +97,21 @@ func contractSources(t *testing.T) []string {
 	return slices.Compact(sources)
 }
 
-// surfacedSources reads the FOCUS_SURFACE literal out of the TypeScript module.
+// surfacedSources reads the KNOWN_SOURCES literal out of the TypeScript module.
+//
+// The map moved when the lane page became the ranked queue: the decision lane's
+// FOCUS_SURFACE chose which BODY to draw, and this one decides whether a source
+// has a sentence at all. The invariant is the same either way — a source the
+// contract can emit and the client cannot name reaches a reader as an
+// identifier — so the gate follows the map rather than being deleted with the
+// page it used to guard.
 func surfacedSources(t *testing.T) []string {
 	t.Helper()
 	source, err := os.ReadFile(frontendAttentionMap)
 	if err != nil {
 		t.Fatalf("reading the frontend focus-surface map: %v", err)
 	}
-	const opener = "export const FOCUS_SURFACE"
+	const opener = "const KNOWN_SOURCES"
 	start := strings.Index(string(source), opener)
 	if start < 0 {
 		t.Fatalf("no %s declaration in %s", opener, frontendAttentionMap)
@@ -119,7 +126,7 @@ func surfacedSources(t *testing.T) []string {
 		sources = append(sources, match[1])
 	}
 	if len(sources) == 0 {
-		t.Fatalf("read no entries out of FOCUS_SURFACE — the parser has stopped seeing the map")
+		t.Fatalf("read no entries out of KNOWN_SOURCES — the parser has stopped seeing the map")
 	}
 	slices.Sort(sources)
 	return slices.Compact(sources)

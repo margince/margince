@@ -231,3 +231,36 @@ func TestWithEverythingElseEqualTheLongerWaitLeads(t *testing.T) {
 
 	assertOrder(t, got, "waiting-83-days", "waiting-3-days")
 }
+
+// A comparator that "decided" on two equal values decided nothing a reader can
+// check. The live page printed "07:30 against 07:30" and asked them to accept
+// it as a reason.
+func TestARowNeverClaimsADateDecidedWhenTheDatesAreTheSame(t *testing.T) {
+	same := rankInstant.Add(24 * time.Hour)
+	first := candidate("a", levelWaiting, due(same), quiet(9))
+	second := candidate("b", levelWaiting, due(same), quiet(3))
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Comparator == crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatal("the row claims its date beat an identical date")
+	}
+	if got[0].AboveNext.Comparator != crmcontracts.WorklistComparisonComparatorWaitingDays {
+		t.Fatalf("claimed %q; the longer wait is what actually decided",
+			got[0].AboveNext.Comparator)
+	}
+}
+
+// Two instants a few seconds apart render as the same minute on screen. The
+// live page printed "16:21 against 16:21" and called it the reason.
+func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T) {
+	base := rankInstant.Add(-24 * time.Hour)
+	first := candidate("a", levelAgreed, due(base), quiet(9))
+	second := candidate("b", levelAgreed, due(base.Add(20*time.Second)), quiet(3))
+
+	got := rankAll([]ranked{first, second})
+
+	if got[0].AboveNext.Comparator == crmcontracts.WorklistComparisonComparatorDeadline {
+		t.Fatal("the row offers two identical-looking times as its reason")
+	}
+}

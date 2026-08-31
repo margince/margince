@@ -103,3 +103,34 @@ func TestIsMachineLocalpart(t *testing.T) {
 		}
 	}
 }
+
+// A queue asking "is a customer waiting?" has an address and no headers, so it
+// needs the address half of the rule on its own.
+func TestAMachineAddressIsRecognisedWithoutHeaders(t *testing.T) {
+	for _, address := range []string{
+		"noreply@acme.com", "no-reply@acme.com", "notifications@acme.com",
+		"donotreply@acme.com", "bounces@acme.com",
+		"anything@sendgrid.net", "hello@mailgun.org",
+		// The compound names the real world actually sends from. An exact
+		// match missed every one of these, and they filled a rep's day.
+		"esignature-noreply@google.com", "calendar-notification@google.com",
+		"jira-no-reply@atlassian.net", "automated@billing.example.com",
+	} {
+		if !IsMachineAddress(address) {
+			t.Errorf("%q was taken for a person", address)
+		}
+	}
+}
+
+// And a person must not be mistaken for one. Over-recognising hides a customer,
+// which the reader cannot recover from; under-recognising costs a row.
+func TestAPersonIsNeverTakenForAMachine(t *testing.T) {
+	for _, address := range []string{
+		"anna.weber@acme.com", "lars@gradion.com", "sales@acme.com",
+		"info@acme.com", "kontakt@acme.de", "", "not-an-address",
+	} {
+		if IsMachineAddress(address) {
+			t.Errorf("%q was taken for a machine", address)
+		}
+	}
+}

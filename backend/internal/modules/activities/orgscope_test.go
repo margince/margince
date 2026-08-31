@@ -258,3 +258,21 @@ func TestTheWaitingQueryExcludesUnthreadedMessages(t *testing.T) {
 		t.Fatal("the waiting query matches NULL thread keys to each other")
 	}
 }
+
+// The SELECT and the Scan must agree, column for column. They drifted when the
+// sender was added in the middle of the list, and the read then failed at the
+// database on every call — reported to the reader as "this source could not be
+// read", which is indistinguishable from a permissions problem.
+func TestTheWaitingQuerySelectsWhatItScans(t *testing.T) {
+	from := strings.Index(waitingRepliesSQL, "FROM activity a")
+	if from < 0 {
+		t.Fatal("the waiting query no longer selects from activity")
+	}
+	head := waitingRepliesSQL[:from]
+	subject := strings.Index(head, "a.subject")
+	sender := strings.Index(head, "sender.address")
+	occurred := strings.Index(head, "a.occurred_at")
+	if subject >= sender || sender >= occurred {
+		t.Fatal("the projection no longer reads id, subject, sender, occurred_at — the order Scan expects")
+	}
+}

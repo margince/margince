@@ -214,7 +214,14 @@ export function consequenceText(item: WorklistItem, t: T): string | null {
 // source instead.
 export function itemTitle(item: WorklistItem, t: T): string {
   if (item.title) {
-    return item.title;
+    // A title that names no record, on a row that HAS one, gets the record's
+    // name beside it. Eight rows reading "Follow up with the new lead" cannot
+    // be told apart or put in order, and the lead's name is already on the row
+    // — it was only the sentence that discarded it.
+    const named = item.subject?.label;
+    return named && !item.title.includes(named)
+      ? `${item.title} · ${named}`
+      : item.title;
   }
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");

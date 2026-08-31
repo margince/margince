@@ -91,6 +91,86 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.querySelectorAll(".panel")).toHaveLength(0);
   });
 
+  it("names the record when the title alone cannot be told apart", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "t1",
+            title: "Follow up with the new lead",
+            subject: {
+              type: "lead",
+              id: "01a05500-0000-7000-8000-000000000001",
+              label: "Katrin Seibert",
+            },
+          }),
+          row({
+            id: "t2",
+            title: "Follow up with the new lead",
+            subject: {
+              type: "lead",
+              id: "01a05500-0000-7000-8000-000000000002",
+              label: "Philipp Hartwig",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 2, lower_priority: 0, total: 2 },
+      }),
+    );
+    renderWorklist();
+
+    // Eight rows reading the same sentence cannot be ordered or chosen between.
+    // The name is already on the row; only the title discarded it.
+    expect(await screen.findByText(/Katrin Seibert/)).toBeTruthy();
+    expect(screen.getByText(/Philipp Hartwig/)).toBeTruthy();
+  });
+
+  it("does not repeat a name the title already carries", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "Call Anna Weber about the renewal",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-000000000003",
+              label: "Anna Weber",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const title = await screen.findByText(/Call Anna Weber/);
+    expect(title.textContent).not.toContain("· Anna Weber");
+  });
+
+  it("draws one control per destination, not one per verb", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "Send the proposal",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-000000000009",
+              label: "Anna Weber",
+            },
+            // Both verbs open the same record; the row drew two "Open"s.
+            actions: ["complete", "snooze"],
+          }),
+        ],
+        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText(/Send the proposal/);
+    expect(screen.getAllByRole("link", { name: "Open" })).toHaveLength(1);
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({
@@ -191,23 +271,42 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.textContent).not.toContain("worklist.because");
   });
 
-  it("offers the verbs the item says it has", async () => {
+  it("offers a verb that goes somewhere, and none that does not", async () => {
     stub(
       day({
         queue: [
           row({
+            id: "with-record",
+            title: "Anna Weber",
+            source: "customer_waiting",
+            category: "customer_waiting",
+            consequence: "buyer_waits",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-000000000001",
+            },
+            actions: ["open"],
+          }),
+          row({
+            id: "no-destination",
             title: "Add someone from your mail",
             source: "approval",
             category: "decisions",
+            consequence: "data_drifts",
+            // `decide` is answered on this page, so it has nowhere to link.
             actions: ["decide"],
           }),
         ],
-        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+        summary: { urgent: 1, due: 0, lower_priority: 1, total: 2 },
       }),
     );
     renderWorklist();
 
-    expect(await screen.findByRole("link", { name: "Decide" })).toBeTruthy();
+    // The row that names a record gets its verb…
+    expect(await screen.findByRole("link", { name: "Open" })).toBeTruthy();
+    // …and the one whose verb leads nowhere draws no control at all. A button
+    // that looks pressable and does nothing is worse than no button.
+    expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
   });
 
   it("names the source it could not read rather than counting it", async () => {

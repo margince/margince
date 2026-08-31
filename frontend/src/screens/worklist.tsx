@@ -116,6 +116,7 @@ function RowVerbs({
   href,
 }: Readonly<{ item: WorklistItem; href: string | undefined }>) {
   const t = useT();
+  const drawn = new Set<string>();
   const verbs = item.actions.flatMap((action) => {
     const route = VERB_DESTINATION[action];
     if (!route) {
@@ -124,7 +125,18 @@ function RowVerbs({
       return [];
     }
     const destination = route(href);
-    return destination ? [{ action, destination }] : [];
+    if (!destination) {
+      return [];
+    }
+    // One control per DESTINATION. `complete` and `snooze` both open the
+    // record this row is about, and two identical "Open" links side by side
+    // ask the reader to choose between the same thing twice.
+    const key = `${VERB_LABEL[action](t)}|${destination}`;
+    if (drawn.has(key)) {
+      return [];
+    }
+    drawn.add(key);
+    return [{ action, destination }];
   });
   if (verbs.length === 0) {
     return null;
@@ -149,10 +161,12 @@ const VERB_DESTINATION: Partial<
     (href: string | undefined) => string | undefined
   >
 > = {
-  // The decision surfaces own their own verbs; this sends the reader to them.
-  decide: () => "#/today",
-  merge: () => "#/today",
-  // Everything else is the record the row is about.
+  // `decide` and `merge` are deliberately absent: the surface that answers
+  // them IS this page, so a link would send the reader where they already are.
+  // They come back when the decision card is drawn inline, which is its own
+  // piece of work.
+  //
+  // Everything routable is the record the row is about.
   open: (href) => href,
   complete: (href) => href,
   snooze: (href) => href,

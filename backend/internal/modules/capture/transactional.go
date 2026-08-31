@@ -152,6 +152,31 @@ func isMachineLocalpart(localpart string) bool {
 	return false
 }
 
+// hasMachineMarker catches the compound no-reply names an exact match misses:
+// `esignature-noreply@`, `calendar-notification@`, `jira-no-reply@`. The real
+// world writes the marker into a longer local part far more often than it sends
+// from a bare `noreply@`, and the exact list alone let a page of e-signature
+// and calendar notifications open a rep's day.
+//
+// Kept to markers that are unambiguous ON THEIR OWN. "notification" and
+// "no-reply" mean the same thing wherever they appear in a name; "mail" or
+// "info" do not, and a rule that swept those would hide real people.
+func hasMachineMarker(localpart string) bool {
+	local := strings.ToLower(strings.TrimSpace(localpart))
+	local = strings.ReplaceAll(local, ".", "")
+	local = strings.ReplaceAll(local, "-", "")
+	local = strings.ReplaceAll(local, "_", "")
+	for _, marker := range []string{
+		"noreply", "donotreply", "notification", "notifications",
+		"mailerdaemon", "automated", "autoreply",
+	} {
+		if strings.Contains(local, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 // senderPrefix returns the leftmost subdomain label below the registrable
 // domain — the "sender lane" a prefix rule keys on. "event.gitex.com" over base
 // "gitex.com" → "event"; a bare registrable domain has no prefix.
@@ -186,4 +211,33 @@ func normalizedSet(values []string) map[string]struct{} {
 		}
 	}
 	return set
+}
+
+// IsMachineAddress reports whether an address belongs to a machine rather than
+// a person: a no-reply style local part, or a domain that exists to send
+// transactional mail.
+//
+// It is the ADDRESS-ONLY half of Suppress, exported for readers that have an
+// address and no headers — a queue asking "is a customer waiting on me?"
+// cannot ask about `Auto-Submitted` on a row it is ranking, and a notification
+// from `noreply@` is not a customer waiting whatever its headers said.
+//
+// Deliberately NARROWER than Suppress: without the header corroboration a
+// prefix rule needs, the subdomain arm is left out. Under-recognising costs a
+// row in a queue; over-recognising hides a real customer, and only one of those
+// is recoverable by the reader.
+func IsMachineAddress(address string) bool {
+	at := strings.LastIndex(address, "@")
+	if at <= 0 || at == len(address)-1 {
+		return false
+	}
+	if isMachineLocalpart(address[:at]) || hasMachineMarker(address[:at]) {
+		return true
+	}
+	base := freemail.Registrable(address[at+1:])
+	if base == "" {
+		return false
+	}
+	_, transactional := transactionalBaseline[base]
+	return transactional
 }

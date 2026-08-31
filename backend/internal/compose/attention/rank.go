@@ -188,7 +188,13 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 			Theirs:     levelValue(b.item.Level),
 		}
 	}
-	if decided, _ := byDeadline(a, b); decided {
+	// Only when the two sides actually DIFFER. byDeadline can decide on
+	// overdue-versus-not while both dates read the same to a reader, and a row
+	// saying "07:30 against 07:30" claims a reason nobody can check.
+	// Compared at the resolution a READER sees. Two instants a few seconds
+	// apart render as the same minute, and "16:21 against 16:21" is a reason
+	// nobody can check — the live page printed exactly that.
+	if decided, _ := byDeadline(a, b); decided && !sameMinute(a.deadlineAt, b.deadlineAt) {
 		return crmcontracts.WorklistComparison{
 			Comparator: crmcontracts.WorklistComparisonComparatorDeadline,
 			Mine:       dateValue(a),
@@ -229,6 +235,13 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 	// naming a comparator that decided nothing; the client draws no reason line
 	// for this case.
 	return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorOrder}
+}
+
+// sameMinute reports whether two instants read alike on screen. The card shows
+// a date and a time to the minute, so anything finer is a difference the reader
+// cannot see and must not be offered as an explanation.
+func sameMinute(a, b time.Time) bool {
+	return a.Truncate(time.Minute).Equal(b.Truncate(time.Minute))
 }
 
 func levelValue(level int) *crmcontracts.WorklistValue {

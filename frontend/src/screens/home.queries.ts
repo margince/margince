@@ -10,7 +10,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
-import { attentionKey } from "./today.queries";
+import { worklistKey } from "./worklist.queries";
 
 // Home's reads, in one place. The screen fans out to five of them and each is
 // gated on its own, deliberately: a transient failure in the decisions queue
@@ -280,7 +280,7 @@ export function useBriefItemMark() {
       // leaves that lane rather than settling in place. Patching only the brief
       // cache would leave the row on screen until the next refetch, which reads
       // exactly like a click that did nothing.
-      void queryClient.invalidateQueries({ queryKey: attentionKey });
+      void queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }

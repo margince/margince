@@ -37,6 +37,9 @@ type WaitingReply struct {
 	// ActivityID is the message itself — what a draft would reply to.
 	ActivityID ids.UUID
 	Subject    string
+	// Sender is the address the message came from, so a caller can tell a
+	// person waiting from a machine sending. Empty when no sender was recorded.
+	Sender string
 	// OccurredAt is when they wrote, which is what the wait is measured from.
 	OccurredAt time.Time
 	// The record the thread is filed under, when it names one.
@@ -82,7 +85,10 @@ const waitingScanCap = 200
 // unthreaded question at once. Excluding them under-reports, which is the
 // direction that costs a row rather than a customer.
 const waitingRepliesSQL = `
-	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at,
+	SELECT a.id, COALESCE(a.subject, ''),
+	       COALESCE((array_agg(sender.address ORDER BY sender.address)
+	                 FILTER (WHERE sender.address IS NOT NULL))[1], ''),
+	       a.occurred_at,
 	       -- One row per message however many records it is filed under. There
 	       -- is no max(uuid) in Postgres, so the pick is the first by text
 	       -- order: arbitrary but STABLE, which is what a card needs — the same
@@ -99,6 +105,11 @@ const waitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
+	  -- Who wrote. The sender participant is where capture records the address,
+	  -- and it is the only evidence at this level that tells a person apart
+	  -- from a notification service.
+	  LEFT JOIN activity_participant sender
+	         ON sender.activity_id = a.id AND sender.role = 'from'
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -183,7 +194,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		waiting = []WaitingReply{}
 		for rows.Next() {
 			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.OccurredAt,
+			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID); err != nil {
 				return err
 			}
