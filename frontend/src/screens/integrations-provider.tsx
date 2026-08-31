@@ -7,6 +7,7 @@ import { Plug, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import {
   Badge,
@@ -28,6 +29,7 @@ import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { categoryName } from "./provider-categories";
 import {
   connectionLabel,
   connectionTone,
@@ -417,6 +419,7 @@ function PolicyRow({
         )}
       />
       <LookupBacklogRow connection={connection} />
+      <PricedCategoryRows connection={connection} canEdit={canEdit} />
       {/* Under the row whose flip failed, at the row's full width, rather than
           squeezed into the control column beside the switch: the reason names
           what the reader just tried to change, and a sentence sharing a
@@ -434,6 +437,134 @@ function PolicyRow({
       )}
     </>
   );
+}
+
+// What this installation is willing to BUY, one switch per priced category.
+//
+// Switching one on does not spend anything and does not schedule anything. It
+// decides which buy buttons a rep is offered on a contact — every purchase is
+// still a person pressing a priced button on one named record, which is the
+// split the free tier exists to keep. So the switch means "available to buy",
+// never "will be bought", and the row's own copy has to say so: an admin who
+// reads it as the latter leaves the whole paid half of the product switched off.
+//
+// The free categories are deliberately NOT here. They are what the automatic
+// lookup takes, the switch above already governs them as one decision, and a
+// second control that could turn one of them off would be a way to half-disable
+// a feature with nothing on screen explaining the difference.
+function PricedCategoryRows({
+  connection,
+  canEdit,
+}: Readonly<{ connection: ProviderConnection; canEdit: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const patch = usePatchCategories();
+  const priced = (connection.catalog ?? []).filter((entry) => !entry.free);
+  // A provider nobody has connected is listed anyway — with its catalog, so the
+  // card can say what it sells before a key exists — but it has no row, and the
+  // server omits the version for one. The contract declares `version` required,
+  // so nothing in the types objects to reading it; at runtime the patch would
+  // carry `If-Match: undefined` and be refused as malformed every time.
+  //
+  // Absent rather than disabled: there is no connection to decide about yet, and
+  // a dead switch beside a key field reads as a permission the reader lacks.
+  // The switches appear with the connection, which is the order the decision
+  // actually has — a key, then what it may be spent on.
+  const version = connection.version;
+  if (priced.length === 0 || version === undefined) {
+    return null;
+  }
+  const selection = connection.configuration.categories ?? {};
+  return (
+    <>
+      {priced.map((entry) => (
+        <SettingRow
+          key={entry.category}
+          label={t("provider.buyable", {
+            category: categoryName(entry.category, t),
+          })}
+          description={t("provider.buyableHint", {
+            credits: formatNumber(creditsOf(entry), locale),
+          })}
+          control={(control) => (
+            <Switch
+              describedBy={control["aria-describedby"]}
+              checked={selection[entry.category] ?? false}
+              // The WHOLE selection, not the one key. The contract's patch
+              // replaces the map rather than merging into it, so sending one
+              // pair would switch off every category not named — including the
+              // free ones the automatic lookup runs on.
+              onChange={(next) =>
+                patch.mutate({
+                  provider: connection.provider,
+                  version,
+                  categories: { ...selection, [entry.category]: next },
+                })
+              }
+              reason={canEdit ? undefined : t("captureSettings.adminOnly")}
+              disabled={!canEdit}
+              pending={patch.isPending}
+              label={t("provider.buyable", {
+                category: categoryName(entry.category, t),
+              })}
+              labelHidden
+            />
+          )}
+        />
+      ))}
+      {patch.error && (
+        <div className="provider-row-note">
+          <Callout tone="danger" live="alert">
+            {problemMessageOf(patch.error, t)}
+          </Callout>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The credits one category costs, summed across pools. A category priced in
+ *  two pools is one purchase, and two figures on one row would read as a
+ *  choice between them. */
+function creditsOf(
+  entry: components["schemas"]["ProviderCategoryCost"],
+): number {
+  return Object.values(entry.cost).reduce((total, n) => total + n, 0);
+}
+
+type CategoryPatch = {
+  provider: components["schemas"]["Provider"];
+  version: number;
+  categories: Record<string, boolean>;
+};
+
+// Saving the fetch scope, with the version the card was rendered from.
+//
+// If-Match rather than a blind write: two admins on this card are two people
+// deciding what the installation may spend on, and a lost update there is a
+// category switched on by somebody who never saw it happen.
+function usePatchCategories() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ provider, version, categories }: CategoryPatch) => {
+      const { data, error } = await api.PATCH(
+        "/provider-connections/{provider}",
+        {
+          params: { path: { provider }, ...ifMatch(version) },
+          body: { configuration: { categories } },
+        },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["provider-connections"],
+      });
+    },
+  });
 }
 
 // How much of the installation is still waiting to be looked up.

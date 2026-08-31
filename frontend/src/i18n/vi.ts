@@ -6577,6 +6577,9 @@ export const vi = {
     "Mỗi liên hệ được tra cứu một lần — cho những mục mà kết nối chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, cùng quá trình công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này: chúng tốn tín dụng và vẫn là quyết định cho từng liên hệ.",
   "provider.automaticLookupJurisdiction":
     "Hãy tắt mục này nếu liên hệ của bạn thuộc phạm vi luật cấm mua bán dữ liệu cá nhân, trong đó có luật Việt Nam. Nút trên từng liên hệ vẫn dùng được, để quyết định thuộc về người đưa ra nó.",
+  "provider.buyable": "Cho phép mua {category}",
+  "provider.buyableHint":
+    "Bật công tắc này không mua gì cả. Nó đặt một nút trên mỗi liên hệ, giá {credits} tín dụng, để ai đó mua thông tin này cho từng người một.",
   "provider.backlog": "Còn phải tra cứu",
   "provider.backlogRemaining_one": "{count} liên hệ",
   "provider.backlogRemaining_other": "{count} liên hệ",
@@ -6625,7 +6628,8 @@ export const vi = {
     "Chúng ta không bao giờ biết lượt tra cứu này kết thúc ra sao. Nó có thể đã bị tính phí.",
   "provider.profile.claimsUnwritten":
     "Đã trả tiền, nhưng thông tin chưa bao giờ đến hồ sơ này. Không ai phải đi tìm — đây chính là chỗ thiếu.",
-  "provider.profile.enrichNow": "Tra cứu liên hệ này",
+  "provider.profile.enrichNow": "Tra cứu liên hệ này · miễn phí",
+  "provider.profile.recheck": "Kiểm tra lại · miễn phí",
   "provider.profile.lookingUp": "Đang hỏi nhà cung cấp. Việc này mất một lát.",
   "provider.profile.emptyTitle": "Chưa mua dữ liệu nào cho liên hệ này",
   "provider.profile.emptyBody":

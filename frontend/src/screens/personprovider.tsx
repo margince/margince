@@ -17,8 +17,8 @@ import {
 } from "../design-system/provider-mark";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
+import { categoryNames } from "./provider-categories";
 import {
   canEnrichNow,
   isRunning,
@@ -169,6 +169,11 @@ function ProviderPanel({
             profile={profile}
             enrich={enrich}
             free={free}
+            // This contact has already been looked up, so the press is a
+            // RE-CHECK: same free details, asked again because a job may have
+            // changed. The empty-state twin below is the first lookup and says
+            // so instead.
+            recheck
             small
           />
         )
@@ -486,36 +491,6 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
   );
 }
 
-/** The categories a provider names, as words a reader knows.
- *
- *  The wire carries the provider's own vocabulary (`professional_email`,
- *  `linkedin_profile`), which is a key rather than a phrase — printed raw it
- *  puts `linkedin_profile, current_employment` in front of a rep.
- *
- *  A category this build has no word for keeps the provider's own: the
- *  vocabulary belongs to the provider, so an installation can declare one this
- *  frontend has never seen, and showing their word beats showing nothing. */
-const CATEGORY_LABELS: Record<string, MessageKey> = {
-  professional_email: "provider.category.professionalEmail",
-  personal_email: "provider.category.personalEmail",
-  mobile: "provider.category.mobile",
-  linkedin_profile: "provider.category.linkedin",
-  current_employment: "provider.category.currentEmployment",
-  job_history: "provider.category.jobHistory",
-};
-
-function categoryNames(
-  categories: readonly string[],
-  t: (key: MessageKey) => string,
-): string {
-  return categories
-    .map((category) => {
-      const label = CATEGORY_LABELS[category];
-      return label ? t(label) : category;
-    })
-    .join(", ");
-}
-
 /** The lookup itself, hoisted so the header button and the first-run plate
  *  drive ONE mutation: two `useMutation` calls would each carry their own
  *  pending and error state, and the reader would see a failure on whichever
@@ -556,12 +531,19 @@ function EnrichNow({
   profile,
   enrich,
   free,
+  recheck = false,
   small = false,
 }: Readonly<{
   free: string[];
   personId: string;
   profile: Profile;
   enrich: ReturnType<typeof useEnrichRun>;
+  // Whether this contact has been looked up before. The press buys the same
+  // free set either way; what differs is what the reader is being offered — a
+  // first lookup, or asking again in case a job changed. A button that says
+  // "look this contact up" on a record already showing a lookup reads as the
+  // thing that fetches the email, which is the one thing it never does.
+  recheck?: boolean;
   small?: boolean;
 }>) {
   const t = useT();
@@ -592,7 +574,8 @@ function EnrichNow({
         })
       }
     >
-      <Search size={15} aria-hidden="true" /> {t("provider.profile.enrichNow")}
+      <Search size={15} aria-hidden="true" />{" "}
+      {t(recheck ? "provider.profile.recheck" : "provider.profile.enrichNow")}
     </Button>
   );
 }

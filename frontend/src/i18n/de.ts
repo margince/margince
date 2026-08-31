@@ -6646,6 +6646,9 @@ export const de = {
     "Jeder Kontakt wird einmal nachgeschlagen — für das, was die Verbindung auswählt und der Anbieter nicht berechnet, in der Regel den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber und den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft: die kosten Guthaben und bleiben eine Entscheidung pro Kontakt.",
   "provider.automaticLookupJurisdiction":
     "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
+  "provider.buyable": "Kauf von {category} erlauben",
+  "provider.buyableHint":
+    "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
   "provider.backlog": "Noch nachzuschlagen",
   "provider.backlogRemaining_one": "{count} Kontakt",
   "provider.backlogRemaining_other": "{count} Kontakte",
@@ -6696,7 +6699,8 @@ export const de = {
     "Wie diese Abfrage ausgegangen ist, haben wir nie erfahren. Sie kann berechnet worden sein.",
   "provider.profile.claimsUnwritten":
     "Bezahlt, aber die Daten sind nie an diesem Datensatz angekommen. Niemand muss danach suchen — das hier ist die Lücke.",
-  "provider.profile.enrichNow": "Kontakt nachschlagen",
+  "provider.profile.enrichNow": "Kontakt nachschlagen · kostenlos",
+  "provider.profile.recheck": "Erneut prüfen · kostenlos",
   "provider.profile.lookingUp": "Wir fragen den Anbieter. Das dauert kurz.",
   "provider.profile.emptyTitle": "Für diesen Kontakt wurde noch nichts gekauft",
   "provider.profile.emptyBody":
