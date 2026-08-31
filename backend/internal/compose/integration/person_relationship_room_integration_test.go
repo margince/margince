@@ -763,8 +763,8 @@ func TestThePerson360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
 	owner := OwnerConn(t)
 	mine := e.SeedPerson(t, "Version Carrier", &e.Rep1)
 
-	message := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, body, occurred_at, direction, source, captured_by)
-		VALUES ($1, 'message', 'they wrote', '2026-08-01T09:00:00Z', 'inbound', 'manual', 'human:x')`)
+	message := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, channel_provider, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'they wrote', '2026-08-01T09:00:00Z', 'inbound', 'manual', 'human:x')`)
 	LinkActivity(t, owner, message, "person", mine)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
