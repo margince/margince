@@ -21426,7 +21426,7 @@ export interface components {
              *     client waiting for a re-check to land would wait forever on that field, and the
              *     server's own rate floor reads this one for the same reason.
              */
-            readonly recorded_at?: string;
+            readonly recorded_at: string;
         };
         /**
          * @description What each public source last did for one account. Per lane rather than per run: the

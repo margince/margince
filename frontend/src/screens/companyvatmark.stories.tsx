@@ -50,6 +50,7 @@ const CHECKED: VatCheck = {
   registered_name: "Muster Handels GmbH",
   registered_address: "Musterstraße 1, 10115 Berlin",
   checked_at: "2026-08-14T09:12:00Z",
+  recorded_at: "2026-08-14T09:12:31Z",
 };
 
 // The row as the rail draws it: the label, the value, the mark. The mark has to

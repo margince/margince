@@ -29154,7 +29154,7 @@ components:
       description: |
         One company's current VAT standing, and the evidence for it. The row keeps only the
         CURRENT consultation; what a re-check overwrote lives in the audit trail.
-      required: [organization_id, vat_number, status, checked_at]
+      required: [organization_id, vat_number, status, checked_at, recorded_at]
       properties:
         organization_id: { type: string, format: uuid }
         vat_number:

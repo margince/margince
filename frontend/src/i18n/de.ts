@@ -1607,8 +1607,9 @@ export const de = {
     "Die USt-IdNr. dieser Firma wurde noch nicht abgefragt. Das passiert von selbst, sobald die Nummer aus dem Impressum gelesen wird — oder Sie fragen jetzt beim Register nach.",
   "co.vat.askNow": "Beim Register abfragen",
   "co.vat.askAgain": "Erneut abfragen",
-  "co.vat.asked":
-    "Angefragt. Die Antwort des Registers erscheint hier, sobald sie vorliegt.",
+  "co.vat.askingBusy": "Register wird gefragt",
+  "co.vat.asking":
+    "Das Register wird gefragt — die Antwort erscheint hier, sobald sie vorliegt.",
   "co.tech.title": "Technik",
   "co.tech.sub":
     "Was diese Firma öffentlich betreibt — gelesen aus ihren DNS-Einträgen, ihren Zertifikaten und ihrer eigenen Startseite.",

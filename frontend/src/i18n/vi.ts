@@ -1602,8 +1602,9 @@ export const vi = {
     "Mã số thuế GTGT của công ty này chưa được tra cứu. Việc này diễn ra tự động khi mã số được đọc từ trang thông tin pháp lý của công ty, hoặc bạn có thể tra cứu ngay.",
   "co.vat.askNow": "Tra cứu tại cơ quan đăng ký",
   "co.vat.askAgain": "Tra cứu lại",
-  "co.vat.asked":
-    "Đã gửi yêu cầu. Câu trả lời sẽ hiện ở đây khi cơ quan đăng ký phản hồi.",
+  "co.vat.askingBusy": "Đang hỏi cơ quan đăng ký",
+  "co.vat.asking":
+    "Đang hỏi cơ quan đăng ký — câu trả lời sẽ hiện ở đây khi có.",
   "co.tech.title": "Công nghệ",
   "co.tech.sub":
     "Những gì công ty này công khai vận hành, đọc từ bản ghi DNS, chứng chỉ và trang chủ của họ.",
