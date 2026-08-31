@@ -42,31 +42,42 @@ must_mention:
 
 # The note says "im Oktober" and it is wrong, and the answer has to notice.
 #
-# Two spellings of this assertion have now been tried and both were wrong.
+# This takes BOTH halves, and two earlier spellings each had only one.
 #
-# A bare /Oktober|October/ cannot express the thing being tested: an answer
-# SHOULD quote the note, because it is a real record and hiding it would be its
-# own defect.
+# The first was a `must_not_mention` forbidding October outside a quotation:
+# /raised (it|this) (clearly )?in Octo/ and friends. check.py matches one flat
+# regex over the whole answer and has no idea where a quotation ends, so those
+# fired on the English translation an answer writes directly under the German
+# note it just quoted — which is the right thing for an answer to do. Two of
+# three runs on 2026-08-28 had found the contradiction, said so, and failed on
+# the wording of their own translation.
 #
-# Forbidding October only OUTSIDE a quotation cannot be spelled either. check.py
-# matches one flat regex over the whole answer and has no idea where a quotation
-# starts, so /raised (it|this) in Octo/ fires on the English translation an
-# answer writes directly under the German it just quoted — which is the correct
-# thing to do. That cost two of three runs on 2026-08-28: both had found the
-# contradiction and said so, and failed on the wording of their own translation.
+# Replacing it with a positive assertion alone was worse. It could pass an
+# answer that noticed nothing: a lone "conflict" also appears in "a conflict of
+# interest between the two managers", and a lone "unrecorded" or "hearsay" in
+# sentences that never compare the two dates. Under-recognition is the one
+# direction a scenario must not fail in — it reports PASS and there is no
+# failing assertion to notice.
 #
-# So assert the finding instead of policing the wording. An answer that noticed
-# the disagreement says so, in one of a small number of ways: the dates do not
-# match, the note misremembers, the October conversation is not in the CRM. The
-# three runs of 2026-08-27 — each of which adopted October as its own finding
-# ("the October complaint sat too long", "the complaint sat from October to
-# December") with no mention that the email says September — match none of them.
-# A bare "conflict" is not in the alternation: "a conflict of interest between
-# the two managers" would earn a green from an answer that never noticed the
-# dates at all, and a scenario that can pass a bad answer is worse than one
-# that fails a good one. It counts only when what conflicts is a date or a
-# record.
-  - "disagree|do(es)? not match|contradict|misremember|(dates?|records?|note|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|unrecorded|only logged inbound|no October|by the CRM's own dates|hearsay"
+# So both, each narrow:
+#
+# must_mention  — the answer states that the record and the note disagree, and
+#                 names WHAT disagrees. No lone word qualifies: "conflict"
+#                 counts only next to a date, record, note or email.
+# must_not_mention — the answer does not go on to adopt October as its own
+#                 conclusion. Every alternative here needs a conclusion verb
+#                 ("the complaint was raised in October"), so translating the
+#                 quoted note ("The customer raised it clearly in October")
+#                 does not trip it. That distinction is the whole fix.
+#
+# Verified in both directions against real transcripts with check.py --check:
+# the three CI runs of 2026-08-28 pass, and the three runs of 2026-08-27 —
+# which adopted October as their own finding ("the October complaint sat too
+# long") with no mention that the email says September — still fail.
+  - "disagree|do(es)? not match|contradict|misremember|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|only logged inbound|no October|by the CRM's own dates"
+
+must_not_mention:
+  - "the (complaint|escalation|customer)[^.]{0,30}(was|were) raised in Octo|raised in Octo(ber)? before|complaint (came|landed|arrived) in Octo|since Octo(ber)?,? the customer"
 
 runs: 3
 pass_at: 2
