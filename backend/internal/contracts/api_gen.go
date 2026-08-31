@@ -8455,6 +8455,7 @@ const (
 	ProviderRunSkipReasonBudgetExhausted           ProviderRunSkipReason = "budget_exhausted"
 	ProviderRunSkipReasonDuplicateSubjectCandidate ProviderRunSkipReason = "duplicate_subject_candidate"
 	ProviderRunSkipReasonLowBalance                ProviderRunSkipReason = "low_balance"
+	ProviderRunSkipReasonNoIdentifiers             ProviderRunSkipReason = "no_identifiers"
 	ProviderRunSkipReasonNotEligible               ProviderRunSkipReason = "not_eligible"
 	ProviderRunSkipReasonRateLimited               ProviderRunSkipReason = "rate_limited"
 	ProviderRunSkipReasonSuppressed                ProviderRunSkipReason = "suppressed"
@@ -8470,6 +8471,8 @@ func (e ProviderRunSkipReason) Valid() bool {
 	case ProviderRunSkipReasonDuplicateSubjectCandidate:
 		return true
 	case ProviderRunSkipReasonLowBalance:
+		return true
+	case ProviderRunSkipReasonNoIdentifiers:
 		return true
 	case ProviderRunSkipReasonNotEligible:
 		return true
@@ -8538,15 +8541,18 @@ func (e ProviderRunSubjectKind) Valid() bool {
 
 // Defines values for ProviderRunTrigger.
 const (
-	ProviderRunTriggerAutomaticCreate  ProviderRunTrigger = "automatic_create"
-	ProviderRunTriggerAutomaticImport  ProviderRunTrigger = "automatic_import"
-	ProviderRunTriggerManual           ProviderRunTrigger = "manual"
-	ProviderRunTriggerScheduledRefresh ProviderRunTrigger = "scheduled_refresh"
+	ProviderRunTriggerAutomaticBackfill ProviderRunTrigger = "automatic_backfill"
+	ProviderRunTriggerAutomaticCreate   ProviderRunTrigger = "automatic_create"
+	ProviderRunTriggerAutomaticImport   ProviderRunTrigger = "automatic_import"
+	ProviderRunTriggerManual            ProviderRunTrigger = "manual"
+	ProviderRunTriggerScheduledRefresh  ProviderRunTrigger = "scheduled_refresh"
 )
 
 // Valid indicates whether the value is a known member of the ProviderRunTrigger enum.
 func (e ProviderRunTrigger) Valid() bool {
 	switch e {
+	case ProviderRunTriggerAutomaticBackfill:
+		return true
 	case ProviderRunTriggerAutomaticCreate:
 		return true
 	case ProviderRunTriggerAutomaticImport:
@@ -18751,6 +18757,22 @@ type InstallationSetupStep struct {
 // InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
 type InstallationSetupStepStep string
 
+// IntegrationsSettings The installation's provider-lookup posture. Read by every role, changed only by
+// admin/ops.
+type IntegrationsSettings struct {
+	// AutomaticLookup When true, every contact is looked up once against the connected data provider for
+	// the details it charges nothing for — the professional profile link, the current role
+	// and employer, the work history. Email and mobile are never bought this way: those
+	// cost credits and stay a per-contact human action.
+	//
+	// Default is ON. Switching it OFF is a jurisdiction answer rather than a pause button:
+	// some laws forbid trading personal data outright, and an installation whose contacts
+	// fall under one turns this off and looks a contact up by hand, which keeps the
+	// decision with the person who made it. There is no per-contact equivalent because a
+	// contact's country is not a fact this product holds.
+	AutomaticLookup bool `json:"automatic_lookup"`
+}
+
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.
 type InviteDealRoomParticipantRequest struct {
 	// Capability Defaults to `view` — the least that lets someone read the room.
@@ -23493,8 +23515,12 @@ type ProviderCategorySelection map[string]bool
 
 // ProviderConfiguration defines model for ProviderConfiguration.
 type ProviderConfiguration struct {
-	// AutomaticImport Enrich every person a connector creates. A mailbox, channel or other connection mints one person per counterparty it sees, and each purchase spends credits; off by default for that reason.
-	AutomaticImport           bool `json:"automatic_import"`
+	// AutomaticImport IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`. It once held connector-created contacts back because each purchase spent credits; an automatic run now buys only what costs nothing, so the two cases stopped differing.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	AutomaticImport bool `json:"automatic_import"`
+
+	// AutomaticIndividualCreate IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	AutomaticIndividualCreate bool `json:"automatic_individual_create"`
 
 	// Budgets Per-pool ceilings keyed by the provider's declared credit pools.
@@ -23558,6 +23584,9 @@ type ProviderConnection struct {
 	LastUsedAt           *time.Time `json:"last_used_at,omitempty"`
 	LastVerifiedAt       *time.Time `json:"last_verified_at,omitempty"`
 
+	// LookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
+	LookupBacklog *ProviderLookupBacklog `json:"lookup_backlog,omitempty"`
+
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
 	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
@@ -23593,6 +23622,15 @@ type ProviderConnectionStatus string
 type ProviderCredits struct {
 	Pools  map[string]*int `json:"pools"`
 	ReadAt *time.Time      `json:"read_at,omitempty"`
+}
+
+// ProviderLookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
+type ProviderLookupBacklog struct {
+	// Paused True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep.
+	Paused bool `json:"paused"`
+
+	// Remaining Contacts with no completed free lookup and no live one in flight. Counts down to zero as the sweep works through them, and rises when contacts are created faster than it can reach them.
+	Remaining int `json:"remaining"`
 }
 
 // ProviderMonthlySpend One calendar month's consumption for one credit pool, from this installation's own
@@ -23644,6 +23682,14 @@ type ProviderRef = string
 
 // ProviderRun defines model for ProviderRun.
 type ProviderRun struct {
+	// Applied True once this run's answers have been folded onto the contact's own record — the
+	// fields it filled that were empty. A `completed` run that is not yet `applied` has
+	// bought its values but they have not reached the record, which is the window a
+	// client polls through: stopping at `completed` shows a page that still looks empty.
+	// Always false for a run that never completed, and for one whose claims were
+	// discarded (`claims_unwritten`), because there was nothing to apply.
+	Applied *bool `json:"applied,omitempty"`
+
 	// ClaimsUnwritten True when a paid terminal result could not be handed to the owning domain within
 	// the bounded retry (PI-PARAM-10). The spend is real and the claims are absent; an
 	// operator sees the gap rather than discovering it as missing data (PI-AC-12).
@@ -23686,6 +23732,10 @@ type ProviderRun struct {
 	// (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
 	// than the connection's refresh window, so an automatic trigger declined to buy
 	// the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+	// `no_identifiers` means the contact carries neither a profile link nor a name with
+	// a company, so the provider has nothing to match on; an automatic trigger declines
+	// rather than spending a call that can only answer "no match". A human pressing the
+	// button on the contact is still allowed to try.
 	SkipReason *ProviderRunSkipReason `json:"skip_reason,omitempty"`
 	State      ProviderRunState       `json:"state"`
 
@@ -23694,8 +23744,13 @@ type ProviderRun struct {
 	// populated for that kind (PI-DDL-2).
 	SubjectKind ProviderRunSubjectKind `json:"subject_kind"`
 	SubmittedAt *time.Time             `json:"submitted_at,omitempty"`
-	Trigger     ProviderRunTrigger     `json:"trigger"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+
+	// Trigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+	// contact that existed before the provider was connected, or that no run has covered
+	// yet; like the other automatic triggers it buys only the categories that cost
+	// nothing.
+	Trigger   ProviderRunTrigger `json:"trigger"`
+	UpdatedAt time.Time          `json:"updated_at"`
 }
 
 // ProviderRunSkipReason Why a `skipped` run sent nothing. Null for every other state.
@@ -23705,6 +23760,10 @@ type ProviderRun struct {
 // (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
 // than the connection's refresh window, so an automatic trigger declined to buy
 // the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+// `no_identifiers` means the contact carries neither a profile link nor a name with
+// a company, so the provider has nothing to match on; an automatic trigger declines
+// rather than spending a call that can only answer "no match". A human pressing the
+// button on the contact is still allowed to try.
 type ProviderRunSkipReason string
 
 // ProviderRunState defines model for ProviderRun.State.
@@ -23715,7 +23774,10 @@ type ProviderRunState string
 // populated for that kind (PI-DDL-2).
 type ProviderRunSubjectKind string
 
-// ProviderRunTrigger defines model for ProviderRun.Trigger.
+// ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+// contact that existed before the provider was connected, or that no run has covered
+// yet; like the other automatic triggers it buys only the categories that cost
+// nothing.
 type ProviderRunTrigger string
 
 // ProviderSpend A bounded consumption series: the current month plus a small number of prior
@@ -25677,6 +25739,12 @@ type UpdateInstallationSettingsRequest struct {
 // UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 // nothing already written, so artifacts stay in the language they were written in.
 type UpdateInstallationSettingsRequestBaseLanguage string
+
+// UpdateIntegrationsSettingsRequest A sparse provider-posture patch (admin/ops).
+type UpdateIntegrationsSettingsRequest struct {
+	// AutomaticLookup Toggle whether contacts are looked up automatically for the free details.
+	AutomaticLookup *bool `json:"automatic_lookup,omitempty"`
+}
 
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
 type UpdateLeadDisqualifyReasonRequest struct {
@@ -31086,6 +31154,9 @@ type SetGoogleAppJSONRequestBody = GoogleAppInput
 
 // UpdateInstallationSettingsJSONRequestBody defines body for UpdateInstallationSettings for application/json ContentType.
 type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsRequest
+
+// UpdateIntegrationsSettingsJSONRequestBody defines body for UpdateIntegrationsSettings for application/json ContentType.
+type UpdateIntegrationsSettingsJSONRequestBody = UpdateIntegrationsSettingsRequest
 
 // CreateCorpusJSONRequestBody defines body for CreateCorpus for application/json ContentType.
 type CreateCorpusJSONRequestBody CreateCorpusJSONBody
@@ -39732,6 +39803,12 @@ type ServerInterface interface {
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
+	// The installation's provider-lookup posture.
+	// (GET /integrations/settings)
+	GetIntegrationsSettings(w http.ResponseWriter, r *http.Request)
+	// Update the installation's provider-lookup posture (admin/ops).
+	// (PATCH /integrations/settings)
+	UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request)
@@ -41901,6 +41978,18 @@ func (_ Unimplemented) UpdateInstallationSettings(w http.ResponseWriter, r *http
 // What this installation still has to be configured with before it can be used.
 // (GET /installation/setup)
 func (_ Unimplemented) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The installation's provider-lookup posture.
+// (GET /integrations/settings)
+func (_ Unimplemented) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update the installation's provider-lookup posture (admin/ops).
+// (PATCH /integrations/settings)
+func (_ Unimplemented) UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52330,6 +52419,46 @@ func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetInstallationSetup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIntegrationsSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIntegrationsSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateIntegrationsSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateIntegrationsSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67069,6 +67198,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/integrations/settings", wrapper.GetIntegrationsSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/integrations/settings", wrapper.UpdateIntegrationsSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/corpora", wrapper.ListCorpora)

@@ -94,6 +94,7 @@ type Server struct {
 	backfillHandlers
 	aiRoutingHandlers
 	captureSettingsHandlers
+	integrationsSettingsHandlers
 	ownDomainHandlers
 	installationSettingsHandlers
 	licenseHandlers

@@ -982,6 +982,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The installation's provider-lookup posture.
+         * @description Whether a provider run may be queued without a human pressing anything. Every role may
+         *     read it — a rep needs to know whether a contact arrives already looked up; only
+         *     admin/ops may change it (PATCH). Governed by the `integrations` RBAC object.
+         */
+        get: operations["getIntegrationsSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update the installation's provider-lookup posture (admin/ops).
+         * @description Admin/ops-only. `automatic_lookup` ON means every contact is looked up once for the
+         *     details the provider charges nothing for; email and mobile are never bought this way
+         *     and stay a per-contact human action. OFF is a jurisdiction answer rather than a pause:
+         *     an installation whose contacts fall under a law that forbids trading personal data
+         *     turns it off and looks a contact up by hand. Human session only — an agent never
+         *     changes an installation-wide purchasing posture. Audit-only write (EVT-NOEVT-3).
+         */
+        patch: operations["updateIntegrationsSettings"];
+        trace?: never;
+    };
     "/provider-connections": {
         parameters: {
             query?: never;
@@ -11590,6 +11621,30 @@ export interface components {
              */
             dimensions?: number;
         };
+        /**
+         * @description The installation's provider-lookup posture. Read by every role, changed only by
+         *     admin/ops.
+         */
+        IntegrationsSettings: {
+            /**
+             * @description When true, every contact is looked up once against the connected data provider for
+             *     the details it charges nothing for — the professional profile link, the current role
+             *     and employer, the work history. Email and mobile are never bought this way: those
+             *     cost credits and stay a per-contact human action.
+             *
+             *     Default is ON. Switching it OFF is a jurisdiction answer rather than a pause button:
+             *     some laws forbid trading personal data outright, and an installation whose contacts
+             *     fall under one turns this off and looks a contact up by hand, which keeps the
+             *     decision with the person who made it. There is no per-contact equivalent because a
+             *     contact's country is not a fact this product holds.
+             */
+            automatic_lookup: boolean;
+        };
+        /** @description A sparse provider-posture patch (admin/ops). */
+        UpdateIntegrationsSettingsRequest: {
+            /** @description Toggle whether contacts are looked up automatically for the free details. */
+            automatic_lookup?: boolean;
+        };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-organization auto-enrichment. */
@@ -12992,10 +13047,15 @@ export interface components {
         ProviderConfiguration: {
             mode: components["schemas"]["ProviderConnectionMode"];
             preset: components["schemas"]["ProviderPreset"];
-            /** @default true */
+            /**
+             * @deprecated
+             * @description IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`.
+             * @default true
+             */
             automatic_individual_create: boolean;
             /**
-             * @description Enrich every person a connector creates. A mailbox, channel or other connection mints one person per counterparty it sees, and each purchase spends credits; off by default for that reason.
+             * @deprecated
+             * @description IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`. It once held connector-created contacts back because each purchase spent credits; an automatic run now buys only what costs nothing, so the two cases stopped differing.
              * @default false
              */
             automatic_import: boolean;
@@ -13078,6 +13138,13 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** @description How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do. */
+        ProviderLookupBacklog: {
+            /** @description Contacts with no completed free lookup and no live one in flight. Counts down to zero as the sweep works through them, and rises when contacts are created faster than it can reach them. */
+            remaining: number;
+            /** @description True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep. */
+            paused: boolean;
+        };
         ProviderConnection: {
             provider: components["schemas"]["Provider"];
             status: components["schemas"]["ProviderConnectionStatus"];
@@ -13090,6 +13157,7 @@ export interface components {
             effective_constraints?: string[];
             credits: components["schemas"]["ProviderCredits"];
             spend?: components["schemas"]["ProviderSpend"];
+            lookup_backlog?: components["schemas"]["ProviderLookupBacklog"];
             /** Format: date-time */
             connected_at?: string | null;
             /** Format: date-time */
@@ -13135,8 +13203,14 @@ export interface components {
              */
             person_id?: string | null;
             provider: components["schemas"]["Provider"];
-            /** @enum {string} */
-            trigger: "automatic_create" | "automatic_import" | "scheduled_refresh" | "manual";
+            /**
+             * @description What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+             *     contact that existed before the provider was connected, or that no run has covered
+             *     yet; like the other automatic triggers it buys only the categories that cost
+             *     nothing.
+             * @enum {string}
+             */
+            trigger: "automatic_create" | "automatic_import" | "automatic_backfill" | "scheduled_refresh" | "manual";
             /** @enum {string} */
             state: "queued" | "submitting" | "in_progress" | "completed" | "no_match" | "skipped" | "submission_unknown" | "failed" | "cancelled";
             /**
@@ -13147,9 +13221,13 @@ export interface components {
              *     (PI-PARAM-13). `already_fresh` means a completed run for this subject is newer
              *     than the connection's refresh window, so an automatic trigger declined to buy
              *     the same data twice (PI-PARAM-14) — nothing failed and no budget was consumed.
+             *     `no_identifiers` means the contact carries neither a profile link nor a name with
+             *     a company, so the provider has nothing to match on; an automatic trigger declines
+             *     rather than spending a call that can only answer "no match". A human pressing the
+             *     button on the contact is still allowed to try.
              * @enum {string|null}
              */
-            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | null;
+            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | "no_identifiers" | null;
             /** Format: int64 */
             connection_version: number;
             configuration_snapshot: components["schemas"]["ProviderConfiguration"];
@@ -13167,6 +13245,16 @@ export interface components {
              * @default false
              */
             claims_unwritten: boolean;
+            /**
+             * @description True once this run's answers have been folded onto the contact's own record — the
+             *     fields it filled that were empty. A `completed` run that is not yet `applied` has
+             *     bought its values but they have not reached the record, which is the window a
+             *     client polls through: stopping at `completed` shows a page that still looks empty.
+             *     Always false for a run that never completed, and for one whose claims were
+             *     discarded (`claims_unwritten`), because there was nothing to apply.
+             * @default false
+             */
+            applied: boolean;
             /** Format: date-time */
             submitted_at?: string | null;
             /** Format: date-time */
@@ -25429,6 +25517,55 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getIntegrationsSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The provider-lookup posture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateIntegrationsSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIntegrationsSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated posture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listProviderConnections: {

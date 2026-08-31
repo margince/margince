@@ -859,6 +859,14 @@ func (stubs) GetInstallationSetup(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetInstallationSetup")
 }
 
+func (stubs) GetIntegrationsSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetIntegrationsSettings")
+}
+
+func (stubs) UpdateIntegrationsSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateIntegrationsSettings")
+}
+
 func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCorpora")
 }

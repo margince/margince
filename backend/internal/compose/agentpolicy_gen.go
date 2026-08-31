@@ -316,6 +316,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PATCH /v1/deal-rooms/{id}/participants/{participantId}":             {Op: "updateDealRoomParticipant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/deals/{id}":                                               {Op: "updateDeal", Access: "tool", Tool: "update_record", RecordType: "deal", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/installation/settings":                                    {Op: "updateInstallationSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PATCH /v1/integrations/settings":                                    {Op: "updateIntegrationsSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/knowledge/corpora/{id}":                                   {Op: "updateCorpus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/lead-disqualify-reasons/{id}":                             {Op: "updateLeadDisqualifyReason", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/lead-sources/{id}":                                        {Op: "updateLeadSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

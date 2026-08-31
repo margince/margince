@@ -327,9 +327,14 @@ type Adapter interface {
 type Trigger string
 
 const (
-	TriggerAutomaticCreate  Trigger = "automatic_create"
-	TriggerAutomaticImport  Trigger = "automatic_import"
-	TriggerScheduledRefresh Trigger = "scheduled_refresh"
+	TriggerAutomaticCreate Trigger = "automatic_create"
+	TriggerAutomaticImport Trigger = "automatic_import"
+	// TriggerAutomaticBackfill is the catch-up sweep reaching a contact no run
+	// has covered — one that existed before the provider was connected, or
+	// that arrived while the posture was off. Automatic, so it buys only what
+	// costs nothing.
+	TriggerAutomaticBackfill Trigger = "automatic_backfill"
+	TriggerScheduledRefresh  Trigger = "scheduled_refresh"
 	// TriggerManual is a human asking explicitly. It is never fenced by the
 	// duplicate or freshness checks: the person looking at the record knows
 	// something the timestamps do not.
@@ -384,6 +389,12 @@ const (
 	// SkipAlreadyFresh means a completed run is newer than the refresh
 	// window, so an automatic trigger declined to buy the same data twice.
 	SkipAlreadyFresh SkipReason = "already_fresh"
+	// SkipNoIdentifiers means the subject carries nothing the provider can
+	// match on — no profile link, and no name with a company. Declining is
+	// cheaper than spending a call that can only answer "no match", and it is
+	// a different fact from not_eligible: nothing forbids this purchase, there
+	// is simply nothing to ask with. A human pressing the button may still try.
+	SkipNoIdentifiers SkipReason = "no_identifiers"
 )
 
 // Reservation is one pool's hold for one run.
