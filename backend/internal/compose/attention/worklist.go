@@ -31,6 +31,14 @@ import (
 // worklistPage is how many ranked items one read carries by default.
 const worklistPage = 25
 
+// waitingLead is how many unanswered customers lead the page.
+//
+// Not a cap on the source: the rest are still ranked and still reachable. It is
+// a cap on how much of ONE kind a reader meets before they see the others, and
+// the number is the answer to "how many can somebody act on this morning"
+// rather than to "how many are there".
+const waitingLead = 8
+
 // worklistMaxPage is the ceiling the contract publishes. A larger ask is
 // clamped rather than refused: the number is a request for how much to draw,
 // and answering the most that can be drawn is more useful than an error.
@@ -53,9 +61,11 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	// not filtered afterwards: each store bounds what it returns, so a page
 	// full of colleagues' rows would hide the reader's own work behind a cut
 	// that had already happened.
-	reader := s
+	// Deeper than the lane feed reads: a batch row counts a pile, and a count
+	// taken from a page of ten would report ten over a hundred and fifty.
+	reader := s.countingDecisions()
 	if mineOnly(resolved) {
-		reader = s.forReader()
+		reader = reader.forReader()
 	}
 	day, err := reader.Assemble(ctx)
 	if err != nil {
@@ -163,20 +173,50 @@ func (s *Service) worklistFrom(
 	// colleague's deal is that colleague's to answer. Judged against the deals
 	// this reader owns in THIS day, which is the set `mine` already narrowed.
 	owned := ownedDealsIn(ctx, day, scope)
+	// Longest wait first, so the few that LEAD are the ones most likely to have
+	// been forgotten rather than whichever the database returned first.
+	mine := make([]WaitingCustomer, 0, len(waiting))
 	for _, customer := range waiting {
 		if mineOnly(scope) && !waitingIsMine(customer, owned) {
 			continue
 		}
-		rows = append(rows, classifyWaiting(customer, day.AsOf))
+		mine = append(mine, customer)
+	}
+	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Since.Before(mine[j].Since) })
+	for i, customer := range mine {
+		row := classifyWaiting(customer, day.AsOf)
+		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
+		// be one: its level still says a customer is waiting, because that is
+		// what it is and the summary counts on it. What changes is only where
+		// it sits, through the ordering's own last tiebreak.
+		//
+		// Rewriting the level instead would have told the reader the ninth
+		// waiting customer was agreed work, while the row went on saying a
+		// buyer wrote last — the page contradicting itself.
+		if i >= waitingLead {
+			row.crowded = true
+		}
+		rows = append(rows, row)
 	}
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
+
 	if mineOnly(scope) {
 		rows = keepReadersOwn(ctx, rows)
 	}
-	if filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll) {
+	narrowed := filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll)
+	if narrowed {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
+	}
+	// A pile of alike routine decisions is one row, not a hundred — but ONLY on
+	// the unnarrowed page. A reader who asked for decisions asked to see them,
+	// and answering that with the same group they were trying to open is a door
+	// that leads back to itself. Narrowing IS opening the group.
+	if !narrowed {
+		// The decision read stops at its own scan bound, so a group that filled
+		// it reports a floor rather than a total.
+		rows = foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the

@@ -364,45 +364,6 @@ func classifyBounce(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
 }
 
-// classifyDecision: a staged proposal or a duplicate pair.
-//
-// The split is what keeps the queue honest. A decision about a SEND blocks
-// customer work and sits at level 5; contact hygiene — capturing a counterparty,
-// merging two records — is level 6 and never outranks a customer, however many
-// of them are waiting. That is the whole answer to a queue of 188 identical
-// contact questions burying an unanswered buyer.
-func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	level, consequence, why := levelRoutine, crmcontracts.WorklistItemConsequence("data_drifts"), "routine"
-	if blocksCustomerWork(item) {
-		level, consequence, why = levelBlocking, "work_blocked", "blocks_customer_work"
-	}
-	row := base(item, level, "decisions", consequence)
-	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// blocksCustomerWork reports whether a staged decision is holding up something
-// a customer is waiting on, as opposed to tidying the database.
-//
-// The list is the approval kinds whose SUBJECT is an outbound act. A kind absent
-// here is treated as hygiene, which is the safe direction: mislabelling a merge
-// as urgent costs a reader their attention, while the reverse costs them only a
-// place in a queue they are working through anyway.
-func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
-	if item.Kind == nil {
-		return false
-	}
-	switch *item.Kind {
-	case "send_email", "send_account_email", "send_message",
-		"scheduled_send_held", "held_draft",
-		"book_meeting",
-		"deal_follow_up", "transcript_proposal", "site_lead":
-		return true
-	default:
-		return false
-	}
-}
-
 // classifyDecay: a relationship going quiet. Nobody is waiting on the reader
 // for it, which is exactly why it goes unnoticed — and why it sits low rather
 // than not at all.

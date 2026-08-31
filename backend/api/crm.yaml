@@ -32143,8 +32143,13 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice]
-          description: 'Which producer raised it, and therefore which endpoint its verbs go to.'
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, batch]
+          description: |
+            Which producer raised it, and therefore which endpoint its verbs go to.
+
+            `batch` is the one that names no single record: it stands for a GROUP of
+            routine decisions that read alike, so a hundred of them cost the reader one
+            row rather than a hundred. Its own facts ride in `batch`.
         category:
           type: string
           enum: [customer_waiting, deals_at_risk, meetings, tasks, decisions, system]
@@ -32178,6 +32183,7 @@ components:
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
         deal: { $ref: '#/components/schemas/WorklistDealFacts' }
+        batch: { $ref: '#/components/schemas/WorklistBatch' }
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
@@ -32231,6 +32237,42 @@ components:
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         days: { type: integer }
         level: { type: integer, minimum: 0, maximum: 6 }
+
+    WorklistBatch:
+      type: object
+      description: |
+        A group of routine decisions that read alike, standing on the queue as one row.
+
+        The pile is the problem this solves: a hundred and fifty "is this address a
+        contact?" questions are one KIND of work, and asking them one at a time buries
+        every customer beneath them. The reader answers the group, or opens it to answer
+        the exceptions.
+
+        `sample` names a few of the members so the row is checkable — a reader who cannot
+        see what is in a group has to trust it, and a group nobody trusts is worse than
+        the pile it replaced.
+      required: [key, count]
+      properties:
+        key:
+          type: string
+          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft]
+          description: |
+            What the members have in common, which is also what makes them safe to answer
+            together. `likely_automated` is mail from senders that are not people;
+            `company_match` are addresses whose domain already names a company we know;
+            `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
+            `held_draft` are messages waiting to be released.
+        count: { type: integer, minimum: 0, description: 'How many decisions this row stands for.' }
+        at_least:
+          type: boolean
+          description: |
+            The count is a FLOOR, not a total: the read stopped at its own bound before
+            it ran out of members. A client says "200+" rather than "200", because a
+            bound printed as a total is a wrong number rather than a bounded one.
+        sample:
+          type: array
+          items: { type: string }
+          description: 'A few members, named, so the group can be checked before it is answered.'
 
     WorklistDealFacts:
       type: object

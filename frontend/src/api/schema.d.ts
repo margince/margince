@@ -24307,9 +24307,13 @@ export interface components {
             id: string;
             /**
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
+             *
+             *     `batch` is the one that names no single record: it stands for a GROUP of
+             *     routine decisions that read alike, so a hundred of them cost the reader one
+             *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -24343,6 +24347,7 @@ export interface components {
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
             deal?: components["schemas"]["WorklistDealFacts"];
+            batch?: components["schemas"]["WorklistBatch"];
             /**
              * Format: date-time
              * @description When this is due, or when the meeting starts.
@@ -24405,6 +24410,39 @@ export interface components {
             currency?: string;
             days?: number;
             level?: number;
+        };
+        /**
+         * @description A group of routine decisions that read alike, standing on the queue as one row.
+         *
+         *     The pile is the problem this solves: a hundred and fifty "is this address a
+         *     contact?" questions are one KIND of work, and asking them one at a time buries
+         *     every customer beneath them. The reader answers the group, or opens it to answer
+         *     the exceptions.
+         *
+         *     `sample` names a few of the members so the row is checkable — a reader who cannot
+         *     see what is in a group has to trust it, and a group nobody trusts is worse than
+         *     the pile it replaced.
+         */
+        WorklistBatch: {
+            /**
+             * @description What the members have in common, which is also what makes them safe to answer
+             *     together. `likely_automated` is mail from senders that are not people;
+             *     `company_match` are addresses whose domain already names a company we know;
+             *     `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
+             *     `held_draft` are messages waiting to be released.
+             * @enum {string}
+             */
+            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft";
+            /** @description How many decisions this row stands for. */
+            count: number;
+            /**
+             * @description The count is a FLOOR, not a total: the read stopped at its own bound before
+             *     it ran out of members. A client says "200+" rather than "200", because a
+             *     bound printed as a total is a wrong number rather than a bounded one.
+             */
+            at_least?: boolean;
+            /** @description A few members, named, so the group can be checked before it is answered. */
+            sample?: string[];
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is

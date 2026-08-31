@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -164,7 +165,7 @@ func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
 // sanitized at staging time, so it is what a reader sees. A proposal whose
 // summary is empty falls back to its kind rather than rendering a blank card —
 // an unnamed decision is still a decision somebody has to make.
-func approvalItem(approval crmcontracts.Approval) crmcontracts.AttentionItem {
+func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcontracts.AttentionItem {
 	kind := approval.Kind
 	item := crmcontracts.AttentionItem{
 		Id:      approval.Id.String(),
@@ -179,7 +180,38 @@ func approvalItem(approval crmcontracts.Approval) crmcontracts.AttentionItem {
 	if approval.TargetEntityType != nil && approval.TargetEntityId != nil {
 		item.Subject = subjectOf(*approval.TargetEntityType, ids.UUID(*approval.TargetEntityId))
 	}
+	if markers := stagedMarkers(approval, machine); markers != "" {
+		item.Detail = &markers
+	}
 	return item
+}
+
+// stagedMarkers says what a routine contact decision is ABOUT, for the group it
+// will join.
+//
+// Read from the payload the verdict engine staged — the address it is asking
+// about, and whether that address's domain already names a company here. Both
+// are facts the engine had; re-deriving them in the queue would be a second
+// opinion, and one decision would land in two groups across two reads.
+func stagedMarkers(approval crmcontracts.Approval, machine MachineSender) string {
+	if approval.Kind != "capture_counterparty" || approval.ProposedChange == nil {
+		return ""
+	}
+	change := *approval.ProposedChange
+	markers := make([]string, 0, 2)
+	if address, ok := change["email"].(string); ok && machine != nil && machine(address) {
+		markers = append(markers, stagedMachineSender)
+	}
+	// There is no company marker here, and the reason is worth stating: the
+	// only company-ish field the staged payload carries is `display_name`,
+	// which capture labels "untrusted header text — for display, never
+	// matching" (modules/capture/pending.go). A sender types it, so
+	// `Alice <alice@gmail.com>` would have read as a company we know.
+	//
+	// A real match needs a lookup against the organizations this workspace has,
+	// which is a read this assembler does not make. Until it does, a contact
+	// question is either from a machine or is the honest remainder.
+	return strings.Join(markers, " ")
 }
 
 // taskItem renders one open task.

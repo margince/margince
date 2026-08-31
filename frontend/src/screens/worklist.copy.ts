@@ -212,7 +212,19 @@ export function consequenceText(item: WorklistItem, t: T): string | null {
 // at staging time, a deal's own name, a message's subject. Where it has none
 // the sentence would have to be invented, and the client writes it from the
 // source instead.
-export function itemTitle(item: WorklistItem, t: T): string {
+export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
+  // A group names itself by what it holds and how much: "43 likely automated
+  // senders" is the whole row, and a reader decides whether to open it from
+  // that sentence alone.
+  if (item.batch) {
+    // "200+" where the read stopped at its own bound. A floor printed as a
+    // total is a wrong number rather than a bounded one, and the reader has no
+    // way to tell the two apart.
+    const count = item.batch.at_least
+      ? `${formatNumber(item.batch.count, locale)}+`
+      : formatNumber(item.batch.count, locale);
+    return t(`worklist.batch.${item.batch.key}` as const, { count });
+  }
   if (item.title) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot
@@ -265,6 +277,8 @@ const KNOWN_SOURCES = {
   bounce: true,
   automation_run: true,
   notice: true,
+  // A group of routine decisions, which names no single record.
+  batch: true,
 } as const;
 
 function knownSource(

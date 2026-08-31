@@ -11,6 +11,7 @@ package attention
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -520,5 +521,183 @@ func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
 		Subject: &crmcontracts.AttentionSubject{Type: "deal", Id: dealID},
 		Deal:    &crmcontracts.AttentionDealFacts{OwnerId: &ownerID},
 		Actions: []crmcontracts.AttentionItemActions{},
+	}
+}
+
+// A pile of alike questions is one row. On the real workspace this is 152
+// contact decisions and 545 held drafts — no ordering saves a reader who must
+// scroll past them to reach the next thing.
+func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
+	staged := []crmcontracts.AttentionItem{}
+	for i := 0; i < 40; i++ {
+		staged = append(staged, item(
+			"c"+string(rune('a'+i%26))+string(rune('0'+i/26)),
+			"approval", withKind("capture_counterparty")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 1 {
+		t.Fatalf("forty alike decisions drew %d rows", len(got))
+	}
+	if got[0].Batch == nil || got[0].Batch.Count != 40 {
+		t.Fatal("the row does not say how many decisions it stands for")
+	}
+}
+
+// Contact questions split by what they are ABOUT, and the split is derived
+// from the STAGED PAYLOAD rather than fabricated here — a test that writes the
+// marker itself proves nothing about the code that writes it in production.
+func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
+	staged := []crmcontracts.Approval{}
+	for i := 0; i < 3; i++ {
+		staged = append(staged,
+			captureApproval("noreply@vendor.example"),
+			captureApproval("anna.weber@customer.example"))
+	}
+	items := make([]crmcontracts.AttentionItem, 0, len(staged))
+	for _, approval := range staged {
+		items = append(items, approvalItem(approval, func(address string) bool {
+			return strings.HasPrefix(address, "noreply@")
+		}))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: items}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	keys := map[crmcontracts.WorklistBatchKey]int{}
+	for _, row := range got {
+		if row.Batch != nil {
+			keys[row.Batch.Key] = row.Batch.Count
+		}
+	}
+	if keys["likely_automated"] != 3 {
+		t.Fatalf("the machine group holds %d, wanted 3", keys["likely_automated"])
+	}
+	if keys["uncertain_contact"] != 3 {
+		t.Fatalf("the remainder holds %d, wanted 3", keys["uncertain_contact"])
+	}
+}
+
+// A company match needs a lookup this assembler does not make. The only
+// company-ish field on the payload is the sender's own display name, which
+// capture labels untrusted and never-for-matching — so `Alice <alice@gmail.com>`
+// must not read as a company we know.
+func TestASendersOwnDisplayNameIsNotACompanyMatch(t *testing.T) {
+	approval := captureApproval("alice@gmail.com")
+	change := map[string]any{"email": "alice@gmail.com", "display_name": "Alice Example"}
+	approval.ProposedChange = &change
+
+	item := approvalItem(approval, func(string) bool { return false })
+
+	if item.Detail != nil && strings.Contains(*item.Detail, stagedKnownCompany) {
+		t.Fatal("a sender's own display name was taken for a company we know")
+	}
+}
+
+func captureApproval(email string) crmcontracts.Approval {
+	change := map[string]any{"email": email}
+	summary := "Is " + email + " a contact worth keeping?"
+	return crmcontracts.Approval{
+		Id:             openapi_types.UUID(ids.NewV7()),
+		Kind:           "capture_counterparty",
+		Summary:        &summary,
+		ProposedChange: &change,
+	}
+}
+
+// A decision that blocks a customer is never folded, however many of it there
+// are: each holds up somebody different, and the reader has to see each one.
+func TestADecisionThatBlocksACustomerIsNeverFolded(t *testing.T) {
+	staged := []crmcontracts.AttentionItem{}
+	for i := 0; i < 5; i++ {
+		staged = append(staged, item("s"+string(rune('a'+i)), "approval", withKind("send_email")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 5 {
+		t.Fatalf("five customer-blocking decisions drew %d rows", len(got))
+	}
+}
+
+// Two alike questions are not a pile. A reader answers both faster than they
+// would open a group, and a "batch of 2" costs more than it saves.
+func TestTwoAlikeDecisionsStayThemselves(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("a", "approval", withKind("capture_counterparty")),
+			item("b", "approval", withKind("capture_counterparty")),
+		},
+	}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 2 {
+		t.Fatalf("two decisions drew %d rows", len(got))
+	}
+}
+
+// The group names a few members, so a reader can check it before answering it.
+func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
+	staged := []crmcontracts.AttentionItem{}
+	for i := 0; i < 6; i++ {
+		row := item("d"+string(rune('a'+i)), "approval", withKind("capture_counterparty"))
+		title := "Is address " + string(rune('a'+i)) + " a contact?"
+		row.Title = &title
+		staged = append(staged, row)
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if got[0].Batch.Sample == nil || len(*got[0].Batch.Sample) != 3 {
+		t.Fatal("the group names none of what it holds, so it cannot be checked")
+	}
+}
+
+// A hundred unanswered threads is a real backlog, and a page that is nothing
+// but them tells a rep their day holds no deals, tasks or decisions. The
+// longest-waiting few lead; the rest are demoted, never dropped.
+func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
+	waiting := []WaitingCustomer{}
+	for i := 0; i < 30; i++ {
+		waiting = append(waiting, WaitingCustomer{
+			ActivityID: ids.NewV7(),
+			Subject:    "Thread " + string(rune('a'+i%26)) + string(rune('0'+i/26)),
+			Since:      rankInstant.Add(-time.Duration(30-i) * 24 * time.Hour),
+		})
+	}
+	day := crmcontracts.Attention{
+		AsOf:    rankInstant,
+		Planned: []crmcontracts.AttentionItem{item("task", "task", withDue(rankInstant.Add(-time.Hour)))},
+	}
+
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waiting)
+
+	// Every wait is still on the page, and every one still SAYS it is a wait.
+	// Rewriting the level of the ninth would tell the reader it was agreed work
+	// while its own row went on saying a buyer wrote last.
+	kept := 0
+	for _, row := range out.Queue {
+		if row.Source == "customer_waiting" {
+			kept++
+			if row.Level != levelWaiting {
+				t.Fatalf("a waiting customer was relabelled as level %d", row.Level)
+			}
+		}
+	}
+	if kept != 30 {
+		t.Fatalf("thirty waits produced %d rows — some were dropped", kept)
+	}
+	// What changes is only the ORDER: the overdue task is reachable rather than
+	// buried under the whole backlog.
+	for i, row := range out.Queue {
+		if row.Source == "task" && i > waitingLead {
+			t.Fatalf("the overdue task sat at position %d, below the whole backlog", i+1)
+		}
 	}
 }

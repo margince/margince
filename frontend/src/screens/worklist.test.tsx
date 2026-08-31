@@ -177,6 +177,99 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getAllByRole("link", { name: "Open" })).toHaveLength(1);
   });
 
+  it("draws a pile of routine decisions as one row that says how many", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "likely_automated",
+            source: "batch",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
+            batch: {
+              key: "likely_automated",
+              count: 43,
+              sample: [
+                "Is noreply@x.com a contact?",
+                "Is bot@y.com a contact?",
+              ],
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The row IS the sentence: a reader decides whether to open it from this
+    // alone, so the count is part of the name rather than a badge beside it.
+    expect(await screen.findByText("43 likely automated senders")).toBeTruthy();
+    // And it names some of what it holds, because a group nobody can see into
+    // is a group nobody trusts.
+    expect(screen.getByText(/Is noreply@x.com a contact\?/)).toBeTruthy();
+  });
+
+  it("says a bounded count is a floor, not a total", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "held_draft",
+            source: "batch",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
+            batch: { key: "held_draft", count: 200, at_least: true },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The read stopped at its own bound with members left over. "200" would be
+    // a wrong number; "200+" is a bounded one.
+    expect(
+      await screen.findByText("200+ drafts waiting to be sent"),
+    ).toBeTruthy();
+  });
+
+  it("opens a group into the work it stands for", async () => {
+    const user = userEvent.setup();
+    stub(
+      day({
+        queue: [
+          row({
+            id: "likely_automated",
+            source: "batch",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
+            batch: { key: "likely_automated", count: 43 },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("43 likely automated senders");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+
+    // A row whose verb led nowhere would be worse than the pile it replaced,
+    // so this asserts the queue actually narrows rather than that a control
+    // exists.
+    await waitFor(() => {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const urls = calls.map((call) => {
+        const target = call[0];
+        return target instanceof Request ? target.url : String(target);
+      });
+      expect(urls.some((url) => url.includes("filter=decisions"))).toBe(true);
+    });
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({

@@ -23,6 +23,19 @@ import (
 // numbers on screen contradicted each other.
 const needsYouPage = 10
 
+// batchScanDepth is how many staged decisions the RANKED queue reads.
+//
+// Deeper than needsYouPage on purpose, and for a reason that only applies to
+// the queue: a batch row states how many decisions it stands for, and a count
+// taken from a page of ten would say "10" over a pile of a hundred and fifty.
+// The lane feed's page is a prefetch for a surface that answers one at a time;
+// this is a census for a row that answers a group.
+//
+// Bounded by the approvals engine's own scan cap rather than by a number chosen
+// here — past that the count reads "200+", which is the same message to a reader
+// as the true figure.
+const batchScanDepth = 200
+
 // plannedCap bounds today's agreed work for the same reason. Higher than the
 // decision lane because reading a task costs less than deciding one.
 const plannedCap = 12
@@ -81,7 +94,16 @@ type Service struct {
 	// names is OPTIONAL like the lanes above it: nil means subjects travel
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
-	now   Clock
+	// machine answers whether an address is a sending system, for the group a
+	// routine contact decision joins. Nil means every address reads as a
+	// person's, which under-groups rather than hiding anything.
+	machine MachineSender
+	// decisionDepth is how many staged decisions a read takes. The lane feed's
+	// page is a prefetch for a surface that answers one at a time; the ranked
+	// queue takes a census, because a batch row that says "10" over a pile of
+	// a hundred and fifty is a wrong number rather than a bounded one.
+	decisionDepth int
+	now           Clock
 	// mineOnly narrows the producers that can be narrowed to the acting
 	// reader's own work. Set per read (Assemble keeps the lane feed's
 	// behaviour; the ranked queue's default scope sets it), because the same
@@ -121,6 +143,21 @@ func (s *Service) WithWaiting(w Waiting) *Service {
 	return s
 }
 
+// WithMachineSender binds the rule that tells a sending system from a person.
+func (s *Service) WithMachineSender(is MachineSender) *Service {
+	s.machine = is
+	return s
+}
+
+// countingDecisions returns a copy of this service that reads decisions to
+// census depth. A copy, because one Service serves every request and a depth
+// set on it would follow one reader's page onto another's.
+func (s *Service) countingDecisions() *Service {
+	deeper := *s
+	deeper.decisionDepth = batchScanDepth
+	return &deeper
+}
+
 // Assemble reads every lane and returns the day.
 //
 // A lane whose read is REFUSED is omitted and named rather than reported empty.
@@ -151,7 +188,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	needsYou, count, err := s.decisions(ctx)
+	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
 	omitted, err = fill(omitted, "needs_you", err, func() {
 		out.NeedsYou = needsYou
 		out.Counts.NeedsYou = count.items
@@ -249,8 +286,19 @@ func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem
 // Duplicates take the first slot of each round. A merge is the one verb here
 // the product cannot undo, so it leads on stakes — but it leads by one place,
 // not by the whole page.
-func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, laneCount, error) {
-	pairs, err := s.duplicates.OpenCandidates(ctx, needsYouPage)
+// decisionsDepth answers how deep this read goes, defaulting to the lane
+// feed's page.
+func (s *Service) decisionsDepth() int {
+	if s.decisionDepth > 0 {
+		return s.decisionDepth
+	}
+	return needsYouPage
+}
+
+// decisionsToDepth is the same read at a depth the caller chooses: the lane feed
+// takes a page, and the ranked queue takes a census so its batch rows can count.
+func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontracts.AttentionItem, laneCount, error) {
+	pairs, err := s.duplicates.OpenCandidates(ctx, depth)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -258,7 +306,7 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: needsYouPage})
+	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: depth})
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -277,9 +325,9 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 	}
 	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {
-		approvals = append(approvals, approvalItem(approval))
+		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	return interleave(duplicates, approvals, needsYouPage),
+	return interleave(duplicates, approvals, depth),
 		laneCount{items: openPairs + openStaged, duplicates: openPairs},
 		nil
 }

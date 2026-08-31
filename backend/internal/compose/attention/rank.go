@@ -82,6 +82,17 @@ type ranked struct {
 	waitingDays  int
 	strength     int
 	occurredAt   time.Time
+	// What a routine contact decision is ABOUT, for the group it joins. Read
+	// from the staged payload rather than re-derived here: the verdict engine
+	// already decided who the address belongs to, and a second opinion would
+	// put the same decision in two groups on two reads.
+	machineSender bool
+	knownCompany  bool
+	// crowded marks a row that is one of many of its kind. It sorts below its
+	// unmarked siblings so one kind of work cannot fill the page, and it
+	// changes nothing else: the row is still what it is, and every count that
+	// reads its level still reads the truth.
+	crowded bool
 }
 
 // rankAll orders the day and explains itself.
@@ -112,6 +123,16 @@ func rankAll(rows []ranked) []crmcontracts.WorklistItem {
 // explanation cannot come to disagree — compare() below walks the same steps in
 // the same order and names the first one that decided.
 func less(a, b ranked) bool {
+	// Crowding sorts BEFORE the band, and it is the one thing that does.
+	//
+	// A hundred unanswered customers are all genuinely level 1, so comparing
+	// bands first puts every one of them above the reader's overdue task and
+	// the page becomes a single kind of work again. The few that lead keep
+	// their band's precedence; the rest wait behind the other kinds — still
+	// level 1, still saying a buyer wrote last, just not all at once.
+	if a.crowded != b.crowded {
+		return b.crowded
+	}
 	if a.item.Level != b.item.Level {
 		return a.item.Level < b.item.Level
 	}

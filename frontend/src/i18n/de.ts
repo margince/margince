@@ -7076,4 +7076,11 @@ export const de = {
   "worklist.source.failed": "{source} konnte nicht gelesen werden",
   "worklist.source.withheld": "{source} ist für dein Konto nicht sichtbar",
   "worklist.untitled.generic": "Etwas braucht dich",
+  "worklist.batch.likely_automated": "{count} vermutlich automatische Absender",
+  "worklist.batch.company_match": "{count} Adressen bei bekannten Firmen",
+  "worklist.batch.uncertain_contact": "{count} Adressen zu entscheiden",
+  "worklist.batch.duplicates": "{count} mögliche Dubletten",
+  "worklist.batch.held_draft": "{count} Entwürfe warten auf Freigabe",
+  "worklist.untitled.batch": "Eine Gruppe Routineentscheidungen",
+  "worklist.verb.review_batch": "Durchsehen",
 } as const satisfies Record<MessageKey, string>;
