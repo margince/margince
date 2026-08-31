@@ -1032,7 +1032,7 @@ public.capture_pending_counterparty acl=margince_owner=arwdDxt/margince_owner,ma
 public.capture_pending_counterparty.activity_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.attempts integer NOT NULL gen=- def=0
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['person'::text, 'role_mailbox'::text, 'organization_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text]))))
+public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['person'::text, 'role_mailbox'::text, 'organization_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_pkey PRIMARY KEY (id)
 public.capture_pending_counterparty.capture_pending_counterparty_proposal_id_fkey FOREIGN KEY (proposal_id) REFERENCES approval(id) ON DELETE SET NULL

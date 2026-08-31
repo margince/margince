@@ -85,14 +85,14 @@ tasks:
     no_payload: true
 
   capture_counterparty_verdict:
-    ladder: [local_small, cheap_cloud]
+    ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
     sites: [verdict]
     no_payload: true
     company_context: none
-    doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring."
+    doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate — real|noise|unsure per address, floor 0.7 (below → unsure, never noise). Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail."
 
   signal_extract:
     ladder: [cheap_cloud, premium]

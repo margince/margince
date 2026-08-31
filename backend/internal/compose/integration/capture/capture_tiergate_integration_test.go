@@ -29,23 +29,29 @@ import (
 func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
-	t.Run("free-mail creates the person, never a company", func(t *testing.T) {
+	t.Run("free-mail defers the person and never names a company", func(t *testing.T) {
 		sync(t, email("bob@gmail.com", "Bob Person", captureOwner, "b1@gmail.com", ""))
+		// A consumer mailbox settles the ORGANIZATION question by itself and
+		// settles nothing about the person. A customer writing from their
+		// private address and a founder's sister arrive in exactly this shape,
+		// so minting on sight put nineteen private correspondents of one
+		// mailbox into a shared CRM.
 		if n := countRows(t, e, `
 			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
-			WHERE pe.email = 'bob@gmail.com'`); n != 1 {
-			t.Fatalf("%d persons for bob, want 1", n)
+			WHERE pe.email = 'bob@gmail.com'`); n != 0 {
+			t.Fatalf("%d persons for a free-mail sender, want 0 — the verdict decides who they are", n)
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM organization WHERE display_name = 'gmail.com'`); n != 0 {
 			t.Fatal("gmail.com must never become an organization")
 		}
-		// And free-mail is decided HERE, not deferred. Nothing but tier order
-		// enforces that: a deferred free-mail sender would be judged later from
-		// a ledger row that carries only the domain, and a `real` verdict would
-		// mint the "Gmail" organization the tier just refused.
+		// The sender goes on the ledger for a verdict, which is safe for the
+		// company question in a way tier order used to be trusted for: the
+		// verdict's own create path reaches deferOrgToTriage, which refuses a
+		// consumer domain there too. Both writers of that refusal are needed —
+		// the ladder never sees a verdict-created record.
 		if n := countRows(t, e, `
-			SELECT count(*) FROM capture_pending_counterparty WHERE email = 'bob@gmail.com'`); n != 0 {
-			t.Fatalf("%d ledger rows for a free-mail sender, want 0 — deferring one lets a later verdict mint a company from gmail.com", n)
+			SELECT count(*) FROM capture_pending_counterparty WHERE email = 'bob@gmail.com'`); n != 1 {
+			t.Fatalf("%d ledger rows for a free-mail sender, want 1", n)
 		}
 	})
 	t.Run("transactional infrastructure keeps the activity, derives no counterparty", func(t *testing.T) {
@@ -148,6 +154,47 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 			SELECT count(*) FROM system_log
 			WHERE action = 'capture_correspondence_spared' AND detail->>'source_id' = 'ev2@event.expo.example'`); n != 1 {
 			t.Fatalf("%d spare breadcrumbs, want 1 — an overridden suppression must be as visible as a suppression", n)
+		}
+	})
+	t.Run("writing to an expense tool does not make its robot a contact", func(t *testing.T) {
+		// The other half of the precedence, and the half correspondence must NOT
+		// win. A prefix rule guesses that a subdomain is a sender lane, and a
+		// contact the workspace writes to overrules the guess. An exact
+		// infrastructure domain is not a guess: nobody is reachable behind
+		// `receipts@` at an expense tool, so a founder replying to their own
+		// receipts is a person answering a robot. Reading that as correspondence
+		// is what put an expense tool's "Receipts" in a real CRM as a person.
+		syncSent(t, map[string]bool{"exp1@myco.example": true},
+			email(captureOwner, "", "receipts@expensify.com", "exp1@myco.example", ""))
+		if n := countRows(t, e, `
+			SELECT count(*) FROM activity
+			WHERE counterparty_email = 'receipts@expensify.com' AND counterparty_outbound_attested`); n != 1 {
+			t.Fatalf("%d attested outbound activities, want 1 — the T1 evidence is genuinely there", n)
+		}
+
+		sync(t, email("receipts@expensify.com", "Expensify", captureOwner, "exp2@expensify.com", ""))
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'receipts@expensify.com'`); n != 0 {
+			t.Fatalf("%d persons for an expense tool's robot, want 0 — correspondence must not spare an infrastructure domain", n)
+		}
+		// And the message itself still lands: suppression withholds the contact,
+		// never the timeline row.
+		if n := countRows(t, e, `
+			SELECT count(*) FROM activity WHERE source_id = 'exp2@expensify.com'`); n != 1 {
+			t.Fatalf("%d activities, want 1 — a suppressed sender's mail is still a timeline item", n)
+		}
+	})
+	t.Run("a machine local part on a mixed domain is not spared either", func(t *testing.T) {
+		// The domain carries both a robot and the people who work there, so the
+		// rule keys on the LOCAL PART. Writing to the robot must not admit it.
+		syncSent(t, map[string]bool{"gh1@myco.example": true},
+			email(captureOwner, "", "notifications@github.com", "gh1@myco.example", ""))
+		sync(t, email("notifications@github.com", "GitHub", captureOwner, "gh2@github.com", ""))
+		if n := countRows(t, e, `
+			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			WHERE pe.email = 'notifications@github.com'`); n != 0 {
+			t.Fatalf("%d persons for a notification robot, want 0", n)
 		}
 	})
 	t.Run("a forged From:owner does not whitelist the address it names", func(t *testing.T) {
@@ -541,5 +588,53 @@ func TestCaptureTierGateNeverMintsAPersonForADecidedRoleMailbox(t *testing.T) {
 		SELECT count(*) FROM activity
 		WHERE counterparty_email = 'support@respacio.example' AND archived_at IS NULL`); n != 2 {
 		t.Fatalf("%d visible messages, want 2 — a role mailbox is not noise", n)
+	}
+}
+
+// The hazard that made free-mail decide at the ladder rather than defer: a
+// deferred sender is judged later from a ledger row carrying only the domain,
+// and a `real` verdict creating records from `gmail.com` would mint the company
+// the ladder refused.
+//
+// Deferring is safe because the refusal is not the ladder's alone. The verdict's
+// create path reaches deferOrgToTriage, which asks the same consumer-mail
+// question at the chokepoint every writer passes. This is the test that says so
+// — without it the two writers are one comment apart from disagreeing.
+func TestAVerdictOnAFreeMailSenderMintsThePersonAndNoCompany(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+
+	sync(t, email("carla@gmail.com", "Carla Person", captureOwner, "c1@gmail.com", ""))
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = 'carla@gmail.com'`); n != 0 {
+		t.Fatalf("%d persons before the verdict, want 0", n)
+	}
+
+	promoteByVerdict(t, e, "carla@gmail.com", activityIDOf(t, e, "c1@gmail.com"))
+
+	if n := countRows(t, e, `
+		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		WHERE pe.email = 'carla@gmail.com'`); n != 1 {
+		t.Fatalf("%d persons after the verdict, want 1", n)
+	}
+	// No company, in either spelling: the name the ladder would have invented,
+	// and the domain row an attach would have written.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM organization WHERE display_name = 'gmail.com'`); n != 0 {
+		t.Fatal("a verdict on a free-mail sender named gmail.com as a company")
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM organization_domain WHERE domain = 'gmail.com'`); n != 0 {
+		t.Fatal("a verdict on a free-mail sender put gmail.com on an organization")
+	}
+	// And no QUESTION about the domain either, which is the assertion with
+	// teeth. deferOrgToTriage creates nothing by itself — it opens a triage
+	// question, and the crawl behind that question is what would eventually
+	// mint the company. A test that only counted organizations would pass with
+	// the consumer refusal deleted, because the company arrives a crawl later.
+	if n := countRows(t, e, `
+		SELECT count(*) FROM organization_domain_disposition WHERE domain = 'gmail.com'`); n != 0 {
+		t.Fatal("a verdict on a free-mail sender opened a company question about gmail.com")
 	}
 }

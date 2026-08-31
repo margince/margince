@@ -451,10 +451,10 @@ func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 	}
 }
 
-// The other arm of the same ladder: a freemail sender IS created, with the
-// company suppressed. Both arms are asserted because a suite that pinned only
+// The other arm of the same ladder: a freemail sender ALSO defers, and differs
+// in leaving no company question behind. Both arms are asserted because a suite that pinned only
 // one would describe the pipeline as doing whichever it happened to check.
-func TestAFreemailSenderMintsThePerson(t *testing.T) {
+func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -462,9 +462,15 @@ func TestAFreemailSenderMintsThePerson(t *testing.T) {
 		aProviderRecord("ws-7:2002", "someone@gmail.com")); err != nil {
 		t.Fatalf("Ingest: %v", err)
 	}
+	// An extension's record walks the SAME tier ladder as a mailbox sync, which
+	// is the point of this arm: a consumer mailbox settles the organization
+	// question by itself and settles nothing about the person, so the sender
+	// goes to the verdict rather than being minted on sight. An extension that
+	// could mint what a mailbox defers would be a second answer on a public
+	// surface.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1`, "someone@gmail.com"); got != 1 {
-		t.Errorf("person rows = %d, want the one the freemail arm creates", got)
+		`SELECT count(*) FROM person_email WHERE email = $1`, "someone@gmail.com"); got != 0 {
+		t.Errorf("person rows = %d, want none — a free-mail sender defers to the verdict", got)
 	}
 	// The SUPPRESSED half, which the person count cannot see. Capture withholds
 	// a company rather than creating one, so what a corporate domain leaves

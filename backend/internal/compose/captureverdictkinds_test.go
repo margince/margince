@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// The sender taxonomy has three readers that must agree on ONE list: the
+// lifecycle mapping, the JSON schema the model is constrained by, and the
+// effect switch in apply(). They disagreed once — `personal` and `advisor`
+// reached the prompt while the schema still refused them and apply() had no arm
+// — and the comment claiming exhaustiveness is what stopped anybody checking.
+
+import (
+	"encoding/json"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
+)
+
+func TestEveryVerdictKindHasAnEffect(t *testing.T) {
+	// The effect switch is not reachable without a database, so this reads the
+	// source of apply() and asserts every kind appears as a case. A weaker test
+	// — asserting the map and the schema agree — is what the defect already
+	// passed, because both were consistent with an effect switch that ignored
+	// two of them.
+	source := readSource(t, "captureverdict.go")
+	body, ok := cutBetween(source, "switch kind {", "\n\t\t}")
+	if !ok {
+		t.Fatal("apply's effect switch not found in captureverdict.go — this gate reads it by shape, so a refactor must re-point it")
+	}
+	for _, kind := range verdictKindNames() {
+		if !strings.Contains(body, "capture.Kind"+goName(kind)) {
+			t.Errorf("kind %q is in verdictKinds but has no arm in apply's effect switch — "+
+				"it would resolve the ledger row and then fail, burning the retries and retiring to unsure", kind)
+		}
+	}
+}
+
+func TestTheModelMayAnswerEveryKindTheTaxonomyDefines(t *testing.T) {
+	// The schema is the generation-time constraint: on a grammar-constrained
+	// local rung the model CANNOT emit a kind the enum omits, whatever the
+	// prompt says. An omission here makes a kind unreachable in production
+	// while every unit test still passes.
+	var shape struct {
+		Properties struct {
+			Results struct {
+				Items struct {
+					Properties struct {
+						Verdict struct {
+							Enum []string `json:"enum"`
+						} `json:"verdict"`
+					} `json:"properties"`
+				} `json:"items"`
+			} `json:"results"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(verdictSchema(), &shape); err != nil {
+		t.Fatalf("decoding the verdict schema: %v", err)
+	}
+	got := make(map[string]bool, len(shape.Properties.Results.Items.Properties.Verdict.Enum))
+	for _, kind := range shape.Properties.Results.Items.Properties.Verdict.Enum {
+		got[kind] = true
+	}
+	if len(got) == 0 {
+		t.Fatal("the verdict schema declares no kind enum — this gate would then pass vacuously")
+	}
+	for _, kind := range verdictKindNames() {
+		if !got[kind] {
+			t.Errorf("kind %q is in verdictKinds and in the prompt, but the response schema refuses it", kind)
+		}
+	}
+	for kind := range got {
+		if _, known := statusForKind(kind); !known {
+			t.Errorf("the schema admits %q, which the taxonomy does not define", kind)
+		}
+	}
+}
+
+func TestTheTaxonomyDefinesTheKindsCaptureDeclares(t *testing.T) {
+	// Both new kinds exist, spelled the way the CHECK constraint spells them.
+	for _, kind := range []string{capture.KindPersonal, capture.KindAdvisor} {
+		if _, known := statusForKind(kind); !known {
+			t.Errorf("capture declares kind %q but the taxonomy has no status for it", kind)
+		}
+	}
+}
+
+// goName turns a snake_case kind into the Go constant suffix capture spells it
+// with: role_mailbox → RoleMailbox.
+func goName(kind string) string {
+	parts := strings.Split(kind, "_")
+	for i, p := range parts {
+		if p != "" {
+			parts[i] = strings.ToUpper(p[:1]) + p[1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
+// readSource returns a file of this package for a gate that has to read code
+// rather than call it.
+func readSource(t *testing.T, name string) string {
+	t.Helper()
+	body, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatalf("reading %s: %v", name, err)
+	}
+	return string(body)
+}
+
+// cutBetween returns what lies between the first open and the next close.
+func cutBetween(s, open, close string) (string, bool) {
+	_, after, found := strings.Cut(s, open)
+	if !found {
+		return "", false
+	}
+	body, _, found := strings.Cut(after, close)
+	return body, found
+}
+
+func TestOneAssemblerCreatesEveryCounterpartyAVerdictMakes(t *testing.T) {
+	// Three callers turn a decided sender into records: the machine's ordinary
+	// verdict, the machine's advisor verdict, and a human's accept from the
+	// review queue. They differ in who decided and in whether the record is
+	// owner-scoped; what gets created must not differ at all, because a second
+	// assembler is how the linking, the triage hand-off and the erasure check
+	// drift apart between paths that a user cannot tell apart.
+	//
+	// So the claim is that exactly one function calls EnsureCounterpartyTx on
+	// the verdict side. Asserting the CALLERS rather than the function's
+	// existence is what makes this fail when somebody adds a second: a test
+	// that only checked createCounterpartyRecords still exists would pass
+	// beside a rival that never calls it.
+	var callers []string
+	for _, name := range verdictSourceFiles(t) {
+		source := readSource(t, name)
+		if strings.Contains(source, "EnsureCounterpartyTx(") {
+			callers = append(callers, name)
+		}
+	}
+	if len(callers) != 1 || callers[0] != "captureverdictcreate.go" {
+		t.Errorf("EnsureCounterpartyTx is called from %v on the verdict side, want only captureverdictcreate.go — "+
+			"a second assembler diverges from the first in what it links and what it checks", callers)
+	}
+}
+
+// verdictSourceFiles lists this package's verdict sources, tests excluded. It
+// fails when it finds none: a census that can come back empty reports PASS for
+// a tree it never read.
+func verdictSourceFiles(t *testing.T) []string {
+	t.Helper()
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("listing the compose package: %v", err)
+	}
+	var out []string
+	for _, e := range entries {
+		name := e.Name()
+		if strings.HasPrefix(name, "captureverdict") && strings.HasSuffix(name, ".go") &&
+			!strings.HasSuffix(name, "_test.go") {
+			out = append(out, name)
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("no captureverdict*.go sources found — this gate would pass vacuously")
+	}
+	return out
+}

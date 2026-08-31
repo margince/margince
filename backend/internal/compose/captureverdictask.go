@@ -125,8 +125,8 @@ func validateVerdictPayload(payload verdictPayload, row capture.PendingCounterpa
 		}
 		seen[r.ID] = true
 		if _, known := statusForKind(r.Verdict); !known {
-			return fmt.Sprintf("kind %q is not one of person|role_mailbox|organization_sender|newsletter|transactional|spam",
-				clampToken(r.Verdict))
+			return fmt.Sprintf("kind %q is not one of %s",
+				clampToken(r.Verdict), strings.Join(verdictKindNames(), "|"))
 		}
 		if r.Confidence < 0 || r.Confidence > 1 {
 			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
@@ -166,9 +166,10 @@ func verdictSchema() json.RawMessage {
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
 					"id": schema.String(),
-					"verdict": schema.Enum(capture.KindPerson, capture.KindRoleMailbox,
-						capture.KindOrganizationSender, capture.KindNewsletter,
-						capture.KindTransactional, capture.KindSpam),
+					// From verdictKinds, not a second hand-written list: the two
+					// kinds that reached the prompt while this enum still
+					// refused them were unreachable in production.
+					"verdict":               schema.Enum(verdictKindNames()...),
 					extractionConfidenceKey: schema.Number(),
 				},
 				"id", "verdict", "confidence",

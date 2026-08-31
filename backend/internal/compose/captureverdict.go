@@ -282,9 +282,11 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 			return err
 		}
 		acted = true
-		// Exhaustive by construction: every kind in verdictKinds appears here,
-		// and an unknown one was refused above. A `default` that fell through to
-		// hideNoise is how a new kind would silently start hiding real mail.
+		// Exhaustive over verdictKinds, held by TestEveryVerdictKindHasAnEffect
+		// rather than by this comment: two kinds once reached the prompt with no
+		// arm here, and the claim of exhaustiveness is what stopped anybody
+		// checking. A `default` that fell through to hideNoise is how a new kind
+		// would silently start hiding real mail, so there is none.
 		switch kind {
 		case capture.KindPerson:
 			triageDomain, err = e.createCounterparty(ctx, tx, row)
@@ -298,6 +300,24 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 				return err
 			}
 			return e.hideNoise(ctx, tx, row)
+		case capture.KindAdvisor:
+			// A genuine contact who is the OWNER's. The record is made — a
+			// founder's lawyer is somebody they correspond with — and stays
+			// owner-scoped, because publishing it to the workspace announces
+			// that the founder has a lawyer and what about.
+			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row)
+			return err
+		case capture.KindPersonal:
+			// No record at all: a family member is not a counterparty of the
+			// business. The mail itself is not destroyed here — the purge that
+			// does that is its own change, with an undo window in front of it —
+			// so this withholds the record and leaves the thread to the
+			// mailbox owner.
+			//
+			// hideNoise is deliberately NOT called. Its scope excludes every
+			// address the workspace has written to, which is every address this
+			// kind is ever about, so it would be a no-op that read like a hide.
+			return nil
 		}
 		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
 	})
@@ -319,103 +339,6 @@ func (e *CounterpartyVerdictEngine) apply(ctx context.Context, row capture.Pendi
 // verdictReason is what the ledger records as the authority for a machine
 // disposition, distinguishing it from a T2 registry rule or a human decision.
 const verdictReason = "capture_counterparty_verdict"
-
-// createCounterparty is the `real` effect: the records capture withheld while
-// the sender was ambiguous, created now under the human who granted the
-// connection — not under the job, which owns nothing.
-//
-// An address suppressed since capture — an erasure landed while the question was
-// open — creates nothing, and says so: the row is corrected to `suppressed`
-// rather than left reading `real`. Erasure outranks a verdict, and a ledger (or
-// a SAR built from it) that reports `real` for someone with no record would be
-// describing a person who does not exist.
-func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, e.activities, counterpartyCreation{
-		Email:       row.Email,
-		DisplayName: row.DisplayName,
-		Domain:      row.Domain,
-		OwnerID:     row.OwnerID,
-		ActivityID:  row.ActivityID,
-		Source:      verdictReason,
-		CapturedBy:  verdictActor,
-	})
-	if err != nil {
-		return "", err
-	}
-	if created.Suppressed {
-		// The verdict was already written by apply(), and writing it spent the
-		// claim — so this corrects the status it just set rather than trying to
-		// resolve the row a second time.
-		return "", e.pending.CorrectResolution(ctx, tx, row.ID,
-			capture.PendingStatusReal, capture.PendingStatusSuppressed,
-			"the address was erased before the verdict landed")
-	}
-	return created.TriageDomain, nil
-}
-
-// counterpartyCreation names one deferred sender being turned into records.
-type counterpartyCreation struct {
-	Email       string
-	DisplayName string
-	Domain      string
-	OwnerID     ids.UUID
-	ActivityID  ids.UUID
-	// Source is the provenance CHANNEL — which mechanism produced these records.
-	Source string
-	// CapturedBy is the acting PRINCIPAL, in the contract's declared grammar
-	// (`human:<uuid>` | `agent:<id>` | `connector:<name>`). The two are not the
-	// same thing and stamping the channel into both puts a value on the wire
-	// that no client can parse.
-	CapturedBy string
-}
-
-// counterpartyCreated reports what a `real` answer produced that its caller has
-// to act on AFTER the transaction commits. Today that is one thing: the domain
-// whose organization question is still open, which somebody has to queue a
-// triage read for.
-type counterpartyCreated struct {
-	// Suppressed marks an address erased between capture and the answer. Nothing
-	// was created: erasure outranks a verdict.
-	Suppressed bool
-	// TriageDomain names the domain still owed an organization verdict, empty
-	// when there is none.
-	TriageDomain string
-}
-
-// createCounterpartyRecords is the ONE spelling of what a `real` answer does,
-// shared by the machine verdict and the human accept. They differ only in who
-// decided; what gets created — and that the sender's whole captured cohort is
-// linked, not just the message that raised the question — must not.
-func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Store,
-	timeline *activities.Store, in counterpartyCreation,
-) (counterpartyCreated, error) {
-	res, err := store.EnsureCounterpartyTx(ctx, tx, people.EnsureCounterpartyInput{
-		Email:       in.Email,
-		DisplayName: in.DisplayName,
-		Domain:      in.Domain,
-		OwnerID:     in.OwnerID,
-		ActivityID:  ids.From[ids.ActivityKind](in.ActivityID),
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
-	})
-	if errors.Is(err, people.ErrCounterpartySuppressed) {
-		return counterpartyCreated{Suppressed: true}, nil
-	}
-	if err != nil {
-		return counterpartyCreated{}, err
-	}
-	// The ensure links the message that raised the question; the sender may have
-	// written more while it was open, and all of them belong on this person's
-	// timeline rather than only the first.
-	if err := timeline.LinkCapturedMailTx(ctx, tx, res.PersonID, in.Email); err != nil {
-		return counterpartyCreated{}, err
-	}
-	out := counterpartyCreated{}
-	if res.TriagePending {
-		out.TriageDomain = res.TriageDomain
-	}
-	return out, nil
-}
 
 // hideNoise is the `noise` effect's first stage: the mail stops being visible
 // immediately, and its content is redacted later by the sweep (ADR-0072 §4's

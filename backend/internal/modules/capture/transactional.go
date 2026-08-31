@@ -54,6 +54,29 @@ var transactionalBaseline = map[string]struct{}{
 	"docusign.net":      {}, // DocuSign envelope infrastructure
 }
 
+// personalServiceDomains are product companies whose mail to a mailbox owner is
+// the product talking to its user: expense reports, itineraries, invoices.
+//
+// They are kept OUT of transactionalBaseline deliberately. That set is read by
+// IsMachineAddress, which the attention queue uses to drop rows — and these are
+// companies with named salespeople, not relay infrastructure like sendgrid.net.
+// Listing them there would hide a real human waiting on a reply, which the
+// queue's reader cannot recover from because nothing on the page says somebody
+// was hidden.
+//
+// What they DO justify is refusing to mint a contact from the owner's own
+// traffic with the service. Each one put a person in a real CRM — an expense
+// tool's "Receipts", an itinerary service's "Plans" — because a founder
+// replying to their own receipts reads as correspondence.
+var personalServiceDomains = map[string]struct{}{
+	"expensify.com":       {},
+	"tripit.com":          {},
+	"xero.com":            {},
+	"concur.com":          {},
+	"concursolutions.com": {},
+	"docusign.com":        {}, // the product's own mail; docusign.net is its relay
+}
+
 // transactionalPrefixes are subdomain labels that MARK a sender subdomain as an
 // email-blast lane. A prefix hit alone is NOT enough to suppress — a real
 // company can live at news.acme.com — so a prefix suppresses only with
@@ -126,6 +149,19 @@ func (l *TransactionalList) Suppress(in TransactionalInput) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+// Allowlisted reports whether an operator declared this domain always-legitimate
+// through capture.transactional_never. Every refusal in this package consults it
+// first, so one declaration covers the registry and the record-worthiness gate
+// rather than only whichever one an author remembered.
+func (l *TransactionalList) Allowlisted(domain string) bool {
+	base := freemail.Registrable(domain)
+	if base == "" {
+		return false
+	}
+	_, allow := l.never[base]
+	return allow
 }
 
 // corroborated reports whether a prefix-rule sender carries the extra evidence a

@@ -11711,7 +11711,7 @@ export interface components {
         CaptureTraceResolution: {
             /** @enum {string} */
             status: "pending" | "unsure" | "real" | "noise" | "rejected" | "suppressed";
-            /** @description Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam. */
+            /** @description Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally. */
             kind?: string | null;
             /** Format: date-time */
             resolved_at?: string | null;
