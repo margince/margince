@@ -204,3 +204,22 @@ func TestAFilteredQueueCarriesOnlyThatKindOfWork(t *testing.T) {
 		t.Fatalf("filtering for deals kept %d rows, wanted just the deal", len(kept))
 	}
 }
+
+// A staged decision's date is its EXPIRY — when the proposal lapses if nobody
+// answers — not a deadline the reader owes anything on. Counting those as work
+// due today told a rep eleven things were due on a day that held two.
+func TestADecisionsExpiryIsNotCountedAsWorkDue(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("expiring", "approval", withKind("capture_counterparty"), withDue(rankInstant.Add(72*time.Hour))),
+		},
+		Planned: []crmcontracts.AttentionItem{item("real-task", "task", withDue(rankInstant.Add(-time.Hour)))},
+	}
+
+	summary := summarize(rankAll(classifyDay(day, rankInstant)))
+
+	if summary.Due != 1 {
+		t.Fatalf("counted %d due, wanted only the task — a proposal's expiry is not the reader's deadline", summary.Due)
+	}
+}

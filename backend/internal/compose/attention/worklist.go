@@ -69,6 +69,17 @@ func page(items []crmcontracts.WorklistItem, limit int) []crmcontracts.WorklistI
 	return items
 }
 
+// owesADate reports whether this item's date is something the READER owes.
+//
+// Not every `due_at` is a deadline for the reader. A staged decision carries
+// its own EXPIRY there — the moment the proposal lapses if nobody answers — and
+// counting those as work due today told a rep eleven things were due when two
+// were. The `overdue` flag is the tell: the producers that mean a deadline
+// resolve it server-side, and the ones that mean an expiry leave it unset.
+func owesADate(item crmcontracts.WorklistItem) bool {
+	return item.Overdue != nil
+}
+
 func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
@@ -96,11 +107,7 @@ func summarize(items []crmcontracts.WorklistItem) crmcontracts.WorklistSummary {
 		case item.Level >= levelBlocking:
 			summary.LowerPriority++
 		}
-		if item.Overdue != nil && *item.Overdue {
-			summary.Due++
-			continue
-		}
-		if item.DueAt != nil {
+		if owesADate(item) {
 			summary.Due++
 		}
 	}

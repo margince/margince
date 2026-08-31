@@ -107,6 +107,9 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
 	row := base(item, level, "meetings", "meeting_unprepared")
+	// A meeting's start time IS a deadline the reader is racing, so it counts
+	// as work due — unlike a proposal's expiry, which merely lapses.
+	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = reasons
 	return ranked{item: row, deadlineAt: deadlineOf(item.DueAt), occurredAt: occurredOf(item, asOf)}
 }
@@ -115,6 +118,7 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // overdue — the promise is the fact, and the date only orders it.
 func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "tasks", "promise_breaks")
+	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("promised", nil)}
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
@@ -140,6 +144,7 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 // lane is absent for everyone else — so it never needs explaining to a rep.
 func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelWaiting, "system", "legal_deadline_missed")
+	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
 		item:       row,
@@ -169,6 +174,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // nobody dated is real work and is not today's.
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelAgreed, "tasks", "task_slips")
+	stampDeadline(&row, item.DueAt, asOf)
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
 	} else if item.DueAt != nil {
@@ -252,6 +258,20 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 	row := base(item, levelBlocking, "system", consequence)
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+}
+
+// stampDeadline marks an item whose date the READER owes.
+//
+// The flag is what tells a real deadline from a staged proposal's expiry: the
+// producers whose date is a deadline resolve it here, and the ones whose date
+// is a lapse moment leave it unset, so the header can count work due without
+// counting proposals that merely go stale.
+func stampDeadline(row *crmcontracts.WorklistItem, due *time.Time, asOf time.Time) {
+	if due == nil {
+		return
+	}
+	past := overdueAt(due, asOf)
+	row.Overdue = &past
 }
 
 func reason(kind crmcontracts.WorklistReasonKind, value *crmcontracts.WorklistValue) crmcontracts.WorklistReason {
