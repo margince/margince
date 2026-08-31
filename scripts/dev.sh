@@ -632,13 +632,17 @@ margince_server_pids() {
 # linked worktree's database on the primary's Redis database, match nothing, and
 # clean up nothing, silently: the same shape of miss this function exists to
 # close.
+# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
+# of every `margince_dev_<slug>`, so a substring test run from the primary
+# worktree matches every linked worktree's servers — and the primary is the one
+# whose cleanup would then kill all of them at once.
 stack_server_pids() { # dsn [redis_addr]
   local pid cmd
   for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"--dsn $1"* ]] || continue
-    [[ -n "${2:-}" && "$cmd" != *"--redis $2"* ]] && continue
+    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
+    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
     echo "$pid"
   done
 }

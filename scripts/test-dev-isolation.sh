@@ -386,6 +386,12 @@ fake_server() { # dsn redis — sets REPLY to the pid
     bash -c 'exec -a "./bin/worker --dsn '"$1"' --redis '"$2"'" sleep 30' &
     REPLY=$!
 }
+# The two DSNs differ ONLY in the database segment, and the primary's name is a
+# PREFIX of the linked worktree's — which is what production hands out
+# (`margince` and `margince_dev_<slug>` off one APP_DSN). An earlier fixture pair
+# that differed before that segment let a substring match pass every check here
+# while `make dev-stop` on the primary worktree killed every linked worktree's
+# servers at once.
 mine_dsn="postgres://margince_app:pw@localhost:15432/margince"
 theirs_dsn="postgres://margince_app:pw@localhost:15432/margince_dev_band"
 fake_server "$mine_dsn" "localhost:16379/0";    mine=$REPLY
@@ -420,6 +426,18 @@ check "$theirs" "$(stack_server_pids "$theirs_dsn" | sort -u)" \
       "a linked worktree's servers are found with no Redis address — its database name already names the stack"
 check "" "$(stack_server_pids "$theirs_dsn" "localhost:16379/0" | grep -x "$theirs" || true)" \
       "and guessing db 0 for it would have found nothing, which is the miss that made omitting it necessary"
+
+# The dangerous direction, and the one the checks above cannot reach: the PRIMARY
+# worktree, whose database name is a prefix of every linked worktree's. Asked
+# with no Redis address, because that is what the missing-state branch passes —
+# so nothing else narrows the match. A substring test answers both pids here and
+# one `make dev-stop` takes down every parallel session's stack.
+check "$mine" "$(stack_server_pids "$mine_dsn" | sort -u)" \
+      "the primary worktree's cleanup finds ONLY its own — margince must not match margince_dev_band"
+# The same boundary on the Redis half: /6 is a prefix of /64, and the block runs
+# 64..79, so every two-digit logical database has a single-digit prefix.
+check "" "$(stack_server_pids "$theirs_dsn" "localhost:16379/6" | grep -x "$theirs" || true)" \
+      "a logical database matches whole — /6 is not /64"
 kill "$mine" "$theirs" 2>/dev/null || true
 wait "$mine" "$theirs" 2>/dev/null || true
 
