@@ -32288,13 +32288,19 @@ components:
       properties:
         key:
           type: string
-          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft]
+          enum: [likely_automated, company_match, uncertain_contact, duplicates, held_draft, system_incident]
           description: |
             What the members have in common, which is also what makes them safe to answer
             together. `likely_automated` is mail from senders that are not people;
             `company_match` are addresses whose domain already names a company we know;
             `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
             `held_draft` are messages waiting to be released.
+
+            `system_incident` is the one that is not a decision: alike failures of one
+            CAUSE — the same rule, the same AI task, the same mailbox — reported once
+            with the count. Eight rows saying a recap did not generate are one thing that
+            is broken, and repeating it eight times is aggregation failure rather than
+            urgency.
         count: { type: integer, minimum: 0, description: 'How many decisions this row stands for.' }
         at_least:
           type: boolean
@@ -32306,6 +32312,12 @@ components:
           type: array
           items: { type: string }
           description: 'A few members, named, so the group can be checked before it is answered.'
+        cause:
+          type: string
+          description: |
+            What the members have in common, for a `system_incident`: the rule's name,
+            the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
+            rather than only how often.
 
     WorklistDealFacts:
       type: object

@@ -55,7 +55,15 @@ func foldRoutineDecisions(rows []ranked) []ranked {
 // because a bound printed as a total is a wrong number rather than a bounded
 // one, and the reader has no way to tell the two apart.
 func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
-	groups := map[crmcontracts.WorklistBatchKey][]ranked{}
+	// Keyed by the group AND its cause: every contact question shares one cause
+	// (there is none to name), while two failing rules are two incidents that
+	// must not read as one.
+	type groupKey struct {
+		key   crmcontracts.WorklistBatchKey
+		cause string
+	}
+	groups := map[groupKey][]ranked{}
+	order := []groupKey{}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
 		key, groupable := batchKeyOf(row)
@@ -63,17 +71,51 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 			kept = append(kept, row)
 			continue
 		}
-		groups[key] = append(groups[key], row)
+		cause, _ := systemCause(row)
+		at := groupKey{key: key, cause: cause}
+		if _, seen := groups[at]; !seen {
+			order = append(order, at)
+		}
+		groups[at] = append(groups[at], row)
 	}
 	// A group under the floor is not a pile; its rows go back as themselves.
-	for key, members := range groups {
+	// Walked in the order the groups were met, so one read's answer is the
+	// next read's answer rather than whatever the map iterated.
+	for _, at := range order {
+		members := groups[at]
 		if len(members) < batchFloor {
 			kept = append(kept, members...)
 			continue
 		}
-		kept = append(kept, batchRow(key, members, bounded))
+		kept = append(kept, batchRow(at.key, at.cause, members, bounded))
 	}
 	return kept
+}
+
+// systemCause is what a broken system row has in common with its siblings: the
+// rule that failed, the AI task that failed, the mailbox that stopped.
+//
+// A row with no cause it can name does not group. Grouping by SOURCE alone
+// would put a failing mailbox and a failing rule in one row, which tells the
+// reader two things are broken and names neither.
+func systemCause(row ranked) (string, bool) {
+	if row.item.Category != "system" || row.item.Source == "notice" {
+		return "", false
+	}
+	// The NAME of the thing that broke, where the producer sends one: an
+	// automation's own title is the rule ("Post-meeting recap draft"), and
+	// eight failures of it are one broken rule. Its `kind` is the outcome —
+	// "failed" — which every broken rule shares, so grouping on that would put
+	// a failing mailbox and a failing rule under one heading.
+	if row.item.Title != nil && *row.item.Title != "" {
+		return *row.item.Title, true
+	}
+	// Otherwise the producer's sub-type: an AI task's kind IS what ran, and a
+	// mailbox concern's kind is the condition.
+	if row.item.Kind == nil || *row.item.Kind == "" {
+		return "", false
+	}
+	return *row.item.Kind, true
 }
 
 // batchKeyOf says which group a row belongs to, and whether it may be grouped
@@ -83,6 +125,12 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 // at level 5 and stays its own row however many of it there are: the reader has
 // to see each one, because each holds up somebody different.
 func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
+	if row.item.Category == "system" {
+		if _, ok := systemCause(row); ok {
+			return "system_incident", true
+		}
+		return "", false
+	}
 	if row.item.Category != "decisions" || row.item.Level != levelRoutine {
 		return "", false
 	}
@@ -119,6 +167,15 @@ func contactBatchKey(row ranked) crmcontracts.WorklistBatchKey {
 	}
 }
 
+// batchID names one group. Two causes under one key are two groups, so the
+// cause is part of the identity rather than only its description.
+func batchID(key crmcontracts.WorklistBatchKey, cause string) string {
+	if cause == "" {
+		return string(key)
+	}
+	return string(key) + ":" + cause
+}
+
 // batchSample is how many members a batch names.
 //
 // Enough to recognise the kind, few enough to stay one line. A reader who
@@ -131,7 +188,7 @@ const batchSample = 3
 // It carries no subject: a batch is about no single record, and offering `open`
 // would send the reader to whichever member happened to be first. Its verb is
 // the batch screen, which the client routes from the source alone.
-func batchRow(key crmcontracts.WorklistBatchKey, members []ranked, bounded bool) ranked {
+func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked, bounded bool) ranked {
 	sample := make([]string, 0, batchSample)
 	for _, member := range members {
 		if len(sample) == batchSample {
@@ -141,15 +198,29 @@ func batchRow(key crmcontracts.WorklistBatchKey, members []ranked, bounded bool)
 			sample = append(sample, *member.item.Title)
 		}
 	}
+	// An incident is not hygiene. It says something is BROKEN, and while it is
+	// broken every quiet claim on this page is suspect — a mailbox that stopped
+	// makes "nobody is waiting" a sentence the product cannot support. So it
+	// keeps its members' own band and their own consequence rather than being
+	// filed with the routine tidying.
+	level, category, consequence := levelRoutine,
+		crmcontracts.WorklistItemCategory("decisions"),
+		crmcontracts.WorklistItemConsequence("data_drifts")
+	if key == "system_incident" {
+		level = members[0].item.Level
+		category = "system"
+		consequence = members[0].item.Consequence
+	}
 	count := len(members)
 	row := crmcontracts.WorklistItem{
-		// The key IS the id: one row per kind per read, and a client that
-		// re-reads finds the same row rather than a new one each time.
-		Id:          string(key),
+		// The key and its cause ARE the id: one row per kind per cause per read,
+		// so a client that re-reads finds the same row rather than a new one,
+		// and two failing rules stay two rows.
+		Id:          batchID(key, cause),
 		Source:      "batch",
-		Category:    "decisions",
-		Level:       levelRoutine,
-		Consequence: "data_drifts",
+		Category:    category,
+		Level:       level,
+		Consequence: consequence,
 		Because:     []crmcontracts.WorklistReason{reason("routine", nil)},
 		Batch: &crmcontracts.WorklistBatch{
 			Key:    key,
@@ -157,6 +228,9 @@ func batchRow(key crmcontracts.WorklistBatchKey, members []ranked, bounded bool)
 			Sample: &sample,
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
+	}
+	if cause != "" {
+		row.Batch.Cause = &cause
 	}
 	if bounded {
 		atLeast := true

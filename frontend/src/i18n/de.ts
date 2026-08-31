@@ -7085,4 +7085,6 @@ export const de = {
   "worklist.verb.review_batch": "Durchsehen",
   "worklist.verb.draft_reply": "Zum Antworten öffnen",
   "worklist.deal.closes": "Abschluss {date}",
+  "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
+  "worklist.batch.unnamedCause": "Etwas",
 } as const satisfies Record<MessageKey, string>;

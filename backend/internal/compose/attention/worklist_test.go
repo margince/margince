@@ -760,3 +760,73 @@ func TestAnAbsorbedDealKeepsItsMoneyOnTheWaitingRow(t *testing.T) {
 		t.Fatalf("the row says %d, wanted the deal's own amount", *out.Queue[0].Deal.AmountMinor)
 	}
 }
+
+// Eight rows saying a recap did not generate are ONE thing that is broken.
+// Repeating it eight times is aggregation failure rather than urgency — the
+// concept's words, and the real workspace holds 163 failures of one AI task.
+func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
+	failures := []crmcontracts.AttentionItem{}
+	for i := 0; i < 8; i++ {
+		failures = append(failures, item("f"+string(rune('a'+i)), "ai_work_health", withKind("site_triage")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 1 {
+		t.Fatalf("eight failures of one task drew %d rows", len(got))
+	}
+	if got[0].Batch == nil || got[0].Batch.Count != 8 {
+		t.Fatal("the incident does not say how many times it happened")
+	}
+	if got[0].Batch.Cause == nil || *got[0].Batch.Cause != "site_triage" {
+		t.Fatal("the incident does not name WHAT is broken")
+	}
+}
+
+// Two causes are two incidents. Grouping by source alone would tell a reader
+// two things are broken and name neither.
+func TestTwoBrokenThingsAreTwoIncidents(t *testing.T) {
+	failures := []crmcontracts.AttentionItem{}
+	for i := 0; i < 4; i++ {
+		failures = append(failures,
+			item("a"+string(rune('a'+i)), "ai_work_health", withKind("site_triage")),
+			item("b"+string(rune('a'+i)), "ai_work_health", withKind("signal_extract")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if len(got) != 2 {
+		t.Fatalf("two broken tasks drew %d rows", len(got))
+	}
+	causes := map[string]bool{}
+	for _, row := range got {
+		if row.Batch != nil && row.Batch.Cause != nil {
+			causes[*row.Batch.Cause] = true
+		}
+	}
+	if !causes["site_triage"] || !causes["signal_extract"] {
+		t.Fatalf("the incidents name %v, wanted both broken tasks", causes)
+	}
+}
+
+// An incident is not hygiene: while something is broken, every quiet claim on
+// the page is suspect, so it keeps its own band rather than being filed with
+// the routine tidying.
+func TestAnIncidentIsNotFiledAsRoutineTidying(t *testing.T) {
+	failures := []crmcontracts.AttentionItem{}
+	for i := 0; i < 4; i++ {
+		failures = append(failures, item("m"+string(rune('a'+i)), "capture_health", withKind("reauth_required")))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &failures}
+
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
+
+	if got[0].Category != "system" {
+		t.Fatalf("the incident is filed under %q, wanted system", got[0].Category)
+	}
+	if got[0].Consequence == "data_drifts" {
+		t.Fatal("a broken mailbox says the records drift, which is not what it costs")
+	}
+}

@@ -11395,6 +11395,7 @@ const (
 	Duplicates       WorklistBatchKey = "duplicates"
 	HeldDraft        WorklistBatchKey = "held_draft"
 	LikelyAutomated  WorklistBatchKey = "likely_automated"
+	SystemIncident   WorklistBatchKey = "system_incident"
 	UncertainContact WorklistBatchKey = "uncertain_contact"
 )
 
@@ -11408,6 +11409,8 @@ func (e WorklistBatchKey) Valid() bool {
 	case HeldDraft:
 		return true
 	case LikelyAutomated:
+		return true
+	case SystemIncident:
 		return true
 	case UncertainContact:
 		return true
@@ -27630,6 +27633,11 @@ type WorklistBatch struct {
 	// bound printed as a total is a wrong number rather than a bounded one.
 	AtLeast *bool `json:"at_least,omitempty"`
 
+	// Cause What the members have in common, for a `system_incident`: the rule's name,
+	// the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
+	// rather than only how often.
+	Cause *string `json:"cause,omitempty"`
+
 	// Count How many decisions this row stands for.
 	Count int `json:"count"`
 
@@ -27638,6 +27646,12 @@ type WorklistBatch struct {
 	// `company_match` are addresses whose domain already names a company we know;
 	// `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
 	// `held_draft` are messages waiting to be released.
+	//
+	// `system_incident` is the one that is not a decision: alike failures of one
+	// CAUSE — the same rule, the same AI task, the same mailbox — reported once
+	// with the count. Eight rows saying a recap did not generate are one thing that
+	// is broken, and repeating it eight times is aggregation failure rather than
+	// urgency.
 	Key WorklistBatchKey `json:"key"`
 
 	// Sample A few members, named, so the group can be checked before it is answered.
@@ -27649,6 +27663,12 @@ type WorklistBatch struct {
 // `company_match` are addresses whose domain already names a company we know;
 // `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
 // `held_draft` are messages waiting to be released.
+//
+// `system_incident` is the one that is not a decision: alike failures of one
+// CAUSE — the same rule, the same AI task, the same mailbox — reported once
+// with the count. Eight rows saying a recap did not generate are one thing that
+// is broken, and repeating it eight times is aggregation failure rather than
+// urgency.
 type WorklistBatchKey string
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'

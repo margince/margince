@@ -24462,9 +24462,15 @@ export interface components {
              *     `company_match` are addresses whose domain already names a company we know;
              *     `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
              *     `held_draft` are messages waiting to be released.
+             *
+             *     `system_incident` is the one that is not a decision: alike failures of one
+             *     CAUSE — the same rule, the same AI task, the same mailbox — reported once
+             *     with the count. Eight rows saying a recap did not generate are one thing that
+             *     is broken, and repeating it eight times is aggregation failure rather than
+             *     urgency.
              * @enum {string}
              */
-            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft";
+            key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft" | "system_incident";
             /** @description How many decisions this row stands for. */
             count: number;
             /**
@@ -24475,6 +24481,12 @@ export interface components {
             at_least?: boolean;
             /** @description A few members, named, so the group can be checked before it is answered. */
             sample?: string[];
+            /**
+             * @description What the members have in common, for a `system_incident`: the rule's name,
+             *     the AI task's kind, the mailbox. Named so a reader knows WHAT is broken
+             *     rather than only how often.
+             */
+            cause?: string;
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is

@@ -7019,4 +7019,6 @@ export const vi = {
   "worklist.verb.review_batch": "Xem lại",
   "worklist.verb.draft_reply": "Mở để trả lời",
   "worklist.deal.closes": "chốt {date}",
+  "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
+  "worklist.batch.unnamedCause": "Một tác vụ",
 } as const satisfies Record<MessageKey, string>;

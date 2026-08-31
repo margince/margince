@@ -7170,6 +7170,8 @@ export const en = {
   "worklist.verb.review_batch": "Review",
   "worklist.verb.draft_reply": "Open to reply",
   "worklist.deal.closes": "closes {date}",
+  "worklist.batch.system_incident": "{cause} failed {count} times",
+  "worklist.batch.unnamedCause": "Something",
 } as const;
 
 export type MessageKey = keyof typeof en;

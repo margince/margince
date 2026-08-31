@@ -278,6 +278,13 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     const count = item.batch.at_least
       ? `${formatNumber(item.batch.count, locale)}+`
       : formatNumber(item.batch.count, locale);
+    // An incident names WHAT is broken; a hygiene group names its kind.
+    if (item.batch.key === "system_incident") {
+      return t("worklist.batch.system_incident", {
+        count,
+        cause: item.batch.cause ?? t("worklist.batch.unnamedCause"),
+      });
+    }
     return t(`worklist.batch.${item.batch.key}` as const, { count });
   }
   if (item.title) {
