@@ -35,6 +35,11 @@ const batchFloor = 3
 // both ask about them, and a typo in either would put the same decision in two
 // places while both halves still compiled.
 const (
+	// categorySystem is the badge a broken pipe wears. A constant because the
+	// grouper asks about it three times and a typo would silently stop an
+	// incident grouping while every half still compiled.
+	categorySystem = crmcontracts.WorklistItemCategory("system")
+
 	kindHeldDraft     = "held_draft"
 	kindScheduledSend = "scheduled_send_held"
 )
@@ -99,7 +104,7 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 // would put a failing mailbox and a failing rule in one row, which tells the
 // reader two things are broken and names neither.
 func systemCause(row ranked) (string, bool) {
-	if row.item.Category != "system" || row.item.Source == "notice" {
+	if row.item.Category != categorySystem || row.item.Source == "notice" {
 		return "", false
 	}
 	// The NAME of the thing that broke, where the producer sends one: an
@@ -125,7 +130,7 @@ func systemCause(row ranked) (string, bool) {
 // at level 5 and stays its own row however many of it there are: the reader has
 // to see each one, because each holds up somebody different.
 func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
-	if row.item.Category == "system" {
+	if row.item.Category == categorySystem {
 		if _, ok := systemCause(row); ok {
 			return "system_incident", true
 		}
@@ -208,7 +213,7 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		crmcontracts.WorklistItemConsequence("data_drifts")
 	if key == "system_incident" {
 		level = members[0].item.Level
-		category = "system"
+		category = categorySystem
 		consequence = members[0].item.Consequence
 	}
 	count := len(members)
