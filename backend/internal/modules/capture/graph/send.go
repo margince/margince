@@ -19,10 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"slices"
 
-	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/capture/mailwire"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -122,11 +120,22 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 	if err := c.api.SendMIME(ctx, access, []byte(mailwire.Build(st.Owner, msg))); err != nil {
 		return connector.SendReceipt{}, err
 	}
-	// sendMail returns 202 Accepted with no body: Microsoft names no message id
-	// at submission, so the sent copy has to be looked up by the identity it was
-	// asked to carry. That lookup is also the read-back — one call answers both
-	// "which message is it" and "what identity does it actually carry".
-	return c.sentReceipt(ctx, access, st.Owner, msg.MessageID), nil
+	// An EMPTY receipt, and it is the honest one rather than a gap.
+	//
+	// sendMail answers 202 Accepted with no body and no message id, and the
+	// send is ASYNCHRONOUS: Graph writes a draft, returns, and Exchange moves
+	// the copy into Sent Items only once it has actually gone. Looking it up
+	// here would therefore miss almost every time — a round trip per send to
+	// learn nothing, and a warning logged on the ordinary path.
+	//
+	// Nothing is lost by not looking. connector.SendReceipt reads an empty
+	// RFC822MessageID as "no re-key owed", and for a MIME submit that is the
+	// truth: the identity this system minted is the one in the message body
+	// Microsoft was handed, so there is nothing to correct. A tenant that
+	// rewrites it on submission is the exception, and the retry guard above —
+	// which runs later, when the copy HAS been filed — is what still finds the
+	// message in that case.
+	return connector.SendReceipt{}, nil
 }
 
 // Carriage declares what this connector transmits (connector.AttachmentCarrier).
@@ -155,56 +164,4 @@ func (c *Connector) Carriage() connector.Carriage {
 		// extra bound to declare.
 		MaxBodyWithFiles: 0,
 	}
-}
-
-// sentReceipt resolves what Microsoft actually filed, after a submission it
-// acknowledged without naming.
-//
-// EVERY failure returns an empty receipt rather than an error. The message has
-// already been transmitted when this runs, and returning an error would hand
-// the delivery back to a retry — mailing the recipient a second time to fix a
-// bookkeeping problem. An unread identity costs one duplicate timeline row; a
-// re-mail costs the recipient's trust.
-//
-// What comes back is CHECKED before it is reported. These are remote bytes, and
-// the string parsed out of them becomes a natural key, a thread key and a log
-// field on the strength of this return alone — so it must satisfy
-// connector.ValidMessageID, the same predicate SendEmail refuses to transmit
-// without.
-//
-// The identity is parsed with mailmap, the same function capture parses the
-// echo with, so the identity recorded here and the identity derived there are
-// one function of one set of bytes.
-func (c *Connector) sentReceipt(ctx context.Context, access, owner, askedFor string) connector.SendReceipt {
-	providerID, found, err := c.api.FindSentByMessageID(ctx, access, askedFor)
-	if err != nil || !found {
-		// Not a fault to report: Exchange may have rewritten the identity, or
-		// the sent copy may not have been filed yet. Either way the message is
-		// gone and the delivery must not be retried over a lookup.
-		slog.WarnContext(ctx, "graph: could not resolve the sent copy of a transmitted message",
-			"err", err, "found", found)
-		return connector.SendReceipt{}
-	}
-	raw, err := c.api.GetMIME(ctx, access, providerID)
-	if err != nil {
-		slog.WarnContext(ctx, "graph: reading back the sent message identity",
-			"err", err, "provider_message_id", providerID)
-		return connector.SendReceipt{ProviderMessageID: providerID}
-	}
-	parsed, err := mailmap.Parse(raw, owner)
-	if err != nil {
-		slog.WarnContext(ctx, "graph: parsing the sent message identity", "err", err)
-		return connector.SendReceipt{ProviderMessageID: providerID}
-	}
-	id := parsed.ID()
-	if !connector.ValidMessageID(id) {
-		// The rejected value is deliberately NOT logged: it is unbounded
-		// provider input, and the two facts that diagnose this — that the
-		// read-back answered with something unusable, and how big it was —
-		// carry no risk of writing megabytes or control bytes into a log line.
-		slog.WarnContext(ctx, "graph: the sent copy carries no usable message identity",
-			"provider_message_id", providerID, "identity_bytes", len(id))
-		return connector.SendReceipt{ProviderMessageID: providerID}
-	}
-	return connector.SendReceipt{ProviderMessageID: providerID, RFC822MessageID: id}
 }

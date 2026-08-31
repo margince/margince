@@ -11,6 +11,7 @@ package comms
 import (
 	"context"
 	"errors"
+	"sort"
 	"strings"
 	"sync"
 
@@ -328,6 +329,22 @@ func SetChannelProviders(providers []string) {
 var mailSendScopes = map[string]string{
 	"gmail": "https://www.googleapis.com/auth/gmail.send",
 	"graph": "Mail.Send",
+}
+
+// MailSendProviders names every provider this module hands a send scope to.
+//
+// Exported so the gate that binds these strings to the connectors' own
+// constants can derive its corpus from THIS map rather than restating it. A
+// second list in the test would be a second answer, and the failure it would
+// hide is precisely the one that matters: a provider added here and nowhere
+// else, whose scope nothing checks against what its connector re-checks.
+func MailSendProviders() []string {
+	out := make([]string, 0, len(mailSendScopes))
+	for provider := range mailSendScopes {
+		out = append(out, provider)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // SendScopeFor answers whether a provider can transmit and, when its grant must

@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/comms"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // EVERY sending mail provider, in one table, so a third one cannot be added to
@@ -67,19 +66,29 @@ func TestEveryMailConsentRequestsTheScopeTheSendPathDemands(t *testing.T) {
 	}
 }
 
-// A provider comms hands a send scope to must be one that can actually send.
-// The reverse of the drift above and just as silent: a scope demanded of a
-// connector with no SendEmail parks every delivery on a capability nothing
-// implements.
-func TestEveryProviderCommsGivesASendScopeCanSend(t *testing.T) {
-	senders := map[string]connector.EmailSender{
-		"gmail": &gmail.Connector{},
-		"graph": &graph.Connector{},
-	}
+// The table above must cover EXACTLY the providers comms hands a scope to.
+//
+// Derived from comms' own map rather than restated, because a second list is a
+// second answer and the failure it hides is the one that matters: a provider
+// added to mailSendScopes and to nothing else, whose scope no test ever checks
+// against what its connector re-checks. The compile-time connector.EmailSender
+// assertions elsewhere already prove each named connector can send; what only
+// this can prove is that none was forgotten.
+func TestTheSendScopeTableCoversExactlyWhatCommsHandsAScopeTo(t *testing.T) {
+	covered := make(map[string]bool, len(sendingMailProviders))
 	for _, p := range sendingMailProviders {
-		if _, ok := senders[p.provider]; !ok {
-			t.Errorf("comms gives %s a send scope, but no connector.EmailSender is named for it here", p.provider)
+		covered[p.provider] = true
+	}
+	for _, provider := range comms.MailSendProviders() {
+		if !covered[provider] {
+			t.Errorf("comms hands %q a send scope and this file does not bind it to a connector constant — "+
+				"its scope is checked against nothing", provider)
 		}
+		delete(covered, provider)
+	}
+	for provider := range covered {
+		t.Errorf("this file binds %q, which comms hands no send scope: every delivery for it parks as "+
+			"\"provider cannot send messages\"", provider)
 	}
 }
 

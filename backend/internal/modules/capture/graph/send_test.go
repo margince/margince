@@ -33,12 +33,8 @@ func sendableMessage() connector.EmailMessage {
 	}
 }
 
-func TestSendTransmitsTheRenderedMessageAndReportsTheFiledIdentity(t *testing.T) {
-	api := &fakeAPI{
-		email:    owner,
-		sentByID: map[string]string{"outbound-1@margince.test": "AAMk-sent-1"},
-		raws:     map[string][]byte{"AAMk-sent-1": rawMsg("outbound-1@margince.test", owner)},
-	}
+func TestSendTransmitsTheRenderedMessage(t *testing.T) {
+	api := &fakeAPI{email: owner}
 	c := New(&fakeOAuth{access: "a"}, api)
 
 	receipt, err := c.SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage())
@@ -60,11 +56,17 @@ func TestSendTransmitsTheRenderedMessageAndReportsTheFiledIdentity(t *testing.T)
 			t.Errorf("the transmitted message is missing %q:\n%s", want, wire)
 		}
 	}
-	if receipt.ProviderMessageID != "AAMk-sent-1" {
-		t.Errorf("ProviderMessageID = %q, want the sent copy's id", receipt.ProviderMessageID)
+	// An EMPTY receipt is the honest one. sendMail is asynchronous — Graph
+	// returns 202 with no id and Exchange files the sent copy afterwards — so
+	// there is nothing to name yet, and connector.SendReceipt reads an empty
+	// RFC822MessageID as "no re-key owed", which for a MIME submit is the
+	// truth: the identity in the receipt IS the one in the message body.
+	if receipt.ProviderMessageID != "" || receipt.RFC822MessageID != "" {
+		t.Errorf("receipt = %+v, want empty: Microsoft names nothing at submission", receipt)
 	}
-	if receipt.RFC822MessageID != "outbound-1@margince.test" {
-		t.Errorf("RFC822MessageID = %q, want the identity the wire actually carries", receipt.RFC822MessageID)
+	// And nothing was looked up: a lookup here would miss almost every time.
+	if api.findCalls != 0 {
+		t.Errorf("findCalls = %d — a round trip per send that Graph cannot yet answer", api.findCalls)
 	}
 }
 
@@ -96,17 +98,16 @@ func TestARetryThatFindsAPriorSendDoesNotMailAgain(t *testing.T) {
 	}
 }
 
-// A FIRST attempt must not pay for the lookup: it cannot have been sent yet,
-// and the call would be a round trip per message for nothing.
-func TestAFirstAttemptDoesNotRunThePriorSendLookupBeforeSending(t *testing.T) {
+// A FIRST attempt must not pay for the lookup at all: it cannot have been sent
+// yet, and the call would be a round trip per message for nothing.
+func TestAFirstAttemptNeverLooksUpAPriorSend(t *testing.T) {
 	api := &fakeAPI{email: owner, sentByID: map[string]string{}}
 	if _, err := New(&fakeOAuth{access: "a"}, api).
 		SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage()); err != nil {
 		t.Fatalf("SendEmail: %v", err)
 	}
-	// One find: the read-back after sending, never a guard before it.
-	if api.findCalls != 1 || api.sendCalls != 1 {
-		t.Errorf("findCalls=%d sendCalls=%d, want one send and only the read-back lookup", api.findCalls, api.sendCalls)
+	if api.findCalls != 0 || api.sendCalls != 1 {
+		t.Errorf("findCalls=%d sendCalls=%d, want one send and no lookup", api.findCalls, api.sendCalls)
 	}
 }
 
@@ -171,36 +172,6 @@ func TestSendRefusesAMessageWithNoUsableIdentityBeforeAnyProviderCall(t *testing
 	}
 }
 
-// The message has already gone when the read-back runs, so a failure there
-// must NOT become an error: handing the delivery back to a retry would mail
-// the recipient a second time to fix a bookkeeping problem.
-func TestSendSucceedsWithNoIdentityWhenTheReadBackFails(t *testing.T) {
-	cases := map[string]*fakeAPI{
-		"the sent copy cannot be found":   {email: owner, sentByID: map[string]string{}},
-		"the sent copy cannot be fetched": {email: owner, sentByID: map[string]string{"outbound-1@margince.test": "AAMk-sent-1"}, getErr: ErrUnreachable},
-		"the sent copy will not parse": {
-			email:    owner,
-			sentByID: map[string]string{"outbound-1@margince.test": "AAMk-sent-1"},
-			raws:     map[string][]byte{"AAMk-sent-1": []byte("not a message")},
-		},
-	}
-	for name, api := range cases {
-		t.Run(name, func(t *testing.T) {
-			receipt, err := New(&fakeOAuth{access: "a"}, api).
-				SendEmail(context.Background(), sendableAuth(t, SendScope), sendableMessage())
-			if err != nil {
-				t.Fatalf("SendEmail = %v, want success: the message is already gone", err)
-			}
-			if receipt.RFC822MessageID != "" {
-				t.Errorf("RFC822MessageID = %q, want none reported rather than a guess", receipt.RFC822MessageID)
-			}
-			if api.sendCalls != 1 {
-				t.Errorf("sendCalls = %d, want exactly one", api.sendCalls)
-			}
-		})
-	}
-}
-
 // A submission the provider refuses is an error, not a silent success: the
 // delivery must not be recorded as sent.
 func TestASubmissionMicrosoftRefusesIsReportedAsAFailure(t *testing.T) {
@@ -219,11 +190,20 @@ func TestCarriageDeclaresMicrosoftsOwnCeiling(t *testing.T) {
 	if !got.Carries {
 		t.Fatal("Carries = false; a message with files would park against a connector that can carry them")
 	}
-	if got.MaxFiles != maxSendableFiles {
-		t.Errorf("MaxFiles = %d, want %d", got.MaxFiles, maxSendableFiles)
+	// LITERALS, not the constants Carriage returns. Comparing a value against
+	// the constant that produced it catches a copy-paste slip and nothing else
+	// — including the one thing this test exists for, which is the numbers
+	// silently becoming Gmail's.
+	//
+	// 10 files is the contract's attachment_ids cap. 2 MiB is what survives
+	// Microsoft's 4 MB sendMail ceiling once the payload has been base64'd
+	// twice (once per attachment inside the MIME, once for the whole message
+	// on the wire) — Gmail's figure is 25 MiB.
+	if got.MaxFiles != 10 {
+		t.Errorf("MaxFiles = %d, want 10 (the contract's attachment_ids cap)", got.MaxFiles)
 	}
-	if got.MaxBytesPerFile != maxSendableFileBytes {
-		t.Errorf("MaxBytesPerFile = %d, want Microsoft's %d — Gmail's larger cap would leave over-large mail to an opaque refusal", got.MaxBytesPerFile, maxSendableFileBytes)
+	if got.MaxBytesPerFile != 2<<20 {
+		t.Errorf("MaxBytesPerFile = %d, want 2 MiB — Gmail's 25 MiB would leave over-large mail to an opaque 413", got.MaxBytesPerFile)
 	}
 }
 
