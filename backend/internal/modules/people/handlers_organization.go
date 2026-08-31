@@ -202,6 +202,26 @@ func (h Handlers) GetOrganizationVatCheck(w http.ResponseWriter, r *http.Request
 	httperr.WriteJSON(w, http.StatusOK, vatCheckWire(check))
 }
 
+// RequestOrganizationVatCheck queues the consultation a person asked for.
+//
+// 202 rather than 200: the register can be slow or decline, and the answer is
+// read back from the GET above rather than returned here. Both refusals the
+// store distinguishes reach the reader as themselves — no number to consult is
+// a 404, and asking again too soon is a 429 — because "nothing to check" and
+// "wait a moment" call for different actions from whoever pressed the button.
+func (h Handlers) RequestOrganizationVatCheck(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	err := h.store.RequestVatCheck(r.Context(), pathID[ids.OrganizationKind](id))
+	if errors.Is(err, ErrVatCheckNotRecorded) {
+		writeStoreErr(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
 // vatCheckWire maps the stored standing onto the wire. The three optional
 // fields go out absent rather than empty: the register naming nobody and the
 // register returning an empty name are the same fact, and "" on the wire reads

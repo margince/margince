@@ -1941,7 +1941,28 @@ export interface paths {
          */
         get: operations["getOrganizationVatCheck"];
         put?: never;
-        post?: never;
+        /**
+         * Ask the register again about the number this company states.
+         * @description The automatic lanes consult the register only about a number they have not seen: a
+         *     write states a new number and earns one consultation. Nothing re-asks on a schedule,
+         *     which is deliberate — a verdict going stale is not an event the product can observe.
+         *     So a rep who knows a registration changed at the registry had no way to find out, and
+         *     the stored answer stood indefinitely.
+         *
+         *     This is that way. A person pressing it has said the stored answer is not good enough,
+         *     and the consultation runs even though the number has not changed. It is HUMAN-ONLY:
+         *     the register is a shared public service consulted on one worker, and an agent able to
+         *     re-ask in a loop is how an installation gets blocked for everybody.
+         *
+         *     The work is queued, not done here — the register can be slow or decline, and neither
+         *     should hold a request open. `202` means the consultation was accepted; read the
+         *     verdict back from the GET above.
+         *
+         *     `404` when the company states no VAT number to consult, or when this installation
+         *     consults no register at all. `429` when the same number was consulted moments ago:
+         *     the floor is a few minutes, and the answer already on the record is the answer.
+         */
+        post: operations["requestOrganizationVatCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -27258,6 +27279,39 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    requestOrganizationVatCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The consultation was queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            /** @description Consulted too recently — the answer on the record still stands. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getLatestSiteRead: {

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -87,7 +88,12 @@ var ErrVatCheckNotRecorded = errors.New("people: no VAT check is recorded for th
 // number still writes, and no job is queued. Same shape as GeocodeEnqueue, and
 // for the same reason — the number is what the page stated; the verification is
 // what this installation can offer.
-type VatCheckEnqueue func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error
+//
+// requested distinguishes a consultation a PERSON asked for from one a write
+// earned. Both queue the same job on the same shared rate; they differ in what
+// the worker does when the stored answer already names this number — a write
+// leaves it alone, a person's request asks again.
+type VatCheckEnqueue func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, requested bool) error
 
 // enqueueVatCheck queues the consultation a VAT-number write earns, on the
 // caller's transaction so the job and the number commit together.
@@ -95,7 +101,71 @@ func (s *Store) enqueueVatCheck(ctx context.Context, tx pgx.Tx, orgID ids.Organi
 	if s.vatCheckEnqueue == nil {
 		return nil
 	}
-	return s.vatCheckEnqueue(ctx, tx, orgID)
+	return s.vatCheckEnqueue(ctx, tx, orgID, false)
+}
+
+// vatRecheckCooldown is how long a person's request stands as the answer before
+// another one is worth spending.
+//
+// The register is a shared public service and the installation consults it on
+// one worker: a button with no floor under it is how an installation gets
+// blocked for everybody. Short enough that a rep who has just fixed a number at
+// the registry can act on it within a coffee, long enough that a double-click or
+// an impatient second press costs nothing.
+const vatRecheckCooldown = 5 * time.Minute
+
+// RequestVatCheck queues the consultation a person asked for.
+//
+// The two refusals are different facts and stay apart: a company that states no
+// number has nothing to consult (ErrVatCheckNotRecorded, so the reader is told
+// to enter one), and a company consulted moments ago is being asked too often
+// (ErrBudgetExceeded → 429, so the reader is told to wait rather than that
+// something is wrong).
+func (s *Store) RequestVatCheck(ctx context.Context, orgID ids.OrganizationID) error {
+	// A consultation spends the installation's shared rate and writes a receipt
+	// onto the record, so it takes the same authority as any other change to
+	// that record rather than mere read access.
+	if err := auth.Require(ctx, entityOrganization, principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureWritableLive(ctx, tx, entityOrganization, orgID.UUID); err != nil {
+			return err
+		}
+		var number string
+		var tooSoon bool
+		// The cooldown is measured against the DATABASE's clock, the same one
+		// that stamped checked_at. Comparing a stored timestamp to this
+		// process's own wall clock makes the floor depend on how far a
+		// container's clock has drifted from Postgres's.
+		const read = `
+			SELECT btrim(f.value),
+			       c.checked_at IS NOT NULL AND c.checked_at > now() - $2::interval
+			  FROM organization_profile_field f
+			  LEFT JOIN organization_vat_check c ON c.organization_id = f.organization_id
+			 WHERE f.organization_id = $1 AND f.field = 'register_vat'`
+		err := tx.QueryRow(ctx, read, orgID.UUID, vatRecheckCooldown.String()).Scan(&number, &tooSoon)
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && number == "") {
+			return fmt.Errorf(
+				"this company states no VAT number to check: %w", ErrVatCheckNotRecorded)
+		}
+		if err != nil {
+			return fmt.Errorf("people: reading the VAT number to request a check for: %w", err)
+		}
+		if tooSoon {
+			return fmt.Errorf(
+				"this number was consulted less than %s ago: %w",
+				vatRecheckCooldown, apperrors.ErrBudgetExceeded)
+		}
+		if s.vatCheckEnqueue == nil {
+			// This deployment consults no register. Refusing is what keeps the
+			// button honest: queueing into a lane nothing reads would answer the
+			// reader with a promise the installation cannot keep.
+			return fmt.Errorf(
+				"this installation consults no VAT register: %w", ErrVatCheckNotRecorded)
+		}
+		return s.vatCheckEnqueue(ctx, tx, orgID, true)
+	})
 }
 
 // statesAVatNumber reports whether an accepted set of read-back fields carries
