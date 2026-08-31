@@ -222,20 +222,39 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 //
 // An absent or null field names nothing and is skipped: these are optional by
 // contract, and a person captured with no employer carries no organization id.
+// The value is resolved ONCE and by the same walk that reads it — a separate
+// presence test would answer for a different path than the one the probe uses,
+// and the disagreement resolves to a skip, which is a pass.
+//
 // A field that is present and unreadable as an id refuses, on the same terms as
-// the primary — the middleware cannot show the caller may still see what it is
+// the primary: the middleware cannot show the caller may still see what it is
 // handing back.
+//
+// SCOPE, NOT LIVENESS, and the difference is load-bearing. The primary probe is
+// EnsureVisibleLive because the recorded body carries that record's FIELDS —
+// erasure anonymises a person in place, and a frozen snapshot would hand back
+// names every live read now refuses. A companion is an id and nothing else, so
+// what a replay can disclose is that the record exists and what it was to this
+// call — a question of row scope.
+//
+// Using the live probe here would also refuse the retries this exists to serve:
+// promoting a lead ARCHIVES it, and demoting a person can archive them, so the
+// companion those calls name is archived by the very operation being replayed.
+// EnsureVisibleLive requires archived_at IS NULL, so every promote replay would
+// have answered 404.
 func ensureCompanionsVisible(ctx context.Context, pool *pgxpool.Pool, target replayTarget, body string) error {
 	for _, companion := range target.companions {
-		if !bodyHasField(body, companion.idPath) {
+		raw, err := stringAt(body, companion.idPath)
+		if err != nil || raw == "" {
+			// Absent, null, or not a string: the body names no record here.
 			continue
 		}
-		id, err := recordIDAt(body, companion.idPath)
+		id, err := ids.Parse(raw)
 		if err != nil {
-			return err
+			return apperrors.ErrNotFound
 		}
 		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-			return auth.EnsureVisibleLive(ctx, tx, companion.table, id)
+			return auth.EnsureVisible(ctx, tx, companion.table, id)
 		}); err != nil {
 			return err
 		}

@@ -123,6 +123,53 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 	}
 }
 
+// TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead is the boundary the
+// companion probe has to respect.
+//
+// Promoting a lead ARCHIVES it, and the response names that lead. A companion
+// probe that asked whether the lead is still LIVE would answer no on every
+// promote — refusing the retry the idempotency key exists to serve, which is a
+// worse failure than the disclosure it was meant to close. What a companion
+// discloses is an id, so what it is checked against is row SCOPE.
+func TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Idem Promote", "admin@idempromote.test", "Admin")
+
+	var lead AnyMap
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
+		"full_name":    "Promotable Prospect",
+		"email":        "promotable@example.org",
+		"company_name": "Promotable AG",
+		"source":       "import:idem",
+	}, nil, &lead); status != http.StatusCreated {
+		t.Fatalf("create lead = %d %v", status, lead)
+	}
+	leadID, _ := lead["id"].(string)
+	if leadID == "" {
+		t.Fatalf("created lead carries no id: %v", lead)
+	}
+
+	keyed := map[string]string{"Idempotency-Key": "promote-retry-1"}
+	var first AnyMap
+	promoteReq := AnyMap{"trigger": "human_qualify"}
+	if status := e.Call(t, "POST", "/v1/leads/"+leadID+"/promote", promoteReq, keyed, &first); status != http.StatusOK {
+		t.Fatalf("promote = %d %v", status, first)
+	}
+	if first["lead_id"] == nil {
+		t.Fatalf("the promotion names no lead, so this test would prove nothing about the companion: %v", first)
+	}
+
+	// The lead is archived BY the promotion, so this is the retry a live probe
+	// would have refused.
+	var replay AnyMap
+	if status := e.Call(t, "POST", "/v1/leads/"+leadID+"/promote", promoteReq, keyed, &replay); status != http.StatusOK {
+		t.Fatalf("promote replay = %d %v, want the original 200 — the lead it archived is not a lost companion", status, replay)
+	}
+	if !reflect.DeepEqual(first, replay) {
+		t.Errorf("replayed response differs from the original:\n first: %v\nreplay: %v", first, replay)
+	}
+}
+
 // TestIdempotencyKeyReplay_createQuota proves the promise for an
 // operation with no natural-key dedupe behind it: without transport
 // idempotency a retried createQuota lands a second, identical target.
