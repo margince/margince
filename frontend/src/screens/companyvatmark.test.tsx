@@ -4,12 +4,14 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
@@ -94,6 +96,10 @@ describe("the VAT mark beside the number", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    // One test drives the poll on a fake clock. Restored here rather than at
+    // the end of that test, so a failure inside it cannot leave every later
+    // test running against a clock nobody advances.
+    vi.useRealTimers();
   });
 
   it("says the verdict without anything being opened", async () => {
@@ -240,6 +246,112 @@ describe("the VAT mark beside the number", () => {
     // the record.
     expect(await screen.findByText("WAPIAAAAXk3rN2p9")).toBeVisible();
     expect(screen.queryByRole("button", { name: /Check/ })).toBeNull();
+  });
+
+  it("says the register's own word for a verdict this build cannot name", async () => {
+    // A server newer than this tab, which is the ordinary state during a
+    // deploy. A consultation HAPPENED, so announcing it as "not checked yet"
+    // would tell the reader the opposite of the truth at the only moment they
+    // are looking.
+    answerWith({ ...CHECKED, status: "pending_review" });
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: pending_review" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "VAT ID: not checked with the register yet",
+      }),
+    ).toBeNull();
+  });
+
+  it("offers a retry when the check cannot be read", async () => {
+    // Silence would hide a stored verdict behind nothing. "We could not ask"
+    // and "nobody has asked" are different facts, and only one of them is the
+    // reader's to fix.
+    answerWith({ title: "boom" }, 500);
+
+    render(mark());
+
+    expect(
+      await screen.findByRole("button", {
+        name: /the check could not be read just now/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not cry moved over a number typed with spaces", async () => {
+    const user = userEvent.setup();
+    answerWith(CHECKED);
+
+    // The server normalises case and separators before it consults, so this is
+    // the same VAT ID. Reported as moved, it would send a reader to spend a
+    // consultation re-asking about a number that did not change.
+    render(mark("de 811 907 980"));
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    expect(screen.queryByText(/number on this record has changed/)).toBeNull();
+  });
+
+  it("shows the answer once the register replies, without a reload", async () => {
+    // The whole reason the invalidate does not fire on the 202: the worker has
+    // not asked the register yet, so re-reading then caches the OLD verdict as
+    // though it were the answer to this request.
+    // Fake from the start: the poll schedules its setTimeout during the click,
+    // so timers installed afterwards would be advancing a clock the poll never
+    // registered with. `shouldAdvanceTime` keeps the promises React Query
+    // settles between ticks resolving.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let verdict = "invalid";
+    const gets: string[] = [];
+    stubFetch(async (request) => {
+      if (request.method === "GET" && request.url.includes("vat-check")) {
+        gets.push(verdict);
+      }
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return jsonResponse(
+          meFixture({ allow: { organization: ["read", "update"] } }),
+        );
+      }
+      if (request.method === "POST") {
+        // The register answers out of band, between the 202 and the next look.
+        verdict = "valid";
+        return new Response(null, { status: 202 });
+      }
+      return jsonResponse({ ...CHECKED, status: verdict });
+    });
+    render(mark());
+
+    // fireEvent rather than userEvent, and fake timers installed only AFTER
+    // the interactions: userEvent drives its own waits on timers, so the two
+    // together deadlock — it waits for a clock the test is holding still.
+    fireEvent.click(
+      await screen.findByRole("button", { name: "VAT ID: Not valid" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
+    await screen.findByText(/answer appears here once it replies/);
+
+    // The timers have to be fake BEFORE the poll schedules itself, or the
+    // setTimeout it registers belongs to the real clock and advancing a fake
+    // one moves nothing. Installed with `shouldAdvanceTime` so the promises
+    // React Query settles between ticks still resolve.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    ).toBeInTheDocument();
+    // Two reads: the one that drew the first verdict, and the one the poll made
+    // after the register replied. A single read would mean the answer only
+    // arrived because something else remounted the mark.
+    expect(gets).toEqual(["invalid", "valid"]);
   });
 
   it("draws nothing while the read is in flight", () => {

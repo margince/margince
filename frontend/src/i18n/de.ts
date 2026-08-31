@@ -1781,6 +1781,8 @@ export const de = {
   "co.factField.operated_service": "Dienst",
   "co.vat.markVerdict": "USt-IdNr.: {verdict}",
   "co.vat.markUnchecked": "USt-IdNr.: noch nicht beim Register abgefragt",
+  "co.vat.markUnreadable":
+    "USt-IdNr.: Die Prüfung konnte gerade nicht geladen werden — zum Wiederholen drücken",
   "co.vat.numberMoved":
     "Die Nummer auf diesem Datensatz hat sich seit dieser Abfrage geändert. Fragen Sie erneut ab, um die neue zu prüfen.",
   "co.vat.verdict": "Antwort des Registers",

@@ -1767,6 +1767,8 @@ export const vi = {
   "co.factField.operated_service": "Dịch vụ vận hành",
   "co.vat.markVerdict": "Mã số thuế GTGT: {verdict}",
   "co.vat.markUnchecked": "Mã số thuế GTGT: chưa tra cứu tại cơ quan đăng ký",
+  "co.vat.markUnreadable":
+    "Mã số thuế GTGT: chưa đọc được kết quả tra cứu — nhấn để thử lại",
   "co.vat.numberMoved":
     "Mã số trên hồ sơ đã thay đổi kể từ lần tra cứu này. Hãy tra cứu lại để kiểm tra mã số mới.",
   "co.vat.verdict": "Câu trả lời của sổ đăng ký",

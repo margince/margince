@@ -74,3 +74,13 @@
 .vatmark-stale {
   color: var(--textSecondary);
 }
+
+/* The read failed. A button rather than the popover's trigger, because there is
+   no receipt to open — the only thing offered is asking again — and it carries
+   no chrome for the same reason the trigger does not: it sits inside a value. */
+.vatmark-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}

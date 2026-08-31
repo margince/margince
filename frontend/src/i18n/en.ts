@@ -1808,6 +1808,8 @@ export const en = {
   "co.factField.operated_service": "Operated service",
   "co.vat.markVerdict": "VAT ID: {verdict}",
   "co.vat.markUnchecked": "VAT ID: not checked with the register yet",
+  "co.vat.markUnreadable":
+    "VAT ID: the check could not be read just now — press to try again",
   "co.vat.numberMoved":
     "The number on this record has changed since this check. Ask the register again to check the new one.",
   "co.vat.verdict": "Register answer",

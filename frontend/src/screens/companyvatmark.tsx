@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -65,6 +65,54 @@ function isConsultation(body: VatCheck | undefined): body is VatCheck {
   );
 }
 
+/** When the mark looks again after a person asked. The register usually answers
+ * within a second or two, so the first look is soon; the later two are for a
+ * service being slow, and there is no fourth because a reader who has not been
+ * answered by then is better served by the page they will open next than by a
+ * tab that keeps asking. */
+const VAT_POLL_DELAYS_MS = [1_500, 5_000, 15_000];
+
+/** sameNumber decides whether the consulted number and the stated one are the
+ * same VAT ID, on the terms the SERVER uses: it upper-cases and drops spaces,
+ * dots, hyphens and slashes before splitting a number into country and body
+ * (`vatcheck.splitVAT`), so `de 811 907 980` and `DE811907980` are one number.
+ *
+ * A raw string comparison would report the record's number as having "moved"
+ * because somebody typed a space, and send a reader to spend a consultation
+ * re-asking about a number that did not change. Two writers of one rule, and
+ * this one says so rather than pretending it is the only reader of the format —
+ * a mirror in a comment beats a false alarm on a screen. */
+function sameNumber(consulted: string, stated: string): boolean {
+  const normalize = (raw: string) =>
+    raw
+      .trim()
+      .toUpperCase()
+      .replaceAll(/[ ./-]/g, "");
+  return normalize(consulted) === normalize(stated);
+}
+
+/** markName is what the mark is called, and the three cases are three different
+ * facts about the company.
+ *
+ * The one worth spelling out is the third. A status this build has no name for
+ * is a server newer than this tab — an ordinary state during a deploy — and it
+ * must NOT fall through to "not checked yet": a consultation happened, and
+ * announcing it as an absence would tell a reader the opposite of the truth at
+ * the only moment they are looking. The register's own word carries instead,
+ * untranslated because this build has no translation for it. */
+function markName(
+  answer: VatCheck | null,
+  verdict: { label: MessageKey } | null | undefined,
+  t: (key: MessageKey, vars?: Record<string, string>) => string,
+): string {
+  if (answer === null) {
+    return t("co.vat.markUnchecked");
+  }
+  return t("co.vat.markVerdict", {
+    verdict: verdict ? t(verdict.label) : answer.status,
+  });
+}
+
 /**
  * VatMark is the whole VAT surface: one glyph beside the number that says
  * whether the register recognises it, opening to the receipt and the verb.
@@ -118,12 +166,30 @@ export function VatMark({
   // A read still in flight draws nothing rather than a third state: the mark
   // sits inside a value the reader is already looking at, and a glyph that
   // appears a beat later under the eye is worse than one that appears with the
-  // row. A failed read draws nothing for the same reason — the number is the
-  // fact, and a mark that cannot say anything true about it is noise.
-  if (check.data === undefined) {
+  // row.
+  if (check.isPending) {
     return null;
   }
-  const answer = check.data;
+  // A read that FAILED is a different fact from one that has not answered, and
+  // collapsing them would hide a stored verdict behind silence. The mark says
+  // it could not ask and offers the retry, because "we do not know right now"
+  // is honest where drawing nothing implies there is nothing to know.
+  if (check.isError) {
+    return (
+      <span className="vatmark">
+        <button
+          type="button"
+          className="vatmark-glyph vatmark-retry"
+          data-tone="none"
+          onClick={() => void check.refetch()}
+        >
+          <ShieldQuestion aria-hidden />
+          <span className="sr-only">{t("co.vat.markUnreadable")}</span>
+        </button>
+      </span>
+    );
+  }
+  const answer = check.data ?? null;
   const verdict = answer === null ? null : VERDICTS[answer.status];
 
   return (
@@ -138,11 +204,7 @@ export function VatMark({
               the verb: "VAT ID: not valid" is the fact a sighted reader gets
               from the colour, while "check VAT ID" would make them press a
               control to learn it. */}
-          <span className="sr-only">
-            {verdict
-              ? t("co.vat.markVerdict", { verdict: t(verdict.label) })
-              : t("co.vat.markUnchecked")}
-          </span>
+          <span className="sr-only">{markName(answer, verdict, t)}</span>
         </span>
       }
     >
@@ -157,7 +219,7 @@ export function VatMark({
             issued for, and the row above the mark can be edited after a check
             — so a mark that showed only a verdict could sit beside a number
             nobody ever consulted. */}
-        {answer !== null && answer.vat_number !== stated && (
+        {answer !== null && sameNumber(answer.vat_number, stated) === false && (
           <p className="t-caption vatmark-stale">{t("co.vat.numberMoved")}</p>
         )}
       </div>
@@ -246,6 +308,9 @@ function AskTheRegister({
   const t = useT();
   const queryClient = useQueryClient();
   const canEdit = useCan("organization", "update");
+  // The organization whose answer we are waiting for, or null. Set by the
+  // mutation and cleared once the poll below has run its course.
+  const [waitingFor, setWaitingFor] = useState<string | null>(null);
   const ask = useMutation({
     // The organization is a VARIABLE rather than a closure over this render: a
     // click landing between the commit and React Query re-arming the options
@@ -264,12 +329,49 @@ function AskTheRegister({
       }
       return id;
     },
-    // Keyed on what the mutation RETURNED rather than on this render's orgId,
-    // so a click in React Query's re-arming window cannot settle the company
-    // the reader was looking at a moment ago.
-    onSuccess: (asked) =>
-      queryClient.invalidateQueries({ queryKey: vatCheckKey(asked) }),
+    // Deliberately NOT invalidating here. The consultation is QUEUED — 202,
+    // no body — and the worker has not asked the register yet, so a refetch on
+    // success re-reads the OLD verdict and caches it as though it were the
+    // answer to this request. The reader would then watch a stale word settle
+    // under a line saying the register had been asked.
+    //
+    // Waiting is the honest surface instead: the panel says the answer appears
+    // once it replies, and the poll below is what makes that true. Keyed on
+    // what the mutation RETURNED rather than this render's orgId, so a click in
+    // React Query's re-arming window cannot poll the company the reader was
+    // looking at a moment ago.
+    onSuccess: (asked) => setWaitingFor(asked),
   });
+
+  // The register answers out of band, so the only way the mark learns is to
+  // look again. A few spaced attempts rather than a subscription: the whole
+  // exchange is one HTTP call the worker makes, usually inside a second or two,
+  // and a socket for that would be machinery nobody needs. The attempts stop
+  // whether or not an answer arrived — a poll that ran forever would keep
+  // asking about a company the reader left.
+  useEffect(() => {
+    if (waitingFor === null) {
+      return;
+    }
+    const timers = VAT_POLL_DELAYS_MS.map((delay, attempt) =>
+      setTimeout(() => {
+        // refetchQueries, not invalidateQueries: the second marks the entry
+        // stale and refetches only where an observer is currently mounted, and
+        // this poll lives inside a popover panel the reader may have closed. A
+        // request that answered nothing because a panel shut is the shape of
+        // bug this whole change exists to stop.
+        void queryClient.refetchQueries({ queryKey: vatCheckKey(waitingFor) });
+        if (attempt === VAT_POLL_DELAYS_MS.length - 1) {
+          setWaitingFor(null);
+        }
+      }, delay),
+    );
+    return () => {
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+    };
+  }, [waitingFor, queryClient]);
 
   if (!canEdit) {
     return null;
