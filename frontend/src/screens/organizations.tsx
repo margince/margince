@@ -87,6 +87,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyPeopleList } from "./companypeople/contacts";
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { CompanyRecentList } from "./companyrecent";
@@ -2408,6 +2409,10 @@ function CompanyRecordBody({
           side, is the duplication this page's own rule forbids. */}
       {tab === "people" && (
         <div className="co-panel-stack">
+          {/* The list first: a rep opens this tab to choose somebody to write
+              to, and the ranked list over the WHOLE account is what answers
+              that. The card below still summarises the roster. */}
+          <CompanyPeopleList orgId={org.id} />
           <PeopleCard
             view={view}
             writable={orgWritable}
