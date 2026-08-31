@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose"
 )
@@ -33,32 +32,19 @@ import (
 // the SPA are different origins, and Microsoft's redirect_uri must reach the api
 // while the human-facing landing must reach the SPA.
 func microsoftSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, error) {
-	redirectBase := cfg.apiBaseURL
-	if redirectBase == "" {
-		redirectBase = cfg.publicBaseURL
-	}
+	redirectBase, postLogin, failure := signInURLs(cfg)
 	ssoCfg := compose.MicrosoftSignInConfig{
 		ClientID:     cfg.graphClientID,
 		ClientSecret: cfg.graphClientSecret,
 		Tenant:       microsoftSignInTenant(cfg),
 		StateKey:     cfg.connectorStateKey,
 		RedirectBase: redirectBase,
-		PostLoginURL: strings.TrimRight(cfg.publicBaseURL, "/") + "/",
-		FailureURL:   strings.TrimRight(cfg.publicBaseURL, "/") + "/#/login?oidc=failed",
+		PostLoginURL: postLogin,
+		FailureURL:   failure,
 	}
 	if ssoCfg.Enabled() {
-		// Validated here rather than trusted from elsewhere, for the reason
-		// googleSignInOptions gives: this flow bakes the base into a
-		// redirect_uri it sends to Microsoft, and a boot-time refusal is the
-		// only place that catches a malformed or credential-bearing one before
-		// it reaches Microsoft's own server logs.
-		if err := validatePublicBaseURL(cfg.publicBaseURL); err != nil {
-			return nil, fmt.Errorf("api: microsoft sign-in: %w", err)
-		}
-		if cfg.apiBaseURL != "" {
-			if err := validateBareOrigin("--api-base-url", cfg.apiBaseURL); err != nil {
-				return nil, fmt.Errorf("api: microsoft sign-in: %w", err)
-			}
+		if err := validateSignInBases(cfg, "microsoft"); err != nil {
+			return nil, err
 		}
 	}
 	switch {
