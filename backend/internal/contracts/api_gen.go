@@ -26689,6 +26689,20 @@ type TechnicalEnrichStatus struct {
 	OrganizationId openapi_types.UUID    `json:"organization_id"`
 }
 
+// ThreadAudienceOutcome What an owner's decision about a thread reached.
+type ThreadAudienceOutcome struct {
+	// HeldByOthers How many other seats still ask for this thread to be held. A count and never a name:
+	// whose mail a person keeps private is itself private.
+	HeldByOthers int `json:"held_by_others"`
+
+	// Messages How many of the thread's messages you imported, and the decision reached.
+	Messages int `json:"messages"`
+
+	// Shared Whether the messages are now readable by the workspace. False after a share means
+	// somebody else still holds them.
+	Shared bool `json:"shared"`
+}
+
 // TranscriptReadReport What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
 type TranscriptReadReport struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
@@ -28455,6 +28469,12 @@ type RelinkThreadParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// SetThreadAudienceJSONBody defines parameters for SetThreadAudience.
+type SetThreadAudienceJSONBody struct {
+	// Share True to share the thread with the workspace, false to keep it private.
+	Share bool `json:"share"`
 }
 
 // ArchiveActivityParams defines parameters for ArchiveActivity.
@@ -32700,6 +32720,9 @@ type RelinkActivitiesJSONRequestBody = RelinkActivitiesRequest
 
 // RelinkThreadJSONRequestBody defines body for RelinkThread for application/json ContentType.
 type RelinkThreadJSONRequestBody = RelinkThreadRequest
+
+// SetThreadAudienceJSONRequestBody defines body for SetThreadAudience for application/json ContentType.
+type SetThreadAudienceJSONRequestBody SetThreadAudienceJSONBody
 
 // UpdateActivityJSONRequestBody defines body for UpdateActivity for application/json ContentType.
 type UpdateActivityJSONRequestBody = UpdateActivityRequest
@@ -40989,6 +41012,9 @@ type ServerInterface interface {
 	// Re-associate every activity of one conversation thread to a chosen record, in one transaction.
 	// (POST /activities/relink-thread)
 	RelinkThread(w http.ResponseWriter, r *http.Request, params RelinkThreadParams)
+	// Share a thread with the team, or keep it private.
+	// (POST /activities/threads/{thread_key}/audience)
+	SetThreadAudience(w http.ResponseWriter, r *http.Request, threadKey string)
 	// Archive (soft-delete) an activity.
 	// (DELETE /activities/{id})
 	ArchiveActivity(w http.ResponseWriter, r *http.Request, id Id, params ArchiveActivityParams)
@@ -42588,6 +42614,12 @@ func (_ Unimplemented) RelinkActivities(w http.ResponseWriter, r *http.Request, 
 // Re-associate every activity of one conversation thread to a chosen record, in one transaction.
 // (POST /activities/relink-thread)
 func (_ Unimplemented) RelinkThread(w http.ResponseWriter, r *http.Request, params RelinkThreadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Share a thread with the team, or keep it private.
+// (POST /activities/threads/{thread_key}/audience)
+func (_ Unimplemented) SetThreadAudience(w http.ResponseWriter, r *http.Request, threadKey string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46092,6 +46124,38 @@ func (siw *ServerInterfaceWrapper) RelinkThread(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RelinkThread(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetThreadAudience operation middleware
+func (siw *ServerInterfaceWrapper) SetThreadAudience(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "thread_key" -------------
+	var threadKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "thread_key", chi.URLParam(r, "thread_key"), &threadKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "thread_key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetThreadAudience(w, r, threadKey)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69138,6 +69202,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/relink-thread", wrapper.RelinkThread)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/threads/{thread_key}/audience", wrapper.SetThreadAudience)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}", wrapper.ArchiveActivity)

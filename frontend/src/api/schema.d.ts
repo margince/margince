@@ -5528,6 +5528,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/threads/{thread_key}/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The thread's key, as an activity reports it. */
+                thread_key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a thread with the team, or keep it private.
+         * @description Your own view of the thread, and only yours. A message that reached two mailboxes is two
+         *     people's correspondence: each of you contributes what you ask for, and the message ends at
+         *     the strictest of those. So sharing releases YOUR hold — it cannot publish what a colleague
+         *     is still holding, and the response says how many other seats are.
+         *
+         *     This overrules the classifier, and permanently: a thread you decided about is not re-judged
+         *     later. That is what "keep this private" has to mean for the click to be worth making.
+         *
+         *     Only threads you imported. A thread key you were not on answers not-found, because whether
+         *     somebody else's correspondence exists is not a thing to confirm.
+         */
+        post: operations["setThreadAudience"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/counterparty-holds": {
         parameters: {
             query?: never;
@@ -12373,6 +12405,21 @@ export interface components {
             verified: boolean;
             /** Format: date-time */
             created_at?: string;
+        };
+        /** @description What an owner's decision about a thread reached. */
+        ThreadAudienceOutcome: {
+            /** @description How many of the thread's messages you imported, and the decision reached. */
+            messages: number;
+            /**
+             * @description Whether the messages are now readable by the workspace. False after a share means
+             *     somebody else still holds them.
+             */
+            shared: boolean;
+            /**
+             * @description How many other seats still ask for this thread to be held. A count and never a name:
+             *     whose mail a person keeps private is itself private.
+             */
+            held_by_others: number;
         };
         /**
          * @description What a purge destroyed, or what a preview says it would. The four counts are disjoint and
@@ -34847,6 +34894,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CapturePurgeOutcome"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setThreadAudience: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The thread's key, as an activity reports it. */
+                thread_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description True to share the thread with the workspace, false to keep it private. */
+                    share: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description What the decision reached. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadAudienceOutcome"];
                 };
             };
             401: components["responses"]["Unauthorized"];

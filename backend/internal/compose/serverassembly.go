@@ -203,6 +203,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.peopleStore = people.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{people: s.peopleStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
+	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
 	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{store: capture.NewCounterpartyHoldStore(InstallationDB(pool))}
 	s.claimHandlers = claimHandlers{people: s.peopleStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}

@@ -8422,6 +8422,51 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /activities/threads/{thread_key}/audience:
+    parameters:
+      - name: thread_key
+        in: path
+        required: true
+        schema: { type: string, maxLength: 998 }
+        description: The thread's key, as an activity reports it.
+    post:
+      tags: [Activities]
+      operationId: setThreadAudience
+      summary: Share a thread with the team, or keep it private.
+      description: |
+        Your own view of the thread, and only yours. A message that reached two mailboxes is two
+        people's correspondence: each of you contributes what you ask for, and the message ends at
+        the strictest of those. So sharing releases YOUR hold — it cannot publish what a colleague
+        is still holding, and the response says how many other seats are.
+
+        This overrules the classifier, and permanently: a thread you decided about is not re-judged
+        later. That is what "keep this private" has to mean for the click to be worth making.
+
+        Only threads you imported. A thread key you were not on answers not-found, because whether
+        somebody else's correspondence exists is not a thing to confirm.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [share]
+              properties:
+                share:
+                  type: boolean
+                  description: True to share the thread with the workspace, false to keep it private.
+      responses:
+        '200':
+          description: What the decision reached.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThreadAudienceOutcome' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /capture/counterparty-holds:
     get:
       tags: [Capture]
@@ -18575,6 +18620,25 @@ components:
             Whether a human vouched for this domain. Only a verified domain — or one the
             installation's own company claims — suppresses storage.
         created_at: { type: string, format: date-time }
+    ThreadAudienceOutcome:
+      type: object
+      description: What an owner's decision about a thread reached.
+      required: [messages, shared, held_by_others]
+      properties:
+        messages:
+          type: integer
+          description: How many of the thread's messages you imported, and the decision reached.
+        shared:
+          type: boolean
+          description: |
+            Whether the messages are now readable by the workspace. False after a share means
+            somebody else still holds them.
+        held_by_others:
+          type: integer
+          description: |
+            How many other seats still ask for this thread to be held. A count and never a name:
+            whose mail a person keeps private is itself private.
+
     CapturePurgeOutcome:
       type: object
       description: |

@@ -210,6 +210,8 @@ type Server struct {
 	// it feeds a /readyz probe and backs the attachment handlers; nil means
 	// a role that stores no objects.
 	blob blobstore.Store
+	// threadAudience applies an owner own decision about a thread they imported.
+	threadAudience *ThreadAudienceSetter
 
 	// vault is the secret store, injected by WithKeyvault. When configured
 	// it feeds a /readyz probe and backs the capture connector-credential
