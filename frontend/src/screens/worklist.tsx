@@ -15,8 +15,8 @@ import {
   itemTitle,
   moveHref,
   reasonText,
+  rowHref,
   sourceUnavailableText,
-  subjectHref,
 } from "./worklist.copy";
 import {
   useApproval,
@@ -78,7 +78,7 @@ function WorklistRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const href = subjectHref(item);
+  const href = rowHref(item);
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
   const because = item.because
