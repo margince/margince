@@ -6142,6 +6142,10 @@ export const en = {
     "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "googleApp.remove": "Remove app",
   "firstRun.continue": "Continue",
+  // The step's place in first run, over its title. Two questions, and the
+  // reader is told which one they are on rather than left to count.
+  "firstRun.ai.eyebrow": "First run · 1 of 2",
+  "firstRun.google.eyebrow": "First run · 2 of 2",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
     "Margince provides no inference of its own, so it works through your vendor account. You can change any of this later under Settings → AI.",
@@ -6153,6 +6157,18 @@ export const en = {
   "firstRun.ai.modelHint":
     "A starting point. The listed prices are per million tokens, in → out; any model id your provider serves will do.",
   "firstRun.ai.embedModel": "Embedding model",
+  // What the binding on screen will cost, from this installation's own price
+  // sheet. The lane labels name the JOB rather than the mechanism: a first-time
+  // admin is choosing what the product thinks with and what it remembers with,
+  // and "chat tier" and "embeddings lane" are the internal words for that.
+  "aiRates.chatLane": "What it thinks with",
+  "aiRates.embedLane": "What it remembers with",
+  "aiRates.perMTokInOut": "per million tokens, in → out",
+  "aiRates.perMTok": "per million tokens",
+  "aiRates.unpriced": "No price on file",
+  "aiRates.unpricedDetail":
+    "It will still serve calls. They report as unpriced, so they are missing from usage and spend until someone adds a rate under Settings → AI.",
+  "aiRates.priced": "Priced from {date}",
   "firstRun.google.title": "Connect a Google app",
   "firstRun.google.sub":
     "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials. You can change this later under Settings.",

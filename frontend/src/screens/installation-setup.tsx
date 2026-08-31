@@ -1,17 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
+import { Eyebrow } from "../design-system/eyebrow";
+import {
+  MarginceCoreScene,
+  type MarginceCoreState,
+} from "../design-system/margince-core";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import { suggestionsFor, useAiModelCatalogue } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
+import { ModelRatePlate } from "./ai-rates";
 import { problemMessageOf, throwProblem } from "./common";
 import { useSetGoogleApp } from "./google-app";
+// The stylesheet carries the `onboarding-` prefix rather than this file's name
+// on purpose: both onboarding CSS gates derive their corpus from that prefix,
+// so a first-run sheet named after its component would style the coldest screen
+// in the product from outside the censuses that keep the rest of it honest.
+import "./onboarding-first-run.css";
 import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,
@@ -117,8 +129,75 @@ function useBindModels() {
   });
 }
 
+/**
+ * The room both questions are asked in.
+ *
+ * `lit` is a claim rather than a mood: the stage carries indigo only once this
+ * installation has a model bound, because indigo means a machine did it and
+ * until then none has. The Core beside the words says the same thing in the
+ * other direction — it is `idle` and still until there is something to be idle
+ * about, and `working` only while a write is actually in flight.
+ */
+function FirstRunStage({
+  lit,
+  coreState,
+  eyebrow,
+  title,
+  sub,
+  children,
+}: Readonly<{
+  lit: boolean;
+  coreState: MarginceCoreState;
+  eyebrow: string;
+  title: string;
+  sub: string;
+  children: ReactNode;
+}>) {
+  return (
+    <div className="ob-fr" data-lit={lit}>
+      <div className="ob-fr-light" />
+      <div className="ob-fr-core">
+        <MarginceCoreScene state={coreState} />
+      </div>
+      <div className="ob-fr-column">
+        <Eyebrow as="h2">{eyebrow}</Eyebrow>
+        <h1 className="ob-fr-title">{title}</h1>
+        <p className="ob-fr-sub">{sub}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A step's form, telling the stage above it when a write is in flight.
+ *
+ * The Core is the stage's, and whether anything is being written is the step's,
+ * so one of them has to say so to the other. It travels up rather than the
+ * mutation moving down: `useSetProviderKey` and `useSetGoogleApp` are where they
+ * are for reasons of their own (how long a credential lives in memory), and
+ * lifting a mutation to make an orb spin would be the tail wagging the dog.
+ */
+function StepForm({
+  busy,
+  onBusy,
+  children,
+}: Readonly<{
+  busy: boolean;
+  onBusy: (busy: boolean) => void;
+  children: ReactNode;
+}>) {
+  useEffect(() => {
+    onBusy(busy);
+    // A step that unmounts mid-write leaves the stage claiming work nobody is
+    // doing, and the next step would open with a spinning orb.
+    return () => onBusy(false);
+  }, [busy, onBusy]);
+  return children;
+}
+
 /** The AI step: one vendor, one key, the two models it will serve. */
-function AiStep() {
+function AiStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const [choice, setChoice] = useState<SetupProviderId>("gemini");
@@ -189,106 +268,125 @@ function AiStep() {
   };
 
   return (
-    <Panel title={t("firstRun.ai.title")}>
-      <PanelBody>
-        <p className="t-body">{t("firstRun.ai.sub")}</p>
-        {failure && (
-          <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
-        )}
-        <Field label={t("firstRun.ai.provider")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={choice}
-              disabled={busy}
-              // Narrowed THROUGH the id list rather than asserted into it: a
-              // Select answers with a string, and an answer that is not one of
-              // these is not a provider this screen can bind.
-              onChange={(v) => {
-                const next = SETUP_PROVIDER_IDS.find((id) => id === v);
-                if (next) {
-                  pick(next);
-                }
-              }}
-              options={SETUP_PROVIDER_IDS.map((id) => ({
-                value: id,
-                label: SETUP_PROVIDERS[id].label,
-              }))}
-            />
+    <StepForm busy={busy} onBusy={onBusy}>
+      {/* The verb goes in the card's own action strip rather than as the last
+          thing in the stack of questions: a button that shares the fields'
+          spacing reads as one more field. */}
+      <Panel
+        footer={
+          <Button
+            variant="primary"
+            pending={busy}
+            disabled={!ready}
+            onClick={submit}
+          >
+            {t("firstRun.continue")}
+          </Button>
+        }
+      >
+        <PanelBody>
+          {failure && (
+            <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
           )}
-        </Field>
-        <Field
-          label={t("firstRun.ai.key")}
-          hint={t("firstRun.ai.keyHint", { envVar: preset.keyEnv })}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              // A password field so the browser does not offer to remember a
-              // credential this app never stores client-side, and a screenshare
-              // does not carry it.
-              type="password"
-              autoComplete="off"
-              value={apiKey}
-              disabled={busy}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          )}
-        </Field>
-        {/* Both fields offer what the sheet can price for the chosen vendor,
+          <Field label={t("firstRun.ai.provider")}>
+            {(control) => (
+              <Select
+                {...control}
+                value={choice}
+                disabled={busy}
+                // Narrowed THROUGH the id list rather than asserted into it: a
+                // Select answers with a string, and an answer that is not one of
+                // these is not a provider this screen can bind.
+                onChange={(v) => {
+                  const next = SETUP_PROVIDER_IDS.find((id) => id === v);
+                  if (next) {
+                    pick(next);
+                  }
+                }}
+                options={SETUP_PROVIDER_IDS.map((id) => ({
+                  value: id,
+                  label: SETUP_PROVIDERS[id].label,
+                }))}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("firstRun.ai.key")}
+            hint={t("firstRun.ai.keyHint", { envVar: preset.keyEnv })}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                // A password field so the browser does not offer to remember a
+                // credential this app never stores client-side, and a screenshare
+                // does not carry it.
+                type="password"
+                autoComplete="off"
+                value={apiKey}
+                disabled={busy}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            )}
+          </Field>
+          {/* Both fields offer what the sheet can price for the chosen vendor,
             in the lane that field binds — and take anything typed, because the
             server accepts any id its vendor serves and the whole point of the
             preset below is that it is a starting point. */}
-        <Field
-          label={t("firstRun.ai.chatModel")}
-          hint={t("firstRun.ai.modelHint")}
-        >
-          {(control) => (
-            <ComboBox
-              {...control}
-              value={chatModel}
-              suggestions={suggestionsFor(
-                catalogue.data,
-                preset.provider,
-                "chat",
-                locale,
-              )}
-              disabled={busy}
-              onChange={setChatModel}
-            />
-          )}
-        </Field>
-        <Field label={t("firstRun.ai.embedModel")}>
-          {(control) => (
-            <ComboBox
-              {...control}
-              value={embedModel}
-              suggestions={suggestionsFor(
-                catalogue.data,
-                preset.provider,
-                "embeddings",
-                locale,
-              )}
-              disabled={busy}
-              onChange={setEmbedModel}
-            />
-          )}
-        </Field>
-        <Button
-          variant="primary"
-          pending={busy}
-          disabled={!ready}
-          onClick={submit}
-        >
-          {t("firstRun.continue")}
-        </Button>
-      </PanelBody>
-    </Panel>
+          <Field
+            label={t("firstRun.ai.chatModel")}
+            hint={t("firstRun.ai.modelHint")}
+          >
+            {(control) => (
+              <ComboBox
+                {...control}
+                value={chatModel}
+                suggestions={suggestionsFor(
+                  catalogue.data,
+                  preset.provider,
+                  "chat",
+                  locale,
+                )}
+                disabled={busy}
+                onChange={setChatModel}
+              />
+            )}
+          </Field>
+          <Field label={t("firstRun.ai.embedModel")}>
+            {(control) => (
+              <ComboBox
+                {...control}
+                value={embedModel}
+                suggestions={suggestionsFor(
+                  catalogue.data,
+                  preset.provider,
+                  "embeddings",
+                  locale,
+                )}
+                disabled={busy}
+                onChange={setEmbedModel}
+              />
+            )}
+          </Field>
+          {/* What the two ids above will cost, before the binding is written
+            rather than in a usage report a month later. It follows the fields
+            because it is the CONSEQUENCE of them: it re-reads on every
+            keystroke, so a model typed by hand shows its price — or says it
+            has none — while the reader is still deciding. */}
+          <ModelRatePlate
+            catalogue={catalogue.data}
+            provider={preset.provider}
+            chatModel={chatModel}
+            embedModel={embedModel}
+            locale={locale}
+          />
+        </PanelBody>
+      </Panel>
+    </StepForm>
   );
 }
 
 /** The Google step: the OAuth app a mailbox connection is made through. */
-function GoogleStep() {
+function GoogleStep({ onBusy }: Readonly<{ onBusy: (busy: boolean) => void }>) {
   const t = useT();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -296,59 +394,82 @@ function GoogleStep() {
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
 
   return (
-    <Panel title={t("firstRun.google.title")}>
-      <PanelBody>
-        <p className="t-body">{t("firstRun.google.sub")}</p>
-        {save.error && (
-          <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
-        )}
-        <Field label={t("firstRun.google.clientId")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={clientId}
-              disabled={save.isPending}
-              autoComplete="off"
-              placeholder={t("firstRun.google.clientIdPlaceholder")}
-              onChange={(e) => setClientId(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("firstRun.google.clientSecret")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="password"
-              autoComplete="off"
-              value={clientSecret}
-              disabled={save.isPending}
-              onChange={(e) => setClientSecret(e.target.value)}
-            />
-          )}
-        </Field>
-        <Button
-          variant="primary"
-          pending={save.isPending}
-          disabled={!ready}
-          onClick={() => {
-            save.reset();
-            save.mutate(
-              { clientId: clientId.trim(), clientSecret: clientSecret.trim() },
-              {
-                onSuccess: () => {
-                  // Cleared on the way out rather than left in state: the field
-                  // is the only copy this app holds, and it has done its job.
-                  setClientSecret("");
-                  save.reset();
+    <StepForm busy={save.isPending} onBusy={onBusy}>
+      <Panel
+        footer={
+          <Button
+            variant="primary"
+            pending={save.isPending}
+            disabled={!ready}
+            onClick={() => {
+              save.reset();
+              save.mutate(
+                {
+                  clientId: clientId.trim(),
+                  clientSecret: clientSecret.trim(),
                 },
-              },
-            );
-          }}
-        >
-          {t("firstRun.continue")}
-        </Button>
-      </PanelBody>
-    </Panel>
+                {
+                  onSuccess: () => {
+                    // Cleared on the way out rather than left in state: the
+                    // field is the only copy this app holds, and it has done
+                    // its job.
+                    setClientSecret("");
+                    save.reset();
+                  },
+                },
+              );
+            }}
+          >
+            {t("firstRun.continue")}
+          </Button>
+        }
+      >
+        <PanelBody>
+          {save.error && (
+            <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
+          )}
+          <Field label={t("firstRun.google.clientId")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={clientId}
+                disabled={save.isPending}
+                autoComplete="off"
+                placeholder={t("firstRun.google.clientIdPlaceholder")}
+                onChange={(e) => setClientId(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("firstRun.google.clientSecret")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="password"
+                autoComplete="off"
+                value={clientSecret}
+                disabled={save.isPending}
+                onChange={(e) => setClientSecret(e.target.value)}
+              />
+            )}
+          </Field>
+        </PanelBody>
+      </Panel>
+    </StepForm>
+  );
+}
+
+/**
+ * Whether this installation has a model bound, from the server's own step list
+ * rather than from which step is on screen.
+ *
+ * The distinction is what makes the light honest for a reader who arrives
+ * mid-way: `ai_models` can be configured while `google_app` is not, and a
+ * `lit` derived from "this is the second step" would say the same thing by
+ * accident rather than by reading it.
+ */
+function modelBound(setup: Setup | undefined): boolean {
+  return (
+    setup?.steps?.some((s) => s.step === "ai_models" && s.configured) ?? false
   );
 }
 
@@ -356,10 +477,21 @@ function GoogleStep() {
  * The setup gate. Renders nothing once the server says the installation is
  * complete, so the caller can put it in front of whatever comes next without
  * asking a second time whether it should.
+ *
+ * THE STAGE IS HERE RATHER THAN INSIDE EACH STEP, and that is the whole reason
+ * the light works. A stage per step means React unmounts one and mounts the
+ * next when the binding lands, and a CSS transition does not run on a mount:
+ * the room would snap lit instead of coming up, and the Core would lose its GL
+ * context and blink between the two questions. One stage, held across the flip,
+ * and only its children change.
  */
 export function InstallationSetup() {
+  const t = useT();
   const setup = useInstallationSetup();
   const step = outstandingStep(setup.data);
+  // Owned here because the Core belongs to the stage and the write belongs to
+  // the step. The step says when it is writing; nothing reads this but the orb.
+  const [busy, setBusy] = useState(false);
 
   // While the answer has not arrived, nothing: a step drawn from a guess would
   // be replaced a moment later by the real one, and the reader would have
@@ -372,5 +504,16 @@ export function InstallationSetup() {
   if (setup.isPending || !step) {
     return null;
   }
-  return step.step === "ai_models" ? <AiStep /> : <GoogleStep />;
+  const ai = step.step === "ai_models";
+  return (
+    <FirstRunStage
+      lit={modelBound(setup.data)}
+      coreState={busy ? "working" : "idle"}
+      eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
+      title={t(ai ? "firstRun.ai.title" : "firstRun.google.title")}
+      sub={t(ai ? "firstRun.ai.sub" : "firstRun.google.sub")}
+    >
+      {ai ? <AiStep onBusy={setBusy} /> : <GoogleStep onBusy={setBusy} />}
+    </FirstRunStage>
+  );
 }

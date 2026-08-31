@@ -6050,6 +6050,16 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Giá hiển thị tính trên mỗi triệu token, đầu vào → đầu ra; bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
+  "firstRun.ai.eyebrow": "Lần chạy đầu · 1 / 2",
+  "firstRun.google.eyebrow": "Lần chạy đầu · 2 / 2",
+  "aiRates.chatLane": "Dùng để suy luận",
+  "aiRates.embedLane": "Dùng để ghi nhớ",
+  "aiRates.perMTokInOut": "trên mỗi triệu token, vào → ra",
+  "aiRates.perMTok": "trên mỗi triệu token",
+  "aiRates.unpriced": "Chưa có giá",
+  "aiRates.unpricedDetail":
+    "Mô hình vẫn phục vụ được. Các lệnh gọi sẽ báo là chưa có giá, nên không xuất hiện trong mức dùng và chi phí cho tới khi ai đó thêm đơn giá ở Cài đặt → AI.",
+  "aiRates.priced": "Giá áp dụng từ {date}",
   "firstRun.google.title": "Kết nối ứng dụng Google",
   "firstRun.google.sub":
     "Hộp thư được kết nối qua ứng dụng Google OAuth của bạn, nên thư được đọc bằng thông tin xác thực của tổ chức bạn. Có thể đổi sau trong Cài đặt.",

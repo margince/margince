@@ -6114,6 +6114,16 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
+  "firstRun.ai.eyebrow": "Erststart · 1 von 2",
+  "firstRun.google.eyebrow": "Erststart · 2 von 2",
+  "aiRates.chatLane": "Womit es denkt",
+  "aiRates.embedLane": "Womit es sich erinnert",
+  "aiRates.perMTokInOut": "pro Million Token, rein → raus",
+  "aiRates.perMTok": "pro Million Token",
+  "aiRates.unpriced": "Kein Preis hinterlegt",
+  "aiRates.unpricedDetail":
+    "Aufrufe laufen trotzdem. Sie werden als nicht bepreist gemeldet und fehlen damit in Verbrauch und Kosten, bis jemand unter Einstellungen → KI einen Satz hinterlegt.",
+  "aiRates.priced": "Preis gültig ab {date}",
   "firstRun.google.title": "Google-App verbinden",
   "firstRun.google.sub":
     "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen. Später unter Einstellungen änderbar.",
