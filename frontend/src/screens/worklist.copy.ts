@@ -7,6 +7,7 @@ import {
   formatNumber,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
+import { settingsAddress } from "./settings";
 import type {
   Worklist,
   WorklistComparison,
@@ -38,6 +39,32 @@ export function subjectHref(item: WorklistItem): string | undefined {
     return undefined;
   }
   return routeHash(ENTITY[subject.type].route(subject.id));
+}
+
+// Where a row goes when it names no record of its own.
+//
+// Most rows point at a record and reach it through the entity registry. A few
+// name a QUEUE instead — a data-subject request is worked on the privacy
+// screen and nowhere else — and without a destination those rows are a
+// sentence a reader cannot follow, on the one lane whose whole argument is a
+// legal clock somebody has to answer.
+//
+// A destination is not a verb: these rows still offer no action, because the
+// queue cannot perform one. It is the difference between telling somebody
+// where a room is and claiming to have opened the door.
+// Through settingsAddress, not a path spelled here: the settings registry
+// decides whether a tab sits under the admin segment, and a second spelling of
+// that decision would keep pointing at the old address the day it moves.
+const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
+  dsr: routeHash(settingsAddress("privacy")),
+};
+
+// The address a row's headline links to: its record where it has one, the
+// queue that owns it where it does not, and nothing at all for a row that is
+// neither — a system condition fixed on a settings screen the card does not
+// pretend to know.
+export function rowHref(item: WorklistItem): string | undefined {
+  return subjectHref(item) ?? SOURCE_QUEUE[item.source];
 }
 
 // One comparator value, in the reader's notation.

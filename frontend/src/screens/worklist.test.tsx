@@ -310,6 +310,31 @@ describe("what the ranked queue tells a reader", () => {
     );
   });
 
+  it("sends a privacy request to the screen it is worked on", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "01a05500-0000-7000-8000-00000000dddd",
+            source: "dsr",
+            category: "system",
+            consequence: "legal_deadline_missed",
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The row names no record — a request is worked on the privacy screen and
+    // nowhere else — so without this it is a legal clock a reader is told
+    // about and cannot follow.
+    const request = await screen.findByRole("link", {
+      name: "An open privacy request",
+    });
+    expect(request.getAttribute("href")).toBe("#/settings/admin/privacy");
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({
