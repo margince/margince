@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -68,14 +70,24 @@ func (w *weeklyGenerateWorkspaceWorker) mailWeekly(
 		return
 	}
 
+	// The installation's own language, resolved once per message. A rep reads
+	// their Home panel in it and then this summary of the same numbers, so an
+	// English message to a German installation is the product changing language
+	// on its way out of the browser.
+	//
+	// BaseLanguageForPrompt answers English on any failure and logs it, which is
+	// the right trade here too: a week's summary in the wrong language is worth
+	// more than no summary, and the claim above is already spent.
+	words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, w.pool))
+
 	// Bounded like the narration is, and for the same reason: the workspace
 	// job's deadline belongs to every rep in it, and one unreachable relay
 	// must not be able to spend it on the first.
 	bounded, cancel := context.WithTimeout(ctx, mailBudget)
 	defer cancel()
 	if err := w.mail.Mailer.Send(bounded, attempt.Email,
-		weekly.MailSubject(attempt.Review),
-		weekly.MailBody(attempt.Review, w.mail.PublicBaseURL)); err != nil {
+		weekly.MailSubject(attempt.Review, words),
+		weekly.MailBody(attempt.Review, w.mail.PublicBaseURL, words)); err != nil {
 		// LOGGED AND RECORDED, never retried. The attempt is spent; what is
 		// left to do is make the absence answerable.
 		w.log.WarnContext(ctx, "the weekly mail was attempted and did not go out",

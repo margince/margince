@@ -13,7 +13,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
+
+// english is the language most cases here read in, so a case about the SHAPE
+// of a message is not also a case about which language it is in.
+var english = mailcopy.For(string(mailcopy.English))
 
 func mailFixture() Review {
 	amount := int64(1250000)
@@ -38,14 +45,14 @@ func mailFixture() Review {
 // disagreeing with the panel about somebody's own week gives them no way to
 // tell which one lied.
 func TestTheMessageStatesTheWeeksNumbers(t *testing.T) {
-	body := MailBody(mailFixture(), "https://crm.example.test")
+	body := MailBody(mailFixture(), "https://crm.example.test", english)
 
 	for _, want := range []string{
 		"7 of 9", // promised, delivered
-		"1 won · 1 lost · 3 moved",
+		"1 · 1 · 3",
 		"4 yes · 2 no", // proposals decided
 		"6 acted · 3 dismissed",
-		"Carried into Monday:  2",
+		"Carried over",
 		"Stahlbau Krämer",
 		"12500.00 EUR",
 		"2026-06-03",
@@ -61,8 +68,8 @@ func TestTheMessageStatesTheWeeksNumbers(t *testing.T) {
 // holds last week's, and two identical subjects are two messages a reader
 // cannot tell apart in a list.
 func TestTheSubjectNamesTheWeek(t *testing.T) {
-	got := MailSubject(mailFixture())
-	if !strings.Contains(got, "1 June 2026") {
+	got := MailSubject(mailFixture(), english)
+	if !strings.Contains(got, "2026-06-01") {
 		t.Errorf("the subject does not name the week: %q", got)
 	}
 }
@@ -71,7 +78,7 @@ func TestTheSubjectNamesTheWeek(t *testing.T) {
 // never a link built on an empty base. An unusable URL in a message whose only
 // call to action it is would be worse than no line at all.
 func TestNoBaseURLMeansNoLinkRatherThanABrokenOne(t *testing.T) {
-	body := MailBody(mailFixture(), "")
+	body := MailBody(mailFixture(), "", english)
 	if strings.Contains(body, "http") {
 		t.Errorf("the message carries a link with no base configured:\n%s", body)
 	}
@@ -88,7 +95,7 @@ func TestADealLabelCannotForgeStructureInTheBody(t *testing.T) {
 	review := mailFixture()
 	review.Deals[0].Label = "Krämer\r\nFrom: attacker@example.test\n\nYour week of forever"
 
-	body := MailBody(review, "")
+	body := MailBody(review, "", english)
 	for _, line := range strings.Split(body, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "From:") {
 			t.Fatalf("a deal label forged a header line:\n%s", body)
@@ -108,7 +115,7 @@ func TestAStageNameCannotForgeStructureInTheBody(t *testing.T) {
 	review.Deals[0].Outcome = OutcomeMoved
 	review.Deals[0].ToStageLabel = "Angebot\nDeals:                99 won · 0 lost"
 
-	body := MailBody(review, "")
+	body := MailBody(review, "", english)
 	// The flattened text may still CONTAIN the words; what it must not do is
 	// begin a line, which is what makes a forged line read as ours.
 	for _, line := range strings.Split(body, "\n") {
@@ -128,7 +135,7 @@ func TestTheNarrativeCannotForgeStructureInTheBody(t *testing.T) {
 	review := mailFixture()
 	review.Narrative = "A quiet week.\n\nCarried into Monday:  0\nFrom: nobody@example.test"
 
-	body := MailBody(review, "")
+	body := MailBody(review, "", english)
 	for _, line := range strings.Split(body, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "From:") {
 			t.Fatalf("the narrative forged a header line:\n%s", body)
@@ -157,11 +164,95 @@ func TestALongWeekSaysWhatItDidNotList(t *testing.T) {
 		})
 	}
 
-	body := MailBody(review, "")
+	body := MailBody(review, "", english)
 	if !strings.Contains(body, "… and 4 more, on Home") {
 		t.Errorf("a capped week does not say what it left out:\n%s", body)
 	}
 	if got := strings.Count(body, "  · "); got != mailDealCap {
 		t.Errorf("the message listed %d deals, the cap is %d", got, mailDealCap)
 	}
+}
+
+// TestTheMessageIsWrittenInTheInstallationsLanguage is the whole point of the
+// catalog: a rep reads their Home panel in German and then this summary of the
+// same numbers, and an English message is the product changing language on its
+// way out of the browser.
+//
+// The LABELS are asserted, not the numbers — the numbers are the same in every
+// language, so a case that only read them would pass on an English message.
+func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
+	for _, c := range []struct {
+		language string
+		subject  string
+		labels   []string
+	}{
+		{
+			language: "de",
+			subject:  "Deine Woche",
+			labels:   []string{"Zugesagt, erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
+		},
+		{
+			language: "vi",
+			subject:  "Tuần của bạn",
+			labels:   []string{"Đã hứa, đã xong", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
+		},
+		{
+			// A language this build has no copy for is written in the fallback
+			// rather than refused: a summary in the wrong language is worth
+			// more to its reader than no summary.
+			language: "fr",
+			subject:  "Your week",
+			labels:   []string{"Promised, delivered", "You decided", "Morning queue", "Carried over", "won"},
+		},
+	} {
+		t.Run(c.language, func(t *testing.T) {
+			words := mailcopy.For(c.language)
+			if got := MailSubject(mailFixture(), words); !strings.Contains(got, c.subject) {
+				t.Errorf("the subject is %q, want it to carry %q", got, c.subject)
+			}
+			body := MailBody(mailFixture(), "", words)
+			for _, label := range c.labels {
+				if !strings.Contains(body, label) {
+					t.Errorf("the message does not carry %q:\n%s", label, body)
+				}
+			}
+		})
+	}
+}
+
+// TestTheLabelColumnIsSizedToTheLabelsItHas holds the layout in a language
+// whose words are longer than the English ones it was laid out for.
+//
+// Padding by BYTES rather than runes short-changes every row with an umlaut or
+// a Vietnamese diacritic in it, which is a ragged column in two of the three
+// languages and a straight one in the language nobody needed this for.
+func TestTheLabelColumnIsSizedToTheLabelsItHas(t *testing.T) {
+	for _, language := range []string{"en", "de", "vi"} {
+		t.Run(language, func(t *testing.T) {
+			body := MailBody(mailFixture(), "", mailcopy.For(language))
+			widths := map[int]bool{}
+			for _, line := range strings.Split(body, "\n") {
+				colon := strings.Index(line, ":")
+				// Only the tally rows: they are the ones laid out in columns,
+				// and they are what a ragged edge would show in.
+				if colon <= 0 || strings.HasPrefix(line, " ") || strings.Contains(line, "http") {
+					continue
+				}
+				// A line with nothing after its colon is a heading, not a
+				// tally: "What moved:" ends one section and starts another.
+				if strings.TrimSpace(line[colon+1:]) == "" {
+					continue
+				}
+				widths[utf8.RuneCountInString(line[:colon+1])+countLeadingSpaces(line[colon+1:])] = true
+			}
+			if len(widths) > 1 {
+				t.Errorf("the tally rows start their values at %d different columns:\n%s", len(widths), body)
+			}
+		})
+	}
+}
+
+// countLeadingSpaces is how far a value sits from its label's colon.
+func countLeadingSpaces(s string) int {
+	return len(s) - len(strings.TrimLeft(s, " "))
 }

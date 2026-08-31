@@ -483,6 +483,18 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **Outbound mail is written in the installation's own language.** Every message
+  the product sent was hard-coded English while the screens are translated three
+  ways. The weekly retrospective is the one that shows: it arrives unasked every
+  Monday and it is the product talking to a rep about their own week, so a
+  German-speaking rep read their Home panel in German and then an English
+  summary of the same numbers. One catalog now serves all three senders — the
+  password reset, the invitation and the weekly — keyed off the installation's
+  base language, and the weekly's labels and counts are the panel's own strings
+  rather than a second translation of them. A language the catalog has no copy
+  for is sent in English rather than not sent, and a gate fails when the
+  contract admits one the catalog does not carry or leaves a line of it empty.
+
 - **The dev tooling's psql path and its DSN name one database.** They were two,
   with nothing tying them together: ad-hoc statements went through `docker
   compose exec`, and the api, worker and migrator connected through a published

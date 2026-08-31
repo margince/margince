@@ -126,10 +126,11 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		link := passwordLink(h.passwordLinkBaseURL, rawToken)
-		body := "Someone requested a password reset for your Margince account.\n\n" +
-			"Reset your password within one hour:\n\n  " + link + "\n\n" +
-			"If this wasn't you, ignore this email — your password is unchanged."
-		if err := h.resetMailer.Send(workCtx, email.String(), "Reset your Margince password", body); err != nil {
+		words := h.mailCopy(workCtx)
+		body := words.ResetIntro + "\n\n" +
+			words.ResetAction + "\n\n  " + link + "\n\n" +
+			words.ResetIgnore
+		if err := h.resetMailer.Send(workCtx, email.String(), words.ResetSubject, body); err != nil {
 			slog.Error("password-reset email failed", "err", err)
 		}
 	}()

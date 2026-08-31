@@ -329,10 +329,11 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
 		return
 	}
 	link := passwordLink(h.passwordLinkBaseURL, rawToken)
-	body := "You've been invited to Margince.\n\n" +
-		"Set your password within seven days to sign in:\n\n  " + link + "\n\n" +
-		"If you weren't expecting this, you can ignore this email."
-	if err := h.resetMailer.Send(r.Context(), email, "You're invited to Margince", body); err != nil {
+	words := h.mailCopy(r.Context())
+	body := words.InviteIntro + "\n\n" +
+		words.InviteAction + "\n\n  " + link + "\n\n" +
+		words.InviteIgnore
+	if err := h.resetMailer.Send(r.Context(), email, words.InviteSubject, body); err != nil {
 		slog.Error("invite email failed", "err", err)
 	}
 }

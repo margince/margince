@@ -19,6 +19,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -358,4 +361,58 @@ func OperatorResetPasswordSmoke(ctx context.Context, e *revocationEnv, email str
 	//craft:ignore swallowed-errors error-path cleanup — the result under test is OperatorResetPassword's error
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	return OperatorResetPassword(context.Background(), tx, ids.From[ids.WorkspaceKind](e.admin.WorkspaceID.UUID), email, "irrelevant password!")
+}
+
+// TestAResetMailIsWrittenInTheInstallationsLanguage holds the language on the
+// path that cannot supply an actor.
+//
+// `POST /auth/forgot-password` is public: it answers 202 before it knows
+// whether the address maps to an account, and everything after that runs off
+// the request path with nothing bound. The base-language setting is RBAC-gated,
+// so a read on the caller's own context is refused — and the fallback would
+// make every reset mail English on exactly the installations the catalog exists
+// for. The read runs as the system principal for that reason, and this is what
+// says so.
+func TestAResetMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
+	e := setupRevocationEnv(t, "reset-lang")
+	ctx := e.wsOnlyCtx()
+	// Written as a row, the way an administrator's save leaves it. Through
+	// platform/settings would need an actor this fixture has no reason to
+	// carry — and the path under test is the one that has none either.
+	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`INSERT INTO setting (key, value) VALUES ($1, to_jsonb($2::text))
+			 ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+			BaseLanguage.Key(), "de")
+		return err
+	}); err != nil {
+		t.Fatalf("setting the installation's language: %v", err)
+	}
+
+	mail := &capturedMail{}
+	h := NewHandlers(e.svc).WithPasswordReset(mail).WithPasswordLinkBase("https://crm.example.test/")
+	sent := make(chan struct{})
+	h.resetSendStarted = func() { close(sent) }
+
+	rec := httptest.NewRecorder()
+	h.RequestPasswordReset(rec, httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password",
+		strings.NewReader(`{"email":"`+e.member.Email+`"}`)).WithContext(ctx))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("forgot-password status = %d, want 202: %s", rec.Code, rec.Body)
+	}
+	<-sent
+
+	german := mailcopy.For("de")
+	if mail.subject != german.ResetSubject {
+		t.Errorf("subject = %q, want the German %q — the setting read was refused and the message fell back",
+			mail.subject, german.ResetSubject)
+	}
+	if !strings.Contains(mail.body, german.ResetIntro) {
+		t.Errorf("the body does not carry the German opening:\n%s", mail.body)
+	}
+	// The link still goes: the language is a formatting question, and a message
+	// that lost its only call to action would be worse than an English one.
+	if !strings.Contains(mail.body, "https://crm.example.test/#/reset-password?token=") {
+		t.Errorf("the localized mail carries no reset link: %q", mail.body)
+	}
 }
