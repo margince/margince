@@ -88,8 +88,11 @@ ALTER TABLE provider_run
 -- fingerprint of the subject's own address or number; the value itself is no
 -- worse and is honest about what it is.
 --
--- Erasure and the retention sweep both delete these rows: they name a person
--- and describe what is on that person's record.
+-- Erasure and the retention sweep both delete these rows, and a merge moves
+-- them to the survivor: they name a person and describe what is on that
+-- person's record. The foreign key's cascade is not what does it — erasure
+-- anonymizes the person in place rather than deleting the row, so the cascade
+-- never fires and the statements in privacy/ are what remove them.
 CREATE TABLE provider_applied_field (
     id uuid DEFAULT uuidv7() NOT NULL,
     person_id uuid NOT NULL,

@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -146,6 +147,20 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	address, err := values.ParseEmail(v.email)
 	if err != nil {
 		return nothingFilled, nil //nolint:nilerr // an address we cannot parse is one we cannot store
+	}
+	// The suppression probe every ingest path owes. Erasure keeps a hash of
+	// each erased address precisely so a later arrival cannot resurrect the
+	// subject, and a bought address is the sharpest form of that arrival: the
+	// fence above cannot see it, because it reads the addresses already on the
+	// record and this one by construction is not there yet. Without this, a
+	// contact created from a business card and enriched brings a person who
+	// exercised Art. 17 back as a live, mailable record.
+	suppressed, err := storekit.EmailSuppressed(ctx, tx, address.String())
+	if err != nil {
+		return nothingFilled, fmt.Errorf("people: checking a bought address against the erasure list: %w", err)
+	}
+	if suppressed {
+		return nothingFilled, nil
 	}
 	rowID, landed, err := insertChildRow(ctx, tx, `
 		INSERT INTO person_email (person_id, email, email_type, is_primary, position, source, captured_by)

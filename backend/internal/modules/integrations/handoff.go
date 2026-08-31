@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -228,4 +229,30 @@ func (s *Store) bumpClaimAttempt(ctx context.Context, tx pgx.Tx, runID string) (
 // least likely to be ready.
 func claimBackoff(attempt int) time.Duration {
 	return time.Minute << (attempt - 1)
+}
+
+// holdSubjectForSettlement takes the subject's row before a settlement that may
+// go on to write about them, so this transaction's lock order matches the
+// eraser's: person first, then the run.
+//
+// It asks the domain to LOCK, not to judge. The verdict is discarded here on
+// purpose — whether the subject may still receive values is writeClaimsInline's
+// question, asked once, at the point the values would land. Asking it twice
+// would be two answers to one question, and the second would be the one nobody
+// read.
+//
+// A subject that has vanished under the run is not an error to fail the
+// settlement with: the run's own outcome still has to be recorded, and the
+// hand-off below will decline the values on its own terms.
+func (s *Store) holdSubjectForSettlement(ctx context.Context, tx pgx.Tx, personID string) error {
+	if s.holdSubject == nil || personID == "" {
+		return nil
+	}
+	if _, err := s.holdSubject(ctx, tx, personID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

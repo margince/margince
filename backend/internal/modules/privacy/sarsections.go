@@ -268,6 +268,10 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		          ppc.source, ppc.captured_by, ppc.retrieved_at
 		   FROM person_provider_claim ppc
 		   WHERE ppc.person_id = $1`, nil},
+		{&pkg.ProviderAppliedFields, `SELECT paf.provider, paf.target_table, paf.target_field,
+		          paf.applied_value, paf.captured_by, paf.applied_at
+		   FROM provider_applied_field paf
+		   WHERE paf.person_id = $1`, nil},
 		// The run history carries no credential and no vault reference: the
 		// closed safe status code is a product reason, never a provider body.
 		{&pkg.ProviderRuns, `SELECT pr.provider, pr.trigger, pr.state, pr.skip_reason,
