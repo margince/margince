@@ -79,7 +79,6 @@ func TestAStaleConsentNonceComesBackToTheScreen(t *testing.T) {
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	armed := form.Get("consent")
-	form.Set("passport_id", o.mintPassport(t, "lendable", []string{"read", "write"}))
 	form.Set("consent", "not-the-nonce-this-browser-was-given")
 
 	status, location, _ := o.postConsent(t, form)

@@ -10,9 +10,7 @@ package agentaccess
 // unit-tested at identity's TestConsentPayloadOffersTheWholeVocabulary), and
 // the deployment switch it follows like every other /oauth/ path. The old
 // per-human passport-selection read model this endpoint used to serve is gone
-// along with the lend flow it supported; mintPassport stays because the
-// consent-decision refusal suite next door still needs a live passport to
-// drive its own fixtures.
+// along with the flow it supported.
 
 import (
 	"context"
@@ -23,7 +21,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -32,22 +29,6 @@ import (
 // restates the wire name catches a rename that would silently break every
 // browser mid-flow.
 const consentCookieName = "crm_oauth_consent"
-
-// mintPassport creates a hand-minted passport through the public surface and
-// returns its id — never an INSERT, so the row matches what a human's mint
-// actually writes.
-func (o *oauthEnv) mintPassport(t *testing.T, label string, scopes []string) string {
-	t.Helper()
-	var minted struct {
-		ID string `json:"passport_id"`
-	}
-	if status := o.Call(t, "POST", "/v1/passports", integration.AnyMap{
-		"label": label, "scopes": scopes,
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("mint %q → %d", label, status)
-	}
-	return minted.ID
-}
 
 // registerClientDirectly inserts a live oauth_client row over the owner
 // connection. The harness's normal path to a live client is POST
