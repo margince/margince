@@ -16,6 +16,7 @@ package attention
 // right ones.
 
 import (
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -378,7 +379,37 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 	row := base(item, level, "decisions", consequence)
 	row.Because = []crmcontracts.WorklistReason{reason(crmcontracts.WorklistReasonKind(why), nil)}
-	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+	// The two facts a routine contact decision is grouped by. They ride on the
+	// wire item's `detail`, which the feed fills from the staged payload — the
+	// verdict engine already decided who the address belongs to, and deriving
+	// it again here would put one decision in two groups across two reads.
+	facts := stagedFactsOf(item)
+	return ranked{
+		item:          row,
+		occurredAt:    occurredOf(item, asOf),
+		machineSender: facts.MachineSender,
+		knownCompany:  facts.KnownCompany,
+	}
+}
+
+// The markers the feed stamps on a contact decision's detail, so the queue can
+// group it without reading the payload a second time. Two words rather than a
+// structure, because `detail` is one line on the wire and this is all it needs
+// to carry.
+const (
+	stagedMachineSender = "machine_sender"
+	stagedKnownCompany  = "known_company"
+)
+
+// stagedFactsOf reads those markers back.
+func stagedFactsOf(item crmcontracts.AttentionItem) StagedFacts {
+	if item.Detail == nil {
+		return StagedFacts{}
+	}
+	return StagedFacts{
+		MachineSender: strings.Contains(*item.Detail, stagedMachineSender),
+		KnownCompany:  strings.Contains(*item.Detail, stagedKnownCompany),
+	}
 }
 
 // blocksCustomerWork reports whether a staged decision is holding up something
@@ -394,10 +425,20 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	}
 	switch *item.Kind {
 	case "send_email", "send_account_email", "send_message",
-		"scheduled_send_held", "held_draft",
 		"book_meeting",
 		"deal_follow_up", "transcript_proposal", "site_lead":
 		return true
+	case "held_draft", "scheduled_send_held":
+		// A message the product WROTE and is holding. It blocks a customer in
+		// the sense that nothing reaches them until somebody looks — but five
+		// hundred of them are one kind of work, and treating each as its own
+		// urgent row is what made the old page unreadable. So they group, and
+		// the group sits where routine work sits.
+		//
+		// The distinction from a send: a send is a message the rep MEANT to
+		// send and a person is waiting on it. A held draft is a suggestion
+		// nobody has agreed to yet.
+		return false
 	default:
 		return false
 	}

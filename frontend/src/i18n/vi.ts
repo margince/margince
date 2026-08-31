@@ -7050,4 +7050,11 @@ export const vi = {
   "worklist.source.failed": "Không đọc được {source}",
   "worklist.source.withheld": "{source} bị ẩn với tài khoản của bạn",
   "worklist.untitled.generic": "Có việc cần bạn",
+  "worklist.batch.likely_automated": "{count} người gửi có thể tự động",
+  "worklist.batch.company_match": "{count} địa chỉ ở công ty đã biết",
+  "worklist.batch.uncertain_contact": "{count} địa chỉ cần quyết định",
+  "worklist.batch.duplicates": "{count} bản ghi có thể trùng",
+  "worklist.batch.held_draft": "{count} bản nháp đang chờ gửi",
+  "worklist.untitled.batch": "Một nhóm quyết định thường lệ",
+  "worklist.verb.review_batch": "Xem lại",
 } as const satisfies Record<MessageKey, string>;

@@ -89,6 +89,13 @@ function WorklistRow({
           <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
         </p>
+        {item.batch?.sample && item.batch.sample.length > 0 && (
+          // A group nobody can see into is a group nobody trusts, and an
+          // untrusted group is worse than the pile it replaced.
+          <p className="t-caption worklist-row-sample">
+            {item.batch.sample.join(" · ")}
+          </p>
+        )}
         {because && <p className="t-caption worklist-row-because">{because}</p>}
         {/* What it costs to do nothing. The question a queue exists to answer,
             and the one the lane feed had no field for. */}

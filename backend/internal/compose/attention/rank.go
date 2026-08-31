@@ -82,6 +82,12 @@ type ranked struct {
 	waitingDays  int
 	strength     int
 	occurredAt   time.Time
+	// What a routine contact decision is ABOUT, for the group it joins. Read
+	// from the staged payload rather than re-derived here: the verdict engine
+	// already decided who the address belongs to, and a second opinion would
+	// put the same decision in two groups on two reads.
+	machineSender bool
+	knownCompany  bool
 }
 
 // rankAll orders the day and explains itself.

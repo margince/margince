@@ -177,6 +177,39 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getAllByRole("link", { name: "Open" })).toHaveLength(1);
   });
 
+  it("draws a pile of routine decisions as one row that says how many", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "likely_automated",
+            source: "batch",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
+            batch: {
+              key: "likely_automated",
+              count: 43,
+              sample: [
+                "Is noreply@x.com a contact?",
+                "Is bot@y.com a contact?",
+              ],
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The row IS the sentence: a reader decides whether to open it from this
+    // alone, so the count is part of the name rather than a badge beside it.
+    expect(await screen.findByText("43 likely automated senders")).toBeTruthy();
+    // And it names some of what it holds, because a group nobody can see into
+    // is a group nobody trusts.
+    expect(screen.getByText(/Is noreply@x.com a contact\?/)).toBeTruthy();
+  });
+
   it("says what happens if the reader does nothing", async () => {
     stub(
       day({

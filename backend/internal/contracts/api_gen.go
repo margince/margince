@@ -11311,6 +11311,33 @@ func (e WorklistScopeOptions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistBatchKey.
+const (
+	CompanyMatch     WorklistBatchKey = "company_match"
+	Duplicates       WorklistBatchKey = "duplicates"
+	HeldDraft        WorklistBatchKey = "held_draft"
+	LikelyAutomated  WorklistBatchKey = "likely_automated"
+	UncertainContact WorklistBatchKey = "uncertain_contact"
+)
+
+// Valid indicates whether the value is a known member of the WorklistBatchKey enum.
+func (e WorklistBatchKey) Valid() bool {
+	switch e {
+	case CompanyMatch:
+		return true
+	case Duplicates:
+		return true
+	case HeldDraft:
+		return true
+	case LikelyAutomated:
+		return true
+	case UncertainContact:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistComparisonComparator.
 const (
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
@@ -11469,6 +11496,7 @@ const (
 	WorklistItemSourceAiWorkHealth      WorklistItemSource = "ai_work_health"
 	WorklistItemSourceApproval          WorklistItemSource = "approval"
 	WorklistItemSourceAutomationRun     WorklistItemSource = "automation_run"
+	WorklistItemSourceBatch             WorklistItemSource = "batch"
 	WorklistItemSourceBounce            WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem         WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth     WorklistItemSource = "capture_health"
@@ -11493,6 +11521,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceApproval:
 		return true
 	case WorklistItemSourceAutomationRun:
+		return true
+	case WorklistItemSourceBatch:
 		return true
 	case WorklistItemSourceBounce:
 		return true
@@ -27299,6 +27329,38 @@ type WorklistScope string
 // WorklistScopeOptions defines model for Worklist.ScopeOptions.
 type WorklistScopeOptions string
 
+// WorklistBatch A group of routine decisions that read alike, standing on the queue as one row.
+//
+// The pile is the problem this solves: a hundred and fifty "is this address a
+// contact?" questions are one KIND of work, and asking them one at a time buries
+// every customer beneath them. The reader answers the group, or opens it to answer
+// the exceptions.
+//
+// `sample` names a few of the members so the row is checkable — a reader who cannot
+// see what is in a group has to trust it, and a group nobody trusts is worse than
+// the pile it replaced.
+type WorklistBatch struct {
+	// Count How many decisions this row stands for.
+	Count int `json:"count"`
+
+	// Key What the members have in common, which is also what makes them safe to answer
+	// together. `likely_automated` is mail from senders that are not people;
+	// `company_match` are addresses whose domain already names a company we know;
+	// `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
+	// `held_draft` are messages waiting to be released.
+	Key WorklistBatchKey `json:"key"`
+
+	// Sample A few members, named, so the group can be checked before it is answered.
+	Sample *[]string `json:"sample,omitempty"`
+}
+
+// WorklistBatchKey What the members have in common, which is also what makes them safe to answer
+// together. `likely_automated` is mail from senders that are not people;
+// `company_match` are addresses whose domain already names a company we know;
+// `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
+// `held_draft` are messages waiting to be released.
+type WorklistBatchKey string
+
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
 // asking the reader to trust the order.
@@ -27355,6 +27417,18 @@ type WorklistItem struct {
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
 
+	// Batch A group of routine decisions that read alike, standing on the queue as one row.
+	//
+	// The pile is the problem this solves: a hundred and fifty "is this address a
+	// contact?" questions are one KIND of work, and asking them one at a time buries
+	// every customer beneath them. The reader answers the group, or opens it to answer
+	// the exceptions.
+	//
+	// `sample` names a few of the members so the row is checkable — a reader who cannot
+	// see what is in a group has to trust it, and a group nobody trusts is worse than
+	// the pile it replaced.
+	Batch *WorklistBatch `json:"batch,omitempty"`
+
 	// Because The facts that put this item at this level, in the order they were weighed.
 	Because []WorklistReason `json:"because"`
 
@@ -27400,6 +27474,10 @@ type WorklistItem struct {
 	Score *float32 `json:"score,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
+	//
+	// `batch` is the one that names no single record: it stands for a GROUP of
+	// routine decisions that read alike, so a hundred of them cost the reader one
+	// row rather than a hundred. Its own facts ride in `batch`.
 	Source WorklistItemSource `json:"source"`
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
@@ -27421,6 +27499,10 @@ type WorklistItemCategory string
 type WorklistItemConsequence string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+//
+// `batch` is the one that names no single record: it stands for a GROUP of
+// routine decisions that read alike, so a hundred of them cost the reader one
+// row rather than a hundred. Its own facts ride in `batch`.
 type WorklistItemSource string
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the

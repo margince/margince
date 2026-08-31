@@ -7201,6 +7201,13 @@ export const en = {
   "worklist.source.failed": "{source} could not be read",
   "worklist.source.withheld": "{source} is hidden from your account",
   "worklist.untitled.generic": "Something needs you",
+  "worklist.batch.likely_automated": "{count} likely automated senders",
+  "worklist.batch.company_match": "{count} addresses at companies you know",
+  "worklist.batch.uncertain_contact": "{count} addresses to decide on",
+  "worklist.batch.duplicates": "{count} possible duplicate records",
+  "worklist.batch.held_draft": "{count} drafts waiting to be sent",
+  "worklist.untitled.batch": "A group of routine decisions",
+  "worklist.verb.review_batch": "Review",
 } as const;
 
 export type MessageKey = keyof typeof en;

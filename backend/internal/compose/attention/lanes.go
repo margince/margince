@@ -32,6 +32,26 @@ type Approvals interface {
 	CountPending(ctx context.Context) (int, error)
 }
 
+// MachineSender answers whether an address belongs to a sending system rather
+// than a person.
+//
+// Injected rather than imported: this package reaches no module, and the rule
+// belongs to capture, which owns what a machine sender IS. A feed given none
+// treats every address as a person's, which under-groups rather than hiding
+// anything.
+type MachineSender func(address string) bool
+
+// StagedFacts are the few things about a staged proposal this queue needs that
+// its summary sentence does not carry: enough to put a routine decision in the
+// right group without reading the payload twice.
+type StagedFacts struct {
+	// MachineSender is set when the address the decision is about belongs to a
+	// sending system rather than a person.
+	MachineSender bool
+	// KnownCompany is set when its domain already names a company here.
+	KnownCompany bool
+}
+
 // ApprovalQuery is what this feed asks the approvals engine for. Narrower than
 // the engine's own input on purpose: the feed reads one page of one status and
 // takes no part in choosing scope, which stays the engine's to decide.
