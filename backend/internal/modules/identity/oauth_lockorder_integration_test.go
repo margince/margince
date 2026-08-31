@@ -45,12 +45,15 @@ func (e *revocationEnv) connectOAuth(t *testing.T) connectFixture {
 func (e *revocationEnv) connectOAuthFor(t *testing.T, consenter Identity) connectFixture {
 	t.Helper()
 	// The lock-order suite tests revoke/rotation races, not lend races.
-	return e.connectOAuth(t, consenter, "lock order")
+	return e.connectOAuthWith(t, consenter, "lock order")
 }
 
-// connectOAuth is the ONE fixture that builds a connection, so the callers
-// cannot drift apart in how they consent.
-func (e *revocationEnv) connectOAuth(
+// connectOAuthWith builds a connection through the module's own issuance
+// path, taking the client name as a parameter so a caller can register more
+// than one client in the same test. Named apart from connectOAuth/
+// connectOAuthFor above (both pre-existing, narrower convenience wrappers over
+// this one) rather than reusing either name, which would collide.
+func (e *revocationEnv) connectOAuthWith(
 	t *testing.T, consenter Identity, clientName string,
 ) connectFixture {
 	t.Helper()

@@ -9,10 +9,10 @@ package agentaccess
 // scope vocabulary every client is offered (Task 2's consentRequestPayload —
 // unit-tested at identity's TestConsentPayloadOffersTheWholeVocabulary), and
 // the deployment switch it follows like every other /oauth/ path. The old
-// per-human passport-selection read model this endpoint used to serve is
-// gone along with the lend flow it supported; mintPassport and revokePassport
-// stay because the consent-decision refusal suite next door still needs a
-// live passport to drive its own fixtures.
+// per-human passport-selection read model this endpoint used to serve is gone
+// along with the lend flow it supported; mintPassport stays because the
+// consent-decision refusal suite next door still needs a live passport to
+// drive its own fixtures.
 
 import (
 	"context"
@@ -47,13 +47,6 @@ func (o *oauthEnv) mintPassport(t *testing.T, label string, scopes []string) str
 		t.Fatalf("mint %q → %d", label, status)
 	}
 	return minted.ID
-}
-
-func (o *oauthEnv) revokePassport(t *testing.T, id string) {
-	t.Helper()
-	if status := o.Call(t, "DELETE", "/v1/passports/"+id, nil, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("revoke %s → %d", id, status)
-	}
 }
 
 // registerClientDirectly inserts a live oauth_client row over the owner
