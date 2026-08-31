@@ -48,6 +48,11 @@ type appliedField struct {
 	field string
 	rowID *ids.UUID
 	value *string
+	// subject and provider are read back by the revert, which needs to know
+	// whose record it is clearing and whose purchase it is undoing. The apply
+	// side already holds both and leaves them zero.
+	subject  ids.UUID
+	provider string
 }
 
 // ApplyProviderClaims folds one completed run's claims onto the subject's
