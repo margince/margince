@@ -92,7 +92,11 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 			kept = append(kept, members...)
 			continue
 		}
-		kept = append(kept, batchRow(at.key, at.cause, members, bounded))
+		// The bound belongs to the lane the members CAME from. It is the
+		// decision lane's own scan depth, and a system incident read from a
+		// different lane never hit it — marking one "8+" because an unrelated
+		// lane filled up reports a number the reader cannot check.
+		kept = append(kept, batchRow(at.key, at.cause, members, bounded && at.key != "system_incident"))
 	}
 	return kept
 }
@@ -197,6 +201,16 @@ const batchSample = 3
 // It carries no subject: a batch is about no single record, and offering `open`
 // would send the reader to whichever member happened to be first. Its verb is
 // the batch screen, which the client routes from the source alone.
+// groupReason says why these rows are one row. An incident is not tidying: it
+// reports that one thing broke repeatedly, and calling that "routine" tells the
+// reader to leave a dead mailbox for later.
+func groupReason(key crmcontracts.WorklistBatchKey) crmcontracts.WorklistReasonKind {
+	if key == "system_incident" {
+		return "repeated_failure"
+	}
+	return "routine"
+}
+
 func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked, bounded bool) ranked {
 	sample := make([]string, 0, batchSample)
 	for _, member := range members {
@@ -216,9 +230,17 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		crmcontracts.WorklistItemCategory("decisions"),
 		crmcontracts.WorklistItemConsequence("data_drifts")
 	if key == "system_incident" {
-		level = members[0].item.Level
+		// The MOST urgent member's band, not the first one read. The members
+		// arrive in the lane's own order, which is not urgency, so taking the
+		// first would rank an incident by whichever failure happened to be
+		// read first and could file an urgent one below a routine row.
+		level, consequence = members[0].item.Level, members[0].item.Consequence
+		for _, member := range members[1:] {
+			if member.item.Level < level {
+				level, consequence = member.item.Level, member.item.Consequence
+			}
+		}
 		category = categorySystem
-		consequence = members[0].item.Consequence
 	}
 	count := len(members)
 	row := crmcontracts.WorklistItem{
@@ -230,7 +252,7 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		Category:    category,
 		Level:       level,
 		Consequence: consequence,
-		Because:     []crmcontracts.WorklistReason{reason("routine", nil)},
+		Because:     []crmcontracts.WorklistReason{reason(groupReason(key), nil)},
 		Batch: &crmcontracts.WorklistBatch{
 			Key:    key,
 			Count:  count,

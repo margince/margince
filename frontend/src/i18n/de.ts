@@ -7012,6 +7012,7 @@ export const de = {
     "du hast zugestimmt, es lief aber nicht",
   "worklist.because.blocks_customer_work": "ein Kunde wartet darauf",
   "worklist.because.routine": "Routinepflege",
+  "worklist.because.repeated_failure": "dasselbe schlägt immer wieder fehl",
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",

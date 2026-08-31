@@ -6951,6 +6951,7 @@ export const vi = {
   "worklist.because.approved_and_failed": "bạn đã duyệt nhưng nó không chạy",
   "worklist.because.blocks_customer_work": "một khách hàng đang bị chặn",
   "worklist.because.routine": "dọn dẹp thường lệ",
+  "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
   "worklist.because.meeting_soon": "sắp bắt đầu",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",

@@ -112,6 +112,7 @@ const KNOWN_REASONS = {
   approved_and_failed: true,
   blocks_customer_work: true,
   routine: true,
+  repeated_failure: true,
   legal_deadline: true,
   meeting_soon: true,
 } as const;
