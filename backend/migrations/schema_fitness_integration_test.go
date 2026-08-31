@@ -325,6 +325,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// The named audience of a limited activity. Written only by the audience
 	// endpoint, which has put the activity through the content gate first.
 	"activity_audience_member.activity_id": "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
+	"capture_import.activity_id":           "child row: written only by the capture sink, for the activity that same sink just landed or replayed, after auth.EnsureActivityContentVisibleLive — the gate matters here because a message's natural key is the sender-supplied Message-ID, so hitting an incumbent must grant the syncing seat nothing",
 	// The interaction projection (CG-DDL-1) holds no fact of its own: every
 	// row is folded from activity_participant rows by the consumer, and no
 	// request body ever names a person here. Reads of it carry the person

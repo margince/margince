@@ -35,7 +35,13 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 	// No inequality guard: with mail sharing off the row was BORN
 	// participants-only, and a pin that then matched zero rows would abort
 	// the capture of a message that is already exactly as held as asked.
-	tag, err := tx.Exec(ctx, `UPDATE activity SET audience = $2 WHERE id = $1`, id, audienceParticipants)
+	// The reason travels with the hold. The audience derivation runs after this
+	// and would otherwise see a participants-only row that no import row asks
+	// for, and widen it back — the reason is how a hold placed for something
+	// other than a mailbox's posture survives being recomputed.
+	tag, err := tx.Exec(ctx,
+		`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
+		id, audienceParticipants, audienceReasonNoRecord)
 	if err != nil {
 		return fmt.Errorf("capture: limiting a link-less message to its participants: %w", err)
 	}
@@ -49,24 +55,39 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 // is held in (platform/auth ActivityContentClause names the arms).
 const audienceParticipants = "participants"
 
+// audienceReasonNoRecord mirrors activities.ReasonNoRecord, which this module
+// cannot import (a module never imports a sibling). The two are one vocabulary
+// and TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay fails if they drift.
+const audienceReasonNoRecord = "no_record"
+
+// audienceReasonWorkspaceFloor mirrors activities.ReasonWorkspaceFloor, for the
+// same reason and held by the same test: the workspace turned mail sharing off,
+// which is not any mailbox's posture and which no verdict clears.
+const audienceReasonWorkspaceFloor = "workspace_floor"
+
 // capturedAudience answers the audience a freshly captured activity is born
 // with. Mail sharing ON (the default) births an email workspace-readable —
 // the point of capturing into a shared CRM. Switched OFF, an email is held to
 // its participants and the capturing mailbox owner from the moment it lands;
 // the setting moves the default for NEW mail only, and non-mail kinds
 // (meetings, channel messages) keep the workspace default either way.
-func capturedAudience(ctx context.Context, tx pgx.Tx, kind string) (string, error) {
+// It answers a REASON with the audience. The workspace floor is a decision no
+// capture_import row records — it is the workspace's, not any mailbox's — so a
+// derivation reading import rows alone would find nothing asking for a hold and
+// widen the message back on the very capture that just held it. The reason on
+// the row is what carries the floor into every later recompute.
+func capturedAudience(ctx context.Context, tx pgx.Tx, kind string) (audience, reason string, err error) {
 	if kind != "email" {
-		return audienceWorkspace, nil
+		return audienceWorkspace, "", nil
 	}
 	sharing, err := settings.ApplyTx(ctx, tx, MailSharing)
 	if err != nil {
-		return "", fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
+		return "", "", fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
 	}
 	if sharing {
-		return audienceWorkspace, nil
+		return audienceWorkspace, "", nil
 	}
-	return audienceParticipants, nil
+	return audienceParticipants, audienceReasonWorkspaceFloor, nil
 }
 
 const audienceWorkspace = "workspace"
