@@ -1386,6 +1386,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
+         * @description The decision layer of the company People tab. `GET /organizations/{id}/contacts`
+         *     is the roster; this is the reading of it a rep opens the page for: is anybody
+         *     here talking to us, which buying roles nobody holds, and who is the warmest
+         *     route in.
+         *
+         *     **Counted over the WHOLE account, not a page.** A coverage figure taken from a
+         *     page is a figure about the page, and the reader cannot tell the two apart — so
+         *     the counts here are over every contact the caller may see, however many pages
+         *     the list would take.
+         *
+         *     **A role gap is only reported when the committee could be read in full.**
+         *     "Nobody is champion" is a claim about EVERY seat on the deal, and a seat whose
+         *     person the caller cannot see is still a seat: `unlisted_seats` counts them, and
+         *     `gaps` is empty whenever it is non-zero. A partial answer here is worse than
+         *     none, because the reader cannot tell which one they got.
+         *
+         *     Native system-of-record only: an overlay workspace gets `422`, the same refusal
+         *     the 360 gives.
+         */
+        get: operations["getOrganizationCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/contacts": {
         parameters: {
             query?: never;
@@ -16435,6 +16475,79 @@ export interface components {
              */
             contact_id: string;
         };
+        OrganizationCoverage: {
+            /** Format: date-time */
+            as_of: string;
+            summary: components["schemas"]["OrganizationCoverageSummary"];
+            /** @description The account's open deals, so the reader can pick which committee to read. */
+            deals: components["schemas"]["OrganizationCoverageDeal"][];
+            /**
+             * Format: uuid
+             * @description The deal the committee below describes. Null when the account has no visible open deal.
+             */
+            selected_deal_id?: string | null;
+            best_way_in?: components["schemas"]["OrganizationCoverageRoute"];
+            committee?: components["schemas"]["OrganizationCoverageCommittee"];
+            completeness: components["schemas"]["OrganizationCoverageCompleteness"];
+        };
+        OrganizationCoverageSummary: {
+            /** @description Every contact the caller may see at this account, not a page of them. */
+            contacts_total: number;
+            /** @description Contacts who have written back inside the 90-day window. */
+            answered: number;
+            /** @description Contacts we have written to with nothing back. */
+            no_reply: number;
+            /** @description Contacts nobody has written to at all. */
+            untried: number;
+        };
+        OrganizationCoverageDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            name: string;
+        };
+        /**
+         * @description The warmest way into the account: the contact most worth writing to, by the same
+         *     ranking the contact list opens on.
+         */
+        OrganizationCoverageRoute: {
+            /** Format: uuid */
+            person_id: string;
+            full_name: string;
+            title?: string | null;
+            engagement: components["schemas"]["ContactEngagement"];
+            /** Format: date-time */
+            last_inbound_at?: string | null;
+        };
+        OrganizationCoverageCommittee: {
+            seats: components["schemas"]["OrganizationCoverageSeat"][];
+            /**
+             * @description The critical roles nobody holds on the selected deal — champion, then economic
+             *     buyer. EMPTY whenever `unlisted_seats` is non-zero: a seat the caller cannot see
+             *     is still a seat, and reporting a gap over a partial committee names a hole that
+             *     may not exist.
+             */
+            gaps: string[];
+            /**
+             * @description Seats held by somebody this caller may not see. Counted rather than named, so the
+             *     reader learns the committee is bigger than the list without learning who is on it.
+             */
+            unlisted_seats: number;
+        };
+        OrganizationCoverageSeat: {
+            /** Format: uuid */
+            person_id: string;
+            full_name: string;
+            role: string;
+            engagement?: components["schemas"]["ContactEngagement"];
+        };
+        OrganizationCoverageCompleteness: {
+            /**
+             * @description Whether the buying committee could be read at all. False when the caller lacks the
+             *     deal or relationship grant — the committee and its gaps are then absent rather than
+             *     empty, because an empty committee and an unreadable one are different facts.
+             */
+            committee_read: boolean;
+        };
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
          *     score uses.
@@ -27008,6 +27121,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrganizationGraph"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getOrganizationCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account's coverage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationCoverage"];
                 };
             };
             401: components["responses"]["Unauthorized"];

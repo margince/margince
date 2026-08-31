@@ -67,6 +67,19 @@ func (h Handlers) GetOrganizationGraph(w http.ResponseWriter, r *http.Request, i
 	httperr.WriteJSON(w, http.StatusOK, graph)
 }
 
+// GetOrganizationCoverage implements GET /organizations/{id}/coverage.
+func (h Handlers) GetOrganizationCoverage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if !h.nativeOnly(w, r) {
+		return
+	}
+	coverage, err := h.svc.Coverage(r.Context(), ids.From[ids.OrganizationKind](ids.UUID(id)))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, coverage)
+}
+
 // ListOrganizationContacts implements GET /organizations/{id}/contacts.
 func (h Handlers) ListOrganizationContacts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
 	params crmcontracts.ListOrganizationContactsParams,
