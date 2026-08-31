@@ -64,6 +64,13 @@ const waitingScanCap = 200
 // may not READ still answered the customer, and skipping it would report a
 // message as unanswered because the answer was somebody else's to see — the
 // worst failure available here, since it sends a rep to write a second reply.
+//
+// A message with NO thread_key is excluded rather than matched loosely. SQL
+// equality would never join two NULLs, and IS NOT DISTINCT FROM joins them ALL
+// — so an unthreaded message would be silenced by any other unthreaded
+// outbound in the workspace, and one unthreaded reply would hide every
+// unthreaded question at once. Excluding them under-reports, which is the
+// direction that costs a row rather than a customer.
 const waitingRepliesSQL = `
 	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at, %s AS readable,
 	       COALESCE(l.person_id, '00000000-0000-0000-0000-000000000000'::uuid),
@@ -76,15 +83,16 @@ const waitingRepliesSQL = `
 	   AND a.archived_at IS NULL
 	   AND a.occurred_at <= $%d
 	   AND %s
+	   AND a.thread_key IS NOT NULL
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity later
-	          WHERE later.thread_key IS NOT DISTINCT FROM a.thread_key
+	          WHERE later.thread_key = a.thread_key
 	            AND later.direction = 'outbound'
 	            AND later.archived_at IS NULL
 	            AND later.occurred_at > a.occurred_at)
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity newer
-	          WHERE newer.thread_key IS NOT DISTINCT FROM a.thread_key
+	          WHERE newer.thread_key = a.thread_key
 	            AND newer.direction = 'inbound'
 	            AND newer.archived_at IS NULL
 	            AND newer.occurred_at > a.occurred_at)

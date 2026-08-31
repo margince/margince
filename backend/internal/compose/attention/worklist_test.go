@@ -457,3 +457,41 @@ func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
 		t.Fatal("the two-day wait outranked the eighty-three-day one")
 	}
 }
+
+// Being told somebody is waiting is not permission to read what they wrote.
+// A withheld message travels without its subject line, and the client names it
+// generically.
+func TestAWithheldWaitingMessageTravelsWithoutItsSubject(t *testing.T) {
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000dddd"),
+		Subject:    "Re: our confidential pricing",
+		Since:      rankInstant.Add(-24 * time.Hour),
+		Readable:   false,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Title != nil {
+		t.Fatalf("a message this reader may not read published its subject %q", *out.Queue[0].Title)
+	}
+	if len(out.Queue) != 1 {
+		t.Fatal("the withheld message stopped being reported at all — the wait is still a fact")
+	}
+}
+
+// A readable one keeps its subject: withholding everything would make the lane
+// useless to the reader it is for.
+func TestAReadableWaitingMessageKeepsItsSubject(t *testing.T) {
+	waiting := []WaitingCustomer{{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000eeee"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-24 * time.Hour),
+		Readable:   true,
+	}}
+
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
+
+	if out.Queue[0].Title == nil || *out.Queue[0].Title != "Re: pricing" {
+		t.Fatal("a readable message lost its subject line")
+	}
+}

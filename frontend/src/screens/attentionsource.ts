@@ -26,6 +26,9 @@ export const FOCUS_SURFACE = {
   task: "report",
   brief_item: "report",
   conversation_claim: "report",
+  // A waiting customer is reported, not decided: the reply is drafted on the
+  // record the thread belongs to, and the decision lane holds no verb for it.
+  customer_waiting: "report",
   deal_at_risk: "report",
   meeting: "report",
   relationship_decay: "report",
