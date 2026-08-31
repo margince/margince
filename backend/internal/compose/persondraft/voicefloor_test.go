@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package accountdraft
+package persondraft
 
 // The anti-AI floor a voiced draft passes through, and the guarantee it owes:
 // every step may improve the draft and none may replace it with a worse one.
+//
+// The account composer carries the same floor and the same tests. Both, on
+// purpose: the two were written from one template, and a fix applied to one of
+// them is exactly the drift a pair of tests exists to catch.
 
 import (
 	"context"
@@ -39,6 +43,15 @@ func (l *sequencedLane) Complete(_ context.Context, _ model.Request) (model.Resp
 	return model.Response{Text: l.answers[l.calls-1]}, nil
 }
 
+func floorInput() Input {
+	return Input{
+		Recipient: RecipientIn{
+			ID: "019fe7ae-0000-7000-8000-000000000001", Name: "Sarah Cole",
+			FirstName: "Sarah", Email: "sarah@glazedfrog.example",
+		},
+	}
+}
+
 func voiced() draftvoice.Context {
 	return draftvoice.Context{
 		Profile: ai.VoiceProfile{PersonalityMD: "I write short."},
@@ -47,79 +60,24 @@ func voiced() draftvoice.Context {
 	}
 }
 
-// A draft the sanitizer would empty is served unsanitized rather than blank.
-//
-// The sanitizer deletes characters. A subject made only of what it deletes
-// comes back as the empty string, and an empty subject is not a message the
-// contract can carry — so the pre-sanitizer draft, imperfect but real, is what
-// the rep gets. Without this the composer answers a rep's "Write email" with a
-// draft that has no subject at all.
-func TestASanitizerThatWouldEmptyTheDraftIsNotApplied(t *testing.T) {
-	// A subject that is NOTHING but a spaced em dash: it survives the parse,
-	// which only refuses an empty string, and the sanitizer removes the whole
-	// of it. A subject that merely CONTAINS one is not this case — the
-	// sanitizer rewrites it to a comma and the draft is never empty, so a
-	// fixture built from one cannot fail however the code behaves.
-	const answer = `{"subject":" — ","body":"Hi Sarah,\n\nShall we pick this up?"}`
-	lane := &sequencedLane{answers: []string{answer, answer}}
-
-	draft, _, err := Write(context.Background(), lane, sampleInput(), voiced())
-	if err != nil {
-		t.Fatalf("the voiced draft failed: %v", err)
-	}
-	if strings.TrimSpace(draft.Subject) == "" {
-		t.Error("the composer served a draft with an empty subject, which is not a message a rep can send")
-	}
-	if strings.TrimSpace(draft.Body) == "" {
-		t.Error("the composer served a draft with an empty body")
-	}
-}
-
-// A retry that clears nothing is discarded, and the first attempt stands.
-//
-// A retry is one more model answer, not a better one by definition: it is
-// written without the draftcheck findings the first pass already cleared, so
-// keeping it unconditionally can trade a clean draft for a dirty one.
-func TestARetryThatClearsNothingIsDiscarded(t *testing.T) {
-	const first = `{"subject":"Rollout — Phase 2","body":"Hi Sarah,\n\nShall we pick this up?"}`
-	// The retry keeps the violation AND loses the recipient's name, so a test
-	// that could not tell the two apart would pass on either being served.
-	const retry = `{"subject":"Rollout — Phase 2","body":"Hi there,\n\nAnything to add?"}`
-	lane := &sequencedLane{answers: []string{first, retry}}
-
-	draft, _, err := Write(context.Background(), lane, sampleInput(), voiced())
-	if err != nil {
-		t.Fatalf("the voiced draft failed: %v", err)
-	}
-	if lane.calls != 2 {
-		t.Fatalf("the floor made %d model calls; a violation earns exactly one retry", lane.calls)
-	}
-	if !strings.Contains(draft.Body, "Shall we pick this up?") {
-		t.Errorf("the composer kept a retry that cleared no violation; body = %q", draft.Body)
-	}
-}
-
-// A retry that clears a voice violation may not smuggle in a draftcheck one.
+// A retry that clears a voice violation may not smuggle in a phrasing one.
 //
 // The floor runs AFTER draftcore.CorrectOnce, so the draft it receives has
-// already cleared draftcheck. The retry it may substitute has not: it is a
-// fresh answer, written to a prompt that names the voice violations and says
-// nothing about the phrasing rules the first pass already fixed. Counting only
+// already cleared the phrasing rules. The retry it may substitute has not: it
+// is a fresh answer, written to a prompt that names the voice violations and
+// says nothing about the phrasing findings the first pass fixed. Counting only
 // voice violations lets a retry that drops an em dash and invents a shared
-// history — "we help companies", on a first-touch message — replace a draft
-// that was clean by both measures.
+// history — "we help companies", to somebody we have never written to —
+// replace a draft that was clean by both measures.
 func TestARetryThatTradesAVoiceViolationForAPhrasingOneIsDiscarded(t *testing.T) {
-	// A spaced em dash: one voice violation, no draftcheck finding.
 	const first = `{"subject":"Rollout","body":"Hi Sarah,\n\nThe rollout — Phase 2 — is ready. Shall we pick this up?"}`
-	// The em dash is gone, so it clears MORE voice violations than the first.
-	// It also claims a sales pitch draftcheck refuses on a first message.
 	const retry = `{"subject":"Rollout","body":"Hi Sarah,\n\nWe help companies like yours. Shall we pick this up?"}`
 	lane := &sequencedLane{answers: []string{first, retry}}
 
 	// A FIRST-TOUCH envelope, which is what makes "we help companies" a
 	// finding: the invention rules only bind where there is no prior
 	// correspondence to have established anything.
-	in := sampleInput()
+	in := floorInput()
 	in.Envelope = draftfloor.Envelope{ConversationState: string(convstate.BandNone)}
 
 	draft, _, err := Write(context.Background(), lane, in, voiced())
@@ -132,15 +90,58 @@ func TestARetryThatTradesAVoiceViolationForAPhrasingOneIsDiscarded(t *testing.T)
 	}
 }
 
-// An unvoiced draft costs no second model call.
+// A retry that clears nothing is discarded, and the first attempt stands.
+func TestARetryThatClearsNothingIsDiscarded(t *testing.T) {
+	const first = `{"subject":"Rollout — Phase 2","body":"Hi Sarah,\n\nShall we pick this up?"}`
+	// The retry keeps the violation AND loses the recipient's name, so a test
+	// that could not tell the two apart would pass on either being served.
+	const retry = `{"subject":"Rollout — Phase 2","body":"Hi there,\n\nAnything to add?"}`
+	lane := &sequencedLane{answers: []string{first, retry}}
+
+	draft, _, err := Write(context.Background(), lane, floorInput(), voiced())
+	if err != nil {
+		t.Fatalf("the voiced draft failed: %v", err)
+	}
+	if lane.calls != 2 {
+		t.Fatalf("the floor made %d model calls; a violation earns exactly one retry", lane.calls)
+	}
+	if !strings.Contains(draft.Body, "Shall we pick this up?") {
+		t.Errorf("the composer kept a retry that cleared no violation; body = %q", draft.Body)
+	}
+}
+
+// A draft the sanitizer would empty is served unsanitized rather than blank.
 //
-// The floor exists for the voiced path. Running it over every draft would
-// double the model spend of the common case to fix the rare one.
+// The sanitizer deletes characters. A subject made only of what it deletes
+// comes back as the empty string, and an empty subject is not a message the
+// contract can carry — so the pre-sanitizer draft, imperfect but real, is what
+// the rep gets.
+func TestASanitizerThatWouldEmptyTheDraftIsNotApplied(t *testing.T) {
+	// A subject that is NOTHING but a spaced em dash: it survives the parse,
+	// which only refuses an empty string, and the sanitizer removes the whole
+	// of it. A subject that merely CONTAINS one is not this case — the
+	// sanitizer rewrites it to a comma and the draft is never empty.
+	const answer = `{"subject":" — ","body":"Hi Sarah,\n\nShall we pick this up?"}`
+	lane := &sequencedLane{answers: []string{answer, answer}}
+
+	draft, _, err := Write(context.Background(), lane, floorInput(), voiced())
+	if err != nil {
+		t.Fatalf("the voiced draft failed: %v", err)
+	}
+	if strings.TrimSpace(draft.Subject) == "" {
+		t.Error("the composer served a draft with an empty subject, which is not a message a rep can send")
+	}
+	if strings.TrimSpace(draft.Body) == "" {
+		t.Error("the composer served a draft with an empty body")
+	}
+}
+
+// An unvoiced draft costs no second model call.
 func TestAnUnvoicedDraftRunsNoVoiceRetry(t *testing.T) {
 	const answer = `{"subject":"Rollout — Phase 2","body":"Hi Sarah,\n\nShall we pick this up?"}`
 	lane := &sequencedLane{answers: []string{answer}}
 
-	if _, _, err := Write(context.Background(), lane, sampleInput(), draftvoice.Context{}); err != nil {
+	if _, _, err := Write(context.Background(), lane, floorInput(), draftvoice.Context{}); err != nil {
 		t.Fatalf("the unvoiced draft failed: %v", err)
 	}
 	if lane.calls != 1 {
@@ -160,7 +161,7 @@ func TestARetryThatFixesTheVoiceIsServed(t *testing.T) {
 	const retry = `{"subject":"Rollout","body":"Hi Sarah,\n\nPhase 2 of the rollout is ready. Shall we pick this up?"}`
 	lane := &sequencedLane{answers: []string{first, retry}}
 
-	draft, by, err := Write(context.Background(), lane, sampleInput(), voiced())
+	draft, by, err := Write(context.Background(), lane, floorInput(), voiced())
 	if err != nil {
 		t.Fatalf("the voiced draft failed: %v", err)
 	}
@@ -199,7 +200,7 @@ func TestARetryThatSwapsOnePhrasingFindingForAnotherIsDiscarded(t *testing.T) {
 	const floorRetry = `{"subject":"Re: Rollout","body":"Hi Sarah,\n\nPhase 2 of the rollout is ready."}`
 	lane := &sequencedLane{answers: []string{first, loopRetry, floorRetry}}
 
-	draft, _, err := Write(context.Background(), lane, sampleInput(), voiced())
+	draft, _, err := Write(context.Background(), lane, floorInput(), voiced())
 	if err != nil {
 		t.Fatalf("the voiced draft failed: %v", err)
 	}
