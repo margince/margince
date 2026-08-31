@@ -11,13 +11,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // sendableAuth is a connected mailbox whose grant carries the send permission.
 func sendableAuth(t *testing.T, granted ...string) connector.Auth {
 	t.Helper()
-	b, err := json.Marshal(authState{RefreshToken: "r", Owner: owner, Granted: granted})
+	b, err := json.Marshal(graphconn.AuthState{RefreshToken: "r", Owner: owner, Granted: granted})
 	if err != nil {
 		t.Fatalf("marshal auth: %v", err)
 	}

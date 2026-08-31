@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,15 +47,6 @@ import (
 // connectStateTTL bounds the consent round-trip: generous for a human to
 // click through Google, short enough that a leaked state is quickly useless.
 const connectStateTTL = 10 * time.Minute
-
-// The OAuth capture providers this transport implements. Gmail and Google
-// Calendar (gcal) share one Google OAuth app (differing only in scope); graph
-// is the Microsoft 365 app.
-const (
-	providerGmail = "gmail"
-	providerGcal  = "gcal"
-	providerGraph = "graph"
-)
 
 // codeUnauthorized is the RFC 7807 code for connector/backfill ops that
 // require a signed-in human principal — the contract's documented 401
@@ -79,6 +71,8 @@ type connectorHandlers struct {
 	gcalAPI          gcal.API
 	graphOAuth       graph.OAuth
 	graphAPI         graph.API
+	graphCalOAuth    graphcal.OAuth
+	graphCalAPI      graphcal.API
 	signer           stateSigner
 	// publicBaseURL is the canonical public/front origin (the SPA): where the
 	// browser lands after consent, and — for a same-origin deployment — the
@@ -168,7 +162,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		h.connectIMAP(w, r)
 		return
 	}
-	if string(provider) != providerGmail && string(provider) != providerGraph && string(provider) != providerGcal {
+	if !isOAuthProvider(string(provider)) {
 		if h.registry == nil {
 			httperr.NotImplemented(w, r, "ConnectConnector")
 			return
@@ -176,7 +170,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity,
 			Code:   "connector_unsupported",
-			Detail: "Only the gmail, gcal, graph and imap connectors can be connected here.",
+			Detail: "Only the " + strings.Join(oauthProviders, ", ") + " and imap connectors can be connected here.",
 		})
 		return
 	}
@@ -204,7 +198,9 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized,
 			Code:   codeUnauthorized,
-			Detail: "Connecting a mailbox is a signed-in human action.",
+			// Provider-neutral: this guard serves the calendars as well as the
+			// mailboxes, and naming a mailbox mislabels half the flows it refuses.
+			Detail: "Connecting an account is a signed-in human action.",
 		})
 		return
 	}

@@ -11,11 +11,10 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -25,9 +24,9 @@ const backfillPageSize = 100
 
 // EstimateBackfill asks the provider how many messages the window holds.
 func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, after time.Time) (int, error) {
-	var st authState
-	if err := json.Unmarshal(auth, &st); err != nil {
-		return 0, fmt.Errorf("graph: malformed auth state: %w", err)
+	st, err := graphconn.Read(connectorName, auth)
+	if err != nil {
+		return 0, err
 	}
 	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
@@ -42,9 +41,9 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 // provider's own @odata.nextLink (the client refuses one that points off the
 // Graph API).
 func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after time.Time, pageToken string, sink connector.Sink) (connector.BackfillPageResult, error) {
-	var st authState
-	if err := json.Unmarshal(auth, &st); err != nil {
-		return connector.BackfillPageResult{}, fmt.Errorf("graph: malformed auth state: %w", err)
+	st, err := graphconn.Read(connectorName, auth)
+	if err != nil {
+		return connector.BackfillPageResult{}, err
 	}
 	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {

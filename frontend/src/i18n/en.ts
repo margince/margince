@@ -3849,7 +3849,8 @@ export const en = {
   "connectors.empty": "No inbox is connected yet.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
-  "connectors.provGraph": "Microsoft",
+  "connectors.provGraph": "Outlook",
+  "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
   "connectors.statusConnected": "Capturing",
   "connectors.statusPending": "Pending — not yet confirmed live",
@@ -3924,7 +3925,9 @@ export const en = {
   "connectors.addGcalBrings":
     "Your Google calendar. It connects separately from Gmail.",
   "connectors.addGraphBrings":
-    "Mail and calendar on a Microsoft work account, over the Graph API. Margince can send from it too.",
+    "The mail you send and receive on a Microsoft work account. Margince can send from it too.",
+  "connectors.addGraphCalBrings":
+    "Your Outlook calendar. It connects separately from your Outlook mail.",
   "connectors.addImapBrings":
     "Any other mail host, with an app password. Capture only.",
   "connectors.providerNotConfigured":

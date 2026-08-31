@@ -3813,7 +3813,8 @@ export const de = {
   "connectors.empty": "Noch kein Postfach verbunden.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
-  "connectors.provGraph": "Microsoft",
+  "connectors.provGraph": "Outlook",
+  "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
   "connectors.statusConnected": "Aktiv",
   "connectors.statusPending": "Ausstehend — noch nicht bestätigt aktiv",
@@ -3887,7 +3888,9 @@ export const de = {
   "connectors.addGcalBrings":
     "Dein Google Kalender. Er wird separat von Gmail verbunden.",
   "connectors.addGraphBrings":
-    "Mail und Kalender eines Microsoft-Geschäftskontos, über die Graph-API. Margince kann auch darüber senden.",
+    "Die Mails, die du über ein Microsoft-Geschäftskonto sendest und empfängst. Margince kann auch darüber senden.",
+  "connectors.addGraphCalBrings":
+    "Dein Outlook-Kalender. Er wird getrennt von deiner Outlook-Mail verbunden.",
   "connectors.addImapBrings":
     "Jeder andere Mail-Host, mit einem App-Passwort. Nur Erfassung.",
   "connectors.providerNotConfigured":

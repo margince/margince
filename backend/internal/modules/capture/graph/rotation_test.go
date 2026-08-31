@@ -9,6 +9,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -45,7 +46,7 @@ func TestASyncReportsTheReplacementCredentialWithTheRestOfTheBundleIntact(t *tes
 	if len(sink.got) != 1 {
 		t.Fatalf("the sink saw %d rotation(s), want one", len(sink.got))
 	}
-	var st authState
+	var st graphconn.AuthState
 	if err := json.Unmarshal(sink.got[0], &st); err != nil {
 		t.Fatalf("the reported bundle does not decode: %v", err)
 	}
@@ -137,7 +138,7 @@ func TestBindingASinkLeavesTheRegisteredConnectorAlone(t *testing.T) {
 // sealedAuth is the bundle a connected mailbox holds.
 func sealedAuth(t *testing.T) connector.Auth {
 	t.Helper()
-	b, err := json.Marshal(authState{
+	b, err := json.Marshal(graphconn.AuthState{
 		RefreshToken: "r-1", Owner: owner,
 		Granted: []string{"offline_access", "User.Read", "Mail.Read"},
 	})

@@ -5841,10 +5841,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -5854,7 +5856,7 @@ export interface paths {
         put?: never;
         /**
          * Connect (or re-authorize) the calling user's mail/calendar for capture.
-         * @description Per-user, consent-driven connect (RC-8). For an OAuth provider (`gmail`/`gcal`/`graph`)
+         * @description Per-user, consent-driven connect (RC-8). For an OAuth provider (`gmail`/`gcal`/`graph`/`graphcal`)
          *     returns the provider `authorize_url` to redirect the user to; the flow completes at
          *     `GET /connectors/{provider}/callback`. The refresh token is written to the vault on
          *     callback, NEVER to the row or a response. Human-only: an agent connecting a human's mailbox
@@ -5875,10 +5877,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -5908,10 +5912,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -5942,10 +5948,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -5977,10 +5985,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -6019,10 +6029,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -6052,10 +6064,12 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -12427,7 +12441,7 @@ export interface components {
              * @description The mail/calendar provider (A51 email+calendar parity).
              * @enum {string}
              */
-            provider: "gmail" | "gcal" | "graph" | "imap";
+            provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
             /** @description Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one. */
             account_label?: string | null;
             /**
@@ -12705,7 +12719,7 @@ export interface components {
         };
         /**
          * @description Connect a capture source. Providers differ in kind, not in path: an OAuth provider
-         *     (gmail, gcal, graph) needs no body and answers with `authorize_url`; a credential
+         *     (gmail, gcal, graph, graphcal) needs no body and answers with `authorize_url`; a credential
          *     provider (imap) submits `imap` and answers with the created `connection`. Exactly one
          *     of `authorize_url` or `connection` is returned.
          */
@@ -12900,7 +12914,7 @@ export interface components {
             };
             connectors: {
                 /** @enum {string} */
-                provider?: "gmail" | "gcal" | "graph" | "imap";
+                provider?: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
                 /** @enum {string} */
                 status?: "connected" | "disconnected" | "error" | "reauth_required";
                 /** Format: date-time */
@@ -25440,12 +25454,14 @@ export interface components {
         FactKey: string;
         /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-         *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-         *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-         *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-         *     messaging-channels surface, not this one.
+         *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+         *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+         *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+         *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+         *     consent each, so a person can bring one without the other and disconnect either.
+         *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
          */
-        CaptureProvider: "gmail" | "gcal" | "graph" | "imap";
+        CaptureProvider: "gmail" | "gcal" | "graph" | "graphcal" | "imap";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
         /**
@@ -35434,10 +35450,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35476,10 +35494,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35504,10 +35524,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35533,10 +35555,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35569,10 +35593,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35606,10 +35632,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35651,10 +35679,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35682,10 +35712,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };
@@ -35718,10 +35750,12 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-                 *     messaging-channels surface, not this one.
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
             };

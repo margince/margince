@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -56,6 +57,8 @@ func (h connectorHandlers) providerWired(provider string) bool {
 		return h.gcalOAuth != nil || (h.googleCredentials != nil && h.canRunConsent(providerGcal))
 	case providerGraph:
 		return h.graphOAuth != nil
+	case providerGraphCal:
+		return h.graphCalOAuth != nil
 	default:
 		return false
 	}
@@ -128,6 +131,8 @@ func (h connectorHandlers) oauthApp(ctx context.Context, provider string) (oauth
 		return h.gcalApp(ctx)
 	case providerGraph:
 		return h.graphApp()
+	case providerGraphCal:
+		return h.graphCalApp()
 	default:
 		return oauthApp{}, false, nil
 	}
@@ -206,9 +211,9 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 	}, true, nil
 }
 
-// graphApp is the Microsoft app, still composed entirely from the deployment's
-// environment — it has no stored half to resolve, which is why it takes no
-// context.
+// graphApp is the Microsoft MAIL app, still composed entirely from the
+// deployment's environment — it has no stored half to resolve, which is why it
+// takes no context.
 func (h connectorHandlers) graphApp() (oauthApp, bool, error) {
 	if h.graphOAuth == nil {
 		return oauthApp{}, false, nil
@@ -221,6 +226,25 @@ func (h connectorHandlers) graphApp() (oauthApp, bool, error) {
 				return nil, err
 			}
 			return graph.New(h.graphOAuth, h.graphAPI).Authenticate(ctx, req)
+		},
+	}, true, nil
+}
+
+// graphCalApp is the Microsoft CALENDAR authorization on the same app — its own
+// consent, requesting the calendar permission alone, so it resolves separately
+// from the mailbox's even though one Entra registration serves both.
+func (h connectorHandlers) graphCalApp() (oauthApp, bool, error) {
+	if h.graphCalOAuth == nil {
+		return oauthApp{}, false, nil
+	}
+	return oauthApp{
+		authCodeURL: h.graphCalOAuth.AuthCodeURL,
+		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
+			req, err := graphcal.AuthRequestFrom(code, redirectURI)
+			if err != nil {
+				return nil, err
+			}
+			return graphcal.New(h.graphCalOAuth, h.graphCalAPI).Authenticate(ctx, req)
 		},
 	}, true, nil
 }

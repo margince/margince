@@ -343,7 +343,6 @@ internal/modules/capture/channelconnfixture_test.go#method countingVault.mintedR
 internal/modules/capture/channelconnfixture_test.go#method fakeTelegram.clearedWebhooks
 internal/modules/capture/channelsend.go#method Registry.liveChannelBindings
 internal/modules/capture/freemaildomain.go#const block at const auditKeyDomain
-internal/modules/capture/gcal/event.go#type meeting.addresses
 internal/modules/capture/gmail/send.go#method Connector.stampedIdentity
 internal/modules/capture/lifecycleaudit.go#func connectionAuditImage
 internal/modules/capture/mailmap/mailmap.go#method Message.Addresses

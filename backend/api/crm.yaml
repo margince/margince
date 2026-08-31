@@ -8318,7 +8318,7 @@ paths:
 
   # ------------------ /connectors (per-provider OAuth capture) ---------------
   # Per-user mail/calendar connectors (RC-8): connect/callback/disconnect for
-  # every provider — gmail/gcal/graph (OAuth) and imap (credential submission)
+  # every provider — gmail/gcal/graph/graphcal (OAuth) and imap (credential submission)
   # — plus the standing connection list; every provider persists a connection
   # and syncs incrementally in the background (capture.md CAP-WIRE-1).
   # Connecting a mailbox is a human-only consent act; an agent never
@@ -8812,7 +8812,7 @@ paths:
       operationId: connectConnector
       summary: Connect (or re-authorize) the calling user's mail/calendar for capture.
       description: |
-        Per-user, consent-driven connect (RC-8). For an OAuth provider (`gmail`/`gcal`/`graph`)
+        Per-user, consent-driven connect (RC-8). For an OAuth provider (`gmail`/`gcal`/`graph`/`graphcal`)
         returns the provider `authorize_url` to redirect the user to; the flow completes at
         `GET /connectors/{provider}/callback`. The refresh token is written to the vault on
         callback, NEVER to the row or a response. Human-only: an agent connecting a human's mailbox
@@ -17368,13 +17368,15 @@ components:
       name: provider
       in: path
       required: true
-      schema: { type: string, enum: [gmail, gcal, graph, imap] }
+      schema: { type: string, enum: [gmail, gcal, graph, graphcal, imap] }
       description: |
         The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-        the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
-        submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
-        Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
-        messaging-channels surface, not this one.
+        the same operation; every provider but imap authorizes by OAuth redirect, imap by
+        credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+        Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+        engine. Mail and calendar are always SEPARATE connections on either vendor: one
+        consent each, so a person can bring one without the other and disconnect either.
+        WhatsApp/Telegram connect is the messaging-channels surface, not this one.
     Id:
       name: id
       in: path
@@ -18704,7 +18706,7 @@ components:
       required: [id, provider, status, scopes]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [gmail, gcal, graph, imap], description: The mail/calendar provider (A51 email+calendar parity). }
+        provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap], description: The mail/calendar provider (A51 email+calendar parity). }
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
         status: { type: string, enum: [connected, disconnected, error, reauth_required], description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture — read-only.' }
@@ -19009,7 +19011,7 @@ components:
       type: object
       description: |
         Connect a capture source. Providers differ in kind, not in path: an OAuth provider
-        (gmail, gcal, graph) needs no body and answers with `authorize_url`; a credential
+        (gmail, gcal, graph, graphcal) needs no body and answers with `authorize_url`; a credential
         provider (imap) submits `imap` and answers with the created `connection`. Exactly one
         of `authorize_url` or `connection` is returned.
       properties:
@@ -19156,7 +19158,7 @@ components:
           items:
             type: object
             properties:
-              provider: { type: string, enum: [gmail, gcal, graph, imap] }
+              provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap] }
               status: { type: string, enum: [connected, disconnected, error, reauth_required] }
               last_synced_at: { type: [string, 'null'], format: date-time }
               last_sync_error_class: { type: [string, 'null'] }

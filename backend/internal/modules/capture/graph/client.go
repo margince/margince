@@ -157,6 +157,14 @@ type OAuthConfig struct {
 	Scopes       []string
 	AuthURL      string
 	TokenURL     string
+	// Provider names the connector in a handshake failure's error detail.
+	// Empty means this package's own name. The Microsoft 365 CALENDAR connector
+	// runs the identical handshake against the identical endpoints with
+	// different scopes, so it reuses this constructor rather than keeping a
+	// second copy of Microsoft's consent parameters; what it must not reuse is
+	// the NAME, or its own failures would read as the mail connector's in the
+	// logs and in the connection roster.
+	Provider string
 }
 
 // NewOAuth builds the OAuth client, applying Microsoft's default endpoints
@@ -176,8 +184,12 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 	if cfg.TokenURL == "" {
 		cfg.TokenURL = fmt.Sprintf(msTokenURLFormat, url.PathEscape(tenant))
 	}
+	provider := cfg.Provider
+	if provider == "" {
+		provider = connectorName
+	}
 	return oauthflow.New(oauthflow.Config{
-		Provider:     "graph",
+		Provider:     provider,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		Scopes:       cfg.Scopes,

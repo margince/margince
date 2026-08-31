@@ -3777,7 +3777,8 @@ export const vi = {
   "connectors.empty": "Chưa có hộp thư nào được kết nối.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
-  "connectors.provGraph": "Microsoft",
+  "connectors.provGraph": "Outlook",
+  "connectors.provGraphCal": "Lịch Outlook",
   "connectors.provImap": "Hộp thư IMAP",
   "connectors.statusConnected": "Đang thu thập",
   "connectors.statusPending": "Đang chờ — chưa xác nhận là đã chạy",
@@ -3850,7 +3851,9 @@ export const vi = {
   "connectors.addGcalBrings":
     "Google Calendar của bạn. Nó được kết nối riêng, không đi kèm Gmail.",
   "connectors.addGraphBrings":
-    "Thư và lịch của một tài khoản công việc Microsoft, qua Graph API. Margince cũng có thể gửi thư qua kết nối này.",
+    "Thư bạn gửi và nhận trên tài khoản công việc Microsoft. Margince cũng có thể gửi thư qua kết nối này.",
+  "connectors.addGraphCalBrings":
+    "Lịch Outlook của bạn. Nó được kết nối riêng với thư Outlook.",
   "connectors.addImapBrings":
     "Bất kỳ máy chủ thư nào khác, bằng mật khẩu ứng dụng. Chỉ thu thập.",
   "connectors.providerNotConfigured":

@@ -139,7 +139,7 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 }
 
 // Adding a connection is the card's create verb, so it lives in the panel
-// header and its provider picks live in the dialog it opens — a strip of four
+// header and its provider picks live in the dialog it opens — a strip of
 // buttons in a row's right column was the shape it replaced. Every claim about
 // a pick therefore opens the dialog first and scopes its queries to it.
 async function openAddDialog() {
@@ -225,7 +225,8 @@ describe("the connected-inboxes card", () => {
     for (const provider of [
       "Gmail",
       "Google Calendar",
-      "Microsoft",
+      "Outlook",
+      "Outlook Calendar",
       "IMAP mailbox",
     ]) {
       expect(
@@ -580,7 +581,10 @@ describe("add a connection", () => {
       within(dialog).getByRole("button", { name: "Connect Google Calendar" }),
     ).toBeTruthy();
     expect(
-      within(dialog).getByRole("button", { name: "Connect Microsoft" }),
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: "Connect Outlook Calendar" }),
     ).toBeTruthy();
     expect(
       within(dialog).getByRole("button", { name: "Connect IMAP mailbox" }),
@@ -608,11 +612,11 @@ describe("add a connection", () => {
     render(<ConnectorsCard />);
     const dialog = await openAddDialog();
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Connect Microsoft" }),
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
     );
     expect(
       await within(dialog).findByText(
-        "Microsoft isn't configured in this deployment.",
+        "Outlook isn't configured in this deployment.",
       ),
     ).toBeTruthy();
   });
@@ -622,7 +626,7 @@ describe("add a connection", () => {
     render(<ConnectorsCard />);
     const dialog = await openAddDialog();
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Connect Microsoft" }),
+      within(dialog).getByRole("button", { name: "Connect Outlook" }),
     );
 
     const alert = await screen.findByRole("alert");
@@ -632,10 +636,11 @@ describe("add a connection", () => {
     expect(dialog.contains(alert)).toBe(true);
   });
 
-  // Four provider names decide nothing: Gmail and Google Calendar are two
-  // halves of one account, only the OAuth mailboxes can send, and IMAP is the answer for
-  // every host with no OAuth. Each pick carries the sentence that says so, and
-  // it lands in that button's own aria-describedby.
+  // Five provider names decide nothing: on both vendors the mail and the
+  // calendar are two halves of one account and two separate connections, only
+  // the OAuth mailboxes can send, and IMAP is the answer for every host with no
+  // OAuth. Each pick carries the sentence that says so, and it lands in that
+  // button's own aria-describedby.
   it("gives every pick the sentence its choice needs", async () => {
     stubApi([]);
     render(<ConnectorsCard />);
@@ -650,12 +655,13 @@ describe("add a connection", () => {
     expect(describedBy).not.toBeNull();
   });
 
-  it("withdraws the header verb when all four providers are connected", async () => {
+  it("withdraws the header verb when every provider is connected", async () => {
     stubApi([
       gmailConnected,
       { ...gmailConnected, id: "c2", provider: "gcal" },
       { ...gmailConnected, id: "c3", provider: "graph" },
-      { ...gmailConnected, id: "c4", provider: "imap" },
+      { ...gmailConnected, id: "c4", provider: "graphcal" },
+      { ...gmailConnected, id: "c5", provider: "imap" },
     ]);
     render(<ConnectorsCard />);
     await screen.findByText("Google Calendar"); // a roster row label

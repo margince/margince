@@ -922,7 +922,7 @@ public.capture_connection.account_label text gen=- def=-
 public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
-public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text])))
+public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
 public.capture_connection.capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
