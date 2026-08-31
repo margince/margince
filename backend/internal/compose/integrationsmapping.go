@@ -188,6 +188,7 @@ func toProviderRun(r provider.Run) crmcontracts.ProviderRun {
 		Trigger:         crmcontracts.ProviderRunTrigger(r.Trigger),
 		State:           crmcontracts.ProviderRunState(r.State),
 		ClaimsUnwritten: r.ClaimsUnwritten,
+		Applied:         &r.Applied,
 		// The frozen snapshot, echoed so a caller can see what the run was
 		// admitted under rather than what the connection says now.
 		ConfigurationSnapshot: toProviderSnapshot(r.Snapshot),

@@ -1,0 +1,69 @@
+/* The Worklist: one ranked list.
+   Spacing comes from the space tokens; nothing here invents a colour. */
+.worklist-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.worklist-lead {
+  margin: 0;
+}
+
+.worklist-clear {
+  color: var(--textSecondary);
+  margin: var(--space-4) 0;
+}
+
+.worklist-row {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* The rank reads as a marker beside the row rather than as part of the
+   sentence, so it is set in the muted tone at a fixed width: a two-digit
+   number must not shift the titles beside it. */
+.worklist-rank {
+  color: var(--textSecondary);
+  flex: 0 0 auto;
+  min-width: var(--space-5);
+  text-align: right;
+}
+
+.worklist-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.worklist-row-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.worklist-row-because,
+.worklist-row-consequence,
+.worklist-row-above {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
+/* The queue is an ordered list for assistive technology and a plain stack on
+   screen: the rank number is already drawn in the row. */
+.worklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.worklist-row-verbs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+}

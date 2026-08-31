@@ -311,6 +311,21 @@ func cascadesFor(desc provider.Descriptor, requested []provider.Category) []prov
 // submission_unknown with its reservation held, PI-AC-4's exact state.
 func (s *Store) settleSubmit(ctx context.Context, desc provider.Descriptor, name, runID string, lease execLease, sub provider.Submission) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// SUBJECT FIRST. A synchronous provider answers inside this
+		// transaction, so this settlement may go on to write the subject's
+		// record — and the eraser locks the person before it scrubs the runs
+		// that bought their data. Taking the connection and the run first and
+		// the person last would close a cycle against it: one of the two dies
+		// on a deadlock, either failing somebody's Art. 17 request or burning
+		// a paid run's hand-off into claims_unwritten.
+		//
+		// Held for every outcome, not only the synchronous one. Which branch
+		// recordSubmission takes is not known until the epoch has been
+		// re-read, and a lock order that depends on the answer is not an
+		// order.
+		if err := s.holdSubjectForSettlement(ctx, tx, lease.person); err != nil {
+			return err
+		}
 		if err := storekit.LockWriteIdentity(ctx, tx, "provider_connection", name); err != nil {
 			return err
 		}

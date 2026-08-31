@@ -46,6 +46,10 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   // reached from the composer that put a message in it and from Today, which is
   // where the same rep's other waiting work already lives.
   scheduled: "nav.scheduled",
+  // Off the rail while the ranked queue is built up beside the lane page it
+  // will replace. Reached by address rather than by a rail entry, so it needs
+  // its title named here or the shell heads it "Unknown page".
+  worklist: "worklist.title",
 };
 
 export function resolveTitle(

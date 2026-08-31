@@ -112,12 +112,12 @@ func (s *Store) readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.
 	var cats []string
 	err := tx.QueryRow(ctx, `
 		SELECT id::text, subject_kind, person_id::text, provider, trigger, state,
-		       skip_reason, claims_unwritten, connection_version,
+		       skip_reason, claims_unwritten, applied_at IS NOT NULL, connection_version,
 		       configuration_snapshot, requested_categories, last_safe_status_code,
 		       submitted_at, completed_at, created_at, updated_at
 		  FROM provider_run WHERE id = $1`, runID).
 		Scan(&r.ID, &r.SubjectKind, &personID, &r.Provider, &r.Trigger, &r.State,
-			&skipReason, &r.ClaimsUnwritten, &r.ConnectionVersion,
+			&skipReason, &r.ClaimsUnwritten, &r.Applied, &r.ConnectionVersion,
 			&snapJSON, &cats, &safeCode,
 			&r.SubmittedAt, &r.CompletedAt, &r.CreatedAt, &r.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {

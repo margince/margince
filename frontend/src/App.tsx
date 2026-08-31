@@ -239,6 +239,9 @@ const ShareScreen = lazy(
     import("./screens/share").then((m) => ({ default: m.ShareScreen })),
   ),
 );
+const WorklistScreen = lazy(() =>
+  import("./screens/worklist").then((m) => ({ default: m.WorklistScreen })),
+);
 const TodayScreen = lazy(
   routed(() =>
     import("./screens/today").then((m) => ({ default: m.TodayScreen })),
@@ -449,6 +452,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
     projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
     today: () => <TodayScreen />,
+    worklist: () => <WorklistScreen />,
     reports: () => <ReportsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names

@@ -42,9 +42,13 @@ type activityScan struct {
 	kind                   string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, threadKey, captureLabel *string
-	bulkMailAttested                                                   bool
-	version                                                            int64
-	audience                                                           string
+	// audienceReason says why a derived audience is what it is. It travels with
+	// the content, not with the markers: "held because personnel" describes
+	// what the message is about.
+	audienceReason   *string
+	bulkMailAttested bool
+	version          int64
+	audience         string
 	// contentAvailable is the caller's audience test, evaluated per row: it
 	// decides whether the content columns above reach the caller at all.
 	contentAvailable bool
@@ -93,6 +97,7 @@ var activityProjection = []activityColumn{
 	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
+	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
@@ -123,7 +128,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 	a := s.a
 	aud := crmcontracts.ActivityAudience(s.audience)
 	a.Audience = &aud
-	threadKey, captureLabel := s.threadKey, s.captureLabel
+	threadKey, captureLabel, audienceReason := s.threadKey, s.captureLabel, s.audienceReason
 	state := crmcontracts.ActivityContentStateAvailable
 	if !s.contentAvailable {
 		// Withheld: the row is discoverable, its content is not the caller's.
@@ -131,7 +136,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 		// at the provider — goes; the markers stay.
 		state = crmcontracts.ActivityContentStateWithheld
 		a.Subject, a.Body, a.SourceId = nil, nil, nil
-		threadKey, captureLabel = nil, nil
+		threadKey, captureLabel, audienceReason = nil, nil, nil
 	}
 	a.ContentState = &state
 
@@ -152,6 +157,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 		a.MeetingStatus = &m
 	}
 	a.ThreadKey = threadKey
+	a.AudienceReason = audienceReason
 	if captureLabel != nil {
 		label := crmcontracts.ActivityCaptureLabel(*captureLabel)
 		a.CaptureLabel = &label

@@ -23,6 +23,9 @@ package compose
 // drift this shape exists to make impossible.
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -138,6 +141,10 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
 		WithRecipientDirectory(recipientDirectory{}).
+		// Unconditional for the same reason, and a sharper one: addressing a
+		// reply must skip a co-worker who has no seat, and a deployment that
+		// forgot to wire this would compose replies to its own staff.
+		WithColleagues(colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
 		WithSendAuthority(send.SendAuthority).
 		WithDraftOutcome(send.DraftOutcome)
 	decisions := s.approvalsHandlers
@@ -252,4 +259,18 @@ func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send S
 		timer:         send.ScheduleTimer,
 		own:           capture.NewOwnDomainStore(InstallationDB(pool)),
 	}
+}
+
+// colleagueDomains adapts the own-domain store to the seam the activities
+// handlers take. The module may not import capture, and the reply-address
+// question needs to know who is ours by DOMAIN rather than by seat — a
+// co-worker with no login is still not somebody to compose a reply to.
+type colleagueDomains struct{ store *capture.OwnDomainStore }
+
+func (c colleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
+	own, err := c.store.Colleagues(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading who counts as a colleague: %w", err)
+	}
+	return own.Covers, nil
 }

@@ -319,16 +319,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		_, err = tx.Exec(ctx, `DELETE FROM person_profile_field WHERE person_id = $1`, id)
 	}
 	if err == nil {
-		// Purchased provider values, and the runs that bought them. Same
-		// reasoning as the sidecar above and the same statements the erasure
-		// path uses: anonymize-in-place cascades to nothing, so without these
-		// the person page would show a bought email and employer beside an
-		// "Erased Subject" name.
-		_, err = tx.Exec(ctx, `DELETE FROM person_provider_claim WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		_, err = tx.Exec(ctx,
-			`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE person_id = $1`, id)
+		err = purgeSubjectPurchases(ctx, tx, id)
 	}
 	if err == nil {
 		// The channel identity is a resolution key on the subject as
@@ -372,5 +363,27 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err == nil {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName, linkedInHandles)
 	}
+	return err
+}
+
+// purgeSubjectPurchases removes everything a licensed data provider left on one
+// subject: what it asserted, what those assertions FILLED on the record, and
+// the identifying half of the runs that bought them.
+//
+// The same three statements the Art. 17 path runs, for the same reason:
+// anonymize-in-place leaves the person row standing, so nothing cascades, and
+// without these the page would show a bought email and employer beside an
+// "Erased Subject" name. The runs are scrubbed rather than deleted — what the
+// installation paid is an accounting fact about the installation once the row
+// names nobody.
+func purgeSubjectPurchases(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM person_provider_claim WHERE person_id = $1`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM provider_applied_field WHERE person_id = $1`, id); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx,
+		`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE person_id = $1`, id)
 	return err
 }

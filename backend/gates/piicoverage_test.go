@@ -199,6 +199,14 @@ var piiTables = map[string]piiHandling{
 	// given by them, which makes it disclosable twice over — the values and
 	// the fact that they were purchased.
 	"person_provider_claim": {erasureWrite: true, sarRead: true},
+	// What a purchase FILLED on the record. It keeps the value it wrote for a
+	// plain column — the title, the profile URL — because the revert has
+	// nothing else to recognise the value by, and a hash of an address or a
+	// handle is a reversible fingerprint rather than a safer store. So the row
+	// carries the subject's own data and is erased with the claims beside it.
+	// Art. 15 discloses it: a subject asking what we hold is owed the fact that
+	// a purchase put something on their record, not only that we bought it.
+	"provider_applied_field": {erasureWrite: true, sarRead: true},
 	// The run that bought it. Erasure SCRUBS rather than deletes: the row
 	// stops naming anybody (person_id, fingerprint, job id, requester,
 	// snapshot) while the spend it records survives, because what the

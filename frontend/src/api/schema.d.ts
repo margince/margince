@@ -3079,6 +3079,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/reply-recipient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Who a reply to this message would be addressed to.
+         * @description Asked without drafting, so a composer can show the recipient when it opens
+         *     rather than after a model call. `address` is resolved by the same reply-address
+         *     rule the automation reply path uses, so the address offered here is one that
+         *     path would also compose to.
+         *
+         *     `address` and the two name fields answer DIFFERENT questions, and on our own
+         *     outbound mail they name different people. The names are whoever the message was
+         *     with — the sender of an inbound message, an addressee on our own outbound. The
+         *     address must be a COUNTERPARTY: one of this installation's own people, whether
+         *     by seat or by email domain, is never offered, because a reply composed to a
+         *     colleague is a message to ourselves.
+         *
+         *     Every field may be empty, and empty is an answer rather than a failure: a
+         *     message linked to nobody, a contact with no live address, and a thread whose
+         *     every participant is a colleague all answer empty rather than guessing.
+         *
+         *     The name and the address are withheld on DIFFERENT terms, so a caller may get
+         *     one without the other. Naming a person reads their record, so a person this
+         *     caller cannot read is not named. An address recorded on the message itself is
+         *     on correspondence they can already open, so it is answered whether or not the
+         *     person behind it is readable — which means the two fields can name two
+         *     different people, and a client that greets by `full_name` while sending to
+         *     `address` must not assume they are one.
+         *
+         *     A caller without the person read grant is refused outright (403) rather than
+         *     answered with empty fields; a caller who cannot see the message gets 404,
+         *     whether it is missing or merely withheld.
+         *
+         *     Sending still requires `to` on the send request and gates consent
+         *     independently; this only saves typing an address the record already holds.
+         */
+        get: operations["getReplyRecipient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/send-email": {
         parameters: {
             query?: never;
@@ -13353,12 +13405,18 @@ export interface components {
              */
             claims_unwritten: boolean;
             /**
-             * @description True once this run's answers have been folded onto the contact's own record — the
-             *     fields it filled that were empty. A `completed` run that is not yet `applied` has
-             *     bought its values but they have not reached the record, which is the window a
-             *     client polls through: stopping at `completed` shows a page that still looks empty.
-             *     Always false for a run that never completed, and for one whose claims were
-             *     discarded (`claims_unwritten`), because there was nothing to apply.
+             * @description True once this run's answers have been OFFERED to the contact's own record — every
+             *     field the record left empty is filled, and the rest were already answered. It says
+             *     the folding HAPPENED, not that anything moved: a run whose values the record
+             *     already held reports `applied` with nothing changed, because for a client waiting
+             *     to re-read, "we tried and there is nothing more coming" is the same fact.
+             *
+             *     A `completed` run that is not yet `applied` has bought its values and they have not
+             *     reached the record yet, which is the window a client polls through: stopping at
+             *     `completed` shows a page that still looks empty. Always false for a run that never
+             *     completed, and for one whose claims were discarded (`claims_unwritten`) because the
+             *     subject stopped being eligible mid-flight — that run's values reach nothing, and
+             *     `claims_unwritten` is what says so.
              * @default false
              */
             applied: boolean;
@@ -17271,6 +17329,8 @@ export interface components {
             readonly bulk_mail_attested?: boolean;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. */
             readonly audience?: components["schemas"]["ActivityAudience"];
+            /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
+            readonly audience_reason?: string | null;
             /**
              * @description Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
              * @enum {string}
@@ -17730,6 +17790,21 @@ export interface components {
             readonly voice_profile_version?: number | null;
             /** @description Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it. */
             readonly draft_ref: string | null;
+        };
+        /**
+         * @description Who a reply to a message is addressed to: one person, resolved from the
+         *     message's participants by role.
+         *
+         *     One person rather than a list. A reply is written to somebody, and a group
+         *     thread degrades to the most likely counterparty rather than to nobody.
+         */
+        ReplyRecipient: {
+            /** @description The name as recorded, empty when no readable person is on the message. */
+            full_name: string;
+            /** @description What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call. */
+            first_name: string;
+            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own people. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
+            address: string;
         };
         /**
          * @description A draft written from an account's records, and what it was written from
@@ -29512,6 +29587,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailDraft"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getReplyRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recipient a reply would go to, with empty fields where unknown. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyRecipient"];
                 };
             };
             404: components["responses"]["NotFound"];

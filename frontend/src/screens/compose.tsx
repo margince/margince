@@ -514,6 +514,37 @@ function useLatestMessage(
 }
 
 /**
+ * Who a reply to this anchor goes to, resolved without drafting.
+ *
+ * Sending REQUIRES `to`, so an empty field is not a convenience gap: it is a
+ * reply the reader must address by hand against a record that already holds
+ * the answer. The server ranks the message's participants — its sender before
+ * anyone copied on it — and this asks that same resolution the draft uses, so
+ * what the composer shows on open and what a draft fills in cannot disagree.
+ *
+ * Undefined while unsettled and for a contact with no address on record. The
+ * caller only ever fills an EMPTY field from it, so a reader who typed their
+ * own recipient keeps it.
+ */
+function useReplyRecipient(anchor: string | undefined): string | undefined {
+  const query = useQuery({
+    queryKey: ["compose-reply-recipient", anchor],
+    queryFn: async () => {
+      const { data, error } = await api.GET(
+        "/activities/{id}/reply-recipient",
+        { params: { path: { id: anchor ?? "" } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    enabled: anchor !== undefined,
+  });
+  return query.data?.address === "" ? undefined : query.data?.address;
+}
+
+/**
  * What the composer says it is answering, or null while it does not yet know.
  *
  * A caller that named an activity has already told the reader what they opened
@@ -841,10 +872,16 @@ function RecipientField({
   label,
   values,
   onChange,
+  onEditing,
 }: Readonly<{
   label: string;
   values: string[];
   onChange: (next: string[]) => void;
+  // Called the first time the reader types here. The committed values do not
+  // say this: text sits in `draft` until Enter or blur, so a field the reader
+  // is halfway through filling looks exactly like an untouched empty one to
+  // anyone reading `values`.
+  onEditing?: () => void;
 }>) {
   const t = useT();
   const [draft, setDraft] = useState("");
@@ -879,7 +916,10 @@ function RecipientField({
         type="email"
         aria-label={label}
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          onEditing?.();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === ",") {
             event.preventDefault();
@@ -1507,6 +1547,7 @@ function MailOnlyFields({
   reasons,
   to,
   onToChange,
+  onToEditing,
   cc,
   onCcChange,
   subject,
@@ -1523,6 +1564,8 @@ function MailOnlyFields({
   reasons: components["schemas"]["AccountDraftReason"][];
   to: string[];
   onToChange: (next: string[]) => void;
+  /** The reader has started typing a recipient, before any is committed. */
+  onToEditing: () => void;
   cc: string[];
   onCcChange: (next: string[]) => void;
   subject: string;
@@ -1566,6 +1609,7 @@ function MailOnlyFields({
           label={t("compose.to")}
           values={to}
           onChange={onToChange}
+          onEditing={onToEditing}
         />
       </MailRow>
       <MailRow label={t("compose.cc")}>
@@ -2146,6 +2190,39 @@ export function ComposeModal({
     open && !activityId,
   );
   const answering = activityId ?? latest.activity?.id;
+  // Addressing the reply before a draft is asked for. A channel reply resolves
+  // its recipient server-side and shows no To field, so it asks nothing.
+  const threadRecipient = useReplyRecipient(
+    open && !isChannelReply ? answering : undefined,
+  );
+  // Offered ONCE, when the lookup first answers, and never again.
+  //
+  // Keyed on the recipient rather than on the field being empty, because an
+  // empty field is not the same as an untouched one. `to` stays empty while
+  // RecipientField holds text the reader has typed but not yet committed, so
+  // a lookup landing mid-word would add the thread's address and then the
+  // reader's — sending the reply to somebody they never chose. It is also
+  // empty again after they DELETE the prefill, and re-adding what they just
+  // removed makes the field impossible to clear.
+  //
+  // The ref, not state: this decides whether to offer at all, so re-rendering
+  // on it would be a render caused by the thing it is trying not to do twice.
+  const offered = useRef(false);
+  // The reader has taken the field over. Set on the first keystroke, which is
+  // the only signal there is — the committed values stay empty until they
+  // press Enter.
+  const stopOfferingRecipient = useCallback(() => {
+    offered.current = true;
+  }, []);
+  useEffect(() => {
+    if (threadRecipient === undefined || offered.current) {
+      return;
+    }
+    offered.current = true;
+    // A draft that named its own recipient, or a reader who committed one
+    // before the lookup answered, both outrank the thread's default.
+    setTo((current) => (current.length > 0 ? current : [threadRecipient]));
+  }, [threadRecipient]);
   // The sentence the reader reads. Null while the lookup is unsettled: an
   // unanswered read is not "no earlier message", and saying so would tell them
   // this starts a new thread when it may continue one.
@@ -2529,6 +2606,7 @@ export function ComposeModal({
               reasons={account.reasoning}
               to={to}
               onToChange={setTo}
+              onToEditing={stopOfferingRecipient}
               cc={cc}
               onCcChange={setCc}
               subject={subject}

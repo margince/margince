@@ -91,8 +91,19 @@ func BindProviderDomain(store *integrations.Store) *integrations.Store {
 func bindProviderDomain(store *integrations.Store) *integrations.Store {
 	return store.
 		WithDomain(providerFence, people.DuplicateCluster, people.SubjectIdentifiers).
+		WithSubjectHold(providerSubjectHold).
 		WithClaimWriter(providerClaimWriter).
 		WithClaimDeleter(providerClaimDeleter)
+}
+
+// providerSubjectHold is the fence asked while holding the subject, for the
+// hand-off that goes on to write about them.
+func providerSubjectHold(ctx context.Context, tx pgx.Tx, personID string) (integrations.FenceVerdict, error) {
+	allowed, reason, err := people.HoldEnrichmentSubject(ctx, tx, personID)
+	if err != nil {
+		return integrations.FenceVerdict{}, err
+	}
+	return integrations.FenceVerdict{Allowed: allowed, Reason: reason}, nil
 }
 
 // providerFence adapts people's verdict to the shape integrations declares.
@@ -106,9 +117,18 @@ func providerFence(ctx context.Context, tx pgx.Tx, personID string) (integration
 	return integrations.FenceVerdict{Allowed: allowed, Reason: reason}, nil
 }
 
-// providerClaimWriter lands one run's values in the table people owns.
+// providerClaimWriter lands one run's values in the table people owns, and
+// folds what a record can hold onto the record itself.
+//
+// The two are one write. A purchase stored but not applied is a run that is
+// paid, complete and invisible on the page the rep works from; splitting them
+// across transactions would make that state reachable by a crash rather than
+// only by a refusal.
 func providerClaimWriter(ctx context.Context, tx pgx.Tx, w integrations.ClaimWrite) error {
-	return people.WriteProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims, w.RetrievedAt)
+	if err := people.WriteProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims, w.RetrievedAt); err != nil {
+		return err
+	}
+	return people.ApplyProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims)
 }
 
 // providerClaimDeleter is the domain half of the delete-data action.

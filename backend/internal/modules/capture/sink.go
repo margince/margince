@@ -8,16 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -50,6 +44,10 @@ type Sink struct {
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.
 	tracePayloads bool
+	// recomputeAudience derives a captured message's audience from every
+	// mailbox that imported it. Nil derives nothing and leaves the audience the
+	// capture was born with.
+	recomputeAudience AudienceRecomputer
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for
@@ -246,228 +244,6 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		}
 	}
 	return ref, nil
-}
-
-// captureActivity lands one activity: upsert on the natural key, links,
-// audit and event only when the row is new — a replay writes nothing.
-func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (datasource.EntityRef, bool, counterpartyDecision, error) {
-	// One clock read for the whole capture. A provider payload carrying no
-	// timestamp falls back to now(), and THREE things downstream ask for that
-	// answer — the activity row, its audit image, and the reply fact — so asking
-	// separately files one message under three different times, and the reply
-	// event then claims to describe an activity it disagrees with. fields is a
-	// value copy, so settling it here settles it for every one of them.
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
-	id, created, err := s.upsertActivity(ctx, tx, rec, fields)
-	if err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	ref := datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}
-	if !created {
-		return ref, false, counterpartyDecision{}, nil
-	}
-	if err := s.linkActivity(ctx, tx, id, rec.Links); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	// The files, after the links: the account roll-up a captured file carries is
-	// read from the activity's own organization link, which does not exist until
-	// the line above has run.
-	//
-	// Staged HERE, inside the transaction and only once the message is known to
-	// be new. The bytes still land before the row that points at them — the put
-	// is not transactional — but two things now cannot happen. Colleague mail
-	// the internal gate drops never has its files written at all, which it did
-	// when staging ran ahead of that gate. And a replayed message writes no
-	// second copy: every pull minted fresh keys and then skipped the insert, so
-	// a routine backfill left an unreferenced object per attachment per pass.
-	staged, err := s.stageParts(ctx, rec)
-	if err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	if err := s.recordParts(ctx, tx, id, rec, fields, staged); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	if err := s.logPartDrops(ctx, tx, rec); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	// Who was in it (ACT-DDL-3). Stamped here, beside the links, because the
-	// connector principal bound to THIS context is the only place the mailbox
-	// owner is known — every consumer downstream sees an activity whose
-	// captured_by reads `connector:gmail` and cannot recover the human behind
-	// it. The participant rows are the record of that fact.
-	if err := stampCaptureParticipants(ctx, tx, id, actorUserID(ctx), fields.Kind, fields.Direction, rec.Counterparty.Email); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	// Everyone else who was in it — the CCs, the meeting's organizer and
-	// attendees. Separate from the two ends above because these are resolved
-	// against our own people here rather than promoted later.
-	// The recipient list is OURS to trust only when the provider attested our
-	// own mailbox owner sent this message — then the Cc line is what our user
-	// typed. On anything inbound it is the sender's text.
-	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind,
-		rec.Counterparty.SentByOwner(), rec.Participants); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	// Capture-audit minimization (ADR-0072/A118): the after-image is
-	// metadata-only, never the subject/body (capturedActivityAuditImage).
-	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, capturedActivityAuditImage(rec, fields))
-	if err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCaptureEventPayload(fields.Kind, fields.ChannelProvider, rec.NaturalKey.SourceSystem)); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	if err := s.emitReply(ctx, tx, auditID, id, rec, fields); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	// The tiered creation gate decides and records in THIS transaction, so a
-	// SUCCESSFUL gate leaves no window between an activity landing and its
-	// disposition being known. A gate FAULT is contained by the savepoint inside
-	// decideCounterpartyGuarded: it costs the derivation only, the message still
-	// commits, and the link-less activity plus its capture_ensure_fault
-	// breadcrumb are what the reconcile pass looks for. Failing the whole capture
-	// would throw away a message we had already successfully read.
-	decision, err := s.decideCounterpartyGuarded(ctx, tx, rec, id.UUID)
-	if err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, decision); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	// The trace runs LAST, so it can carry the reason the ladder just settled on:
-	// a message from a sender a previous verdict judged noise commits exactly
-	// like any other and is then archived by the hide sweep, and a trace saying
-	// only "captured" would answer "why did this not appear" with "it did".
-	if err := s.traceActivity(ctx, tx, rec, id.UUID, decision); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	return ref, true, decision, nil
-}
-
-// activityCaptureEventPayload builds the activity.captured event for the
-// capture ingestion path — the one emit site (of the event's two) that
-// names an originating source system; the direct-log path
-// (activities/activity.go) sets no fields but kind.
-func activityCaptureEventPayload(kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
-	p := crmcontracts.PublicEventActivityCaptured{Kind: kind, SourceSystem: &sourceSystem}
-	// Present only for a message, matching the envelope's own rule. This is the
-	// path that carries every inbound channel message, so a consumer that could
-	// once read the transport off the kind reads it here instead (ADR-0107/A158).
-	if channelProvider != "" {
-		p.ChannelProvider = &channelProvider
-	}
-	return p
-}
-
-func (s *Sink) upsertActivity(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ids.ActivityID, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return ids.ActivityID{}, false, err
-	}
-	occurredAt := fields.OccurredAt
-	audience, err := capturedAudience(ctx, tx, fields.Kind)
-	if err != nil {
-		return ids.ActivityID{}, false, err
-	}
-	var id ids.ActivityID
-	err = tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15)
-		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
-		DO NOTHING
-		RETURNING id`,
-		// NULLIF on channel_provider, not the empty string: the column FKs into
-		// channel_provider, and '' names no provider — so a non-channel record
-		// has to store NULL or the insert fails the foreign key.
-		fields.Kind, fields.ChannelProvider, fields.Subject, fields.Body, occurredAt, fields.Direction,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), rec.ThreadKey,
-		// Normalized lowercased at the write (a connector need not lowercase the
-		// header case), matching the person_email normalization, so the T1
-		// correspondence lookup's index-backed equality matches regardless of
-		// the sender's casing without a runtime case fold.
-		strings.ToLower(strings.TrimSpace(rec.Counterparty.Email)),
-		// The provider's filing AND the message's authorship, never the
-		// From-derived direction alone: this column is the T1
-		// correspondence-positive gate's only evidence, and a forged
-		// From:owner must not register as the owner's correspondence.
-		rec.Counterparty.SentByOwner(),
-		// This message's own RFC 2369 List-Unsubscribe header — the corroboration
-		// a noise REDACTION needs before it destroys content (migration 0137).
-		// Stamped per message, so a newsletter blast is destroyable while a
-		// personal mail from the same address is only ever hidden.
-		rec.Counterparty.ListUnsubscribe,
-		audience).Scan(&id)
-	if err == nil {
-		// Field-level provenance (B-E02.12) for the content fields this
-		// capture set — same source/author the row itself carries.
-		var stamps []storekit.FieldStamp
-		for _, f := range []struct{ field, value string }{
-			{"subject", fields.Subject}, {"body", fields.Body}, {"direction", fields.Direction},
-		} {
-			if f.value != "" {
-				stamps = append(stamps, storekit.FieldStamp{Field: f.field})
-			}
-		}
-		if err := storekit.StampFields(ctx, tx, "activity", id.UUID, captureSource(rec), rec.CapturedBy, stamps); err != nil {
-			return ids.ActivityID{}, false, err
-		}
-		return id, true, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return ids.ActivityID{}, false, fmt.Errorf("capture: activity upsert: %w", err)
-	}
-	// Replay: the natural key already landed — return the incumbent. Returning
-	// a record is a read, so the row scope binds on this path too; an activity
-	// scopes through its links, which can move after the first capture.
-	err = tx.QueryRow(ctx,
-		`SELECT id FROM activity WHERE source_system = $1 AND source_id = $2`,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&id)
-	if err != nil {
-		return ids.ActivityID{}, false, fmt.Errorf("capture: activity replay lookup: %w", err)
-	}
-	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return ids.ActivityID{}, false, skipInvisibleIncumbent(rec, "activity")
-		}
-		return ids.ActivityID{}, false, err
-	}
-	return id, false, nil
-}
-
-// linkActivity resolves the normalized record's link refs. Every target
-// is an FK argument naming a row-scoped record, so every one passes the
-// visibility probe (H1) — a connector cannot plant a link to a row its
-// granting human could not see.
-func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []datasource.EntityRef) error {
-	for _, link := range links {
-		column, ok := map[datasource.EntityType]string{
-			datasource.EntityPerson:       "person_id",
-			datasource.EntityOrganization: "organization_id",
-			datasource.EntityDeal:         "deal_id",
-		}[link.Type]
-		if !ok {
-			return fmt.Errorf("capture: activities cannot link a %s", link.Type)
-		}
-		if err := auth.EnsureLinkTarget(ctx, tx, string(link.Type), link.ID); err != nil {
-			return fmt.Errorf("capture: link target %s %s: %w", link.Type, link.ID, err)
-		}
-		if _, err := tx.Exec(ctx, fmt.Sprintf(`
-			INSERT INTO activity_link (activity_id, entity_type, %s)
-			VALUES ($1, $2, $3)`, column),
-			activityID, string(link.Type), link.ID); err != nil {
-			return fmt.Errorf("capture: linking activity: %w", err)
-		}
-	}
-	return nil
-}
-
-// defaultOccurredAt fills a provider payload that carried no timestamp:
-// capture time is the honest fallback — better a coarse "when we saw
-// it" than a zero time sorting the record to the beginning of history.
-func defaultOccurredAt(occurredAt time.Time) time.Time {
-	if occurredAt.IsZero() {
-		return time.Now().UTC()
-	}
-	return occurredAt
 }
 
 // skipInvisibleIncumbent refuses a record whose incumbent row — the lead an

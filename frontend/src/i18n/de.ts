@@ -7134,4 +7134,121 @@ export const de = {
     "Dieser Deal hängt an {project}, das Projekt ist aber noch nicht in der Umsetzung. Jetzt wechseln?",
   "deal.startDeliveryBody":
     "Dieser Deal ist gewonnen und nennt kein Projekt. An {project} anhängen und das Projekt in die Umsetzung bringen?",
+
+  // The Worklist's own words: the ranked queue, its dials, and the phrase
+  // for every fact the server sends as a closed vocabulary.
+  "worklist.title": "Arbeitsliste",
+  "worklist.loading": "Dein Tag wird gelesen…",
+  "worklist.queue": "Was als Nächstes zu tun ist",
+  "worklist.summary": "{urgent} dringend · {due} fällig · {lower} nachrangig",
+  "worklist.clear": "Nichts wartet auf dich.",
+  "worklist.clearOfWhatWasRead":
+    "Unter den Quellen, die geantwortet haben, wartet nichts.",
+  "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
+  "worklist.overdue": "Überfällig",
+  "worklist.scope.label": "Wessen Arbeit",
+  "worklist.scope.mine": "Meine",
+  "worklist.scope.team": "Mein Team",
+  "worklist.scope.all": "Alle",
+  "worklist.filter.label": "Art der Arbeit",
+  "worklist.filter.all": "Alle",
+  "worklist.filter.customer_waiting": "Kunde wartet",
+  "worklist.filter.deals_at_risk": "Gefährdete Deals",
+  "worklist.filter.meetings": "Termine",
+  "worklist.filter.tasks": "Aufgaben",
+  "worklist.filter.decisions": "Entscheidungen",
+  "worklist.filter.system": "System",
+  "worklist.category.customer_waiting": "Kunde wartet",
+  "worklist.category.deals_at_risk": "Deal gefährdet",
+  "worklist.category.meetings": "Termin",
+  "worklist.category.tasks": "Aufgabe",
+  "worklist.category.decisions": "Entscheidung",
+  "worklist.category.system": "System",
+  "worklist.because.pinned": "Von dir angeheftet",
+  "worklist.because.buyer_wrote_last": "Sie haben zuletzt geschrieben",
+  "worklist.because.waiting_days": "wartet",
+  "worklist.because.waiting_days.value": "wartet seit {value} Tagen",
+  "worklist.because.overdue": "überfällig",
+  "worklist.because.due_today": "heute fällig",
+  "worklist.because.closing_soon": "hat ein Abschlussdatum",
+  "worklist.because.expected_revenue": "erwarteter Umsatz",
+  "worklist.because.expected_revenue.value": "Wert {value}",
+  "worklist.because.material": "über dem üblichen offenen Deal",
+  "worklist.because.material.value":
+    "Wert {value}, über dem üblichen offenen Deal",
+  "worklist.because.below_material": "unter dem üblichen offenen Deal",
+  "worklist.because.below_material.value":
+    "Wert {value}, unter dem üblichen offenen Deal",
+  "worklist.because.quiet_days": "still geworden",
+  "worklist.because.quiet_days.value": "seit {value} Tagen still",
+  "worklist.because.no_champion": "kein Fürsprecher",
+  "worklist.because.promised": "du hast es zugesagt",
+  "worklist.because.approved_and_failed":
+    "du hast zugestimmt, es lief aber nicht",
+  "worklist.because.blocks_customer_work": "ein Kunde wartet darauf",
+  "worklist.because.routine": "Routinepflege",
+  "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
+  "worklist.because.meeting_soon": "beginnt gleich",
+  "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
+  "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
+  "worklist.above.deadline": "Über dem Nächsten wegen des Datums.",
+  "worklist.above.deadline.pair": "Über dem Nächsten: {mine} gegen {theirs}.",
+  "worklist.above.expected_revenue":
+    "Über dem Nächsten wegen des erwarteten Umsatzes.",
+  "worklist.above.expected_revenue.pair":
+    "Über dem Nächsten: {mine} gegen {theirs}.",
+  "worklist.above.waiting_days": "Über dem Nächsten wegen der Wartezeit.",
+  "worklist.above.waiting_days.pair":
+    "Über dem Nächsten: {mine} gegen {theirs}.",
+  "worklist.above.relationship":
+    "Über dem Nächsten wegen der engeren Beziehung.",
+  "worklist.consequence.buyer_waits": "Wenn du nichts tust, warten sie weiter.",
+  "worklist.consequence.promise_breaks":
+    "Wenn du nichts tust, brichst du eine Zusage.",
+  "worklist.consequence.deal_drifts":
+    "Wenn du nichts tust, treibt der Deal weiter ab.",
+  "worklist.consequence.deal_slips_past_close":
+    "Wenn du nichts tust, verstreicht das vereinbarte Datum.",
+  "worklist.consequence.meeting_unprepared":
+    "Wenn du nichts tust, gehst du unvorbereitet hinein.",
+  "worklist.consequence.task_slips": "Wenn du nichts tust, bleibt es liegen.",
+  "worklist.consequence.work_blocked":
+    "Wenn du nichts tust, bleibt die Arbeit blockiert.",
+  "worklist.consequence.customer_never_received":
+    "Wenn du nichts tust, erhält der Kunde es nie.",
+  "worklist.consequence.you_believe_it_happened":
+    "Wenn du nichts tust, glaubst du weiter, es sei passiert.",
+  "worklist.consequence.legal_deadline_missed":
+    "Wenn du nichts tust, verstreicht eine gesetzliche Frist.",
+  "worklist.consequence.mailbox_blind":
+    "Wenn du nichts tust, fehlt dieser Seite weiter, was nicht ankommt.",
+  "worklist.consequence.data_drifts": "Wenn du nichts tust, driften die Daten.",
+  "worklist.untitled.approval": "Eine Entscheidung wartet",
+  "worklist.untitled.dedupe_candidate": "Zwei Datensätze sehen gleich aus",
+  "worklist.untitled.task": "Eine Aufgabe",
+  "worklist.untitled.brief_item": "Die Nacht hat das herausgesucht",
+  "worklist.untitled.conversation_claim": "Eine Zusage von dir",
+  "worklist.untitled.customer_waiting": "Jemand wartet auf Antwort",
+  "worklist.untitled.deal_at_risk": "Ein Deal treibt ab",
+  "worklist.untitled.meeting": "Ein Termin",
+  "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",
+  "worklist.untitled.failed_approval": "Etwas Zugestimmtes lief nicht",
+  "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
+  "worklist.untitled.sync_health":
+    "Die CRM-Synchronisierung braucht Aufmerksamkeit",
+  "worklist.untitled.capture_health":
+    "Eine Postfachverbindung braucht Aufmerksamkeit",
+  "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",
+  "worklist.untitled.bounce": "Eine E-Mail kam nicht an",
+  "worklist.untitled.automation_run": "Eine Regel hat nicht funktioniert",
+  "worklist.untitled.notice": "Ein Hinweis für dich",
+  "worklist.verb.decide": "Entscheiden",
+  "worklist.verb.merge": "Zusammenführen",
+  "worklist.verb.open": "Öffnen",
+  "worklist.verb.complete": "Öffnen",
+  "worklist.verb.snooze": "Öffnen",
+  "worklist.verb.acknowledge": "Öffnen",
+  "worklist.source.failed": "{source} konnte nicht gelesen werden",
+  "worklist.source.withheld": "{source} ist für dein Konto nicht sichtbar",
+  "worklist.untitled.generic": "Etwas braucht dich",
 } as const satisfies Record<MessageKey, string>;

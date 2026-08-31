@@ -28,6 +28,7 @@ public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at I
 public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
+public.activity.audience_reason text gen=- def=-
 public.activity.body text gen=- def=-
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
 public.activity.capture_label text gen=- def=-
@@ -977,6 +978,23 @@ public.capture_freemail_domain.domain text NOT NULL gen=- def=-
 public.capture_freemail_domain.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_freemail_domain.kind text NOT NULL gen=- def=-
 public.capture_freemail_domain_pkey CREATE UNIQUE INDEX capture_freemail_domain_pkey ON public.capture_freemail_domain USING btree (id)
+public.capture_import acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_import.activity_id uuid NOT NULL gen=- def=-
+public.capture_import.capture_import_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_import.capture_import_activity_user_key UNIQUE (activity_id, user_id)
+public.capture_import.capture_import_pkey PRIMARY KEY (id)
+public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))))
+public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.capture_import.capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
+public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_import.posture_at_import text gen=- def=-
+public.capture_import.user_id uuid NOT NULL gen=- def=-
+public.capture_import.verdict_reason text gen=- def=-
+public.capture_import.verdict_status text gen=- def=-
+public.capture_import_activity_user_key CREATE UNIQUE INDEX capture_import_activity_user_key ON public.capture_import USING btree (activity_id, user_id)
+public.capture_import_pkey CREATE UNIQUE INDEX capture_import_pkey ON public.capture_import USING btree (id)
+public.capture_import_user_idx CREATE INDEX capture_import_user_idx ON public.capture_import USING btree (user_id, activity_id)
 public.capture_owner_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_owner_identity.capture_owner_identity_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
 public.capture_owner_identity.capture_owner_identity_pkey PRIMARY KEY (id)

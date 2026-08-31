@@ -13292,7 +13292,10 @@ type Activity struct {
 
 	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity.
 	Audience *ActivityAudience `json:"audience,omitempty"`
-	Body     *string           `json:"body,omitempty"`
+
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	AudienceReason *string `json:"audience_reason,omitempty"`
+	Body           *string `json:"body,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
@@ -24214,12 +24217,18 @@ type ProviderRef = string
 
 // ProviderRun defines model for ProviderRun.
 type ProviderRun struct {
-	// Applied True once this run's answers have been folded onto the contact's own record — the
-	// fields it filled that were empty. A `completed` run that is not yet `applied` has
-	// bought its values but they have not reached the record, which is the window a
-	// client polls through: stopping at `completed` shows a page that still looks empty.
-	// Always false for a run that never completed, and for one whose claims were
-	// discarded (`claims_unwritten`), because there was nothing to apply.
+	// Applied True once this run's answers have been OFFERED to the contact's own record — every
+	// field the record left empty is filled, and the rest were already answered. It says
+	// the folding HAPPENED, not that anything moved: a run whose values the record
+	// already held reports `applied` with nothing changed, because for a client waiting
+	// to re-read, "we tried and there is nothing more coming" is the same fact.
+	//
+	// A `completed` run that is not yet `applied` has bought its values and they have not
+	// reached the record yet, which is the window a client polls through: stopping at
+	// `completed` shows a page that still looks empty. Always false for a run that never
+	// completed, and for one whose claims were discarded (`claims_unwritten`) because the
+	// subject stopped being eligible mid-flight — that run's values reach nothing, and
+	// `claims_unwritten` is what says so.
 	Applied *bool `json:"applied,omitempty"`
 
 	// ClaimsUnwritten True when a paid terminal result could not be handed to the owning domain within
@@ -24819,6 +24828,22 @@ type RenewContractRequestValueBasis string
 type ReplaceChannelTokenRequest struct {
 	// BotToken The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
 	BotToken string `json:"botToken"`
+}
+
+// ReplyRecipient Who a reply to a message is addressed to: one person, resolved from the
+// message's participants by role.
+//
+// One person rather than a list. A reply is written to somebody, and a group
+// thread degrades to the most likely counterparty rather than to nobody.
+type ReplyRecipient struct {
+	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own people. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
+	Address string `json:"address"`
+
+	// FirstName What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
+	FirstName string `json:"first_name"`
+
+	// FullName The name as recorded, empty when no readable person is on the message.
+	FullName string `json:"full_name"`
 }
 
 // ReportDerivation The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
@@ -40040,6 +40065,9 @@ type ServerInterface interface {
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
+	// Who a reply to this message would be addressed to.
+	// (GET /activities/{id}/reply-recipient)
+	GetReplyRecipient(w http.ResponseWriter, r *http.Request, id Id)
 	// Send a (possibly edited) email draft — runs directly, consent-gated.
 	// (POST /activities/{id}/send-email)
 	SendEmail(w http.ResponseWriter, r *http.Request, id Id, params SendEmailParams)
@@ -41627,6 +41655,12 @@ func (_ Unimplemented) ReadActivityPipelineTrace(w http.ResponseWriter, r *http.
 // Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 // (POST /activities/{id}/relink)
 func (_ Unimplemented) RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Who a reply to this message would be addressed to.
+// (GET /activities/{id}/reply-recipient)
+func (_ Unimplemented) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -45429,6 +45463,40 @@ func (siw *ServerInterfaceWrapper) RelinkActivity(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RelinkActivity(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReplyRecipient operation middleware
+func (siw *ServerInterfaceWrapper) GetReplyRecipient(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReplyRecipient(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67511,6 +67579,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/reply-recipient", wrapper.GetReplyRecipient)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/send-email", wrapper.SendEmail)

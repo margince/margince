@@ -254,6 +254,7 @@ var tableOwners = map[string]string{
 	"workspace_email_domain":       "internal/modules/capture",
 	"capture_exclusion":            "internal/modules/capture",
 	"capture_owner_identity":       "internal/modules/capture",
+	"capture_import":               "internal/modules/capture",
 	"capture_digest":               "internal/modules/capture",
 	"capture_auto_enrich_state":    "internal/modules/capture",
 	"capture_pending_counterparty": "internal/modules/capture",
@@ -329,6 +330,7 @@ var tableOwners = map[string]string{
 	// means and how it renders, while integrations owns the run that bought
 	// it. That split is what lets a person page show a bought email beside a
 	// canonical one and say which is which.
+	"provider_applied_field":    "internal/modules/people",
 	"person_provider_claim":     "internal/modules/people",
 	"finance_external_customer": "internal/modules/finance",
 	"finance_customer_link":     "internal/modules/finance",

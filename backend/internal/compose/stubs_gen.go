@@ -71,6 +71,10 @@ func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
 
+func (stubs) GetReplyRecipient(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReplyRecipient")
+}
+
 func (stubs) SendEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SendEmailParams) {
 	httperr.NotImplemented(w, r, "SendEmail")
 }
