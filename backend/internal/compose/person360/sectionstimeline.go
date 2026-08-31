@@ -127,11 +127,17 @@ func sectionPage(rows []crmcontracts.Activity, hasMore bool) crmcontracts.PageIn
 // It selects channel_provider, and that is not decoration: since ADR-0107/A158
 // the kind says only that an interaction was a message, so a row without the
 // provider renders as the bare word "message" and a Telegram thread becomes
-// indistinguishable from a unit's. This SELECT is a hand-written sibling of
-// activities.activityColumns, which is exactly how it came to be missing the
-// column for a whole slice — the narrowing added it there and nothing pointed
-// at the copy. TestThePerson360TimelineNamesTheTransportThatCarriedAMessage is
-// the guard that says so out loud.
+// indistinguishable from a unit's. It also selects version, for the same
+// reason and by the same mistake a second time: AudienceAction sends the
+// row's version as If-Match and refuses to write blind without one, so a row
+// missing it cannot have its audience narrowed from this page at all — the
+// request never leaves the browser, and the error names no cause because
+// there was no request to have one (margince#3249). This SELECT is a
+// hand-written sibling of activities.activityColumns, which is exactly how
+// it came to be missing a column for a whole slice, twice.
+// TestThePerson360TimelineNamesTheTransportThatCarriedAMessage and
+// TestThePerson360TimelineCarriesTheVersionAWriteNeeds are the guards that
+// say so out loud.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.PersonID, opts AssembleOptions, extra string) ([]crmcontracts.Activity, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -151,7 +157,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
 		       a.occurred_at, a.due_at, a.is_done, a.source, a.captured_by, a.created_at,
-		       a.thread_key, a.bulk_mail_attested, a.audience, (%s) AS content_available
+		       a.thread_key, a.bulk_mail_attested, a.audience, a.version, (%s) AS content_available
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY a.occurred_at DESC, a.id DESC
@@ -166,16 +172,18 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		var a crmcontracts.Activity
 		var id ids.UUID
 		var audience string
+		var version int64
 		var contentAvailable, bulkMailAttested bool
 		var threadKey *string
 		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
 			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.Source, &a.CapturedBy,
-			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &contentAvailable); err != nil {
+			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &version, &contentAvailable); err != nil {
 			return nil, false, err
 		}
 		a.Id = openapi_types.UUID(id)
 		aud := crmcontracts.ActivityAudience(audience)
 		a.Audience = &aud
+		a.Version = &version
 		// The thread key and the bulk attestation are what lets the record
 		// page fold this page into conversations the way the list's page
 		// folds; the key identifies the message at the provider, so it is
