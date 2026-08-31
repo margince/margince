@@ -67,7 +67,7 @@ function WorklistRow({
   const { locale } = useLocale();
   const zone = viewerZone();
   const href = subjectHref(item);
-  const title = itemTitle(item, t);
+  const title = itemTitle(item, t, locale);
   const because = item.because
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)

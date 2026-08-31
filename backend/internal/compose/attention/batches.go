@@ -45,6 +45,16 @@ const (
 // reader would have met first. Everything that is not routine passes through
 // untouched.
 func foldRoutineDecisions(rows []ranked) []ranked {
+	return foldRoutineDecisionsBounded(rows, false)
+}
+
+// foldRoutineDecisionsBounded is the same fold, told whether the read that
+// produced these rows stopped at its own bound.
+//
+// A group whose members were cut short says so: "200+" rather than "200",
+// because a bound printed as a total is a wrong number rather than a bounded
+// one, and the reader has no way to tell the two apart.
+func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 	groups := map[crmcontracts.WorklistBatchKey][]ranked{}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
@@ -61,7 +71,7 @@ func foldRoutineDecisions(rows []ranked) []ranked {
 			kept = append(kept, members...)
 			continue
 		}
-		kept = append(kept, batchRow(key, members))
+		kept = append(kept, batchRow(key, members, bounded))
 	}
 	return kept
 }
@@ -85,7 +95,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 	switch *row.item.Kind {
 	case "capture_counterparty":
 		return contactBatchKey(row), true
-	case kindHeldDraft, kindScheduledSend:
+	case kindHeldDraft:
 		return kindHeldDraft, true
 	default:
 		return "", false
@@ -121,7 +131,7 @@ const batchSample = 3
 // It carries no subject: a batch is about no single record, and offering `open`
 // would send the reader to whichever member happened to be first. Its verb is
 // the batch screen, which the client routes from the source alone.
-func batchRow(key crmcontracts.WorklistBatchKey, members []ranked) ranked {
+func batchRow(key crmcontracts.WorklistBatchKey, members []ranked, bounded bool) ranked {
 	sample := make([]string, 0, batchSample)
 	for _, member := range members {
 		if len(sample) == batchSample {
@@ -147,6 +157,10 @@ func batchRow(key crmcontracts.WorklistBatchKey, members []ranked) ranked {
 			Sample: &sample,
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
+	}
+	if bounded {
+		atLeast := true
+		row.Batch.AtLeast = &atLeast
 	}
 	// The oldest member's moment, so a batch sorts where its work would have.
 	occurred := members[0].occurredAt

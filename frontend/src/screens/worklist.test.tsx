@@ -210,6 +210,31 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getByText(/Is noreply@x.com a contact\?/)).toBeTruthy();
   });
 
+  it("says a bounded count is a floor, not a total", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "held_draft",
+            source: "batch",
+            category: "decisions",
+            level: 6,
+            consequence: "data_drifts",
+            batch: { key: "held_draft", count: 200, at_least: true },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The read stopped at its own bound with members left over. "200" would be
+    // a wrong number; "200+" is a bounded one.
+    expect(
+      await screen.findByText("200+ drafts waiting to be sent"),
+    ).toBeTruthy();
+  });
+
   it("opens a group into the work it stands for", async () => {
     const user = userEvent.setup();
     stub(

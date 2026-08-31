@@ -27340,6 +27340,11 @@ type WorklistScopeOptions string
 // see what is in a group has to trust it, and a group nobody trusts is worse than
 // the pile it replaced.
 type WorklistBatch struct {
+	// AtLeast The count is a FLOOR, not a total: the read stopped at its own bound before
+	// it ran out of members. A client says "200+" rather than "200", because a
+	// bound printed as a total is a wrong number rather than a bounded one.
+	AtLeast *bool `json:"at_least,omitempty"`
+
 	// Count How many decisions this row stands for.
 	Count int `json:"count"`
 

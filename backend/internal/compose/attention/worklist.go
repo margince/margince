@@ -185,27 +185,38 @@ func (s *Service) worklistFrom(
 	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Since.Before(mine[j].Since) })
 	for i, customer := range mine {
 		row := classifyWaiting(customer, day.AsOf)
-		// Past the lead, a wait keeps its row, its reason and its place in the
-		// ordering — one band lower, so the other kinds of work are reachable
-		// above it. Demoted, never dropped: a queue that hid a waiting customer
-		// to make room would be the failure this whole surface exists to end.
+		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
+		// be one: its level still says a customer is waiting, because that is
+		// what it is and the summary counts on it. What changes is only where
+		// it sits, through the ordering's own last tiebreak.
+		//
+		// Rewriting the level instead would have told the reader the ninth
+		// waiting customer was agreed work, while the row went on saying a
+		// buyer wrote last — the page contradicting itself.
 		if i >= waitingLead {
-			row.item.Level = levelAgreed
+			row.crowded = true
 		}
 		rows = append(rows, row)
 	}
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
-	// And a pile of alike routine decisions is one row, not a hundred. No
-	// ordering saves a reader who must scroll past a hundred to reach the next
-	// thing, so the pile is collapsed before it is ranked.
-	rows = foldRoutineDecisions(rows)
+
 	if mineOnly(scope) {
 		rows = keepReadersOwn(ctx, rows)
 	}
-	if filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll) {
+	narrowed := filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll)
+	if narrowed {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
+	}
+	// A pile of alike routine decisions is one row, not a hundred — but ONLY on
+	// the unnarrowed page. A reader who asked for decisions asked to see them,
+	// and answering that with the same group they were trying to open is a door
+	// that leads back to itself. Narrowing IS opening the group.
+	if !narrowed {
+		// The decision read stops at its own scan bound, so a group that filled
+		// it reports a floor rather than a total.
+		rows = foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the

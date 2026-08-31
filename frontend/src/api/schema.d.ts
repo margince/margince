@@ -24139,6 +24139,12 @@ export interface components {
             key: "likely_automated" | "company_match" | "uncertain_contact" | "duplicates" | "held_draft";
             /** @description How many decisions this row stands for. */
             count: number;
+            /**
+             * @description The count is a FLOOR, not a total: the read stopped at its own bound before
+             *     it ran out of members. A client says "200+" rather than "200", because a
+             *     bound printed as a total is a wrong number rather than a bounded one.
+             */
+            at_least?: boolean;
             /** @description A few members, named, so the group can be checked before it is answered. */
             sample?: string[];
         };

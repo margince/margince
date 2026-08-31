@@ -202,11 +202,15 @@ func stagedMarkers(approval crmcontracts.Approval, machine MachineSender) string
 	if address, ok := change["email"].(string); ok && machine != nil && machine(address) {
 		markers = append(markers, stagedMachineSender)
 	}
-	// The engine names the company when it recognised the domain, so its
-	// presence IS the match. An empty name is the honest "we do not know it".
-	if name, ok := change["display_name"].(string); ok && strings.TrimSpace(name) != "" {
-		markers = append(markers, stagedKnownCompany)
-	}
+	// There is no company marker here, and the reason is worth stating: the
+	// only company-ish field the staged payload carries is `display_name`,
+	// which capture labels "untrusted header text — for display, never
+	// matching" (modules/capture/pending.go). A sender types it, so
+	// `Alice <alice@gmail.com>` would have read as a company we know.
+	//
+	// A real match needs a lookup against the organizations this workspace has,
+	// which is a read this assembler does not make. Until it does, a contact
+	// question is either from a machine or is the honest remainder.
 	return strings.Join(markers, " ")
 }
 

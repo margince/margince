@@ -80,16 +80,17 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 		"book_meeting",
 		"deal_follow_up", "transcript_proposal", "site_lead":
 		return true
-	case kindHeldDraft, kindScheduledSend:
-		// A message the product WROTE and is holding. It blocks a customer in
-		// the sense that nothing reaches them until somebody looks — but five
-		// hundred of them are one kind of work, and treating each as its own
-		// urgent row is what made the old page unreadable. So they group, and
-		// the group sits where routine work sits.
-		//
-		// The distinction from a send: a send is a message the rep MEANT to
-		// send and a person is waiting on it. A held draft is a suggestion
-		// nobody has agreed to yet.
+	case kindScheduledSend:
+		// A message the rep already MEANT to send, stopped at send time. The
+		// accept verb on it reads "yes, still send this", and somebody is
+		// waiting at the other end — so it blocks a customer exactly as a send
+		// does, and never groups.
+		return true
+	case kindHeldDraft:
+		// A message the product WROTE and is holding: a suggestion nobody has
+		// agreed to yet. Five hundred of them are one kind of work, and
+		// treating each as its own urgent row is what made the old page
+		// unreadable, so they group and the group sits where routine work sits.
 		return false
 	default:
 		return false

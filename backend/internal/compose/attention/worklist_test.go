@@ -11,6 +11,7 @@ package attention
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -549,20 +550,23 @@ func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 	}
 }
 
-// The three contact groups are answered differently — a machine is rejected
-// without thought, a known company is usually accepted, and the remainder is
-// the part that needs a person. One group of everything would still be a pile.
+// Contact questions split by what they are ABOUT, and the split is derived
+// from the STAGED PAYLOAD rather than fabricated here — a test that writes the
+// marker itself proves nothing about the code that writes it in production.
 func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
-	staged := []crmcontracts.AttentionItem{}
+	staged := []crmcontracts.Approval{}
 	for i := 0; i < 3; i++ {
-		staged = append(staged, item("m"+string(rune('a'+i)), "approval",
-			withKind("capture_counterparty"), withDetail2("machine_sender")))
-		staged = append(staged, item("k"+string(rune('a'+i)), "approval",
-			withKind("capture_counterparty"), withDetail2("known_company")))
-		staged = append(staged, item("u"+string(rune('a'+i)), "approval",
-			withKind("capture_counterparty")))
+		staged = append(staged,
+			captureApproval("noreply@vendor.example"),
+			captureApproval("anna.weber@customer.example"))
 	}
-	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
+	items := make([]crmcontracts.AttentionItem, 0, len(staged))
+	for _, approval := range staged {
+		items = append(items, approvalItem(approval, func(address string) bool {
+			return strings.HasPrefix(address, "noreply@")
+		}))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: items}
 
 	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant)))
 
@@ -572,12 +576,38 @@ func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
 			keys[row.Batch.Key] = row.Batch.Count
 		}
 	}
-	for _, want := range []crmcontracts.WorklistBatchKey{
-		"likely_automated", "company_match", "uncertain_contact",
-	} {
-		if keys[want] != 3 {
-			t.Fatalf("group %q holds %d, wanted 3", want, keys[want])
-		}
+	if keys["likely_automated"] != 3 {
+		t.Fatalf("the machine group holds %d, wanted 3", keys["likely_automated"])
+	}
+	if keys["uncertain_contact"] != 3 {
+		t.Fatalf("the remainder holds %d, wanted 3", keys["uncertain_contact"])
+	}
+}
+
+// A company match needs a lookup this assembler does not make. The only
+// company-ish field on the payload is the sender's own display name, which
+// capture labels untrusted and never-for-matching — so `Alice <alice@gmail.com>`
+// must not read as a company we know.
+func TestASendersOwnDisplayNameIsNotACompanyMatch(t *testing.T) {
+	approval := captureApproval("alice@gmail.com")
+	change := map[string]any{"email": "alice@gmail.com", "display_name": "Alice Example"}
+	approval.ProposedChange = &change
+
+	item := approvalItem(approval, func(string) bool { return false })
+
+	if item.Detail != nil && strings.Contains(*item.Detail, stagedKnownCompany) {
+		t.Fatal("a sender's own display name was taken for a company we know")
+	}
+}
+
+func captureApproval(email string) crmcontracts.Approval {
+	change := map[string]any{"email": email}
+	summary := "Is " + email + " a contact worth keeping?"
+	return crmcontracts.Approval{
+		Id:             openapi_types.UUID(ids.NewV7()),
+		Kind:           "capture_counterparty",
+		Summary:        &summary,
+		ProposedChange: &change,
 	}
 }
 
@@ -652,26 +682,25 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 
 	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waiting)
 
-	// Every wait is still on the page.
+	// Every wait is still on the page, and every one still SAYS it is a wait.
+	// Rewriting the level of the ninth would tell the reader it was agreed work
+	// while its own row went on saying a buyer wrote last.
 	kept := 0
-	lead := 0
 	for _, row := range out.Queue {
 		if row.Source == "customer_waiting" {
 			kept++
-			if row.Level == levelWaiting {
-				lead++
+			if row.Level != levelWaiting {
+				t.Fatalf("a waiting customer was relabelled as level %d", row.Level)
 			}
 		}
 	}
 	if kept != 30 {
 		t.Fatalf("thirty waits produced %d rows — some were dropped", kept)
 	}
-	if lead != 8 {
-		t.Fatalf("%d waits lead the page, wanted the longest-waiting eight", lead)
-	}
-	// And the task is no longer buried under all thirty.
+	// What changes is only the ORDER: the overdue task is reachable rather than
+	// buried under the whole backlog.
 	for i, row := range out.Queue {
-		if row.Source == "task" && i > 8 {
+		if row.Source == "task" && i > waitingLead {
 			t.Fatalf("the overdue task sat at position %d, below the whole backlog", i+1)
 		}
 	}

@@ -31943,6 +31943,12 @@ components:
             `uncertain_contact` is the honest remainder; `duplicates` are record pairs;
             `held_draft` are messages waiting to be released.
         count: { type: integer, minimum: 0, description: 'How many decisions this row stands for.' }
+        at_least:
+          type: boolean
+          description: |
+            The count is a FLOOR, not a total: the read stopped at its own bound before
+            it ran out of members. A client says "200+" rather than "200", because a
+            bound printed as a total is a wrong number rather than a bounded one.
         sample:
           type: array
           items: { type: string }
