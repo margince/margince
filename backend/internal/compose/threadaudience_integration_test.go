@@ -163,3 +163,36 @@ func recompute(t *testing.T, e *integration.Env, activityID ids.UUID) {
 		t.Fatalf("recomputing the audience: %v", err)
 	}
 }
+
+func TestTheHoldCountReadsOnlyTheCallersOwnMessages(t *testing.T) {
+	// A thread key is the RFC822 References root, taken verbatim from a
+	// sender's header — guessable, forgeable, and shared across one workspace
+	// namespace. Counting holders BY thread key would walk messages the caller
+	// never received, and a capture_import row is itself an arm of the audience
+	// gate: the count would read exactly the membership a held message hides.
+	//
+	// A seat could then map which colleagues are on which private
+	// conversations, one thread key at a time, without reading a word of them.
+	e := integration.Setup(t)
+	const key = "thread-shared-key"
+	// The caller's own message on the thread.
+	mine := seedHeldThreadOn(t, e, key, "kunde@example.test", e.Rep1)
+	// A LATER message on the same thread that only a colleague imported — the
+	// conversation continued without the caller.
+	theirs := seedHeldThreadOn(t, e, key, "kunde@example.test", e.Rep2)
+
+	outcome := decideThread(t, e, e.Rep1, key, true)
+
+	if outcome.HeldByOthers != 0 {
+		t.Fatalf("held_by_others=%d, want 0 — the colleague holds a message this caller never "+
+			"received, and counting it tells them who is on a conversation they are not", outcome.HeldByOthers)
+	}
+	if got := activityAudience(t, e, mine); got != "workspace" {
+		t.Fatalf("the caller's own message is %q, want workspace — nobody else holds it", got)
+	}
+	// And the colleague's message is untouched by a decision that was never
+	// about it.
+	if got := activityAudience(t, e, theirs); got != "participants" {
+		t.Fatalf("the colleague's message is %q, want participants", got)
+	}
+}

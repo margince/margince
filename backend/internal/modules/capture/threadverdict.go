@@ -405,6 +405,7 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 		 WHERE a.id = i.activity_id
 		   AND a.thread_key = $1
 		   AND a.restricted_at IS NULL
+		   AND a.archived_at IS NULL
 		   AND i.user_id = $2`, threadKey, actor.UserID, status); err != nil {
 		return fmt.Errorf("capture: applying the owner's decision to their import rows: %w", err)
 	}

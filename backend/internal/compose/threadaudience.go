@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,6 +70,15 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied
 	}
+	// A read seat is licensed to look, not to change what colleagues can read.
+	// The same pair the purge takes, and for the same reason: being a person is
+	// not a grant, and RequireHuman inside the store reads none.
+	if !actor.SeatType.CanMutate() {
+		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return ThreadAudienceOutcome{}, err
+	}
 	if threadKey == "" {
 		return ThreadAudienceOutcome{}, apperrors.ErrNotFound
 	}
@@ -93,7 +103,7 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 			}
 		}
 		outcome.Messages = len(messages)
-		held, err := othersHoldingTx(ctx, tx, threadKey, actor.UserID)
+		held, err := othersHoldingTx(ctx, tx, messages, actor.UserID)
 		if err != nil {
 			return err
 		}
@@ -107,24 +117,39 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 	return outcome, nil
 }
 
-// othersHoldingTx counts the OTHER seats whose contribution still holds this
-// thread's messages.
+// othersHoldingTx counts the OTHER seats whose contribution still holds the
+// caller's OWN messages.
 //
 // It is what makes a share honest: an owner who shares a thread a colleague is
 // holding gets a 200 and a message that stayed private, and being told the
 // count is the difference between "the product ignored me" and "somebody else
 // has a say here too".
-func othersHoldingTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) (int, error) {
+//
+// Over the activity ids the caller imported, NEVER over the thread key. A
+// thread key is the RFC822 References root taken verbatim from a sender's
+// header, so it is both guessable and forgeable, and the workspace shares one
+// namespace of them. Counting by thread key would walk messages the caller
+// never received — and a capture_import row is itself an arm of the audience
+// gate (platform/auth ActivityContentClause), so the count would read exactly
+// the membership a held message hides. A seat could then map which colleagues
+// are on which private conversations, one thread key at a time, without ever
+// reading a word of them.
+//
+// It is also the honest number: the caller is owed how many colleagues co-hold
+// THEIR messages, not how many hold a stranger's message that happens to carry
+// the same header value.
+func othersHoldingTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, user ids.UUID) (int, error) {
+	if len(messages) == 0 {
+		return 0, nil
+	}
 	var held int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(DISTINCT i.user_id)
 		  FROM capture_import i
-		  JOIN activity a ON a.id = i.activity_id
-		 WHERE a.thread_key = $1 AND a.restricted_at IS NULL
-		   AND i.user_id <> $2
+		 WHERE i.activity_id = ANY($1) AND i.user_id <> $2
 		   AND (coalesce(i.posture_at_import, 'shared') <> 'shared'
 		        OR i.verdict_status IN ('held', 'unsure', 'held_by_owner', 'pending'))`,
-		threadKey, user).Scan(&held); err != nil {
+		messages, user).Scan(&held); err != nil {
 		return 0, fmt.Errorf("compose: counting the seats still holding a thread: %w", err)
 	}
 	return held, nil
