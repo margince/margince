@@ -9,11 +9,15 @@ package integration
 // reaches it and a run exists for that person — admitted, fenced, frozen and
 // reserved, with the submit job committed beside it.
 //
-// WHO created the person decides which of the customer's two toggles governs
-// the purchase, and whether there is one at all. That is the subject of most
-// of these cases: the same event is emitted by four writers, and an agent
-// creating a contact must not reach through it what the REST policy denies
-// the agent at the door.
+// ONE installation-wide posture decides whether an automatic lookup happens at
+// all: integrations.automatic_lookup, in place of the per-connection switches
+// that used to ask which WRITER a purchase followed. An automatic run buys only
+// what the provider gives away, so that distinction stopped paying for itself.
+//
+// WHO created the person still decides whether there is an automatic trigger to
+// admit, and that is the subject of most of these cases: the same event is
+// emitted by four writers, and an agent creating a contact must not reach
+// through it what the REST policy denies the agent at the door.
 
 import (
 	"context"
@@ -42,7 +46,14 @@ type providerConsumerEnv struct {
 
 // setupProviderConsumer seeds a subject and a connected provider in the named
 // mode, and wires the consumer over the REAL cross-module binding.
-func setupProviderConsumer(t *testing.T, mode string) *providerConsumerEnv {
+// setupProviderConsumer builds the consumer with the installation's automatic
+// lookup switched on or off.
+//
+// The installation SETTING, not the connection's mode: one answer governs every
+// automatic trigger now, and the per-connection mode and switches are still
+// written and still answered on the wire while nothing reads what they say. A
+// fixture that expressed "off" as `mode = on_demand` was expressing nothing.
+func setupProviderConsumer(t *testing.T, automaticLookup bool) *providerConsumerEnv {
 	t.Helper()
 	// Before the database: this is a contradiction between the fixture and the
 	// provider's own cost table, and neither a schema nor a seeded row can
@@ -71,10 +82,23 @@ func setupProviderConsumer(t *testing.T, mode string) *providerConsumerEnv {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_connection
 			       (id, provider, status, mode, preset, categories, automatic_individual_create)
-			VALUES (gen_random_uuid(), 'surfe', 'connected', $1, 'full', $2, true)
+			VALUES (gen_random_uuid(), 'surfe', 'connected', 'automatic_on_create', 'full', $1, true)
 			ON CONFLICT (provider) DO UPDATE
-			   SET status = 'connected', mode = $1, categories = $2,
-			       automatic_individual_create = true`, mode, seeded)
+			   SET status = 'connected', mode = 'automatic_on_create', categories = $1,
+			       automatic_individual_create = true`, seeded)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The one answer that decides. Written as a row the way the settings
+	// surface leaves it, because the read is machinery-applied and this
+	// fixture has no caller for a gated write.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO setting (key, value) VALUES ($1, to_jsonb($2::bool))
+			ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+			integrations.AutomaticLookup.Key(), automaticLookup)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -143,20 +167,6 @@ func actorEnvelope(personID ids.UUID, actorType, actorID string) events.Envelope
 	}
 }
 
-// admitCapturedContacts is the customer switching automatic_import on, through
-// the same column the settings card writes. Separate from the setup so every
-// other case here keeps the default the server ships, which is off.
-func (c *providerConsumerEnv) admitCapturedContacts(t *testing.T) {
-	t.Helper()
-	if err := database.WithWorkspaceTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`UPDATE provider_connection SET automatic_import = true WHERE provider = 'surfe'`)
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func (c *providerConsumerEnv) runsForPerson(t *testing.T) int {
 	t.Helper()
 	var runs int
@@ -171,7 +181,7 @@ func (c *providerConsumerEnv) runsForPerson(t *testing.T) int {
 
 // A human creating a contact, with the toggle on: the event buys the data.
 func TestPersonCreatedQueuesAnEnrichmentRun(t *testing.T) {
-	c := setupProviderConsumer(t, "automatic_on_create")
+	c := setupProviderConsumer(t, true)
 
 	if err := c.consumer.HandleEvent(context.Background(), humanCreated(c.personID)); err != nil {
 		t.Fatal(err)
@@ -203,7 +213,7 @@ func TestPersonCreatedQueuesAnEnrichmentRun(t *testing.T) {
 // Auto-enrich switched off: the refusal is the configuration working, so the
 // consumer reports success and buys nothing.
 func TestPersonCreatedWithAutoEnrichOffBuysNothingAndDoesNotError(t *testing.T) {
-	c := setupProviderConsumer(t, "on_demand")
+	c := setupProviderConsumer(t, false)
 
 	if err := c.consumer.HandleEvent(context.Background(), humanCreated(c.personID)); err != nil {
 		t.Fatalf("a switched-off toggle surfaced as a failure, which would wedge the consumer group: %v", err)
@@ -218,7 +228,7 @@ func TestPersonCreatedWithAutoEnrichOffBuysNothingAndDoesNotError(t *testing.T) 
 // event what the policy denies it at the door: the seat cap is what the
 // agent's human could do through the same gate, and an event has no gate.
 func TestAnAgentCreatedPersonBuysNothing(t *testing.T) {
-	c := setupProviderConsumer(t, "automatic_on_create")
+	c := setupProviderConsumer(t, true)
 
 	if err := c.consumer.HandleEvent(context.Background(),
 		actorEnvelope(c.personID, "agent", "agent:overnight")); err != nil {
@@ -229,44 +239,53 @@ func TestAnAgentCreatedPersonBuysNothing(t *testing.T) {
 	}
 }
 
-// The other half of the import toggle: switched ON, a captured counterparty
-// buys exactly like a typed one. Without this case the refusal below passes
-// against a gate that admits nobody — the toggle could be wired to a constant
-// false and every assertion in this file would still be green.
-func TestACapturedContactIsBoughtOnceTheImportToggleIsOn(t *testing.T) {
-	c := setupProviderConsumer(t, "automatic_on_create")
-	c.admitCapturedContacts(t)
+// The other half of the posture: switched ON, a captured counterparty is looked
+// up exactly like a typed one — the writer is not the question any more.
+//
+// Without this case the refusal beside it passes against a gate that admits
+// nobody: the setting could be wired to a constant false and every assertion in
+// this file would still be green.
+func TestACapturedContactIsLookedUpOnceThePostureIsOn(t *testing.T) {
+	c := setupProviderConsumer(t, true)
 
 	if err := c.consumer.HandleEvent(context.Background(),
 		actorEnvelope(c.personID, "connector", "connector:gmail")); err != nil {
 		t.Fatal(err)
 	}
 	if runs := c.runsForPerson(t); runs != 1 {
-		t.Errorf("%d runs exist for a captured counterparty with automatic_import on, want 1 — the customer switched capture enrichment on and got nothing", runs)
+		t.Errorf("%d runs exist for a captured counterparty with automatic lookups on, want 1 — the installation left the posture on and got nothing", runs)
 	}
 	if *c.enqueued != 1 {
 		t.Errorf("%d submit jobs were committed, want 1 — a queued run with no job blocks every later attempt at that subject", *c.enqueued)
 	}
 }
 
-// Capture creates a person per external counterparty, so a mailbox connect
-// with a year of history would buy thousands of records. That is what
-// automatic_import governs, and it is NOT the individual-create toggle.
-func TestAConnectorCreatedPersonIsGovernedByTheImportToggle(t *testing.T) {
-	c := setupProviderConsumer(t, "automatic_on_create")
+// A captured counterparty is governed by the same installation-wide answer as
+// any other automatic trigger.
+//
+// Capture creates a person per external counterparty, so a mailbox connect with
+// a year of history reaches thousands of them.
+//
+// It used to be governed by a switch of its own — the writer mattered, because
+// a connector's thousands of contacts each spent credits. An automatic run now
+// buys only what the provider gives away, so the distinction stopped paying for
+// itself and the remaining question is the installation's posture. Turning that
+// off is what stops a connected mailbox looking up every sender in its history.
+func TestAConnectorCreatedPersonIsGovernedByTheInstallationsPosture(t *testing.T) {
+	c := setupProviderConsumer(t, false)
 
 	if err := c.consumer.HandleEvent(context.Background(),
 		actorEnvelope(c.personID, "connector", "connector:gmail")); err != nil {
 		t.Fatal(err)
 	}
 	if runs := c.runsForPerson(t); runs != 0 {
-		t.Errorf("a captured counterparty triggered %d paid runs under automatic_import=false — connecting a mailbox would buy data for every sender in its history", runs)
+		t.Errorf("a captured counterparty triggered %d runs with automatic lookups switched off — connecting a mailbox would look up every sender in its history", runs)
 	}
 }
 
 // Only person.created buys. An edit must not re-purchase.
 func TestOnlyPersonCreatedTriggersAPurchase(t *testing.T) {
-	c := setupProviderConsumer(t, "automatic_on_create")
+	c := setupProviderConsumer(t, true)
 	env := humanCreated(c.personID)
 	env.Type = "person.updated"
 
