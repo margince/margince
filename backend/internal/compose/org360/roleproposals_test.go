@@ -109,3 +109,23 @@ func TestAMalformedReplyIsNotReadAsNoRolesFound(t *testing.T) {
 		t.Fatal("prose parsed as an empty reading")
 	}
 }
+
+// A required field's ABSENCE is a malformed reply, not an empty reading. A
+// provider answering `{}` — or a grammar the lane failed to constrain — would
+// otherwise report itself as a well-covered account with nothing to propose.
+func TestParseRefusesAReplyMissingTheRequiredField(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{`{}`, `{"proposals":null}`} {
+		if _, err := proposeroles.Parse(reply); err == nil {
+			t.Fatalf("%s parsed as an empty reading", reply)
+		}
+	}
+	// An explicit empty list IS an empty reading, and stays one.
+	got, err := proposeroles.Parse(`{"proposals":[]}`)
+	if err != nil {
+		t.Fatalf("an explicitly empty answer was refused: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("decoded %d proposals from an empty list", len(got))
+	}
+}

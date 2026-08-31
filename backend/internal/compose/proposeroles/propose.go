@@ -278,10 +278,17 @@ func survives(
 // well-covered account.
 func Parse(raw string) ([]Proposal, error) {
 	var answer struct {
-		Proposals []Proposal `json:"proposals"`
+		Proposals *[]Proposal `json:"proposals"`
 	}
 	if err := json.Unmarshal([]byte(raw), &answer); err != nil {
 		return nil, fmt.Errorf("proposeroles: the reply is not the shape this site takes: %w", err)
 	}
-	return answer.Proposals, nil
+	// The field is REQUIRED by the schema, so its absence is a malformed reply
+	// rather than an empty reading. Read as the latter, a provider answering
+	// `{}` — or a grammar the lane failed to constrain — would report itself as
+	// a well-covered account with nothing to propose.
+	if answer.Proposals == nil {
+		return nil, fmt.Errorf("proposeroles: the reply carries no proposals field, which the schema requires")
+	}
+	return *answer.Proposals, nil
 }

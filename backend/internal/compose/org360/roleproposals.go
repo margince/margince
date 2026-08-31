@@ -163,6 +163,17 @@ func (s *Service) proposalInput(
 	if err != nil {
 		return "", nil, err
 	}
+	// WRITE authority over THIS deal, asked of the human while they are still
+	// the principal. The write below runs as the reading agent, and a system
+	// principal is unbounded — ensureWriteAuthority returns for it without
+	// consulting the row at all. So a rep holding a read-only share of a
+	// colleague's deal would otherwise pass the object grants above, reach the
+	// store as an unbounded actor, and seat a stakeholder they could not add
+	// through the ordinary relationship endpoint. The substitution is for
+	// PROVENANCE, and it must never be for authority.
+	if err := auth.EnsureWritableLive(ctx, tx, "deal", dealID.UUID); err != nil {
+		return "", nil, err
+	}
 	roster, err := people.StrengthForOrgContacts(ctx, tx, orgID, now)
 	if err != nil {
 		return "", nil, err
@@ -187,7 +198,7 @@ func (s *Service) proposalInput(
 	if err != nil {
 		return "", nil, err
 	}
-	messages, err := ownWords(ctx, tx, personIDs, now)
+	messages, err := ownWords(ctx, tx, orgID, personIDs, now)
 	if err != nil {
 		return "", nil, err
 	}
