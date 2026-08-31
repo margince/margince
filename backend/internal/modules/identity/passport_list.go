@@ -35,7 +35,8 @@ type PassportRow struct {
 // PassportConnectionRow is the connection a grant-bound passport belongs to.
 // Present exactly when the passport was issued BY the token exchange rather
 // than minted by a human, which is the distinction the Settings list is built
-// on — a human lends a passport and the client receives one of these.
+// on — the token exchange mints one of these fresh from the scopes the human
+// ticked on the consent screen, unrelated to any standalone passport.
 //
 // ClientName falls back to ClientID when the registration is gone: a
 // connection whose client was deleted still has to be nameable, because it is

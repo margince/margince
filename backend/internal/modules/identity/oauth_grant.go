@@ -216,11 +216,12 @@ func supersedePriorGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID, cli
 // that takes a refresh row before its grant re-opens exactly that hole.
 //
 // app_user sits AHEAD of all three: requireLiveConsentingUser locks it before
-// the grant insert below, DeactivateUser locks it before revoking the human's own
-// passports (users.go), and a consent locks it before the passport it lends
-// (lockConsentingUser, oauth_lend.go). A path that takes a passport or refresh row
-// and then reaches for app_user inverts that chain and deadlocks against a
-// deactivation.
+// the grant insert below, and DeactivateUser locks it before revoking the
+// human's own passports (users.go). A consent itself takes no passport lock at
+// all — the human's ticks are not a row that can go stale between render and
+// submit — so the chain a consent can deadlock against is only this one. A
+// path that takes a passport or refresh row and then reaches for app_user
+// inverts that chain and deadlocks against a deactivation.
 //
 // Which is why a path that ALREADY holds the grant must not lock app_user at all:
 // it is past app_user's place in the chain, so it reads the human's row unlocked

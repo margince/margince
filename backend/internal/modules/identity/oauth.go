@@ -369,12 +369,12 @@ const scopeOfflineAccess = "offline_access"
 // returned scopes never include it: it buys the connection's lifetime, and a
 // scope list is read as record authority wherever it travels.
 //
-// The scopes themselves grant nothing. A consent hands over the passport the
-// human lent — the lent passport's own scopes are what the code records
-// (lockLentPassport, oauth_consent.go), and the consent screen offers passports
-// without consulting the request — so what survives of this list is the string
-// the screen posts back (formScope, oauth_consentscreen.go), which carries the
-// offline marker home.
+// The scopes themselves grant nothing. The consent screen offers a fixed
+// vocabulary without consulting this list at all (offlineRequested,
+// oauth_consent.go) — what the human ticks there is what the code records
+// (parseConsentedScopes, oauth_consentcommit.go) — so what survives of this
+// list is the string the screen posts back (formScope, oauth_consentscreen.go),
+// which carries the offline marker home.
 func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 	if strings.TrimSpace(raw) == "" {
 		return []string{string(principal.ScopeRead)}, false, nil

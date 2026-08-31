@@ -43,9 +43,10 @@ func (s *Service) liveClient(ctx context.Context, clientID string) (string, erro
 
 // offlineRequested is all the consent screen takes from the client's scope
 // parameter: whether it asked to stay connected without asking again. The access
-// scopes in it are not read, because they decide nothing the screen renders — a
-// lend grants the chosen passport's own scopes — while offline_access is about
-// the connection's lifetime, which the human is approving and so must see.
+// scopes in it are not read, because they decide nothing the screen renders —
+// the screen offers the fixed vocabulary ticked, and the human's own ticks are
+// the grant — while offline_access is about the connection's lifetime, which
+// the human is approving and so must see.
 //
 // Unlike parseOAuthScopes this never errors: an unknown scope has already been
 // refused on the authorize request this screen is rendering.
