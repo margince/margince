@@ -14,6 +14,8 @@ package agentaccess
 // under a real Postgres, not merely on paper.
 
 import (
+	"encoding/json"
+	"net/http"
 	"net/url"
 	"sync"
 	"testing"
@@ -69,6 +71,17 @@ func TestConcurrentCodeExchangesForOneClientSerialize(t *testing.T) {
 	for name, r := range map[string]renewal{"first exchange": a, "second exchange": b} {
 		if r.err != nil {
 			t.Fatalf("%s failed on the interleaving rather than the rule: %v", name, r.err)
+		}
+		if r.status != http.StatusOK {
+			t.Fatalf("%s → %d %s, want 200: each code is independently valid, so the "+
+				"lock must serialize the pair rather than fail either one", name, r.status, r.body)
+		}
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(r.body), &payload); err != nil {
+			t.Fatalf("%s: decoding the token response: %v", name, err)
+		}
+		if accessToken, _ := payload["access_token"].(string); accessToken == "" {
+			t.Fatalf("%s: response carried no access_token: %s", name, r.body)
 		}
 	}
 

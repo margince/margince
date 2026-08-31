@@ -229,8 +229,8 @@ const clientRevokeReason = "revoked via RFC 7009 /oauth/revoke"
 // credential pair was presented, the whole connection dies through the ONE
 // cascade. Resolution is unlocked exactly like grantOfPresentedToken — it
 // names which grant to lock and decides nothing else, so revokeGrantTx alone
-// takes the grant → refresh → passport order (oauth_grant.go) and no read
-// here can invert it by locking a passport or refresh row first.
+// takes the grant → refresh → passport order and no read here can invert it
+// by locking a passport or refresh row first.
 //
 // An unresolved token — unknown, from another workspace, or naming no grant
 // at all (a locally minted passport answers to no connection) — commits
