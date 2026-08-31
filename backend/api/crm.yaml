@@ -15081,6 +15081,65 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /deals/{id}/role-proposals:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals, AI]
+      operationId: proposeDealRoles
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Read the buying roles out of what this deal's contacts have written.
+      description: |
+        The roles are the deal's shape: who signs, who carries it inside the account,
+        who can stop it. They are recorded by hand today, which means a deal usually
+        has none — and a committee with no champion recorded looks exactly like a
+        committee with no champion.
+
+        **A ROLE IS NEVER INFERRED FROM A JOB TITLE.** "Managing Director" says what
+        somebody is called, not that they carry this deal. That is why this reads
+        messages rather than signatures, and a proposal citing only a title is dropped.
+
+        **WRITTEN DIRECTLY, NOT STAGED.** A surviving proposal becomes a real seat
+        immediately — attributed to `agent:propose_roles`, marked `ai_suggested` on
+        the coverage card, and reversible by archiving it like any other seat. Nothing
+        queues for an approval a reader would rubber-stamp.
+
+        That puts the whole weight on the gate, and the gate is stricter than the
+        enrichment one for a reason: a wrong phone number is a typo a reader fixes in
+        passing, a wrong economic buyer sends a rep to the wrong person for a quarter.
+        A proposal survives only if the model quoted a real message VERBATIM, that
+        quote is genuinely inside the source it named, **the person who wrote that
+        source is the person the role is proposed for**, the quote is at least six
+        words, and the score clears 0.75.
+
+        **A seat a person typed is never touched.** The read can only fill a hole, so
+        pressing this twice on a settled committee writes nothing and says so in
+        `skipped`.
+
+        Every contact reaching the prompt passes the caller's own row scope first, so
+        a person the caller cannot see is never read and never proposed.
+      responses:
+        '200':
+          description: What was written, and how much the gate refused.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoleProposalResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: |
+            The process role wired no model path — declared absent, never a silent no-op.
+
+            There is no deterministic floor here, and that is deliberate. Every other
+            drafting endpoint degrades to a template; a buying role has no template,
+            because the only thing left to guess from is the job title, which is the
+            one inference this endpoint exists not to make.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /me/linkedin-connections:
     post:
       tags: [People]
@@ -23724,6 +23783,49 @@ components:
             ABSENT rather than empty for a caller without the activity grant: an empty set
             is an answer ("nobody can reach them"), and giving that answer to somebody who
             was not allowed to ask is the disclosure inverted.
+    DealRoleProposalResult:
+      type: object
+      required: [written, skipped, generated_by]
+      properties:
+        written:
+          type: array
+          description: |
+            The seats this read actually created, in the order it wrote them. Each is a
+            real `deal_stakeholder` relationship carrying `ai_suggested`, so the committee
+            board and the map mark it without a second read.
+          items: { $ref: '#/components/schemas/DealRoleProposalWritten' }
+        skipped:
+          type: integer
+          minimum: 0
+          description: |
+            How many of the model's proposals the gate refused — a wrong quote, a person
+            who already holds a seat, a score under the floor, evidence written by
+            somebody else.
+
+            Reported as a COUNT, not a list. A refused proposal is a claim the product
+            decided not to make, and showing it would put the unevidenced guess back in
+            front of the reader that dropping it removed. The number is here so an empty
+            answer can tell "nothing was proposed" apart from "everything proposed was
+            refused", which are different facts about the account.
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+    DealRoleProposalWritten:
+      type: object
+      required: [person_id, full_name, role, evidence_snippet, source_activity_id, confidence]
+      properties:
+        person_id: { type: string, format: uuid }
+        full_name: { type: string }
+        role: { type: string }
+        evidence_snippet:
+          type: string
+          description: |
+            The words this role was read out of, quoted verbatim from the contact's own
+            message. Checked against that message before the seat was written, so a
+            reader can find the sentence rather than take the label on trust.
+        source_activity_id:
+          type: string
+          format: uuid
+          description: The message the quote came from, and the one the contact themselves wrote.
+        confidence: { type: number, minimum: 0, maximum: 1 }
     OrganizationCoverageCompleteness:
       type: object
       required: [committee_read]

@@ -100,6 +100,14 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// on its own terms.
 	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
 
+	// The buying-role reading's pre-write committee check. It asks whether a
+	// seat would SECOND an answer somebody has already given, and a seat the
+	// caller cannot see is still an answer — so scoping it would let the
+	// reading overwrite exactly the seats its author was not allowed to know
+	// about. Nothing leaves the function: no person id, no role, only the
+	// decision not to write.
+	"internal/compose/org360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
+
 	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by

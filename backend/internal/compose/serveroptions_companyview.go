@@ -149,3 +149,22 @@ func WithDealStatusWriter(brain completer, routingVersion string) Option {
 		s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc.WithLane(brain, routingVersion))
 	}
 }
+
+// WithRoleProposals binds the lane that reads a deal's buying roles out of
+// what its contacts have written.
+//
+// Unlike every other lane on this page, its absence is a 501 rather than a
+// deterministic answer. Each of the others degrades to a template — a draft
+// still has words, a status card still has the deal's own facts. A buying role
+// has no template, because the only thing left to read one from would be the
+// job title, and inferring a role from a title is precisely what this endpoint
+// exists not to do. So a role that wires no lane declares the capability
+// absent instead of guessing.
+func WithRoleProposals(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.org360Svc == nil {
+			return
+		}
+		s.org360Handlers = s.WithRoleLane(brain)
+	}
+}

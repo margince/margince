@@ -751,6 +751,10 @@ func (stubs) CreateOffer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "CreateOffer")
 }
 
+func (stubs) ProposeDealRoles(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ProposeDealRoles")
+}
+
 func (stubs) ListDealStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListDealStakeholders")
 }

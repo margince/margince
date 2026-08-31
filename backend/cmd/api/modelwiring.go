@@ -167,6 +167,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// drafting task, a different input shape.
 		compose.WithPersonDraft(modelPath.DraftReply),
 		compose.WithDealStatusWriter(modelPath.DealHealth, routingVersion),
+		compose.WithRoleProposals(modelPath.ProposeRoles),
 	}
 }
 

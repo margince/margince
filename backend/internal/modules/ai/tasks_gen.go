@@ -34,7 +34,7 @@ const (
 	// TaskNlSearch is Declared, not built (ADR-0074).
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
-	// TaskProposeRoles is PLANNED — the reading and its gate exist (compose/proposeroles) and are tested offline; the site arrives with the endpoint that calls them, because a planned task declares no site and therefore cannot present as certified. Read the buying roles out of what a contact has actually written — who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and a snippet that is not in the source it names is dropped rather than trusted. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the record carries the evidence so a reader can check it and the mark stays until a human confirms.
+	// TaskProposeRoles is Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the person who WROTE that message must be the person the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title.
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
 	TaskRateExtract Task = "rate_extract"
@@ -83,7 +83,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "cf97629b60a5206f737b086d61006d387d653041dc27df9b9a2b8fc4f768bbdb"
+const TaskContractHash = "d9bfbbf45defb6ae1f0852b75644d997b19850e9a1722cb9cd3c145671367d83"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -226,7 +226,7 @@ var taskStatus = map[Task]string{
 	TaskGrowthFit:                     "shipped",
 	TaskNlSearch:                      "planned",
 	TaskOfferDraft:                    "shipped",
-	TaskProposeRoles:                  "planned",
+	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
 	TaskSignalExtract:                 "shipped",
 	TaskSiteExtract:                   "shipped",
@@ -306,6 +306,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
+	},
+	TaskProposeRoles: {
+		{Name: "committee", Kind: "one_shot"},
 	},
 	TaskRateExtract: {
 		{Name: "pricing", Kind: "one_shot"},
