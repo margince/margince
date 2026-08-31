@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -105,11 +106,11 @@ func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (mod
 	return b.responses[index], nil
 }
 
-func testVoiceContext() voiceContext {
-	return voiceContext{
-		ok:      true,
-		profile: ai.VoiceProfile{PersonalityMD: "Blunt, never hedges."},
-		version: ai.VoiceProfileVersion{
+func testVoiceContext() draftvoice.Context {
+	return draftvoice.Context{
+		OK:      true,
+		Profile: ai.VoiceProfile{PersonalityMD: "Blunt, never hedges."},
+		Version: ai.VoiceProfileVersion{
 			ProfileVersion: 3,
 			VoiceProfileMD: "# Voice DNA\n\n## How you think\n\nVerdict first.",
 			ProfileJSON: map[string]any{"exemplars": []any{
@@ -220,7 +221,7 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	}}
 	drafter := replyDrafter{brain: brain}
 	_, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, voiceContext{})
+		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
