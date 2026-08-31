@@ -9,15 +9,12 @@ package gates
 // human-only in the store.
 //
 // consent's requireDSRAdmin refuses every principal that is not a HUMAN, and
-// it does so before it checks admin — so an agent tool pointed at this queue
-// can only ever be refused. An operation advertised on the tool surface that
-// can only 403 is not merely useless: it is a door the contract is already
-// holding open, and the day somebody relaxes the store gate the policy would
-// let agents straight through without anyone deciding that.
-//
-// Two of the three operations here were marked human-only and the third was
-// not, which is the drift this gate exists to catch — the miss was invisible
-// because nothing compares the contract's answer with the store's.
+// it does so before it checks admin, so an agent pointed at this queue is
+// always refused. An operation advertised on the tool surface that can only
+// answer 403 is not merely useless: it is a door the contract holds open, and
+// relaxing the store gate would let agents through it without anyone deciding
+// that. The contract has to say what the store enforces, and nothing else
+// compares the two.
 //
 // The contract is PARSED rather than pattern-matched: writing the same
 // operation block-style instead of inline changes nothing about the document,
@@ -33,11 +30,11 @@ import (
 )
 
 const (
-	dsrContract   = "api/crm.yaml"
-	dsrPathPrefix = "/data-subject-requests"
-	// dsrOperationFloor is what the queue declared when this gate was
-	// written. A census that reads zero operations — a renamed path, a
-	// restructured document — would otherwise certify nothing while passing.
+	dsrContract  = "api/crm.yaml"
+	dsrQueuePath = "/data-subject-requests"
+	// dsrOperationFloor is what the queue declares. A census that reads zero
+	// operations — a renamed path, a restructured document — would otherwise
+	// certify nothing while passing.
 	dsrOperationFloor = 3
 )
 
@@ -58,7 +55,11 @@ func TestTheSubjectRequestQueueIsHumanOnlyInTheContract(t *testing.T) {
 
 	seen := 0
 	for path, operations := range doc.Paths {
-		if !strings.HasPrefix(path, dsrPathPrefix) {
+		// The queue itself and its descendants, never a NEIGHBOUR that merely
+		// starts with the same letters: `/data-subject-requests-v2` is a
+		// different surface, and matching it would let a rename satisfy the
+		// floor below while this checked nothing the name still refers to.
+		if path != dsrQueuePath && !strings.HasPrefix(path, dsrQueuePath+"/") {
 			continue
 		}
 		for method, raw := range operations {
@@ -84,7 +85,7 @@ func TestTheSubjectRequestQueueIsHumanOnlyInTheContract(t *testing.T) {
 		}
 	}
 	if seen < dsrOperationFloor {
-		t.Fatalf("read %d operations under %s, want at least %d: this gate finds them by path prefix, so a rename leaves it certifying nothing",
-			seen, dsrPathPrefix, dsrOperationFloor)
+		t.Fatalf("read %d operations under %s, want at least %d: this gate finds them by path, so a rename leaves it certifying nothing",
+			seen, dsrQueuePath, dsrOperationFloor)
 	}
 }
