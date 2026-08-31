@@ -66,12 +66,12 @@ it can be answered for.
 `)
 	for _, name := range names {
 		def := c.Tasks[name]
-		b.WriteString(fmt.Sprintf("| `%s` | %s | %s | %s | %s |\n",
+		fmt.Fprintf(&b, "| `%s` | %s | %s | %s | %s |\n",
 			name,
 			ladderCell(def.Ladder),
 			yesNo(staysLocal(def.Ladder)),
 			yesNo(def.NoPayload),
-			def.Status))
+			def.Status)
 	}
 	b.WriteString(`
 ## Reading this against a data-protection question
