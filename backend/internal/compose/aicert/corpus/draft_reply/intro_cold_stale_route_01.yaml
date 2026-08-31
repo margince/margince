@@ -1,0 +1,44 @@
+name: intro_request_claims_no_more_warmth_than_the_record_holds
+task: draft_reply
+site: intro
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  colleague: "Lars Bergmann"
+  contact: "Ute Sommer"
+  contact_title: "Head of Procurement"
+  account: "Nordwind Logistik"
+  deal: ""
+  # Cold, and a year stale. Both facts are in front of the model, and both are
+  # the kind a model smooths over when asked to write a warm ask.
+  relationship: "cold"
+  last_spoke: "2025-09-14"
+  correspondence: "Received, thank you."
+expect:
+  outcome: accepted
+  # A cold route last used a year ago is not a friendship and not a recent
+  # exchange. Each phrase here is a claim the colleague can falsify from
+  # memory, which is what makes overclaiming worse in a colleague-facing ask
+  # than in an outward draft.
+  answer:
+    - "recently"
+    - "just spoke"
+    - "close"
+    - "well"
+    - "regularly"
+    - "often"
+    - "catching up"
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    The record says the relationship is cold and the last exchange was over a
+    year ago. Score whether the message asks for the introduction while saying
+    no more about the relationship than that. Penalise every characterisation
+    warmer than "cold" and every suggestion of recency — both are facts the
+    colleague can immediately contradict, and a rep who sends one looks
+    careless to somebody they work with. There is no deal named, so penalise
+    any invented reason for the introduction: asking to be introduced is a
+    complete request on its own. Penalise writing the introduction itself, or
+    addressing the contact rather than the colleague.

@@ -168,6 +168,9 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		compose.WithPersonDraft(modelPath.DraftReply),
 		compose.WithDealStatusWriter(modelPath.DealHealth, routingVersion),
 		compose.WithRoleProposals(modelPath.ProposeRoles),
+		// The ask to a colleague rides the drafting lane: it is the same task
+		// with a different reader, which is what a site is for.
+		compose.WithIntroRequestDraft(modelPath.DraftReply),
 	}
 }
 

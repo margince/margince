@@ -26,7 +26,7 @@ const (
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
 	TaskDocumentExtract Task = "document_extract"
-	// TaskDraftReply is Four sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, and the message that opens a conversation from a stated intent alone (draft_email over MCP, which names records to file under rather than records to write from). They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them.
+	// TaskDraftReply is Five sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, and the ask a rep sends a COLLEAGUE for an introduction (the only one of the five written to somebody on our own side, which is why it carries its own phrasing) (draft_email over MCP, which names records to file under rather than records to write from). They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them.
 	TaskDraftReply Task = "draft_reply"
 	TaskEnrich     Task = "enrich"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
@@ -83,7 +83,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "d9bfbbf45defb6ae1f0852b75644d997b19850e9a1722cb9cd3c145671367d83"
+const TaskContractHash = "3e8e1c3f616e86bb42065ffc4b95c43dc12c1d4f4aa493f6ccb8cf4179b7d48a"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -297,6 +297,7 @@ var taskSites = map[Task][]Site{
 		{Name: "person", Kind: "one_shot"},
 		{Name: "account", Kind: "one_shot"},
 		{Name: "first", Kind: "one_shot"},
+		{Name: "intro", Kind: "one_shot"},
 	},
 	TaskEnrich: {
 		{Name: "signature", Kind: "one_shot"},

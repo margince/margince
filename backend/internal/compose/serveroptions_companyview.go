@@ -168,3 +168,19 @@ func WithRoleProposals(brain completer) Option {
 		s.org360Handlers = s.WithRoleLane(brain)
 	}
 }
+
+// WithIntroRequestDraft binds the lane that phrases an introduction request.
+//
+// Its absence is a template, not a 501 — the opposite of WithRoleProposals
+// beside it, and for a reason worth stating: an ask for an introduction is
+// short, and its facts are few enough that a template states every one of them
+// honestly. What the model buys here is phrasing. A buying role has no such
+// floor, because the only thing left to read one from is the job title.
+func WithIntroRequestDraft(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		if s.org360Svc == nil {
+			return
+		}
+		s.org360Handlers = s.WithIntroLane(brain)
+	}
+}

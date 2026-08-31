@@ -57,6 +57,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"RecordConsentRequest":            true,
 	"IssueDoubleOptInJSONBody":        true,
 	"SetProjectStakeholderRequest":    true,
+	"DraftIntroRequestJSONBody":       true,
 	"SetProjectCompanyRequest":        true,
 	"CreateRecordGrantRequest":        true,
 	"MergePersonJSONBody":             true,

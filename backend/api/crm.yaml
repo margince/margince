@@ -2212,6 +2212,92 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /organizations/{id}/intro-request-draft:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Organizations, AI]
+      operationId: draftIntroRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Draft the message asking a colleague to introduce you.
+      description: |
+        The People tab can already tell a rep that Sofia is the warmest way in to
+        Philipp. What it could not do is help them ask her, and the asking is where
+        the route stops being a fact and becomes a move.
+
+        **It changes no record, and it sends nothing.** The draft comes back for the
+        reader to copy or open in their own mail client. There is no colleague-to-colleague
+        channel in this product, and inventing one to carry this would be a messaging
+        surface arriving by the back door.
+
+        A message to a COLLEAGUE, not to a counterparty. Every other draft here writes
+        outward — to a buyer, in the register a customer is owed. This one asks somebody
+        on your own side for a favour, which is a different register, a different length
+        and a different ask, so it carries its own phrasing rather than bending the
+        outward table into a shape it was not written for.
+
+        **Grounded in the route, not in the account.** The draft names the colleague, the
+        contact, how warm the relationship is and when they last spoke — the same facts
+        the map draws, from the same read, so the message cannot claim a closeness the
+        page does not show.
+
+        The model additionally receives this workspace's own positioning material, the
+        way every drafting site here does — so a model-written ask reads like the rest
+        of the product's outbound rather than like a stranger. The template does not,
+        which is the honest difference between them: `generated_by` says which wrote
+        the message, and the route facts above are identical either way.
+
+        DEGRADES RATHER THAN FAILS. With no model lane, an exhausted budget or a reply
+        that never names the two people it is about, the same request is composed from
+        a template and `generated_by` says which wrote it. An ask for an introduction
+        is a sentence a template can write honestly.
+
+        What is checked on the way back is SHAPE, not truth: a reply is refused if it
+        does not name the colleague and the contact. Whether it overstates how well
+        they know each other is not something a string test can decide, and claiming
+        otherwise would be the more dangerous error — it is scored by the certification
+        rubric instead.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person_id, via_user_id]
+              properties:
+                person_id:
+                  type: string
+                  format: uuid
+                  description: >-
+                    The contact to be introduced TO. Must be somebody the caller can see on
+                    this account; a contact they cannot read is `404`, the same answer a
+                    direct read gives.
+                via_user_id:
+                  type: string
+                  format: uuid
+                  description: >-
+                    The colleague being asked. Must hold a recorded route to that contact —
+                    asking somebody with no relationship to trade on is a favour they cannot
+                    do, and a draft that claims one would be describing a closeness the
+                    account's own page does not show.
+                deal_id:
+                  type: [string, 'null']
+                  format: uuid
+                  description: >-
+                    Which open deal the introduction is for. Absent draws on the account as a
+                    whole, which is the honest shape when the rep is opening a conversation
+                    rather than moving a transaction.
+      responses:
+        '200':
+          description: The draft, and what it was written from.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /organizations/{id}/coverage:
     parameters:
       - $ref: '#/components/parameters/Id'

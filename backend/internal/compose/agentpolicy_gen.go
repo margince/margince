@@ -468,6 +468,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/organizations/{id}/facts":                                  {Op: "createOrganizationFact", Access: "tool", Tool: "update_record", RecordType: "organization", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/organizations/{id}/facts/{factKey}/confirm":                {Op: "confirmOrganizationFact", Access: "tool", Tool: "update_record", RecordType: "organization", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/organizations/{id}/growth-fit":                             {Op: "refreshOrganizationGrowthFit", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/organizations/{id}/intro-request-draft":                    {Op: "draftIntroRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/organizations/{id}/merge":                                  {Op: "mergeOrganization", Access: "tool", Tool: "merge_records", RecordType: "organization", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/organizations/{id}/profile-fields/{field}/confirm":         {Op: "confirmOrganizationProfileField", Access: "tool", Tool: "update_record", RecordType: "organization", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/organizations/{id}/suggestions/dismiss":                    {Op: "dismissOrganizationSuggestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
