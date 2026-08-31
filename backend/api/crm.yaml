@@ -32130,7 +32130,7 @@ components:
         does, widened: a source the caller may not read is named as `withheld`, and one
         that failed to answer is named as `failed`. Both keep the summary from claiming a
         clear day it did not actually see.
-      required: [as_of, queue, summary, sources_unavailable, scope, scope_options]
+      required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
         scope:
@@ -32154,6 +32154,46 @@ components:
           type: array
           items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }
           description: 'Sources that could not be included, and why. Empty is the honest common case.'
+        reach:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistReach' }
+          description: |
+            How much of each source the queue actually looked at. A source is read up to a
+            work bound, so a page can be a page rather than everything there is, and this
+            is where the queue says which. Empty only when no source was read at all.
+
+    WorklistReach:
+      type: object
+      description: |
+        What one source contributed, in numbers that say what they counted.
+
+        `considered` is how many candidates were read and ranked. It is NOT a total: when
+        `more_available` is true there are candidates past the bound that this read never
+        saw, and no field here claims to know how many. A reader who needs the rest
+        narrows the queue or opens that source's own screen, which pages its own data.
+
+        `shown` is how many of those candidates survived filtering and the page cut, so
+        `shown` under `considered` means the rest were folded, filtered or below the cut —
+        not lost.
+      required: [source, considered, shown, more_available]
+      properties:
+        source:
+          type: string
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, batch]
+          description: 'Which producer these numbers are about. The same vocabulary as an item source.'
+        considered:
+          type: integer
+          minimum: 0
+          description: 'How many candidates from this source were read and ranked.'
+        shown:
+          type: integer
+          minimum: 0
+          description: 'How many of them the queue is carrying after folding, filtering and the page cut.'
+        more_available:
+          type: boolean
+          description: |
+            True when this source was read to its work bound, so candidates exist past what
+            was considered. The client renders `considered` as "200+" rather than "200".
 
     WorklistSummary:
       type: object

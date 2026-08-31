@@ -213,6 +213,10 @@ func (s *Service) worklistFrom(
 	// the unnarrowed page. A reader who asked for decisions asked to see them,
 	// and answering that with the same group they were trying to open is a door
 	// that leads back to itself. Narrowing IS opening the group.
+	// Held before the fold, because folding REPLACES rows: counting after it
+	// would report a folded source as having considered nothing, which is the
+	// opposite of what happened to it.
+	considered := rows
 	if !narrowed {
 		// The decision read stops at its own scan bound, so a group that filled
 		// it reports a floor rather than a total.
@@ -222,12 +226,17 @@ func (s *Service) worklistFrom(
 	// then slicing left the last returned row comparing itself against a row the
 	// caller never received, and the summary describing a queue longer than the
 	// one on screen.
-	ordered := rankAll(page(rows, limit))
+	shown := page(rows, limit)
+	ordered := rankAll(shown)
 	out := crmcontracts.Worklist{
 		AsOf:               day.AsOf,
 		Queue:              ordered,
 		Summary:            summarize(ordered),
 		SourcesUnavailable: unavailable(day),
+		// `considered` is every candidate this read weighed, `shown` what
+		// survived folding and the cut. Both are already in hand, so no figure
+		// here costs a query that could disagree with the page it describes.
+		Reach: reachOf(considered, shown, boundedSources(day)),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
@@ -241,6 +250,36 @@ func (s *Service) worklistFrom(
 // Read off the assembled day rather than queried again: the at-risk lane has
 // already returned the deals under the reader's own scope, so this is the
 // answer that surface already has rather than a second opinion about it.
+// boundedSources names the lanes that came back exactly at their own work
+// bound, and therefore may have had more behind them.
+//
+// A lane read to its limit cannot tell a reader how many it did not see: the
+// bound is a limit on work, not a count. So the source is marked as having more
+// rather than reporting a total it does not know, and every figure beside it
+// stays a count of what this read actually weighed.
+func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
+	bounded := map[crmcontracts.WorklistItemSource]bool{}
+	atCap := func(source crmcontracts.WorklistItemSource, lane *[]crmcontracts.AttentionItem, cap int) {
+		if lane != nil && len(*lane) >= cap {
+			bounded[source] = true
+		}
+	}
+	atCap("failed_approval", day.DidNotRun, doneCap)
+	atCap("dsr", day.Dsr, doneCap)
+	atCap("ai_work_health", day.AiWorkHealth, doneCap)
+	atCap("notice", day.Notices, doneCap)
+	atCap("automation_run", day.AutomationHealth, doneCap)
+	atCap("bounce", day.Bounces, doneCap)
+	// The decision lane is read deeper than the rest, because a batch row
+	// counts a pile and a count taken from a page of ten would report ten over
+	// a hundred and fifty.
+	if len(day.NeedsYou) >= batchScanDepth {
+		bounded["approval"] = true
+		bounded["dedupe_candidate"] = true
+	}
+	return bounded
+}
+
 func ownedDealsIn(ctx context.Context, day crmcontracts.Attention, scope string) map[ids.UUID]bool {
 	owned := map[ids.UUID]bool{}
 	if !mineOnly(scope) || day.AtRisk == nil {

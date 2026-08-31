@@ -82,6 +82,12 @@ type ranked struct {
 	waitingDays  int
 	strength     int
 	occurredAt   time.Time
+	// foldedFrom names the sources of the rows this one stands for, once per
+	// member. A folded group is shown INSTEAD of its members, so a count of
+	// what the reader can see has to attribute it back to them — otherwise
+	// every folded source reports zero shown, which reads as "nothing from
+	// this source" rather than "folded into one row".
+	foldedFrom []crmcontracts.WorklistItemSource
 	// What a routine contact decision is ABOUT, for the group it joins. Read
 	// from the staged payload rather than re-derived here: the verdict engine
 	// already decided who the address belongs to, and a second opinion would

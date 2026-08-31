@@ -11659,6 +11659,72 @@ func (e WorklistMoveAction) Valid() bool {
 	}
 }
 
+// Defines values for WorklistReachSource.
+const (
+	WorklistReachSourceAiWorkHealth      WorklistReachSource = "ai_work_health"
+	WorklistReachSourceApproval          WorklistReachSource = "approval"
+	WorklistReachSourceAutomationRun     WorklistReachSource = "automation_run"
+	WorklistReachSourceBatch             WorklistReachSource = "batch"
+	WorklistReachSourceBounce            WorklistReachSource = "bounce"
+	WorklistReachSourceBriefItem         WorklistReachSource = "brief_item"
+	WorklistReachSourceCaptureHealth     WorklistReachSource = "capture_health"
+	WorklistReachSourceConversationClaim WorklistReachSource = "conversation_claim"
+	WorklistReachSourceCustomerWaiting   WorklistReachSource = "customer_waiting"
+	WorklistReachSourceDealAtRisk        WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDedupeCandidate   WorklistReachSource = "dedupe_candidate"
+	WorklistReachSourceDsr               WorklistReachSource = "dsr"
+	WorklistReachSourceFailedApproval    WorklistReachSource = "failed_approval"
+	WorklistReachSourceMeeting           WorklistReachSource = "meeting"
+	WorklistReachSourceNotice            WorklistReachSource = "notice"
+	WorklistReachSourceRelationshipDecay WorklistReachSource = "relationship_decay"
+	WorklistReachSourceSyncHealth        WorklistReachSource = "sync_health"
+	WorklistReachSourceTask              WorklistReachSource = "task"
+)
+
+// Valid indicates whether the value is a known member of the WorklistReachSource enum.
+func (e WorklistReachSource) Valid() bool {
+	switch e {
+	case WorklistReachSourceAiWorkHealth:
+		return true
+	case WorklistReachSourceApproval:
+		return true
+	case WorklistReachSourceAutomationRun:
+		return true
+	case WorklistReachSourceBatch:
+		return true
+	case WorklistReachSourceBounce:
+		return true
+	case WorklistReachSourceBriefItem:
+		return true
+	case WorklistReachSourceCaptureHealth:
+		return true
+	case WorklistReachSourceConversationClaim:
+		return true
+	case WorklistReachSourceCustomerWaiting:
+		return true
+	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDedupeCandidate:
+		return true
+	case WorklistReachSourceDsr:
+		return true
+	case WorklistReachSourceFailedApproval:
+		return true
+	case WorklistReachSourceMeeting:
+		return true
+	case WorklistReachSourceNotice:
+		return true
+	case WorklistReachSourceRelationshipDecay:
+		return true
+	case WorklistReachSourceSyncHealth:
+		return true
+	case WorklistReachSourceTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistReasonKind.
 const (
 	WorklistReasonKindApprovedAndFailed  WorklistReasonKind = "approved_and_failed"
@@ -12933,22 +12999,22 @@ func (e ListProjectsParamsPhase) Valid() bool {
 
 // Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
 const (
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
-	SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
+	Email    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
+	FullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
+	Phone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
+	Title    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
 )
 
 // Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyCorrectionsField enum.
 func (e SubmitConfirmDetailsJSONBodyCorrectionsField) Valid() bool {
 	switch e {
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail:
+	case Email:
 		return true
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName:
+	case FullName:
 		return true
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone:
+	case Phone:
 		return true
-	case SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle:
+	case Title:
 		return true
 	default:
 		return false
@@ -27646,6 +27712,11 @@ type Worklist struct {
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
 
+	// Reach How much of each source the queue actually looked at. A source is read up to a
+	// work bound, so a page can be a page rather than everything there is, and this
+	// is where the queue says which. Empty only when no source was read at all.
+	Reach []WorklistReach `json:"reach"`
+
 	// Scope Whose work this read answered for.
 	Scope WorklistScope `json:"scope"`
 
@@ -27920,6 +27991,34 @@ type WorklistMove struct {
 // not a move, and a contract that allowed one would let a client draw a control
 // with nothing behind it. A row with no step to suggest sends no `move` at all.
 type WorklistMoveAction string
+
+// WorklistReach What one source contributed, in numbers that say what they counted.
+//
+// `considered` is how many candidates were read and ranked. It is NOT a total: when
+// `more_available` is true there are candidates past the bound that this read never
+// saw, and no field here claims to know how many. A reader who needs the rest
+// narrows the queue or opens that source's own screen, which pages its own data.
+//
+// `shown` is how many of those candidates survived filtering and the page cut, so
+// `shown` under `considered` means the rest were folded, filtered or below the cut —
+// not lost.
+type WorklistReach struct {
+	// Considered How many candidates from this source were read and ranked.
+	Considered int `json:"considered"`
+
+	// MoreAvailable True when this source was read to its work bound, so candidates exist past what
+	// was considered. The client renders `considered` as "200+" rather than "200".
+	MoreAvailable bool `json:"more_available"`
+
+	// Shown How many of them the queue is carrying after folding, filtering and the page cut.
+	Shown int `json:"shown"`
+
+	// Source Which producer these numbers are about. The same vocabulary as an item source.
+	Source WorklistReachSource `json:"source"`
+}
+
+// WorklistReachSource Which producer these numbers are about. The same vocabulary as an item source.
+type WorklistReachSource string
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
 // product ships three languages and a sentence composed here would reach a German
