@@ -264,7 +264,6 @@ jobs:
         with:
           flavor: integration
       - name: Start the dev infra stack (compose + app role)
-        if: steps.funded.outputs.configured == 'yes'
         working-directory: .
         run: make db-up
       # The step separates "a budget breached" from "the lane could not run",
