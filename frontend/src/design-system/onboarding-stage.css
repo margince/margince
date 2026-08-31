@@ -24,11 +24,14 @@
   position: relative;
   min-height: 100vh;
   display: grid;
+  /* The band spans both columns as its own row, so it reads as the stage's
+     frame rather than as something belonging to the question under it. */
   grid-template-columns: minmax(0, 24rem) minmax(0, 34rem);
+  grid-template-rows: auto 1fr;
   justify-content: center;
   align-items: center;
   gap: var(--space-10);
-  padding: var(--space-12) var(--space-6);
+  padding: 0 var(--space-6) var(--space-12);
   background: var(--bgElevated);
   overflow-x: hidden;
 }
@@ -50,11 +53,87 @@
  * travels upward while it is being read. Anchored, growth extends downward into
  * the room the bottom padding already reserves.
  */
-.ob-stage[data-anchor="center"] {
-  align-content: center;
+.ob-stage[data-anchor="center"] .ob-stage-column,
+.ob-stage[data-anchor="center"] .ob-stage-core {
+  align-self: center;
 }
-.ob-stage[data-anchor="start"] {
-  align-content: start;
+.ob-stage[data-anchor="start"] .ob-stage-column,
+.ob-stage[data-anchor="start"] .ob-stage-core {
+  align-self: start;
+  padding-top: var(--space-10);
+}
+
+/*
+ * The band: where the reader is, and what the Core is doing said in words.
+ *
+ * Full width and fixed at the top of the stage, so it reads as the room's frame
+ * — it does not move when the scene under it changes, which is the whole reason
+ * a reader can use it to keep their place.
+ */
+.ob-stage-band {
+  grid-column: 1 / -1;
+  align-self: start;
+  /* Out past the stage's own inline padding: a band inset from the edges reads
+     as a wide card sitting on the page rather than as the room's own header. */
+  margin: 0 calc(var(--space-6) * -1) var(--space-8);
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: color-mix(in srgb, var(--bgCard) 70%, transparent);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+.ob-stage-where {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.ob-stage-step {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+
+/* Progress as marks rather than "2 of 3": the step's own name is already beside
+   them, and a fraction next to a name is the same fact twice. The current one
+   lengthens instead of only changing colour, so the position survives being
+   read without colour. */
+.ob-stage-dashes {
+  display: flex;
+  gap: var(--space-2);
+}
+.ob-stage-dashes span {
+  display: block;
+  width: 22px;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: var(--textMuted);
+  transition:
+    background var(--dur-move) var(--ease-out),
+    width var(--dur-move) var(--ease-out);
+}
+.ob-stage-dashes span[data-at="done"] {
+  background: var(--accent);
+}
+.ob-stage-dashes span[data-at="now"] {
+  background: var(--accent);
+  width: 36px;
+}
+
+/* The Core's state in words — mono because it names a machine state rather than
+   speaking to the reader, and indigo because the thing it describes is the
+   agent. */
+.ob-stage-corestate {
+  margin: 0;
+  font-family: var(--f-mono);
+  font-size: var(--fs-eyebrow);
+  color: var(--aiText);
+  white-space: nowrap;
 }
 
 /*
@@ -108,6 +187,31 @@
   --coreCap: 100%;
 }
 
+/*
+ * The Core gives ground as the work arrives.
+ *
+ * A TRANSFORM rather than a second `--coreSize`: the shader is drawn at one
+ * resolution and scaling the box would re-measure the canvas mid-flow, which is
+ * a resize and a repaint rather than a movement. Scaled, the orb stays the same
+ * element in the same place and simply takes less room — which is what makes it
+ * read as the subject stepping back, not as one screen replacing another.
+ */
+.ob-stage-core {
+  transform: scale(var(--ob-core-scale, 1));
+  transform-origin: center;
+  transition: transform var(--dur-enter) var(--ease-out);
+}
+.ob-stage[data-core="work"] {
+  --ob-core-scale: 0.62;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The size still changes — it says something true about what the screen is
+     for — it just stops travelling between the two. */
+  .ob-stage-core {
+    transition: none;
+  }
+}
+
 .ob-stage-column {
   display: flex;
   flex-direction: column;
@@ -143,12 +247,20 @@
 @media (max-width: 60rem) {
   .ob-stage {
     grid-template-columns: minmax(0, 34rem);
+    grid-template-rows: auto auto 1fr;
     justify-items: center;
     gap: var(--space-6);
-    /* One column is always top-anchored: centred, an expanding form pushes the
-       heading off the top of the screen while somebody is filling it in. */
-    align-content: start;
-    padding-top: var(--space-10);
+  }
+  /* One column is always top-anchored, whatever the anchor says: centred, an
+     expanding form pushes the heading off the top of the screen while somebody
+     is filling it in. */
+  .ob-stage .ob-stage-column,
+  .ob-stage .ob-stage-core {
+    align-self: start;
+    padding-top: 0;
+  }
+  .ob-stage-band {
+    margin-inline: calc(var(--space-6) * -1);
   }
   /* Back inside the component's own cap. The wide layout opts out of it because
      it sized the Core's column; this one did not, and a 300px sphere on a 390px

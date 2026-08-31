@@ -26,6 +26,8 @@ type Story = StoryObj<typeof OnboardingStage>;
 export const Unlit: Story = {
   args: {
     lit: false,
+    coreStateLabel: "core · at rest",
+    progress: { steps: ["The model", "Your platform"], at: 0 },
     eyebrow: "First run · 1 of 2",
     title: "Choose a model provider",
     sub: "Margince provides no inference of its own, so it works through your vendor account.",
@@ -38,6 +40,8 @@ export const Unlit: Story = {
 export const Lit: Story = {
   args: {
     lit: true,
+    coreStateLabel: "core · at rest",
+    progress: { steps: ["The model", "Your platform"], at: 1 },
     eyebrow: "First run · 2 of 2",
     title: "Connect a Google app",
     sub: "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials.",
@@ -55,14 +59,20 @@ export const GrowingAndTopAnchored: Story = {
     coreState: "ingest",
     coreFeed: true,
     coreProgress: 0.4,
+    // The orb steps back once the reader has work of their own to watch. Same
+    // element, same place, less room.
+    coreScale: "work",
+    coreStateLabel: "core · taking it in",
     title: "Reading gradion.com",
     sub: "Following the pages that say what this company does.",
     children: <p className="t-body">Nine pages read, four still to reach.</p>,
   },
 };
 
-// No eyebrow, because not every flow numbers itself — the gate does not, and
-// inventing a step counter for it would be copy nobody wrote.
+// No eyebrow and no band, because not every flow numbers itself — the gate does
+// not, and inventing a step counter for it would be copy nobody wrote. The band
+// disappears entirely rather than drawing an empty rule: a frame with nothing in
+// it is chrome describing itself.
 export const WithoutAnEyebrow: Story = {
   args: {
     lit: true,

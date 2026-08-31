@@ -4521,6 +4521,11 @@ export const de = {
   "ob.gate.titleAnonymous": "Ich bin die Margince-KI.",
   "ob.gate.sub":
     "Ich lese deine Website und entwerfe dein Firmenprofil. Du gibst frei, bevor ich speichere. Zwei Minuten.",
+  "ob.core.idle": "core · in Ruhe",
+  "ob.core.ingest": "core · nimmt auf",
+  "ob.core.working": "core · arbeitet es aus",
+  "ob.core.warning": "core · etwas will angesehen werden",
+  "ob.core.error": "core · gestoppt",
   "ob.gate.trustToggle": "So funktioniert es",
   "ob.gate.trustBody":
     "Ich lese nur öffentliche Seiten. Nichts wird gespeichert, bevor du bestätigst, und ohne deine Freigabe geht nie etwas raus.",
@@ -6152,6 +6157,8 @@ export const de = {
     "{host} ist die Adresse, unter der die API dieser Installation antwortet, also der Wert aus MARGINCE_API_BASE_URL beziehungsweise MARGINCE_PUBLIC_BASE_URL des Servers. In einem lokalen Dev-Stack ist das http://localhost:8080.",
   "firstRun.google.helpDocs":
     "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
+  "firstRun.step.model": "Das Modell",
+  "firstRun.step.platform": "Ihre Plattform",
   "firstRun.ai.eyebrow": "Erststart · 1 von 2",
   "firstRun.google.eyebrow": "Erststart · 2 von 2",
   "aiRates.chatLane": "Womit es denkt",

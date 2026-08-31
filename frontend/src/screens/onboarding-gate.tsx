@@ -228,6 +228,82 @@ export function OnboardingGate({
  * phase 0, and the entrance would replay. The most important moment in the flow
  * would flash and re-enter instead of continuing.
  */
+/**
+ * What the stage says above the column, for both faces of this screen.
+ *
+ * A function rather than a branch inside the component: the two faces are one
+ * shape with different values, and stating that as a returned object is what
+ * keeps them from drifting into two layouts. It is also why GateColumn stays
+ * readable — the branching is HERE, over data, not over markup.
+ */
+type StageHead = Readonly<{
+  core: MarginceCoreState;
+  /**
+   * What the Core is doing, in words, for the band above (WDS-CORE-4).
+   *
+   * While a read runs it is the read's OWN phase line — the sentence the
+   * theatre already writes from `phaseKey`, not a second vocabulary for the
+   * same fact. A read carrying no phase leaves it absent, exactly as the
+   * theatre's line does: the band says nothing rather than inventing a fifth
+   * message.
+   */
+  coreLabel?: string;
+  title: string;
+  sub: string;
+}>;
+
+/**
+ * The Core's own state, named for the band (WDS-CORE-4).
+ *
+ * NOT the phase line. The theatre already writes what the read is doing for the
+ * reader ("Fetching pages"), and putting that sentence in the band too would be
+ * one fact in two places, free to disagree the day either moves. This says what
+ * the ORB is doing, which is the thing the reader cannot otherwise learn: the
+ * orb is aria-hidden, and its state is motion first.
+ */
+const CORE_LABELS: Readonly<Record<MarginceCoreState, MessageKey>> = {
+  idle: "ob.core.idle",
+  ingest: "ob.core.ingest",
+  working: "ob.core.working",
+  warning: "ob.core.warning",
+  error: "ob.core.error",
+};
+
+function stageHead(
+  t: Translate,
+  scan: GateScan | undefined,
+  running: boolean,
+  name: string | undefined,
+): StageHead {
+  if (scan === undefined) {
+    // At rest before the press, the orb is carrying nothing worth announcing —
+    // and a band that says "idle" over an empty form is chrome describing
+    // itself. It speaks from the moment there is something to say.
+    const core = running ? "ingest" : "idle";
+    return {
+      core,
+      coreLabel: running ? t(CORE_LABELS[core]) : undefined,
+      title: name ? t("ob.gate.title", { name }) : t("ob.gate.titleAnonymous"),
+      sub: t("ob.gate.sub"),
+    };
+  }
+  const settled = SETTLED.has(scan.read.status);
+  const core = coreStateFor(scan.read);
+  return {
+    core,
+    coreLabel: t(CORE_LABELS[core]),
+    title: settled
+      ? t("ob.scan.doneTitle", { host: scan.host })
+      : t("ob.scan.title", { host: scan.host }),
+    sub: settled
+      ? t("ob.scan.doneSub", {
+          facts: formatNumber(scan.read.facts.length, scan.locale),
+          fields: formatNumber(scan.read.profile_fields.length, scan.locale),
+        })
+      : t("ob.scan.sub"),
+  };
+}
+
 function GateColumn({
   scan,
   running,
@@ -240,35 +316,8 @@ function GateColumn({
   children: ReactNode;
 }>) {
   const t = useT();
+  const head = stageHead(t, scan, running === true, name);
   const settled = scan !== undefined && SETTLED.has(scan.read.status);
-  const head: Readonly<{
-    core: MarginceCoreState;
-    title: string;
-    sub: string;
-  }> =
-    scan === undefined
-      ? {
-          core: running === true ? "ingest" : "idle",
-          title: name
-            ? t("ob.gate.title", { name })
-            : t("ob.gate.titleAnonymous"),
-          sub: t("ob.gate.sub"),
-        }
-      : {
-          core: coreStateFor(scan.read),
-          title: settled
-            ? t("ob.scan.doneTitle", { host: scan.host })
-            : t("ob.scan.title", { host: scan.host }),
-          sub: settled
-            ? t("ob.scan.doneSub", {
-                facts: formatNumber(scan.read.facts.length, scan.locale),
-                fields: formatNumber(
-                  scan.read.profile_fields.length,
-                  scan.locale,
-                ),
-              })
-            : t("ob.scan.sub"),
-        };
   return (
     <OnboardingStage
       // Nothing reaches this screen until first run is done, so a model is
@@ -277,6 +326,14 @@ function GateColumn({
       // meanings.
       lit
       coreState={head.core}
+      // The orb is the subject while the screen asks one question, and steps
+      // back once the reader has a read of their own to watch. Same element,
+      // same place: it gives ground rather than being replaced.
+      coreScale={scan === undefined ? "hero" : "work"}
+      // The Core is aria-hidden, so the band says what it is showing. While a
+      // read runs that is the read's own phase line — the sentence the theatre
+      // already writes — rather than a second vocabulary for the same fact.
+      coreStateLabel={head.coreLabel}
       // A read GROWS under the reader, tile by tile. Centred, the column would
       // re-centre on every arriving page and carry the line being read upward.
       anchor={scan === undefined ? "center" : "start"}

@@ -626,6 +626,24 @@ export function InstallationSetup() {
     <OnboardingStage
       lit={modelBound(setup.data)}
       coreState={busy ? "working" : "idle"}
+      // The Core is aria-hidden, so the band says in words what it is showing.
+      // From `ob.core.*`, the vocabulary every onboarding surface reads: the
+      // orb showing the same state on two screens must not read as two
+      // different things.
+      coreStateLabel={t(busy ? "ob.core.working" : "ob.core.idle")}
+      // The server's step list, in the server's order — the same array the gate
+      // walks, so the band cannot claim a different flow than the one being
+      // walked.
+      progress={{
+        steps: (setup.data?.steps ?? []).map((s) =>
+          t(
+            s.step === "ai_models"
+              ? "firstRun.step.model"
+              : "firstRun.step.platform",
+          ),
+        ),
+        at: (setup.data?.steps ?? []).findIndex((s) => s.step === step.step),
+      }}
       eyebrow={t(ai ? "firstRun.ai.eyebrow" : "firstRun.google.eyebrow")}
       title={t(ai ? "firstRun.ai.title" : "firstRun.platform.title")}
       sub={t(ai ? "firstRun.ai.sub" : "firstRun.platform.sub")}

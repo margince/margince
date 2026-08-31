@@ -4555,6 +4555,15 @@ export const en = {
   "ob.gate.titleAnonymous": "I am the Margince AI.",
   "ob.gate.sub":
     "I read your site and draft your company profile. You approve before anything is saved. About two minutes.",
+  // The Core is aria-hidden and its state is motion first, so the band names it
+  // in words (WDS-CORE-4). This is what the ORB is doing, not what the read is:
+  // the phase line already says the second, and one fact in two places is two
+  // places to keep agreeing. One entry per state in the closed list.
+  "ob.core.idle": "core · at rest",
+  "ob.core.ingest": "core · taking it in",
+  "ob.core.working": "core · working it out",
+  "ob.core.warning": "core · something needs a look",
+  "ob.core.error": "core · stopped",
   "ob.gate.trustToggle": "How this works",
   "ob.gate.trustBody":
     "I read only public pages. Nothing is saved until you confirm it, and nothing is ever sent without your approval.",
@@ -6146,6 +6155,13 @@ export const en = {
   // reader is told which one they are on rather than left to count.
   "firstRun.ai.eyebrow": "First run · 1 of 2",
   "firstRun.google.eyebrow": "First run · 2 of 2",
+  // The band's own names for the two stops, short enough to sit beside the
+  // progress marks. Not the titles: a hero headline in a 12px band wraps.
+  "firstRun.step.model": "The model",
+  "firstRun.step.platform": "Your platform",
+  // The Core's state in words comes from `ob.core.*`, which every onboarding
+  // surface reads: the orb saying the same thing on two screens must not read
+  // as two different things.
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
     "Margince provides no inference of its own, so it works through your vendor account. You can change any of this later under Settings → AI.",

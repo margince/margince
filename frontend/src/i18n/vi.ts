@@ -4474,6 +4474,11 @@ export const vi = {
   "ob.gate.titleAnonymous": "Tôi là AI của Margince.",
   "ob.gate.sub":
     "Tôi đọc website của bạn và soạn hồ sơ công ty. Bạn duyệt trước khi lưu. Khoảng hai phút.",
+  "ob.core.idle": "core · đang nghỉ",
+  "ob.core.ingest": "core · đang thu nhận",
+  "ob.core.working": "core · đang xử lý",
+  "ob.core.warning": "core · có việc cần xem",
+  "ob.core.error": "core · đã dừng",
   "ob.gate.trustToggle": "Cách hoạt động",
   "ob.gate.trustBody":
     "Tôi chỉ đọc trang công khai. Không gì được lưu cho đến khi bạn xác nhận, và không gì được gửi đi nếu bạn chưa duyệt.",
@@ -6088,6 +6093,8 @@ export const vi = {
     "{host} là địa chỉ mà API của bản cài này trả lời, tức giá trị MARGINCE_API_BASE_URL hoặc MARGINCE_PUBLIC_BASE_URL của server. Trong dev stack cục bộ, đó là http://localhost:8080.",
   "firstRun.google.helpDocs":
     "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
+  "firstRun.step.model": "Mô hình",
+  "firstRun.step.platform": "Nền tảng của bạn",
   "firstRun.ai.eyebrow": "Lần chạy đầu · 1 / 2",
   "firstRun.google.eyebrow": "Lần chạy đầu · 2 / 2",
   "aiRates.chatLane": "Dùng để suy luận",
