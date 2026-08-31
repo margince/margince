@@ -1578,6 +1578,21 @@ export const de = {
   "co.people.map.scopePartial":
     "{count} im Buying-Team · {hidden} weitere für dich nicht sichtbar.",
   "co.people.board.readFromMessages": "Aus ihren Nachrichten gelesen",
+  "co.people.board.suggest": "Rollen vorschlagen",
+  "co.people.board.suggesting": "Nachrichten werden gelesen",
+  "co.people.board.suggestNoDeal":
+    "Rollen gehören zu einem Deal, und dieses Unternehmen hat keinen offenen.",
+  "co.people.board.suggestWrote":
+    "{count} aus ihren eigenen Worten eingetragen.",
+  "co.people.board.suggestUnavailable":
+    "Für das Lesen von Rollen wird ein Modell benötigt; in dieser Installation ist keines eingerichtet.",
+  "co.people.board.suggestNothing":
+    "In ihren Nachrichten steht nicht, wer entscheidet.",
+  "co.people.board.suggestRefused":
+    "Nichts war eindeutig genug. {count} Lesung(en) wurden wegen schwacher Belege verworfen.",
+  "co.people.board.confirm": "Bestätigen",
+  "co.people.board.confirming": "Wird bestätigt",
+  "co.people.board.change": "Rolle ändern",
   "co.reach.answered": "Antwortet",
   "co.reach.silent": "Keine Antwort",
   "co.reach.untried": "Nie angesprochen",

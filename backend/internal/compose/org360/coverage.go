@@ -239,8 +239,19 @@ func (s *Service) wireCommittee(
 		if route, ok := routes[seat.PersonID]; ok {
 			wire.Routes = &route
 		}
-		if mark, ok := marks[seat.PersonID]; ok && mark.suggested {
-			wire.AiSuggested = &mark.suggested
+		if mark, ok := marks[seatKey{person: seat.PersonID, role: seat.Role}]; ok {
+			if mark.suggested {
+				wire.AiSuggested = &mark.suggested
+			}
+			// Carried for EVERY seat, not only a read one: a colleague changing
+			// a role a colleague typed is the same patch on the same row, and
+			// giving the card the id only where the product happens to have
+			// written the seat would make the human-typed ones the ones a
+			// reader cannot correct.
+			id := openapi_types.UUID(mark.relationshipID)
+			wire.RelationshipId = &id
+			version := mark.version
+			wire.RelationshipVersion = &version
 		}
 		out.Seats = append(out.Seats, wire)
 	}
@@ -331,9 +342,30 @@ func seatCount(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (int, error) {
 	return total, nil
 }
 
+// seatKey identifies ONE seat, which is a person AND a role.
+//
+// The table's own uniqueness key is (deal_id, person_id, role), so a person can
+// legitimately hold two roles on one deal. Keyed by person alone, both cards
+// carried whichever row the scan returned last — so Confirm on one could patch
+// the other, changing a role the reader was not looking at or colliding with
+// the uniqueness index.
+type seatKey struct {
+	person ids.UUID
+	role   string
+}
+
 // seatMark is what a seat's own row says about where it came from.
 type seatMark struct {
 	suggested bool
+	// relationshipID is the seat's own row, which a reader needs in order to
+	// disagree with it. Confirming or changing a role is a patch on THIS row,
+	// and the person id alone cannot name it: the same contact can sit on two
+	// deals, and the two seats are different rows.
+	relationshipID ids.UUID
+	// version is what the seat's patch sends as If-Match. Without it a reader
+	// confirming a role overwrites whatever a colleague changed while the page
+	// was open, and the losing write leaves no trace.
+	version int64
 }
 
 // suggestedSeats reads the provenance of the committee's own rows.
@@ -344,8 +376,8 @@ type seatMark struct {
 // rather than by a column somebody has to remember to set.
 func suggestedSeats(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, seats []deals.DealStakeholder,
-) (map[ids.UUID]seatMark, error) {
-	out := map[ids.UUID]seatMark{}
+) (map[seatKey]seatMark, error) {
+	out := map[seatKey]seatMark{}
 	if len(seats) == 0 {
 		return out, nil
 	}
@@ -373,7 +405,7 @@ func suggestedSeats(
 	// archived rows, so filtering ended ones here as well would drop the
 	// provenance of a seat still on the board and quietly unmark it.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT r.person_id, r.captured_by = $%d
+		SELECT r.person_id, coalesce(r.role, ''), r.captured_by = $%d, r.id, r.version
 		  FROM relationship r
 		 WHERE r.kind = 'deal_stakeholder' AND r.person_id = ANY($%d)
 		   AND r.deal_id = $%d AND r.archived_at IS NULL
@@ -383,12 +415,13 @@ func suggestedSeats(
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id ids.UUID
+		var key seatKey
 		var mark seatMark
-		if err := rows.Scan(&id, &mark.suggested); err != nil {
+		if err := rows.Scan(&key.person, &key.role, &mark.suggested,
+			&mark.relationshipID, &mark.version); err != nil {
 			return nil, err
 		}
-		out[id] = mark
+		out[key] = mark
 	}
 	return out, rows.Err()
 }

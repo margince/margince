@@ -17,3 +17,30 @@
   font-weight: var(--fw-semibold);
   color: var(--aiText);
 }
+
+/* The switcher and the reading verb in one row.
+ *
+ * Wraps rather than compressing: at 390px the two do not fit side by side, and
+ * a button squeezed to an icon is a verb the reader can no longer read. */
+.cp-board-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+/* What the last reading did. A line, not a toast: the reader may be looking at
+ * the board rather than the button when it answers, and a message that has
+ * already faded cannot tell them why nothing changed. */
+.cp-write-note {
+  margin: 0 0 var(--space-2);
+  color: var(--textMeta);
+}
+
+/* The two verbs on an unconfirmed seat. */
+.cp-seat-verbs {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}

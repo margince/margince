@@ -1572,6 +1572,20 @@ export const vi = {
   "co.people.map.scopePartial":
     "{count} trong nhóm · {hidden} người khác bạn không thấy.",
   "co.people.board.readFromMessages": "Đọc từ tin nhắn của họ",
+  "co.people.board.suggest": "Đề xuất vai trò",
+  "co.people.board.suggesting": "Đang đọc tin nhắn của họ",
+  "co.people.board.suggestNoDeal":
+    "Vai trò được ghi trên một thương vụ, và khách hàng này không có thương vụ nào đang mở.",
+  "co.people.board.suggestWrote": "Đã ghi {count} người từ chính lời họ viết.",
+  "co.people.board.suggestUnavailable":
+    "Đọc vai trò cần một mô hình, và bản cài đặt này chưa cấu hình mô hình nào.",
+  "co.people.board.suggestNothing":
+    "Tin nhắn của họ không cho biết ai là người quyết định.",
+  "co.people.board.suggestRefused":
+    "Không có gì đủ rõ để ghi lại. {count} kết quả đã bị loại vì bằng chứng yếu.",
+  "co.people.board.confirm": "Xác nhận",
+  "co.people.board.confirming": "Đang xác nhận",
+  "co.people.board.change": "Đổi vai trò",
   "co.reach.answered": "Đã hồi đáp",
   "co.reach.silent": "Chưa có hồi đáp",
   "co.reach.untried": "Chưa tiếp cận",

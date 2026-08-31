@@ -1618,6 +1618,19 @@ export const en = {
   "co.people.map.scopePartial":
     "{count} on the buying team · {hidden} more you cannot see.",
   "co.people.board.readFromMessages": "Read from their messages",
+  "co.people.board.suggest": "Suggest roles",
+  "co.people.board.suggesting": "Reading their messages",
+  "co.people.board.suggestNoDeal":
+    "Roles are recorded on a deal, and this account has no open one.",
+  "co.people.board.suggestWrote": "Seated {count} from what they wrote.",
+  "co.people.board.suggestUnavailable":
+    "Reading roles needs a model, and this installation has none configured.",
+  "co.people.board.suggestNothing": "Nothing in their messages says who buys.",
+  "co.people.board.suggestRefused":
+    "Nothing was clear enough to record. {count} reading(s) were dropped for weak evidence.",
+  "co.people.board.confirm": "Confirm",
+  "co.people.board.confirming": "Confirming",
+  "co.people.board.change": "Change role",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",

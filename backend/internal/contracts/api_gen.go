@@ -22332,7 +22332,27 @@ type OrganizationCoverageSeat struct {
 	Engagement *ContactEngagement `json:"engagement,omitempty"`
 	FullName   string             `json:"full_name"`
 	PersonId   openapi_types.UUID `json:"person_id"`
-	Role       string             `json:"role"`
+
+	// RelationshipId The seat's own row, which is what a reader patches to disagree with it —
+	// confirming the role, or changing it.
+	//
+	// Carried for every seat rather than only a read one. A colleague correcting
+	// a role another colleague typed is the same write on the same row, and
+	// omitting the id there would leave exactly the human-typed seats
+	// uncorrectable from this card.
+	//
+	// Absent only when the caller lacks the relationship grant, which is the same
+	// condition that withholds the committee itself.
+	RelationshipId *openapi_types.UUID `json:"relationship_id,omitempty"`
+
+	// RelationshipVersion The seat row's version, for the `If-Match` a patch against it carries.
+	//
+	// Without it a reader confirming a role would overwrite whatever a colleague
+	// changed while the page was open, and the write that lost would leave no
+	// trace — the point of the conditional write is that the second one is
+	// refused rather than silently winning.
+	RelationshipVersion *int64 `json:"relationship_version,omitempty"`
+	Role                string `json:"role"`
 
 	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089/A134).
 	//

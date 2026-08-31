@@ -1,15 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ifMatch } from "../../api/version";
+import { navigate } from "../../app/router";
 import { useUrlParams } from "../../app/urlstate";
-import { Badge, SegmentedControl, StatCard } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  SegmentedControl,
+  StatCard,
+} from "../../design-system/atoms";
 import { PipelineBoard } from "../../design-system/composed";
 import { RelationshipMap } from "../../design-system/relationshipmap";
 import { StatStrip } from "../../design-system/statstrip";
+import { ProvenanceTag } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { throwProblem } from "../common";
+import {
+  isVersionSkewOf,
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+} from "../common";
 import { EntityRef } from "../entityref";
 import { mapModelFromCoverage } from "./mapmodel";
 import "./companypeople.css";
@@ -114,7 +128,11 @@ export function CoverageBand({
           onOpen={() => onNarrow("untried")}
         />
       </StatStrip>
-      <CommitteeBoard coverage={coverage} accountName={accountName} />
+      <CommitteeBoard
+        coverage={coverage}
+        accountName={accountName}
+        orgId={orgId}
+      />
     </>
   );
 }
@@ -249,7 +267,8 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
 function CommitteeBoard({
   coverage,
   accountName,
-}: Readonly<{ coverage: Coverage; accountName: string }>) {
+  orgId,
+}: Readonly<{ coverage: Coverage; accountName: string; orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const [view, setView] = useState<"board" | "map">("board");
@@ -268,6 +287,15 @@ function CommitteeBoard({
     }
     setParams(out);
   };
+  const writes = useCommitteeWrites(orgId, coverage.selected_deal_id);
+  const renderSeat = (seat: Seat) => (
+    <SeatCard
+      seat={seat}
+      onConfirm={writes.confirm}
+      onChange={writes.change}
+      confirming={writes.confirming}
+    />
+  );
   const model = useMemo(
     () => mapModelFromCoverage(coverage, accountName, mapCopy(t)),
     [coverage, accountName, t],
@@ -316,11 +344,21 @@ function CommitteeBoard({
       }}
     />
   );
+  // The switcher and the reading sit in one row, so the verb is where the
+  // committee is in BOTH views: a button that appears only on the board would
+  // make the map a place where the gap can be seen and not filled.
+  const toolbar = (
+    <div className="cp-board-tools">
+      {switcher}
+      <SuggestRoles writes={writes} dealId={coverage.selected_deal_id} />
+    </div>
+  );
 
   if (view === "map") {
     return (
       <>
-        {switcher}
+        {toolbar}
+        {writes.note}
         <RelationshipMap
           model={model}
           focusId={focusId}
@@ -348,11 +386,12 @@ function CommitteeBoard({
 
   return (
     <>
-      {switcher}
+      {toolbar}
+      {writes.note}
       <PipelineBoard
         variant="plain"
         columns={columns}
-        renderCard={(record) => <SeatCard seat={record.seat} />}
+        renderCard={(record) => renderSeat(record.seat)}
         columnExtras={(column) =>
           // The gap, where it is: a critical role nobody holds says so in the
           // column that would hold them, not in a line underneath the board.
@@ -415,7 +454,17 @@ function mapCopy(t: ReturnType<typeof useT>) {
   };
 }
 
-function SeatCard({ seat }: Readonly<{ seat: Seat }>) {
+function SeatCard({
+  seat,
+  onConfirm,
+  onChange,
+  confirming,
+}: Readonly<{
+  seat: Seat;
+  onConfirm: (seat: Seat) => void;
+  onChange: (seat: Seat) => void;
+  confirming: ReadonlySet<string>;
+}>) {
   const t = useT();
   // Indigo, dashed, and only here: the treatment means "a machine decided this
   // and nobody has confirmed it". A seat a colleague typed carries none of it,
@@ -428,7 +477,12 @@ function SeatCard({ seat }: Readonly<{ seat: Seat }>) {
       data-suggested={suggested ? "true" : undefined}
     >
       {suggested && (
-        <p className="cp-seat-mark">{t("co.people.board.readFromMessages")}</p>
+        <p className="cp-seat-mark">
+          <ProvenanceTag
+            provenance={{ kind: "agent", agent: "propose_roles" }}
+          />{" "}
+          {t("co.people.board.readFromMessages")}
+        </p>
       )}
       <EntityRef kind="person" id={seat.person_id} name={seat.full_name} />
       {seat.engagement && (
@@ -450,6 +504,231 @@ function SeatCard({ seat }: Readonly<{ seat: Seat }>) {
           )}
         </Badge>
       )}
+      {/* Only an UNCONFIRMED seat offers the two verbs, and only when the
+       * caller can address the row. Confirming a seat a colleague typed
+       * would be agreeing with them on their behalf; the row is already
+       * theirs, and nothing about it is waiting for an answer. */}
+      {/* BOTH halves, because the write needs both. Rendering on the id alone
+       * gave an enabled button whose click was silently dropped when the
+       * version was missing — a control that reports nothing and does
+       * nothing, which is worse than one that is not offered. */}
+      {suggested && seat.relationship_id && seat.relationship_version && (
+        <div className="cp-seat-verbs">
+          <Button
+            small
+            onClick={() => onConfirm(seat)}
+            pending={confirming.has(seat.relationship_id)}
+            busyLabel={t("co.people.board.confirming")}
+          >
+            {t("co.people.board.confirm")}
+          </Button>
+          <Button small variant="ghost" onClick={() => onChange(seat)}>
+            {t("co.people.board.change")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
+
+/**
+ * useCommitteeWrites is the three writes this board performs.
+ *
+ * The reading POSTs to the deal and then invalidates the ACCOUNT's coverage,
+ * which is the key this whole band reads under: a seat written to a deal is a
+ * change to the committee the account shows, and refreshing the deal alone
+ * would leave the board displaying the state before the write.
+ *
+ * Confirm and Change are the same patch on the same row. The store reassigns
+ * `captured_by` to whoever edits, so a human touching the row is what clears
+ * the mark — there is no separate "confirmed" column, and there does not need
+ * to be: the question the mark asks is "did a person answer this", and an edit
+ * IS that answer.
+ */
+function useCommitteeWrites(orgId: string, dealId: string | null | undefined) {
+  const t = useT();
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    queryClient.invalidateQueries({
+      queryKey: ["organization-coverage", orgId],
+    });
+  };
+
+  const suggest = useMutation({
+    mutationFn: async (dealId: string) => {
+      const { data, error } = await api.POST("/deals/{id}/role-proposals", {
+        params: { path: { id: dealId } },
+      });
+      if (error || !data) {
+        return throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: refresh,
+  });
+
+  // WHICH row is being confirmed, held here rather than read off the mutation.
+  // One observer serves every card, and TanStack switches it to the newest
+  // call — so a second confirm took the first's spinner away and swallowed its
+  // outcome. The set is what lets two cards be busy at once and each keep its
+  // own.
+  const [confirming, setConfirming] = useState<ReadonlySet<string>>(new Set());
+  const patch = useMutation({
+    onMutate: (seat: SeatPatch) => {
+      setConfirming((busy) => new Set(busy).add(seat.relationshipId));
+    },
+    onSettled: (_data, _error, seat) => {
+      setConfirming((busy) => {
+        const next = new Set(busy);
+        next.delete(seat.relationshipId);
+        return next;
+      });
+    },
+    mutationFn: async (seat: SeatPatch) => {
+      const { error } = await api.PATCH("/relationships/{id}", {
+        // The conditional write. A colleague may have changed this seat while
+        // the page was open, and without the version the confirmation would
+        // overwrite them — the losing write leaving no trace, which is the one
+        // outcome a concurrent edit must not have.
+        params: { path: { id: seat.relationshipId }, ...ifMatch(seat.version) },
+        body: { role: seat.role },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: refresh,
+  });
+
+  return {
+    suggest,
+    confirming,
+    // Confirming writes the role back UNCHANGED. That looks like a no-op and
+    // is not: the store reassigns captured_by to the editing human, so the
+    // same role written by a person is what turns the machine's reading into
+    // theirs.
+    confirm: (seat: Seat) => {
+      if (seat.relationship_id && seat.relationship_version !== undefined) {
+        patch.mutate({
+          relationshipId: seat.relationship_id,
+          role: seat.role,
+          version: seat.relationship_version,
+        });
+      }
+    },
+    // The DEAL's stakeholder panel, which is where a role is actually edited.
+    // The contact's own page shows the role as a read-only badge, so sending a
+    // reader there was a verb that promised an edit and delivered a label.
+    change: () => {
+      if (dealId) {
+        navigate({ screen: "deals", id: dealId });
+      }
+    },
+    note: <WriteNote suggest={suggest} patch={patch} locale={locale} t={t} />,
+  };
+}
+
+/**
+ * WriteNote says what the last write did, in words rather than a count alone.
+ *
+ * The two empty answers are DIFFERENT facts and get different sentences.
+ * Nothing proposed means their messages do not say who buys; everything
+ * refused means the product read something and would not stand behind it. A
+ * single "no roles found" would report the second as the first, and a reader
+ * would go looking for evidence that was in fact considered and dropped.
+ */
+function WriteNote({
+  suggest,
+  patch,
+  locale,
+  t,
+}: Readonly<{
+  suggest: ReturnType<
+    typeof useMutation<DealRoleProposalResult, Error, string>
+  >;
+  patch: ReturnType<typeof useMutation<void, Error, SeatPatch>>;
+  locale: Locale;
+  t: ReturnType<typeof useT>;
+}>) {
+  // The PATCH's failure first. A suggestion that failed minutes ago would
+  // otherwise mask the confirm the reader just pressed, and the older message
+  // is the less relevant one exactly when a newer write has gone wrong.
+  if (patch.isError) {
+    return (
+      <p className="t-caption cp-write-note">
+        {isVersionSkewOf(patch.error)
+          ? t("edit.versionSkew")
+          : problemMessageOf(patch.error, t)}
+      </p>
+    );
+  }
+  if (suggest.isError) {
+    return (
+      <p className="t-caption cp-write-note">
+        {problemCodeOf(suggest.error) === "not_implemented"
+          ? t("co.people.board.suggestUnavailable")
+          : problemMessageOf(suggest.error, t)}
+      </p>
+    );
+  }
+  const result = suggest.data;
+  if (!result) {
+    return null;
+  }
+  if (result.written.length > 0) {
+    return (
+      <p className="t-caption cp-write-note">
+        {t("co.people.board.suggestWrote", {
+          count: formatNumber(result.written.length, locale),
+        })}
+      </p>
+    );
+  }
+  return (
+    <p className="t-caption cp-write-note">
+      {result.skipped > 0
+        ? t("co.people.board.suggestRefused", {
+            count: formatNumber(result.skipped, locale),
+          })
+        : t("co.people.board.suggestNothing")}
+    </p>
+  );
+}
+
+/**
+ * SuggestRoles is the verb that reads the committee out of the correspondence.
+ *
+ * Disabled with a REASON rather than hidden when the account has no open deal:
+ * a role is recorded on a deal, and a reader who cannot see why the button is
+ * inert learns nothing about what to do instead.
+ */
+function SuggestRoles({
+  writes,
+  dealId,
+}: Readonly<{
+  writes: {
+    suggest: ReturnType<
+      typeof useMutation<DealRoleProposalResult, Error, string>
+    >;
+  };
+  dealId: string | null | undefined;
+}>) {
+  const t = useT();
+  return (
+    <Button
+      small
+      variant="ai"
+      onClick={() => dealId && writes.suggest.mutate(dealId)}
+      reason={dealId ? undefined : t("co.people.board.suggestNoDeal")}
+      pending={writes.suggest.isPending}
+      busyLabel={t("co.people.board.suggesting")}
+    >
+      <Sparkles aria-hidden="true" />
+      {t("co.people.board.suggest")}
+    </Button>
+  );
+}
+
+type DealRoleProposalResult = components["schemas"]["DealRoleProposalResult"];
+type SeatPatch = { relationshipId: string; role: string; version: number };

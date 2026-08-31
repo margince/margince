@@ -16742,6 +16742,30 @@ export interface components {
             role: string;
             engagement?: components["schemas"]["ContactEngagement"];
             /**
+             * Format: int64
+             * @description The seat row's version, for the `If-Match` a patch against it carries.
+             *
+             *     Without it a reader confirming a role would overwrite whatever a colleague
+             *     changed while the page was open, and the write that lost would leave no
+             *     trace — the point of the conditional write is that the second one is
+             *     refused rather than silently winning.
+             */
+            relationship_version?: number;
+            /**
+             * Format: uuid
+             * @description The seat's own row, which is what a reader patches to disagree with it —
+             *     confirming the role, or changing it.
+             *
+             *     Carried for every seat rather than only a read one. A colleague correcting
+             *     a role another colleague typed is the same write on the same row, and
+             *     omitting the id there would leave exactly the human-typed seats
+             *     uncorrectable from this card.
+             *
+             *     Absent only when the caller lacks the relationship grant, which is the same
+             *     condition that withholds the committee itself.
+             */
+            relationship_id?: string;
+            /**
              * @description The seat was read out of the contact's own messages rather than typed by a
              *     person, and nobody has confirmed it yet.
              *

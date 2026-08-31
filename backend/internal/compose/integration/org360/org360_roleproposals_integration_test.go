@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	org360svc "github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -447,4 +448,114 @@ func blockFor(t *testing.T, prompt, mine, theirs string) string {
 		return rest[:end]
 	}
 	return rest
+}
+
+// CONFIRMING IS AN EDIT THAT CHANGES NOTHING, AND IT STILL CLEARS THE MARK.
+//
+// The card's Confirm sends the seat's role back unchanged, and the whole
+// design rests on the relationship writer reassigning captured_by to whoever
+// edits. If that writer ever short-circuits a patch whose fields all match,
+// Confirm becomes a button that reports success and changes nothing — the mark
+// stays, the reader presses it again, and nothing they do ever takes.
+func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	svc := org360Service(e)
+
+	org, deal := seedRoleDeal(t, e)
+	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, buyer, org, "Chief Financial Officer")
+	source := wrote(t, e, buyer, org, "Re: Angebot",
+		"I sign off the budget for this, so send the figures to me directly.", 3)
+
+	lane := &scriptedLane{reply: `{"proposals":[{
+		"person_id":"` + buyer.String() + `","role":"economic_buyer",
+		"evidence_snippet":"I sign off the budget for this, so send",
+		"source_id":"` + source.String() + `","confidence":0.9}]}`}
+	if _, err := svc.ProposeRoles(ctx, lane, ids.DealID{UUID: deal}); err != nil {
+		t.Fatalf("proposing roles: %v", err)
+	}
+
+	before, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("reading coverage: %v", err)
+	}
+	seat := before.Committee.Seats[0]
+	if seat.AiSuggested == nil || !*seat.AiSuggested {
+		t.Fatal("the written seat is not marked, so the clearing below proves nothing")
+	}
+	if seat.RelationshipId == nil || seat.RelationshipVersion == nil {
+		t.Fatal("the seat carries no row to patch, so the card cannot confirm it")
+	}
+
+	// Exactly what the card sends: the same role, nothing else.
+	role := seat.Role
+	if _, err := e.People.UpdateRelationship(ctx, ids.UUID(*seat.RelationshipId),
+		people.UpdateRelationshipInput{Role: &role}); err != nil {
+		t.Fatalf("confirming the seat: %v", err)
+	}
+
+	after, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("re-reading coverage: %v", err)
+	}
+	confirmed := after.Committee.Seats[0]
+	if confirmed.AiSuggested != nil && *confirmed.AiSuggested {
+		t.Fatal("the mark survived a human's edit, so Confirm reports success and does nothing")
+	}
+	if confirmed.Role != role {
+		t.Fatalf("confirming changed the role to %q", confirmed.Role)
+	}
+}
+
+// A PERSON CAN HOLD TWO ROLES ON ONE DEAL, and each card must address its own
+// row.
+//
+// The table's uniqueness key is (deal_id, person_id, role), so this is a shape
+// the database permits. Keyed by person alone, both cards carried whichever
+// row the scan returned last — so Confirm on one patched the other, changing a
+// role the reader was not looking at or colliding with the uniqueness index.
+func TestASeatCardAddressesItsOwnRowWhenAPersonHoldsTwoRoles(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	svc := org360Service(e)
+
+	org, deal := seedRoleDeal(t, e)
+	both := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, both, org, "Chief Financial Officer")
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, both, deal)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
+		both, deal)
+
+	got, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
+	if err != nil {
+		t.Fatalf("reading coverage: %v", err)
+	}
+	rows := map[string]string{}
+	marked := map[string]bool{}
+	for _, seat := range got.Committee.Seats {
+		if seat.RelationshipId == nil {
+			t.Fatalf("seat %q carries no row to patch", seat.Role)
+		}
+		rows[seat.Role] = seat.RelationshipId.String()
+		marked[seat.Role] = seat.AiSuggested != nil && *seat.AiSuggested
+	}
+	if len(rows) != 2 {
+		t.Fatalf("read %d seats for a person holding two roles: %+v", len(rows), rows)
+	}
+	if rows["champion"] == rows["economic_buyer"] {
+		t.Fatalf("both cards address the same row (%s) — confirming one patches the other",
+			rows["champion"])
+	}
+	// And the provenance follows the ROW, not the person: one seat was typed
+	// and one was read, and a mark shared between them would offer to confirm
+	// a colleague's own answer.
+	if !marked["champion"] {
+		t.Fatal("the read seat is not marked")
+	}
+	if marked["economic_buyer"] {
+		t.Fatal("a seat a person typed is marked as the product's reading")
+	}
 }
