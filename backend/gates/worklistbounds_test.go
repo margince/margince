@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H2
+
 package gates
 
 // The worklist reports a source as possibly having more work behind it when its
@@ -21,6 +23,8 @@ import (
 )
 
 func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
+	t.Parallel()
+
 	mirrors := []struct {
 		name      string
 		ownerFile string
