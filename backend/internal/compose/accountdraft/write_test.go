@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -56,7 +57,7 @@ func TestTheReasonsNeverAppearInTheBody(t *testing.T) {
 	  "entity_id":"019fe7ae-0000-7000-8000-000000000002"}]}`
 	lane := &scriptedLane{answer: answer}
 
-	draft, by, err := Write(context.Background(), lane, sampleInput())
+	draft, by, err := Write(context.Background(), lane, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func TestAReasonCitingARecordTheReaderCannotSeeIsDropped(t *testing.T) {
 	  {"kind":"deal","label":"a deal you cannot see","entity_type":"deal",
 	   "entity_id":"019fe7ae-0000-7000-8000-0000000000ff"},
 	  {"kind":"intent","label":"shorter"}]}`
-	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput())
+	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +100,7 @@ func TestAReasonCitingTheRightIdAsTheWrongKindIsDropped(t *testing.T) {
 	answer := `{"subject":"S","body":"B","reasoning":[
 	  {"kind":"deal","label":"mislabelled","entity_type":"person",
 	   "entity_id":"019fe7ae-0000-7000-8000-000000000002"}]}`
-	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput())
+	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +116,7 @@ func TestAnUncitedReasonSurvivesOnlyForTheCallersOwnIntent(t *testing.T) {
 	  {"kind":"deal","label":"something about a deal"},
 	  {"kind":"dossier","label":"something about the company"},
 	  {"kind":"intent","label":"shorter"}]}`
-	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput())
+	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +130,7 @@ func TestAnUncitedReasonSurvivesOnlyForTheCallersOwnIntent(t *testing.T) {
 // unlabelled chip, because the composer groups reasons by kind.
 func TestAnUnknownReasonKindIsDropped(t *testing.T) {
 	answer := `{"subject":"S","body":"B","reasoning":[{"kind":"vibes","label":"a feeling"}]}`
-	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput())
+	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +148,7 @@ func TestAFailedLaneDegradesToTheFloorRatherThanErroring(t *testing.T) {
 		"empty":    {answer: `{"subject":"","body":""}`},
 	} {
 		t.Run(name, func(t *testing.T) {
-			draft, by, err := Write(context.Background(), lane, sampleInput())
+			draft, by, err := Write(context.Background(), lane, sampleInput(), draftvoice.Context{})
 			if err != nil {
 				t.Fatalf("a bad answer must degrade, not error: %v", err)
 			}
@@ -166,7 +167,7 @@ func TestAFailedLaneDegradesToTheFloorRatherThanErroring(t *testing.T) {
 // boundary rather than concatenated into the instructions.
 func TestTheAccountSummaryTravelsInsideAFence(t *testing.T) {
 	lane := &scriptedLane{answer: `{"subject":"S","body":"B"}`}
-	if _, _, err := Write(context.Background(), lane, sampleInput()); err != nil {
+	if _, _, err := Write(context.Background(), lane, sampleInput(), draftvoice.Context{}); err != nil {
 		t.Fatal(err)
 	}
 	req := lane.seen[0]
@@ -186,7 +187,7 @@ func TestTheCallersOwnIntentIsOutsideTheFence(t *testing.T) {
 	in := sampleInput()
 	in.Intent = "keep it short"
 	lane := &scriptedLane{answer: `{"subject":"S","body":"B"}`}
-	if _, _, err := Write(context.Background(), lane, in); err != nil {
+	if _, _, err := Write(context.Background(), lane, in, draftvoice.Context{}); err != nil {
 		t.Fatal(err)
 	}
 	content := lane.seen[0].Messages[0].Content
@@ -235,7 +236,7 @@ func TestAFencedAnswerIsRead(t *testing.T) {
 		"\n```"
 	lane := &scriptedLane{answer: answer}
 
-	draft, by, err := Write(context.Background(), lane, sampleInput())
+	draft, by, err := Write(context.Background(), lane, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}

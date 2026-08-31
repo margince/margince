@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // WithAccountDraft binds the lane that writes an account-started email
@@ -37,14 +38,16 @@ import (
 // deployment running no model still has a rep who pressed "Write email", and
 // a short opener they edit beats a refusal.
 //
-// It takes no pool, unlike every other option here. That is the zero-write
-// guarantee expressed as a dependency: drafting reads the caller's 360 and
-// writes nothing, so there is nothing for a transaction to do.
+// The pool it takes is for READS only — the sender's own voice profile and the
+// identity behind the envelope. Drafting still writes nothing; accountdraft is
+// handed the voice READ seam rather than the store, so the zero-write
+// guarantee stays a dependency rather than a rule somebody remembers.
 func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := accountdraft.NewService(s.org360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithDossier(s.orgDossierSvc)
+			WithDossier(s.orgDossierSvc).
+			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.accountDraftHandlers = accountdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
 	}
 }

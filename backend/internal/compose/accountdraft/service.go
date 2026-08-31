@@ -12,9 +12,11 @@ package accountdraft
 
 import (
 	"context"
+	"log/slog"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -69,6 +71,21 @@ type Service struct {
 	lane     Completer
 	envelope *draftfloor.Resolver
 	dossier  Dossier
+	// voice reads the sender's own Voice DNA. It is the READ seam, not the
+	// voice store: this package promises to write nothing, and a store handed
+	// in whole would carry the learning-signal writes with it.
+	voice draftvoice.Reader
+	log   *slog.Logger
+}
+
+// WithVoice binds the sender's voice profile read, so a rep who has built one
+// gets their own writing here and not only when they answer a mail. Without it
+// the draft is written under the shared rules alone, which is what a
+// deployment with no voice lane has.
+func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service {
+	s.voice = reader
+	s.log = log
+	return s
 }
 
 // WithDossier feeds the draft what the company IS, from a dossier already
@@ -142,7 +159,9 @@ func (s *Service) Draft(
 		return crmcontracts.AccountEmailDraft{}, err
 	}
 	in.Dossier = s.facts(ctx, orgID)
-	draft, by, err := Write(ctx, s.lane, in)
+	// Loaded after the 360 read, so a caller who may not read this account is
+	// refused before their voice profile is touched at all.
+	draft, by, err := Write(ctx, s.lane, in, draftvoice.Load(ctx, s.voice, s.log))
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}

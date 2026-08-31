@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -52,10 +53,19 @@ sections_omitted names what the reader of this summary was not allowed to see. S
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
 // draftSystemFor assembles this call's system turn: what this surface is for,
-// the rules every drafting surface shares, and THIS call's data boundary (see
-// promptfence.Fence.Rule).
-func draftSystemFor(fence promptfence.Fence) string {
-	return draftSystem + "\n\n" + draftrules.Shared + "\n" + fence.Rule("contact summary")
+// the rules every drafting surface shares, THIS call's data boundary (see
+// promptfence.Fence.Rule), and — when the sender has a voice profile — what
+// that profile is allowed to govern.
+//
+// The voice rule is conditional because the block it describes is: a system
+// turn telling the model to obey a profile that never arrives in the user turn
+// is an instruction pointing at nothing.
+func draftSystemFor(fence promptfence.Fence, voiced bool) string {
+	system := draftSystem + "\n\n" + draftrules.Shared
+	if voiced {
+		system += "\n\n" + draftvoice.SystemRule
+	}
+	return system + "\n" + fence.Rule("contact summary")
 }
 
 // draftSchema is the response shape the validated lane enforces.
@@ -99,13 +109,13 @@ type modelReason struct {
 // the deployment saying this role runs no model, and the deterministic floor is
 // the answer.
 func Write(
-	ctx context.Context, lane Completer, in Input,
+	ctx context.Context, lane Completer, in Input, voice draftvoice.Context,
 ) (Draft, crmcontracts.WrittenBy, error) {
 	floor := Deterministic(in)
 	if lane == nil {
 		return floor, crmcontracts.Deterministic, nil
 	}
-	written, err := writeChecked(ctx, lane, in)
+	written, err := writeChecked(ctx, lane, in, voice)
 	if err != nil {
 		// A model that is down, over budget or answering nonsense must not cost
 		// the rep their draft: the floor is a real message they can edit, and
@@ -122,10 +132,10 @@ func Write(
 // writeChecked drafts through the shared correct-and-retry loop, so this
 // surface cannot drift from the other two about what a rejected phrase is or
 // how many chances the model gets to fix one.
-func writeChecked(ctx context.Context, lane Completer, in Input) (Draft, error) {
-	return draftcore.CorrectOnce(ctx, in.Envelope.Lang(), in.Envelope.Band(),
+func writeChecked(ctx context.Context, lane Completer, in Input, voice draftvoice.Context) (Draft, error) {
+	draft, err := draftcore.CorrectOnce(ctx, in.Envelope.Lang(), in.Envelope.Band(),
 		func(ctx context.Context, correction string) (Draft, error) {
-			return writeWithModel(ctx, lane, in, correction)
+			return writeWithModel(ctx, lane, in, voice, correction)
 		},
 		func(d Draft) (string, []string) { return d.Body, reasonLabels(d.Reasoning) },
 		func(d Draft) (string, bool) { return d.Subject, in.Threaded() },
@@ -134,10 +144,63 @@ func writeChecked(ctx context.Context, lane Completer, in Input) (Draft, error) 
 		// reports it.
 		nil,
 	)
+	if err != nil {
+		return Draft{}, err
+	}
+	return applyVoiceFloor(ctx, lane, in, voice, draft)
 }
 
-func writeWithModel(ctx context.Context, lane Completer, in Input, correction string) (Draft, error) {
-	req, err := groundedRequest(in)
+// applyVoiceFloor is the deterministic anti-AI pass a voiced draft must clear:
+// detect on the raw text, one critic retry that fixes the SENTENCE, then the
+// sanitizer for what is left to remove mechanically.
+//
+// It runs only for a voiced draft. An unvoiced one is already governed by the
+// shared rules and by draftcheck, and running a second retry over every draft
+// would double the model spend of the common case to fix the rare one.
+//
+// Every step can only improve the draft, never replace it with a worse one.
+// The retry is kept only if it clears MORE violations than the attempt it
+// replaces — a retry is one more model answer, not a better one by definition,
+// and it is written without the draftcheck findings the first pass already
+// cleared. The sanitizer's edits are kept only if what survives them is still a
+// draft: it deletes characters, so a subject that was nothing but an em dash
+// comes back empty, and an empty subject is not a message the contract allows.
+//
+// A draft that still trips the floor after all of that is served anyway. The
+// alternative is the deterministic floor — a two-line opener — and a rep who
+// asked for a draft is better served by an imperfect real message than by a
+// stub, which is the same trade Write makes when the model is down.
+func applyVoiceFloor(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, draft Draft) (Draft, error) {
+	if !voice.OK {
+		return draft, nil
+	}
+	// Detect on the RAW draft: a violation the sanitizer could mechanically
+	// remove still earns the retry, because the retry rewrites the sentence
+	// where the sanitizer only deletes the punctuation.
+	violations := draftvoice.Violations(draft.Subject, draft.Body)
+	if len(violations) > 0 {
+		retried, retryErr := writeWithModel(ctx, lane, in, voice, draftvoice.Feedback(violations))
+		if retryErr == nil && len(draftvoice.Violations(retried.Subject, retried.Body)) < len(violations) {
+			draft = retried
+		}
+	}
+	sanitized := draft
+	sanitized.Subject, sanitized.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
+	if !servable(sanitized) {
+		return draft, nil
+	}
+	return sanitized, nil
+}
+
+// servable reports whether a draft is still one the contract can carry. The
+// sanitizer removes characters, so a draft made only of what it removes comes
+// back empty — and an empty subject or body is not a message.
+func servable(draft Draft) bool {
+	return strings.TrimSpace(draft.Subject) != "" && strings.TrimSpace(draft.Body) != ""
+}
+
+func writeWithModel(ctx context.Context, lane Completer, in Input, voice draftvoice.Context, correction string) (Draft, error) {
+	req, err := buildRequest(in, voice)
 	if err != nil {
 		return Draft{}, err
 	}
@@ -154,26 +217,33 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, correction st
 	return ParseDraft(res.Text, in)
 }
 
-// groundedRequest builds the model call: the system prompt naming this call's
+// buildRequest builds the model call: the system prompt naming this call's
 // boundary, and the contact summary INSIDE it.
 //
 // The caller's intent is the one input outside the fence, and it is outside
 // because the caller typed it: fencing a person's own instruction would tell
 // the model to treat the reader as an attacker.
 //
-//promptvoice:exempt the reply is an email the salesperson sends under their OWN name — see accountdraft/write.go for the same reason; the user's voice governs a draft, not Margince's.
-func groundedRequest(in Input) (model.Request, error) {
+// The sender's voice profile, when they have one, rides the user turn under
+// this call's own fence — it is corpus text, so it is data and never
+// instruction.
+//
+//promptvoice:exempt this is an email the salesperson sends under their OWN name, so it carries THEIR voice (draftvoice) rather than Margince's personality — Margince's voice inside a customer-facing draft would be Margince signing somebody else's mail.
+func buildRequest(in Input, voice draftvoice.Context) (model.Request, error) {
 	fence := promptfence.New()
 	payload, err := json.Marshal(fencedInput(in))
 	if err != nil {
 		return model.Request{}, fmt.Errorf("marshal person draft input: %w", err)
 	}
 	content := fence.Wrap(string(payload))
+	if block := voice.Block(fence); block != "" {
+		content += "\n\n" + block
+	}
 	if in.Intent != "" {
 		content += "\n\nThe salesperson asks for: " + in.Intent
 	}
 	return model.Request{
-		System:   draftSystemFor(fence),
+		System:   draftSystemFor(fence, voice.OK),
 		Messages: []model.Message{{Role: "user", Content: content}},
 		// Thinking headroom. A reasoning model spends output tokens on internal
 		// thinking BEFORE its answer, and that thinking counts against the cap —
@@ -323,7 +393,12 @@ var (
 // SystemPromptFor is the assembled system turn, for the compose-level parity
 // gate that asserts every drafting surface writes under the same shared rules.
 // Exported for that assertion alone: the surface itself calls draftSystemFor.
-func SystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence) }
+func SystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence, false) }
+
+// VoicedSystemPromptFor is the system turn a draft written under a sender's
+// voice profile carries. The parity gate reads BOTH: a surface with two system
+// turns has two chances to drop the shared rules.
+func VoicedSystemPromptFor(fence promptfence.Fence) string { return draftSystemFor(fence, true) }
 
 // reasonLabels is the provenance a draft shows the rep, for the checks that
 // judge it. The labels alone: an entity id is a citation the filter already
@@ -336,7 +411,10 @@ func reasonLabels(reasons []Reason) []string {
 	return out
 }
 
-// GroundedRequest is the request this site sends, for the compose-level gate
-// that asserts every drafting surface carries thinking headroom. Exported for
-// that assertion alone; the site itself calls groundedRequest.
-func GroundedRequest(in Input) (model.Request, error) { return groundedRequest(in) }
+// GroundedRequest is the request this site sends, for the compose-level gates
+// that assert every drafting surface carries thinking headroom and that a
+// loaded voice profile reaches the model's user turn. Exported for those
+// assertions alone; the site itself calls buildRequest.
+func GroundedRequest(in Input, voice draftvoice.Context) (model.Request, error) {
+	return buildRequest(in, voice)
+}
