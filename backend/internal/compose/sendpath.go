@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // SendPath is the deployment configuration the send path needs and cannot
@@ -50,6 +51,10 @@ type SendPath struct {
 	// means a marketing send refuses (the store's fail-loud branch) rather
 	// than emitting a forgeable link.
 	PublicBaseURL string
+	// Environment decides whether a loopback PublicBaseURL is a working dev
+	// stack or a link the recipient's mail client cannot open. The zero
+	// value is production, which is the direction that fails safe.
+	Environment runtimeenv.Environment
 	// Delivery records an accepted message for transmission, in either shape a
 	// message takes. Nil means the send path refuses rather than log an
 	// activity nothing will carry.
@@ -126,6 +131,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	send := s.send.withPoolDefaults(pool)
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
+		WithRuntimeEnvironment(send.Environment).
 		WithDelivery(send.Delivery).
 		// One machinery, both staging shapes: a nil Delivery converts to a nil
 		// channel stager too, so the reply surface fails closed exactly as the
@@ -227,6 +233,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 	return activities.NewStore(InstallationDB(pool)).
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		WithPublicBaseURL(send.PublicBaseURL).
+		WithRuntimeEnvironment(send.Environment).
 		WithSendAuthority(send.SendAuthority).
 		WithChannelReachability(send.ChannelRecipients).
 		WithRecipientDirectory(recipientDirectory{}).
@@ -236,6 +243,9 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		// because the request arrived on the tool surface. An agent principal
 		// still signs nothing — signedBody decides that, not this wiring.
 		WithSignature(people.NewStore(InstallationDB(pool))).
+		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
+			return identity.BaseLanguageForPrompt(ctx, pool)
+		})).
 		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
 		WithDraftOutcome(send.DraftOutcome)

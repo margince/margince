@@ -296,7 +296,6 @@ internal/modules/activities/scheduling.go#var block at var errAvailabilityToNotA
 internal/modules/activities/transcript_integration_test.go#func TestUpdateActivityNormalizesATranscriptBody
 internal/modules/activities/transcriptnorm.go#func transcriptLines
 internal/modules/activities/unsubscribe.go#func listUnsubscribeHeader
-internal/modules/activities/unsubscribe.go#func unsubscribeURL
 internal/modules/activities/unsubscribe.go#method Store.deliverability
 internal/modules/agents/approvals.go#func pinForWrite
 internal/modules/agents/apps/apps.go#const block at const AccountBriefURI

@@ -61,6 +61,16 @@ func TestOneClickAcceptsAnEmptyBody(t *testing.T) {
 	}
 }
 
+// A client that announces JSON and sends nothing has said nothing this
+// endpoint disagrees with. Shared request helpers set this header on
+// every call, including bodiless ones, so refusing it would break the
+// product's own unsubscribe page to protect a machine contract.
+func TestOneClickAcceptsAnEmptyBodyUnderAnyContentType(t *testing.T) {
+	if err := requireOneClickBody(oneClickRequest("", "application/json")); err != nil {
+		t.Errorf("refused an empty body announced as JSON: %v", err)
+	}
+}
+
 // A charset parameter is ordinary and must not change the verdict.
 func TestOneClickToleratesAContentTypeParameter(t *testing.T) {
 	if err := requireOneClickBody(
@@ -77,7 +87,7 @@ func TestOneClickRefusesABodyThatIsNotOneClick(t *testing.T) {
 	}{
 		{"a form without the pair", "Something=Else", "application/x-www-form-urlencoded"},
 		{"the wrong value", "List-Unsubscribe=Two-Click", "application/x-www-form-urlencoded"},
-		{"json", `{"List-Unsubscribe":"One-Click"}`, "application/json"},
+		{"a json body", `{"List-Unsubscribe":"One-Click"}`, "application/json"},
 		{"multipart with no boundary", "whatever", "multipart/form-data"},
 		{"no content type, junk body", "hello", ""},
 	}

@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -121,7 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
+	if err := admitBoot(ctx, logger, pool, vault, cfg, deployCfg); err != nil {
 		return err
 	}
 
@@ -346,6 +347,35 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 // is reached, which is the posture every role takes: an installation whose root
 // key no longer opens its own secrets has a problem that outlives the license
 // question.
+// admitBoot holds every precondition this worker must satisfy before it
+// starts doing work: it is entitled to run, and anything it sends will
+// carry links a recipient can open.
+func admitBoot(
+	ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool,
+	vault keyvault.Vault, cfg workerConfig, deployCfg deployconfig.Config,
+) error {
+	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
+		return err
+	}
+	return requireUsablePublicOrigin(cfg, deployCfg)
+}
+
+// requireUsablePublicOrigin refuses to start a sending worker whose
+// outgoing links a recipient could not open.
+//
+// The worker sends too — the scheduled and agent lanes run here — so it
+// answers to the same rule as the api. A role that skipped it would send
+// exactly the messages the api refuses.
+func requireUsablePublicOrigin(cfg workerConfig, deployCfg deployconfig.Config) error {
+	if !deployCfg.Email.Enabled && !cfg.gmailAppWired() {
+		return nil
+	}
+	if err := netguard.RequirePublicOrigin("--public-base-url", cfg.publicBaseURL, cfg.posture); err != nil {
+		return fmt.Errorf("worker: %w", err)
+	}
+	return nil
+}
+
 func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, deployCfg deployconfig.Config, posture runtimeenv.Environment) error {
 	_, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, posture, config.FromOS)
 	return err

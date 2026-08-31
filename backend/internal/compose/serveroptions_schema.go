@@ -98,6 +98,11 @@ func WithResetRuntime(rt ResetRuntime) Option {
 func WithNonProduction(env runtimeenv.Environment) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithNonProduction(env.IsNonProduction())
+		// ONE posture, two consumers. The send path needs it for a different
+		// question than /me does — whether a loopback public origin is a
+		// working dev stack or a link the recipient cannot open — and reading
+		// the environment twice is how the two answers start to disagree.
+		s.send.Environment = env
 	}
 }
 
