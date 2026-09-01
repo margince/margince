@@ -231,6 +231,14 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	// that already exists.
 	args, parked := readTheAnchorsSiteFor(t, e, blob)
 	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	// The SAME company, which is what makes this a re-read rather than two
+	// unrelated onboardings: a workspace has at most one live anchor
+	// (uq_organization_anchor), so the second confirmation resolves the record
+	// the first one created instead of minting a rival.
+	if orgID != created {
+		t.Fatalf("the second confirmation landed on %s, want the company the first created (%s)",
+			orgID, created)
+	}
 	if parked == first {
 		t.Fatal("both reads parked one object, so this case cannot tell a replacement from a no-op")
 	}
