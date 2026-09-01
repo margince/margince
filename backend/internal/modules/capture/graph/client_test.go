@@ -77,6 +77,18 @@ func msStub(t *testing.T) *httptest.Server {
 		}
 	})
 
+	mux.HandleFunc("/me/mailFolders/{folder}/messages", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("ConsistencyLevel") != "eventual" {
+			// $count without the header fails on real Graph; the stub makes
+			// that contract visible as a client-side failure.
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// The two the delta round hands back, so a walk of the whole folder
+		// measures up and the anchor stands.
+		writeJSON(w, map[string]any{"@odata.count": 2, "value": []map[string]any{{"id": "m1"}}})
+	})
+
 	mux.HandleFunc("/me/messages", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("$count") == "true" {
 			if r.Header.Get("ConsistencyLevel") != "eventual" {
@@ -514,4 +526,85 @@ func jsonStub(t *testing.T, body map[string]any) *httptest.Server {
 	}))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+// anchorStub serves one folder: a single-page delta round holding the given
+// ids, and a $count answering held. It records the filter the count carried.
+func anchorStub(t *testing.T, ids []string, held int) (*httptest.Server, *string) {
+	t.Helper()
+	var countFilter string
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	mux.HandleFunc("/me/mailFolders/inbox/messages/delta", func(w http.ResponseWriter, _ *http.Request) {
+		value := make([]map[string]any, 0, len(ids))
+		for _, id := range ids {
+			value = append(value, map[string]any{"id": id})
+		}
+		writeJSON(w, map[string]any{
+			"value":            value,
+			"@odata.deltaLink": srv.URL + "/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
+		})
+	})
+	mux.HandleFunc("/me/mailFolders/inbox/messages", func(w http.ResponseWriter, r *http.Request) {
+		countFilter = r.URL.Query().Get("$filter")
+		writeJSON(w, map[string]any{"@odata.count": held, "value": []map[string]any{}})
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, &countFilter
+}
+
+func TestAnAnchorHoldingFewerThanTheFolderReportsIsRefused(t *testing.T) {
+	srv, _ := anchorStub(t, []string{"m1"}, 5)
+	ids, delta, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
+	if !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want ErrUnreachable — a round that closed short of the folder's own tally", err)
+	}
+	if ids != nil || delta != "" {
+		t.Errorf("ids = %v, deltaLink = %q, want neither: a watermark stored here would drop the 4 the walk never saw", ids, delta)
+	}
+	if !strings.Contains(err.Error(), "holds 5") {
+		t.Errorf("err = %q, want the tally the walk was measured against", err)
+	}
+}
+
+func TestAnAnchorHoldingMoreThanTheFolderReportsStands(t *testing.T) {
+	// A message arriving mid-walk is inside the walk and outside the closed
+	// window the tally covers. That gap must not read as a short round.
+	srv, _ := anchorStub(t, []string{"m1", "m2", "m3"}, 2)
+	ids, delta, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("DeltaInit: %v", err)
+	}
+	if len(ids) != 3 || delta == "" {
+		t.Errorf("ids = %v, deltaLink = %q, want all three and the link that closed the round", ids, delta)
+	}
+}
+
+func TestTheAnchorsTallyCoversTheWindowTheWalkOpenedIn(t *testing.T) {
+	after := time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC)
+	opened := time.Now().UTC()
+	srv, filter := anchorStub(t, []string{"m1"}, 1)
+	if _, _, err := NewAPI(srv.Client(), srv.URL).
+		DeltaInit(context.Background(), "at", folderInbox, after); err != nil {
+		t.Fatalf("DeltaInit: %v", err)
+	}
+	closed := time.Now().UTC()
+	if !strings.HasPrefix(*filter, "receivedDateTime ge "+after.Format(time.RFC3339)+" and ") {
+		t.Fatalf("count filter = %q, want the anchor's own lower bound", *filter)
+	}
+	_, upper, found := strings.Cut(*filter, " and receivedDateTime lt ")
+	if !found {
+		t.Fatalf("count filter = %q, want a closed upper bound: an open tally would count arrivals the walk could not have seen", *filter)
+	}
+	at, err := time.Parse(time.RFC3339, upper)
+	if err != nil {
+		t.Fatalf("upper bound %q: %v", upper, err)
+	}
+	// Second-grain rendering floors the bound, so allow the second it truncates.
+	if at.Before(opened.Truncate(time.Second)) || at.After(closed) {
+		t.Errorf("upper bound = %s, want the instant the walk opened (between %s and %s)", at, opened, closed)
+	}
 }

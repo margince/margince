@@ -75,6 +75,13 @@ func fullStub(t *testing.T, overrides map[string]http.HandlerFunc) *serveMuxWith
 			"@odata.deltaLink": s.srv.URL + "/me/mailFolders/sentitems/messages/delta?%24deltatoken=s1",
 		})
 	})
+	// The tally an anchor reconciles its walk against. Nothing here carries a
+	// receivedDateTime, so the closed window holds none of it and every canned
+	// round measures up; what the reconciliation refuses is covered against a
+	// stub built for it in client_test.go.
+	reg("/me/mailFolders/{folder}/messages", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"@odata.count": 0, "value": []map[string]any{}})
+	})
 	reg("/me/messages/s1/$value", func(w http.ResponseWriter, _ *http.Request) {
 		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion failure
 		_, _ = w.Write(sentMsg("s1@x", "buyer@acme.com"))
