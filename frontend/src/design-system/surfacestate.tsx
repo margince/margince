@@ -137,7 +137,23 @@ export type SectionDetail = {
   // Which mode limitation this is, in the caller's words. The generic
   // sentence is the floor, not the target.
   unsupportedReason?: string;
+  // WHY this section was withheld and what it costs the reader, in the
+  // caller's words. The generic "you cannot see this" is true of every
+  // withheld section and tells a reader nothing about what is missing from
+  // the one in front of them; a payload that names the source spends it here.
+  withheldReason?: string;
 };
+
+// The withheld sentence: the payload's own where it has one, the generic where
+// it does not. Its own component because a `??` inside the state switch reads
+// as one more branch of that switch, and the branch count there is what says
+// how many states a reader of this file has to hold at once.
+function Withheld({ reason }: Readonly<{ reason?: string }>) {
+  const t = useT();
+  return (
+    <p className="surfacestate-withheld">{reason ?? t("state.withheld")}</p>
+  );
+}
 
 /**
  * SurfaceState renders ONE surface's body in whichever of the nine states it
@@ -212,9 +228,7 @@ export function SurfaceState({
     <>
       {state === "ready" && children}
       {state === "empty" && <Nothing label={emptyLabel} detail={emptyDetail} />}
-      {state === "withheld" && (
-        <p className="surfacestate-withheld">{t("state.withheld")}</p>
-      )}
+      {state === "withheld" && <Withheld reason={detail?.withheldReason} />}
       {state === "unavailable" && (
         <p className="surfacestate-withheld">{t("state.unavailable")}</p>
       )}

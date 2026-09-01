@@ -343,3 +343,63 @@ export const TwoProviders: Story = {
     );
   },
 };
+
+/**
+ * The mobile number offered for a contact whose work email is already on
+ * record — the common case once a lookup has run, and the one that spends more
+ * than a reader would guess.
+ *
+ * Surfe will not look for a number without the email flag set, and it charges
+ * for whatever it sends back regardless of what we already hold. So this press
+ * costs two credits and buys the address a second time. The button names only
+ * what is being SOUGHT; the line under it names what is paid for again.
+ */
+export const BuyMobileWithEmailHeld: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /provider-connections": () =>
+        jsonResponse({
+          data: [
+            {
+              provider: "surfe",
+              status: "connected",
+              credential_present: true,
+              catalog: [
+                { category: "linkedin_profile", free: true, cost: {} },
+                {
+                  category: "professional_email",
+                  free: false,
+                  cost: { email: 1 },
+                },
+                {
+                  category: "mobile",
+                  free: false,
+                  cost: { email: 1, mobile: 1 },
+                  requires: "professional_email",
+                },
+              ],
+              configuration: {
+                categories: {
+                  linkedin_profile: true,
+                  professional_email: true,
+                  mobile: true,
+                },
+              },
+              credits: { pools: {} },
+              version: 1,
+              created_at: "2026-08-20T09:00:00Z",
+              updated_at: "2026-08-20T09:00:00Z",
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[profile({ state: "completed", mobile_phones: [] })]}
+        />
+      </StoryProviders>
+    );
+  },
+};

@@ -1393,6 +1393,7 @@ const (
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
+	AttentionItemSourceLeadResponse        AttentionItemSource = "lead_response"
 	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
@@ -1429,6 +1430,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceFailedApproval:
 		return true
 	case AttentionItemSourceIntroductionRequest:
+		return true
+	case AttentionItemSourceLeadResponse:
 		return true
 	case AttentionItemSourceMeeting:
 		return true
@@ -8293,6 +8296,7 @@ const (
 	PersonMomentRuleNothingNeeded    PersonMomentRule = "nothing_needed"
 	PersonMomentRuleOpenPromise      PersonMomentRule = "open_promise"
 	PersonMomentRuleOverduePromise   PersonMomentRule = "overdue_promise"
+	PersonMomentRuleOverdueTask      PersonMomentRule = "overdue_task"
 	PersonMomentRulePublicSignal     PersonMomentRule = "public_signal"
 	PersonMomentRuleReEngaged        PersonMomentRule = "re_engaged"
 	PersonMomentRuleRoleChange       PersonMomentRule = "role_change"
@@ -8315,6 +8319,8 @@ func (e PersonMomentRule) Valid() bool {
 	case PersonMomentRuleOpenPromise:
 		return true
 	case PersonMomentRuleOverduePromise:
+		return true
+	case PersonMomentRuleOverdueTask:
 		return true
 	case PersonMomentRulePublicSignal:
 		return true
@@ -11680,6 +11686,7 @@ const (
 	WorklistFilterCustomerWaiting WorklistFilter = "customer_waiting"
 	WorklistFilterDealsAtRisk     WorklistFilter = "deals_at_risk"
 	WorklistFilterDecisions       WorklistFilter = "decisions"
+	WorklistFilterLeads           WorklistFilter = "leads"
 	WorklistFilterMeetings        WorklistFilter = "meetings"
 	WorklistFilterSystem          WorklistFilter = "system"
 	WorklistFilterTasks           WorklistFilter = "tasks"
@@ -11695,6 +11702,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterDealsAtRisk:
 		return true
 	case WorklistFilterDecisions:
+		return true
+	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
 		return true
@@ -11850,6 +11859,7 @@ const (
 	WorklistCountCategoryCustomerWaiting WorklistCountCategory = "customer_waiting"
 	WorklistCountCategoryDealsAtRisk     WorklistCountCategory = "deals_at_risk"
 	WorklistCountCategoryDecisions       WorklistCountCategory = "decisions"
+	WorklistCountCategoryLeads           WorklistCountCategory = "leads"
 	WorklistCountCategoryMeetings        WorklistCountCategory = "meetings"
 	WorklistCountCategorySystem          WorklistCountCategory = "system"
 	WorklistCountCategoryTasks           WorklistCountCategory = "tasks"
@@ -11863,6 +11873,8 @@ func (e WorklistCountCategory) Valid() bool {
 	case WorklistCountCategoryDealsAtRisk:
 		return true
 	case WorklistCountCategoryDecisions:
+		return true
+	case WorklistCountCategoryLeads:
 		return true
 	case WorklistCountCategoryMeetings:
 		return true
@@ -11943,6 +11955,7 @@ const (
 	WorklistItemCategoryCustomerWaiting WorklistItemCategory = "customer_waiting"
 	WorklistItemCategoryDealsAtRisk     WorklistItemCategory = "deals_at_risk"
 	WorklistItemCategoryDecisions       WorklistItemCategory = "decisions"
+	WorklistItemCategoryLeads           WorklistItemCategory = "leads"
 	WorklistItemCategoryMeetings        WorklistItemCategory = "meetings"
 	WorklistItemCategorySystem          WorklistItemCategory = "system"
 	WorklistItemCategoryTasks           WorklistItemCategory = "tasks"
@@ -11957,6 +11970,8 @@ func (e WorklistItemCategory) Valid() bool {
 		return true
 	case WorklistItemCategoryDecisions:
 		return true
+	case WorklistItemCategoryLeads:
+		return true
 	case WorklistItemCategoryMeetings:
 		return true
 	case WorklistItemCategorySystem:
@@ -11970,49 +11985,49 @@ func (e WorklistItemCategory) Valid() bool {
 
 // Defines values for WorklistItemConsequence.
 const (
-	WorklistItemConsequenceBuyerWaits            WorklistItemConsequence = "buyer_waits"
-	WorklistItemConsequenceCustomerNeverReceived WorklistItemConsequence = "customer_never_received"
-	WorklistItemConsequenceDataDrifts            WorklistItemConsequence = "data_drifts"
-	WorklistItemConsequenceDealDrifts            WorklistItemConsequence = "deal_drifts"
-	WorklistItemConsequenceDealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
-	WorklistItemConsequenceLegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
-	WorklistItemConsequenceMailboxBlind          WorklistItemConsequence = "mailbox_blind"
-	WorklistItemConsequenceMeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
-	WorklistItemConsequenceNone                  WorklistItemConsequence = "none"
-	WorklistItemConsequencePromiseBreaks         WorklistItemConsequence = "promise_breaks"
-	WorklistItemConsequenceTaskSlips             WorklistItemConsequence = "task_slips"
-	WorklistItemConsequenceWorkBlocked           WorklistItemConsequence = "work_blocked"
-	WorklistItemConsequenceYouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
+	BuyerWaits            WorklistItemConsequence = "buyer_waits"
+	CustomerNeverReceived WorklistItemConsequence = "customer_never_received"
+	DataDrifts            WorklistItemConsequence = "data_drifts"
+	DealDrifts            WorklistItemConsequence = "deal_drifts"
+	DealSlipsPastClose    WorklistItemConsequence = "deal_slips_past_close"
+	LegalDeadlineMissed   WorklistItemConsequence = "legal_deadline_missed"
+	MailboxBlind          WorklistItemConsequence = "mailbox_blind"
+	MeetingUnprepared     WorklistItemConsequence = "meeting_unprepared"
+	None                  WorklistItemConsequence = "none"
+	PromiseBreaks         WorklistItemConsequence = "promise_breaks"
+	TaskSlips             WorklistItemConsequence = "task_slips"
+	WorkBlocked           WorklistItemConsequence = "work_blocked"
+	YouBelieveItHappened  WorklistItemConsequence = "you_believe_it_happened"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemConsequence enum.
 func (e WorklistItemConsequence) Valid() bool {
 	switch e {
-	case WorklistItemConsequenceBuyerWaits:
+	case BuyerWaits:
 		return true
-	case WorklistItemConsequenceCustomerNeverReceived:
+	case CustomerNeverReceived:
 		return true
-	case WorklistItemConsequenceDataDrifts:
+	case DataDrifts:
 		return true
-	case WorklistItemConsequenceDealDrifts:
+	case DealDrifts:
 		return true
-	case WorklistItemConsequenceDealSlipsPastClose:
+	case DealSlipsPastClose:
 		return true
-	case WorklistItemConsequenceLegalDeadlineMissed:
+	case LegalDeadlineMissed:
 		return true
-	case WorklistItemConsequenceMailboxBlind:
+	case MailboxBlind:
 		return true
-	case WorklistItemConsequenceMeetingUnprepared:
+	case MeetingUnprepared:
 		return true
-	case WorklistItemConsequenceNone:
+	case None:
 		return true
-	case WorklistItemConsequencePromiseBreaks:
+	case PromiseBreaks:
 		return true
-	case WorklistItemConsequenceTaskSlips:
+	case TaskSlips:
 		return true
-	case WorklistItemConsequenceWorkBlocked:
+	case WorkBlocked:
 		return true
-	case WorklistItemConsequenceYouBelieveItHappened:
+	case YouBelieveItHappened:
 		return true
 	default:
 		return false
@@ -12095,6 +12110,7 @@ const (
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
 	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
+	WorklistItemSourceLeadResponse        WorklistItemSource = "lead_response"
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
@@ -12133,6 +12149,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceFailedApproval:
 		return true
 	case WorklistItemSourceIntroductionRequest:
+		return true
+	case WorklistItemSourceLeadResponse:
 		return true
 	case WorklistItemSourceMeeting:
 		return true
@@ -12182,6 +12200,7 @@ const (
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
 	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
+	WorklistReachSourceLeadResponse        WorklistReachSource = "lead_response"
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
@@ -12220,6 +12239,8 @@ func (e WorklistReachSource) Valid() bool {
 		return true
 	case WorklistReachSourceIntroductionRequest:
 		return true
+	case WorklistReachSourceLeadResponse:
+		return true
 	case WorklistReachSourceMeeting:
 		return true
 	case WorklistReachSourceNotice:
@@ -12254,8 +12275,11 @@ const (
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
+	WorklistReasonKindResponseDueSoon    WorklistReasonKind = "response_due_soon"
+	WorklistReasonKindResponseOverdue    WorklistReasonKind = "response_overdue"
 	WorklistReasonKindRoutine            WorklistReasonKind = "routine"
 	WorklistReasonKindStale              WorklistReasonKind = "stale"
+	WorklistReasonKindUnassigned         WorklistReasonKind = "unassigned"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
 )
 
@@ -12296,9 +12320,15 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindRepeatedFailure:
 		return true
+	case WorklistReasonKindResponseDueSoon:
+		return true
+	case WorklistReasonKindResponseOverdue:
+		return true
 	case WorklistReasonKindRoutine:
 		return true
 	case WorklistReasonKindStale:
+		return true
+	case WorklistReasonKindUnassigned:
 		return true
 	case WorklistReasonKindWaitingDays:
 		return true
@@ -13942,6 +13972,7 @@ const (
 	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
 	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
 	Decisions       GetWorklistParamsFilter = "decisions"
+	Leads           GetWorklistParamsFilter = "leads"
 	Meetings        GetWorklistParamsFilter = "meetings"
 	System          GetWorklistParamsFilter = "system"
 	Tasks           GetWorklistParamsFilter = "tasks"
@@ -13957,6 +13988,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case DealsAtRisk:
 		return true
 	case Decisions:
+		return true
+	case Leads:
 		return true
 	case Meetings:
 		return true

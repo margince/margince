@@ -30,7 +30,7 @@
   padding: 0 var(--space-5);
   border-bottom: 1px solid var(--borderSubtle);
 }
-.panel-head h2 {
+.panel-head .panel-title {
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
   color: var(--textContent);
@@ -232,8 +232,8 @@
 .panel-warn > .panel-head {
   gap: var(--space-2);
 }
-.panel-accent > .panel-head h2,
-.panel-warn > .panel-head h2 {
+.panel-accent > .panel-head .panel-title,
+.panel-warn > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -249,7 +249,7 @@
   background: var(--accentLight);
   border-bottom: 1px solid var(--accentMed);
 }
-.panel-accent > .panel-head h2 {
+.panel-accent > .panel-head .panel-title {
   color: var(--accentText);
 }
 .panel-accent > .panel-foot {
@@ -267,7 +267,7 @@
   background: var(--warnBg);
   border-bottom: 1px solid var(--warnBorder);
 }
-.panel-warn > .panel-head h2 {
+.panel-warn > .panel-head .panel-title {
   color: var(--warn);
 }
 .panel-warn > .panel-foot {
@@ -280,7 +280,7 @@
  * it sits beside "accent" and "warn" rather than replacing either. A reader
  * seeing indigo anywhere knows the same thing: Margince did this. */
 .panel-ai > .panel-head,
-.panel-ai > .panel-head h2 {
+.panel-ai > .panel-head .panel-title {
   gap: var(--space-2);
 }
 /* The band hugs its two lines instead of centring them in a row sized for one.
@@ -293,7 +293,7 @@
   min-height: 0;
   padding-block: var(--space-3);
 }
-.panel-ai > .panel-head h2 {
+.panel-ai > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -307,7 +307,7 @@
   background: var(--aiLight);
   border-bottom: 1px solid var(--aiMed);
 }
-.panel-ai > .panel-head h2 {
+.panel-ai > .panel-head .panel-title {
   color: var(--aiText);
 }
 .panel-ai > .panel-foot {

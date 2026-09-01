@@ -75,6 +75,13 @@ func fullStub(t *testing.T, overrides map[string]http.HandlerFunc) *serveMuxWith
 			"@odata.deltaLink": s.srv.URL + "/me/mailFolders/sentitems/messages/delta?%24deltatoken=s1",
 		})
 	})
+	// The tally an anchor reconciles its walk against. Nothing here carries a
+	// receivedDateTime, so the closed window holds none of it and every canned
+	// round measures up; what the reconciliation refuses is covered against a
+	// stub built for it in client_test.go.
+	reg("/me/mailFolders/{folder}/messages", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"@odata.count": 0, "value": []map[string]any{}})
+	})
 	reg("/me/messages/s1/$value", func(w http.ResponseWriter, _ *http.Request) {
 		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion failure
 		_, _ = w.Write(sentMsg("s1@x", "buyer@acme.com"))
@@ -92,8 +99,15 @@ func fail500(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.Status
 
 // emptyRound is a folder with nothing new in it, for a test that is about the
 // other folder.
-func emptyRound(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, map[string]any{"value": []map[string]any{}, "@odata.deltaLink": "https://graph/none"})
+// The link is built from the request rather than named outright: a deltaLink is
+// STORED and followed on the next cycle, so the client refuses one pointing
+// anywhere but the API it is talking to, and this stub has to be a Graph that
+// behaves.
+func emptyRound(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{
+		"value":            []map[string]any{},
+		"@odata.deltaLink": "http://" + r.Host + r.URL.Path + "?%24deltatoken=none",
+	})
 }
 
 func authViaStub(t *testing.T, c *Connector) []byte {

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -219,4 +221,58 @@ func registeredNames(descs []connector.Descriptor) map[string]bool {
 		names[d.Name] = true
 	}
 	return names
+}
+
+// THE WORKER CARRIES A RUNTIME RESOLVER FOR EVERY VENDOR, so a vendor whose app
+// exists only in the database still gets its connectors registered.
+//
+// Precisely what this pins, and no more: that CaptureSyncRegistry hands a
+// resolver to BOTH vendors' registrations. Registration is on the resolver
+// EXISTING (googleAppReachable and registerMicrosoftConnectors ask whether
+// anything could supply an app, not whether something does), so this passes with
+// an empty store on purpose — the environment is empty here to take the other
+// source away, not to stand in for a configured installation.
+//
+// That is the seam this ticket is about. The dispatcher walks
+// registry.Connectors(), so a vendor the worker never registered is a mailbox
+// that connects and is then never enumerated: an empty inbox rather than a
+// broken one. Microsoft was registered from environment credentials alone while
+// Google resolved a stored app, and nothing failed to say so.
+//
+// Whether a resolver then RESOLVES is a different question, held elsewhere:
+// TestAStoredAppRegistersTheGoogleConnectors over googleAppReachable's sources,
+// and TestEveryMicrosoftMethodReachesTheSameResolvedApp end to end through the
+// Graph authorizer.
+func TestTheWorkerCarriesARuntimeResolverForEveryVendor(t *testing.T) {
+	// A pool and a vault, and nothing in the environment: with the environment
+	// source gone, a registration can only come from the resolver.
+	resolvers := CaptureSyncRegistry(&pgxpool.Pool{}, fakeVault{},
+		GmailConfig{}, GraphConfig{}, CaptureConfig{}, nil)
+
+	names := registeredNames(resolvers.Connectors())
+	for _, want := range []string{"gmail", "gcal", "graph", "graphcal"} {
+		if !names[want] {
+			t.Errorf("no %q connector with a resolver available: an installation that configured "+
+				"that app in the product connects the mailbox and then nothing pulls it — "+
+				"connectors = %v", want, names)
+		}
+	}
+}
+
+// AND REGISTERS NONE OF THEM WHERE NEITHER SOURCE IS THERE — no resolver to
+// build one from and nothing in the environment. A connector with no app behind
+// it fails every call with "no app configured", which is a worse answer than the
+// declared 501: it looks configured and is not.
+func TestTheWorkerRegistersNoVendorWithNeitherSource(t *testing.T) {
+	names := registeredNames(
+		CaptureSyncRegistry(nil, nil, GmailConfig{}, GraphConfig{}, CaptureConfig{}, nil).Connectors())
+	for _, unwanted := range []string{"gmail", "gcal", "graph", "graphcal"} {
+		if names[unwanted] {
+			t.Errorf("registered %q with neither a stored app to resolve nor one in the "+
+				"environment — connectors = %v", unwanted, names)
+		}
+	}
+	if !names["imap"] {
+		t.Error("the standing IMAP connector needs no app and must be there regardless")
+	}
 }

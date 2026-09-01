@@ -9585,7 +9585,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system] }
+          schema: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system] }
           description: 'Narrow the queue to one kind of work. Omitted means everything, which is the default view.'
         - name: limit
           in: query
@@ -24585,7 +24585,7 @@ components:
         `job_change` fires only on a RECORDED employment change, and `public_signal` needs a
         connected data provider. A rule that cannot fire is absent from the page, not an empty
         card.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [meeting_prep, re_engaged, job_change, overdue_promise, overdue_task, gone_quiet, open_promise, role_change, public_signal, missing_next_step, thin_relationship, nothing_needed]
 
     PersonMomentEvidence:
       type: object
@@ -33897,7 +33897,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -34057,7 +34057,7 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        filter: { type: string, enum: [all, customer_waiting, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
+        filter: { type: string, enum: [all, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system], description: 'The narrowing this read applied.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
           type: array
@@ -34111,7 +34111,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, introduction_request, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, automation_run, notice, introduction_request, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -34169,7 +34169,7 @@ components:
       properties:
         category:
           type: string
-          enum: [customer_waiting, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
           description: 'Which kind of work these numbers are about. The same vocabulary the filter uses.'
         considered:
           type: integer
@@ -34222,7 +34222,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -34231,7 +34231,7 @@ components:
             row rather than a hundred. Its own facts ride in `batch`.
         category:
           type: string
-          enum: [customer_waiting, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
         level:
           type: integer
@@ -34322,7 +34322,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, stale]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
