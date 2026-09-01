@@ -3785,6 +3785,27 @@ export const vi = {
     "Bạn đã đồng ý, nhưng quyền mà Margince đang dùng đã hết hạn. Tắt rồi bật lại tùy chọn này để gia hạn — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
   "overnightGrant.renewScope":
     "Bạn đã đồng ý, nhưng Margince nay làm được nhiều hơn, và quyền bạn đã cấp không bao gồm phần việc mới. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
+  "heldThreads.title": "Đang giữ lại khỏi nhóm",
+  "heldThreads.sub":
+    "Những chuỗi thư hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi cho phép mọi đồng nghiệp đọc nó; không ai khác có thể chia sẻ chuỗi của bạn.",
+  "heldThreads.empty": "hộp thư của bạn hiện không giữ lại gì",
+  "heldThreads.colThread": "Chuỗi thư",
+  "heldThreads.colWhy": "Lý do giữ lại",
+  "heldThreads.colWhen": "Đã đến",
+  "heldThreads.colActions": "Thao tác",
+  "heldThreads.release": "Chia sẻ với nhóm",
+  "heldThreads.released": "Đã chia sẻ với nhóm",
+  "heldThreads.noSubject": "thư mở đầu đã bị xóa",
+  "heldThreads.pending": "Đang chờ phán quyết",
+  "heldThreads.attempts": "đã hỏi {count} lần",
+  "heldThreads.heldByOthers":
+    "Vẫn bị giữ lại: {count} hộp thư khác cũng đã nhập thư này và chưa chia sẻ. Một chuỗi chỉ mở khi mọi người nhận đều đồng ý.",
+  "heldThreads.kind.legal": "Pháp lý",
+  "heldThreads.kind.financialCorporate": "Tài chính công ty",
+  "heldThreads.kind.personnel": "Nhân sự",
+  "heldThreads.kind.personal": "Cá nhân",
+  "heldThreads.kind.securityIncident": "Sự cố bảo mật",
+  "heldThreads.kind.explicitlyConfidential": "Được đánh dấu bảo mật",
   "senders.title": "Người gửi",
   "senders.sub":
     "Những gì đã được quyết định về từng địa chỉ mà hộp thư của bạn mang vào — và câu trả lời của chính bạn nếu có. Chỉ người gửi của bạn; đồng nghiệp không bao giờ thấy danh sách này.",

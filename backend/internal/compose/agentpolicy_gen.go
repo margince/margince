@@ -189,6 +189,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/capture/counterparty-holds":                                 {Op: "listCaptureCounterpartyHolds", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/email-domains":                                      {Op: "listWorkspaceEmailDomains", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/exclusions":                                         {Op: "listCaptureExclusions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/capture/held-threads":                                       {Op: "listHeldThreads", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/owner-identities":                                   {Op: "listCaptureOwnerIdentities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/senders":                                            {Op: "listCaptureSenders", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/traces/{id}":                                        {Op: "readCaptureTracePipeline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

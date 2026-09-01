@@ -5804,6 +5804,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/held-threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What your mailbox is holding right now.
+         * @description The threads your mailbox is withholding from your colleagues, and why. Pending rows first,
+         *     because during a classifier outage those are the ones nobody has decided — a thread whose
+         *     `attempts` stop climbing is a model that stopped answering rather than a thread that is
+         *     merely slow.
+         *
+         *     Release one with `POST /activities/threads/{thread_key}/audience`, which is the same door a
+         *     record's timeline uses. This endpoint only answers the question that page cannot: what am I
+         *     holding, across every contact at once.
+         *
+         *     A thread the classifier cleared is not here, because it is not held. Everything else is,
+         *     `unsure` included: a thread the model could not judge withholds exactly like one it judged
+         *     legal, and an owner who is not shown it cannot release it.
+         *
+         *     Your own mailbox and nobody else's. What a person is holding is the most private thing this
+         *     module knows — the list names threads judged legal, personnel or personal — so there is no
+         *     id here that reaches a colleague's list and no admin view of one.
+         */
+        get: operations["listHeldThreads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/senders": {
         parameters: {
             query?: never;
@@ -12723,6 +12758,51 @@ export interface components {
             verified: boolean;
             /** Format: date-time */
             created_at?: string;
+        };
+        HeldThreadListResponse: {
+            data: components["schemas"]["HeldThread"][];
+        };
+        /** @description One thread your mailbox is withholding, and what is known about why. */
+        HeldThread: {
+            /**
+             * @description The thread this holds, and the key `POST /activities/threads/{thread_key}/audience`
+             *     takes to release it.
+             */
+            thread_key: string;
+            /**
+             * @description The ledger's own word: `pending` while no verdict has landed, `held` or `unsure` once
+             *     one has, `held_by_owner` where you said so yourself.
+             */
+            status: string;
+            /**
+             * @description No verdict has landed yet. Stated as its own field rather than left to a client
+             *     comparing `status`, because it decides the order these arrive in and a reader that
+             *     derived it differently would sort them differently.
+             */
+            pending: boolean;
+            /**
+             * @description What the classifier concluded the thread is ABOUT — legal, personnel,
+             *     financial_corporate, personal, security_incident, explicitly_confidential. Absent while
+             *     pending, because nothing has concluded anything yet.
+             */
+            kind?: string;
+            /**
+             * @description The subject of the message that opened the thread, so one held thread reads differently
+             *     from another. Absent when that message was erased while the verdict stood, which the
+             *     ledger deliberately survives — losing the verdict would re-open a thread a classifier
+             *     already held.
+             */
+            subject?: string;
+            /**
+             * Format: date-time
+             * @description When that message arrived. Absent for the same reason `subject` can be.
+             */
+            occurred_at?: string;
+            /**
+             * @description How many times a verdict has been asked for. This is the outage signal: a pending row
+             *     whose attempts stop climbing is a model that stopped answering.
+             */
+            attempts: number;
         };
         CaptureSenderListResponse: {
             data: components["schemas"]["CaptureSenderDecision"][];
@@ -35908,6 +35988,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listHeldThreads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's held threads, pending first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeldThreadListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listCaptureSenders: {

@@ -116,6 +116,7 @@ import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
 import { GoogleAppCard } from "./google-app";
+import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
@@ -413,6 +414,12 @@ function ConnectionsTab() {
           The posture rows above say what may be read; this says what was
           decided, which is the half a reader audits. */}
       <CaptureSendersCard />
+      {/* And what those decisions are currently WITHHOLDING. The senders card
+          above says what was decided about each correspondent; this says which
+          threads are held back from the team right now, which is the question
+          an outage makes urgent — every new thread lands pending and stays
+          there until the classifier answers again. */}
+      <HeldThreadsCard />
       {/* Directly under the mailboxes, because it is the same decision seen
           from the other side: those cards say what Margince may READ, this one
           says whether it may act on it overnight while nobody is watching. The

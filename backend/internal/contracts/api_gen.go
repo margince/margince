@@ -19659,6 +19659,45 @@ type HealthDimension struct {
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
 
+// HeldThread One thread your mailbox is withholding, and what is known about why.
+type HeldThread struct {
+	// Attempts How many times a verdict has been asked for. This is the outage signal: a pending row
+	// whose attempts stop climbing is a model that stopped answering.
+	Attempts int `json:"attempts"`
+
+	// Kind What the classifier concluded the thread is ABOUT — legal, personnel,
+	// financial_corporate, personal, security_incident, explicitly_confidential. Absent while
+	// pending, because nothing has concluded anything yet.
+	Kind *string `json:"kind,omitempty"`
+
+	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// Pending No verdict has landed yet. Stated as its own field rather than left to a client
+	// comparing `status`, because it decides the order these arrive in and a reader that
+	// derived it differently would sort them differently.
+	Pending bool `json:"pending"`
+
+	// Status The ledger's own word: `pending` while no verdict has landed, `held` or `unsure` once
+	// one has, `held_by_owner` where you said so yourself.
+	Status string `json:"status"`
+
+	// Subject The subject of the message that opened the thread, so one held thread reads differently
+	// from another. Absent when that message was erased while the verdict stood, which the
+	// ledger deliberately survives — losing the verdict would re-open a thread a classifier
+	// already held.
+	Subject *string `json:"subject,omitempty"`
+
+	// ThreadKey The thread this holds, and the key `POST /activities/threads/{thread_key}/audience`
+	// takes to release it.
+	ThreadKey string `json:"thread_key"`
+}
+
+// HeldThreadListResponse defines model for HeldThreadListResponse.
+type HeldThreadListResponse struct {
+	Data []HeldThread `json:"data"`
+}
+
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
 //
@@ -42163,6 +42202,9 @@ type ServerInterface interface {
 	// Destroy the mail one of your own rules matched.
 	// (POST /capture/exclusions/{id}/purge)
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
+	// What your mailbox is holding right now.
+	// (GET /capture/held-threads)
+	ListHeldThreads(w http.ResponseWriter, r *http.Request)
 	// The caller's own other email addresses.
 	// (GET /capture/owner-identities)
 	ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request)
@@ -44074,6 +44116,12 @@ func (_ Unimplemented) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Req
 // Destroy the mail one of your own rules matched.
 // (POST /capture/exclusions/{id}/purge)
 func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What your mailbox is holding right now.
+// (GET /capture/held-threads)
+func (_ Unimplemented) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -50490,6 +50538,26 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PurgeCaptureExclusion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListHeldThreads operation middleware
+func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListHeldThreads(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70771,6 +70839,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/exclusions/{id}/purge", wrapper.PurgeCaptureExclusion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/held-threads", wrapper.ListHeldThreads)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/owner-identities", wrapper.ListCaptureOwnerIdentities)

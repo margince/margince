@@ -3857,6 +3857,27 @@ export const en = {
     "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "overnightGrant.renewScope":
     "You said yes, but Margince has learned to do more since, and the authority you gave does not cover the new work. Turn this off and on again to widen it — until then your brief is not being prepared.",
+  "heldThreads.title": "Held back from your team",
+  "heldThreads.sub":
+    "Threads your mailbox is withholding. Releasing one lets every colleague read it; nobody else can release yours.",
+  "heldThreads.empty": "your mailbox is withholding nothing right now",
+  "heldThreads.colThread": "Thread",
+  "heldThreads.colWhy": "Why it is held",
+  "heldThreads.colWhen": "Arrived",
+  "heldThreads.colActions": "What you can do",
+  "heldThreads.release": "Share with the team",
+  "heldThreads.released": "Shared with the team",
+  "heldThreads.noSubject": "the message this began with is gone",
+  "heldThreads.pending": "Waiting on a verdict",
+  "heldThreads.attempts": "asked {count} time(s)",
+  "heldThreads.heldByOthers":
+    "Still held: {count} other mailbox imported this message and has not shared it. A thread opens only when everyone who received it agrees.",
+  "heldThreads.kind.legal": "Legal",
+  "heldThreads.kind.financialCorporate": "Company finances",
+  "heldThreads.kind.personnel": "Personnel",
+  "heldThreads.kind.personal": "Personal",
+  "heldThreads.kind.securityIncident": "Security incident",
+  "heldThreads.kind.explicitlyConfidential": "Marked confidential",
   "senders.title": "Senders",
   "senders.sub":
     "What was decided about each address your mailbox brought in — and your own answer where you gave one. Your senders only; a colleague never sees this list.",

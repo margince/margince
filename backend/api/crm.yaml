@@ -8788,6 +8788,39 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /capture/held-threads:
+    get:
+      tags: [Capture]
+      operationId: listHeldThreads
+      summary: What your mailbox is holding right now.
+      description: |
+        The threads your mailbox is withholding from your colleagues, and why. Pending rows first,
+        because during a classifier outage those are the ones nobody has decided — a thread whose
+        `attempts` stop climbing is a model that stopped answering rather than a thread that is
+        merely slow.
+
+        Release one with `POST /activities/threads/{thread_key}/audience`, which is the same door a
+        record's timeline uses. This endpoint only answers the question that page cannot: what am I
+        holding, across every contact at once.
+
+        A thread the classifier cleared is not here, because it is not held. Everything else is,
+        `unsure` included: a thread the model could not judge withholds exactly like one it judged
+        legal, and an owner who is not shown it cannot release it.
+
+        Your own mailbox and nobody else's. What a person is holding is the most private thing this
+        module knows — the list names threads judged legal, personnel or personal — so there is no
+        id here that reaches a colleague's list and no admin view of one.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The caller's held threads, pending first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HeldThreadListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /capture/senders:
     get:
       tags: [Capture]
@@ -19067,6 +19100,58 @@ components:
             Whether a human vouched for this domain. Only a verified domain — or one the
             installation's own company claims — suppresses storage.
         created_at: { type: string, format: date-time }
+    HeldThreadListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/HeldThread' }
+
+    HeldThread:
+      type: object
+      description: One thread your mailbox is withholding, and what is known about why.
+      required: [thread_key, status, pending, attempts]
+      properties:
+        thread_key:
+          type: string
+          description: |
+            The thread this holds, and the key `POST /activities/threads/{thread_key}/audience`
+            takes to release it.
+        status:
+          type: string
+          description: |
+            The ledger's own word: `pending` while no verdict has landed, `held` or `unsure` once
+            one has, `held_by_owner` where you said so yourself.
+        pending:
+          type: boolean
+          description: |
+            No verdict has landed yet. Stated as its own field rather than left to a client
+            comparing `status`, because it decides the order these arrive in and a reader that
+            derived it differently would sort them differently.
+        kind:
+          type: string
+          description: |
+            What the classifier concluded the thread is ABOUT — legal, personnel,
+            financial_corporate, personal, security_incident, explicitly_confidential. Absent while
+            pending, because nothing has concluded anything yet.
+        subject:
+          type: string
+          description: |
+            The subject of the message that opened the thread, so one held thread reads differently
+            from another. Absent when that message was erased while the verdict stood, which the
+            ledger deliberately survives — losing the verdict would re-open a thread a classifier
+            already held.
+        occurred_at:
+          type: string
+          format: date-time
+          description: When that message arrived. Absent for the same reason `subject` can be.
+        attempts:
+          type: integer
+          description: |
+            How many times a verdict has been asked for. This is the outage signal: a pending row
+            whose attempts stop climbing is a model that stopped answering.
+
     CaptureSenderListResponse:
       type: object
       required: [data]

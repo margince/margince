@@ -411,6 +411,10 @@ func (stubs) PurgeCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "PurgeCaptureExclusion")
 }
 
+func (stubs) ListHeldThreads(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListHeldThreads")
+}
+
 func (stubs) ListCaptureOwnerIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCaptureOwnerIdentities")
 }

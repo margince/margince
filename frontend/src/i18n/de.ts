@@ -3821,6 +3821,27 @@ export const de = {
     "Du hast zugestimmt, aber die Vollmacht, unter der Margince gearbeitet hat, ist abgelaufen. Schalte die Option aus und wieder ein, um sie zu erneuern — bis dahin wird dein Überblick nicht vorbereitet.",
   "overnightGrant.renewScope":
     "Du hast zugestimmt, aber Margince kann inzwischen mehr, und die erteilte Vollmacht deckt die neue Arbeit nicht ab. Schalte die Option aus und wieder ein, um sie zu erweitern — bis dahin wird dein Überblick nicht vorbereitet.",
+  "heldThreads.title": "Vom Team zurückgehalten",
+  "heldThreads.sub":
+    "Konversationen, die Ihr Postfach zurückhält. Wenn Sie eine freigeben, können alle Kolleginnen und Kollegen sie lesen; niemand sonst kann Ihre freigeben.",
+  "heldThreads.empty": "Ihr Postfach hält derzeit nichts zurück",
+  "heldThreads.colThread": "Konversation",
+  "heldThreads.colWhy": "Warum zurückgehalten",
+  "heldThreads.colWhen": "Eingegangen",
+  "heldThreads.colActions": "Aktionen",
+  "heldThreads.release": "Mit dem Team teilen",
+  "heldThreads.released": "Mit dem Team geteilt",
+  "heldThreads.noSubject": "die ursprüngliche Nachricht ist gelöscht",
+  "heldThreads.pending": "Wartet auf Beurteilung",
+  "heldThreads.attempts": "{count}-mal angefragt",
+  "heldThreads.heldByOthers":
+    "Weiterhin zurückgehalten: {count} weiteres Postfach hat diese Nachricht ebenfalls importiert und nicht freigegeben. Eine Konversation wird erst geöffnet, wenn alle Empfänger zustimmen.",
+  "heldThreads.kind.legal": "Rechtliches",
+  "heldThreads.kind.financialCorporate": "Unternehmensfinanzen",
+  "heldThreads.kind.personnel": "Personal",
+  "heldThreads.kind.personal": "Privat",
+  "heldThreads.kind.securityIncident": "Sicherheitsvorfall",
+  "heldThreads.kind.explicitlyConfidential": "Als vertraulich markiert",
   "senders.title": "Absender",
   "senders.sub":
     "Was über jede Adresse entschieden wurde, die Ihr Postfach eingebracht hat — und Ihre eigene Antwort, wo Sie eine gegeben haben. Nur Ihre Absender; Kolleginnen und Kollegen sehen diese Liste nie.",
