@@ -25,12 +25,48 @@ func numericRate(coefficient int64, exp int32) pgtype.Numeric {
 	return pgtype.Numeric{Int: big.NewInt(coefficient), Exp: exp, Valid: true}
 }
 
+// TestConvertToBaseAppliesBothMinorUnitScales is the case a same-scale table
+// cannot reach, and the one a mixed pipeline meets first.
+//
+// A stored rate says what one MAJOR unit is worth ("1 JPY = 0.006 EUR" is how
+// the ingestion prompt reads a rates page), while both amounts count MINOR
+// units. JPY has none and EUR has two, so a bare minor × rate answers a
+// hundredth of the truth — and it answers it in the direction that makes a yen
+// deal look small on a page that ranks by money.
+func TestConvertToBaseAppliesBothMinorUnitScales(t *testing.T) {
+	// ¥5,000,000 is five million yen. At 1 JPY = 0.006 EUR that is €30,000,
+	// which in EUR minor units is 3,000,000.
+	got, err := ConvertToBase(5_000_000, numericRate(6, -3), "JPY", "EUR")
+	if err != nil {
+		t.Fatalf("converting yen to euro: %v", err)
+	}
+	if got != 3_000_000 {
+		t.Errorf("¥5,000,000 = %d EUR minor units, want 3000000 (€30,000); "+
+			"30000 would be €300, the scale error a bare minor × rate makes", got)
+	}
+	// And back the other way, so the fix cannot be a one-directional fudge:
+	// €30,000 at 1 EUR = 166.6667 JPY is about ¥5,000,001 — whole yen, because
+	// JPY has no minor unit to carry a fraction.
+	back, err := ConvertToBase(3_000_000, numericRate(1_666_667, -4), "EUR", "JPY")
+	if err != nil {
+		t.Fatalf("converting euro to yen: %v", err)
+	}
+	if back != 5_000_001 {
+		t.Errorf("€30,000 = %d JPY minor units, want 5000001 whole yen", back)
+	}
+}
+
 func TestConvertToBase(t *testing.T) {
 	cases := []struct {
 		name        string
 		amountMinor int64
 		rate        pgtype.Numeric
-		want        int64
+		// from and to are the currencies the amounts count minor units of.
+		// Empty means EUR on both sides — the same-scale case these rounding
+		// and overflow cases are about, stated once here rather than repeated
+		// on every row where it is not the subject.
+		from, to string
+		want     int64
 	}{
 		{name: "rate of 1.0 is a passthrough", amountMinor: 123456, rate: numericRate(1, 0), want: 123456},
 		{name: "positive half rounds away from zero", amountMinor: 1, rate: numericRate(5, -1), want: 1},
@@ -61,7 +97,11 @@ func TestConvertToBase(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := ConvertToBase(tc.amountMinor, tc.rate)
+			from, to := tc.from, tc.to
+			if from == "" {
+				from, to = "EUR", "EUR"
+			}
+			got, err := ConvertToBase(tc.amountMinor, tc.rate, from, to)
 			if err != nil {
 				t.Fatalf("ConvertToBase(%d, %v): %v", tc.amountMinor, tc.rate, err)
 			}
@@ -74,14 +114,14 @@ func TestConvertToBase(t *testing.T) {
 
 func TestConvertToBaseRefusesDishonestResults(t *testing.T) {
 	t.Run("non-finite rate is refused", func(t *testing.T) {
-		if _, err := ConvertToBase(100, pgtype.Numeric{NaN: true, Valid: true}); err == nil {
+		if _, err := ConvertToBase(100, pgtype.Numeric{NaN: true, Valid: true}, "EUR", "EUR"); err == nil {
 			t.Error("NaN rate converted — must refuse, a money total can never absorb it")
 		}
 	})
 	t.Run("overflowing conversion is refused", func(t *testing.T) {
 		// max-int64 minor units at rate 100 cannot fit int64; a wrapped
 		// (silently truncated) figure would be a lie about money.
-		if _, err := ConvertToBase(math.MaxInt64, numericRate(1, 2)); err == nil {
+		if _, err := ConvertToBase(math.MaxInt64, numericRate(1, 2), "EUR", "EUR"); err == nil {
 			t.Error("overflowing conversion returned a value — must refuse")
 		}
 	})
@@ -97,12 +137,12 @@ func TestConvertToBaseRefusesDishonestResults(t *testing.T) {
 func TestConvertToBaseRefusesRatherThanWrapping(t *testing.T) {
 	// The largest rate the column holds, against an amount near the top of its
 	// own range: a product no int64 can carry.
-	if _, err := ConvertToBase(math.MaxInt64, numericRate(9_999_999_999, 0)); err == nil {
+	if _, err := ConvertToBase(math.MaxInt64, numericRate(9_999_999_999, 0), "EUR", "EUR"); err == nil {
 		t.Error("a product past int64 returned a value — a wrapped figure is a plausible-looking wrong " +
 			"number, which is worse than no number")
 	}
 	// And the boundary the other way: a product that exactly fits is answered.
-	if got, err := ConvertToBase(math.MaxInt64, numericRate(1, 0)); err != nil || got != math.MaxInt64 {
+	if got, err := ConvertToBase(math.MaxInt64, numericRate(1, 0), "EUR", "EUR"); err != nil || got != math.MaxInt64 {
 		t.Errorf("the largest representable product = %d, %v; want it answered, not refused", got, err)
 	}
 }

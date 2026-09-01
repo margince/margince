@@ -9,7 +9,9 @@ package attention
 // Both facts here are about which SERVICE COPY the projection reads. A read
 // narrows onto a copy — the scope, the named owner, this day's rates — and a
 // projection that walked the shared service instead would answer with none of
-// them, silently and in the shape of a plausible page.
+// them, silently and in the shape of a plausible page. They live together
+// because that one line is what they both hold, not because money and scope
+// are one subject.
 
 import (
 	"testing"
@@ -27,9 +29,9 @@ func worklistOverDeals(fx BaseMoney, rows []RiskyDeal) *Service {
 		WithBaseMoney(fx)
 }
 
-func riskyDeal(name string, minor int64, currency string, owner ids.UUID) RiskyDeal {
-	amount, units := minor, currency
-	deal := RiskyDeal{DealID: ids.NewV7(), Name: name, AmountMinor: &amount, Currency: &units, QuietDays: 20}
+func riskyDeal(name string, amount CurrencyAmount, owner ids.UUID) RiskyDeal {
+	minor, units := amount.Minor, amount.Currency
+	deal := RiskyDeal{DealID: ids.NewV7(), Name: name, AmountMinor: &minor, Currency: &units, QuietDays: 20}
 	if !owner.IsZero() {
 		holder := owner
 		deal.OwnerID = &holder
@@ -37,15 +39,21 @@ func riskyDeal(name string, minor int64, currency string, owner ids.UUID) RiskyD
 	return deal
 }
 
-// The seam reaches the ordering through the endpoint, not only through the
-// projection a unit test can call directly. Unwired, the yen deal leads by
-// being the larger integer.
+// The seam reaches the ordering through the ENDPOINT, not only through the
+// projection a unit test can call directly.
+//
+// The yen deal is worth about €30,000 and the euro deal €4,000, while their
+// raw integers say the opposite ordering by a factor of twelve. Unwired, the
+// page ranks the integers.
 func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
 	svc := worklistOverDeals(
-		stubFX{base: "EUR", milli: map[string]int64{"JPY": 6}},
+		stubFX{base: "EUR", answers: map[CurrencyAmount]int64{
+			fiveMillionYen: 3_000_000,
+			eur(400_000):   400_000,
+		}},
 		[]RiskyDeal{
-			riskyDeal("yen", 5_000_000, "JPY", ids.UUID{}),
-			riskyDeal("euro", 40_000, "EUR", ids.UUID{}),
+			riskyDeal("yen", fiveMillionYen, ids.UUID{}),
+			riskyDeal("euro", eur(400_000), ids.UUID{}),
 		})
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25)
@@ -56,25 +64,26 @@ func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
 	if len(day.Queue) != 2 {
 		t.Fatalf("the queue carries %d rows, wanted the two deals", len(day.Queue))
 	}
-	if day.Queue[0].Title == nil || *day.Queue[0].Title != "euro" {
-		t.Fatalf("the queue leads with %v, wanted the euro deal — the yen figure is larger only as an integer", day.Queue[0].Title)
+	if day.Queue[0].Title == nil || *day.Queue[0].Title != "yen" {
+		t.Fatalf("the queue leads with %v, wanted the yen deal — it is worth €30,000 against €4,000", day.Queue[0].Title)
 	}
 	if day.Summary.BaseCurrency == nil || *day.Summary.BaseCurrency != "EUR" {
 		t.Fatalf("the summary names %v, wanted EUR", day.Summary.BaseCurrency)
 	}
 }
 
-// A named owner's queue carries their work. The projection reads taskOwner off
-// the service it is called on, and that field is only ever set on the read's
-// own copy — so this fails whenever the endpoint projects through the shared
-// service instead, with a page that looks like the rep's day and is not.
+// A named owner's queue carries THEIR work.
+//
+// The projection reads taskOwner off the service it is called on, and that
+// field lives only on the read's own copy — so a page assembled through the
+// shared service answers with the reader's own rows under the rep's name.
 func TestOpeningANamedRepsQueueReachesTheProjection(t *testing.T) {
 	lena := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
 	svc := worklistOverDeals(
-		stubFX{base: "EUR", milli: map[string]int64{}},
+		stubFX{base: "EUR", answers: map[CurrencyAmount]int64{eur(900_000): 900_000}},
 		[]RiskyDeal{
-			riskyDeal("lenas", 90_000, "EUR", lena),
-			riskyDeal("somebody elses", 90_000, "EUR", ids.MustParse("01a05500-0000-7000-8000-0000000000cc")),
+			riskyDeal("lenas", eur(900_000), lena),
+			riskyDeal("somebody elses", eur(900_000), ids.MustParse("01a05500-0000-7000-8000-0000000000cc")),
 		})
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", lena, 25)

@@ -10,8 +10,14 @@ package integration
 // The engine's own reading — the as-of cutoff, newest-wins, the identity
 // shortcut — is SQL, so a unit test over a stub cannot fail the binding. What
 // this proves is the seam's whole contract in one call: a foreign amount
-// converts at the stored rate, a base-currency amount converts at identity, and
-// a currency the estate holds no rate for comes back unpriced rather than raw.
+// converts at the stored rate and across the two currencies' minor-unit
+// scales, a base-currency amount converts at identity, and a currency the
+// estate holds no rate for comes back unpriced rather than raw.
+//
+// The foreign currency is JPY deliberately. It carries no minor unit where EUR
+// carries two, so a conversion that multiplied minor units by a major-unit
+// rate answers a hundredth of the truth here and is right for any same-scale
+// pair — which is every pair in the demo data.
 
 import (
 	"testing"
@@ -40,8 +46,9 @@ func TestTheWorklistPricesAmountsThroughTheStoredRates(t *testing.T) {
 	if base != "EUR" {
 		t.Fatalf("the seam prices into %q, wanted the installation's EUR", base)
 	}
-	if converted[0] == nil || *converted[0] != 30_000 {
-		t.Fatalf("¥5,000,000 came back as %v, wanted 30000 at the stored 0.006", converted[0])
+	if converted[0] == nil || *converted[0] != 3_000_000 {
+		t.Fatalf("¥5,000,000 came back as %v EUR minor units, wanted 3000000 (€30,000) at the stored 0.006; "+
+			"30000 would be €300, the answer a bare minor-unit multiply gives", converted[0])
 	}
 	if converted[1] == nil || *converted[1] != 40_000 {
 		t.Fatalf("a base-currency amount came back as %v, wanted itself", converted[1])

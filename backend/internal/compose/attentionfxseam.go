@@ -6,16 +6,15 @@ package compose
 // The Worklist's money, priced by the one FX engine.
 //
 // The ranked queue compares expected revenue between deals, and that comparison
-// is honest only in the installation's base currency. The conversion itself —
-// the direction, the as-of cutoff, newest-wins, the multiply-and-round — is
-// deals.FXRates + deals.ConvertToBase, the same engine the company page and the
-// hierarchy rollup price with, bound here as a seam so the queue cannot grow a
-// second spelling of it.
+// is honest only in the installation's base currency. Nothing about HOW is
+// decided here: deals.PriceAll runs the loop — which rate, what a missing one
+// means, and the two currencies' minor-unit scales — and this file is only the
+// wiring that hands it the installation's base and this read's amounts.
 //
-// The missing-rate policy is the caller's (fxconvert.go states why): this
-// surface leaves an unpriceable deal UNPRICED, so it ranks as a deal whose
-// value nobody recorded rather than by a number in the wrong units, and the
-// row still shows its own amount in its own currency.
+// deals.PriceAll's leave-it-unpriced policy is the one this surface wants: an
+// unpriceable deal ranks as a deal whose value nobody recorded rather than by a
+// number in the wrong units, and the row still shows its own amount in its own
+// currency.
 
 import (
 	"context"
@@ -49,25 +48,22 @@ func (m AttentionBaseMoney) ToBase(
 		if err != nil {
 			return err
 		}
-		rates := deals.NewFXRates(base, asOf)
+		figures := make([]deals.CurrencyAmount, len(amounts))
 		for i, amount := range amounts {
-			rate, found, err := rates.For(ctx, tx, amount.Currency)
-			if err != nil {
-				return err
+			figures[i] = deals.CurrencyAmount{Minor: amount.Minor, Currency: amount.Currency}
+		}
+		priced, err := deals.PriceAll(ctx, tx, deals.NewFXRates(base, asOf), figures)
+		if err != nil {
+			return err
+		}
+		// The rate DATE goes no further: the queue states an order, and a row
+		// that named the day its comparison was priced at would be answering a
+		// question nobody asked of a ranking.
+		for i, figure := range priced {
+			if figure.Priced {
+				minor := figure.Minor
+				out[i] = &minor
 			}
-			if !found {
-				continue
-			}
-			converted, err := deals.ConvertToBase(amount.Minor, rate.Rate)
-			if err != nil {
-				// UNPRICED, not refused — a decision, not a swallow. An amount
-				// whose converted value does not fit money's range is one deal
-				// the ordering cannot weigh, and org360's open-pipeline read
-				// gives the same deal the same answer; one implausible amount
-				// must not take the whole queue offline.
-				continue
-			}
-			out[i] = &converted
 		}
 		return nil
 	})

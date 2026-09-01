@@ -6,10 +6,11 @@ package attention
 // The ordering compares money in ONE currency.
 //
 // The defect these tests hold the door against: expected revenue compared as
-// raw minor units, so ¥8,000,000 outranked €40,000 by being the larger integer
-// while being worth a fraction of it. Every deal in the demo data is EUR, which
-// is why nothing ever looked wrong — a single-currency pipeline is correct by
-// coincidence, and these fixtures are deliberately not one.
+// raw minor units, which ranks a yen integer against a euro one and gets the
+// answer wrong in whichever direction the two scales happen to fall. Every deal
+// in the demo data is EUR, which is why nothing ever looked wrong — a
+// single-currency pipeline is correct by coincidence, and these fixtures are
+// deliberately not one.
 
 import (
 	"context"
@@ -20,12 +21,24 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// stubFX converts by a per-currency rate in thousandths, the way a stored rate
-// would, and answers nil for a currency it holds no rate for.
+// stubFX answers a conversion the fixtures state outright, keyed by the
+// amount's own minor units and currency.
+//
+// It does NOT recompute the arithmetic. Rate handling and the two currencies'
+// minor-unit scales belong to deals.ConvertToBase, which proves them against
+// its own cases (deals/fxconvert_test.go) and against real rows in the
+// integration lane. A stub that multiplied here would be a second, simpler
+// implementation of that arithmetic, free to be wrong in the same direction as
+// a bug and hide it — which is exactly what a milli-rate version of this stub
+// did: it restated a bare minor × rate and made a ¥5,000,000 deal look like
+// €300.
 type stubFX struct {
-	base  string
-	milli map[string]int64
-	err   error
+	base string
+	// answers maps a deal's own {minor, currency} to what it is worth in the
+	// base currency's minor units. An amount absent from the map is one the
+	// estate cannot price.
+	answers map[CurrencyAmount]int64
+	err     error
 }
 
 func (f stubFX) ToBase(_ context.Context, _ time.Time, amounts []CurrencyAmount) ([]*int64, string, error) {
@@ -34,25 +47,29 @@ func (f stubFX) ToBase(_ context.Context, _ time.Time, amounts []CurrencyAmount)
 	}
 	out := make([]*int64, len(amounts))
 	for i, amount := range amounts {
-		if amount.Currency == f.base {
-			minor := amount.Minor
+		if converted, priced := f.answers[amount]; priced {
+			minor := converted
 			out[i] = &minor
-			continue
 		}
-		rate, held := f.milli[amount.Currency]
-		if !held {
-			continue
-		}
-		minor := amount.Minor * rate / 1000
-		out[i] = &minor
 	}
 	return out, f.base, nil
 }
 
-func withPricedDeal(minor int64, currency string) func(*crmcontracts.AttentionItem) {
+// eur is one amount in the base currency, which converts to itself.
+func eur(minor int64) CurrencyAmount { return CurrencyAmount{Minor: minor, Currency: "EUR"} }
+
+// fiveMillionYen is the cross-scale fixture: ¥5,000,000, worth about €30,000.
+//
+// JPY carries no minor unit where EUR carries two, so this one amount is both
+// the largest figure on every page below and — as a bare integer against euro
+// minor units — the one a wrong conversion misreads by a hundredfold. A
+// same-scale pair could not tell the two readings apart.
+var fiveMillionYen = CurrencyAmount{Minor: 5_000_000, Currency: "JPY"}
+
+func withPricedDeal(amount CurrencyAmount) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) {
-		amount := minor
-		i.Deal = &crmcontracts.AttentionDealFacts{AmountMinor: &amount, Currency: &currency}
+		minor, currency := amount.Minor, amount.Currency
+		i.Deal = &crmcontracts.AttentionDealFacts{AmountMinor: &minor, Currency: &currency}
 	}
 }
 
@@ -69,35 +86,50 @@ func pricedWorklist(t *testing.T, fx BaseMoney, day crmcontracts.Attention) crmc
 	return reader.worklistFrom(t.Context(), day, scopeAll, "", 25, nil, leadRead{})
 }
 
-// A converted euro deal outranks a yen deal whose raw integer is larger. This
-// is the ordering the raw comparison got exactly backwards.
-func TestALargerRawYenFigureDoesNotOutrankAEuroDeal(t *testing.T) {
+// The ordering compares what deals are WORTH, not what their integers say.
+//
+// The yen deal is ¥5,000,000 — five million yen, about €30,000, the largest on
+// the page by worth AND by integer, so on its own it proves nothing. The one
+// that does is `eur-20k`: €20,000, the second largest by worth and the second
+// SMALLEST integer of the four. Raw minor units rank it third from bottom;
+// converted, it comes second. That inversion is the assertion.
+//
+// Four deals rather than three so the median leaves two of them material and
+// the revenue step is what separates the top pair. With three, only the yen
+// deal cleared the bar and a LEVEL difference decided the leading pair, which
+// is a different rule proving itself.
+func TestTheOrderingComparesWhatDealsAreWorth(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
 		AtRisk: lane(
-			item("yen", "deal_at_risk", withPricedDeal(5_000_000, "JPY")),
-			item("big-eur", "deal_at_risk", withPricedDeal(40_000, "EUR")),
-			item("mid-eur", "deal_at_risk", withPricedDeal(20_000, "EUR")),
-			item("small-eur", "deal_at_risk", withPricedDeal(10_000, "EUR")),
+			item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen)),
+			item("eur-20k", "deal_at_risk", withPricedDeal(eur(2_000_000))),
+			item("eur-4k", "deal_at_risk", withPricedDeal(eur(400_000))),
+			item("eur-1k", "deal_at_risk", withPricedDeal(eur(100_000))),
 		),
 	}
-	// ¥5,000,000 × 0.006 = 30,000 base units: material, and still below big-eur.
-	fx := stubFX{base: "EUR", milli: map[string]int64{"JPY": 6}}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{
+		// ¥5,000,000 at 1 JPY = 0.006 EUR is €30,000.
+		fiveMillionYen: 3_000_000,
+		eur(2_000_000): 2_000_000,
+		eur(400_000):   400_000,
+		eur(100_000):   100_000,
+	}}
 
 	out := pricedWorklist(t, fx, day)
 
-	assertOrder(t, out.Queue, "big-eur", "yen", "mid-eur", "small-eur")
-	// The first row explains itself against the second in the figures the
+	assertOrder(t, out.Queue, "yen", "eur-20k", "eur-4k", "eur-1k")
+	// The leading row explains itself against the second in the figures the
 	// ordering used, and names the currency they are genuinely in.
 	comparison := out.Queue[0].AboveNext
 	if comparison == nil || comparison.Comparator != crmcontracts.WorklistComparisonComparatorExpectedRevenue {
 		t.Fatalf("the leading deal explains itself with %+v, wanted expected_revenue", comparison)
 	}
-	if comparison.Mine == nil || comparison.Mine.Minor == nil || *comparison.Mine.Minor != 40_000 {
-		t.Fatalf("mine = %+v, wanted the converted 40000", comparison.Mine)
+	if comparison.Mine == nil || comparison.Mine.Minor == nil || *comparison.Mine.Minor != 3_000_000 {
+		t.Fatalf("mine = %+v, wanted the yen deal's €30,000 as 3000000 EUR minor units", comparison.Mine)
 	}
-	if comparison.Theirs == nil || comparison.Theirs.Minor == nil || *comparison.Theirs.Minor != 30_000 {
-		t.Fatalf("theirs = %+v, wanted the converted 30000, not the raw 8000000", comparison.Theirs)
+	if comparison.Theirs == nil || comparison.Theirs.Minor == nil || *comparison.Theirs.Minor != 2_000_000 {
+		t.Fatalf("theirs = %+v, wanted 2000000", comparison.Theirs)
 	}
 	if comparison.Mine.Currency == nil || *comparison.Mine.Currency != "EUR" {
 		t.Fatalf("the compared figure claims currency %v, wanted the base EUR", comparison.Mine.Currency)
@@ -110,21 +142,27 @@ func TestTheMaterialBarIsTakenFromConvertedFiguresAndNamesItsCurrency(t *testing
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
 		AtRisk: lane(
-			item("yen", "deal_at_risk", withPricedDeal(5_000_000, "JPY")),
-			item("yen2", "deal_at_risk", withPricedDeal(6_000_000, "JPY")),
-			item("big-eur", "deal_at_risk", withPricedDeal(40_000, "EUR")),
-			item("mid-eur", "deal_at_risk", withPricedDeal(20_000, "EUR")),
-			item("small-eur", "deal_at_risk", withPricedDeal(10_000, "EUR")),
+			item("yen", "deal_at_risk", withPricedDeal(fiveMillionYen)),
+			item("eur-60k", "deal_at_risk", withPricedDeal(eur(6_000_000))),
+			item("eur-1k", "deal_at_risk", withPricedDeal(eur(100_000))),
 		),
 	}
-	fx := stubFX{base: "EUR", milli: map[string]int64{"JPY": 6}}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{
+		fiveMillionYen: 3_000_000, // ¥5,000,000 is €30,000
+		eur(6_000_000): 6_000_000,
+		eur(100_000):   100_000,
+	}}
 
 	out := pricedWorklist(t, fx, day)
 
-	// Converted figures 10k, 20k, 30k, 36k, 40k: the median is 30k. A median
-	// over raw amounts is 40k, with both yen integers above every euro one.
-	if out.Summary.MaterialThresholdMinor == nil || *out.Summary.MaterialThresholdMinor != 30_000 {
-		t.Fatalf("the bar is %v, wanted the converted median 30000", out.Summary.MaterialThresholdMinor)
+	// Converted the set is €1,000 / €30,000 / €60,000 and the median is the
+	// YEN deal, €30,000. Raw it is 100,000 / 5,000,000 / 6,000,000 and the
+	// median is the same integer 5,000,000 — read as €50,000, which is a bar
+	// no deal on this page is actually worth. So the number below distinguishes
+	// a converted median from a raw one, rather than agreeing by coincidence.
+	if out.Summary.MaterialThresholdMinor == nil || *out.Summary.MaterialThresholdMinor != 3_000_000 {
+		t.Fatalf("the bar is %v, wanted the converted median 3000000 (€30,000); "+
+			"5000000 is the raw yen integer read as euros", out.Summary.MaterialThresholdMinor)
 	}
 	if out.Summary.BaseCurrency == nil || *out.Summary.BaseCurrency != "EUR" {
 		t.Fatalf("the summary names %v, wanted EUR — a threshold without units cannot be checked", out.Summary.BaseCurrency)
@@ -137,12 +175,13 @@ func TestADealWithNoStoredRateRanksAsUnpriced(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
 		AtRisk: lane(
-			item("no-rate", "deal_at_risk", withPricedDeal(9_000_000, "GBP")),
-			item("priced", "deal_at_risk", withPricedDeal(5_000, "EUR")),
+			item("no-rate", "deal_at_risk", withPricedDeal(CurrencyAmount{Minor: 9_000_000, Currency: "GBP"})),
+			item("priced", "deal_at_risk", withPricedDeal(eur(500_000))),
 			item("unitless", "deal_at_risk", withDeal(7_000_000)),
 		),
 	}
-	fx := stubFX{base: "EUR", milli: map[string]int64{}}
+	// The estate prices the euro deal and holds no GBP rate at all.
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{eur(500_000): 500_000}}
 
 	out := pricedWorklist(t, fx, day)
 
@@ -158,8 +197,8 @@ func TestADealWithNoStoredRateRanksAsUnpriced(t *testing.T) {
 		}
 	}
 	// The bar comes from the one priced deal, not from the two raw integers.
-	if out.Summary.MaterialThresholdMinor == nil || *out.Summary.MaterialThresholdMinor != 5_000 {
-		t.Fatalf("the bar is %v, wanted 5000 from the only priced deal", out.Summary.MaterialThresholdMinor)
+	if out.Summary.MaterialThresholdMinor == nil || *out.Summary.MaterialThresholdMinor != 500_000 {
+		t.Fatalf("the bar is %v, wanted 500000 from the only priced deal", *out.Summary.MaterialThresholdMinor)
 	}
 }
 
@@ -193,7 +232,7 @@ func TestAnUnboundSeamNamesNoBaseCurrency(t *testing.T) {
 func TestAFailedConversionFailsThePricing(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:   rankInstant,
-		AtRisk: lane(item("d", "deal_at_risk", withPricedDeal(1_000, "EUR"))),
+		AtRisk: lane(item("d", "deal_at_risk", withPricedDeal(eur(100_000)))),
 	}
 	s := &Service{fx: stubFX{err: errors.New("the rate read broke")}}
 
