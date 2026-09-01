@@ -113,6 +113,24 @@ func (s *Store) slaPolicy(ctx context.Context) (leadSLAPolicy, error) {
 	return policy, err
 }
 
+// FirstResponseTracked reports whether this installation measures a
+// first-response target at all.
+//
+// The Worklist's lead lane asks before it claims anything: with the target
+// switched off no lead is LATE, and a queue that reported none overdue would be
+// stating a fact nothing measures. Exported for that one caller, which cannot
+// reach the unexported policy read beside it.
+func (s *Store) FirstResponseTracked(ctx context.Context) (bool, error) {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return false, err
+	}
+	policy, err := s.slaPolicy(ctx)
+	if err != nil {
+		return false, err
+	}
+	return policy.enabled, nil
+}
+
 // WithSettings wires the installation settings store the lead-settings
 // endpoints write through; compose injects it.
 func (s *Store) WithSettings(store *settings.Store) *Store {

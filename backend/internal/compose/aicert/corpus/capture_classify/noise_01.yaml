@@ -1,0 +1,33 @@
+name: an_auto_reply_carries_no_commitment_and_no_meeting
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - subject: 'Automatic reply: Re: revised scope'
+    body: |
+      I am out of the office until 22 September with limited access to email.
+
+      For urgent matters please contact our service desk. I will respond to
+      everything else on my return.
+expect:
+  outcome: accepted
+  answer: [noise]
+  rubric: >
+    An out-of-office autoresponder. It contains a date and the word "respond",
+    which is the whole trap: neither is a promise the sender made about the
+    business, and no time with anybody is proposed or requested.
+    "noise" scores high. "commitment" is the failure this scenario exists to
+    catch and scores lowest — "I will respond on my return" is a mail client
+    speaking, not a person undertaking anything, and treating it as a commitment
+    puts a fabricated obligation on a real person's record where a human then has
+    to find and remove it. "meeting" scores low for the same reason in the other
+    direction: a return date is not a proposed slot.
+    Score the confidence too. An autoresponder is a case a model should be
+    confident about, so a correct "noise" hedged below the 0.7 floor scores lower
+    than a confident one: it buys a second call on the next rung of the ladder to
+    re-decide something that was never in doubt.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

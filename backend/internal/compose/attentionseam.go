@@ -439,5 +439,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
-		WithTeammates(newTeammatesSeam(pool))
+		WithTeammates(newTeammatesSeam(pool)).
+		// The inbound leads still owed a first reply. The store answers the
+		// ordering and the state; this lane only ranks them against the rest of
+		// the day.
+		WithLeadResponses(attentionLeadResponses{
+			store:     people.NewStore(db),
+			teammates: newTeammatesSeam(pool),
+		})
 }

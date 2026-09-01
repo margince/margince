@@ -457,6 +457,7 @@ function PricedCategoryRows({
   canEdit,
 }: Readonly<{ connection: ProviderConnection; canEdit: boolean }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const patch = usePatchCategories();
   const priced = (connection.catalog ?? []).filter((entry) => !entry.free);
@@ -477,41 +478,88 @@ function PricedCategoryRows({
   const selection = connection.configuration.categories ?? {};
   return (
     <>
-      {priced.map((entry) => (
-        <SettingRow
-          key={entry.category}
-          label={t("provider.buyable", {
-            category: categoryName(entry.category, t),
-          })}
-          description={t("provider.buyableHint", {
-            credits: formatNumber(creditsOf(entry), locale),
-          })}
-          control={(control) => (
-            <Switch
-              describedBy={control["aria-describedby"]}
-              checked={selection[entry.category] ?? false}
-              // The WHOLE selection, not the one key. The contract's patch
-              // replaces the map rather than merging into it, so sending one
-              // pair would switch off every category not named — including the
-              // free ones the automatic lookup runs on.
-              onChange={(next) =>
-                patch.mutate({
-                  provider: connection.provider,
-                  version,
-                  categories: { ...selection, [entry.category]: next },
-                })
-              }
-              reason={canEdit ? undefined : t("captureSettings.adminOnly")}
-              disabled={!canEdit}
-              pending={patch.isPending}
-              label={t("provider.buyable", {
-                category: categoryName(entry.category, t),
-              })}
-              labelHidden
-            />
-          )}
-        />
-      ))}
+      {priced.map((entry) => {
+        // A category the provider only issues alongside another cannot be
+        // bought while that one is off — the vendor refuses the request, so
+        // the switch would promise a purchase nobody can make and the buy
+        // button would never appear, with nothing on screen saying why.
+        //
+        // Disabled with the reason rather than hidden: an admin looking for
+        // the mobile number needs to find it and learn what it depends on. A
+        // row that vanished would read as "this provider does not sell it".
+        // Truthy, not `!== undefined`: the contract types this as
+        // `[string, 'null']`, so an absent prerequisite arrives as null on the
+        // wire and as undefined from a fixture that omits the key. Both mean
+        // "stands alone", and a check that caught only one would block every
+        // row the server sent.
+        const prerequisite = entry.requires ? entry.requires : undefined;
+        const on = selection[entry.category] ?? false;
+        // Refused only where the flip would turn it ON. Switching a
+        // prerequisite off leaves its dependent saved as on, and blocking that
+        // row outright would strand the admin: the only control able to undo
+        // the combination would be the one they cannot reach, and turning the
+        // prerequisite back on to release it spends nothing but reads like the
+        // card fighting them. Off is always allowed.
+        const blocked =
+          prerequisite !== undefined && !selection[prerequisite] && !on;
+        const dependency =
+          prerequisite === undefined
+            ? undefined
+            : t("provider.buyableNeeds", {
+                prerequisite: categoryName(prerequisite, t),
+              });
+        return (
+          <SettingRow
+            key={entry.category}
+            label={t("provider.buyable", {
+              category: categoryName(entry.category, t),
+            })}
+            // The dependency sentence belongs to the Switch's `reason`, which
+            // renders it AND announces it — repeating it here read it to a
+            // screen reader twice and printed it twice on the card.
+            description={plural(
+              "provider.buyableHint",
+              creditsOf(entry),
+              // Priced for the pair where there is one, so a dependent row
+              // never quotes a figure smaller than the press spends.
+              { credits: formatNumber(creditsOf(entry), locale) },
+            )}
+            control={(control) => (
+              <Switch
+                describedBy={control["aria-describedby"]}
+                checked={selection[entry.category] ?? false}
+                // The WHOLE selection, not the one key. The contract's patch
+                // replaces the map rather than merging into it, so sending one
+                // pair would switch off every category not named — including the
+                // free ones the automatic lookup runs on.
+                onChange={(next) =>
+                  patch.mutate({
+                    provider: connection.provider,
+                    version,
+                    categories: { ...selection, [entry.category]: next },
+                  })
+                }
+                // The admin denial comes first: a seat that may not edit
+                // anything is not told instead about a dependency it could
+                // not act on either way.
+                reason={
+                  canEdit
+                    ? blocked
+                      ? dependency
+                      : undefined
+                    : t("captureSettings.adminOnly")
+                }
+                disabled={!canEdit || blocked}
+                pending={patch.isPending}
+                label={t("provider.buyable", {
+                  category: categoryName(entry.category, t),
+                })}
+                labelHidden
+              />
+            )}
+          />
+        );
+      })}
       {patch.error && (
         <div className="provider-row-note">
           <Callout tone="danger" live="alert">

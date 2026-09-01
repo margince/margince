@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { LocaleProvider } from "../i18n";
 import { PersonCommitmentsCard } from "./personcards";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 type Person360 = components["schemas"]["Person360"];
 type ConversationClaim = components["schemas"]["ConversationClaim"];
@@ -26,6 +26,14 @@ const CAPTURED: Pick<
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
 };
+
+// The reader every case renders as. useViewerId reads it off the shared /me
+// cache, and whose task a row is decides how the row is prefixed.
+const VIEWER = "00000000-0000-4000-8000-000000000001";
+
+beforeEach(() => {
+  installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+});
 
 // The reading moment every case below is an offset from. Fixed, because a
 // suite that reads the machine's calendar changes its verdict in December.
@@ -60,9 +68,9 @@ function at(offsetMs: number): string {
 
 function renderDue(dueAt: string | null) {
   render(
-    <LocaleProvider initial="en">
+    <StoryProviders>
       <PersonCommitmentsCard view={viewWithDue(dueAt)} firstName="Dana" />
-    </LocaleProvider>,
+    </StoryProviders>,
   );
 }
 
@@ -120,5 +128,128 @@ describe("the commitments card's due status", () => {
   it("shows the open badge when there is no due date at all", () => {
     renderDue(null);
     expect(screen.getByText("open")).toBeTruthy();
+  });
+});
+
+// A task IS a promise. The card read extracted claims alone, so a record whose
+// only open promise was a task — which is what an accepted transcript proposal
+// becomes — said "nothing has been promised" under a headline naming it.
+describe("open tasks are commitments too", () => {
+  function viewWithTask(dueAt: string | null): Person360 {
+    return {
+      as_of: NOW,
+      person: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
+      sections_omitted: [],
+      next_steps: {
+        data: [
+          {
+            id: "t-1",
+            kind: "task",
+            subject: "Send the MCP whitepaper",
+            occurred_at: NOW,
+            is_done: false,
+            due_at: dueAt,
+            ...CAPTURED,
+          },
+        ],
+        page: { has_more: false },
+      },
+    };
+  }
+
+  it("lists an undated task as ours and open", () => {
+    render(
+      <StoryProviders>
+        <PersonCommitmentsCard view={viewWithTask(null)} firstName="Dana" />
+      </StoryProviders>,
+    );
+
+    expect(
+      screen.getAllByText(/Send the MCP whitepaper/).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("open")).toBeDefined();
+    expect(screen.queryByText(/Nothing has been promised/)).toBeNull();
+  });
+
+  it("reads an overdue task against the clock, like a claim", () => {
+    vi.setSystemTime(new Date(Date.parse(NOW)));
+    render(
+      <StoryProviders>
+        <PersonCommitmentsCard
+          view={viewWithTask(at(-25 * HOUR))}
+          firstName="Dana"
+        />
+      </StoryProviders>,
+    );
+
+    expect(screen.getByText("overdue 1 days")).toBeDefined();
+  });
+
+  it('keeps "You" on a task the reader holds themselves', async () => {
+    // The writer assigns every human-written task to its author, so this is
+    // the ordinary case, not a corner: a rule reading "assigned" as "somebody
+    // else's" would strip the prefix from nearly every task on the page.
+    const view = viewWithTask(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    view.next_steps!.data[0].assignee_id = VIEWER;
+    render(
+      <StoryProviders>
+        <PersonCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+
+    // The reader's identity arrives with /me, so the prefix appears on the
+    // render after it resolves.
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/You: Send the MCP whitepaper/).length,
+      ).toBeGreaterThan(0),
+    );
+  });
+
+  it("does not tell the reader they owe a colleague's task", () => {
+    const view = viewWithTask(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    view.next_steps!.data[0].assignee_id = "u-someone-else";
+    render(
+      <StoryProviders>
+        <PersonCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+
+    expect(screen.queryByText(/You: Send the MCP whitepaper/)).toBeNull();
+    expect(
+      screen.getAllByText(/Send the MCP whitepaper/).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("names a task whose subject it may not see", () => {
+    const view = viewWithTask(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    view.next_steps!.data[0].subject = null;
+    render(
+      <StoryProviders>
+        <PersonCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+
+    expect(screen.getAllByText(/an open task/).length).toBeGreaterThan(0);
+  });
+
+  it("still says nothing is promised when there is neither claim nor task", () => {
+    render(
+      <StoryProviders>
+        <PersonCommitmentsCard
+          view={{
+            as_of: NOW,
+            person: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
+            sections_omitted: [],
+          }}
+          firstName="Dana"
+        />
+      </StoryProviders>,
+    );
+
+    expect(screen.getByText(/Nothing has been promised/)).toBeDefined();
   });
 });

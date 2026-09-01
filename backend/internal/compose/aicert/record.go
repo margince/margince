@@ -116,9 +116,20 @@ type Record struct {
 type ScenarioRecord struct {
 	Scenario string `json:"scenario"`
 	Site     string `json:"site"`
-	Verdict  string `json:"verdict"`
-	Runs     int    `json:"runs"`
-	Passed   int    `json:"passed"`
+	// Stamp is THIS scenario's own certification stamp — the scenario whole plus
+	// the candidate and grader requests this build constructs from it
+	// (ScenarioStamps). The record's task-level PromptVersion is the fold of
+	// every one of these.
+	//
+	// Carried per scenario because the fold cannot say WHICH scenario moved, and
+	// that is the difference between re-certifying one case and re-certifying a
+	// task: adding a tenth scenario leaves nine measurements true, and a task
+	// stamp has no way to say so. Empty on a record written before this field
+	// existed, which the report reads as "ask the task stamp instead".
+	Stamp   string `json:"stamp,omitempty"`
+	Verdict string `json:"verdict"`
+	Runs    int    `json:"runs"`
+	Passed  int    `json:"passed"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`

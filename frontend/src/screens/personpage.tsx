@@ -29,6 +29,7 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { ConsentSection } from "./consent";
 import { LogActivityAction } from "./logactivity";
+import { PersonMeetingBrief } from "./meetingbrief";
 import {
   hasCommercial,
   hasCommitments,
@@ -39,11 +40,7 @@ import {
   PersonMattersCard,
 } from "./personcards";
 import { EnrichedFields } from "./personcorrections";
-import {
-  PersonComposer,
-  PersonMeetingBrief,
-  PersonResearchDrawer,
-} from "./persondrawers";
+import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
