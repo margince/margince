@@ -11727,10 +11727,11 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered      WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered         WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending           WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying          WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusVisibilityRevoked WebhookDeliveryStatus = "visibility_revoked"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
@@ -11743,6 +11744,8 @@ func (e WebhookDeliveryStatus) Valid() bool {
 	case WebhookDeliveryStatusPending:
 		return true
 	case WebhookDeliveryStatusRetrying:
+		return true
+	case WebhookDeliveryStatusVisibilityRevoked:
 		return true
 	default:
 		return false

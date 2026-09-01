@@ -4860,6 +4860,8 @@ public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.dead_lettered_at timestamp with time zone gen=- def=-
 public.webhook_delivery.delivered_at timestamp with time zone gen=- def=-
+public.webhook_delivery.entity_id uuid gen=- def=-
+public.webhook_delivery.entity_type text gen=- def=-
 public.webhook_delivery.event_id uuid NOT NULL gen=- def=-
 public.webhook_delivery.event_type text NOT NULL gen=- def=-
 public.webhook_delivery.id uuid NOT NULL gen=- def=uuidv7()
@@ -4873,7 +4875,7 @@ public.webhook_delivery.trg_webhook_delivery_updated CREATE TRIGGER trg_webhook_
 public.webhook_delivery.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.webhook_delivery_dedupe_key UNIQUE (subscription_id, event_id)
 public.webhook_delivery.webhook_delivery_pkey PRIMARY KEY (id)
-public.webhook_delivery.webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text])))
+public.webhook_delivery.webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text, 'visibility_revoked'::text])))
 public.webhook_delivery.webhook_delivery_subscription_fkey FOREIGN KEY (subscription_id) REFERENCES webhook_subscription(id) ON DELETE CASCADE
 public.webhook_delivery_dedupe_key CREATE UNIQUE INDEX webhook_delivery_dedupe_key ON public.webhook_delivery USING btree (subscription_id, event_id)
 public.webhook_delivery_pkey CREATE UNIQUE INDEX webhook_delivery_pkey ON public.webhook_delivery USING btree (id)

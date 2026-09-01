@@ -6434,6 +6434,8 @@ export const en = {
   "webhooks.deliveries.status.delivered": "Delivered",
   "webhooks.deliveries.status.retrying": "Retrying",
   "webhooks.deliveries.status.dead_lettered": "Dead-lettered",
+  "webhooks.deliveries.status.visibility_revoked":
+    "Stopped — no longer visible",
   "webhooks.deliveries.replay": "Replay",
   "webhooks.deliveries.replayConfirm.title": "Replay this delivery?",
   "webhooks.deliveries.replayConfirm.body":

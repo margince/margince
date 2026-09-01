@@ -20,6 +20,8 @@ import (
 // The webhook_delivery status vocabulary lives in the table's CHECK and in
 // the SQL below: 'pending' (freshly enqueued) → 'retrying' (failed, with a
 // backoff deadline) → 'dead_lettered' (budget spent), or → 'delivered'.
+// 'visibility_revoked' is the fifth and is terminal: the subject record left
+// the owner's sight between enqueue and the re-attempt.
 const deliveryColumns = `id, subscription_id, event_id, event_type, status, attempts,
 	last_status_code, last_error, next_retry_at, delivered_at, dead_lettered_at, created_at, updated_at`
 
@@ -148,6 +150,14 @@ type attemptTarget struct {
 	eventID       ids.UUID
 	payload       []byte
 	priorAttempts int
+	// entityType, entityID and ownerID are what a RE-attempt needs and a first
+	// attempt does not: the enqueue path has already asked whether this owner
+	// may see this record, and a retry has to ask again because the answer can
+	// have changed. entityType is empty on a row written before those columns
+	// existed, and an empty subject is refused rather than sent.
+	entityType string
+	entityID   ids.UUID
+	ownerID    ids.UUID
 }
 
 // subCandidate is one active subscription matching an event's type, with
@@ -190,7 +200,7 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 // it never double-POSTs. It returns only the freshly-created rows to
 // attempt now. subIDs is the visibility-filtered set (BYO-EVT-4). Runs in
 // the envelope's workspace.
-func (s *Store) enqueueForSubscriptions(ctx context.Context, subIDs []ids.UUID, eventType string, eventID ids.UUID, body []byte) ([]attemptTarget, error) {
+func (s *Store) enqueueForSubscriptions(ctx context.Context, subIDs []ids.UUID, eventType string, eventID ids.UUID, body []byte, entityType string, entityID ids.UUID) ([]attemptTarget, error) {
 	if len(subIDs) == 0 {
 		return nil, nil
 	}
@@ -203,15 +213,15 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, subIDs []ids.UUID, 
 				WHERE id = ANY($4::uuid[]) AND state = 'active' AND archived_at IS NULL
 			), created AS (
 				INSERT INTO webhook_delivery
-				  (subscription_id, event_id, event_type, payload, status)
-				SELECT m.id, $2, $1, $3::text, 'pending'
+				  (subscription_id, event_id, event_type, payload, status, entity_type, entity_id)
+				SELECT m.id, $2, $1, $3::text, 'pending', $5, $6
 				FROM matched m
 				ON CONFLICT (subscription_id, event_id) DO NOTHING
 				RETURNING id, subscription_id
 			)
 			SELECT c.id, c.subscription_id, m.target_url, m.signing_secret_ref
 			FROM created c JOIN matched m ON m.id = c.subscription_id`,
-			eventType, eventID, body, subIDs)
+			eventType, eventID, body, subIDs, entityType, entityID)
 		if err != nil {
 			return err
 		}
@@ -264,14 +274,31 @@ func (s *Store) dueRetries(ctx context.Context, now time.Time, limit int) ([]ids
 func (s *Store) loadTarget(ctx context.Context, deliveryID ids.UUID) (attemptTarget, error) {
 	var t attemptTarget
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
+		var entityType *string
+		var entityID *ids.UUID
+		if err := tx.QueryRow(ctx, `
 			SELECT d.id, d.subscription_id, s.target_url, s.signing_secret_ref,
-			       d.event_type, d.event_id, d.payload, d.attempts
+			       d.event_type, d.event_id, d.payload, d.attempts,
+			       d.entity_type, d.entity_id, s.owner_id
 			FROM webhook_delivery d
 			JOIN webhook_subscription s ON s.id = d.subscription_id
 			WHERE d.id = $1`, deliveryID).
 			Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret,
-				&t.eventType, &t.eventID, &t.payload, &t.priorAttempts)
+				&t.eventType, &t.eventID, &t.payload, &t.priorAttempts,
+				&entityType, &entityID, &t.ownerID); err != nil {
+			return err
+		}
+		// A NULL subject scans to a nil pointer and stays the zero value, which
+		// refuseUnverifiable reads as "cannot be checked". Widening it to an
+		// empty string here rather than at the call site keeps the one meaning
+		// in one place.
+		if entityType != nil {
+			t.entityType = *entityType
+		}
+		if entityID != nil {
+			t.entityID = *entityID
+		}
+		return nil
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return attemptTarget{}, apperrors.ErrNotFound
@@ -326,6 +353,21 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 // resetForReplay clears a parked delivery back to pending so it can be
 // re-attempted. Returns ErrNotFound if the delivery is absent in the
 // caller's workspace (existence-hiding).
+// markVisibilityRevoked parks a delivery whose subject the owner may no longer
+// see. Terminal, and deliberately not dead_lettered: dead_lettered is the store
+// an operator replays FROM, and a revoked delivery must not be in it. The reason
+// goes in last_error for the operator, and stays there — resetForReplay clears
+// that column, so a status that shared the replay path would destroy it.
+func (s *Store) markVisibilityRevoked(ctx context.Context, deliveryID ids.UUID, reason string) error {
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE webhook_delivery
+			SET status = 'visibility_revoked', last_error = $2, next_retry_at = NULL
+			WHERE id = $1`, deliveryID, reason)
+		return err
+	})
+}
+
 func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `

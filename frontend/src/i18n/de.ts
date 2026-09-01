@@ -6392,6 +6392,8 @@ export const de = {
   "webhooks.deliveries.status.delivered": "Zugestellt",
   "webhooks.deliveries.status.retrying": "Wird wiederholt",
   "webhooks.deliveries.status.dead_lettered": "Dead-Letter",
+  "webhooks.deliveries.status.visibility_revoked":
+    "Gestoppt — nicht mehr sichtbar",
   "webhooks.deliveries.replay": "Erneut zustellen",
   "webhooks.deliveries.replayConfirm.title":
     "Diese Zustellung erneut versuchen?",
