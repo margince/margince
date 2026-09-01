@@ -12,10 +12,46 @@ package attention
 // when a reply is late would be one the lead screen could disagree with.
 
 import (
+	"context"
+	"errors"
+	"log/slog"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// LeadResponses is the inbound leads still owed a first reply.
+//
+// The SDR's half of the morning. A routed lead nobody has answered goes cold on
+// a clock the product already runs — sla_deadline_at and sla_state are derived
+// on every lead read — and until now that clock ticked on a screen of its own
+// while the queue that claims to be "what should I do next" said nothing about
+// it.
+//
+// `tracked` is the installation's first-response policy, and false is not an
+// empty list: with the target switched off no lead owes a reply at a stated
+// time, so the lane renders ABSENT rather than empty. Saying "no leads are
+// overdue" where nothing measures overdue would be a claim the product cannot
+// support.
+type LeadResponses interface {
+	Owed(ctx context.Context, scope TaskScope, owner ids.UUID, limit int) (rows []OwedLead, tracked bool, err error)
+}
+
+// OwedLead is one inbound lead nobody has replied to yet.
+type OwedLead struct {
+	ID   ids.UUID
+	Name string
+	// OwnerID is zero when the lead is assigned to nobody, which is its own
+	// kind of urgency rather than a missing field.
+	OwnerID ids.UUID
+	// DeadlineAt is when the first reply was owed. Zero when the policy states
+	// no target, in which case State is empty too.
+	DeadlineAt time.Time
+	// State is the contract's own vocabulary: within_target, at_risk, breached.
+	State string
+}
 
 // sourceLeadResponse is a lead still owed its first reply.
 const sourceLeadResponse = "lead_response"
@@ -53,7 +89,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 		Level:       level,
 		Consequence: "buyer_waits",
 		Because:     because,
-		Subject:     subjectOf("lead", lead.ID),
+		Subject:     subjectOf(string(subjectLead), lead.ID),
 		Actions:     []crmcontracts.WorklistItemActions{crmcontracts.WorklistItemActions(actionOpen)},
 	}
 	if name != "" {
@@ -121,10 +157,40 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
 		if row.item.Source == sourceTask && row.item.Subject != nil &&
-			row.item.Subject.Type == "lead" && owed[row.item.Subject.Id.String()] {
+			row.item.Subject.Type == subjectLead && owed[row.item.Subject.Id.String()] {
 			continue
 		}
 		kept = append(kept, row)
 	}
 	return kept
+}
+
+// owedLeads reads the leads still owed a first reply, or names why it could not.
+//
+// The `tracked` half is not an error and not an empty list: an installation
+// with no first-response target has no leads that are LATE, so the source is
+// absent from the page entirely. Reporting zero overdue leads where nothing
+// measures overdue would be a number the product cannot stand behind.
+func (s *Service) owedLeads(
+	ctx context.Context,
+) ([]OwedLead, bool, *crmcontracts.WorklistSourceUnavailable) {
+	if s.leads == nil {
+		return nil, false, nil
+	}
+	rows, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return nil, false, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
+		}
+	case err != nil:
+		slog.ErrorContext(ctx, "the leads-owed-a-reply read failed", "error", err)
+		return nil, false, &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
+		}
+	case !tracked:
+		return nil, false, nil
+	default:
+		return rows, len(rows) >= leadResponseBound, nil
+	}
 }

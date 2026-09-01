@@ -156,36 +156,6 @@ func (s *Service) waitingCustomers(
 	}
 }
 
-// owedLeads reads the leads still owed a first reply, or names why it could not.
-//
-// The `tracked` half is not an error and not an empty list: an installation
-// with no first-response target has no leads that are LATE, so the source is
-// absent from the page entirely. Reporting zero overdue leads where nothing
-// measures overdue would be a number the product cannot stand behind.
-func (s *Service) owedLeads(
-	ctx context.Context,
-) ([]OwedLead, bool, *crmcontracts.WorklistSourceUnavailable) {
-	if s.leads == nil {
-		return nil, false, nil
-	}
-	rows, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return nil, false, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
-		}
-	case err != nil:
-		slog.ErrorContext(ctx, "the leads-owed-a-reply read failed", "error", err)
-		return nil, false, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
-		}
-	case !tracked:
-		return nil, false, nil
-	default:
-		return rows, len(rows) >= leadResponseBound, nil
-	}
-}
-
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
 	waiting []WaitingCustomer, leads []OwedLead, leadsBounded bool,

@@ -66,10 +66,14 @@ func kindsOf(row crmcontracts.WorklistItem) []string {
 // than below the routine work.
 func TestABreachedLeadRanksAboveOneMerelyAtRisk(t *testing.T) {
 	svc := leadLaneService(&stubLeads{tracked: true, rows: []OwedLead{
-		{ID: ids.NewV7(), Name: "at risk", DeadlineAt: readInstant.Add(30 * time.Minute),
-			State: "at_risk", OwnerID: ids.NewV7()},
-		{ID: ids.NewV7(), Name: "breached", DeadlineAt: readInstant.Add(-2 * time.Hour),
-			State: "breached", OwnerID: ids.NewV7()},
+		{
+			ID: ids.NewV7(), Name: "at risk", DeadlineAt: readInstant.Add(30 * time.Minute),
+			State: "at_risk", OwnerID: ids.NewV7(),
+		},
+		{
+			ID: ids.NewV7(), Name: "breached", DeadlineAt: readInstant.Add(-2 * time.Hour),
+			State: "breached", OwnerID: ids.NewV7(),
+		},
 	}})
 
 	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25)
