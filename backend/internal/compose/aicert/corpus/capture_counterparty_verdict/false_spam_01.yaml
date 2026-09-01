@@ -6,13 +6,12 @@ sanitized_by: hand_authored/claude-opus-5
 fixture:
   display_name: Ines Waldherr
   email: i.waldherr@kranzler-druck.example
-  subject: "Re: Angebot Messestand Halle 4"
+  subject: Angebot Messestand Halle 4
   body: |
     Guten Tag,
 
-    vielen Dank fuer Ihre Anfrage von gestern. Anbei unser Angebot fuer den
-    Messestand in Halle 4: Aufbau am 12.03., Abbau am 15.03., inklusive
-    Beleuchtung und Transport.
+    anbei unser Angebot fuer den Messestand in Halle 4: Aufbau am 12.03.,
+    Abbau am 15.03., inklusive Beleuchtung und Transport.
 
     Die Preise verstehen sich netto. Bei Zusage bis Freitag koennen wir den
     Termin fest einplanen.
@@ -24,15 +23,21 @@ expect:
   outcome: accepted
   answer: person
   rubric: >
-    The guard on the direction-of-offer rule. This sender is also offering to
-    sell something, and also signs with a full name and a company — the surface
-    markers spam_01 has. What separates them is that this business ASKED: the
-    subject is a reply, and the body opens by thanking them for yesterday's
-    enquiry. An invited supplier answering a request is the ordinary "person"
-    case, and the sender the CRM most needs as a contact.
-    A verdict of "person" scores high. "spam" scores zero: it would mean the
-    direction-of-offer rule had swallowed every supplier who quotes a price,
-    which is the over-correction this scenario exists to catch.
+    The guard on the direction-of-offer rule, written as the HARD case rather
+    than the easy one. This sender is also offering to sell something and also
+    signs with a full name and a company, so it carries spam_01's surface
+    markers — and it deliberately carries no proof of invitation either: no
+    "Re:", no reference to an earlier enquiry, nothing naming who asked.
+    The model is never told the relationship history. It receives display name,
+    address, subject and body, so a rule phrased as "did this business contact
+    them first?" has to be answered from the message alone. What answers it here
+    is the SHAPE of the mail: a quote for a named job with fixed dates, an
+    itemised scope and a deadline is work already discussed, not an opening
+    pitch. A pitch describes a capability; this describes an agreement.
+    A verdict of "person" scores high. "spam" scores zero, and it is the costly
+    direction: a spam verdict hides the mail and suppresses the sender's whole
+    DOMAIN workspace-wide, so one wrong answer here blocks every future mail
+    from that supplier for every colleague.
     "organization_sender" scores in the middle — a named human signs the mail,
     so it is the wrong reading, but it withholds the record rather than hiding
     the correspondence.

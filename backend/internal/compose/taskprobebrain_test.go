@@ -127,6 +127,15 @@ func TestAPinnedCloudModelReadsItsKeyFromTheEnvironment(t *testing.T) {
 // they read private mail: the sender verdict and the confidentiality verdict.
 // Both were unprobeable, which is why a wrong sender verdict in the field had
 // to be reproduced by hand.
+//
+// It asserts on the CONFIG rather than on a driven call, and that is the only
+// place the defect is visible in-process: Router.Complete refuses a task
+// "outside workspace context" before it resolves a tier at all, so a completer
+// driven from a unit test returns the same error whether the ladder is bound or
+// not. An end-to-end assertion here would pass under the broken binding — the
+// exact way this gap survived — so the real outside proof is
+// `worker aitask run --site capture_counterparty_verdict/verdict --model ...`,
+// which reaches a rung now and reached none before.
 func TestAProbeBindsTheTiersItsTaskCanAskFor(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "probe-key")
 
@@ -147,16 +156,5 @@ func TestAProbeBindsTheTiersItsTaskCanAskFor(t *testing.T) {
 				t.Errorf("%s: ladder names tier %s, which the probe left unbound — the call fails with \"no bound tier can serve\"", task, tier)
 			}
 		}
-	}
-}
-
-// The whole point is reaching a task the old binding could not, so the local-only
-// verdict task is asserted from the outside too: through TaskProbeBrain, which is
-// what `worker aitask run --model` actually calls.
-func TestAProbeServesTheLocalOnlyVerdictTask(t *testing.T) {
-	t.Setenv("GEMINI_API_KEY", "probe-key")
-
-	if _, _, err := TaskProbeBrain("gemini:probe-model", false, ai.TaskCaptureCounterpartyVerdict); err != nil {
-		t.Fatalf("the sender verdict is pinned to a local rung and must still be probeable, got %v", err)
 	}
 }
