@@ -51,6 +51,22 @@ func profileFor(routing *ai.RoutingConfig, fromEnv string) ai.Profile {
 	return ai.Profile(fromEnv)
 }
 
+// logResolvedBindings prints what a routed run decided BEFORE it spends: which
+// rung each shipped task landed on and the model bound there. A paid run that
+// measured the wrong deployment is only obvious from this list.
+func logResolvedBindings(t *testing.T, routing ai.RoutingConfig) {
+	t.Helper()
+	for _, task := range ai.AllTasks() {
+		if ai.Status(task) != ai.StatusShipped {
+			continue
+		}
+		lead := ai.LeadingTier(task)
+		if b, ok := routing.Tiers[lead]; ok {
+			t.Logf("routed: %-34s %-12s %s:%s", task, lead, b.Provider, b.Model)
+		}
+	}
+}
+
 // judgeBaseURL is the host root the grader is reached on.
 //
 // It falls back to the CANDIDATE's host only for an openai_compatible judge,
@@ -100,28 +116,21 @@ func TestE2ECertify(t *testing.T) {
 		t.Fatalf("both ROUTING=%s and MODEL=%s were given — the first certifies the models a deployment binds, "+
 			"the second one model you name; a run cannot report both, so pass one", routingPath, modelSpec)
 	}
-	if path := routingPath; path != "" {
-		resolved, rerr := compose.RoutingFromDeployConfig(path, runtimeenv.Development)
+	if routingPath != "" {
+		resolved, rerr := compose.RoutingFromDeployConfig(routingPath, runtimeenv.Development)
 		if rerr != nil {
-			t.Fatalf("MARGINCE_AICERT_ROUTING=%s: %v", path, rerr)
+			t.Fatalf("MARGINCE_AICERT_ROUTING=%s: %v", routingPath, rerr)
 		}
 		routing = &resolved
-		for _, task := range ai.AllTasks() {
-			if ai.Status(task) != ai.StatusShipped {
-				continue
-			}
-			lead := ai.LeadingTier(task)
-			if b, ok := resolved.Tiers[lead]; ok {
-				t.Logf("routed: %-34s %-12s %s:%s", task, lead, b.Provider, b.Model)
-			}
-		}
+		logResolvedBindings(t, resolved)
 	} else {
-		parsed, perr := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_MODEL"), os.Getenv("MARGINCE_AICERT_BASE_URL"))
+		parsed, perr := ai.ParseBinding(modelSpec, os.Getenv("MARGINCE_AICERT_BASE_URL"))
 		if perr != nil {
 			t.Fatalf("MARGINCE_AICERT_MODEL: %v", perr)
 		}
 		binding = parsed
 	}
+
 	// The judge is a SECOND model on purpose: one grading itself is certified by
 	// construction. Run refuses the two being equal before a call is paid for.
 	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), judgeBaseURL())

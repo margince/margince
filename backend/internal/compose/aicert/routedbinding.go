@@ -62,30 +62,7 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 		return fmt.Errorf("the supplied routing declares profile %q, which is not an environment class; "+
 			"a record is filed under it, so a run states which one it measured", cfg.Profile)
 	}
-	// Every rung a task can REACH, not just the one it leads on. A task whose
-	// degrade target is unbound runs fine until the budget band moves it there,
-	// then fails in production on a rung certification never looked at — and the
-	// cert run is the one place that gap is cheap to see, because it already has
-	// the routing in hand.
-	var unreachable []string
-	for _, task := range ai.AllTasks() {
-		if ai.Status(task) != ai.StatusShipped {
-			continue
-		}
-		for _, tier := range ai.ServableTiers(task) {
-			binding, bound := cfg.Routing.Tiers[tier]
-			if !bound || binding.Provider == "" || binding.Model == "" {
-				unreachable = append(unreachable, fmt.Sprintf("%s→%s", task, tier))
-			}
-		}
-	}
-	if len(unreachable) > 0 {
-		// A warning rather than a refusal: the leading rung is what this run
-		// measures, and an unbound degrade target is a gap in the DEPLOYMENT, not
-		// a reason to refuse to measure what is bound.
-		log.Warn("aicert: some tiers a task can degrade to are unbound in the supplied routing — those rungs will fail in production and this run does not measure them",
-			"unbound", strings.Join(unreachable, ", "))
-	}
+	warnUnboundDegradeTargets(cfg, log)
 
 	var collisions []string
 	for _, task := range ai.AllTasks() {
@@ -104,4 +81,33 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 			cfg.JudgeBinding.Provider, cfg.JudgeBinding.Model, len(collisions), strings.Join(collisions, ", "))
 	}
 	return nil
+}
+
+// warnUnboundDegradeTargets says which rungs a task can fall to that this
+// deployment does not bind.
+//
+// A warning rather than a refusal: the rung this run MEASURES is bound, and an
+// unbound degrade target is a gap in the deployment rather than a reason to
+// decline to measure what is there. It is worth saying at all because the cert
+// run is the one place the gap is cheap to see — it already holds the routing —
+// and in production it surfaces only once the budget band moves a task onto a
+// rung nothing can serve.
+func warnUnboundDegradeTargets(cfg RunnerConfig, log *slog.Logger) {
+	var unreachable []string
+	for _, task := range ai.AllTasks() {
+		if ai.Status(task) != ai.StatusShipped {
+			continue
+		}
+		for _, tier := range ai.ServableTiers(task) {
+			binding, bound := cfg.Routing.Tiers[tier]
+			if !bound || binding.Provider == "" || binding.Model == "" {
+				unreachable = append(unreachable, fmt.Sprintf("%s→%s", task, tier))
+			}
+		}
+	}
+	if len(unreachable) > 0 {
+		log.Warn("aicert: some tiers a task can degrade to are unbound in the supplied routing — those rungs will fail in production and this run does not measure them",
+			"unbound", strings.Join(unreachable, ", "))
+	}
+
 }
