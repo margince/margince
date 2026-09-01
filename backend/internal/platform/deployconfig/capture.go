@@ -29,22 +29,46 @@ type Capture struct {
 	// over every baseline/prefix rule.
 	TransactionalNever []string `yaml:"transactional_never"`
 
-	// TracePayloads turns on payload capture in the 24-hour capture trace: each
-	// traced message keeps its sender and a bounded subject, INCLUDING messages
-	// dropped because every party was internal — which is the case an operator
-	// turns this on to diagnose, and the case that stores correspondence the
-	// pipeline otherwise refuses to keep.
+	// TracePayloads keeps each traced message's sender and a bounded subject in
+	// the 24-hour capture trace, INCLUDING messages dropped because every party
+	// was internal.
 	//
-	// OFF by default and settable ONLY here. There is no API and no Settings
-	// control, deliberately: a member must not be able to switch on retention of
-	// their colleagues' subjects, and an operator turning it on is a decision
+	// ON unless the file says otherwise, which is why this is a pointer: for a
+	// plain bool an absent key and an explicit `false` are the same zero value,
+	// so a default of on could not be turned off. nil means the operator said
+	// nothing and gets the default.
+	//
+	// It ships on because the trace exists to answer "why did this message not
+	// arrive", and without the sender it cannot: a page of decisions naming
+	// nobody tells a member their mail is a black box rather than telling them
+	// what the pipeline threw away. The cost is one address and one clamped
+	// subject (320 and 300 characters, trace.go), never a body, deleted with
+	// the row by the hourly sweep and reachable by an erasure inside the
+	// window. A member reads only their OWN rows — no grant widens them — so
+	// this is somebody's own mail shown back to them.
+	//
+	// Settable ONLY here, and only to turn it OFF. There is no API and no
+	// Settings control: a member must not be able to switch on retention of
+	// their colleagues' subjects, and an operator turning it off is a decision
 	// with a name attached.
 	//
 	// It does NOT touch the system_log breadcrumb, which keeps carrying the
 	// connector, the source system and the external id and nothing else
 	// (ADR-0082 §1). Nor does it reach ai_call_payload, which this pipeline's
 	// verdict task is pinned out of (`no_payload: true`, ADR-0074).
-	TracePayloads bool `yaml:"trace_payloads"`
+	TracePayloads *bool `yaml:"trace_payloads"`
+}
+
+// TracesPayloads answers the question the field spells as three states: an
+// operator who said nothing gets the default, which is on.
+//
+// Every reader goes through this rather than dereferencing the pointer, so
+// there is one place the default lives and a nil can never panic at a call
+// site that forgot it.
+//
+// Held by: TestOnlyTheResolverDereferencesTracePayloads (capture_test.go)
+func (c Capture) TracesPayloads() bool {
+	return c.TracePayloads == nil || *c.TracePayloads
 }
 
 // Warnings names the settings this block still accepts but no longer acts on,

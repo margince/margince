@@ -345,10 +345,19 @@ full" and "one domain is flooding it" are never confused.
 
 Every decision above is readable, per member, in **Settings → Capture activity**.
 
-The tab shows the last 24 hours of the reader's own connections: a count per outcome, then a row per
-message saying when it arrived, which connector carried it, what the pipeline decided, and — where
-the decision needs it — the reason that changes what that decision means. A deferred message shows
-what later became of its sender, read from the disposition ledger.
+The tab holds two things. First, **Keep out of capture**: the addresses and domains whose mail never
+enters the CRM. It lives here rather than under the administrator's Capture settings because blocking
+a sender is the reader's own answer to what this page reports, not an installation posture.
+
+Then the last 24 hours of the reader's own connections: a count per outcome, and behind a disclosure
+titled **Messages**, a row per message saying when it arrived, which connector carried it, what the
+pipeline decided, and — where the decision needs it — the reason that changes what that decision
+means. A deferred message shows what later became of its sender, read from the disposition ledger.
+
+The log is closed by default. It answers a question about one message, which is what somebody
+debugging the pipeline asks and not what a member opening the page came for. It stays reachable by
+every seat rather than moving behind the `capture_trace` grant: a member's own trace rows answer to
+their owner and no grant widens them, so gating them here would invent a rule the API does not have.
 
 That last column is **mail rows only**. The ledger belongs to the mail ladder and is keyed on an
 address. Without the guard, a direct message would inherit whatever verdict is pending for the same
@@ -362,16 +371,24 @@ channel record has no ladder verdict, which is not the same as having one that i
 | Scope | Captured messages. Lead capture has its own outcomes and is not shown here |
 | Retention | 24 hours, deleted by an hourly sweep |
 
-**By default the trace stores nothing about the message itself**: no address, no subject. A row whose
-message was dropped as internal shows the time and the connector, and says *content not stored*. That
-is the honest answer, since the drop exists so that no copy is kept.
+**The trace names the sender and keeps a bounded subject**: one address and one subject line, clamped
+to 320 and 300 characters, never a body. It covers internally-dropped mail, which the CRM otherwise
+stores nothing about and which is exactly what somebody is looking for when a message went missing.
 
-`capture.trace_payloads: true` in `margince.yaml` changes that. Each traced message then also keeps
-its sender and a bounded subject for the same 24 hours, including internally-dropped mail, which is
-the case an operator turns it on to diagnose. It is **off by default and settable only in the
-deployment file** — no API, no in-app switch — because it retains correspondence the CRM otherwise
-refuses to store. An erased subject's address is never written whatever the posture says, and an
-erasure request inside the window reaches what is already there.
+This is on by default, which is a deliberate reversal of where the feature started. A trace of
+decisions naming nobody cannot answer the question the page exists for — it tells a member their mail
+is a black box rather than telling them what the pipeline threw away. The exposure is bounded three
+ways: the payload is an address and a subject rather than the message, the hourly sweep deletes it
+with its row inside a day, and a member reads only rows from their own connections, so this is
+somebody's own mail shown back to them.
+
+`capture.trace_payloads: false` in `margince.yaml` turns it off, for an installation whose works
+agreement requires that; the trace then keeps recording every decision and names nobody, and one note
+above the list says so — once, about the deployment, rather than on each row where it read as a fact
+about that message. It is **settable only in the deployment file** — no API, no in-app switch — so
+neither posture is one member's to change for their colleagues. An erased subject's address is never
+written whatever the posture says, and an erasure request inside the window reaches what is already
+there.
 
 Operators also get `margince_capture_outcomes_total` on `/metrics`, counted per outcome since process
 start. It makes a change like "every message from that mailbox has been dropped as internal since

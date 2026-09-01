@@ -5321,7 +5321,7 @@ export const de = {
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "captureActivity.title": "Erfassungsaktivität",
   "captureActivity.sub":
-    "Was in den letzten 24 Stunden mit Ihren Nachrichten geschehen ist.",
+    "Was aus Ihrer Post der letzten 24 Stunden geworden ist. Die Absender, die Sie ausschließen, stehen darüber.",
   "captureActivity.scope.label": "Wessen Aktivität",
   "captureActivity.outcomes": "Ergebnisse",
   "captureActivity.messages": "Nachrichten",
@@ -5337,7 +5337,8 @@ export const de = {
   "captureActivity.loadMore": "Mehr laden",
   "captureActivity.empty":
     "keine Erfassungsaktivität in den letzten 24 Stunden",
-  "captureActivity.contentNotStored": "Inhalt nicht gespeichert",
+  "captureActivity.payloadsOff":
+    "Diese Installation speichert weder den Absender einer Nachricht noch ihren Betreff. Die Zeilen unten nennen daher nur die Entscheidung.",
   "captureActivity.contentNone": "kein Absender erfasst",
   "captureActivity.outcome.captured": "Erfasst",
   "captureActivity.outcome.internal": "Als intern verworfen",

@@ -95,7 +95,11 @@ function jsonResponse(body: unknown, status = 200) {
 // `allow` rather than a role name: the fixture does not infer grants from
 // roles, deliberately — a screen must gate on the grant the server actually
 // sent, not on a role a test asserted.
-function renderTab(body: Record<string, unknown>, allow: GrantSpec = {}) {
+function renderTab(
+  body: Record<string, unknown>,
+  allow: GrantSpec = {},
+  exclusions: readonly Record<string, unknown>[] = [],
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -108,6 +112,12 @@ function renderTab(body: Record<string, unknown>, allow: GrantSpec = {}) {
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       if (key === "GET /me") return jsonResponse(meFixture({ allow }));
       if (key === "GET /capture/activity") return jsonResponse(body);
+      // The block list is composed on this page now, so the harness owes it a
+      // route: without one it renders against `{}` and takes the whole card
+      // down with it, which is what every test in this file saw first.
+      if (key === "GET /capture/exclusions") {
+        return jsonResponse({ data: exclusions });
+      }
       if (key === "GET /capture/activity/workspace") {
         return jsonResponse(windowBody({ data: [], funnel: {} }));
       }
@@ -142,6 +152,29 @@ function renderTab(body: Record<string, unknown>, allow: GrantSpec = {}) {
   return rtlRender(ui);
 }
 
+// The per-message log is behind a disclosure, so a test that wants a row has to
+// open it the way a reader does. jsdom renders `<details>` children whether or
+// not it is open, so reaching straight for a row would assert about markup a
+// reader cannot see — the exact confusion this surface exists to avoid.
+async function logDisclosure(): Promise<HTMLDetailsElement> {
+  // `find`, not `get`: the summary is drawn by the window query, so a helper
+  // that read synchronously would race the fetch every caller has just started.
+  const summary = await screen.findByText("Messages");
+  const details = summary.closest("details");
+  if (!(details instanceof HTMLDetailsElement)) {
+    throw new Error("the per-message log is not inside a disclosure");
+  }
+  return details;
+}
+
+async function openLog(): Promise<HTMLDetailsElement> {
+  const details = await logDisclosure();
+  if (!details.open) {
+    await userEvent.click(await screen.findByText("Messages"));
+  }
+  return details;
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -156,18 +189,30 @@ describe("capture activity", () => {
     expect(screen.getAllByText("0").length).toBeGreaterThan(0);
   });
 
-  it("says content is not stored rather than showing an empty subject", async () => {
-    renderTab(windowBody());
-    expect(await screen.findByText(/content not stored/i)).toBeInTheDocument();
+  it("says once that the installation stores no sender, not once per row", async () => {
+    // The old spelling put "content not stored" on every row, which reads as a
+    // fact about THAT message — as though this one arrived without a sender.
+    // It is the deployment having stored an address for none of them, so it is
+    // said once, above the rows, about the installation.
+    renderTab(windowBody({ data: [ROW, { ...ROW, id: "row-2" }] }));
+    await openLog();
+    const note = await screen.findAllByText(
+      /does not record who sent a message/i,
+    );
+    expect(note).toHaveLength(1);
   });
 
   it("distinguishes an absent payload from a posture that stores none", async () => {
     // Payload capture is ON and this row still carries nothing — an erased
-    // subject. Reporting that as "content not stored" would blame the operator's
-    // posture for a deletion somebody requested.
+    // subject. That absence IS about this message, so the row says so, and the
+    // installation-wide note must not appear to blame the operator's posture
+    // for a deletion somebody requested.
     renderTab(windowBody({ payload_capture_enabled: true }));
+    await openLog();
     expect(await screen.findByText(/no sender recorded/i)).toBeInTheDocument();
-    expect(screen.queryByText(/content not stored/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/does not record who sent a message/i),
+    ).not.toBeInTheDocument();
   });
 
   it("explains a reason that changes what the outcome means", async () => {
@@ -192,7 +237,7 @@ describe("capture activity", () => {
 
   it("hides the shared-channel toggle from a seat without the grant", async () => {
     renderTab(windowBody());
-    await screen.findByText(/content not stored/i);
+    await screen.findByText("Outcomes");
     expect(screen.queryByText(/shared channels/i)).not.toBeInTheDocument();
   });
 
@@ -223,7 +268,7 @@ describe("capture activity", () => {
         data: [{ ...ROW, outcome: "captured", reason: "teleported" }],
       }),
     );
-    await screen.findByText(/content not stored/i);
+    await openLog();
     expect(screen.queryByText(/teleported/)).not.toBeInTheDocument();
   });
 
@@ -312,22 +357,17 @@ describe("capture activity", () => {
     expect(row.getByText(/waiting on a verdict/i)).toBeInTheDocument();
   });
 
-  // The row language: the counters and the log are the SUBJECT of this card
-  // rather than answers to a question that would fit beside them, so each is
-  // named and then given the whole width below its naming. A log squeezed into
-  // a right-hand column is the shape this replaced.
-  it("gives the log a named row of its own, at the card's full width", async () => {
+  // What a rep meets on this page, in order. The block list is the one control
+  // they came for; the counters say what the window did; the per-message log is
+  // a diagnostic and sits behind a disclosure so it is available without being
+  // the first thing on the page. Closed is the default and is the assertion:
+  // `<details>` renders its children either way, so a test that merely FINDS a
+  // row proves nothing about whether a reader can see it.
+  it("puts the block list and the counters ahead of the per-message log", async () => {
     renderTab(windowBody());
-    const naming = await screen.findByText("Messages");
-    const row = naming.closest(".settingrow");
-    expect(row).not.toBeNull();
-    if (row instanceof HTMLElement) {
-      expect(row.className).toContain("settingrow-stack");
-      expect(within(row).getByRole("list")).toBeInTheDocument();
-    }
-    // And the counters are their own row, with what they are counting stated as
-    // that row's description rather than as a paragraph between the two.
-    const counters = screen.getByText("Outcomes").closest(".settingrow");
+    const counters = (await screen.findByText("Outcomes")).closest(
+      ".settingrow",
+    );
     expect(counters).not.toBeNull();
     if (counters instanceof HTMLElement) {
       expect(
@@ -337,6 +377,16 @@ describe("capture activity", () => {
         within(counters).getByText(/filtered on its own side/i),
       ).toBeInTheDocument();
     }
+    // The block list is on this page at all — it used to live two tabs away
+    // under Organization, behind a door most seats cannot open.
+    expect(await screen.findByText("Keep out of capture")).toBeInTheDocument();
+    // And the log is closed, so nothing about one message is on screen until
+    // somebody asks for it.
+    const log = await logDisclosure();
+    expect(log.open).toBe(false);
+    await openLog();
+    expect(log.open).toBe(true);
+    expect(within(log).getByRole("list")).toBeInTheDocument();
   });
 
   it("reports an empty window as empty rather than as a failure", async () => {
@@ -362,7 +412,7 @@ describe("the pipeline drill-down", () => {
     // count under a counter reading 3 would look like the counter was wrong.
     const user = userEvent.setup();
     renderTab(windowBody());
-    await screen.findByText(/content not stored/i);
+    await openLog();
     await user.click(
       screen.getByRole("button", { name: /dropped as internal/i }),
     );
@@ -384,9 +434,7 @@ describe("the pipeline drill-down", () => {
         ],
       }),
     );
-    // Settle on a row-only string: "Dropped as internal" appears in the funnel
-    // slot AND in the row, so waiting on it would be ambiguous.
-    await screen.findAllByText(/content not stored/i);
+    await openLog();
     await user.click(screen.getByRole("button", { name: /^captured/i }));
     const list = within(await screen.findByRole("list"));
     expect(list.getByText("Captured")).toBeInTheDocument();
@@ -396,8 +444,9 @@ describe("the pipeline drill-down", () => {
   it("opens one message's whole path from its row", async () => {
     const user = userEvent.setup();
     renderTab(windowBody());
+    await openLog();
     await user.click(
-      await screen.findByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", { name: /every step this message/i }),
     );
     expect(
       await screen.findByText(/how this message was handled/i),
@@ -414,8 +463,9 @@ describe("the pipeline drill-down", () => {
     // surface exists to end.
     const user = userEvent.setup();
     renderTab(windowBody());
+    await openLog();
     await user.click(
-      await screen.findByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", { name: /every step this message/i }),
     );
     expect(await screen.findByText("Sentiment scoring")).toBeInTheDocument();
     expect(screen.getByText(/the sentiment pass read it/i)).toBeInTheDocument();
@@ -426,8 +476,9 @@ describe("the pipeline drill-down", () => {
   it("says once that no step stored content, rather than per step", async () => {
     const user = userEvent.setup();
     renderTab(windowBody());
+    await openLog();
     await user.click(
-      await screen.findByRole("button", { name: /every step this message/i }),
+      screen.getByRole("button", { name: /every step this message/i }),
     );
     expect(
       await screen.findByText(/did not turn payload capture on/i),

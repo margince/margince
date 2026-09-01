@@ -90,7 +90,6 @@ import { AutomationsAdmin } from "./automations";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
 import { CaptureActivityTab } from "./capture-activity";
-import { CaptureExclusionsCard } from "./capture-exclusions";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
 import {
@@ -339,9 +338,6 @@ export function tabContent(id: SettingsTabId): ReactNode {
           <OwnDomainsCard />
           <CaptureSettingsCard />
           <ConsumerMailDomainsCard />
-          {/* What the reader themselves, and the workspace, keep out entirely:
-              addresses and domains the sink drops before storing anything. */}
-          <CaptureExclusionsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
               a machine or a person decided it. An operator hunting a company
