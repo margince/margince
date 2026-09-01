@@ -133,6 +133,32 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getByText(/Philipp Hartwig/)).toBeTruthy();
   });
 
+  // The server sends the deal's name in `detail` — the title has nowhere to
+  // put it, since a notice's subject is never set.
+  it("renders the server's one supporting line, even when the title has no subject to name", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "n1",
+            source: "notice",
+            title: "A deal you own changed stage",
+            detail: "Acme Renewal moved to a new pipeline stage.",
+          }),
+        ],
+        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    expect(
+      await screen.findByText("A deal you own changed stage"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Acme Renewal moved to a new pipeline stage."),
+    ).toBeTruthy();
+  });
+
   it("does not repeat a name the title already carries", async () => {
     stub(
       day({

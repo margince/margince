@@ -74,6 +74,7 @@ function WorklistRow({
   item,
   position,
   owner,
+  asOf,
   onReview,
 }: Readonly<{
   item: WorklistItem;
@@ -81,6 +82,12 @@ function WorklistRow({
   // Whose queue this row is on, empty for the reader's own. A row can only be
   // handed to somebody else from a page that is already about somebody else.
   owner: string;
+  // When the server took this snapshot. The waiting_days tie-break's elapsed
+  // days are computed against THIS, not the render's own wall clock — a cached
+  // read rendered later, or a client clock that has drifted from the
+  // server's, must not silently change what the row says about an order the
+  // server already decided as of a fixed instant.
+  asOf: string;
   onReview: () => void;
 }>) {
   const t = useT();
@@ -93,7 +100,13 @@ function WorklistRow({
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null)
     .join(" · ");
-  const above = comparisonText(item.above_next, t, locale, zone);
+  const above = comparisonText(
+    item.above_next,
+    t,
+    locale,
+    zone,
+    new Date(asOf),
+  );
   const consequence = consequenceText(item, t);
   return (
     <PanelRow className="worklist-row">
@@ -115,6 +128,16 @@ function WorklistRow({
           <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
         </p>
+        {/* `detail` is not prose on every source: a relationship-decay row
+            carries a bare day COUNT there (attention/render.go's lapsedItem,
+            "the client writes 'quiet N days'"), which this row already says
+            properly through `because`. Only the `notice` source's detail is
+            a full sentence — the server sets it from the notice's own body,
+            the deal's name included — so only that source renders it here
+            rather than every source that happens to send one. */}
+        {item.source === "notice" && item.detail && (
+          <p className="t-caption worklist-row-detail">{item.detail}</p>
+        )}
         {item.batch?.sample && item.batch.sample.length > 0 && (
           // A group nobody can see into is a group nobody trusts, and an
           // untrusted group is worse than the pile it replaced.
@@ -465,6 +488,7 @@ function WorklistBody({
                   item={item}
                   position={index + 1}
                   owner={owner}
+                  asOf={day.as_of}
                   onReview={() => onFilter(reviewFilter(item))}
                 />
               </li>
