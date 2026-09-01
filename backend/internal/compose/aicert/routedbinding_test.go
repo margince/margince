@@ -161,3 +161,21 @@ func TestValidateRoutedBindingsRefusesAnUnknownProfile(t *testing.T) {
 }
 
 func ptr(r ai.RoutingConfig) *ai.RoutingConfig { return &r }
+
+// A routed run files its records under the ROUTING's profile, whatever the
+// config field beside it says. The profile is part of a record's identity, so a
+// caller that set Routing and left Profile at something else would otherwise
+// write records under an environment class the binding never declared — and
+// nothing downstream could tell.
+func TestARoutedRunTakesItsProfileFromTheRouting(t *testing.T) {
+	routing := devLikeRouting() // declares eu_hosted
+	cfg := RunnerConfig{Routing: &routing, Profile: ai.ProfileCloudFrontier}
+	if got := cfg.recordProfile(); got != ai.ProfileEUHosted {
+		t.Errorf("recordProfile() = %q, want the routing's own eu_hosted — not the field beside it", got)
+	}
+	// Unrouted, the field IS the answer; there is nothing else to ask.
+	plain := RunnerConfig{Profile: ai.ProfileCloudFrontier}
+	if got := plain.recordProfile(); got != ai.ProfileCloudFrontier {
+		t.Errorf("recordProfile() = %q, want the configured cloud_frontier", got)
+	}
+}

@@ -58,9 +58,9 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 			"the judge is a SECOND model on purpose and is NOT resolved from the routing, because " +
 			"cert_judge's own rung would collide with every candidate sharing it")
 	}
-	if !cfg.Profile.Valid() {
+	if !cfg.Routing.Profile.Valid() {
 		return fmt.Errorf("the supplied routing declares profile %q, which is not an environment class; "+
-			"a record is filed under it, so a run states which one it measured", cfg.Profile)
+			"a record is filed under it, so a run states which one it measured", cfg.Routing.Profile)
 	}
 	warnUnboundDegradeTargets(cfg, log)
 
@@ -81,6 +81,24 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 			cfg.JudgeBinding.Provider, cfg.JudgeBinding.Model, len(collisions), strings.Join(collisions, ", "))
 	}
 	return nil
+}
+
+// recordProfile is the environment class this run files its records under.
+//
+// A routed run takes the ROUTING's profile, not the config field beside it. The
+// profile is part of a record's identity and is the claim ValidateTierBinding
+// enforces, so it has to come from the same document that named the models — a
+// caller that set Routing and left Profile at some other value would otherwise
+// file records under an environment class the binding never declared, and
+// nothing downstream could tell.
+//
+// Decided here rather than trusted from the caller because Run is the last place
+// that knows both, and the paid lane is not the only caller.
+func (c RunnerConfig) recordProfile() ai.Profile {
+	if c.Routing != nil {
+		return c.Routing.Profile
+	}
+	return c.Profile
 }
 
 // warnUnboundDegradeTargets says which rungs a task can fall to that this

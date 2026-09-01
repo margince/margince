@@ -39,18 +39,6 @@ import (
 // the lane gate itself; the rest default to "certify everything the
 // corpus covers, on the routing file's own bindings, Run's own default
 // repeat count."
-// profileFor is the environment class a run files its records under: the routed
-// config's own when there is one, else the environment's.
-//
-// (This function was inserted above TestE2ECertify and took its doc comment with
-// it; the test's own comment is restored below.)
-func profileFor(routing *ai.RoutingConfig, fromEnv string) ai.Profile {
-	if routing != nil {
-		return routing.Profile
-	}
-	return ai.Profile(fromEnv)
-}
-
 // logResolvedBindings prints what a routed run decided BEFORE it spends: which
 // rung each shipped task landed on and the model bound there. A paid run that
 // measured the wrong deployment is only obvious from this list.
@@ -167,7 +155,10 @@ func TestE2ECertify(t *testing.T) {
 		// is part of a record's identity and part of what ValidateTierBinding
 		// enforces, so taking it from anywhere but the config that names the
 		// models would file a record under an environment class nobody declared.
-		Profile:    profileFor(routing, os.Getenv("MARGINCE_AICERT_PROFILE")),
+		// Under ROUTING= this is ignored: Run takes the profile from the routing
+		// itself (RunnerConfig.recordProfile), so the record's environment class
+		// comes from the same document that named the models.
+		Profile:    ai.Profile(os.Getenv("MARGINCE_AICERT_PROFILE")),
 		TaskFilter: os.Getenv("MARGINCE_AICERT_TASK"),
 		Repeats:    repeats,
 		CorpusDir:  "corpus",

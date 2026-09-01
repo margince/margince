@@ -178,11 +178,11 @@ the records:
 ```text
 AI certification readiness: 1 of 36 shipped sites carry a current record.
 
-SITE                  SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV   RUNS  PASSED  RELIABILITY  ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
-agent_loop/loop       single_turn      absent   -          -          -         -                 -     -     -       -            -         -             -        -
-cold_start/acts       single_turn      current  3/3        certified  gemini    gemini-3.5-flash  byok  3     3       1.00         3         0             0        0
-cold_start/company    single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  byok  27    27      1.00         27        0             0        0
-rate_extract/pricing  full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  byok  3     3       1.00         3         0             0        0
+SITE                  SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY  ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
+agent_loop/loop       single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
+cold_start/acts       single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+cold_start/company    single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
+rate_extract/pricing  full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
 ```
 
 **Every row's numbers are that SITE's own.** A record is written per task and a

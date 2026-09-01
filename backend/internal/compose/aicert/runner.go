@@ -217,7 +217,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 			binding = resolved
 			log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
 		}
-		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.Profile, repeats, log, &certifyHooks{trace: trace})
+		rec, err := certifyTask(ctx, task, byTask[task], cfg.Census, binding, cfg.JudgeBinding, cfg.recordProfile(), repeats, log, &certifyHooks{trace: trace})
 		if err != nil {
 			log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
 			runErrs = append(runErrs, fmt.Errorf("task %s: %w", task, err))
