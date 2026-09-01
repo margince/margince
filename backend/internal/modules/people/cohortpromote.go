@@ -268,15 +268,18 @@ func (s *Store) PeopleOwedACohortRepair(ctx context.Context, limit int) ([]ids.P
 				-- row. Without this arm a person owed nothing BUT meeting links
 				-- is never offered, and the sweep reports a drained backlog
 				-- while every synced meeting stays off their page.
-				SELECT ap.person_id
+				SELECT coalesce(att.merged_into_id, att.id)
 				  FROM activity_participant ap
 				  JOIN activity a ON a.id = ap.activity_id
+				  JOIN person att ON att.id = ap.person_id
 				 WHERE ap.person_id IS NOT NULL
 				   AND a.kind = 'meeting'
 				   AND a.captured_by LIKE 'connector:%' AND a.restricted_at IS NULL
+				   AND a.archived_at IS NULL
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_link l
-				        WHERE l.activity_id = a.id AND l.person_id = ap.person_id)
+				        WHERE l.activity_id = a.id
+				          AND l.person_id = coalesce(att.merged_into_id, att.id))
 				   AND (SELECT count(*) FROM activity_link cap
 				         WHERE cap.activity_id = a.id) < $2
 			)
@@ -445,6 +448,17 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 // PERSON links only, never the company: a meeting may not link straight to an
 // organization, and the account reaches it through the attendee's employment.
 //
+// The ATTENDEE's own merge redirect is resolved, not just the person the repair
+// was asked about. A participant row written before the merge repointed them
+// still names the retired id; matching on it alone would miss that meeting
+// forever, while the selector offered the retired id and the liveness join then
+// dropped it — the meeting stays unlinked and the sweep reports a drained
+// backlog. capture.meetingParticipantsWithPeople resolves it the same way, for
+// the same reason.
+//
+// An archived meeting is left alone. Linking one would file a record a reader
+// cannot open, and emit an activity.updated for it.
+//
 // The 25-link ceiling is activities.maxActivityLinks — an activity may be filed
 // under at most 25 records, whatever wrote them. It is re-spelled rather than
 // imported because a module never imports a sibling; what must not drift is the
@@ -459,9 +473,12 @@ func linkAttendedMeetings(ctx context.Context, tx pgx.Tx, personID ids.PersonID)
 		 WHERE a.kind = 'meeting'
 		   AND a.captured_by LIKE 'connector:%'
 		   AND a.restricted_at IS NULL
+		   AND a.archived_at IS NULL
 		   AND EXISTS (
 		       SELECT 1 FROM activity_participant ap
-		        WHERE ap.activity_id = a.id AND ap.person_id = $1)
+		         JOIN person att ON att.id = ap.person_id
+		        WHERE ap.activity_id = a.id
+		          AND coalesce(att.merged_into_id, att.id) = $1)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_link l
 		        WHERE l.activity_id = a.id AND l.person_id = $1)

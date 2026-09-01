@@ -136,3 +136,59 @@ func TestAMeetingReachesEveryAttendeeNotOnlyTheFirst(t *testing.T) {
 			"activity already linked to anyone reads a meeting as taken by whoever was repaired first")
 	}
 }
+
+// The shape a database written before the merge fix holds: an attendee row still
+// naming the retired person id, with the survivor live beside it.
+//
+// It has to be built by hand — the merge repoints participant rows now, so no
+// current writer produces it. Missing it is silent in the worst way: the
+// selector offers the retired id, the liveness join drops it as merged, and the
+// sweep reports a drained backlog while the meeting never reaches anyone.
+func TestAMeetingReachesTheSurvivorWhenItsAttendeeRowNamesAMergedRecord(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	const retiredEmail, survivorEmail = "retired@merge.test", "survivor@merge.test"
+	retired, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, retiredEmail, "Retired Rec", "merge.test"))
+	if err != nil {
+		t.Fatalf("ensure retired: %v", err)
+	}
+	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, survivorEmail, "Survivor Rec", "merge.test"))
+	if err != nil {
+		t.Fatalf("ensure survivor: %v", err)
+	}
+
+	meeting := e.seedCapturedMeeting(ctx, t, retiredEmail)
+	// Point the attendee row at the retired record, then retire it — the
+	// pre-fix ordering, where the merge moved the person but not the row.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			UPDATE activity_participant SET person_id = $1, address = NULL
+			 WHERE activity_id = $2`, retired.PersonID, meeting); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			UPDATE person SET merged_into_id = $1, archived_at = now() WHERE id = $2`,
+			survivor.PersonID, retired.PersonID)
+		return err
+	}); err != nil {
+		t.Fatalf("building the pre-merge shape: %v", err)
+	}
+
+	owed, err := e.store.PeopleOwedACohortRepair(ctx, 50)
+	if err != nil {
+		t.Fatalf("listing the owed: %v", err)
+	}
+	if !containsPerson(owed, survivor.PersonID) {
+		t.Fatalf("the sweep does not offer the survivor %s — it selected the retired id, the "+
+			"liveness join dropped it, and the meeting is owed to nobody", survivor.PersonID)
+	}
+
+	if _, err := e.store.RepairPersonCohort(ctx, survivor.PersonID); err != nil {
+		t.Fatalf("repair: %v", err)
+	}
+	if linked, _ := e.cohortStateOf(ctx, t, meeting, survivor.PersonID); !linked {
+		t.Errorf("the meeting is not filed under the survivor — an attendee row naming the " +
+			"retired id is a meeting on a page nobody opens")
+	}
+}
