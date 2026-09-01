@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The one thing to do next, drawn as itself.
+//
+// The queue already answers "what is most important" — it is the first row, and
+// it has been since the ranking shipped. What it did not do is SAY so: a reader
+// arriving at a list of twenty-five rows has to work out that the top one is
+// the answer, and a list is a shape that invites scanning rather than acting.
+//
+// So the first row is lifted out and given the evidence a rep needs to act
+// without opening anything: what it is, why now in money and dates, and the one
+// verb the server named. The row stays in the queue below it, because removing
+// it would make the rank numbers lie and the counts disagree with the page.
+
+import { Badge } from "../design-system/atoms";
+import { Panel } from "../design-system/panel";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
+import {
+  consequenceText,
+  dealFactsText,
+  itemTitle,
+  moveHref,
+  reasonText,
+  rowHref,
+} from "./worklist.copy";
+import type { WorklistItem } from "./worklist.queries";
+
+// The focus card, or nothing.
+//
+// Drawn only on a page the reader can act on. A day whose top row is a
+// duplicate-merge suggestion is not a day with a recommended action, and
+// promoting one would tell a rep that hygiene is their most important work.
+export function FocusCard({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  if (!worthFocusing(item)) {
+    return null;
+  }
+  const href = rowHref(item);
+  const move = moveHref(item);
+  const facts = dealFactsText(item, t, locale, zone);
+  const consequence = consequenceText(item, t);
+  // The evidence, in the order the concept asks for it: what, why now, what it
+  // costs to do nothing. The comparator is deliberately absent — "182 against
+  // 180" belongs behind a disclosure, never in the primary scan path.
+  const because = item.because
+    .map((reason) => reasonText(reason, t, locale, zone))
+    .filter((phrase): phrase is string => phrase !== null)
+    .join(" · ");
+  return (
+    <Panel title={t("worklist.focus.title")}>
+      <div className="worklist-focus">
+        <p className="t-h2 worklist-focus-what">
+          {href ? (
+            <a className="entity-link" href={href}>
+              {itemTitle(item, t, locale)}
+            </a>
+          ) : (
+            itemTitle(item, t, locale)
+          )}
+          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
+        </p>
+        {facts && <p className="t-body worklist-focus-facts">{facts}</p>}
+        {because && <p className="t-caption worklist-focus-why">{because}</p>}
+        {consequence && (
+          <p className="t-caption worklist-focus-cost">{consequence}</p>
+        )}
+        {/* ONE verb. The server named it, and a card offering three would be
+            the list again in a bigger box. Everything else this row supports
+            stays available on its own row below. */}
+        <div className="worklist-focus-verb">
+          {move ? (
+            <a className="button button-primary" href={move}>
+              {t("worklist.verb.draft_reply")}
+            </a>
+          ) : (
+            href && (
+              <a className="button button-primary" href={href}>
+                {t(`worklist.focus.verb.${item.primary_action ?? "open"}`)}
+              </a>
+            )
+          )}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+// Whether this row is worth promoting to the card.
+//
+// A recommended action has to be something the rep DOES, and it has to be
+// theirs to do now. Review work is neither: it is judgement the queue collects
+// so it can be worked through in one pass, and a page headed "do this next"
+// over a duplicate-merge suggestion would be telling a rep something false
+// about their morning.
+function worthFocusing(item: WorklistItem): boolean {
+  return item.band !== "review" && item.primary_action !== undefined;
+}
+
+// Whether the page should draw a card at all, asked of the whole queue so the
+// screen does not have to know the rule.
+export function focusOf(
+  queue: readonly WorklistItem[],
+): WorklistItem | undefined {
+  const first = queue[0];
+  return first && worthFocusing(first) ? first : undefined;
+}

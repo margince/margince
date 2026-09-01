@@ -697,3 +697,71 @@ describe("an introduction ask on the queue", () => {
     expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
   });
 });
+
+describe("the one thing to do next", () => {
+  it("says what the top row is, rather than leaving a reader to work it out", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "focus-me",
+            title: "Northstar renewal",
+            band: "now",
+            primary_action: "act",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            level: 3,
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The card names the row and offers ONE verb. Both are drawn twice — once
+    // on the card, once on the row it was lifted from — because the row stays
+    // in the queue so the ranks and counts keep agreeing with the page.
+    await screen.findByText("Do this next");
+    expect(await screen.findAllByText("Northstar renewal")).toHaveLength(2);
+  });
+
+  it("promotes no card when the day's top row is review work", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "dupe",
+            title: "Two Acme records",
+            band: "review",
+            primary_action: "merge",
+            source: "dedupe_candidate",
+            category: "decisions",
+            level: 6,
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The row is there; the card is not. A page headed "do this next" over a
+    // duplicate-merge suggestion tells a rep something false about their day.
+    await screen.findByText("Two Acme records");
+    expect(screen.queryByText("Do this next")).toBeNull();
+  });
+
+  it("promotes no card when the server named no verb for the top row", async () => {
+    stub(
+      day({
+        queue: [
+          row({ id: "verbless", title: "Something happened", band: "now" }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Something happened");
+    expect(screen.queryByText("Do this next")).toBeNull();
+  });
+});

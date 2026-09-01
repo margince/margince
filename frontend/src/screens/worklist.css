@@ -24,6 +24,38 @@
   margin: var(--space-4) 0;
 }
 
+/* The one thing to do next.
+   Denser than a row and quieter than a banner: it earns its place by saying
+   more, not by shouting. The evidence lines step down the type ramp so a reader
+   scanning finds the name, then the money, then the reason. */
+.worklist-focus {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.worklist-focus-what {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.worklist-focus-facts,
+.worklist-focus-why,
+.worklist-focus-cost {
+  margin: 0;
+}
+
+.worklist-focus-why,
+.worklist-focus-cost {
+  color: var(--textSecondary);
+}
+
+.worklist-focus-verb {
+  margin-top: var(--space-2);
+}
+
 /* The band heading, above the first row of its run.
    Inside the list item rather than between them, because an <ol> may hold only
    <li> children — a heading placed as a sibling would be invalid structure that

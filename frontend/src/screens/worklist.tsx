@@ -1,37 +1,27 @@
 import { useState } from "react";
-import { Badge, Button, SegmentedControl } from "../design-system/atoms";
+import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
-import { Panel, PanelRow } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { ApprovalRow } from "./approvalrow";
 import {
-  comparisonText,
   completenessText,
-  consequenceText,
-  dealFactsText,
-  itemTitle,
-  moveHref,
   pillCount,
-  reasonText,
-  rowHref,
   sourceUnavailableText,
 } from "./worklist.copy";
-import { DispositionVerbs } from "./worklist.dispositions";
-import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
+import { FocusCard, focusOf } from "./worklist.focus";
+import { CoachControl, OwnerPicker } from "./worklist.manager";
 import {
-  useApproval,
   useWorklist,
   type Worklist,
   type WorklistFilter,
   type WorklistItem,
   type WorklistScope,
-  worklistKey,
 } from "./worklist.queries";
+import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 
 // The Worklist: one ranked list, not fourteen lanes.
@@ -96,289 +86,6 @@ function opensBand(queue: readonly WorklistItem[], index: number): boolean {
 // The rank number leads because the whole promise of the page is an order; the
 // reason line under the title is what makes that order checkable rather than
 // something to trust.
-function WorklistRow({
-  item,
-  position,
-  owner,
-  asOf,
-  onReview,
-}: Readonly<{
-  item: WorklistItem;
-  position: number;
-  // Whose queue this row is on, empty for the reader's own. A row can only be
-  // handed to somebody else from a page that is already about somebody else.
-  owner: string;
-  // When the server took this snapshot. The waiting_days tie-break's elapsed
-  // days are computed against THIS, not the render's own wall clock — a cached
-  // read rendered later, or a client clock that has drifted from the
-  // server's, must not silently change what the row says about an order the
-  // server already decided as of a fixed instant.
-  asOf: string;
-  onReview: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const href = rowHref(item);
-  const title = itemTitle(item, t, locale);
-  const facts = dealFactsText(item, t, locale, zone);
-  const because = item.because
-    .map((reason) => reasonText(reason, t, locale, zone))
-    .filter((phrase): phrase is string => phrase !== null)
-    .join(" · ");
-  const above = comparisonText(
-    item.above_next,
-    t,
-    locale,
-    zone,
-    new Date(asOf),
-  );
-  const consequence = consequenceText(item, t);
-  return (
-    <PanelRow className="worklist-row">
-      {/* The rank is the page's central claim, so it is readable rather than
-          decorative: the list element carries the order for a screen reader and
-          the number states it for everybody else. */}
-      <span className="t-caption worklist-rank">
-        {formatNumber(position, locale)}
-      </span>
-      <div className="worklist-row-text">
-        <p className="t-body worklist-row-title">
-          {href ? (
-            <a className="entity-link" href={href}>
-              {title}
-            </a>
-          ) : (
-            title
-          )}
-          <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
-          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
-        </p>
-        {/* `detail` is not prose on every source: a relationship-decay row
-            carries a bare day COUNT there (attention/render.go's lapsedItem,
-            "the client writes 'quiet N days'"), which this row already says
-            properly through `because`. Only the `notice` source's detail is
-            a full sentence — the server sets it from the notice's own body,
-            the deal's name included — so only that source renders it here
-            rather than every source that happens to send one. */}
-        {item.source === "notice" && item.detail && (
-          <p className="t-caption worklist-row-detail">{item.detail}</p>
-        )}
-        {item.batch?.sample && item.batch.sample.length > 0 && (
-          // A group nobody can see into is a group nobody trusts, and an
-          // untrusted group is worse than the pile it replaced.
-          <p className="t-caption worklist-row-sample">
-            {item.batch.sample.join(" · ")}
-          </p>
-        )}
-        {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-        {because && <p className="t-caption worklist-row-because">{because}</p>}
-        {/* What it costs to do nothing. The question a queue exists to answer,
-            and the one the lane feed had no field for. */}
-        {consequence && (
-          <p className="t-caption worklist-row-consequence">{consequence}</p>
-        )}
-        {/* Why this row beat the one below it. Absent on the last row, which
-            has nothing below it to beat. */}
-        {above && <p className="t-caption worklist-row-above">{above}</p>}
-      </div>
-      {item.batch ? (
-        <BatchVerb onReview={onReview} />
-      ) : (
-        <RowVerbs item={item} href={href} move={moveHref(item)} />
-      )}
-      {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
-          from `dispositions` rather than inferred from `source`: which rows a
-          rep may judge is a server rule, and a client keeping its own copy
-          draws a verb that 404s or hides one the rep is entitled to. */}
-      <DispositionVerbs item={item} />
-      {/* Only a task carries an assignee, so only a task can be handed on. A
-          group row stands for a pile and names no single activity to move. */}
-      {owner !== "" && item.source === "task" && !item.batch && (
-        <ReassignControl item={item} owner={owner} />
-      )}
-      {decidable(item) && <RowDecision item={item} />}
-    </PanelRow>
-  );
-}
-
-// Whether this row is a decision a person answers HERE.
-//
-// The queue holds no authority of its own — the card below is the same one the
-// record page draws, posting to the same endpoint. What the queue adds is that
-// the decision is answerable where it was ranked, instead of sending a reader
-// to a second screen to do what the row already described.
-function decidable(item: WorklistItem): boolean {
-  return item.actions.includes("decide") && item.source === "approval";
-}
-
-// The decision itself, fetched whole because a row cannot carry it.
-function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
-  const approval = useApproval(item.id, true);
-  // A body with no `kind` is not a proposal this card can draw: the kind
-  // chooses the label, the tool chip and the autonomy dot. Treated as a failed
-  // read rather than rendered, because the alternative is a throw that takes
-  // the whole day's page down over one malformed answer.
-  const usable = approval.data?.kind ? approval.data : undefined;
-  if (!usable) {
-    return null;
-  }
-  return (
-    <div className="worklist-row-decision">
-      <ApprovalRow approval={usable} extraInvalidateKeys={[worklistKey]} />
-    </div>
-  );
-}
-
-// The way into a group.
-//
-// It narrows the queue to decisions rather than opening a screen of its own:
-// that screen is its own piece of work, and a row whose only verb led nowhere
-// would be worse than the pile it replaced.
-//
-// A button, not a link. The dials live in this screen's state today, so an
-// address carrying `?filter=decisions` would be read by nobody and the control
-// would do nothing — which is the defect it exists to avoid. Moving them into
-// the URL is the right shape and is its own change.
-function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
-  const t = useT();
-  return (
-    <div className="worklist-row-verbs">
-      <Button small onClick={onReview}>
-        {t("worklist.verb.review_batch")}
-      </Button>
-    </div>
-  );
-}
-
-// What this row offers, as the item itself declares it.
-//
-// Every verb is a LINK to the surface that owns it rather than a mutation from
-// here: this queue adds no authority of its own, so deciding an approval goes
-// to the decision surface and merging a pair to the dedupe queue, exactly as
-// they do from any other door. Rendering a button that acted here would be a
-// second place for those rules to live.
-//
-// A verb whose destination this page cannot name draws nothing. A control that
-// looks pressable and goes nowhere is worse than no control.
-function RowVerbs({
-  item,
-  href,
-  move,
-}: Readonly<{
-  item: WorklistItem;
-  href: string | undefined;
-  move: string | undefined;
-}>) {
-  const t = useT();
-  const drawn = new Set<string>();
-  type Verb = {
-    action: WorklistItem["actions"][number];
-    destination: string;
-  };
-  const verbs = item.actions.flatMap<Verb>((action) => {
-    if (action === "decide") {
-      const to = decideDestination(item, href);
-      return to ? [{ action, destination: to }] : [];
-    }
-    const route = VERB_DESTINATION[action];
-    if (!route) {
-      // A verb this build cannot route draws nothing. A control that looks
-      // pressable and goes nowhere is worse than no control.
-      return [];
-    }
-    const destination = route(href);
-    if (!destination) {
-      return [];
-    }
-    // One control per DESTINATION. `complete` and `snooze` both open the
-    // record this row is about, and two identical "Open" links side by side
-    // ask the reader to choose between the same thing twice.
-    const key = `${VERB_LABEL[action](t)}|${destination}`;
-    if (drawn.has(key)) {
-      return [];
-    }
-    drawn.add(key);
-    return [{ action, destination }];
-  });
-  if (verbs.length === 0 && !move) {
-    return null;
-  }
-  return (
-    <div className="worklist-row-verbs">
-      {/* The step the product already worked out, offered where the reader is
-          standing rather than on a screen they have to go and find. */}
-      {move && (
-        <a className="link-button" href={move}>
-          {t("worklist.verb.draft_reply")}
-        </a>
-      )}
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className="link-button" href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-// Where each verb lives. A total map over the ones this page can route, so a
-// verb the contract adds either gets a destination here or is not drawn —
-// never a button that does nothing.
-const VERB_DESTINATION: Partial<
-  Record<
-    WorklistItem["actions"][number],
-    (href: string | undefined) => string | undefined
-  >
-> = {
-  // `decide` and `merge` are deliberately absent: the surface that answers
-  // them IS this page, so a link would send the reader where they already are.
-  // They come back when the decision card is drawn inline, which is its own
-  // piece of work.
-  //
-  // Everything routable is the record the row is about.
-  open: (href) => href,
-  complete: (href) => href,
-  snooze: (href) => href,
-  acknowledge: (href) => href,
-};
-
-// The one verb whose routing depends on the SOURCE rather than only the verb.
-//
-// `decide` is answered inline for an approval — the card is right there, so a
-// link would send the reader where they already are. An introduction ask has no
-// inline card: its four answers are the colleague's own, given on the contact's
-// Network tab. Without this the ask row names somebody waiting and offers
-// nothing at all, which is the worst of both.
-function decideDestination(
-  item: WorklistItem,
-  href: string | undefined,
-): string | undefined {
-  return item.source === "introduction_request" ? href : undefined;
-}
-
-// What each routable verb is called. Spelled as a map of functions rather than
-// a composed key, so a verb the contract adds without copy here does not
-// compile — which is the only way this cannot reach a reader as a raw word.
-const VERB_LABEL: Record<
-  WorklistItem["actions"][number],
-  (t: ReturnType<typeof useT>) => string
-> = {
-  decide: (t) => t("worklist.verb.decide"),
-  merge: (t) => t("worklist.verb.merge"),
-  open: (t) => t("worklist.verb.open"),
-  complete: (t) => t("worklist.verb.complete"),
-  snooze: (t) => t("worklist.verb.snooze"),
-  acknowledge: (t) => t("worklist.verb.acknowledge"),
-  // The briefing queue's three verbs. Named here because the map is total over
-  // the contract's actions — they route nowhere from this page yet, so
-  // VERB_DESTINATION does not carry them and no control is drawn.
-  act: (t) => t("worklist.verb.open"),
-  dismiss: (t) => t("worklist.verb.open"),
-  set_aside: (t) => t("worklist.verb.open"),
-};
-
-// The day's figures, and the dials that narrow them.
 function WorklistHeader({
   day,
   scope,
@@ -472,6 +179,7 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
+  const focus = focusOf(day.queue);
   return (
     <>
       <WorklistHeader
@@ -498,6 +206,10 @@ function WorklistBody({
           })}
         </Callout>
       )}
+      {/* The one thing to do next, said rather than implied. The row stays in
+          the queue below: removing it would make the rank numbers lie and the
+          counts disagree with the page. */}
+      {focus && <FocusCard item={focus} />}
       {day.queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
         <p className="t-body worklist-clear">
