@@ -125,15 +125,13 @@ func TestOneRepsNotMineDoesNotHideTheRowFromAnother(t *testing.T) {
 // A DISPOSITION IS REFUSED ON A MESSAGE THE CALLER MAY NOT READ, and refused
 // the same way as one that is not there.
 //
-// The schema fitness gate waives activity_reader_state.activity_id on exactly
-// this claim: the write is gated, so the FK is not the thing standing between a
-// rep and a message they have no business knowing exists. A waiver is a claim,
-// and this is the test that holds it — without one, a change to judgeMessage
-// would leave the waiver standing over nothing.
+// INDISTINGUISHABLE is the point. Setting a message aside is a write, but the
+// id names a row, and answering "you may not read this" differently from "there
+// is no such message" turns the write into a way to ask whether a message
+// exists. The answer is itself the disclosure, so both are ErrNotFound.
 //
-// INDISTINGUISHABLE is the point. If "you may not read this" and "there is no
-// such message" answered differently, setting one aside would be a way to ask
-// whether it exists — and the answer is itself the disclosure.
+// And nothing may land: a reader-state row written for a message the caller
+// cannot open would say, on their next read, that something is there.
 func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-unreadable", "inbound", "Held from this reader",
@@ -147,14 +145,18 @@ func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
 	if err := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), id); err != nil {
 		t.Fatalf("a readable message could not be set aside: %v — the refusal below would prove nothing", err)
 	}
-	if _, err := OwnerConn(t).Exec(context.Background(),
-		`DELETE FROM activity_reader_state WHERE activity_id = $1`, id); err != nil {
+	if err := store.ClearMessageDisposition(e.As(e.Rep1, nil, AdminPerms), id); err != nil {
 		t.Fatalf("clearing the admission: %v", err)
 	}
 
-	// Now held to its participants, of whom this rep is not one.
-	if _, err := OwnerConn(t).Exec(context.Background(),
-		`UPDATE activity SET audience = 'participants' WHERE id = $1`, id); err != nil {
+	// Now held to its participants, of whom this rep is not one — through the
+	// writer a person's narrowing goes through, because the raw column is not
+	// the whole state. SetAudience also stamps audience_reason=manual, and
+	// RecomputeAudienceTx reads that reason to tell a human's hold from a
+	// derived one: a row narrowed by UPDATE alone is one the next sync widens
+	// back, and the refusal below would then be proving nothing.
+	if _, err := store.SetAudience(e.As(e.AdminUser, nil, AdminPerms), id,
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("narrowing the message: %v", err)
 	}
 
