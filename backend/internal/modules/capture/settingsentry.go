@@ -95,8 +95,8 @@ var SharedPostureAllowed = settings.Define[bool](
 // turning it off means "do not take contact details off my mail", and a card
 // attached to that mail is the same answer to the same question.
 //
-// No longer nightly. The pass runs within minutes of a message arriving; the
-// nightly cycle is the backstop now, not the trigger.
+// The pass runs within minutes of a message arriving; the daily cycle is the
+// backstop rather than the trigger.
 //
 // It is the default rather than the answer: `capture_connection.signature_enrich_enabled`
 // overrides it per mailbox, and a mailbox that never chose follows this. That

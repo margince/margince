@@ -12570,13 +12570,15 @@ export interface components {
              */
             auto_enrich: boolean;
             /**
-             * @description The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
-             *     number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
-             *     a value the signature does not state is not written.
+             * @description The workspace DEFAULT for reading stated contact details — a title, a phone number, an
+             *     address, a company — out of mail a contact sent us. It governs both readers: the
+             *     signature of the message, and a vCard attached to it. Nothing is inferred: a value the
+             *     mail does not state is not written. Reading happens within minutes of the mail arriving;
+             *     a daily pass is the backstop.
              *
              *     A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
              *     never chose follows this. Distinct from the exclusion list, which keeps whole messages
-             *     out of capture by address or domain and says nothing about reading a signature.
+             *     out of capture by address or domain and says nothing about reading contact details.
              *     Default is ON.
              *
              *     "Workspace" here is the storage tenant, not the word the product shows a reader —
@@ -12741,7 +12743,7 @@ export interface components {
             auto_enrich?: boolean;
             /** @description Toggle the workspace mail-sharing posture; affects mail captured from now on. */
             mail_sharing?: boolean;
-            /** @description Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it. */
+            /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
             signature_enrich?: boolean;
             /** @description Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts. */
             shared_posture_allowed?: boolean;
@@ -12871,13 +12873,14 @@ export interface components {
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
             /**
-             * @description This mailbox's own answer to the nightly signature pass, or null to follow the
-             *     tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
-             *     a missing value: a mailbox that never chose moves with the default, and one that
-             *     did keeps its answer whatever the default becomes.
+             * @description This mailbox's own answer to reading contact details out of its mail, or null to
+             *     follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
+             *     and not a missing value: a mailbox that never chose moves with the default, and one
+             *     that did keeps its answer whatever the default becomes.
              *
-             *     False means no mail from this mailbox is ever SELECTED for enrichment — the pass
-             *     never reads it, rather than reading it and discarding the result.
+             *     False means no mail from this mailbox is ever SELECTED — neither its signatures are
+             *     read nor its attached vCards imported. The passes never reach it, rather than
+             *     reading it and discarding the result.
              */
             signature_enrich_enabled?: boolean | null;
             /**
