@@ -5387,7 +5387,8 @@ export const en = {
   "settings.tab.privacy": "Privacy & audit",
   "settings.tab.capture-activity": "Capture activity",
   "captureActivity.title": "Capture activity",
-  "captureActivity.sub": "What happened to your messages in the last 24 hours.",
+  "captureActivity.sub":
+    "What the last 24 hours of your mail turned into. The senders you keep out are above.",
   "captureActivity.scope.label": "Whose activity",
   "captureActivity.outcomes": "Outcomes",
   "captureActivity.messages": "Messages",
@@ -5402,7 +5403,8 @@ export const en = {
     "none of the loaded rows match — load more to reach the rest of the window",
   "captureActivity.loadMore": "Load more",
   "captureActivity.empty": "no capture activity in the last 24 hours",
-  "captureActivity.contentNotStored": "content not stored",
+  "captureActivity.payloadsOff":
+    "This installation does not record who sent a message or what it was about, so the rows below name the decision only.",
   "captureActivity.contentNone": "no sender recorded",
   "captureActivity.outcome.captured": "Captured",
   "captureActivity.outcome.internal": "Dropped as internal",
@@ -5439,7 +5441,7 @@ export const en = {
   "pipeline.sub":
     "Every step of the capture pipeline, in the order this message met them.",
   "pipeline.payloadsOff":
-    "No sender or subject is stored for any step: this deployment did not turn payload capture on.",
+    "No sender or subject is stored for any step: this deployment turned payload capture off.",
   "pipeline.transport": "Carried by",
   "pipeline.unavailable": "this message's pipeline steps could not be read",
   "pipeline.status.done": "Done",

@@ -105,10 +105,11 @@ event. **The audit record stores metadata only, never a subject or a body.**
 
 **4. Deciding about the sender.** See the ladder below.
 
-You can watch all of this. **Settings → Capture activity** shows "What happened
-to your messages in the last 24 hours", and any single message can be opened to
-see **"How this message was handled"** — every step in the order it met them,
-each marked Done, Skipped, Waiting, Failed, Did not apply, or Cannot tell.
+You can watch all of this. **Settings → Capture activity** counts what the last
+24 hours turned into, and holds the senders you keep out. Under **Messages**,
+which you open when you want it, any single message can be opened again to see
+**"How this message was handled"** — every step in the order it met them, each
+marked Done, Skipped, Waiting, Failed, Did not apply, or Cannot tell.
 
 ## Who the message belongs to
 
@@ -273,10 +274,16 @@ person on a channel, or the person has blocked the bot, there is no reply
 button. And a send without consent for that purpose is blocked outright, with a
 **Review consent** link rather than a silent failure.
 
-**Sender and subject are not kept in the capture trace** unless an operator
-explicitly turns that on in the deployment file. There is no in-app switch,
-because it retains correspondence the CRM otherwise refuses to store. When it is
-off, the trace says so: "content not stored".
+**The capture trace names the sender and keeps a bounded subject** — one address
+and one subject line, never a body, deleted with the row after 24 hours. That is
+what lets the log answer why a message did not arrive; without it the page is a
+list of decisions naming nobody. You see only rows from your own connections.
+
+An operator can turn this off in the deployment file (`capture.trace_payloads:
+false`) where a works agreement requires it. There is no in-app switch either
+way, so neither posture is one member's to change for their colleagues. When it
+is off, the log says so once, above its rows, as a fact about the installation
+rather than about any one message.
 
 ## Things you control yourself
 
@@ -285,9 +292,10 @@ your company. This is what makes internal mail internal. Changing it is
 irreversible in one direction: mail skipped while a domain was registered is
 never offered again by any mailbox.
 
-**Keep out of capture** — addresses and domains whose messages never enter the
-CRM. Your own rules bind only the mailboxes you connected; the organization's
-rules bind everyone. Takes effect from the next message; messages already
+**Keep out of capture** (Settings → Capture activity) — addresses and domains
+whose messages never enter the CRM. Your own rules bind only the mailboxes you
+connected; the organization's rules bind everyone, and only an administrator may
+change one of those. Takes effect from the next message; messages already
 captured stay.
 
 **Consumer mail domains** — which domains count as personal mailboxes. "Mail

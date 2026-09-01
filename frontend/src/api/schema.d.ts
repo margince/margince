@@ -6704,7 +6704,8 @@ export interface paths {
          *     deliberately out of scope.
          *
          *     `payload_capture_enabled` reports the deployment's `capture.trace_payloads` posture, so a
-         *     client can tell "the operator did not enable this" from "this row has no payload".
+         *     client can tell "the operator turned this off" from "this row has no payload". It is on
+         *     unless the deployment file says otherwise.
          */
         get: operations["listMyCaptureActivity"];
         put?: never;
@@ -12290,7 +12291,7 @@ export interface components {
             activity_id?: string | null;
             /** @description The provider id that carried the message, never a display label; resolve it against `GET /channel-providers`. Empty when the trace rows have been swept. */
             connector?: string;
-            /** @description The deployment's `capture.trace_payloads` posture. False means no rung carries `counterparty` or `subject` because the operator did not turn payload capture on — as against a rung that simply has none. */
+            /** @description The deployment's `capture.trace_payloads` posture, on unless the deployment file turns it off. False means no rung carries `counterparty` or `subject` because the operator turned payload capture off — as against a rung that simply has none. */
             payload_capture_enabled: boolean;
             /** @description How long stored rungs are kept. Derived rungs answer at any age; stored ones report `unknown` past this, which is a different claim from `not_applicable` — the rows are gone, so whether the stage ran can no longer be established. */
             retention_hours: number;

@@ -5275,7 +5275,7 @@ export const vi = {
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "captureActivity.title": "Hoạt động thu thập",
   "captureActivity.sub":
-    "Điều gì đã xảy ra với tin nhắn của bạn trong 24 giờ qua.",
+    "Thư của bạn trong 24 giờ qua đã trở thành gì. Những người gửi bạn chặn nằm ở phía trên.",
   "captureActivity.scope.label": "Hoạt động của ai",
   "captureActivity.outcomes": "Kết quả",
   "captureActivity.messages": "Tin nhắn",
@@ -5290,7 +5290,8 @@ export const vi = {
     "không dòng nào đã tải khớp — tải thêm để xem phần còn lại của khoảng thời gian",
   "captureActivity.loadMore": "Tải thêm",
   "captureActivity.empty": "không có hoạt động thu thập trong 24 giờ qua",
-  "captureActivity.contentNotStored": "nội dung không được lưu",
+  "captureActivity.payloadsOff":
+    "Bản cài đặt này không ghi lại người gửi tin nhắn hay nội dung của nó, nên các dòng bên dưới chỉ nêu quyết định.",
   "captureActivity.contentNone": "không ghi nhận người gửi",
   "captureActivity.outcome.captured": "Đã thu thập",
   "captureActivity.outcome.internal": "Bỏ qua vì nội bộ",
@@ -5329,7 +5330,7 @@ export const vi = {
   "pipeline.sub":
     "Từng bước của luồng thu thập, theo đúng thứ tự tin nhắn này đi qua.",
   "pipeline.payloadsOff":
-    "Không bước nào lưu người gửi hay tiêu đề: bản triển khai này không bật việc lưu nội dung.",
+    "Không bước nào lưu người gửi hay tiêu đề: bản triển khai này đã tắt việc lưu nội dung.",
   "pipeline.transport": "Được chuyển qua",
   "pipeline.unavailable": "không đọc được các bước xử lý của tin nhắn này",
   "pipeline.status.done": "Xong",

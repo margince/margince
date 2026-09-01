@@ -86,6 +86,28 @@ function story(body: Record<string, unknown>, allow: GrantSpec = {}) {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /capture/activity": () => jsonResponse(body),
+      // The block list is composed on this page, so the story owes it a route
+      // — the card is what a reader meets first here, and a story that drew it
+      // as a failed read would be showing the wrong page.
+      "GET /capture/exclusions": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "01930000-0000-7000-8000-0000000000e1",
+              scope: "user",
+              kind: "domain",
+              value: "newsletters.example",
+              created_at: "2026-08-14T08:00:00Z",
+            },
+            {
+              id: "01930000-0000-7000-8000-0000000000e2",
+              scope: "workspace",
+              kind: "address",
+              value: "billing@vendor.example",
+              created_at: "2026-08-10T08:00:00Z",
+            },
+          ],
+        }),
       "GET /capture/activity/workspace": () =>
         jsonResponse({
           ...body,
@@ -171,10 +193,14 @@ export const WithPayloadCaptureDark: Story = {
 export const Filtered: Story = {
   render: story(WINDOW),
   play: async ({ canvasElement }) => {
-    await userEvent.setup().click(
-      await within(canvasElement).findByRole("button", {
-        name: /dropped as internal/i,
-      }),
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    // The log is behind a disclosure now, so the story opens it first: the
+    // count line this story exists to show sits inside it, and a click with
+    // nothing visible behind it demonstrates the opposite of the point.
+    await user.click(await canvas.findByText("Messages"));
+    await user.click(
+      await canvas.findByRole("button", { name: /dropped as internal/i }),
     );
   },
 };

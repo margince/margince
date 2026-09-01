@@ -903,20 +903,25 @@ destructive keys off it: the data reset is armed by `operations.allow_data_reset
 below, which is why the dev arming lives in the tracked
 `config/margince.dev.yaml` and every other posture gets the compiled default.
 
-`capture.trace_payloads` (default `false`) turns on payload capture in the
-24-hour Capture activity trace every member sees under Settings. With it off,
-the trace records what the pipeline decided about each message and nothing about
-the message itself — no address, no subject. With it on, each traced message
-additionally keeps its sender and a bounded subject for 24 hours, **including
-messages dropped because every party was internal to your own domains**, which
-is the case an operator turns it on to diagnose.
+`capture.trace_payloads` (default `true`) keeps each traced message's sender and
+a bounded subject — 320 and 300 characters, never a body — in the 24-hour
+Capture activity trace every member sees under Settings. It covers **messages
+dropped because every party was internal to your own domains**, which the CRM
+otherwise stores nothing about and which are exactly what an operator is looking
+for when a message went missing.
 
-It is settable only here, deliberately: there is no API and no in-app switch,
-because it retains correspondence the CRM otherwise refuses to store, and that
-is a decision for whoever runs the installation rather than for the people whose
-colleagues' mail it is. The hourly sweep deletes payloads with the rows carrying
-them, an erased subject's address is never written whatever the posture says,
-and an Art. 17 request inside the window reaches what is already there.
+It is on by default because the trace exists to answer why a message did not
+arrive, and a page of decisions naming nobody cannot: it tells a member their
+mail is a black box rather than telling them what the pipeline threw away. A
+member reads only rows from their own connections — no grant widens them — so
+this is somebody's own mail shown back to them.
+
+Set it to `false` where a works agreement requires it; the trace then keeps
+recording every decision and names nobody. It is settable only here: there is no
+API and no in-app switch, so neither posture is a member's to change for their
+colleagues. The hourly sweep deletes payloads with the rows carrying them, an
+erased subject's address is never written whatever the posture says, and an
+Art. 17 request inside the window reaches what is already there.
 
 `company_context.rollout` is the ordered server-side company-context capability:
 `off` disables context reads, injection, and the new onboarding surface; `read`

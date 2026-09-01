@@ -7,7 +7,12 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import { Button, SegmentedControl, StatCard } from "../design-system/atoms";
+import {
+  Button,
+  Disclosure,
+  SegmentedControl,
+  StatCard,
+} from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
@@ -16,6 +21,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
+import { CaptureExclusionsCard } from "./capture-exclusions";
 import { useProviderLabel } from "./channelproviders";
 import { QueryGate, throwProblem } from "./common";
 
@@ -109,50 +115,55 @@ export function CaptureActivityTab() {
   const [scope, setScope] = useState<Scope>("mine");
 
   return (
-    // `title` on the Panel, not a SectionHeader nested inside it. Nested, the
-    // heading landed as a direct child of `.panel` — which has zero padding —
-    // so the card's own name sat flush against its left border while everything
-    // under it was indented by PanelBody's 20px, and the panel drew no header
-    // band and no rule at all. It also rendered at 15px/600 through
-    // `.section-header h2` where every other settings card reads
-    // `--fs-sm`/`fw-medium` through `.panel-head h2`: this was the one card in
-    // the product whose title was a different size from the thirteen beside it.
-    <Panel title={t("captureActivity.title")}>
-      <PanelBody>
-        {/* The description belongs in the body, which is where the other ten
-            settings cards put theirs — Panel's header band holds the title
-            alone, by design. */}
-        <p className="settings-panel-sub">{t("captureActivity.sub")}</p>
-        <SettingList>
-          {/* Whose activity is a one-of-two ANSWER, so it sits beside its
-              naming in the right column like every other answer on the page.
-              The control keeps the same words as its own accessible name — the
-              row draws them, the fieldset announces them. */}
-          {canReadWorkspace && (
-            <SettingRow
-              label={t("captureActivity.scope.label")}
-              control={
-                <SegmentedControl<Scope>
-                  label={t("captureActivity.scope.label")}
-                  value={scope}
-                  onChange={setScope}
-                  options={SCOPES}
-                  labels={{
-                    mine: t("captureActivity.scope.mine"),
-                    workspace: t("captureActivity.scope.workspace"),
-                  }}
-                />
-              }
-            />
-          )}
-          {/* The window contributes the card's other two rows itself: the
-              funnel and the log are the SUBJECT here rather than answers to a
-              question, and both need the full width below their naming. They
-              are the query's children so a single read feeds both. */}
-          <CaptureActivityWindow scope={canReadWorkspace ? scope : "mine"} />
-        </SettingList>
-      </PanelBody>
-    </Panel>
+    <>
+      {/* What the reader keeps out, first and on this page: the addresses and
+          domains whose mail the CRM never stores. It used to sit two tabs away
+          under Organization → Capture, beside the posture settings an admin
+          owns, which put the one control a rep actually reaches for behind a
+          door most seats cannot open. Blocking a sender is not an
+          administrator's job — it is the answer to what this page is asking
+          about. */}
+      <CaptureExclusionsCard />
+      {/* `title` on the Panel, not a SectionHeader nested inside it. Nested, the
+          heading landed as a direct child of `.panel` — which has zero padding —
+          so the card's own name sat flush against its left border while
+          everything under it was indented by PanelBody's 20px, and the panel
+          drew no header band and no rule at all. */}
+      <Panel title={t("captureActivity.title")}>
+        <PanelBody>
+          {/* The description belongs in the body, which is where the other ten
+              settings cards put theirs — Panel's header band holds the title
+              alone, by design. */}
+          <p className="settings-panel-sub">{t("captureActivity.sub")}</p>
+          <SettingList>
+            {/* Whose activity is a one-of-two ANSWER, so it sits beside its
+                naming in the right column like every other answer on the page.
+                The control keeps the same words as its own accessible name —
+                the row draws them, the fieldset announces them. */}
+            {canReadWorkspace && (
+              <SettingRow
+                label={t("captureActivity.scope.label")}
+                control={
+                  <SegmentedControl<Scope>
+                    label={t("captureActivity.scope.label")}
+                    value={scope}
+                    onChange={setScope}
+                    options={SCOPES}
+                    labels={{
+                      mine: t("captureActivity.scope.mine"),
+                      workspace: t("captureActivity.scope.workspace"),
+                    }}
+                  />
+                }
+              />
+            )}
+            {/* The window contributes the card's remaining children itself:
+                the funnel row and the log's disclosure, both fed by one read. */}
+            <CaptureActivityWindow scope={canReadWorkspace ? scope : "mine"} />
+          </SettingList>
+        </PanelBody>
+      </Panel>
+    </>
   );
 }
 
@@ -233,70 +244,81 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                 />
               }
             />
-            {/* The log. A row of its own rather than more content under the
-                funnel: it is what a reader came here to read, and it takes the
-                width the card has instead of the space left over. */}
-            <SettingRow
-              label={t("captureActivity.messages")}
-              layout="stack"
-              control={
-                <div className="capture-activity__log">
-                  {filter && (
-                    // Both numbers, always. The funnel counts the WINDOW and
-                    // this filters what is loaded, so a bare "12" under a
-                    // counter reading 26 would look like the counter was wrong.
-                    <p className="capture-activity__count">
-                      {t("captureActivity.filtered", {
-                        shown: formatNumber(shown.length, locale),
-                        total: formatNumber(first.funnel[filter] ?? 0, locale),
-                        outcome: t(`captureActivity.outcome.${filter}`),
-                      })}
-                    </p>
-                  )}
-                  {shown.length === 0 && (
-                    // A filter that matched nothing LOADED is not an empty
-                    // window. The counter above may say 3 while all three sit
-                    // on pages nobody has fetched, and saying "no capture
-                    // activity" there would contradict the number beside it.
-                    <SurfaceState
-                      state="empty"
-                      emptyLabel={t(
-                        filter
-                          ? "captureActivity.emptyFiltered"
-                          : "captureActivity.empty",
-                      )}
-                    >
-                      {null}
-                    </SurfaceState>
-                  )}
-                  {shown.length > 0 && (
-                    <ul className="capture-activity__list">
-                      {shown.map((entry) => (
-                        <CaptureEntryRow
-                          key={entry.id}
-                          entry={entry}
-                          payloads={first.payload_capture_enabled}
-                          onOpen={() => setOpenTrace(entry.id)}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                  {/* Outside the rows, so a filter matching nothing on this
-                      page can still reach the pages that hold its matches.
-                      Hiding it there was a dead end: the counter promised rows
-                      the reader had no way to fetch. */}
-                  {query.hasNextPage && (
-                    <Button
-                      small
-                      disabled={query.isFetchingNextPage}
-                      onClick={() => void query.fetchNextPage()}
-                    >
-                      {t("captureActivity.loadMore")}
-                    </Button>
-                  )}
-                </div>
-              }
-            />
+            {/* The log, behind a disclosure. It answers a question about ONE
+                message — was this deferred or suppressed, and why — which is
+                what somebody debugging the pipeline asks and not what a rep
+                opening this page came for. Closed, the counts and the block
+                list above are the whole page; open, nothing about the log
+                changed. It stays reachable by every seat rather than moving
+                behind the capture_trace grant, because a member's own trace
+                rows answer to their owner and no grant widens them (0258) —
+                gating them here would invent a rule the API does not have. */}
+            <Disclosure summary={t("captureActivity.messages")}>
+              <div className="capture-activity__log">
+                {!first.payload_capture_enabled && (
+                  // Said ONCE, about the installation, rather than on every
+                  // row. Per-row it read as a property of that message — as
+                  // though this one arrived without a sender — when it is the
+                  // deployment having stored no address for any of them.
+                  <p className="capture-activity__note">
+                    {t("captureActivity.payloadsOff")}
+                  </p>
+                )}
+                {filter && (
+                  // Both numbers, always. The funnel counts the WINDOW and
+                  // this filters what is loaded, so a bare "12" under a
+                  // counter reading 26 would look like the counter was wrong.
+                  <p className="capture-activity__count">
+                    {t("captureActivity.filtered", {
+                      shown: formatNumber(shown.length, locale),
+                      total: formatNumber(first.funnel[filter] ?? 0, locale),
+                      outcome: t(`captureActivity.outcome.${filter}`),
+                    })}
+                  </p>
+                )}
+                {shown.length === 0 && (
+                  // A filter that matched nothing LOADED is not an empty
+                  // window. The counter above may say 3 while all three sit
+                  // on pages nobody has fetched, and saying "no capture
+                  // activity" there would contradict the number beside it.
+                  <SurfaceState
+                    state="empty"
+                    emptyLabel={t(
+                      filter
+                        ? "captureActivity.emptyFiltered"
+                        : "captureActivity.empty",
+                    )}
+                  >
+                    {null}
+                  </SurfaceState>
+                )}
+                {shown.length > 0 && (
+                  <ul className="capture-activity__list">
+                    {shown.map((entry) => (
+                      <CaptureEntryRow
+                        key={entry.id}
+                        entry={entry}
+                        payloads={first.payload_capture_enabled}
+                        onOpen={() => setOpenTrace(entry.id)}
+                      />
+                    ))}
+                  </ul>
+                )}
+                {/* Outside the rows, so a filter matching nothing on this
+                    page can still reach the pages that hold its matches.
+                    Hiding it there was a dead end: the counter promised rows
+                    the reader had no way to fetch. */}
+                {query.hasNextPage && (
+                  <Button
+                    small
+                    disabled={query.isFetchingNextPage}
+                    onClick={() => void query.fetchNextPage()}
+                  >
+                    {t("captureActivity.loadMore")}
+                  </Button>
+                )}
+              </div>
+            </Disclosure>
             {openTrace && (
               <CaptureActivityDrawer
                 traceId={openTrace}
@@ -462,24 +484,22 @@ function deferralLabel(
 
 // What the row can honestly show about the message itself.
 //
-// With payload capture off — the default — the pipeline stored no address and
-// no subject, so the row says so rather than rendering an empty cell a reader
-// would take for a message with no subject.
+// An installation that turned payload capture off stored no address and no
+// subject for any message, so the row shows nothing here and the note above the
+// list says why, once, for all of them. Per-row it read as a fact about THIS
+// message, which is the one thing it is not.
 function CaptureEntryContent({
   entry,
   payloads,
 }: Readonly<{ entry: TraceEntry; payloads: boolean }>) {
   const t = useT();
   if (!payloads) {
-    return (
-      <span className="capture-activity__content capture-activity__content--absent">
-        {t("captureActivity.contentNotStored")}
-      </span>
-    );
+    return null;
   }
   if (!entry.counterparty && !entry.subject) {
     // Payload capture IS on, so this row genuinely carried neither — an erased
-    // subject, or a message with no sender we could read.
+    // subject, or a message with no sender we could read. Here the absence IS
+    // about this message, so the row says so.
     return (
       <span className="capture-activity__content capture-activity__content--absent">
         {t("captureActivity.contentNone")}
