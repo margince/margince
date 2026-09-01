@@ -8,6 +8,11 @@ import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import "./rates.css";
 
+/** The two sheets this product re-reads from their sources. */
+type RefreshPath =
+  | "/fx-rates/propose-refresh"
+  | "/ai-model-rates/propose-refresh";
+
 // Asking the product to go and re-read a price sheet from its sources.
 //
 // Its own module because TWO screens offer it — the currency sheet on the
@@ -24,15 +29,16 @@ import "./rates.css";
  * button stays available so an admin can trigger another refresh; success and
  * failure both surface next to it.
  */
-export function RefreshFromSources({
-  path,
-}: Readonly<{
-  path: "/fx-rates/propose-refresh" | "/ai-model-rates/propose-refresh";
-}>) {
+export function RefreshFromSources({ path }: Readonly<{ path: RefreshPath }>) {
   const t = useT();
   const refresh = useMutation({
-    mutationFn: async () => {
-      const { error } = await api.POST(path);
+    // The path travels as a VARIABLE rather than closing over the render that
+    // drew the button. React Query re-arms a mutation's options in a passive
+    // effect, so a click landing before that effect runs would carry the
+    // previous render's closure — and `mutation-variable-coverage.test.ts`
+    // walks the TSX for exactly this shape.
+    mutationFn: async (target: RefreshPath) => {
+      const { error } = await api.POST(target);
       if (error) {
         throwProblem(error);
       }
@@ -43,7 +49,7 @@ export function RefreshFromSources({
       <Button
         variant="ghost"
         small
-        onClick={() => refresh.mutate()}
+        onClick={() => refresh.mutate(path)}
         // `pending`, not `disabled`. A natively disabled button drops the focus
         // of the reader who just pressed it and announces nothing; `pending` is
         // what this design system reserves for a write in flight, and it blocks

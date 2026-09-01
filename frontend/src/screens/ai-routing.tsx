@@ -143,11 +143,6 @@ export function AiRoutingCard({
     <QueryGate query={query}>
       {(routing) => (
         <RoutingForm
-          // The key the draft's own comment depends on. Without it the form
-          // initialises once and never re-syncs, so a document another role
-          // changed arrives behind an untouched form that now reports itself
-          // DIRTY — and Save writes the stale draft over the newer binding.
-          key={routingIdentity(routing)}
           routing={routing}
           canManage={canManage}
           onDirtyChange={onDirtyChange}
@@ -213,12 +208,30 @@ function RoutingForm({
   // role changed replaces an untouched form rather than being overwritten by
   // it — see the key at the call site.
   const [draft, setDraft] = useState<Routing>(routing);
+  // The document this draft was seeded FROM, which is what "unsaved" is measured
+  // against. Comparing to the live `routing` instead would call a form dirty the
+  // moment somebody else saved, having changed nothing here.
+  const [seeded, setSeeded] = useState(() => routingIdentity(routing));
   // Which lane is open for editing. One at a time: a lane row is a reading,
   // and every row expanded at once is the form this card used to be.
   const [editing, setEditing] = useState<string | null>(null);
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(routing);
+  const dirty = JSON.stringify(draft) !== seeded;
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
+
+  // A binding another role changed re-seeds an UNTOUCHED form, and never
+  // replaces one somebody is working in.
+  //
+  // Keying the whole form on the document did the first AND the second: it
+  // remounted, so a reader mid-edit lost what they had typed with nothing on
+  // screen saying why. Their work stands instead.
+  const current = routingIdentity(routing);
+  useEffect(() => {
+    if (current !== seeded && !dirty) {
+      setDraft(routing);
+      setSeeded(current);
+    }
+  }, [current, seeded, dirty, routing]);
 
   // Defensive on a field the contract marks required: a client that dies on an
   // unexpected shape takes the whole settings page with it, and the shape it
@@ -701,6 +714,11 @@ function unkeyedProviders(
 // empty list from the catalogue hook by design, and marking every lane unpriced
 // on the strength of that would report a fault in the installation where the
 // truth is only that the sheet is not theirs.
+//
+// A row that EXISTS but carries a price nothing can parse counts as unpriced
+// too. It is the same fact to a reader — this call cannot be costed — and
+// treating it as priced left the row showing neither a figure nor the pill,
+// which says nothing at all.
 function isUnpriced(
   catalogue: ModelCatalogue,
   provider: string,
@@ -710,12 +728,18 @@ function isUnpriced(
   if (!catalogue || catalogue.length === 0) {
     return false;
   }
-  return !catalogue.some(
-    (rate) =>
-      rate.provider === provider &&
-      rate.model_id === model &&
-      rate.lane === lane,
+  const rate = catalogue.find(
+    (r) => r.provider === provider && r.model_id === model && r.lane === lane,
   );
+  if (!rate) {
+    return true;
+  }
+  if (unreadablePrice(rate.input_per_mtok)) {
+    return true;
+  }
+  // An embedding lane has no output, so a blank there is the sheet being right
+  // rather than unreadable.
+  return lane !== "embeddings" && unreadablePrice(rate.output_per_mtok);
 }
 
 // The host part of a base URL, for a row that has room for the address but not
