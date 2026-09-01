@@ -18,10 +18,12 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -117,6 +119,66 @@ func TestOneRepsNotMineDoesNotHideTheRowFromAnother(t *testing.T) {
 	}
 	if !waitsFor(t, e, e.Rep2, "Not mine to answer") {
 		t.Fatal("one rep's not-mine took the message off the colleague it was handed TO")
+	}
+}
+
+// A DISPOSITION IS REFUSED ON A MESSAGE THE CALLER MAY NOT READ, and refused
+// the same way as one that is not there.
+//
+// INDISTINGUISHABLE is the point. Setting a message aside is a write, but the
+// id names a row, and answering "you may not read this" differently from "there
+// is no such message" turns the write into a way to ask whether a message
+// exists. The answer is itself the disclosure, so both are ErrNotFound.
+//
+// And nothing may land: a reader-state row written for a message the caller
+// cannot open would say, on their next read, that something is there.
+func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
+	e := Setup(t)
+	seedWaitingMessage(t, e, "thread-unreadable", "inbound", "Held from this reader",
+		waitingInstant.Add(-3*24*time.Hour))
+	id := waitingMessageID(t, e, "Held from this reader")
+	store := activities.NewStore(e.DB())
+
+	// THE ADMISSION FIRST. While the message is workspace-wide the same call
+	// succeeds, so the refusal below is about what the reader may see rather
+	// than about the write being broken.
+	if err := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), id); err != nil {
+		t.Fatalf("a readable message could not be set aside: %v — the refusal below would prove nothing", err)
+	}
+	if err := store.ClearMessageDisposition(e.As(e.Rep1, nil, AdminPerms), id); err != nil {
+		t.Fatalf("clearing the admission: %v", err)
+	}
+
+	// Now held to its participants, of whom this rep is not one — through the
+	// writer a person's narrowing goes through, because the raw column is not
+	// the whole state. SetAudience also stamps audience_reason=manual, and
+	// RecomputeAudienceTx reads that reason to tell a human's hold from a
+	// derived one: a row narrowed by UPDATE alone is one the next sync widens
+	// back, and the refusal below would then be proving nothing.
+	if _, err := store.SetAudience(e.As(e.AdminUser, nil, AdminPerms), id,
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("narrowing the message: %v", err)
+	}
+
+	err := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), id)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("setting aside a message the reader may not open answered %v, want ErrNotFound — the "+
+			"reader-state row is what would tell them it exists", err)
+	}
+
+	absent := ids.From[ids.ActivityKind](ids.NewV7())
+	missing := store.SetMessageNotMine(e.As(e.Rep1, nil, AdminPerms), absent)
+	if !errors.Is(missing, apperrors.ErrNotFound) {
+		t.Fatalf("setting aside a message that does not exist answered %v, want ErrNotFound", missing)
+	}
+
+	var rows int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_reader_state WHERE activity_id = $1`, id).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 0 {
+		t.Errorf("%d reader-state row(s) landed for a message the caller may not read", rows)
 	}
 }
 
