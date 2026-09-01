@@ -17534,7 +17534,7 @@ type ConnectorApp struct {
 	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
 	Source ConnectorAppSource `json:"source"`
 
-	// Tenant The Entra directory (tenant) id a Microsoft app is pinned to, empty for one that authorizes any organization. Always empty for `google`, which has no such concept — a value there would be a field that silently does nothing.
+	// Tenant The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any organization — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent.
 	Tenant *string `json:"tenant,omitempty"`
 }
 

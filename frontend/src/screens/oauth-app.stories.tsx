@@ -12,9 +12,14 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // the DEPLOYMENT supplies is neither a stored app nor the absence of one, and
 // reporting it as absent told operators Gmail could not be connected on
 // installations where it demonstrably could.
+//
+// It is now ONE component rendered per vendor, so the Microsoft story is not a
+// duplicate: it carries a state Google cannot have — a directory pin — and its
+// copy, callbacks and vendor console all differ. A reader comparing the two is
+// checking exactly what the shared card is allowed to vary.
 
 const meta: Meta<typeof OAuthAppCard> = {
-  title: "Settings/Admin settings/General/Google app",
+  title: "Settings/Admin settings/General/Connector app",
   component: OAuthAppCard,
   parameters: { layout: "padded" },
 };
@@ -47,6 +52,7 @@ function Served({
     // substituted the provider by the time it is called. A key still carrying
     // `{provider}` matches nothing and every story renders the fallback.
     "GET /installation/oauth-apps/google": () => jsonResponse(app),
+    "GET /installation/oauth-apps/microsoft": () => jsonResponse(app),
     "GET /me": () =>
       jsonResponse({
         user: { email: "admin@brandt.example" },
@@ -109,6 +115,57 @@ export const Absent: Story = {
       }}
     >
       <OAuthAppCard provider="google" />
+    </Served>
+  ),
+};
+
+const ENTRA_ID = "11111111-2222-3333-4444-555555555555";
+const GRAPH_URIS = [
+  {
+    purpose: "sign_in",
+    url: "https://api.brandt.example/v1/auth/oidc/microsoft/callback",
+  },
+  {
+    purpose: "mailbox_connect",
+    url: "https://api.brandt.example/v1/connectors/graph/callback",
+  },
+  {
+    purpose: "calendar_connect",
+    url: "https://api.brandt.example/v1/connectors/graphcal/callback",
+  },
+];
+
+/** The Microsoft variant, pinned to one Entra directory — the state Google has
+ * no equivalent of, and the reason the tenant field exists at all. */
+export const MicrosoftPinnedToADirectory: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: ENTRA_ID,
+        tenant: "99999999-8888-7777-6666-555555555555",
+        source: "stored",
+        redirect_uris: GRAPH_URIS,
+      }}
+    >
+      <OAuthAppCard provider="microsoft" />
+    </Served>
+  ),
+};
+
+/** Unpinned: the same app authorizing any organization, which is what an
+ * omitted tenant means rather than an empty one. */
+export const MicrosoftAnyOrganization: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: ENTRA_ID,
+        source: "environment",
+        redirect_uris: GRAPH_URIS,
+      }}
+    >
+      <OAuthAppCard provider="microsoft" />
     </Served>
   ),
 };

@@ -242,10 +242,10 @@ Then give the app to the installation, either way — a stored app wins and take
 consent, with no restart. **Settings → General → Microsoft app** takes the Application (client)
 ID and secret, optionally a Directory (tenant) ID to pin it to one directory, and lists the redirect
 URIs to register byte for byte. Or the environment, which still works: `MARGINCE_GRAPH_CLIENT_ID`,
-`MARGINCE_GRAPH_CLIENT_SECRET`, `MARGINCE_GRAPH_TENANT`, plus the same A1 state/vault/base-URL keys —
-then `make dev` to pick it up. Push is optional and the lane is poll-only without it: set the SAME
-`MARGINCE_GRAPH_PUSH_TOKEN` on api and worker, and `MARGINCE_GRAPH_NOTIFICATION_URL` to
-`https://<api>/webhooks/graph?token=<that token>`.
+`MARGINCE_GRAPH_CLIENT_SECRET`, optional `MARGINCE_GRAPH_TENANT` (unset or `common` for any
+organization, a directory id to pin it), plus the same A1 keys — then `make dev`. Push is optional
+and the lane polls without it: the SAME `MARGINCE_GRAPH_PUSH_TOKEN` on api and worker, and
+`MARGINCE_GRAPH_NOTIFICATION_URL` of `https://<api>/webhooks/graph?token=<that token>`.
 
 ### C2. Connect from the UI
 

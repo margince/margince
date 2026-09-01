@@ -12611,7 +12611,7 @@ export interface components {
             configured: boolean;
             /** @description The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
             client_id: string;
-            /** @description The Entra directory (tenant) id a Microsoft app is pinned to, empty for one that authorizes any organization. Always empty for `google`, which has no such concept — a value there would be a field that silently does nothing. */
+            /** @description The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any organization — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent. */
             tenant?: string;
             /**
              * @description Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.

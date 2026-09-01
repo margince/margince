@@ -18994,9 +18994,10 @@ components:
         tenant:
           type: string
           description: >-
-            The Entra directory (tenant) id a Microsoft app is pinned to, empty for one that
-            authorizes any organization. Always empty for `google`, which has no such concept —
-            a value there would be a field that silently does nothing.
+            The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when
+            the app authorizes any organization — and always omitted for `google`, which has no
+            such concept, where a value would be a field that silently does nothing. A client that
+            expects a string here reads the unpinned case as the wrong shape rather than as absent.
         source:
           type: string
           enum: [stored, environment, none]

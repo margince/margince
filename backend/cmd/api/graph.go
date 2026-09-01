@@ -61,6 +61,12 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logge
 		_, _ = fmt.Fprintln(stdout, "api graph capture connector enabled (/connectors/graph/*, backfill ops)")
 	case graphCfg.TransportMountable() && vault != nil:
 		_, _ = fmt.Fprintln(stdout, "api graph capture transport mounted; no Entra app in the environment — Settings supplies one, or /connectors/graph/* answers 501")
+	// Named separately from the flags case below: the settings that gate this
+	// ARE set, and telling an operator to supply them would send them to change
+	// values that are already right. A stored Entra app is sealed, so no vault
+	// means nowhere to keep its secret — the blocker is the vault, not them.
+	case graphCfg.TransportMountable():
+		_, _ = fmt.Fprintln(stdout, "api graph capture transport NOT mounted — no keyvault is configured, and a Settings-supplied Entra app has nowhere to seal its client secret; surface stays 501")
 	case cfg.graphClientID != "":
 		_, _ = fmt.Fprintln(stdout, "api graph capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) and --public-base-url; surface stays 501")
 	}

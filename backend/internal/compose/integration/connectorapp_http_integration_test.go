@@ -603,6 +603,21 @@ func TestMicrosoftAppOverHTTPRefusesAnAliasAndAForeignClientID(t *testing.T) {
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google", google, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("PUT a Google app carrying a tenant → %d, want 422", status)
 	}
+
+	// A 422 is only half the claim. The other half is that NOTHING landed:
+	// a validator that answered 422 after the write would pass every case above
+	// while leaving an installation configured against an app it refused, which
+	// is the worse failure of the two — it reads as working until a consent
+	// screen says otherwise.
+	for _, vendor := range []string{"microsoft", "google"} {
+		var app crmcontracts.ConnectorApp
+		if status := e.Call(t, "GET", "/v1/installation/oauth-apps/"+vendor, nil, nil, &app); status != http.StatusOK {
+			t.Fatalf("GET the %s app → %d, want 200", vendor, status)
+		}
+		if app.Configured {
+			t.Errorf("a refused %s app was stored anyway: %+v", vendor, app)
+		}
+	}
 }
 
 // A vendor this build does not serve is 404 and never a default: defaulting
