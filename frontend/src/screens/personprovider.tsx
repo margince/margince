@@ -421,9 +421,21 @@ function creditsOf(
  *  unmentioned. */
 function alreadyHeld(profile: Profile, category: string): boolean {
   switch (category) {
+    // By TYPE, not by "any address at all". The two are separate purchases
+    // from separate pools, and collapsing them hid each behind the other: a
+    // contact whose personal address came back was never offered a work
+    // email, and the reverse.
+    //
+    // An address the provider could not classify counts for neither. It is
+    // one of the two, and guessing which would either hide an offer the
+    // reader can still use or claim a re-buy that does not happen — both
+    // worse than offering a purchase they may decline.
     case "professional_email":
+      return profile.emails.some(
+        (email) => email.email_type === "professional",
+      );
     case "personal_email":
-      return profile.emails.length > 0;
+      return profile.emails.some((email) => email.email_type === "personal");
     case "mobile":
       return profile.mobile_phones.length > 0;
     default:

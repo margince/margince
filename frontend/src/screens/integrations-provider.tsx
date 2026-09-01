@@ -493,7 +493,15 @@ function PricedCategoryRows({
         // "stands alone", and a check that caught only one would block every
         // row the server sent.
         const prerequisite = entry.requires ? entry.requires : undefined;
-        const blocked = prerequisite !== undefined && !selection[prerequisite];
+        const on = selection[entry.category] ?? false;
+        // Refused only where the flip would turn it ON. Switching a
+        // prerequisite off leaves its dependent saved as on, and blocking that
+        // row outright would strand the admin: the only control able to undo
+        // the combination would be the one they cannot reach, and turning the
+        // prerequisite back on to release it spends nothing but reads like the
+        // card fighting them. Off is always allowed.
+        const blocked =
+          prerequisite !== undefined && !selection[prerequisite] && !on;
         const dependency =
           prerequisite === undefined
             ? undefined

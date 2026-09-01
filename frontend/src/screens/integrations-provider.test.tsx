@@ -390,6 +390,37 @@ describe("ProviderCard write posture", () => {
     RENDER_TEST_MS,
   );
 
+  // Switching a prerequisite off leaves its dependent saved as on. Refusing
+  // that row outright stranded the admin: the only control able to undo the
+  // combination was the one they could not reach, so the way out was to turn
+  // the prerequisite back on purely to release the switch beneath it.
+  it(
+    "still lets a dependent purchase be switched OFF after its prerequisite went off",
+    async () => {
+      await renderAs(ME_OPERATOR, {
+        ...CONNECTION,
+        configuration: {
+          ...CONNECTION.configuration,
+          // The stranding combination: the dependent on, its prerequisite off.
+          categories: {
+            linkedin_profile: true,
+            professional_email: false,
+            mobile: true,
+          },
+        },
+      });
+
+      const mobile = screen.getByRole("switch", {
+        name: "Allow buying mobile number",
+      });
+      expect(mobile.getAttribute("aria-checked")).toBe("true");
+      // Operable, because the only flip it offers now is the one that resolves
+      // the combination.
+      expect(mobile).toHaveProperty("disabled", false);
+    },
+    RENDER_TEST_MS,
+  );
+
   it(
     "allows the dependent purchase once its prerequisite is on",
     async () => {

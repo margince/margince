@@ -624,6 +624,71 @@ describe("the details that cost credits", () => {
     ).toBeNull();
   });
 
+  it("still offers the work email when only a personal address came back", async () => {
+    mountWithCatalog(
+      {
+        ...neverRun(),
+        state: "completed",
+        // A personal address and nothing else. The two are separate purchases
+        // from separate pools, so this contact still has no work email.
+        emails: [
+          {
+            value: "dana@privatemail.example",
+            email_type: "personal",
+            email_type_source: "provider",
+            validation_status: "valid",
+          },
+        ],
+      },
+      queuedRun,
+    );
+
+    // Reading "any address at all" hid each email offer behind the other: a
+    // contact whose personal address came back was never offered a work
+    // email, and the reverse.
+    expect(
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
+    ).toBeDefined();
+
+    // And the mobile press does not claim to re-buy a work email nobody
+    // holds — the note names what is actually paid for twice.
+    expect(
+      await screen.findByRole("button", {
+        name: /Buy work email and mobile number · 2 credits/,
+      }),
+    ).toBeDefined();
+    expect(screen.queryByText(/includes the work email again/)).toBeNull();
+  });
+
+  it("offers both email purchases when the provider classified neither", async () => {
+    mountWithCatalog(
+      {
+        ...neverRun(),
+        state: "completed",
+        // Surfe can omit emailType, and the platform only labels it from the
+        // frozen cascade where it can. An address of unknown type is one of
+        // the two purchases, and guessing which would either hide an offer
+        // the reader can still use or claim a re-buy that never happens.
+        emails: [
+          {
+            value: "dana@unknown.example",
+            email_type: null,
+            email_type_source: null,
+            validation_status: null,
+          },
+        ],
+      },
+      queuedRun,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
+    ).toBeDefined();
+    // No re-buy claim either: nothing here is known to be the work email, so
+    // saying the press pays for one twice would be a guess presented as a fact.
+    expect(screen.queryByText(/includes the work email again/)).toBeNull();
+  });
+
   it("says nothing about re-buying when neither half is held", async () => {
     mountWithCatalog({ ...neverRun(), state: "completed" }, queuedRun);
 
