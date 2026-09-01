@@ -7092,7 +7092,7 @@ export const en = {
   "provider.profile.rateLimited":
     "Not bought: the provider asked us to slow down.",
   "provider.profile.providerError":
-    "The last call to the provider failed. Automatic lookups are paused; a free check that gets through resumes them.",
+    "The last lookup did not get through. Try again, or check the provider's card in Settings if it keeps happening.",
   "provider.profile.submissionUnknown":
     "We never learned how this lookup ended. It may have been charged for.",
   "provider.profile.claimsUnwritten":

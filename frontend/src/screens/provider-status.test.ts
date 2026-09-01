@@ -118,6 +118,27 @@ describe("the provider status vocabulary", () => {
     expect(canEnrichNow("nothing_to_look_up", false)).toBe(true);
   });
 
+  it("does not claim an installation-wide pause on one contact's failed run", () => {
+    // The person page's provider_error is reached two ways: the CONNECTION is
+    // degraded, or this contact's newest run failed under a healthy one. The
+    // copy used to assert the first for both — "Automatic lookups are paused;
+    // a free check that gets through resumes them" — and on a healthy
+    // connection every word of that is false. In one installation 205 contacts
+    // showed it while the connection was `connected` and working, and the
+    // suggested remedy could not fire: those contacts carry nothing to look
+    // them up by, so a free check is skipped rather than passed.
+    //
+    // The installation-wide story belongs to the settings card, which has its
+    // own connection-level sentence for it.
+    const message = en[profileLabel("provider_error")];
+    expect(message).not.toMatch(/paus/i);
+    // And it must stay true for BOTH causes: this key is also what a
+    // degraded CONNECTION renders, before any run history is read. Wording
+    // that named this contact's own lookup would be a false claim on every
+    // page during an outage, including contacts nobody ever asked about.
+    expect(message).not.toMatch(/this contact/i);
+  });
+
   it("tells the reader what to add rather than blaming the provider", () => {
     // The defect: a record with no profile link and no company was sent
     // anyway, the vendor rejected the request, and the page reported "the
