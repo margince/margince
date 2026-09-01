@@ -312,15 +312,29 @@ func TestALostRaceWritesNoAuditTrail(t *testing.T) {
 	}
 }
 
-// waitForLockOn blocks until some backend is WAITING for a lock, which is the
-// observable fact that the racing call has reached the row and stopped.
+// waitForLockOn blocks until a backend is waiting for a lock on THIS ask's row,
+// which is the observable fact that the racing call reached it and stopped.
+//
+// The wait is scoped to the row rather than to "any ungranted lock": a shared
+// database has other traffic, and a test that took somebody else's contention
+// as its signal would race past the setup it is trying to establish and then
+// fail somewhere else.
 func waitForLockOn(t *testing.T, e *introEnv, id ids.UUID) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		var waiting bool
-		if err := e.owner.QueryRow(context.Background(),
-			`SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted)`).Scan(&waiting); err != nil {
+		// A backend blocked on a row lock in THIS database, while the ask still
+		// exists. pg_blocking_pids is the direct question — "is somebody stuck
+		// behind somebody else" — and it names the waiter rather than counting
+		// ungranted locks the rest of the machine happens to hold.
+		if err := e.owner.QueryRow(context.Background(), `
+			SELECT EXISTS (
+				SELECT 1 FROM pg_stat_activity
+				 WHERE datname = current_database()
+				   AND cardinality(pg_blocking_pids(pid)) > 0)
+			   AND EXISTS (SELECT 1 FROM intro_request WHERE id = $1)`,
+			id).Scan(&waiting); err != nil {
 			t.Fatal(err)
 		}
 		if waiting {
