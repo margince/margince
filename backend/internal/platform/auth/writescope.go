@@ -326,8 +326,30 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 // this is the arm that keeps activity writes team-shaped. An unbounded human
 // edits every activity they can read, as they edit every record.
 func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if err := EnsureActivityContentVisibleLive(ctx, tx, id); err != nil {
-		return err
+	return EnsureActivityWritableIn(ctx, tx, id, true)
+}
+
+// EnsureActivityWritableIn is EnsureActivityWritable against a chosen row
+// liveness. live=false serves a caller that already resolved the row past
+// its own LiveOnly lock and confirmed it is held under a statutory
+// retention obligation (activities.lockActivityForWrite).
+//
+// It skips the content-visible gate rather than passing live through to it:
+// ActivityAvailableClause is `restricted_at IS NULL` UNCONDITIONALLY — by
+// design, a restricted row reads as gone to everyone through that gate, live
+// argument or not (ensureActivity's own doc). A caller reaching this
+// function with live=false already proved the row exists by another means
+// (the row lock, taken directly against the table), so re-asking the
+// discoverability gate would only reproduce the same false 404 this exists
+// to remove. The ownership test below still runs unconditionally: what
+// changes is not WHETHER a caller must be authorized over the row, only
+// which gate is asked to answer it, so an unrelated caller with no ownership
+// claim on the row still cannot learn a restricted row exists.
+func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live bool) error {
+	if live {
+		if err := ensureActivity(ctx, tx, id, ActivityContentClause, true); err != nil {
+			return err
+		}
 	}
 	p, err := rbacActor(ctx)
 	if err != nil {

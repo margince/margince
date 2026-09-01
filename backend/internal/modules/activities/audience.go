@@ -65,10 +65,11 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		if err != nil {
 			return err
 		}
-		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
 		// A CAPTURED message is not one person's to set.
@@ -200,12 +201,17 @@ func audienceMembersFor(in SetAudienceInput) ([]AudienceMember, error) {
 
 // ensureVersion is the If-Match compare, against the row the caller just
 // locked; a mismatch is version skew, which the wire answers as 409.
+//
+// No archived filter: lockActivityForWrite already proved the row exists,
+// live or held, before this runs, so re-filtering here would hide a held
+// row's version from under a lock that already resolved it — exactly the
+// 404-instead-of-423 lockActivityForWrite exists to remove.
 func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
 	if ifVersion == nil {
 		return nil
 	}
 	var current int64
-	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1`, id).Scan(&current); err != nil {
 		return err
 	}
 	if current != *ifVersion {

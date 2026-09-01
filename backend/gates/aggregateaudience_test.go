@@ -34,11 +34,12 @@ import (
 // so a failure names the disclosure rather than only the file. These are not
 // waived costs: every entry must satisfy the rule, and none is exempt from it.
 var aggregateReaders = map[string]string{
-	"internal/modules/people/strength.go":      "relationship strength and warmth, shown on a person and an account to any seat",
-	"internal/modules/deals/health.go":         "the deal's recency score, shown to anybody who can open the deal",
-	"internal/compose/meetingbrief/meeting.go": "last-touch per attendee, the number a brief's reader trusts most",
-	"internal/modules/search/graphedge.go":     "the global who-knows-whom projection, readable by everyone",
-	"internal/modules/capture/digest.go":       "the weekly digest's counts of what came in",
+	"internal/modules/people/strength.go":            "relationship strength and warmth, shown on a person and an account to any seat",
+	"internal/modules/deals/health.go":               "the deal's recency score, shown to anybody who can open the deal",
+	"internal/compose/meetingbrief/meeting.go":       "last-touch per attendee, the number a brief's reader trusts most",
+	"internal/modules/search/graphedge.go":           "the global who-knows-whom projection, readable by everyone",
+	"internal/modules/capture/digest.go":             "the weekly digest's counts of what came in",
+	"internal/compose/person360/sectionstimeline.go": "the person page's last-inbound/last-outbound dates, read by any seat that can open the record",
 }
 
 func TestEveryAggregateAsksTheAudience(t *testing.T) {

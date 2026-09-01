@@ -382,7 +382,12 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 // one the availability test must still stop. The single-row read, the
 // timeline including archived rows, and the record history all answer as if
 // the row were gone; the Art. 15 package alone still reaches it; and a write
-// surfaces as the 423 the contract promises, with the deadline attached.
+// — through the store's own guarded path or a raw statement alike — surfaces
+// as the 423 the contract promises, with the deadline attached (margince#3231:
+// the store's write path used to read the row LiveOnly before ever reaching
+// the guard, so an authorized writer with the id in front of them was told
+// the record did not exist; lockActivityForWrite now asks whether a row
+// LiveOnly cannot see is gone or held before answering either way).
 func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
@@ -408,14 +413,16 @@ func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 		t.Errorf("a held record's history (which carries its pre-redaction images) is readable: %v", err)
 	}
 
-	// The store's own write path never reaches the guard: it reads first,
-	// and a held row reads as gone. A writer that skips the read — a raw
-	// statement, a lifecycle path that addresses the row by id — meets the
-	// guard, and the transport answers the refusal as the contract's 423 with
-	// the deadline, never as a value the caller could fix.
+	// The store's own write path reaches the guard now: lockActivityForWrite
+	// answers a genuinely missing row as before, but retries a row LiveOnly
+	// cannot see once it confirms the row is HELD, so the write below reaches
+	// activity_refuse_restricted_mutation and the transport answers the
+	// refusal as the contract's 423 with the deadline, never as a 404 that
+	// tells an authorized writer their record does not exist.
 	subject := "rewritten"
-	if _, err := e.Activities.UpdateActivity(admin, held, activities.UpdateActivityInput{Subject: &subject}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("the store's write path found a held record: %v", err)
+	_, updateErr := e.Activities.UpdateActivity(admin, held, activities.UpdateActivityInput{Subject: &subject})
+	if updateFault, ok := httperr.Classify(updateErr); !ok || updateFault.Status != http.StatusLocked || updateFault.Code != "locked" {
+		t.Errorf("the store's write path answered %v (fault %+v), want 423 locked", updateErr, updateFault)
 	}
 	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET subject = 'rewritten' WHERE id = $1`, f.email)

@@ -120,6 +120,19 @@ func versionedTables(t *testing.T) map[string]bool {
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/people:touchRevertedPerson": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this person FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
+	// Both hold the row FOR UPDATE before this UPDATE runs, through
+	// lockActivityForWrite (retentionhold.go) rather than a direct
+	// storekit.LockRow call this witness's AST walk can see: a row a plain
+	// LiveOnly lock cannot find is checked for a statutory retention hold
+	// before being reported missing, and the lock is retaken with
+	// IncludeArchived when it is, so the write can reach
+	// activity_refuse_restricted_mutation instead of a 404 that denies a
+	// held row exists (margince#3231). The guard is real — the witness's
+	// per-function scan just does not cross the one-hop indirection a
+	// helper shared by three write paths puts between the call site and
+	// storekit.LockRow.
+	"internal/modules/activities:SetAudience":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/activities:UpdateActivity": "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
 	// checks the outcome in. It witnesses RowsAffected on a tx.Exec, and this
 	// sends the same conditional UPDATE through QueryRow so the value the write

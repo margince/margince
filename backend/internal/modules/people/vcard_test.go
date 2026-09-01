@@ -171,6 +171,16 @@ func TestParseVCardsRefusesAFileItCannotRead(t *testing.T) {
 		// An import that quietly drops a person is worse than one that
 		// refuses: the reader has no way to notice who is missing.
 		{"a card that never ends", "BEGIN:VCARD\nFN:Truncated Person\n"},
+		// The same malformation, found mid-file instead of at EOF: a second
+		// BEGIN before the first card's END used to overwrite `current`
+		// silently, dropping the unterminated card with no error while the
+		// well-formed card after it parsed and shipped — a shorter-than-
+		// expected result with nothing to say why.
+		{
+			"a card that never ends, before another one",
+			"BEGIN:VCARD\nFN:Truncated Person\n" +
+				"BEGIN:VCARD\nFN:Well Formed Person\nEND:VCARD\n",
+		},
 		{"a file with no card at all", "this is not a vCard\n"},
 		{"an empty file", ""},
 	}

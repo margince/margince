@@ -48,16 +48,19 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		// The row lock makes the version compare and the coalesce update
 		// below one race-free unit: without it two concurrent edits both
 		// pass the compare and the loser silently overwrites the winner.
-		if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		if err != nil {
 			return err
 		}
 		// Reading the row is not the licence to change it: customer identity
 		// is workspace-readable, so the write arm is what keeps a colleague's
 		// correspondence theirs.
-		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
-		current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+		// A held row must reach the UPDATE below so its own CHECK trigger —
+		// not this read — is what refuses the write.
+		current, err := readActivityForWrite(ctx, tx, id, held)
 		if err != nil {
 			return err
 		}
@@ -182,12 +185,21 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		if err != nil {
+			return err
+		}
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
 		p := storekit.NewPatch()
 		p.Set("archived_at", nil, time.Now().UTC())
-		if err := p.ApplyGuarded(ctx, tx, "activity", id.UUID, ifVersion); err != nil {
+		// A held row's version pin was read against the same live-or-held row
+		// this transaction already locked, so applying it under the matching
+		// filter is what lets the archive UPDATE reach
+		// activity_refuse_restricted_mutation instead of a LiveOnly clause
+		// hiding the row a second time.
+		if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, ifVersion, activityArchivedFilter(held)); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)

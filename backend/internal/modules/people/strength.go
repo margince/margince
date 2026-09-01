@@ -401,12 +401,12 @@ func strengthInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now t
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.person_id = $1
 		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2
+		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
-		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`,
+		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a"),
 		personID, windowStart).Scan(&out.LastInteraction, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
 		&out.LastInboundActivity); err != nil {
@@ -416,7 +416,7 @@ func strengthInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now t
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1
-		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL AND a.occurred_at >= $2
+		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+`
 		ORDER BY a.occurred_at DESC
 		LIMIT $3`, personID, windowStart, relStrengthEvidenceCap)
 	if err != nil {

@@ -108,6 +108,15 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 		switch strings.ToUpper(name) {
 		case "BEGIN":
 			if strings.EqualFold(value, "VCARD") {
+				// A BEGIN while a card is still open means the previous one
+				// never got its END — the same malformation the end-of-file
+				// check below catches, just discovered mid-file instead. Left
+				// unchecked here, the open card is silently overwritten and
+				// vanishes with no error: the exact "quietly drops a person"
+				// case this function's own doc comment refuses.
+				if current != nil {
+					return nil, fmt.Errorf("people: a vCard begins before the previous one ends")
+				}
 				current = &VCardEntry{}
 			}
 		case "END":

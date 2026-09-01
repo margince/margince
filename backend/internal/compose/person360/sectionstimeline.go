@@ -264,12 +264,19 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, personID ids.
 	if err != nil {
 		return err
 	}
+	// An aggregate, not a per-row read: it has to agree for every colleague,
+	// so it asks whether the WORKSPACE may see the row (auth.AudienceWorkspaceOnly)
+	// rather than the caller-scoped arm readActivities uses above for content —
+	// a private message narrowed to its participants must not move the date a
+	// colleague outside them reads here, the same rule relationship strength
+	// holds (people/strength.go).
 	return tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
 		FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s`,
-		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg)), args...).
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
+		fmt.Sprintf(personReachesActivity, personPos), scope, projectScope(opts, arg),
+		auth.AudienceWorkspaceOnly("a")), args...).
 		Scan(&out.LastInboundAt, &out.LastOutboundAt)
 }
 

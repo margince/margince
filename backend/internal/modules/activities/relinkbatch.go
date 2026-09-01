@@ -80,13 +80,14 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	// It is taken for every relink rather than only a pinned one: the write
 	// below updates this row, so the lock is acquired either way — this decides
 	// WHEN, and the two checks above are the reason it is now.
-	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
+	held, err := lockActivityForWrite(ctx, tx, id.UUID)
+	if err != nil {
 		return false, err
 	}
-	if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 		return false, err
 	}
-	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion); err != nil {
+	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion, held); err != nil {
 		return false, err
 	}
 	var displaced []ids.UUID
@@ -155,11 +156,11 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 // No pin is the ordinary case and is not an error: a human's relink through the
 // app conditions on nothing, and a static-tier agent call has nothing to
 // condition on either.
-func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
+func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
 	if ifVersion == nil {
 		return nil
 	}
-	current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	current, err := readActivityForWrite(ctx, tx, id, held)
 	if err != nil {
 		return err
 	}
