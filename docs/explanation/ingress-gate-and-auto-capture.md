@@ -52,14 +52,29 @@ Three rules apply everywhere:
 | 3. Tier ladder (T0–T4) | Plain code | — |
 | 4. Verdict engine — claiming, writing, hiding, sweeping | Plain code | — |
 | 4. Verdict engine — **judging one sender** | **AI** | `capture_counterparty_verdict` |
+| 5. Confidentiality engine — **judging one thread** | **AI** | `capture_confidentiality_verdict` |
 | Does this domain deserve a company record? | **AI** | `site_triage` |
 | Attention labels on captured mail (separate feature) | **AI** | `capture_classify` |
 
-A model makes one decision here: *what kind of sender is this?* It is asked once per **sender**, not
-per message, and only for senders plain code could not classify. The answer decides whether a
-**contact** is created. It never decides whether a **message** is kept.
+Two model decisions, and they answer different questions.
 
-If no model is configured, capture works normally. Only the judging step is skipped.
+*What kind of sender is this?* — asked once per **sender**, not per message, and only for senders
+plain code could not classify. The answer decides whether a **contact** is created, and whether that
+contact is the whole workspace's or the importing seat's alone.
+
+*Is this thread ordinary business?* — asked once per **thread per seat**, on the first message. The
+answer decides who may **read** the message, never whether it is kept. A thread it clears is
+readable by colleagues; anything else stays with the people who were on it, with the kind it
+concluded as the reason.
+
+Both run on a local rung by default and neither sends message text off the machine unless an admin
+binds a cloud one. The generated egress table
+([ai-egress.md](../reference/ai-egress.md)) says which, and a gate fails when the two disagree.
+
+**Neither model can widen anything by being unavailable.** With no model configured, capture works
+normally: senders stay unjudged and their records stay owner-scoped, threads stay held, and nothing
+is purged. An outage and a careful classifier look the same from the outside — mail stays with the
+people who were on it — which is the direction an outage has to fail in.
 
 ---
 

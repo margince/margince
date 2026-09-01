@@ -128,10 +128,21 @@ An activity has no owner; it inherits visibility from the records it links to (t
 and a link-less note is workspace-shared. On top of that sits a per-activity **audience**
 (`activity.audience`, `activity_audience_member`):
 
-- `workspace` — the default; everyone who can discover the row reads it;
+- `workspace` — everyone who can discover the row reads it;
 - `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant
   by seat);
 - `selected` — the participants plus the users and teams a human named.
+
+`workspace` is the default for a row a human logged. For a row a MAILBOX brought in it is derived,
+not defaulted: `activities.RecomputeAudienceTx` takes the strictest contribution across every
+importing seat's `capture_import` row — the mailbox's posture, the thread's verdict, that seat's
+counterparty holds — so a colleague whose mailbox shares cannot publish a message another importer
+is holding, in whatever order the two syncs ran. `activity.audience_reason` names the strictest
+contributor, and is withheld with the content: the reason describes what the message is about.
+
+A direct `PATCH /activities/{id}/audience` on a captured row is refused (`audience_is_derived`) and
+points at `POST /activities/threads/{key}/audience`, which releases the caller's own contribution
+and reports how many other seats still hold the thread — a count, never a name.
 
 `auth.ActivityDiscoverClause` answers "may I learn this row exists" (date, direction, kind, who owns
 it — the last-touch marker); `auth.ActivityContentClause` answers "may I read it" (subject, body,
