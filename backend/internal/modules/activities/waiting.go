@@ -46,14 +46,70 @@ type WaitingReply struct {
 	PersonID       ids.UUID
 	OrganizationID ids.UUID
 	DealID         ids.UUID
+	// HasOpenDeal reports whether an open deal is on this thread. It is what
+	// lets a caller keep an old wait that still has money behind it, and drop
+	// one that does not.
+	//
+	// Read through the SAME visibility-gated links as the record ids above, so
+	// it means "an open deal this reader can see" rather than "an open deal
+	// exists". The looser reading would let somebody learn a deal is there by
+	// watching a row they can see decline to go stale.
+	HasOpenDeal bool
 }
 
 // waitingScanCap bounds the work one read does. Beyond this the answer is
 // "there are more", never a silent truncation reported as a total.
 const waitingScanCap = 200
 
+// waitingHorizonDays is how far back a wait can reach and still be work.
+//
+// Past this, an unanswered message is history rather than an obligation: the
+// conversation it belonged to has ended one way or another, and nobody is
+// sitting at the other end of it. The horizon is coarse on purpose — the bands
+// that separate an urgent wait from a stale one are the caller's, and they
+// judge what survives this.
+//
+// A thread with an open deal on it is exempt. That is the one case where a long
+// silence still costs money, and the caller says the same thing in its own
+// staleness rule; a horizon that outranked it would leave that rule with
+// nothing to act on.
+//
+// Applied BEFORE the cap for the same reason the machine rule is, and the
+// reason is worth restating because it is the whole shape of this query: a
+// filter after LIMIT lets two hundred rows nobody wants fill the scan and push
+// a real customer past it, and the page then says nobody is waiting.
+const waitingHorizonDays = 90
+
+// What "still live" means, per record type, as one spelling each.
+//
+// Both predicates take a table alias, because every reader needs them under a
+// different one. They exist as constants because this file needed each rule
+// twice and lasttouch.go states the same two in its own dispatch: four copies
+// of "a deal is open" in one package is four places to edit when archiving
+// changes, and nothing fails when the fourth is missed.
+//
+// The lead list is the WORKING part of the lifecycle. A promoted or
+// disqualified lead is finished business, and a wait on one is history rather
+// than work.
+const (
+	openDealPredicate    = `%[1]s.status = 'open' AND %[1]s.archived_at IS NULL`
+	workingLeadPredicate = `%[1]s.status IN ('new', 'contacted', 'engaged') AND %[1]s.archived_at IS NULL`
+)
+
+// liveRecord renders one of the predicates above under a caller's alias.
+func liveRecord(predicate, alias string) string {
+	return fmt.Sprintf(predicate, alias)
+}
+
 // waitingRepliesSQL finds, per thread, the newest inbound with no later
-// outbound in the same thread.
+// outbound in the same thread — where the thread is a SALES conversation the
+// workspace is answerable for, recent enough to still be one.
+//
+// Every eligibility rule is applied before ORDER BY and LIMIT, so the cap falls
+// on qualified rows only. A rule applied after the cap reads as a working
+// filter and fails as a silent one: the scan fills with rows the rule would
+// have removed, the customer behind them never arrives, and the page reports an
+// empty queue with nothing to say it was truncated.
 //
 // NOT EXISTS rather than a window function or a join: it expresses the question
 // directly — "nobody wrote back after this" — and it stops at the first later
@@ -102,7 +158,15 @@ const waitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       -- Whether an open deal this reader can SEE is on this thread, which
+	       -- is what lets a long wait with money on it stay in the day.
+	       --
+	       -- Off the visibility-gated join, like every record id above it. Read
+	       -- off an ungated one it would answer "a deal exists" rather than "you
+	       -- can see a deal", and a reader would learn the first by watching a
+	       -- row they can see decline to go stale.
+	       bool_or(openDeal.id IS NOT NULL)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -110,12 +174,49 @@ const waitingRepliesSQL = `
 	  -- from a notification service.
 	  LEFT JOIN activity_participant sender
 	         ON sender.activity_id = a.id AND sender.role = 'from'
+	  LEFT JOIN deal openDeal ON openDeal.id = wl.deal_id
+	                         AND %[8]s
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
 	   AND a.occurred_at <= $%[1]d
 	   AND %[2]s
 	   AND a.thread_key IS NOT NULL
+	   -- Old enough and it is history, not work — UNLESS an open deal is on it.
+	   --
+	   -- The horizon and the caller's staleness rule have to agree about money,
+	   -- or the looser of the two is decoration. The caller keeps a long wait
+	   -- that still has a deal behind it, on the ground that there the silence
+	   -- IS the problem; a horizon that removed those rows first would make that
+	   -- branch unreachable and the rep would never see the one case where a
+	   -- half-year of quiet costs something.
+	   --
+	   -- Before the cap, like every other exclusion here.
+	   AND (a.occurred_at >= $%[1]d - make_interval(days => %[5]d)
+	     OR EXISTS (
+	          SELECT 1 FROM activity_link funded
+	          JOIN deal fd ON fd.id = funded.deal_id AND %[9]s
+	           WHERE funded.activity_id = a.id))
+	   -- A SALES link, or it is not this queue's business.
+	   --
+	   -- The rule that was missing: this read used to answer "somebody wrote and
+	   -- nobody replied", which is true of a rep's dentist. Unanswered is a fact
+	   -- about a mailbox; waiting is a fact about a customer, and only a link to
+	   -- a record the workspace sells to tells the two apart.
+	   --
+	   -- Its own EXISTS rather than a predicate on the wl join above, because
+	   -- that join is filtered by what the reader may SEE. Qualifying through it
+	   -- would make eligibility depend on the reader, so the same message would
+	   -- be work for one colleague and personal mail for another.
+	   AND EXISTS (
+	         SELECT 1 FROM activity_link sales
+	          WHERE sales.activity_id = a.id
+	            AND (sales.person_id IS NOT NULL
+	              OR sales.organization_id IS NOT NULL
+	              OR EXISTS (SELECT 1 FROM deal d
+	                          WHERE d.id = sales.deal_id AND %[6]s)
+	              OR EXISTS (SELECT 1 FROM lead ld
+	                          WHERE ld.id = sales.lead_id AND %[7]s)))
 	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
 	   -- LIMIT lets two hundred notification threads fill the scan and push a
 	   -- real customer past it, and the page then says nobody is waiting —
@@ -153,7 +254,19 @@ const waitingRepliesSQL = `
 	            AND newer.occurred_at <= $%[1]d
 	            AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
 	 GROUP BY a.id, a.subject, a.occurred_at
-	 ORDER BY a.occurred_at ASC
+	 -- NEWEST first, which is the opposite of how the rows are then shown.
+	 --
+	 -- The cap has to spend its budget on the rows most likely to matter, and
+	 -- those are the recent ones: a wait inside a day is urgent, and one past a
+	 -- fortnight without an open deal is demoted by the caller the moment it
+	 -- arrives. Taking the OLDEST two hundred spent the entire scan on rows
+	 -- headed for the bottom of the page and cut the urgent ones before anybody
+	 -- saw them — the queue would report nobody waiting on the day it was most
+	 -- wrong.
+	 --
+	 -- The caller sorts oldest-first for display, so what a reader sees is
+	 -- unchanged. This decides only WHICH waits survive the bound.
+	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 
 // WaitingReplies answers who is waiting on this reader for a reply.
@@ -204,7 +317,12 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			linkVisible = scopeUnbounded
 		}
 		rows, err := tx.Query(ctx,
-			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap), args...)
+			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap,
+				waitingHorizonDays,
+				liveRecord(openDealPredicate, "d"),
+				liveRecord(workingLeadPredicate, "ld"),
+				liveRecord(openDealPredicate, "openDeal"),
+				liveRecord(openDealPredicate, "fd")), args...)
 		if err != nil {
 			return err
 		}
@@ -213,7 +331,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		for rows.Next() {
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.PersonID, &row.OrganizationID, &row.DealID); err != nil {
+				&row.PersonID, &row.OrganizationID, &row.DealID,
+				&row.HasOpenDeal); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

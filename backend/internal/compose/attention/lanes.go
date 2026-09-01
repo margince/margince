@@ -339,6 +339,10 @@ type WaitingCustomer struct {
 	PersonID       ids.UUID
 	OrganizationID ids.UUID
 	DealID         ids.UUID
+	// HasOpenDeal reports whether money this reader can see is still on this
+	// thread. It is what keeps a long wait in execution instead of sending it
+	// to review.
+	HasOpenDeal bool
 }
 
 // Meetings is today's booked meetings that have not happened yet.

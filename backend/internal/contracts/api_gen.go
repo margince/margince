@@ -11837,6 +11837,7 @@ const (
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
 	WorklistReasonKindRoutine            WorklistReasonKind = "routine"
+	WorklistReasonKindStale              WorklistReasonKind = "stale"
 	WorklistReasonKindWaitingDays        WorklistReasonKind = "waiting_days"
 )
 
@@ -11876,6 +11877,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindRepeatedFailure:
 		return true
 	case WorklistReasonKindRoutine:
+		return true
+	case WorklistReasonKindStale:
 		return true
 	case WorklistReasonKindWaitingDays:
 		return true

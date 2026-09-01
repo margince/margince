@@ -408,7 +408,7 @@ func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
 	waiting := []WaitingCustomer{{
 		ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000aaaa"),
 		Subject:    "Re: pricing",
-		Since:      rankInstant.Add(-83 * 24 * time.Hour),
+		Since:      rankInstant.Add(-2 * 24 * time.Hour),
 	}}
 
 	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waiting)
@@ -447,10 +447,14 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 
 // The longer somebody has waited, the higher they sit — among people who are
 // all waiting, the forgotten one is the one at risk.
+//
+// Both waits are inside the ordering ceiling. Past it every wait ties on age by
+// design, so a fixture that straddled the cap would be asserting the tie-break
+// below age while claiming to test age.
 func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
 	waiting := []WaitingCustomer{
 		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000a"), Since: rankInstant.Add(-2 * 24 * time.Hour)},
-		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-83 * 24 * time.Hour)},
+		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-9 * 24 * time.Hour)},
 	}
 
 	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waiting)
@@ -664,11 +668,14 @@ func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
 // longest-waiting few lead; the rest are demoted, never dropped.
 func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 	waiting := []WaitingCustomer{}
+	// Every wait is LIVE — hours apart, none old enough to go stale. Crowding
+	// and staleness both move a row down the page, and a fixture that aged past
+	// the stale line would pass this test while proving the other rule.
 	for i := 0; i < 30; i++ {
 		waiting = append(waiting, WaitingCustomer{
 			ActivityID: ids.NewV7(),
 			Subject:    "Thread " + string(rune('a'+i%26)) + string(rune('0'+i/26)),
-			Since:      rankInstant.Add(-time.Duration(30-i) * 24 * time.Hour),
+			Since:      rankInstant.Add(-time.Duration(30-i) * time.Hour),
 		})
 	}
 	day := crmcontracts.Attention{

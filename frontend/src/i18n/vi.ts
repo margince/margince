@@ -7091,6 +7091,7 @@ export const vi = {
   "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
   "worklist.because.meeting_soon": "sắp bắt đầu",
+  "worklist.because.stale": "đã chờ rất lâu",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",
