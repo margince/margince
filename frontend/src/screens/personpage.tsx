@@ -404,16 +404,11 @@ export function PersonPageV2({
             firstName={firstName}
             onExplain={() => navigate({ screen: "contacts", id })}
           />
-          {/* Not in overlay: a mirrored workspace has no thread data, and the
-              server refuses the waiting-reply read there outright. */}
-          {!overlay && !person.archived_at && (
-            <RecordEmailAside
-              entityType="person"
-              entityId={id}
-              personId={id}
-              detectWaitingReply
-            />
-          )}
+          <PersonEmailPanel
+            personId={id}
+            overlay={overlay}
+            archived={Boolean(person.archived_at)}
+          />
         </PageAside>
         {tab === "overview" && (
           <div className="record-stack">
@@ -658,6 +653,28 @@ function writeRefusal(
     return undefined;
   }
   return t("person.action.consentRefused");
+}
+
+// The rail's email box, and when the page may not draw it: not in overlay — a
+// mirrored workspace has no thread data, and the server refuses the
+// waiting-reply read there outright — and not on an archived contact, whose
+// page offers no writes.
+function PersonEmailPanel({
+  personId,
+  overlay,
+  archived,
+}: Readonly<{ personId: string; overlay: boolean; archived: boolean }>) {
+  if (overlay || archived) {
+    return null;
+  }
+  return (
+    <RecordEmailAside
+      entityType="person"
+      entityId={personId}
+      personId={personId}
+      detectWaitingReply
+    />
+  );
 }
 
 // The header's generic mail verb opens the shared compose drawer — the thread
