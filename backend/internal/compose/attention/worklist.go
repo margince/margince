@@ -244,6 +244,10 @@ func (s *Service) worklistFrom(
 		// survived folding and the cut. Both are already in hand, so no figure
 		// here costs a query that could disagree with the page it describes.
 		Reach: reachOf(considered, shown, boundedSources(day)),
+		// The same accounting per kind of work. Both read the same two
+		// snapshots, so the per-source and per-category figures are two views of
+		// one answer rather than two answers.
+		Counts: countsOf(considered, shown, boundedSources(day)),
 	}
 	if filter != "" {
 		narrowed := crmcontracts.WorklistFilter(filter)
@@ -299,7 +303,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("bounce", day.Bounces, doneCap)
 	// Each of these carries its own, declared where the lane is read.
 	atCap("task", &day.Planned, plannedCap)
-	atCap("deal_at_risk", day.AtRisk, quietDealBound)
+	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row

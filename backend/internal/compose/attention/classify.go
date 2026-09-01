@@ -36,6 +36,11 @@ const sourceWaiting = "customer_waiting"
 // out of the queue it was asked for.
 const sourceTask = "task"
 
+// sourceAtRisk names the quiet-deal producer. Three readers spell it — the
+// bounds table, the category map and the classifier — which is two more than a
+// literal survives.
+const sourceAtRisk = "deal_at_risk"
+
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 

@@ -11743,6 +11743,36 @@ func (e WorklistComparisonComparator) Valid() bool {
 	}
 }
 
+// Defines values for WorklistCountCategory.
+const (
+	WorklistCountCategoryCustomerWaiting WorklistCountCategory = "customer_waiting"
+	WorklistCountCategoryDealsAtRisk     WorklistCountCategory = "deals_at_risk"
+	WorklistCountCategoryDecisions       WorklistCountCategory = "decisions"
+	WorklistCountCategoryMeetings        WorklistCountCategory = "meetings"
+	WorklistCountCategorySystem          WorklistCountCategory = "system"
+	WorklistCountCategoryTasks           WorklistCountCategory = "tasks"
+)
+
+// Valid indicates whether the value is a known member of the WorklistCountCategory enum.
+func (e WorklistCountCategory) Valid() bool {
+	switch e {
+	case WorklistCountCategoryCustomerWaiting:
+		return true
+	case WorklistCountCategoryDealsAtRisk:
+		return true
+	case WorklistCountCategoryDecisions:
+		return true
+	case WorklistCountCategoryMeetings:
+		return true
+	case WorklistCountCategorySystem:
+		return true
+	case WorklistCountCategoryTasks:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemActions.
 const (
 	WorklistItemActionsAcknowledge WorklistItemActions = "acknowledge"
@@ -28554,6 +28584,12 @@ type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// Counts The same accounting per KIND of work rather than per producer — what a filter
+	// pill counts, and what lets the page say how much it is not showing. Counted
+	// before any narrowing, so a filtered page still reports the categories it is
+	// not drawing.
+	Counts []WorklistCount `json:"counts"`
+
 	// Filter The narrowing this read applied.
 	Filter *WorklistFilter `json:"filter,omitempty"`
 
@@ -28666,6 +28702,44 @@ type WorklistComparison struct {
 
 // WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
 type WorklistComparisonComparator string
+
+// WorklistCount What one CATEGORY of work held, and how much of it reached the page.
+//
+// The same three figures `WorklistReach` reports per source, asked of the thing a
+// reader actually filters by. A client cannot derive one from the other: which
+// source belongs to which category is decided here, and summing `reach` in the
+// browser would be a second copy of that map, wrong the first time a source moves
+// lane.
+//
+// This is what a filter pill draws its number from, and what lets the page say how
+// much it is not showing. Without it the queue was a cut at 25 rows that said
+// nothing about the rest, so a full first page made a real backlog look like zero.
+//
+// `considered` counts what this read weighed BEFORE any category narrowing, which
+// is why a page filtered to meetings can still say how many tasks there were. It is
+// not a total when `more_available` is true.
+//
+// `shown` counts what the page carries, with a folded group counted as the items it
+// stands for rather than as the single row that stands for them.
+type WorklistCount struct {
+	// Category Which kind of work these numbers are about. The same vocabulary the filter uses.
+	Category WorklistCountCategory `json:"category"`
+
+	// Considered How many items of this kind were read and ranked, before any narrowing.
+	Considered int `json:"considered"`
+
+	// MoreAvailable True when any source behind this category was read to its work bound, so items
+	// MAY exist past what was considered. A category inherits its sources' honesty:
+	// reporting "12 decisions" over a pile the read never finished counting is the
+	// failure this flag exists to prevent.
+	MoreAvailable bool `json:"more_available"`
+
+	// Shown How many of them the page carries, counting a folded group as its members.
+	Shown int `json:"shown"`
+}
+
+// WorklistCountCategory Which kind of work these numbers are about. The same vocabulary the filter uses.
+type WorklistCountCategory string
 
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
 // `amount_minor × win_probability`, converted to the installation's base currency —

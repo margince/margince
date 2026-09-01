@@ -1779,6 +1779,25 @@ export async function mockApi(
         scope_options: ["mine"],
         summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
         sources_unavailable: [],
+        // Both accountings, because the server sends both. A fixture that omits
+        // them models a response the product never produces, and a spec driving
+        // it passes against a page no reader can reach.
+        reach: [
+          {
+            source: "approval",
+            considered: 1,
+            shown: 1,
+            more_available: false,
+          },
+        ],
+        counts: [
+          {
+            category: "decisions",
+            considered: 1,
+            shown: 1,
+            more_available: false,
+          },
+        ],
         queue: [
           {
             id: approval.id,

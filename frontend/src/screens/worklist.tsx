@@ -10,10 +10,12 @@ import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import {
   comparisonText,
+  completenessText,
   consequenceText,
   dealFactsText,
   itemTitle,
   moveHref,
+  pillCount,
   reasonText,
   rowHref,
   sourceUnavailableText,
@@ -306,6 +308,7 @@ function WorklistHeader({
   const t = useT();
   const { locale } = useLocale();
   const scopes = day.scope_options;
+  const completeness = completenessText(day, filter, t, locale);
   return (
     <div className="worklist-header">
       <p className="t-h2 worklist-lead">
@@ -335,11 +338,17 @@ function WorklistHeader({
         pills={FILTERS.map((value) => ({
           value,
           label: t(`worklist.filter.${value}` as const),
+          count: pillCount(day, value),
         }))}
         value={filter}
         onChange={onFilter}
         label={t("worklist.filter.label")}
       />
+      {/* What the page is NOT showing. Drawn only when there is a difference to
+          report: on a day the queue carries whole, "12 of 12" is noise. */}
+      {completeness !== null && (
+        <p className="t-meta worklist-completeness">{completeness}</p>
+      )}
     </div>
   );
 }

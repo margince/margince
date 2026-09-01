@@ -11,6 +11,14 @@
   margin: 0;
 }
 
+/* What the page is not showing. Quiet on purpose: this is the surface reporting
+   on itself rather than a row of work, and it must not compete with the queue
+   for the reader's eye. */
+.worklist-completeness {
+  color: var(--textSecondary);
+  margin: 0;
+}
+
 .worklist-clear {
   color: var(--textSecondary);
   margin: var(--space-4) 0;
