@@ -344,10 +344,20 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.Perso
 	// snippet is what the card stated, which is what an Art. 15 answer has to
 	// be able to show.
 	evidence := vcardEvidence(entry)
-	applied, err := applyObservedCard(ctx, tx, personID, observedCard{
+	// The card's own REV when it states one, so importing the same file twice
+	// states the same thing twice. Dated from the clock instead, a re-upload
+	// would be a NEWER statement than everything since it — and a reader
+	// re-uploading a file they were unsure landed would put back a detail a
+	// signature had already corrected. A card with no REV still takes the
+	// clock, which is what every card did before.
+	card := observedCard{
 		Entry: entry, Evidence: evidence, SourceRef: vcardSource,
 		Source: vcardSource, CapturedBy: by,
-	})
+	}
+	if entry.Revised != nil {
+		card.ObservedAt = *entry.Revised
+	}
+	applied, err := applyObservedCard(ctx, tx, personID, card)
 	if err != nil {
 		return err
 	}

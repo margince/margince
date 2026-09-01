@@ -20,6 +20,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -360,4 +361,120 @@ func TestTheRestoreMatchesTheLedgersOwnClaimKey(t *testing.T) {
 				field, got, hex.EncodeToString(want[:]))
 		}
 	}
+}
+
+// A card carries its own date, so importing the same file twice states the
+// same thing twice.
+//
+// Without it, a re-upload is dated NOW and outranks everything since — so a
+// reader re-uploading a file they were unsure landed puts back a detail a
+// signature had already corrected. That is the whole defect; the second import
+// asserting nothing new is the fix.
+func TestReimportingACardDoesNotOutrankWhatCameAfterIt(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	card := "BEGIN:VCARD\nFN:Rev Card\nTITLE:VP Finance\nREV:20250101T090000Z\n" +
+		"EMAIL;TYPE=WORK:rev@card.example\nEND:VCARD\n"
+
+	results := importCards(ctx, t, e, card)
+	if len(results) != 1 || results[0].Outcome != VCardCreated {
+		t.Fatalf("outcomes = %+v, want one created", results)
+	}
+	personID := *results[0].PersonID
+
+	// Something states a newer title after the card was written.
+	if !fillFromSignature(ctx, t, e, personID, SignatureField{
+		Name: fieldTitle, Value: "Group CFO", Evidence: "Group CFO", Confidence: 0.9,
+	}) {
+		t.Fatal("the signature wrote nothing, so this test proves nothing about the re-import")
+	}
+
+	// The same file again. Its REV has not moved, so it is not a newer
+	// statement and the title it once carried must not come back.
+	importCards(ctx, t, e, card)
+
+	after, err := e.store.GetPerson(ctx, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("re-reading the person: %v", err)
+	}
+	if after.Title == nil || *after.Title != "Group CFO" {
+		t.Errorf("title = %v after re-importing the same card, want the newer %q — "+
+			"a re-upload must not resurrect what a later statement replaced", after.Title, "Group CFO")
+	}
+}
+
+// Undoing a replaced number moves the ROW, not just the evidence line.
+//
+// The sidecar holds one answer per field while the record holds a list, so a
+// restore that rewrote only the sidecar would tell a reader their old number
+// was back while the record still held the replacement — and they would find
+// out by dialling it.
+func TestUndoingAReplacedNumberBringsBackTheRowAReaderDials(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Nora Numbers", "nora@numbers.example", "Numbers AS", "numbers.example")
+
+	// The number on the record, stated a month ago.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by, observed_at)
+			VALUES ($1, '+49301111111', 'work', true, 0, 'manual', 'human:test', now() - interval '30 days')`,
+			personID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !fillFromSignatureObserved(ctx, t, e, personID, time.Now().Add(-30*24*time.Hour), SignatureField{
+		Name: fieldPhone, Value: "+49301111111", Evidence: "+49 30 1111111", Confidence: 0.9,
+	}) {
+		t.Fatal("seeding the evidence line for the old number wrote nothing")
+	}
+
+	// A newer signature states a different one.
+	if !fillFromSignature(ctx, t, e, personID, SignatureField{
+		Name: fieldPhone, Value: "+49302222222", Evidence: "+49 30 2222222", Confidence: 0.9,
+	}) {
+		t.Fatal("the replacing number wrote nothing, so there is nothing to undo")
+	}
+	if live := livePhones(ctx, t, e, personID); len(live) != 1 || live[0] != "+49302222222" {
+		t.Fatalf("live numbers = %v, want only the replacement before the undo", live)
+	}
+
+	if err := e.store.RestoreProfileField(ctx, personID, fieldPhone); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	live := livePhones(ctx, t, e, personID)
+	if len(live) != 1 || live[0] != "+49301111111" {
+		t.Errorf("live numbers = %v after the undo, want the old number back and the "+
+			"replacement retired — an undo that leaves the record dialling the new one undid nothing", live)
+	}
+}
+
+// livePhones reads the numbers a reader would be offered, in position order.
+func livePhones(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID) []string {
+	t.Helper()
+	var out []string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT phone FROM person_phone
+			 WHERE person_id = $1 AND archived_at IS NULL
+			 ORDER BY position, created_at`, personID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var phone string
+			if err := rows.Scan(&phone); err != nil {
+				return err
+			}
+			out = append(out, phone)
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatalf("reading the live numbers: %v", err)
+	}
+	return out
 }

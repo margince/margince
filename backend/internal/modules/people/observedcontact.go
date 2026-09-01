@@ -417,6 +417,7 @@ func applyObservedCard(ctx context.Context, tx pgx.Tx, personID ids.PersonID, c 
 			applied = append(applied, f.name)
 		}
 	}
+	wroteEvidence := false
 	for _, phone := range c.Entry.Phones {
 		outcome, err := applyObservedPhone(ctx, tx, personID, observedPhone{
 			Phone: phone.Value, PhoneType: phone.Kind, SourceRef: c.SourceRef,
@@ -425,8 +426,27 @@ func applyObservedCard(ctx context.Context, tx pgx.Tx, personID ids.PersonID, c 
 		if err != nil {
 			return nil, err
 		}
-		if outcome == observedApplied && !slices.Contains(applied, fieldPhone) {
+		if outcome != observedApplied {
+			continue
+		}
+		if !slices.Contains(applied, fieldPhone) {
 			applied = append(applied, fieldPhone)
+		}
+		// The evidence line for the number, written once for the first number
+		// this card LANDS: the sidecar holds one row per field while a card may
+		// state several numbers, so writing it per number would be the same row
+		// overwritten and the undo would offer whichever happened to be last.
+		// The signature pass writes this line too, and it is what gives a
+		// replaced number something to undo.
+		if !wroteEvidence {
+			wroteEvidence = true
+			if _, err := applyObservedField(ctx, tx, personID, observedField{
+				Field: fieldPhone, Value: phone.Value, Evidence: c.Evidence,
+				SourceRef: c.SourceRef, Source: c.Source, CapturedBy: c.CapturedBy,
+				ObservedAt: c.ObservedAt,
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return applied, nil

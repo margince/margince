@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 // VCardEntry is one card, reduced to what a person record holds. Every field is
@@ -39,6 +40,10 @@ type VCardEntry struct {
 	Phones       []VCardChannel
 	URL          string
 	Address      string
+	// Revised is what the card's REV property states: when this card was last
+	// changed. Nil where it states none, and the import then dates the card
+	// from its own clock.
+	Revised *time.Time
 }
 
 // VCardChannel is one address or number with the kind the card gave it.
@@ -246,7 +251,40 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		if entry.Address == "" {
 			entry.Address = addressFromStructured(params, raw)
 		}
+	case "REV":
+		if entry.Revised == nil {
+			entry.Revised = parseVCardRevision(value)
+		}
 	}
+}
+
+// parseVCardRevision reads REV, the card's own statement of when it was last
+// revised, and nil when it states none or states one this reader cannot parse.
+//
+// It matters because a card carries no other date, and the import needs one:
+// dating a card from the moment the request ran makes a re-upload of the same
+// file a NEWER statement than everything since, so a retry can put back a
+// detail a signature had already corrected. REV is what the card itself says,
+// so importing the same file twice states the same thing twice.
+//
+// RFC 6350 writes REV as an ISO 8601 basic-format timestamp; the extended
+// format and a bare date appear in real files, so all three are read. A card
+// whose REV cannot be read falls back to the import's own clock, which is the
+// behaviour every card had before this.
+func parseVCardRevision(value string) *time.Time {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return nil
+	}
+	for _, layout := range []string{
+		"20060102T150405Z0700", "20060102T150405Z07:00", "20060102T150405",
+		time.RFC3339, "2006-01-02T15:04:05", "20060102", "2006-01-02",
+	} {
+		if at, err := time.Parse(layout, v); err == nil {
+			return &at
+		}
+	}
+	return nil
 }
 
 // decodeVCardValue undoes the two encodings a real-world card carries: the
