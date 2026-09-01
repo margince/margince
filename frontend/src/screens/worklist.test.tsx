@@ -697,3 +697,277 @@ describe("an introduction ask on the queue", () => {
     expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
   });
 });
+
+describe("the one thing to do next", () => {
+  it("says what the top row is, rather than leaving a reader to work it out", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "focus-me",
+            title: "Northstar renewal",
+            band: "now",
+            primary_action: "act",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            level: 3,
+            // The record the verb goes to. Without it the row has no address
+            // at all, and the card is correctly withheld — which is a
+            // different case, tested below.
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000cc",
+              label: "Northstar",
+            },
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The card names the row and offers ONE verb. Both are drawn twice — once
+    // on the card, once on the row it was lifted from — because the row stays
+    // in the queue so the ranks and counts keep agreeing with the page.
+    await screen.findByText("Do this next");
+    expect(await screen.findAllByText("Northstar renewal")).toHaveLength(2);
+  });
+
+  it("promotes no card when the day's top row is review work", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "dupe",
+            title: "Two Acme records",
+            band: "review",
+            primary_action: "merge",
+            source: "dedupe_candidate",
+            category: "decisions",
+            level: 6,
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The row is there; the card is not. A page headed "do this next" over a
+    // duplicate-merge suggestion tells a rep something false about their day.
+    await screen.findByText("Two Acme records");
+    expect(screen.queryByText("Do this next")).toBeNull();
+  });
+
+  it("promotes no card when the server named no verb for the top row", async () => {
+    stub(
+      day({
+        queue: [
+          row({ id: "verbless", title: "Something happened", band: "now" }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Something happened");
+    expect(screen.queryByText("Do this next")).toBeNull();
+  });
+  it("promotes no card when the row has nowhere for its verb to go", async () => {
+    stub(
+      day({
+        // A task filed under nothing: no subject, so rowHref falls through
+        // SOURCE_QUEUE and finds no address. The server named a verb, and the
+        // page has nowhere to send it.
+        queue: [
+          row({
+            id: "unfiled",
+            title: "Something to do",
+            band: "keep_momentum",
+            primary_action: "complete",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Something to do");
+    // A card with a headline and no way to act is worse than no card: it
+    // occupies the place a reader looks for their next step.
+    expect(screen.queryByText("Do this next")).toBeNull();
+  });
+});
+
+describe("what the selected row is about", () => {
+  it("draws no pane until the reader picks a row", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "A task",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-0000000000aa",
+              label: "Kirsten Vogel",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The full-width list a reader had before selection existed. An empty
+    // column standing ready reads as a pane that failed to load.
+    await screen.findByText("A task · Kirsten Vogel");
+    expect(screen.queryByText("They last wrote")).toBeNull();
+  });
+
+  it("opens the record beside the queue, and closes it on a second press", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "A task",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-0000000000aa",
+              label: "Kirsten Vogel",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const open = await screen.findByRole("button", {
+      name: /^Show what/,
+    });
+    await userEvent.click(open);
+    // The pane names the record and answers the question the row cannot: how
+    // long the silence has run, in both directions.
+    await screen.findByText("They last wrote");
+    expect(screen.getByText("We last wrote")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await waitFor(() => {
+      expect(screen.queryByText("They last wrote")).toBeNull();
+    });
+  });
+
+  it("draws no pane for a row about a deal, whose figures are already on it", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "Northstar renewal",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000bb",
+              label: "Northstar",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const open = await screen.findByRole("button", {
+      name: /^Show what/,
+    });
+    await userEvent.click(open);
+
+    // Selected, and deliberately nothing beside it: a deal row carries its own
+    // amount, close date and owner, so a pane would be a second spelling.
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^Show what/ })).toBeTruthy();
+    });
+    expect(screen.queryByText("They last wrote")).toBeNull();
+  });
+
+  it("closes the pane when the selected row leaves the queue", async () => {
+    const withRow = day({
+      queue: [
+        row({
+          id: "one",
+          title: "A task",
+          subject: {
+            type: "person",
+            id: "01a05500-0000-7000-8000-0000000000aa",
+            label: "Kirsten Vogel",
+          },
+        }),
+      ],
+      summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+    });
+    // The same day with the row gone — a disposition, a filter, a refetch that
+    // found it answered. The pane must not go on describing a record whose row
+    // is no longer on the page.
+    let current: Worklist = withRow;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/worklist")) {
+          return jsonResponse(current);
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    renderWorklist();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show what/ }),
+    );
+    await screen.findByText("They last wrote");
+
+    current = day({
+      queue: [],
+      summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+    });
+    // Re-render through the filter, which refetches: the row is gone, and the
+    // pane goes with it rather than outliving the row it describes.
+    await userEvent.click(screen.getByRole("button", { name: /Decisions/ }));
+    await waitFor(() => {
+      expect(screen.queryByText("They last wrote")).toBeNull();
+    });
+  });
+  it("draws no aside landmark for a row that has no pane", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "Northstar renewal",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000bb",
+              label: "Northstar",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show what/ }),
+    );
+    // A deal row has no pane. An empty <aside> would still be announced as a
+    // landmark and still take its third of the grid, which reads as a pane
+    // that failed rather than as one that was never meant to be there.
+    await waitFor(() => {
+      expect(container.querySelectorAll("aside")).toHaveLength(0);
+    });
+  });
+});
