@@ -91,3 +91,24 @@ func TestAMeetingThisReaderCannotReadClaimsNothingAboutPreparation(t *testing.T)
 		t.Errorf("a withheld meeting published %v — an empty body it may not read is not an unprepared meeting", got)
 	}
 }
+
+// The mark is written in one place and read in another, and nothing but this
+// test makes them agree. A second spelling would not fail a build: the writer
+// would stamp a word the reader never matches, and the reason would quietly
+// stop appearing on the rows that earned it.
+func TestTheUnpreparedMarkHasOneSpelling(t *testing.T) {
+	written := meetingItem(Meeting{
+		ID: ids.NewV7(), Subject: "unprepared", StartsAt: readInstant,
+		NeedsPrep: true, PrepKnown: true,
+	})
+	if written.Kind == nil {
+		t.Fatal("meetingItem stamped no kind on a meeting it knows is unprepared")
+	}
+	row := classifyMeeting(written, readInstant)
+	for _, because := range row.item.Because {
+		if because.Kind == "meeting_unprepared" {
+			return
+		}
+	}
+	t.Errorf("classifyMeeting did not read the mark meetingItem wrote (%q) — the two spellings have drifted", *written.Kind)
+}

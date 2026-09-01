@@ -128,29 +128,6 @@ func carriedActions(actions []crmcontracts.AttentionItemActions) []crmcontracts.
 	return out
 }
 
-// classifyMeeting: a meeting starting within the horizon is the most urgent
-// thing on the page, because it happens whether or not the reader acts.
-func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	level := levelAgreed
-	reasons := []crmcontracts.WorklistReason{}
-	if item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
-		level = levelWaiting
-		reasons = append(reasons, reason("meeting_soon", nil))
-	}
-	// Nothing written down for it, said only where the lane could actually tell
-	// — an absent kind means the reader may not read the row's content, not
-	// that the meeting is ready. Silence beats a warning nobody can act on.
-	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
-		reasons = append(reasons, reason("meeting_unprepared", nil))
-	}
-	row := base(item, level, "meetings", "meeting_unprepared")
-	// A meeting's start time IS a deadline the reader is racing, so it counts
-	// as work due — unlike a proposal's expiry, which merely lapses.
-	stampDeadline(&row, item.DueAt, asOf)
-	row.Because = reasons
-	return ranked{item: row, deadlineAt: deadlineOf(item.DueAt), occurredAt: occurredOf(item, asOf)}
-}
-
 // classifyCommitment: a promise the rep made. Level 2 whether or not it is
 // overdue — the promise is the fact, and the date only orders it.
 func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked {
