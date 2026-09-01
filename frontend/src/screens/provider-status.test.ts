@@ -106,6 +106,31 @@ describe("the provider status vocabulary", () => {
     expect(canEnrichNow("provider_error", false)).toBe(true);
   });
 
+  it("keeps the button where the reader is the one who can fix it", () => {
+    // The section tells somebody to add a LinkedIn URL or a company. Taking
+    // the button away with it would leave them no way to say they had: the
+    // automatic sweep revisits a declined contact only after a day, and only
+    // while automatic lookup is switched on at all.
+    //
+    // Offering it is free — the server re-reads the identifiers and declines
+    // before reserving any credit — so the cost of a wasted press is one
+    // skipped run, against a reader otherwise stuck for a day.
+    expect(canEnrichNow("nothing_to_look_up", false)).toBe(true);
+  });
+
+  it("tells the reader what to add rather than blaming the provider", () => {
+    // The defect: a record with no profile link and no company was sent
+    // anyway, the vendor rejected the request, and the page reported "the
+    // last call to the provider failed" — which names the wrong party and
+    // sits beside a button that can only fail again. The sentence has to name
+    // the missing fact, because supplying it is the only thing that helps.
+    const message = en[profileLabel("nothing_to_look_up")];
+    expect(message).toMatch(/LinkedIn/);
+    expect(message).toMatch(/company/i);
+    // And it must not read as a fault of the provider or of the contact.
+    expect(message).not.toMatch(/failed|error|not eligible/i);
+  });
+
   it("colours a refused key as danger and an unconnected provider as neither", () => {
     // A provider nobody connected is a configuration, not a fault: painting
     // it red tells an operator to fix something that is not broken. A

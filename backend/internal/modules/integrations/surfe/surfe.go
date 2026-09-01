@@ -153,6 +153,7 @@ func (a *Adapter) Descriptor() provider.Descriptor {
 			Excludes: []provider.Category{categoryMobile},
 		}},
 		Identifiers:  []string{"LinkedIn profile URL", "first and last name with company name or domain"},
+		MatchRules:   matchRules(),
 		EgressHost:   egressHost,
 		Verification: "credit-balance read",
 		TermsLinks: []provider.Link{
@@ -191,6 +192,33 @@ func (a *Adapter) Descriptor() provider.Descriptor {
 		// vendor could not place is never asked for a number.
 		RequiresAnswerTo: map[provider.Category]provider.Category{
 			categoryMobile: categoryProfessionalEmail,
+		},
+	}
+}
+
+// matchRules is the Identifiers sentence above, in a form admission can
+// apply. The two must say the same thing: "LinkedIn profile URL, or first and
+// last name with company name or domain".
+//
+// So a name rule requires BOTH names, matching the disclosure exactly. The
+// vendor may well answer a last name alone with a company — the wire field is
+// optional — but nothing here has confirmed that, and guessing LOOSER than the
+// disclosed rule sends the request this whole guard exists to stop. Guessing
+// tighter costs at most a lookup somebody can still start by hand. If the
+// vendor's behaviour is ever confirmed, relax it here and in the sentence
+// together.
+func matchRules() []provider.MatchRule {
+	return []provider.MatchRule{
+		{AllOf: []provider.IdentifierField{provider.IdentifierLinkedInURL}},
+		{
+			AllOf: []provider.IdentifierField{
+				provider.IdentifierFirstName,
+				provider.IdentifierLastName,
+			},
+			AnyOf: []provider.IdentifierField{
+				provider.IdentifierCompanyName,
+				provider.IdentifierCompanyDomain,
+			},
 		},
 	}
 }

@@ -8424,6 +8424,7 @@ const (
 	PersonProviderProfileStateNoMatch                  PersonProviderProfileState = "no_match"
 	PersonProviderProfileStateNotConnected             PersonProviderProfileState = "not_connected"
 	PersonProviderProfileStateNotEligible              PersonProviderProfileState = "not_eligible"
+	PersonProviderProfileStateNothingToLookUp          PersonProviderProfileState = "nothing_to_look_up"
 	PersonProviderProfileStateProviderError            PersonProviderProfileState = "provider_error"
 	PersonProviderProfileStateQueued                   PersonProviderProfileState = "queued"
 	PersonProviderProfileStateRateLimited              PersonProviderProfileState = "rate_limited"
@@ -8451,6 +8452,8 @@ func (e PersonProviderProfileState) Valid() bool {
 	case PersonProviderProfileStateNotConnected:
 		return true
 	case PersonProviderProfileStateNotEligible:
+		return true
+	case PersonProviderProfileStateNothingToLookUp:
 		return true
 	case PersonProviderProfileStateProviderError:
 		return true
@@ -24708,14 +24711,16 @@ type PersonProviderProfile struct {
 	// Region Geographic state/province as the provider returned it. Named `region` because
 	// `state` on this schema is the run lifecycle state above; a duplicate key here
 	// silently dropped the lifecycle field until ADR-0101 Decision 6.
-	Region         *string                    `json:"region,omitempty"`
-	RetrievedAt    *time.Time                 `json:"retrieved_at,omitempty"`
-	SafeStatusCode *string                    `json:"safe_status_code,omitempty"`
-	Seniorities    []string                   `json:"seniorities"`
-	State          PersonProviderProfileState `json:"state"`
+	Region         *string    `json:"region,omitempty"`
+	RetrievedAt    *time.Time `json:"retrieved_at,omitempty"`
+	SafeStatusCode *string    `json:"safe_status_code,omitempty"`
+	Seniorities    []string   `json:"seniorities"`
+
+	// State Why this provider's section reads the way it does. `nothing_to_look_up` is its own state rather than a kind of `not_eligible`: nothing forbids the purchase, the record simply carries no profile link and no company, so the provider has nothing to match on. The reader's next step is to add one of those, which is the next step for no other state here.
+	State PersonProviderProfileState `json:"state"`
 }
 
-// PersonProviderProfileState defines model for PersonProviderProfile.State.
+// PersonProviderProfileState Why this provider's section reads the way it does. `nothing_to_look_up` is its own state rather than a kind of `not_eligible`: nothing forbids the purchase, the record simply carries no profile link and no company, so the provider has nothing to match on. The reader's next step is to add one of those, which is the next step for no other state here.
 type PersonProviderProfileState string
 
 // PersonReachability Whether a reply on this channel can currently be delivered (design §6.6) — a live

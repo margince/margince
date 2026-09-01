@@ -130,6 +130,14 @@ type Descriptor struct {
 	// Identifiers names exactly what may leave the installation for this
 	// provider. It is disclosure copy AND the egress contract.
 	Identifiers []string
+	// MatchRules is the same fact as Identifiers in a form admission can
+	// apply: the combinations this provider can find somebody BY. A subject
+	// satisfying none of them is skipped as no_identifiers instead of being
+	// sent, because the vendor rejects such a request and the platform can
+	// only read that rejection as a provider fault.
+	//
+	// Empty means the adapter declares no rule, and every subject is sent.
+	MatchRules []MatchRule
 	// EgressHost is the single allowlisted host this adapter may reach.
 	EgressHost string
 	// Verification names the cheapest read used to validate a credential at

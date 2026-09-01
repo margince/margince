@@ -6977,6 +6977,8 @@ export const en = {
     "No data provider is connected, so nothing has been bought.",
   "provider.profile.notEligible":
     "This contact is not eligible — they have objected, or the record is archived.",
+  "provider.profile.nothingToLookUp":
+    "There is nothing to look this contact up by. Add their LinkedIn URL, or the company they work for, and the lookup can run.",
   "provider.profile.neverRun": "Nobody has looked this contact up yet.",
   "provider.profile.queued": "Queued",
   "provider.profile.inProgress": "Looking them up…",

@@ -69,6 +69,9 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 		if err := pricesOnlyDeclaredPools(d); err != nil {
 			return nil, err
 		}
+		if err := matchesOnKnownIdentifiers(d); err != nil {
+			return nil, err
+		}
 		if d.EgressHost == "" {
 			return nil, fmt.Errorf("integrations: provider %q declared no egress host", d.Name)
 		}
@@ -103,6 +106,41 @@ func pricesOnlyDeclaredPools(d provider.Descriptor) error {
 						"a hold taken in an undeclared pool cannot be matched to what the vendor reports spending, and "+
 						"settles as a refund of a charge they kept",
 					d.Name, category, pool)
+			}
+		}
+	}
+	return nil
+}
+
+// matchesOnKnownIdentifiers refuses an adapter whose match rules name a field
+// PersonIdentifiers does not carry.
+//
+// This is the one way the mechanism fails quietly. An unknown field is never
+// present, so a rule carrying a typo can never be satisfied — and a rule that
+// can never be satisfied refuses every subject, which reads as "this provider
+// can look nobody up" and silences the lane completely. Checked at
+// registration, where the author sees the name they mistyped.
+//
+// A rule naming nothing at all goes through the same door: it would likewise
+// match nobody.
+func matchesOnKnownIdentifiers(d provider.Descriptor) error {
+	known := make(map[provider.IdentifierField]bool, len(provider.IdentifierFields()))
+	for _, f := range provider.IdentifierFields() {
+		known[f] = true
+	}
+	for i, rule := range d.MatchRules {
+		if len(rule.AllOf) == 0 && len(rule.AnyOf) == 0 {
+			return fmt.Errorf(
+				"integrations: provider %q declares match rule %d naming no identifier at all: "+
+					"such a rule matches nobody, so every subject would be skipped as unlookupable",
+				d.Name, i)
+		}
+		for _, f := range append(append([]provider.IdentifierField{}, rule.AllOf...), rule.AnyOf...) {
+			if !known[f] {
+				return fmt.Errorf(
+					"integrations: provider %q declares match rule %d on identifier %q, which is not one a person carries: "+
+						"an unknown field is never present, so the rule matches nobody and the lane goes silent",
+					d.Name, i, f)
 			}
 		}
 	}
