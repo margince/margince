@@ -17,7 +17,8 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 // What the picker offers, and what the server will decode. Both lists say the
 // same thing, and this one is the browser's filter only: a drop is not filtered
 // by it, and the server refuses what it cannot read either way.
-const ACCEPTED_IMAGES = "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
+const ACCEPTED_IMAGES =
+  "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
 
 /**
  * The installation's own mark: what it is now, and the two things a person can

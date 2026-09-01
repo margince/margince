@@ -63,9 +63,9 @@ it("stands the monogram in and offers to add a mark", () => {
 
 it("draws the mark the company wears, and offers to replace or remove it", () => {
   const { container } = mark(WITH_MARK);
-  expect(container.querySelector(".company-mark img")?.getAttribute("src")).toBe(
-    LOGO,
-  );
+  expect(
+    container.querySelector(".company-mark img")?.getAttribute("src"),
+  ).toBe(LOGO);
   expect(screen.getByRole("button", { name: "Replace" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
 });
