@@ -221,6 +221,12 @@ type Server struct {
 	// threadAudience applies an owner own decision about a thread they imported.
 	threadAudience *ThreadAudienceSetter
 
+	// originProbe answers whether the configured public origin responds.
+	// Nil until WithPublicBaseURL runs, and nil forever in a role with no
+	// origin configured — which the Connections screen renders as an
+	// absent row rather than a failure.
+	originProbe *publicOriginProbe
+
 	// vault is the secret store, injected by WithKeyvault. When configured
 	// it feeds a /readyz probe and backs the capture connector-credential
 	// path; nil means a role that resolves no stored connector credentials.

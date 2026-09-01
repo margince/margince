@@ -3902,6 +3902,10 @@ export const en = {
   "mailSharing.sharedPosture.warning":
     "Reading an employee's mailbox into a shared CRM is what a works-council agreement covers in Germany and Austria. Turning this on says your organization holds one. Margince does not check.",
   "mailSharing.save": "Save",
+  "connectors.originLabel": "Address used in emailed links",
+  "connectors.originReachable": "Answering",
+  "connectors.originUnreachable": "Not answering",
+  "connectors.originUnchecked": "Not checked yet",
   "connectors.sub":
     "Mailboxes capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
   "connectors.loading": "Loading your connections…",

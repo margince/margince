@@ -3866,6 +3866,10 @@ export const de = {
   "mailSharing.sharedPosture.warning":
     "Das Postfach von Beschäftigten in ein gemeinsames CRM einzulesen, ist in Deutschland und Österreich Gegenstand einer Betriebsvereinbarung. Wer dies einschaltet, erklärt, dass Ihre Organisation eine solche hat. Margince prüft das nicht.",
   "mailSharing.save": "Speichern",
+  "connectors.originLabel": "Adresse in versendeten Links",
+  "connectors.originReachable": "Antwortet",
+  "connectors.originUnreachable": "Antwortet nicht",
+  "connectors.originUnchecked": "Noch nicht gepr\u00fcft",
   "connectors.sub":
     "Postfächer, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
   "connectors.loading": "Verbindungen werden geladen…",

@@ -76,6 +76,12 @@ type StubOpts = {
   connect?: { authorize_url?: string } | { status: number };
   /** The messaging-channel roster the Telegram panel reads. */
   channels?: ChannelConnection[];
+  /** The installation's outward address, as GET /connectors reports it. */
+  publicOrigin?: {
+    origin: string;
+    reachable?: boolean | null;
+    detail?: string | null;
+  };
 };
 
 function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
@@ -89,7 +95,11 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
         if (opts.listStatus) {
           return jsonResponse({ detail: "boom" }, opts.listStatus);
         }
-        return jsonResponse({ data: connections });
+        return jsonResponse(
+          opts.publicOrigin
+            ? { data: connections, public_origin: opts.publicOrigin }
+            : { data: connections },
+        );
       }
       // Every ConnectorsCard mount now also reads the Telegram channel
       // panel's own list — these tests exercise the mail-connector rows
@@ -724,5 +734,58 @@ describe("the Telegram connector panel", () => {
     // observable proof it bound to that row and not to the first.
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/^Pending/)).toBeTruthy();
+  });
+  // The address this installation puts in emailed links, on the card that
+  // already asks whether it can reach the outside world.
+  //
+  // It exists because the value is otherwise invisible: a deployment
+  // configured with a localhost origin sends mail whose unsubscribe links
+  // open nothing, and the only way to find out was for a recipient to
+  // click one.
+  it("shows the address used in emailed links, and that it answers", async () => {
+    stubApi([], {
+      publicOrigin: {
+        origin: "https://crm.example.com",
+        reachable: true,
+        detail: "http 200",
+      },
+    });
+    render(<ConnectorsCard />);
+
+    const row = await screen.findByTestId("public-origin");
+    expect(within(row).getByText("https://crm.example.com")).toBeTruthy();
+    expect(within(row).getByText("Answering")).toBeTruthy();
+  });
+
+  it("says so when the address does not answer", async () => {
+    stubApi([], {
+      publicOrigin: { origin: "https://crm.example.com", reachable: false },
+    });
+    render(<ConnectorsCard />);
+    expect(
+      within(await screen.findByTestId("public-origin")).getByText(
+        "Not answering",
+      ),
+    ).toBeTruthy();
+  });
+
+  // Null is "not asked yet", which must not read as a failure.
+  it("distinguishes an unchecked address from a failing one", async () => {
+    stubApi([], {
+      publicOrigin: { origin: "https://crm.example.com", reachable: null },
+    });
+    render(<ConnectorsCard />);
+    expect(
+      within(await screen.findByTestId("public-origin")).getByText(
+        "Not checked yet",
+      ),
+    ).toBeTruthy();
+  });
+
+  // No origin configured is not a broken origin: the row is absent.
+  it("shows no address row when none is configured", async () => {
+    stubApi([]);
+    render(<ConnectorsCard />);
+    expect(screen.queryByTestId("public-origin")).toBeNull();
   });
 });

@@ -124,3 +124,39 @@ func TestTheReportedDetailCarriesNoPath(t *testing.T) {
 		t.Errorf("detail = %q, want just the status", status.Detail)
 	}
 }
+
+// The bug this pins: connectorHandlers is REPLACED wholesale by more than
+// one option, in an order no single option controls, so a literal that
+// captured the probe directly captured whatever was there at the time —
+// usually nil — and the row silently never appeared. Reading it through a
+// Server method means every literal answers once the origin is wired,
+// whatever order the options ran in.
+func TestTheOriginStatusSurvivesAHandlerRebuild(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	s := &Server{}
+	s.connectorHandlers.publicOrigin = s.originStatus
+	// The origin is configured AFTER the handler was built, which is the
+	// order that used to lose it.
+	s.originProbe = newPublicOriginProbe(srv.URL, newOriginProbeClient(), time.Now)
+
+	status := s.connectorHandlers.publicOrigin(context.Background())
+	if status.Origin != srv.URL {
+		t.Errorf("origin = %q, want %q — the handler lost the probe", status.Origin, srv.URL)
+	}
+	if status.Reachable == nil || !*status.Reachable {
+		t.Errorf("reachable = %v, want true", status.Reachable)
+	}
+}
+
+// A role with no origin configured answers an empty status rather than
+// panicking, so the screen renders no row instead of failing.
+func TestNoConfiguredOriginAnswersAnEmptyStatus(t *testing.T) {
+	s := &Server{}
+	if got := s.originStatus(context.Background()); got.Origin != "" || got.Reachable != nil {
+		t.Errorf("status = %+v, want empty", got)
+	}
+}

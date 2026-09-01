@@ -250,6 +250,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 				registry:          NewCaptureRegistry(pool, vault, s.captureConfig),
 				authority:         identity.NewService(pool),
 				googleCredentials: s.googleAppResolver,
+				publicOrigin:      s.originStatus,
 			}
 		}
 		// The overlay incumbent connection lifecycle needs the same
@@ -407,8 +408,8 @@ func WithPublicBaseURL(base string) Option {
 		// Reported to an operator, never enforced: the boot and send guards
 		// are what refuse an unusable origin, and a readiness check here
 		// would deadlock a rollout on its own ingress.
-		probe := newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
-		s.connectorHandlers.publicOrigin = probe.Status
+		s.originProbe = newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
+		s.connectorHandlers.publicOrigin = s.originStatus
 		s.rebuildToolRegistry(pool)
 	}
 }

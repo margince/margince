@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 const (
@@ -107,6 +109,10 @@ func (p *publicOriginProbe) probe(ctx context.Context) PublicOriginStatus {
 		status.Detail = "the configured origin cannot be requested"
 		return status
 	}
+	// Named, because this lands in the operator's OWN access log: an
+	// unexplained hit on /healthz every minute is something somebody has to
+	// go and investigate.
+	req.Header.Set("User-Agent", outbound.SelfCheckHeader)
 	resp, err := p.client.Do(req)
 	if err != nil {
 		status.Reachable = &reachable
@@ -116,7 +122,12 @@ func (p *publicOriginProbe) probe(ctx context.Context) PublicOriginStatus {
 		status.Detail = "the origin did not answer"
 		return status
 	}
+	// The STATUS is the answer here, not the body — so both of these
+	// discard a result that cannot change the verdict, and neither may
+	// turn a reachable origin into an error.
+	//craft:ignore swallowed-errors closing a response whose status has already been read changes no verdict
 	defer func() { _ = resp.Body.Close() }()
+	//craft:ignore swallowed-errors the body is drained to reuse the connection; its content is not the answer
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, originProbeReadLimit))
 
 	reachable = resp.StatusCode < http.StatusInternalServerError
@@ -136,4 +147,19 @@ func newOriginProbeClient() *http.Client {
 			return http.ErrUseLastResponse
 		},
 	}
+}
+
+// originStatus is what every connectorHandlers literal wires as its
+// publicOrigin.
+//
+// A METHOD on the Server rather than the probe's own Status: the handler
+// struct is rebuilt by several options, in an order no single one of them
+// controls, so a literal that captured the probe directly would capture
+// whatever was there at the time — usually nil. This reads the Server's
+// field when the request arrives, which is after every option has run.
+func (s *Server) originStatus(ctx context.Context) PublicOriginStatus {
+	if s.originProbe == nil {
+		return PublicOriginStatus{}
+	}
+	return s.originProbe.Status(ctx)
 }

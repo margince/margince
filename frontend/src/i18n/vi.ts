@@ -3830,6 +3830,11 @@ export const vi = {
   "mailSharing.sharedPosture.warning":
     "Việc đọc hộp thư của nhân viên vào một CRM dùng chung thuộc phạm vi thỏa thuận với hội đồng lao động ở Đức và Áo. Bật mục này nghĩa là tổ chức của bạn đã có thỏa thuận đó. Margince không kiểm tra điều này.",
   "mailSharing.save": "Lưu",
+  "connectors.originLabel":
+    "\u0110\u1ecba ch\u1ec9 d\u00f9ng trong li\u00ean k\u1ebft g\u1eedi qua email",
+  "connectors.originReachable": "C\u00f3 ph\u1ea3n h\u1ed3i",
+  "connectors.originUnreachable": "Kh\u00f4ng ph\u1ea3n h\u1ed3i",
+  "connectors.originUnchecked": "Ch\u01b0a ki\u1ec3m tra",
   "connectors.sub":
     "Các hộp thư đang thu thập vào CRM của bạn. Cần thì ngắt kết nối hộp nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
   "connectors.loading": "Đang tải các kết nối…",

@@ -126,7 +126,14 @@ export type ConnectorsResult = {
   // webhooks_not_configured treatment).
   notConfigured: boolean;
   data: CaptureConnection[];
+  // The address this installation puts in outgoing links, and whether it
+  // answered when last asked. Absent when none is configured — which is
+  // itself the answer, not a failure.
+  publicOrigin?: PublicOriginStatus;
 };
+
+type PublicOriginStatus =
+  components["schemas"]["CaptureConnectionListResponse"]["public_origin"];
 
 // The OAuth return outcome (Task 2): the callback lands back on
 // #/settings/connections/{outcome} — id2 on that route only, never parsed
@@ -928,9 +935,59 @@ export function useConnectors() {
       if (error) {
         throwProblem(error);
       }
-      return { notConfigured: false, data: data.data };
+      return {
+        notConfigured: false,
+        data: data.data,
+        publicOrigin: data.public_origin,
+      };
     },
   });
+}
+
+/**
+ * The address this installation puts in the links it emails, and whether it
+ * answered when last asked.
+ *
+ * It sits on this card because it is the same question the card already
+ * asks — can this installation reach the outside world — and because the
+ * value is otherwise invisible: a deployment configured with a localhost
+ * origin sends mail whose unsubscribe links open nothing, and until now
+ * the only way to find out was for a recipient to click one.
+ *
+ * Reported, never enforced. The boot and send guards are what refuse an
+ * unusable origin; this is so somebody can SEE it. And a probe from inside
+ * the deployment says this process can reach the origin — it cannot say a
+ * recipient's mail client can.
+ */
+function PublicOriginRow({
+  status,
+}: Readonly<{ status?: ConnectorsResult["publicOrigin"] }>) {
+  const t = useT();
+  if (!status) {
+    return null;
+  }
+  const tone =
+    status.reachable === null || status.reachable === undefined
+      ? undefined
+      : status.reachable
+        ? "success"
+        : "warn";
+  const stateLabel =
+    status.reachable === null || status.reachable === undefined
+      ? t("connectors.originUnchecked")
+      : status.reachable
+        ? t("connectors.originReachable")
+        : t("connectors.originUnreachable");
+  return (
+    <SettingList>
+      <SettingRow
+        testId="public-origin"
+        label={t("connectors.originLabel")}
+        description={status.origin}
+        control={<Badge tone={tone}>{stateLabel}</Badge>}
+      />
+    </SettingList>
+  );
 }
 
 // The roster as this card's list of decisions: one row per mailbox, or — when
@@ -1120,6 +1177,7 @@ function MailConnectorsPanel() {
             onDisconnect={setPendingDisconnect}
           />
         )}
+        <PublicOriginRow status={connectors.data?.publicOrigin} />
       </PanelBody>
       <AddConnectionDialog
         open={addOpen && offerAdd}
