@@ -391,6 +391,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, AIActivityReconcileArgs{}),
 		periodicFor(cfg, AIActivityRetentionArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
+		periodicFor(cfg, IntroExpiryArgs{}),
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),
 		periodicFor(cfg, CaptureClassifyArgs{}),
@@ -483,6 +484,9 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
+		pool: pool, identity: identity.NewService(pool), log: log,
+	})
+	addDeclaredWorker[IntroExpiryArgs](reg, &introExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
 	addDeclaredWorker[ApprovalAutoApplyArgs](reg, &approvalAutoApplyWorker{

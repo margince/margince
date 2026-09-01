@@ -269,3 +269,47 @@ func TestTheReplyPredicateMatchesTheLifecycle(t *testing.T) {
 		}
 	}
 }
+
+// The sweep reaches every status the lifecycle says can expire.
+//
+// Three spellings of one set: Open(), the partial unique index, and the sweep's
+// own SQL. The first two are held together by the test above; this holds the
+// third, and the way it fails without one is silent — a status added to the
+// lifecycle and forgotten in the query is an ask that can never expire, holding
+// its route blocked forever with nothing reporting a fault. That is the exact
+// defect expiresweep.go was written to fix, so leaving a second copy of it
+// ungated would be reintroducing it one status at a time.
+func TestTheSweepReachesEveryOpenStatus(t *testing.T) {
+	source, err := os.ReadFile("expiresweep.go")
+	if err != nil {
+		t.Fatalf("reading the sweep: %v", err)
+	}
+	lists := regexp.MustCompile(`status IN \(([^)]*)\)`).FindAllSubmatch(source, -1)
+	if len(lists) == 0 {
+		t.Fatal("the sweep names no statuses, so it would expire nothing")
+	}
+
+	expirable := map[Status]bool{}
+	for _, tr := range transitions {
+		if tr.to == StatusExpired && tr.by == ActorClock {
+			expirable[tr.from] = true
+		}
+	}
+
+	// Every list in the file, because the sweep reads the set three times — the
+	// candidate query, the CTE's lock, and the UPDATE's re-check — and a
+	// mismatch between any two is a row that is selected and then not written,
+	// or written from a state the lifecycle forbids.
+	for i, list := range lists {
+		named := map[Status]bool{}
+		for _, quoted := range regexp.MustCompile(`'([a-z_]+)'`).FindAllSubmatch(list[1], -1) {
+			named[Status(quoted[1])] = true
+		}
+		if !reflect.DeepEqual(named, expirable) {
+			t.Errorf("status list %d is %v; the lifecycle lets the clock expire %v — "+
+				"a status the sweep never selects is an ask that can never expire, "+
+				"holding its route blocked with nothing reporting it",
+				i+1, named, expirable)
+		}
+	}
+}

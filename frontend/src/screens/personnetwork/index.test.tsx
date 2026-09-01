@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { PersonNetworkTab } from "./index";
 
 // What the tab says when it has LESS to say than the full case.
@@ -20,6 +21,13 @@ import { PersonNetworkTab } from "./index";
 type PersonGraph = components["schemas"]["PersonGraph"];
 
 const PERSON = "018f3a1b-0000-7000-8000-000000000010";
+
+// The strings come from the catalogue rather than being typed here, so a
+// rewording is a copy change and not a test failure. What these tests are about
+// is how MANY times the page says a thing and whether a card is drawn at all —
+// neither of which should depend on the words chosen.
+const NO_ROUTE = en["person.graph.noRoute"];
+const WAYS_IN = en["person.intro.routesTitle"];
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -85,9 +93,7 @@ describe("a contact nobody here reaches", () => {
     // there. A paragraph under it repeating the same words made one finding
     // read as two.
     await waitFor(() => {
-      expect(
-        screen.getAllByText(/Nobody here corresponds with them/).length,
-      ).toBe(1);
+      expect(screen.getAllByText(NO_ROUTE).length).toBe(1);
     });
   });
 
@@ -100,11 +106,11 @@ describe("a contact nobody here reaches", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(/Nobody here corresponds with them/);
+    await screen.findByText(NO_ROUTE);
     // "Ways in — best first, pick the one you can actually use" over an empty
     // list. The card's own comment says a heading with nothing under it is
     // worse than no card, and the condition that drew it disagreed.
-    expect(screen.queryByText("Ways in")).toBeNull();
+    expect(screen.queryByText(WAYS_IN)).toBeNull();
   });
 });
 
@@ -144,11 +150,9 @@ describe("a legacy payload with one route", () => {
     });
 
     // findByText throws when absent, which IS the assertion.
-    await screen.findByText("Ways in");
+    await screen.findByText(WAYS_IN);
     // And it does NOT claim nobody reaches them, which is the contradiction
     // the old condition was written to avoid.
-    expect(
-      screen.queryByText(/Nobody here corresponds with them or with anyone/),
-    ).toBeNull();
+    expect(screen.queryByText(NO_ROUTE)).toBeNull();
   });
 });

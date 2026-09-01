@@ -931,6 +931,35 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
+  # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
+  # an installation-wide table, so there is nothing to fan out over.
+  intro_expiry:
+    role: worker
+    go_type: IntroExpiryArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      An unanswered introduction blocks two things at once, and only one of them
+      is a stale row. The rep waits on a colleague who has moved on, because a
+      silence that never closes never becomes an answer. And the open-route
+      index is a partial unique index, so an ask that cannot leave an open
+      status holds that (contact, colleague) pair permanently — the duplicate
+      guard becomes a refusal the rep can never clear, on the one route the page
+      recommends.
+
+      An hour, not five minutes: an introduction's window is days, so the lag
+      between a deadline passing and the ask closing is measured against that
+      rather than against somebody watching an inbox. A tick that finds nothing
+      costs one indexed query, which is what most ticks do — asks expire in ones
+      and twos rather than in floods.
+
+      One attempt, not three: the retry is the next tick, and every ask this
+      pass did not reach is still due then. A backing-off row would only
+      suppress that tick.
+
   approval_auto_apply:
     role: worker
     go_type: ApprovalAutoApplyArgs

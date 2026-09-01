@@ -519,6 +519,7 @@ var argsForKind = map[string]river.JobArgs{
 	AIActivityReconcileArgs{}.Kind():     AIActivityReconcileArgs{},
 	AIActivityRetentionArgs{}.Kind():     AIActivityRetentionArgs{},
 	ApprovalExpiryArgs{}.Kind():          ApprovalExpiryArgs{},
+	IntroExpiryArgs{}.Kind():             IntroExpiryArgs{},
 	ApprovalAutoApplyArgs{}.Kind():       ApprovalAutoApplyArgs{},
 	PrivacyRetentionArgs{}.Kind():        PrivacyRetentionArgs{},
 }

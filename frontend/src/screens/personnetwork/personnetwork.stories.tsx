@@ -53,6 +53,16 @@ const sofia: PersonGraph["nodes"][number] = {
   user_id: SOFIA,
 };
 
+// The same colleague as the server draws her when her only edge is to somebody
+// at the contact's company: `account`, not `direct`. The group is assigned from
+// which edge put her in the graph (persongraphaccount.go), so an indirect-only
+// story that left her `direct` would put her in the wrong lane of the map and
+// describe a payload the server cannot produce.
+const sofiaOnAccount: PersonGraph["nodes"][number] = {
+  ...sofia,
+  group: "account",
+};
+
 const martin: PersonGraph["nodes"][number] = {
   id: `user:${MARTIN}`,
   type: "colleague",
@@ -93,7 +103,11 @@ function directRoute(over: Partial<RouteCandidate> = {}): RouteCandidate {
   };
 }
 
+// The server sets `route` and `routes` together — `route` is `routes[0]`
+// (persongraph.go) — so a fixture carrying one without the other describes a
+// payload nothing produces. `over` may still replace both.
 function graph(over: Partial<PersonGraph> = {}): PersonGraph {
+  const routes = over.routes ?? [directRoute()];
   return {
     person_id: PERSON,
     nodes: [anchor, sofia],
@@ -108,9 +122,16 @@ function graph(over: Partial<PersonGraph> = {}): PersonGraph {
         last_at: "2026-08-28T09:00:00Z",
       },
     ],
-    routes: [directRoute()],
     groups_omitted: [],
     ...over,
+    routes,
+    route: routes[0]
+      ? {
+          via_user_id: routes[0].via_user_id,
+          via_display_name: routes[0].via_display_name,
+          why: "Carried beside the candidate list, as the server carries it.",
+        }
+      : undefined,
   };
 }
 
@@ -125,11 +146,20 @@ function stub(payload: PersonGraph, asks: IntroRequest[] = []) {
   });
 }
 
-function render(payload: PersonGraph, asks: IntroRequest[] = []) {
+type Moments = Pick<
+  components["schemas"]["Person360"],
+  "relationship_changes" | "sections_omitted"
+>;
+
+function render(
+  payload: PersonGraph,
+  asks: IntroRequest[] = [],
+  view?: Moments,
+) {
   stub(payload, asks);
   return (
     <StoryProviders>
-      <PersonNetworkTab personId={PERSON} />
+      <PersonNetworkTab personId={PERSON} view={view} />
     </StoryProviders>
   );
 }
@@ -156,7 +186,7 @@ export const IndirectOnly: Story = {
   render: () =>
     render(
       graph({
-        nodes: [anchor, sofia, philipp],
+        nodes: [anchor, sofiaOnAccount, philipp],
         edges: [
           {
             from: `user:${SOFIA}`,
@@ -232,6 +262,13 @@ export const TwoAlternatives: Story = {
 // says so instead of offering a button that would 409 — a rep pressing it and
 // being told "already requested" learned nothing they could not have been told
 // first.
+//
+// NOT REACHABLE TODAY, and the story says so rather than implying otherwise:
+// chooseRoutes stamps every candidate `available`, because the availability
+// seam its own comment describes was never bound (issue #3520). So the panel
+// below is correct and the server cannot yet ask it for this. The story earns
+// its place by holding the rendering ready — and by being the thing that
+// noticed.
 export const AlreadyAsked: Story = {
   render: () =>
     render(
@@ -259,8 +296,11 @@ export const AlreadyAsked: Story = {
     ),
 };
 
-// A colleague said "use my name" and the rep did. This is the state the product
-// most has to keep separate from `introduced`: permission to mention somebody
+// A colleague said "use my name" and the rep did. Reachable — the ASK carries
+// this status from the introductions module; only the route's `availability`
+// beside it is the unbound seam the story above describes.
+//
+// This is the state the product most has to keep separate from `introduced`: permission to mention somebody
 // is not a handshake, and a page that collapsed them would tell a rep a door
 // had been opened that nobody opened.
 export const NameDropped: Story = {
@@ -306,12 +346,18 @@ export const AccountWithheld: Story = {
 // The graph hit its caps. The count is stated rather than the list silently
 // cut: a picture that quietly drops people is one a reader trusts for a
 // completeness it does not have.
+//
+// The numbers are the REMAINDER past each cap, not a total, so a fixture has to
+// show a full lane to be describing the state it names. The server's caps are
+// ten direct and twelve account, and this draws two of each with a plausible
+// remainder behind them — an earlier version claimed twelve account contacts
+// dropped while drawing one, which is a payload nothing produces.
 export const Truncated: Story = {
   render: () =>
     render(
       graph({
         nodes: [anchor, sofia, martin, philipp],
-        dropped_count: { direct: 3, account: 12, peer: 5 },
+        dropped_count: { direct: 4, account: 7 },
       }),
     ),
 };
@@ -335,4 +381,32 @@ export const NoRoute: Story = {
 export const Narrow390: Story = {
   parameters: { viewport: { defaultViewport: "mobile1" } },
   render: () => render(graph()),
+};
+
+// The same page in the dark theme. Its own story because the design system
+// defines both palettes and only a render says whether this page reads in each
+// — a token used in one and missing in the other is invisible in the source.
+export const RoutedDark: Story = {
+  name: "Strong direct route — dark",
+  globals: { theme: "dark" },
+  render: () => render(graph()),
+};
+
+// What moved lately, from the 360. The card is ABSENT rather than empty when no
+// view is passed — the older contacts screen holds none — so this is the only
+// story that draws it.
+export const WithMoments: Story = {
+  render: () =>
+    render(graph(), [], {
+      relationship_changes: [
+        { kind: "replied_after_gap", at: "2026-08-20T09:00:00Z", days: 41 },
+        {
+          kind: "warmed",
+          at: "2026-08-25T09:00:00Z",
+          from_bucket: "weak",
+          to_bucket: "strong",
+        },
+      ],
+      sections_omitted: [],
+    }),
 };
