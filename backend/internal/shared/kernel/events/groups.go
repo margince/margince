@@ -73,6 +73,19 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// Closing an introduction the contact answered. Its own group because
+		// the evidence is perishable in one direction: `replied` may only be
+		// reached from a captured message, so a lane wedged behind an
+		// enrichment backlog leaves every introduction reading as unanswered,
+		// which is what a refusal looks like to the rep who asked.
+		//
+		// BOTH streams. activity.captured is the reply arriving; the person
+		// stream is the repair, because capture promotes an address to a
+		// contact in a transaction AFTER the one that wrote the message. A
+		// message captured before its sender was a person names nobody the
+		// activity arm can act on, and without the person event that reply
+		// would be lost permanently while the ask read unanswered.
+		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, personStreamEntity)},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the

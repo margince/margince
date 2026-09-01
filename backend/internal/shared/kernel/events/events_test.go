@@ -211,6 +211,17 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
 		"cg:commissions": {"gw:events:crm:deal"},
+		// Closing an introduction the contact answered. Its own group because
+		// `replied` may only be reached from a captured message: a lane wedged
+		// behind an enrichment backlog leaves every introduction reading as
+		// unanswered, which to the rep who asked looks like a refusal.
+		//
+		// BOTH streams. The activity stream is the reply arriving; the person
+		// stream is the repair, because capture promotes an address to a
+		// contact in a transaction AFTER the one that wrote the message — so a
+		// reply captured before its sender was a person names nobody the
+		// activity arm can act on.
+		"cg:intro-advance": {"gw:events:crm:activity", "gw:events:crm:person"},
 		// What happened in a Deal Room, written onto the deal's timeline. Its
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
@@ -230,7 +241,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, and the signature-enrich trigger", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, and the introduction reply consumer", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

@@ -667,3 +667,75 @@ func TestAUsedNameDropCanBeAnsweredToo(t *testing.T) {
 		t.Errorf("the trail says the reply followed %q; want name_dropped", before)
 	}
 }
+
+// The receipt names the message the CURRENT claim rests on.
+//
+// One column serves three claims — introduced, name_dropped, replied — so a
+// reply has to REPLACE the handshake's evidence rather than sit behind it. A
+// row saying `replied` whose source_activity_id is the introduction sends a
+// reader who opens the receipt to the wrong mail: they check the claim and find
+// the message that preceded it.
+//
+// This is the branch a coalescing write leaves untested — every other case here
+// completes with no evidence, so the old value was null and any rule looked
+// right.
+func TestAReplyReplacesTheHandshakesEvidence(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	// The handshake cites its own message, which is the case the reply must
+	// then overwrite.
+	handshake := e.evidence(t)
+	linkEvidence(t, e, handshake, e.contact)
+	if err := e.store.Complete(e.asUser(e.introducer), id, &handshake, 2); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+
+	answer := e.evidence(t)
+	if _, err := e.store.RecordReply(
+		e.asCapture(), id, answer, testNow.Add(time.Hour)); err != nil {
+		t.Fatalf("RecordReply: %v", err)
+	}
+
+	var source ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT source_activity_id FROM intro_request WHERE id = $1`, id).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if source != answer {
+		t.Errorf("the receipt on a replied ask is %v; want the reply %v, not the "+
+			"handshake %v — a reader opening it would check the wrong message",
+			source, answer, handshake)
+	}
+
+	// The handshake's evidence is not lost, only moved: the audit row for that
+	// transition still carries it, which is where a dispute about whether the
+	// introduction happened is settled.
+	var trail int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM audit_log
+		  WHERE entity_type = 'intro_request' AND entity_id = $1
+		    AND after->>'status' = 'introduced'`, id).Scan(&trail); err != nil {
+		t.Fatal(err)
+	}
+	if trail != 1 {
+		t.Errorf("%d audit rows record the handshake; want one", trail)
+	}
+}
+
+// linkEvidence files a message under a contact, which is what Complete's
+// evidence check requires: an activity cited as proof has to be about the ask's
+// own contact.
+func linkEvidence(t *testing.T, e *introEnv, activity, person ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, activity, person); err != nil {
+		t.Fatal(err)
+	}
+}

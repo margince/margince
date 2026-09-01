@@ -36,8 +36,7 @@ import (
 // There is no version to check: nobody read this ask before the message
 // arrived, so there is no reader whose view could be stale. What move's version
 // check buys — that a second writer cannot land the same transition twice — is
-// bought here by the status predicate in the WHERE clause, which matches only
-// from the two states a reply can follow.
+// bought here by the locked, twice-checked status predicate below.
 //
 // Zero rows is therefore not a failure. The bus is at-least-once and a thread
 // carries many messages, so a second qualifying activity for an ask already
@@ -57,20 +56,43 @@ func (s *Store) RecordReply(
 	}
 	replied := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// ONE guard, and it is this statement's own WHERE clause.
+		// ONE guard, inside one statement, and it needs all three parts.
 		//
 		// A read-then-check in Go would be a second answer to the same question
 		// and a weaker one: two consumers holding two messages from the same
-		// thread both pass a read-then-check, and only one passes this. The
-		// admissible statuses are spelled in SQL because SQL cannot ask the
-		// transition table — TestTheReplyPredicateMatchesTheLifecycle holds the
-		// two spellings together instead of hoping they stay aligned.
+		// thread both pass a read-then-check, and only one may pass this.
+		//
+		// FOR UPDATE, because the CTE is otherwise a snapshot read. Under READ
+		// COMMITTED two transactions can both see the row as introduced; the
+		// lock makes the second wait for the first.
+		//
+		// AND the status test REPEATED on the UPDATE's own target, because
+		// waiting is not enough. When the loser resumes, Postgres re-reads the
+		// row it was blocked on and applies only the UPDATE's WHERE — the CTE's
+		// clause has already been evaluated against the stale snapshot. Without
+		// the repeat, the join predicate is just `r.id = prior.id`, which is
+		// true of a row already replied: the loser would write a second
+		// transition, a second audit row and a second event for a reply that
+		// happened once.
+		//
+		// The lists are two spellings of one rule, so a gate holds them
+		// together with the transition table rather than hoping they stay
+		// aligned: TestTheReplyPredicateMatchesTheLifecycle reads BOTH out of
+		// this file and fails if either drifts.
 		//
 		// `before` comes out of the CTE, which is the only way to read the
 		// status this reply followed in the same statement that replaces it.
 		// The audit trail needs it: a handshake answered and a lent name
-		// answered are different stories, and the before-image is what tells
-		// them apart.
+		// answered are different stories, and the before-image tells them
+		// apart.
+		//
+		// source_activity_id is REPLACED, not coalesced. One column serves
+		// three claims — introduced, name_dropped, replied — and it names the
+		// message the CURRENT one rests on. Keeping the handshake's message
+		// would leave the row saying `replied` while its evidence is the
+		// introduction, so a reader opening the receipt to check the reply
+		// would find the mail that came before it. The earlier evidence is not
+		// lost: the audit row for the handshake still names it.
 		var before Status
 		var personID ids.UUID
 		err := tx.QueryRow(ctx, `
@@ -78,13 +100,15 @@ func (s *Store) RecordReply(
 				SELECT id, status FROM intro_request
 				 WHERE id = $1 AND archived_at IS NULL
 				   AND status IN ('introduced', 'name_dropped')
+				 FOR UPDATE
 			)
 			UPDATE intro_request r
 			   SET status = 'replied', replied_at = $2,
-			       source_activity_id = COALESCE(r.source_activity_id, $3),
+			       source_activity_id = $3,
 			       version = r.version + 1, updated_at = now()
 			  FROM prior
 			 WHERE r.id = prior.id
+			   AND r.status IN ('introduced', 'name_dropped')
 			 RETURNING prior.status, r.person_id`, id, at, activity).Scan(&before, &personID)
 		// No row is the ordinary outcome rather than a fault. The ask is already
 		// replied, was never introduced, or is archived — each a message that

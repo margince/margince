@@ -17,6 +17,22 @@ package compose
 //
 // WHAT QUALIFIES, and why each clause is load-bearing:
 //
+//   - The activity was CAPTURED BY A CONNECTOR, not logged by a person. This is
+//     the security clause, and without it the feature is a privilege
+//     escalation: a member holding activity:create can log an "inbound" message
+//     naming any contact they can see, at any occurred_at they choose, and the
+//     writer stamps that contact as its sender (activities/participantlog.go).
+//     Running as PrincipalSystem, this consumer would then close every ask
+//     about that contact — including asks the member is not party to and could
+//     not otherwise read or write.
+//
+//     The test is `captured_by`, and nothing weaker holds. `source_system` is
+//     settable on the public log endpoint, so a body carrying
+//     `source_system: gmail` forges that in one line. `captured_by` comes from
+//     the AUTHENTICATED principal through storekit.CapturedBy — a connector's
+//     is `connector:…`, a person's is `human:…` — so it is provenance a caller
+//     cannot assert. capture/sinkprovenance.go states the same rule for the
+//     same reason.
 //   - The activity is INBOUND. An outbound mail is the rep writing to the
 //     contact, which is the opposite of the contact answering.
 //   - The contact is the SENDER, not merely present. Being cc'd on a colleague's
@@ -27,6 +43,15 @@ package compose
 //     correspondence would mark every introduction ever made as answered, using
 //     mail sent before anyone was introduced.
 //
+// WHAT THIS DELIBERATELY DOES NOT CLAIM. A connector delivers what a mail
+// server handed it, and an unauthenticated From header is a header its sender
+// typed. So `replied` means "a message arrived that this workspace's own
+// capture attributes to the contact, after the introduction" — which is what
+// the status is for, and why the evidence id travels on both the row and the
+// event: the claim stays checkable against the message it rests on. Making it
+// stronger is a question for capture, which owns sender authentication on
+// behalf of every consumer, rather than one this consumer answers alone.
+//
 // Idempotency is the ask's own status: the UPDATE matches only from `introduced`
 // or `name_dropped`, so a redelivered event and the second message in a thread
 // both find nothing to do. events.Dedupe sits in front of that as a cache, never
@@ -35,10 +60,12 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -48,12 +75,28 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// introAdvanceEntityActivity is the outbox entity type this consumer reacts to.
-const introAdvanceEntityActivity = "activity"
+// The two outbox entity types this consumer reacts to: the message, and the
+// person a message's sender was promoted into after the fact.
+const (
+	introAdvanceEntityActivity = "activity"
+	introAdvancePersonEntity   = "person"
+)
 
 // systemIntroAdvanceActor names this consumer in every audit row it causes, so
 // a reply the product recorded is told apart from one a person asserted.
 const systemIntroAdvanceActor = "system:intro-advance"
+
+// connectorCapturedPrefix is how a connector's provenance reads in
+// activity.captured_by: capture stamps `connector:<name>[:<user>]` from the
+// authenticated principal (capture/sinkprovenance.go). A person's row reads
+// `human:<id>` and never matches.
+//
+// Built from principal.PrincipalConnector rather than typed as a literal, so
+// the prefix cannot drift from the vocabulary it describes: renaming that
+// constant breaks this expression at compile time instead of silently making
+// the clause match nothing — a clause matching nothing here is a lane that
+// closes no introductions and reports no fault.
+const connectorCapturedPrefix = string(principal.PrincipalConnector) + ":"
 
 // IntroAdvance closes introductions the contact has answered.
 //
@@ -76,9 +119,31 @@ func NewIntroAdvance(
 
 // HandleEvent routes one envelope. Anything else answers nil, so the consumer
 // group keeps flowing rather than wedging on traffic this consumer ignores.
+//
+// TWO arms, because the message and the person who sent it do not arrive
+// together. Capture commits the activity and its address-only participant, then
+// promotes that address to a person in a SEPARATE transaction afterwards
+// (capture/sinkensure.go says so: "Runs after the capture transaction
+// committed"). So the activity arm can run before the sender is a person, find
+// nobody, and acknowledge — losing a real reply with nothing scheduled to
+// notice. The person arm is the repair, and it is the same shape
+// cg:cohort-promote uses for the same race.
+//
+// The person arm covers a SECOND race for free, which is why it is deliberately
+// keyed on the entity rather than on one event type. A message can also arrive
+// while the handshake transaction is still open: the ask is not yet introduced,
+// so nothing is awaiting a reply and the activity arm correctly does nothing.
+// intro_request.completed rides on the PERSON entity (public-events.yaml), so
+// the handshake committing is itself an event this arm consumes — it re-reads
+// the contact's mail and finds the message that arrived early.
 func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != introAdvanceEntityActivity ||
-		env.Type != string(crmcontracts.ActivityCaptured) {
+	if env.Entity.ID == ids.Nil {
+		return nil
+	}
+	captured := env.Entity.Type == introAdvanceEntityActivity &&
+		env.Type == string(crmcontracts.ActivityCaptured)
+	promoted := env.Entity.Type == introAdvancePersonEntity
+	if !captured && !promoted {
 		return nil
 	}
 	ws, err := InstallationDB(a.pool).Workspace(ctx)
@@ -86,6 +151,9 @@ func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) err
 		return err
 	}
 	ctx = a.advanceContext(ctx, env, ws.UUID)
+	if promoted {
+		return a.answerBacklogFor(ctx, env.Entity.ID)
+	}
 
 	// Who sent this, and when. A message with no inbound sender answers no
 	// introduction, and the great majority of captured activity is exactly
@@ -100,6 +168,76 @@ func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) err
 		}
 	}
 	return nil
+}
+
+// answerBacklogFor re-checks the mail a contact has ALREADY sent, for the asks
+// still waiting on them.
+//
+// This is the repair arm. A message captured before its sender was a person
+// left no trace the activity arm could act on, and nothing else would ever look
+// at it again — the reply would be lost permanently while the ask sat reading
+// unanswered.
+//
+// Bounded, and cheap in the ordinary case: it runs only when an ask about this
+// contact is actually awaiting a reply, which is rare, and the query then reads
+// their qualifying mail since the earliest such handshake rather than their
+// whole history.
+func (a *IntroAdvance) answerBacklogFor(ctx context.Context, personID ids.UUID) error {
+	pending, err := a.asks.AwaitingReply(ctx, personID)
+	if err != nil {
+		return err
+	}
+	if len(pending) == 0 {
+		return nil
+	}
+	earliest := pending[0].Since
+	for _, ask := range pending[1:] {
+		if ask.Since.Before(earliest) {
+			earliest = ask.Since
+		}
+	}
+	activityID, occurredAt, err := a.firstAnswerSince(ctx, personID, earliest)
+	if err != nil || activityID == ids.Nil {
+		return err
+	}
+	return a.answerAsksTo(ctx, personID, activityID, occurredAt)
+}
+
+// firstAnswerSince finds the EARLIEST qualifying message this contact sent after
+// an instant, or the zero id when they have sent none.
+//
+// Earliest rather than latest: the ask was answered when they first wrote back,
+// and dating it from their most recent mail would overstate how long the
+// introduction took to land. It carries every clause the activity arm's read
+// carries, because the repair must admit exactly what the live path admits —
+// a backlog pass with a looser rule would close asks the live one refused.
+func (a *IntroAdvance) firstAnswerSince(
+	ctx context.Context, personID ids.UUID, since time.Time,
+) (ids.UUID, time.Time, error) {
+	var activityID ids.UUID
+	var occurredAt time.Time
+	err := a.pool.QueryRow(ctx, `
+		SELECT a.id, a.occurred_at
+		  FROM activity a
+		  JOIN activity_participant p ON p.activity_id = a.id
+		 WHERE p.person_id = $1
+		   AND a.occurred_at > $2
+		   AND a.archived_at IS NULL
+		   AND a.captured_by LIKE $3
+		   AND a.direction = 'inbound'
+		   AND p.role = 'from'
+		 ORDER BY a.occurred_at
+		 LIMIT 1`, personID, since, connectorCapturedPrefix+"%").Scan(&activityID, &occurredAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// They have written nothing since the introduction, which is the
+		// ordinary state of an ask still waiting.
+		return ids.Nil, time.Time{}, nil
+	}
+	if err != nil {
+		return ids.Nil, time.Time{}, fmt.Errorf(
+			"intro-advance: reading what %s has written since %s: %w", personID, since, err)
+	}
+	return activityID, occurredAt, nil
 }
 
 // inboundSenders reads the contacts who SENT this activity, and when it
@@ -122,9 +260,10 @@ func (a *IntroAdvance) inboundSenders(
 		  JOIN activity_participant p ON p.activity_id = a.id
 		 WHERE a.id = $1
 		   AND a.archived_at IS NULL
+		   AND a.captured_by LIKE $2
 		   AND a.direction = 'inbound'
 		   AND p.role = 'from'
-		   AND p.person_id IS NOT NULL`, activityID)
+		   AND p.person_id IS NOT NULL`, activityID, connectorCapturedPrefix+"%")
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("intro-advance: reading who sent %s: %w", activityID, err)
 	}
