@@ -431,9 +431,21 @@ function CommitteeBoard({
 }
 
 /** The map's own words, all of them the caller's to supply. */
-function mapLabels(t: ReturnType<typeof useT>, locale: Locale) {
+/**
+ * mapLabels is the shared word set for the relationship map.
+ *
+ * Exported because the person page draws the SAME picture and every label but
+ * one reads identically there. `region` is the exception — it names what the
+ * drawing is OF, and "at this account" is wrong on a person's page — so it is
+ * the one a caller passes in.
+ */
+export function mapLabels(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  region = t("co.people.map.region"),
+) {
   return {
-    region: t("co.people.map.region"),
+    region,
     band: {
       strong: t("co.routeIn.band.strong"),
       developing: t("co.routeIn.band.some"),
