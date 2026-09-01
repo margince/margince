@@ -81,16 +81,14 @@ export function CompanyMark({
   // a mark the company already has reads as the thing to do, and the thing to
   // do on this row is usually nothing.
   const [picking, setPicking] = useState(false);
-  // Each verb is disabled by the OTHER one's flight, never by its own: a button
-  // that disables itself the moment it is pressed takes the focus with it, and
-  // the reader is left with no idea what happened or where they are. Its own
-  // flight is guarded in the handler instead, so a double press or a held
-  // Enter cannot start a second request whose answer would race the first.
+  // Each verb is disabled by the OTHER one's flight and PENDING on its own: a
+  // button that disables itself the moment it is pressed takes the focus with
+  // it, where `pending` keeps the focus, marks the wait, and swallows a repeat
+  // press — so a double press or a held Enter cannot start a second request
+  // whose answer would race the first, nor open a second picker whose file
+  // would then be dropped.
   const failure = upload.error ?? remove.error;
   const removeMark = () => {
-    if (remove.isPending) {
-      return;
-    }
     // A picker left open under a removal is a second writer: a file dropped
     // while the DELETE is out lands in whichever order the two answer.
     setPicking(false);
@@ -98,9 +96,6 @@ export function CompanyMark({
   };
   const uploadMark = (file: File) => {
     setPicking(false);
-    if (upload.isPending) {
-      return;
-    }
     upload.mutate(file);
   };
 
@@ -126,6 +121,7 @@ export function CompanyMark({
               small
               onClick={() => setPicking((open) => !open)}
               disabled={remove.isPending}
+              pending={upload.isPending}
             >
               {profile.logo_url
                 ? t("settings.companyMarkReplace")
@@ -137,6 +133,7 @@ export function CompanyMark({
                 variant="ghost"
                 onClick={removeMark}
                 disabled={upload.isPending}
+                pending={remove.isPending}
               >
                 {t("settings.companyMarkRemove")}
               </Button>

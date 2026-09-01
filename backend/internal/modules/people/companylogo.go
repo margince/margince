@@ -58,9 +58,10 @@ func (s *Store) SetCompanyLogo(ctx context.Context, objectKey, named string) (su
 			return err
 		}
 		var previous, previousOrigin *string
-		// The FILE the person chose stands where a resolve puts the page it read:
-		// the column records where a mark came from, and leaving it empty for an
-		// upload means the NEXT write's before-image says the record wore nothing.
+		// The FILE the person chose is written where a resolve writes the page
+		// it read: the column records where a mark came from, and it is the
+		// value the NEXT write's before-image carries. Written empty here, that
+		// before-image would say the record wore nothing.
 		if err := tx.QueryRow(ctx, `
 			UPDATE organization SET logo_object_key = $2, logo_origin = $3
 			WHERE id = $1 AND archived_at IS NULL
