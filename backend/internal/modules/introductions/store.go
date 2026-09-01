@@ -345,19 +345,13 @@ func (s *Store) move(
 			return fmt.Errorf(
 				"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
 		}
-		// The read above took no lock, so the version check at line 304 can pass
-		// in two transactions at once. Only `AND version = $N` inside the UPDATE
-		// is atomic, and it reports a loss by matching zero rows. Without this,
-		// the loser writes an audit row and emits an event for a transition that
-		// did not happen — the trail would say an ask was declined when it was
-		// accepted.
 		// The before-image is the status this ask was in, which is exactly what
 		// a dispute about an introduction asks: an accepted ask that ended up
 		// declined and one that was declined outright are different stories,
 		// and only the pair tells them apart.
 		auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
-			map[string]any{"status": string(cur.Status)},
-			map[string]any{"status": string(to())})
+			map[string]any{auditedField: string(cur.Status)},
+			map[string]any{auditedField: string(to())})
 		if err != nil {
 			return err
 		}

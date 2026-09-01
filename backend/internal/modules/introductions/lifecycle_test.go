@@ -6,6 +6,7 @@ package introductions
 import (
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -190,6 +191,59 @@ func TestOpenMatchesTheDuplicateGuardIndex(t *testing.T) {
 		if named != Open(s) {
 			t.Errorf("%q: Open()=%v but the guard index names it=%v — the two have drifted",
 				s, Open(s), named)
+		}
+	}
+}
+
+// The reply predicate in SQL and the transition table say the same thing.
+//
+// RecordReply spells its admissible statuses as a literal `status IN (...)`
+// because a SQL statement cannot ask the Go transition table. That makes two
+// spellings of one rule, and the way they fail is silent: adding a state a
+// capture may reply from — a follow-up sent, say — updates the table, leaves
+// the statement behind, and the new state simply never advances. Nothing
+// errors; the ask just sits there looking unanswered forever.
+//
+// So this reads the statuses back OUT of the store's own SQL and checks the
+// table agrees, in both directions.
+func TestTheReplyPredicateMatchesTheLifecycle(t *testing.T) {
+	source, err := os.ReadFile("reply.go")
+	if err != nil {
+		t.Fatalf("reading the reply path: %v", err)
+	}
+	// The one statement's one clause. Anchored on the CTE so a status list
+	// elsewhere in the file cannot stand in for it — a gate that matched the
+	// wrong statement would pass while the real one drifted.
+	clause := regexp.MustCompile(
+		`(?s)WITH prior AS \(.*?status IN \(([^)]*)\)`).FindSubmatch(source)
+	if clause == nil {
+		t.Fatal("RecordReply's status predicate is no longer where this test looks — " +
+			"re-point it at the statement, do not delete it")
+	}
+	inSQL := map[Status]bool{}
+	for _, quoted := range regexp.MustCompile(`'([a-z_]+)'`).FindAllSubmatch(clause[1], -1) {
+		inSQL[Status(quoted[1])] = true
+	}
+	if len(inSQL) == 0 {
+		t.Fatal("the predicate names no statuses, so it admits nothing")
+	}
+
+	inTable := map[Status]bool{}
+	for _, tr := range transitions {
+		if tr.to == StatusReplied && tr.by == ActorCapture {
+			inTable[tr.from] = true
+		}
+	}
+
+	for from := range inTable {
+		if !inSQL[from] {
+			t.Errorf("the lifecycle lets a capture reply from %q, but the SQL never matches it — "+
+				"an ask in that state would wait forever", from)
+		}
+	}
+	for from := range inSQL {
+		if !inTable[from] {
+			t.Errorf("the SQL admits a reply from %q, which the lifecycle forbids", from)
 		}
 	}
 }
