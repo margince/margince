@@ -187,7 +187,7 @@
 
   .mb-advance > * + * {
     padding-inline-start: var(--space-4);
-    border-inline-start: 1px solid var(--border);
+    border-inline-start: 1px solid var(--borderSubtle);
   }
 }
 
