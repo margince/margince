@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import type { MessageKey } from "../i18n/en";
 
 export type PurposeView =
   components["schemas"]["PreferenceCenter"]["purposes"][number];
@@ -60,4 +61,33 @@ export function toChoices(
       state: draft[purpose.key] ? ("granted" as const) : ("withdrawn" as const),
       wording: wordingOf(purpose.key),
     }));
+}
+
+/**
+ * What to CALL each purpose the product seeds itself.
+ *
+ * `purpose.label` comes from the database, where the seeded catalog is
+ * written in English — so a German page printed "Business
+ * correspondence" inside German prose, and the generic wording sentence
+ * wrapped an English noun in German quotes: „Business correspondence
+ * senden."
+ *
+ * An operator may define purposes of their own, and those keep whatever
+ * they were named: this map covers the three the product plants, which
+ * are the ones every installation has and the only ones whose English is
+ * ours rather than a customer's.
+ */
+export const PURPOSE_LABEL_KEYS: Record<string, MessageKey> = {
+  business_correspondence: "prefs.purpose.business_correspondence",
+  marketing_email: "prefs.purpose.marketing_email",
+  transactional: "prefs.purpose.transactional",
+};
+
+/** The purpose's name in the reader's language, or the catalog's own. */
+export function labelOf(
+  t: (key: MessageKey, vars?: Record<string, string>) => string,
+  purpose: PurposeView,
+): string {
+  const key = PURPOSE_LABEL_KEYS[purpose.key];
+  return key ? t(key) : purpose.label;
 }

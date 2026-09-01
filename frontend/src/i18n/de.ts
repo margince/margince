@@ -4919,6 +4919,10 @@ export const de = {
   "prefs.unsub.retry": "Erneut versuchen",
   "prefs.unsub.unknownPurpose":
     "Dieser Link nennt keine Art von E-Mail, die wir versenden. \u00d6ffne deine Einstellungen, um alles zu sehen.",
+  "prefs.purpose.business_correspondence": "Persönliche Nachrichten",
+  "prefs.purpose.marketing_email": "Produktneuigkeiten",
+  "prefs.purpose.transactional": "Sicherheit & laufende Vorgänge",
+  "prefs.sentVia": "Gesendet über Margince",
   "prefs.invalidLink":
     "Dieser Link ist nicht mehr gültig. Präferenz-Links laufen ab oder können widerrufen werden — frag in einer aktuellen E-Mail nach einem neuen.",
   "buyer.opening": "Ihr Deal Room wird geöffnet …",
@@ -5057,7 +5061,11 @@ export const de = {
   "prefs.discard": "Verwerfen",
   "prefs.partialSave":
     "Beim Speichern ist etwas schiefgelaufen. Einige deiner Entscheidungen wurden möglicherweise schon übernommen — wir haben deinen aktuellen Stand neu geladen, damit du genau siehst, wo du stehst.",
-  "prefs.wordingGeneric": "„{label} senden.“",
+  "prefs.wording.business_correspondence":
+    "„Schick mir Antworten und direkte Nachrichten zu unseren Gesprächen.“",
+  "prefs.wording.transactional":
+    "„Schick mir, was ich für einen von mir angeforderten Vorgang brauche.“",
+  "prefs.wordingGeneric": "„Schick mir {label}.“",
   "prefs.wording.marketing_email":
     "„Schick mir Produkt-Updates und gelegentliche Marketing-E-Mails.“",
   "prefs.wording.events": "„Schick mir Einladungen zu Events und Webinaren.“",

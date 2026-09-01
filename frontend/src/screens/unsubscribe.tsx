@@ -5,14 +5,14 @@ import { api } from "../api/client";
 import { Button, Card, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { usePublicLocale } from "../i18n/publiclocale";
 import { throwProblem } from "./common";
 import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
 } from "./preferences";
-import type { PurposeView } from "./preferences.logic";
+import { labelOf, type PurposeView } from "./preferences.logic";
+import { PublicPage } from "./publicpage";
 import "./preferences.css";
 
 // The human unsubscribe page: where the VISIBLE "Unsubscribe" link in an
@@ -34,9 +34,9 @@ export function UnsubscribeScreen({
   const t = useT();
   if (!token || !purpose) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Callout tone="warn">{t("prefs.invalidLink")}</Callout>
-      </div>
+      </PublicPage>
     );
   }
   return <UnsubscribeBody token={token} purpose={purpose} />;
@@ -47,8 +47,6 @@ function UnsubscribeBody({
   purpose,
 }: Readonly<{ token: string; purpose: string }>) {
   const t = useT();
-  // The link carried the message's language; the page speaks it too.
-  usePublicLocale();
   const queryClient = useQueryClient();
   const queryKey = ["preference-center", token];
   const doneHeading = useRef<HTMLHeadingElement>(null);
@@ -111,11 +109,11 @@ function UnsubscribeBody({
 
   if (center.isPending) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Card>
           <PendingBody label={t("prefs.unsub.loading")} lines={4} />
         </Card>
-      </div>
+      </PublicPage>
     );
   }
   if (center.error) {
@@ -124,7 +122,7 @@ function UnsubscribeBody({
     // an email deserves a way to try again rather than a dead end.
     const retryable = !(center.error instanceof LinkInvalidError);
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Callout
           tone={center.error instanceof RateLimitedError ? "warn" : "danger"}
           actions={
@@ -137,7 +135,7 @@ function UnsubscribeBody({
         >
           {explainPublicError(center.error, t)}
         </Callout>
-      </div>
+      </PublicPage>
     );
   }
 
@@ -146,16 +144,16 @@ function UnsubscribeBody({
   );
   if (!target) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Callout tone="warn">{t("prefs.unsub.unknownPurpose")}</Callout>
         <ManageLink token={token} label={t("prefs.unsub.seeAll")} />
-      </div>
+      </PublicPage>
     );
   }
 
   if (stopped !== null) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Card>
           <div className="unsub-done">
             <span className="unsub-done-mark" aria-hidden="true">
@@ -167,12 +165,12 @@ function UnsubscribeBody({
                 : t("prefs.unsub.alreadyOff")}
             </h1>
             {stopped.length > 0 && (
-              <p>{t("prefs.unsub.doneBody", { label: target.label })}</p>
+              <p>{t("prefs.unsub.doneBody", { label: labelOf(t, target) })}</p>
             )}
           </div>
         </Card>
         <ManageLink token={token} label={t("prefs.unsub.manage")} />
-      </div>
+      </PublicPage>
     );
   }
 
@@ -180,26 +178,26 @@ function UnsubscribeBody({
   // is worse than an absent one, and here the honest answer is why.
   if (target.locked) {
     return (
-      <div className="pref-page">
-        <h1>{t("prefs.unsub.lockedTitle")}</h1>
+      <PublicPage>
+        <h1 className="t-display">{t("prefs.unsub.lockedTitle")}</h1>
         <Card>
           <p className="unsub-kind">
-            <Lock size={16} aria-hidden="true" /> {target.label}
+            <Lock size={16} aria-hidden="true" /> {labelOf(t, target)}
           </p>
           <p>{t("prefs.unsub.lockedBody")}</p>
         </Card>
         <ManageLink token={token} label={t("prefs.unsub.seeAll")} />
-      </div>
+      </PublicPage>
     );
   }
 
   return (
-    <div className="pref-page">
-      <h1>{t("prefs.unsub.title")}</h1>
+    <PublicPage>
+      <h1 className="t-display">{t("prefs.unsub.title")}</h1>
       <p className="unsub-lead">{t("prefs.unsub.lead")}</p>
       <Card>
         <p className="unsub-kind">
-          <Mail size={16} aria-hidden="true" /> {target.label}
+          <Mail size={16} aria-hidden="true" /> {labelOf(t, target)}
         </p>
         <Callout tone="info" title={t("prefs.unsub.afterTitle")}>
           {t("prefs.unsub.afterBody")}
@@ -228,7 +226,7 @@ function UnsubscribeBody({
         ) : null}
       </Card>
       <p className="unsub-privacy">{t("prefs.unsub.privacy")}</p>
-    </div>
+    </PublicPage>
   );
 }
 

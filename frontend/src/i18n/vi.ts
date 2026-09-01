@@ -4882,6 +4882,10 @@ export const vi = {
   "prefs.unsub.retry": "Th\u1eed l\u1ea1i",
   "prefs.unsub.unknownPurpose":
     "Li\u00ean k\u1ebft n\u00e0y kh\u00f4ng n\u00eau lo\u1ea1i email n\u00e0o ch\u00fang t\u00f4i g\u1eedi. H\u00e3y m\u1edf t\u00f9y ch\u1ecdn \u0111\u1ec3 xem t\u1ea5t c\u1ea3.",
+  "prefs.purpose.business_correspondence": "Thư từ trực tiếp",
+  "prefs.purpose.marketing_email": "Tin tức sản phẩm",
+  "prefs.purpose.transactional": "Bảo mật và dịch vụ",
+  "prefs.sentVia": "Được gửi qua Margince",
   "prefs.invalidLink":
     "Liên kết này không còn hiệu lực. Liên kết tuỳ chọn sẽ hết hạn và có thể bị thu hồi — hãy lấy một liên kết mới từ bất kỳ email gần đây nào.",
   "buyer.opening": "Đang mở Deal Room của bạn…",
@@ -5016,6 +5020,10 @@ export const vi = {
   "prefs.discard": "Bỏ thay đổi",
   "prefs.partialSave":
     "Có gì đó hỏng giữa chừng. Một phần lựa chọn của bạn có thể đã được lưu — chúng tôi đã tải lại thiết lập hiện tại để bạn thấy đúng mình đang ở đâu.",
+  "prefs.wording.business_correspondence":
+    "„Gửi cho tôi phản hồi và tin nhắn trực tiếp về các cuộc trao đổi của chúng ta.“",
+  "prefs.wording.transactional":
+    "„Gửi cho tôi những gì cần cho việc tôi đã yêu cầu.“",
   "prefs.wordingGeneric": '"Hãy gửi cho tôi {label}."',
   "prefs.wording.marketing_email":
     '"Hãy gửi cho tôi tin cập nhật sản phẩm & email tiếp thị thỉnh thoảng."',
