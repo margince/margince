@@ -25,17 +25,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// SendProvider names the channel V1 transmits through. It is both the
-// delivery's provider and the activity's source_system, deliberately the
-// same literal: the provider files its own copy of every sent message back
-// into the mailbox, and that copy is only recognised as this activity when
-// the natural key it carries — (source_system, source_id) — is the one the
-// send wrote.
+// DefaultSendProvider is what a store with NO send authority wired sends
+// through — the historical answer, kept because the pre-flight is advisory and
+// an absent one must not change which mailbox a send uses.
 //
-// Exported because the composition root's mailbox pre-flight has to ask about
-// the connection this path will actually transmit through; a second literal
-// there could name a provider the send path never uses.
-const SendProvider = "gmail"
+// It is not the answer for a composed installation. There, the provider is
+// RESOLVED per send (sendableMailProvider): a mail send carries no `from`, so
+// something has to choose, and a constant refused every rep whose only mailbox
+// was the other vendor's.
+//
+// Whichever way it is arrived at, the SAME value is the delivery's provider and
+// the activity's source_system — the provider files its own copy of every sent
+// message back into the mailbox, and that copy is only recognised as this
+// activity when the natural key it carries, (source_system, source_id), is the
+// one the send wrote. Two answers here would be a duplicate timeline row for
+// every message anybody sends.
+const DefaultSendProvider = "gmail"
 
 // sourceManual is the provenance every send this system composes carries: a
 // human typed it here, whichever transport carried it out. Spelled once because
@@ -155,9 +160,12 @@ func MintMessageID(domain string) string {
 // record and a person they may not read. Every guard is fail-closed; only
 // their order carries this rule, which is why they are one function and not
 // scattered through the send.
-func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate ConsentGate, stager DeliveryStager) error {
+// It RETURNS the provider it resolved, so the send that follows uses the very
+// mailbox this guard cleared. Asking twice would be two round-trips and two
+// answers, and the second could differ from the one that was judged.
+func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate ConsentGate, stager DeliveryStager) (string, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return err
+		return "", err
 	}
 	// Guard the To: LINE, not the merged list, because they are not the same
 	// thing and only the first one goes on the wire. Recipients is To+Cc
@@ -180,31 +188,57 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// loosening this in Go while the contract still refuses it would make the
 	// two disagree about what a valid send is.
 	if len(toRecipients(in.Recipients, in.Cc, in.Bcc)) == 0 {
-		return &NoRecipientsError{}
+		return "", &NoRecipientsError{}
 	}
 	// The composition guards report a deployment defect, and a caller who may
 	// not send has no business learning which parts of this installation's
 	// send path are wired — hence their position, not their existence.
 	if gate == nil {
-		return fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
+		return "", fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
 	}
 	if stager == nil {
 		// A send nothing will ever transmit must refuse, not leave a timeline
 		// entry claiming a message went out.
-		return errNoDeliveryStager
+		return "", errNoDeliveryStager
 	}
 	// The mailbox pre-flight is the SENDER's own authority and precedes the
 	// consent gate for the same reason authorization does: a user who holds no
 	// send grant must get the refusal they can act on, not a verdict about the
 	// recipients' consent state.
-	capable, err := s.canSend(ctx, SendProvider)
+	//
+	// It asks WHICH mailbox rather than asking about a fixed one. A mail send
+	// carries no `from`, so something has to choose; a constant was an honest
+	// answer only while one provider could send, and refused a rep whose only
+	// mailbox is the other.
+	provider, err := s.sendableMailProvider(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if !capable {
-		return &MailboxNotSendCapableError{}
+	if err := gate.RequireGrantedForEmails(ctx, in.Recipients, in.ConsentPurpose); err != nil {
+		return "", err
 	}
-	return gate.RequireGrantedForEmails(ctx, in.Recipients, in.ConsentPurpose)
+	return provider, nil
+}
+
+// sendableMailProvider names the mailbox this send will go out through, or
+// refuses with the error the caller can act on.
+//
+// An unwired authority answers with the historical default rather than
+// refusing: the pre-flight is advisory by contract (see SendAuthority), and a
+// store composed without one must accept the send exactly as it did before this
+// question existed.
+func (s *Store) sendableMailProvider(ctx context.Context) (string, error) {
+	if s.sendAuthority == nil {
+		return DefaultSendProvider, nil
+	}
+	provider, err := s.sendAuthority.SendableMailProvider(ctx)
+	if err != nil {
+		return "", err
+	}
+	if provider == "" {
+		return "", &MailboxNotSendCapableError{}
+	}
+	return provider, nil
 }
 
 // messageIDDomain is the right-hand side of every minted Message-ID: the

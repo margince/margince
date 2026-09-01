@@ -11,12 +11,14 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // stubUnsubscribeLinker stands in for the consent module's preference-token
@@ -39,11 +41,28 @@ type stubSendAuthority struct {
 	capable bool
 	err     error
 	asked   []string
+	// mailProvider is the mailbox this stub says a mail send goes out through;
+	// empty falls back to the one a capable authority would name, so a fixture
+	// that only cares about capability need not spell it.
+	mailProvider string
 }
 
 func (m *stubSendAuthority) SendCapable(_ context.Context, provider string) (bool, error) {
 	m.asked = append(m.asked, provider)
 	return m.capable, m.err
+}
+
+func (m *stubSendAuthority) SendableMailProvider(context.Context) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	if !m.capable {
+		return "", nil
+	}
+	if m.mailProvider != "" {
+		return m.mailProvider, nil
+	}
+	return DefaultSendProvider, nil
 }
 
 // draftOutcomeCall is what the send path handed the learning loop: the
@@ -221,4 +240,61 @@ func TestTheFloorGreetsTheRecipientOrNobody(t *testing.T) {
 func firstLineOf(body string) string {
 	line, _, _ := strings.Cut(body, "\n")
 	return line
+}
+
+// THE DEFECT THIS SEAM EXISTS FOR.
+//
+// A mail send carries no `from`, so something chooses the mailbox. While Gmail
+// was the only provider that could transmit, a constant was an honest answer.
+// It stopped being one when Outlook could: the delivery named a connector the
+// sender had no grant on, and the connector that could have carried the message
+// was never reached.
+func TestASendGoesOutThroughTheMailboxItResolved(t *testing.T) {
+	for name, provider := range map[string]string{
+		"a Gmail mailbox":    "gmail",
+		"an Outlook mailbox": "graph",
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := outboundMessage{
+				in:        SendEmailInput{Subject: "Following up"},
+				messageID: "outbound-1@margince.test",
+				provider:  provider,
+				to:        []string{"client@acme.test"},
+			}
+			// BOTH, and the same value: the delivery names the connector that
+			// transmits, and the activity's source_system is the natural key the
+			// provider's own echo carries. Two answers here would file a
+			// duplicate timeline row for every message anybody sends.
+			if got := m.delivery(ids.NewV7(), threading{}).Provider; got != provider {
+				t.Errorf("delivery provider = %q, want %q — handed to a connector this sender has no grant on", got, provider)
+			}
+			act := m.activity(threading{})
+			if act.SourceSystem == nil || *act.SourceSystem != provider {
+				t.Errorf("activity source_system = %v, want %q — the echo would key onto nothing and land as a second row", act.SourceSystem, provider)
+			}
+		})
+	}
+}
+
+// What the guard does with each answer.
+func TestTheMailboxResolutionRefusesOnlyWhenNothingCanTransmit(t *testing.T) {
+	store := &Store{}
+
+	// No authority wired: the pre-flight is advisory, so an absent one must not
+	// change which mailbox a send uses.
+	if got, err := store.sendableMailProvider(context.Background()); err != nil || got != DefaultSendProvider {
+		t.Errorf("unwired authority = (%q, %v), want the historical default", got, err)
+	}
+
+	sending := store.WithSendAuthority(&stubSendAuthority{capable: true, mailProvider: "graph"})
+	if got, err := sending.sendableMailProvider(context.Background()); err != nil || got != "graph" {
+		t.Errorf("resolved = (%q, %v), want the mailbox the authority named", got, err)
+	}
+
+	none := store.WithSendAuthority(&stubSendAuthority{capable: false})
+	_, err := none.sendableMailProvider(context.Background())
+	var refusal *MailboxNotSendCapableError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("no transmitting mailbox = %v, want the refusal naming what to fix", err)
+	}
 }

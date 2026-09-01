@@ -44,6 +44,11 @@ type outboundMessage struct {
 	listUnsubscribe string
 	to              []string
 	links           []ActivityLinkInput
+	// provider is the mailbox this send goes out through, resolved once per
+	// send. It is used twice below — the activity's source_system and the
+	// delivery's provider — and the two must be the same value or the captured
+	// echo keys onto nothing and lands as a second timeline row.
+	provider string
 }
 
 // htmlAlternativeNote marks a timeline row whose message also went out as
@@ -54,7 +59,7 @@ const htmlAlternativeNote = "This message was also sent as HTML."
 
 // activity is the timeline row the send commits.
 func (m outboundMessage) activity(chain threading) LogActivityInput {
-	direction, sourceSystem := "outbound", SendProvider
+	direction, sourceSystem := "outbound", m.provider
 	recorded := m.recordedBody
 	if m.htmlBody != "" {
 		// The timeline keeps the PLAIN alternative, and says so when a markup
@@ -93,7 +98,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 func (m outboundMessage) delivery(activityID ids.UUID, chain threading) DeliveryRequest {
 	return DeliveryRequest{
 		ActivityID:      ids.From[ids.ActivityKind](activityID),
-		Provider:        SendProvider,
+		Provider:        m.provider,
 		MessageID:       m.messageID,
 		Recipients:      m.to,
 		Cc:              m.in.Cc,
