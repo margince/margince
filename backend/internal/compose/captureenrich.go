@@ -45,8 +45,9 @@ const (
 	signatureLineCount = 15
 	// enrichConfidenceFloor is the §2.9 acceptance floor.
 	enrichConfidenceFloor = 0.6
-	// enrichPassLimit bounds one pass's candidate set — the nightly cycle
-	// picks up the rest tomorrow.
+	// enrichPassLimit bounds one pass's candidate set. A pass that fills it
+	// queues a continuation rather than leaving the remainder to the nightly
+	// cycle; see RunWorkspace.
 	enrichPassLimit = 100
 )
 
@@ -76,18 +77,42 @@ type CaptureEnricher struct {
 	store *people.Store
 	brain completer
 	log   *slog.Logger
+	// limit is how many candidates one pass takes, and therefore the count at
+	// which it reports a continuation is due. enrichPassLimit in production; a
+	// test sets it small so it can drive that boundary with a handful of
+	// people rather than a hundred.
+	limit int
 }
 
 // NewCaptureEnricher builds the pass over the pool and one model lane.
 func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CaptureEnricher {
-	return &CaptureEnricher{pool: pool, store: people.NewStore(InstallationDB(pool)), brain: brain, log: log}
+	return &CaptureEnricher{
+		pool:  pool,
+		store: people.NewStore(InstallationDB(pool)),
+		brain: brain,
+		log:   log,
+		limit: enrichPassLimit,
+	}
 }
 
 // RunWorkspace enriches up to enrichPassLimit candidates in the workspace
 // already bound in ctx. A budget stop ends the pass cleanly; per-person model
 // trouble is logged and the person is retried next cycle (their evidence rows
 // are still absent).
-func (e *CaptureEnricher) RunWorkspace(ctx context.Context) error {
+//
+// It reports whether the candidate set FILLED the limit, which is the caller's
+// signal that more people are due right now. Two things make that worth acting
+// on rather than leaving to the nightly pass. A mailbox sync lands hundreds of
+// messages at once, so the 101st contact would wait until tonight for details a
+// rep is about to read. And the trigger's own uniqueness means mail arriving
+// mid-pass dedupes against a pass that has already listed its candidates —
+// so without a continuation that message waits for the nightly run too,
+// whatever the queue depth.
+//
+// A full set is not proof that anyone is left: the last pass may have finished
+// exactly at the limit. The continuation costs one job that lists no candidates
+// and stops, which is the cheap side of the trade.
+func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err error) {
 	// The store's apply writes audit + outbox rows, so the pass binds
 	// the system actor and an operation scope like every worker job.
 	wsCtx := principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
@@ -100,11 +125,11 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) error {
 	// answers to the same question.
 	defaultEnrich, err := settings.Get(wsCtx, NewSettingsStore(e.pool), capture.SignatureEnrich)
 	if err != nil {
-		return fmt.Errorf("reading the signature-enrichment setting: %w", err)
+		return false, fmt.Errorf("reading the signature-enrichment setting: %w", err)
 	}
-	candidates, err := e.store.SignatureCandidates(wsCtx, enrichPassLimit, defaultEnrich)
+	candidates, err := e.store.SignatureCandidates(wsCtx, e.limit, defaultEnrich)
 	if err != nil {
-		return err
+		return false, err
 	}
 	// A candidate that fails is logged, not returned, and that survives the
 	// fan-out deliberately: the retry is durable in the DATA rather than in
@@ -116,13 +141,16 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) error {
 		if err := e.enrichOne(wsCtx, cand); err != nil {
 			if isBudgetStop(err) {
 				e.log.InfoContext(wsCtx, "signature enrich: budget exhausted, stopping the pass")
-				return nil
+				// No continuation: the budget is what stopped this pass, and a
+				// follow-on would hit the same wall immediately. The nightly
+				// cycle is the right owner of work the budget deferred.
+				return false, nil
 			}
 			e.log.WarnContext(wsCtx, "signature enrich: candidate failed",
 				"person", cand.PersonID.String(), "err", err)
 		}
 	}
-	return nil
+	return len(candidates) == e.limit, nil
 }
 
 func isBudgetStop(err error) bool { return errors.Is(err, ai.ErrBudgetDeferred) }
