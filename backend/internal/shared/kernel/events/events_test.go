@@ -202,6 +202,11 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// consumer whose retries buy data must not share a cursor with one
 		// whose retries are free.
 		"cg:person-data": {"gw:events:crm:person"},
+		// Mail landing queues the signature-enrich pass. Its own group for
+		// cg:person-data's reason: this one spends the customer's token budget,
+		// and a consumer whose retries cost money must not share a cursor with
+		// one whose retries are free.
+		"cg:capture-enrich": {"gw:events:crm:activity"},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
@@ -225,7 +230,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, and the Deal Room timeline", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, and the signature-enrich trigger", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {
