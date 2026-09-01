@@ -89,6 +89,45 @@ func TestAnEmptyOriginIsRefused(t *testing.T) {
 	}
 }
 
+// Every one of these was admitted by a first version of this guard that
+// delegated shape validation to a caller which does not always run.
+func TestAMalformedOriginIsRefusedBySendersOwnGuard(t *testing.T) {
+	cases := map[string]string{
+		"userinfo would be published in every emailed link": "https://user:secret@example.com",
+		"a fragment swallows every appended path":           "https://example.com#dead",
+		"a query swallows every appended path":              "https://example.com?a=b",
+		"a path produces links nothing resolves":            "https://example.com/app",
+		"an https scheme with no authority to dial":         "https:/example.com",
+		"an authority naming no host":                       "https://:8443",
+	}
+	for reason, origin := range cases {
+		t.Run(reason, func(t *testing.T) {
+			if err := RequirePublicOrigin("--public-base-url", origin, runtimeenv.Production); err == nil {
+				t.Errorf("admitted %q — %s", origin, reason)
+			}
+		})
+	}
+}
+
+// The same name in the spellings a resolver treats as equal. A check that
+// missed these refuses what an operator is unlikely to type and admits
+// what they might.
+func TestLocalhostIsRefusedInEverySpelling(t *testing.T) {
+	for _, origin := range []string{
+		"https://LOCALHOST",
+		"https://localhost.",
+		"https://LocalHost.",
+		"https://APP.LOCALHOST",
+		"https://[fe80::1%25eth0]",
+	} {
+		t.Run(origin, func(t *testing.T) {
+			if err := RequirePublicOrigin("--public-base-url", origin, runtimeenv.Production); err == nil {
+				t.Errorf("admitted %q", origin)
+			}
+		})
+	}
+}
+
 // A refusal must not echo an origin that could carry a credential.
 func TestARefusalDoesNotEchoUserinfo(t *testing.T) {
 	err := RequirePublicOrigin("--public-base-url", "http://user:hunter2@localhost", runtimeenv.Production)

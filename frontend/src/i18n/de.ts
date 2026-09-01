@@ -4890,6 +4890,31 @@ export const de = {
   "prefs.title": "Wähle, was du von uns hörst",
   "prefs.sub":
     "Jeder Zweck steht für sich — hier ist nicht alles oder nichts. Transaktionale Nachrichten lassen sich hier nicht abschalten, weil du sie brauchst; alles andere bestimmst du selbst.",
+  "prefs.unsub.title": "Diese E-Mails nicht mehr erhalten?",
+  "prefs.unsub.lead":
+    "Ein Klick stoppt Nachrichten dieser Art an deine Adresse. Sonst \u00e4ndert sich nichts.",
+  "prefs.unsub.loading":
+    "Deine E-Mail-Einstellungen werden ge\u00f6ffnet \u2026",
+  "prefs.unsub.afterTitle": "Was danach passiert",
+  "prefs.unsub.afterBody":
+    "Wir senden dir keine weiteren E-Mails dieser Art. Sicherheits- und Servicenachrichten, die du f\u00fcr einen von dir angeforderten Vorgang brauchst, bleiben davon unber\u00fchrt.",
+  "prefs.unsub.confirm": "Diese E-Mails abbestellen",
+  "prefs.unsub.busy": "Deine Entscheidung wird gespeichert \u2026",
+  "prefs.unsub.seeAll": "Alle Einstellungen ansehen",
+  "prefs.unsub.privacy":
+    "Kein Login n\u00f6tig. Dieser pers\u00f6nliche Link gilt nur f\u00fcr deine E-Mail-Einstellungen \u2014 bitte teile ihn nicht.",
+  "prefs.unsub.doneTitle": "Abbestellung best\u00e4tigt",
+  "prefs.unsub.doneBody":
+    "Du erh\u00e4ltst {label} nicht mehr von uns. Die \u00c4nderung gilt sofort.",
+  "prefs.unsub.manage": "Einstellungen verwalten",
+  "prefs.unsub.alreadyOff":
+    "Diese E-Mails waren bereits abgeschaltet. Es wurde nichts ge\u00e4ndert.",
+  "prefs.unsub.lockedTitle": "Diese Nachrichten lassen sich nicht abschalten",
+  "prefs.unsub.lockedBody":
+    "Sie geh\u00f6ren zu einem von dir angeforderten Vorgang \u2014 etwa ein neues Passwort oder eine Best\u00e4tigung, um die du gebeten hast.",
+  "prefs.unsub.retry": "Erneut versuchen",
+  "prefs.unsub.unknownPurpose":
+    "Dieser Link nennt keine Art von E-Mail, die wir versenden. \u00d6ffne deine Einstellungen, um alles zu sehen.",
   "prefs.invalidLink":
     "Dieser Link ist nicht mehr gültig. Präferenz-Links laufen ab oder können widerrufen werden — frag in einer aktuellen E-Mail nach einem neuen.",
   "buyer.opening": "Ihr Deal Room wird geöffnet …",

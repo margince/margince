@@ -47,6 +47,7 @@ const SCREENS = [
   "client",
   "book",
   "preferences",
+  "unsubscribe",
   "confirm",
   "room",
   "oauth-consent",
@@ -172,6 +173,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   client: WHOLE_ADDRESS,
   book: WHOLE_ADDRESS,
   preferences: WHOLE_ADDRESS,
+  // Token AND purpose name the thing: the same reader may hold links for
+  // two different kinds of mail, and they are two different pages.
+  unsubscribe: WHOLE_ADDRESS,
   confirm: WHOLE_ADDRESS,
   room: WHOLE_ADDRESS,
   "oauth-consent": WHOLE_ADDRESS,

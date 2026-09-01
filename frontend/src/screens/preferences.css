@@ -170,3 +170,58 @@
   align-items: flex-start;
   gap: var(--space-3);
 }
+
+/* The human unsubscribe page. It shares .pref-page with the preference
+   centre so the two surfaces a recipient reaches from one message look
+   like one product rather than two. */
+.unsub-lead {
+  margin: 0 0 var(--space-5);
+  color: var(--textSecondary);
+}
+
+.unsub-kind {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-weight: 600;
+}
+
+.unsub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.unsub-privacy {
+  margin-top: var(--space-5);
+  color: var(--textTertiary);
+  font-size: var(--fs-sm);
+}
+
+.unsub-done {
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+
+.unsub-done h1 {
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+/* Focused programmatically after the press, so the outcome is announced;
+   the ring is suppressed because the reader did not tab here. */
+.unsub-done h1:focus-visible {
+  outline: none;
+}
+
+.unsub-done-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  color: var(--success);
+  background: var(--successBg);
+}

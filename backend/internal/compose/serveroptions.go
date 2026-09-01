@@ -404,6 +404,11 @@ func WithPublicBaseURL(base string) Option {
 		// So does the confirm-details link, which opens one person's own record
 		// to whoever holds it.
 		s.consentHandlers = s.WithConfirmLinkBase(base)
+		// Reported to an operator, never enforced: the boot and send guards
+		// are what refuse an unusable origin, and a readiness check here
+		// would deadlock a rollout on its own ingress.
+		probe := newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
+		s.connectorHandlers.publicOrigin = probe.Status
 		s.rebuildToolRegistry(pool)
 	}
 }

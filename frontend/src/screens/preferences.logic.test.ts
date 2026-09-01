@@ -18,6 +18,8 @@ const purposes: PurposeView[] = [
     choice: "opted_in",
     can_opt_in: false,
     grant_needs_confirmation: false,
+    choice: "opted_in",
+    can_opt_in: false,
   },
   {
     key: "marketing_email",
@@ -27,6 +29,8 @@ const purposes: PurposeView[] = [
     choice: "opted_in",
     can_opt_in: true,
     grant_needs_confirmation: false,
+    choice: "opted_in",
+    can_opt_in: true,
   },
   {
     key: "events",
@@ -36,6 +40,8 @@ const purposes: PurposeView[] = [
     choice: "opted_out",
     can_opt_in: true,
     grant_needs_confirmation: false,
+    choice: "opted_out",
+    can_opt_in: true,
   },
   {
     key: "research",
@@ -47,6 +53,8 @@ const purposes: PurposeView[] = [
     choice: "no_objection",
     can_opt_in: true,
     grant_needs_confirmation: false,
+    choice: "opted_out",
+    can_opt_in: true,
   },
 ];
 
@@ -64,6 +72,8 @@ const doiPurposes: PurposeView[] = [
     // here either, for the same reason a locked one cannot.
     can_opt_in: false,
     grant_needs_confirmation: true,
+    choice: "opted_out",
+    can_opt_in: false,
   },
   {
     key: "doi_granted",
@@ -73,6 +83,8 @@ const doiPurposes: PurposeView[] = [
     choice: "opted_in",
     can_opt_in: false,
     grant_needs_confirmation: true,
+    choice: "opted_in",
+    can_opt_in: false,
   },
 ];
 

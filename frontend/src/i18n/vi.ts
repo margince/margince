@@ -4850,6 +4850,33 @@ export const vi = {
   "prefs.title": "Chọn những gì bạn nhận từ chúng tôi",
   "prefs.sub":
     "Mỗi mục đích là riêng biệt — không phải chuyện được tất cả hoặc không gì cả. Thư giao dịch không tắt được ở đây, vì bạn cần chúng; mọi thứ còn lại là quyền của bạn.",
+  "prefs.unsub.title": "Ng\u1eebng nh\u1eadn nh\u1eefng email n\u00e0y?",
+  "prefs.unsub.lead":
+    "M\u1ed9t c\u00fa nh\u1ea5p s\u1ebd d\u1eebng c\u00e1c th\u01b0 thu\u1ed9c lo\u1ea1i n\u00e0y g\u1eedi t\u1edbi \u0111\u1ecba ch\u1ec9 c\u1ee7a b\u1ea1n. M\u1ecdi th\u1ee9 kh\u00e1c gi\u1eef nguy\u00ean.",
+  "prefs.unsub.loading":
+    "\u0110ang m\u1edf t\u00f9y ch\u1ecdn email c\u1ee7a b\u1ea1n\u2026",
+  "prefs.unsub.afterTitle": "\u0110i\u1ec1u g\u00ec x\u1ea3y ra ti\u1ebfp theo",
+  "prefs.unsub.afterBody":
+    "Ch\u00fang t\u00f4i s\u1ebd kh\u00f4ng g\u1eedi cho b\u1ea1n email lo\u1ea1i n\u00e0y n\u1eefa. C\u00e1c th\u01b0 v\u1ec1 b\u1ea3o m\u1eadt v\u00e0 d\u1ecbch v\u1ee5 c\u1ea7n cho vi\u1ec7c b\u1ea1n \u0111\u00e3 y\u00eau c\u1ea7u v\u1eabn \u0111\u01b0\u1ee3c gi\u1eef l\u1ea1i.",
+  "prefs.unsub.confirm": "H\u1ee7y nh\u1eadn nh\u1eefng email n\u00e0y",
+  "prefs.unsub.busy":
+    "\u0110ang ghi l\u1ea1i l\u1ef1a ch\u1ecdn c\u1ee7a b\u1ea1n\u2026",
+  "prefs.unsub.seeAll": "Xem t\u1ea5t c\u1ea3 t\u00f9y ch\u1ecdn",
+  "prefs.unsub.privacy":
+    "Kh\u00f4ng c\u1ea7n \u0111\u0103ng nh\u1eadp. Li\u00ean k\u1ebft c\u00e1 nh\u00e2n n\u00e0y ch\u1ec9 \u0111i\u1ec1u khi\u1ec3n t\u00f9y ch\u1ecdn email c\u1ee7a b\u1ea1n \u2014 xin \u0111\u1eebng chia s\u1ebb.",
+  "prefs.unsub.doneTitle": "\u0110\u00e3 h\u1ee7y \u0111\u0103ng k\u00fd",
+  "prefs.unsub.doneBody":
+    "B\u1ea1n s\u1ebd kh\u00f4ng nh\u1eadn {label} t\u1eeb ch\u00fang t\u00f4i n\u1eefa. Thay \u0111\u1ed5i c\u00f3 hi\u1ec7u l\u1ef1c ngay.",
+  "prefs.unsub.manage": "Qu\u1ea3n l\u00fd t\u00f9y ch\u1ecdn",
+  "prefs.unsub.alreadyOff":
+    "Nh\u1eefng email n\u00e0y \u0111\u00e3 t\u1eaft t\u1eeb tr\u01b0\u1edbc. Kh\u00f4ng c\u00f3 g\u00ec thay \u0111\u1ed5i.",
+  "prefs.unsub.lockedTitle":
+    "Kh\u00f4ng th\u1ec3 t\u1eaft nh\u1eefng th\u01b0 n\u00e0y",
+  "prefs.unsub.lockedBody":
+    "Ch\u00fang thu\u1ed9c v\u1ec1 vi\u1ec7c b\u1ea1n \u0111\u00e3 y\u00eau c\u1ea7u \u2014 \u0111\u1eb7t l\u1ea1i m\u1eadt kh\u1ea9u, ho\u1eb7c m\u1ed9t x\u00e1c nh\u1eadn b\u1ea1n \u0111\u00e3 \u0111\u1ec1 ngh\u1ecb.",
+  "prefs.unsub.retry": "Th\u1eed l\u1ea1i",
+  "prefs.unsub.unknownPurpose":
+    "Li\u00ean k\u1ebft n\u00e0y kh\u00f4ng n\u00eau lo\u1ea1i email n\u00e0o ch\u00fang t\u00f4i g\u1eedi. H\u00e3y m\u1edf t\u00f9y ch\u1ecdn \u0111\u1ec3 xem t\u1ea5t c\u1ea3.",
   "prefs.invalidLink":
     "Liên kết này không còn hiệu lực. Liên kết tuỳ chọn sẽ hết hạn và có thể bị thu hồi — hãy lấy một liên kết mới từ bất kỳ email gần đây nào.",
   "buyer.opening": "Đang mở Deal Room của bạn…",

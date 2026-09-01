@@ -366,6 +366,16 @@ func admitBoot(
 // The worker sends too — the scheduled and agent lanes run here — so it
 // answers to the same rule as the api. A role that skipped it would send
 // exactly the messages the api refuses.
+//
+// What this predicate CANNOT see, and it is worth naming rather than
+// implying: an installation may store its Google app in the database
+// through Settings instead of composing it from the environment
+// (compose.newCaptureRegistryWithGoogle), and that app is not readable
+// here — boot runs before, and independently of, any workspace read. Such
+// a worker starts without this check. It does not then send a broken
+// link: the send-time guard in activities refuses every tokenized message
+// on the same rule. What is lost is the early failure, not the
+// protection.
 func requireUsablePublicOrigin(cfg workerConfig, deployCfg deployconfig.Config) error {
 	if !deployCfg.Email.Enabled && !cfg.gmailAppWired() {
 		return nil

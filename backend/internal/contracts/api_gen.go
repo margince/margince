@@ -15871,6 +15871,12 @@ type CaptureConnectionStatus string
 // CaptureConnectionListResponse defines model for CaptureConnectionListResponse.
 type CaptureConnectionListResponse struct {
 	Data []CaptureConnection `json:"data"`
+
+	// PublicOrigin The address this installation puts in outgoing links, and whether it answered when last asked.
+	// Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
+	// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
+	// process can reach the origin — it cannot say a recipient's mail client can.
+	PublicOrigin *PublicOriginStatus `json:"public_origin,omitempty"`
 }
 
 // CaptureConsent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -25337,6 +25343,23 @@ type ProviderRunTrigger string
 // months, so the connection read stays one round trip.
 type ProviderSpend struct {
 	Months []ProviderMonthlySpend `json:"months"`
+}
+
+// PublicOriginStatus The address this installation puts in outgoing links, and whether it answered when last asked.
+// Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
+// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
+// process can reach the origin — it cannot say a recipient's mail client can.
+type PublicOriginStatus struct {
+	CheckedAt *time.Time `json:"checked_at,omitempty"`
+
+	// Detail The HTTP status or the transport failure. Never carries a path or a token.
+	Detail *string `json:"detail,omitempty"`
+
+	// Origin The configured scheme and host.
+	Origin string `json:"origin"`
+
+	// Reachable Null until the first probe answers, so a screen can say "not checked yet" rather than implying a failure.
+	Reachable *bool `json:"reachable,omitempty"`
 }
 
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.

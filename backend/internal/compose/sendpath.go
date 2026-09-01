@@ -132,6 +132,13 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
 		WithRuntimeEnvironment(send.Environment).
+		// Wired on BOTH transports, which is what this file is for: without
+		// it here, a short message sent over HTTP got an English footer while
+		// the same message sent through the tool surface got the
+		// installation's language.
+		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
+			return identity.BaseLanguageForPrompt(ctx, pool)
+		})).
 		WithDelivery(send.Delivery).
 		// One machinery, both staging shapes: a nil Delivery converts to a nil
 		// channel stager too, so the reply surface fails closed exactly as the

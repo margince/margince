@@ -4958,6 +4958,30 @@ export const en = {
   "prefs.title": "Choose what you hear from us",
   "prefs.sub":
     "Each purpose is separate — this isn't all-or-nothing. Transactional messages can't be switched off here, because you need them; everything else is yours to control.",
+  "prefs.unsub.title": "Stop receiving these emails?",
+  "prefs.unsub.lead":
+    "One click stops messages of this kind to your address. Nothing else changes.",
+  "prefs.unsub.loading": "Opening your email preferences\u2026",
+  "prefs.unsub.afterTitle": "What happens next",
+  "prefs.unsub.afterBody":
+    "We stop sending you emails of this kind. Security and service messages you need for something you asked for are not affected.",
+  "prefs.unsub.confirm": "Unsubscribe from these emails",
+  "prefs.unsub.busy": "Recording your choice\u2026",
+  "prefs.unsub.seeAll": "See all preferences",
+  "prefs.unsub.privacy":
+    "No login needed. This personal link only controls your email preferences \u2014 please don't share it.",
+  "prefs.unsub.doneTitle": "Unsubscribed",
+  "prefs.unsub.doneBody":
+    "You won't receive {label} from us again. The change applies immediately.",
+  "prefs.unsub.manage": "Manage preferences",
+  "prefs.unsub.alreadyOff":
+    "These emails were already switched off. Nothing changed.",
+  "prefs.unsub.lockedTitle": "These messages can't be switched off",
+  "prefs.unsub.lockedBody":
+    "They're needed for something you asked for \u2014 a password reset, or a confirmation you requested.",
+  "prefs.unsub.retry": "Try again",
+  "prefs.unsub.unknownPurpose":
+    "This link doesn't name a kind of email we send. Open your preferences to see everything.",
   "prefs.invalidLink":
     "This link is no longer valid. Preference links expire and can be withdrawn — ask for a fresh one from any recent email.",
   "buyer.opening": "Opening your Deal Room…",

@@ -12718,6 +12718,23 @@ export interface components {
         };
         CaptureConnectionListResponse: {
             data: components["schemas"]["CaptureConnection"][];
+            public_origin?: components["schemas"]["PublicOriginStatus"];
+        };
+        /**
+         * @description The address this installation puts in outgoing links, and whether it answered when last asked.
+         *     Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
+         *     send guards are what actually refuse an unusable one. A probe from inside the deployment says this
+         *     process can reach the origin — it cannot say a recipient's mail client can.
+         */
+        PublicOriginStatus: {
+            /** @description The configured scheme and host. */
+            origin: string;
+            /** @description Null until the first probe answers, so a screen can say "not checked yet" rather than implying a failure. */
+            reachable?: boolean | null;
+            /** Format: date-time */
+            checked_at?: string | null;
+            /** @description The HTTP status or the transport failure. Never carries a path or a token. */
+            detail?: string | null;
         };
         /**
          * @description Connect a capture source. Providers differ in kind, not in path: an OAuth provider
