@@ -302,6 +302,12 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	// reachable today — an unreleased account-origin scheduled_send has no
 	// activity at all, by its own CHECK constraint.
 	//
+	// The same rule covers a route that cannot say whether the row is governed:
+	// an attachment whose own row is gone — erased, which is exactly when the
+	// image left behind matters — resolves `governed` to NULL, and NULL is not
+	// "not governed". It is read as governed, so the image is withheld rather
+	// than the predicate coming back NULL and the scan failing on the row.
+	//
 	// The four collateral types are governed for the same reason the activity is:
 	// their images carry its content. An attachment's image carries the
 	// user-supplied filename, which is why a `Kuendigung.pdf` on a limited thread
@@ -319,7 +325,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.action, a.entity_type, a.entity_id, a.before, a.after, a.authorization_rule,
 			        a.evidence, a.occurred_at,
 			        actor_user.display_name, obo.display_name,
-			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND aud_route.governed)
+			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditActorNameJoins+auditActivityJoin+`
