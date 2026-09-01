@@ -364,10 +364,13 @@ type WaitingCustomer struct {
 //
 // Most rows arrive with their deal's numbers already on them, because the lane
 // that produced them read the deal. The overnight brief does not: it ranks deal
-// ids and keeps its evidence behind its own endpoint, deliberately, so that the
-// ranking payload is not copied onto a second wire where the two could
-// disagree. Without this seam its rows reach a rep naming a deal and saying
-// nothing about it — no amount, no close date, nothing to act on.
+// ids and keeps its composite and factor vector behind its own endpoint, so a
+// card that draws those reads them there. Without this seam its rows reach a
+// rep naming a deal and saying nothing about it — no amount, no close date,
+// nothing to act on.
+//
+// What this answers is the deal's OWN columns, which every other lane already
+// carries onto its rows. The ranking arithmetic stays where it is.
 //
 // One call for every id on the page, like the label pass beside it, rather than
 // one per row.

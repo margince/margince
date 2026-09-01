@@ -10,10 +10,13 @@ package deals
 // anything useful about it. Reading them one at a time is a query per card;
 // this is one query per page.
 //
-// Deliberately NOT a general deal read. It answers four columns, masks nothing
-// and joins nothing, because a caller that needs a deal needs GetDeal — which
-// masks references the reader may not see. What is here is what a card states
-// out loud, and every column of it is already on the row this reader may read.
+// Deliberately NOT a general deal read: it answers six columns and joins
+// nothing, because a caller that needs the whole deal needs GetDeal.
+//
+// It does apply the ROLE MASK, which is not part of "the whole deal" — it is
+// the gate that decides whether this reader may see a deal's money at all, and
+// every other deal read applies it. Skipping it here would print on the
+// Worklist the figure the record page withholds.
 
 import (
 	"context"
@@ -27,6 +30,59 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// maskFigures withholds the figures this reader's ROLE withholds.
+//
+// Row scope decides which deals answer; the field mask decides which of their
+// columns do, and the two are different gates. A role can be authored to hide
+// amount_minor on deals outside the reader's write authority, and every other
+// deal read applies it — the list masks its page, the single get masks its row,
+// the report engine drops masked rows out of its totals so a sum cannot
+// disclose what a row would not. A read that skipped it would print on the
+// Worklist the number the record page refuses to show.
+//
+// The money pair goes together. A withheld amount takes its currency with it,
+// because a currency alone says a deal is priced and in what units, which is
+// half of what the mask was hiding.
+//
+// Unlike a Deal on the wire, DealFigures carries no masked_fields list, so a
+// withheld amount is indistinguishable from an unpriced deal. That is the same
+// answer the card already gives for a deal with no amount, and it is the safe
+// direction: it says less rather than claiming a figure is absent when it is
+// merely withheld.
+func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigures) error {
+	p, err := storekit.Actor(ctx)
+	if err != nil {
+		return err
+	}
+	// Cheap exit for the common case — no mask on deals at all, which is how
+	// every installation ships until an operator authors one.
+	if len(auth.MaskedFields(p, "deal", false)) == 0 {
+		return nil
+	}
+	dealIDs := make([]ids.UUID, 0, len(figures))
+	for id := range figures {
+		dealIDs = append(dealIDs, id)
+	}
+	writable, err := auth.WritableSubset(ctx, tx, dealTable, dealIDs)
+	if err != nil {
+		return err
+	}
+	for id, row := range figures {
+		for _, field := range auth.MaskedFields(p, "deal", writable[id]) {
+			if field == dealAmountField {
+				row.AmountMinor = nil
+				row.Currency = ""
+			}
+		}
+		figures[id] = row
+	}
+	return nil
+}
+
+// dealAmountField is the masked field this read can actually withhold. The
+// others in dealMaskableFields name columns it does not select.
+const dealAmountField = "amount_minor"
 
 // DealFigures is one deal's commercial face: what it is worth, when it was
 // meant to land, and who answers for it.
@@ -59,7 +115,13 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		return out, nil
 	}
 	if len(dealIDs) > figuresScanCap {
-		dealIDs = dealIDs[:figuresScanCap]
+		// Refused rather than silently sliced. No caller can reach this today —
+		// the brief that feeds it is capped far below — so a silent truncation
+		// would be a short answer nothing would ever notice, waiting for the
+		// first caller to grow past it. A caller with more deals than this is
+		// asking a different question and should page.
+		return nil, fmt.Errorf("deals: asked for %d deals' figures, and one read answers %d",
+			len(dealIDs), figuresScanCap)
 	}
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		args := []any{}
@@ -105,7 +167,10 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			}
 			out[id] = figures
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		return maskFigures(ctx, tx, out)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the figures behind a page of deals: %w", err)

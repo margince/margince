@@ -8,16 +8,13 @@ package attention
 //
 // Most lanes read the deal themselves and arrive with the numbers already on
 // the row. The overnight brief does not — it ranks deal ids and keeps its
-// evidence behind its own endpoint, so that the ranking payload is not copied
-// onto a second wire where the two could disagree. The cost was that its rows
-// reached a rep naming a deal and saying nothing else about it: no amount, no
-// close date, nothing to act on. That is the row a rep is meant to open their
-// day on, and it was the least informative one on the page.
+// composite and factor vector behind its own endpoint — so its rows reached a
+// rep naming a deal and saying nothing else about it: no amount, no close date,
+// nothing to act on. That is the row a rep is meant to open their day on, and
+// it was the least informative one on the page.
 //
-// Figures are not the ranking payload. The amount and the close date are the
-// deal's own columns, which every other lane already carries onto its rows;
-// what stays behind the brief's endpoint is the composite and the factors that
-// produced it.
+// Figures are not that ranking arithmetic. The amount and the close date are
+// the deal's own columns, which every other lane already carries onto its rows.
 //
 // One read for every deal the page names, beside the label pass and for the
 // same reason: a follow-up read per card is the N+1 this feed exists to avoid.

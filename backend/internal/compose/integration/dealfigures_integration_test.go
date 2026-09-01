@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedFiguresDeal writes one deal owned by the given rep, with the figures a
@@ -97,5 +98,54 @@ func TestDealFiguresAnswerNothingForNoIDs(t *testing.T) {
 	}
 	if len(figures) != 0 {
 		t.Fatalf("asking about no deals answered %d", len(figures))
+	}
+}
+
+// The role mask reaches this read too.
+//
+// Row scope decides which deals answer; the field mask decides which of their
+// columns do. A rep whose role hides another team's amount everywhere else must
+// not read it off the Worklist, which is the one surface that used to get its
+// figures from a door with no mask on it.
+func TestDealFiguresApplyTheRolesFieldMask(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	mine := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
+	theirs := e.SeedDeal(t, "Theirs", pipeline, open, &e.Rep3)
+	const amount = int64(250000)
+	for _, id := range []ids.UUID{mine, theirs} {
+		e.WsExec(t, `UPDATE deal SET amount_minor = $2, currency = 'EUR' WHERE id = $1`, id, amount)
+	}
+	perms := activityLifecyclePerms
+	perms.Objects = map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}, "pipeline": {Read: true}}
+	perms.FieldMasks = []principal.FieldMask{
+		{Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority},
+	}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+
+	figures, err := e.Deals.Figures(rep, []ids.UUID{mine, theirs})
+	if err != nil {
+		t.Fatalf("reading figures under a mask: %v", err)
+	}
+
+	// The admission half: the mask must not swallow the rep's own money.
+	own, ok := figures[mine]
+	if !ok {
+		t.Fatal("the rep's own deal did not come back at all")
+	}
+	if own.AmountMinor == nil || *own.AmountMinor != amount || own.Currency != "EUR" {
+		t.Fatalf("the rep's own deal came back worth %v %q, wanted %d EUR",
+			own.AmountMinor, own.Currency, amount)
+	}
+	// And the refusal: another team's money is withheld, currency with it.
+	other, ok := figures[theirs]
+	if !ok {
+		t.Fatal("another team's deal vanished — a deal a rep may READ should still name itself")
+	}
+	if other.AmountMinor != nil {
+		t.Fatalf("another team's amount reached the Worklist as %d", *other.AmountMinor)
+	}
+	if other.Currency != "" {
+		t.Fatalf("another team's currency reached the Worklist as %q — a currency alone says the deal is priced and in what units", other.Currency)
 	}
 }
