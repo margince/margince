@@ -7,9 +7,15 @@
      is literals in the TypeScript, which is the one thing ADR-0040 forbids and
      also the thing that would stop the graph following the theme. */
   --crawl-ink: var(--ai);
-  --crawl-edge: var(--borderSubtle);
+  /* The STRONG border. A link between two pages is the picture's only structure
+     and at `--borderSubtle` on this ground it was not visible at all, leaving a
+     scatter of dots with nothing joining them. */
+  --crawl-edge: var(--borderStrong);
   --crawl-rest: var(--textTertiary);
   display: block;
   width: 100%;
+  /* A picture, not a panorama: past this the two rings sit so far apart that
+     the tree reads as unrelated dots at opposite ends of the room. */
+  max-width: 44rem;
   height: 180px;
 }

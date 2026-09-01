@@ -24,9 +24,14 @@
   width: 100%;
 }
 
+/* No box at all. The stage card IS the container, so the panel's own edge was a
+   second frame inside the first, and at `--borderSubtle` on this ground it did
+   not read as a container either: it read as a stray line, with the tinted
+   strip under the button looking like a band attached to nothing. */
 .ob-fr-form .panel {
   background: transparent;
-  border-color: var(--borderSubtle);
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -39,6 +44,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  /* And no inset either, now that there is no edge to sit inside: the board's
+     own padding already holds this form off the card. */
+  padding: 0;
 }
 
 /*

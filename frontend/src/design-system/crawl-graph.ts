@@ -77,19 +77,35 @@ export function layOutCrawl(
   return nodes;
 }
 
-/** How many pages have arrived by now, capped at what the server has sent. */
-export function crawlArrived(elapsed: number, count: number): number {
-  if (!Number.isFinite(elapsed)) {
-    return count;
-  }
-  return Math.max(0, Math.min(count, Math.floor(elapsed / CRAWL_BEAT_S) + 1));
+/**
+ * When each page arrived, in seconds before now.
+ *
+ * ONE AGE PER PAGE, not one clock for the picture. The read runs for minutes and
+ * pages land whenever the crawl reaches them, so a single elapsed-since-mount
+ * says every page arrived in the first three seconds: the graph finishes its
+ * entrance, cools to grey, and then sits still for the rest of the read while
+ * pages are still arriving. Worse, each new one appears already cold, which is
+ * the opposite of the thing worth showing.
+ *
+ * `stamps` holds the moment each page was first seen. The pages already there on
+ * the first frame are dealt in one beat apart, so a resumed read still gets an
+ * entrance rather than appearing all at once.
+ */
+export function crawlAges(stamps: readonly number[], now: number): number[] {
+  return stamps.map((at) => (now - at) / 1000);
+}
+
+/** How many pages have an entrance to draw: everything stamped. */
+export function crawlArrived(ages: readonly number[]): number {
+  return ages.length;
 }
 
 export function drawCrawl(
   ctx: CanvasRenderingContext2D,
   scene: Readonly<{
     nodes: readonly CrawlNode[];
-    elapsed: number;
+    /** Seconds since each node arrived, in the same order as `nodes`. */
+    ages: readonly number[];
     width: number;
     height: number;
     ink: string;
@@ -97,8 +113,8 @@ export function drawCrawl(
     dim: string;
   }>,
 ): void {
-  const { nodes, elapsed, width, height, ink, faint, dim } = scene;
-  const arrived = crawlArrived(elapsed, nodes.length);
+  const { nodes, ages, width, height, ink, faint, dim } = scene;
+  const arrived = Math.min(nodes.length, ages.length);
   ctx.clearRect(0, 0, width, height);
   ctx.lineWidth = 1;
 
@@ -106,11 +122,13 @@ export function drawCrawl(
   ctx.strokeStyle = faint;
   for (let i = 0; i < arrived; i++) {
     const node = nodes[i];
-    if (node.parent < 0) {
+    // Not due yet: the first hand is dealt a beat apart, so a page's stamp can
+    // sit in the future and its age be negative until its turn comes.
+    if (node.parent < 0 || ages[i] < 0) {
       continue;
     }
     const from = nodes[node.parent];
-    const grow = span(elapsed, i, GROW_S);
+    const grow = span(ages[i], GROW_S);
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.quadraticCurveTo(
@@ -124,7 +142,10 @@ export function drawCrawl(
 
   for (let i = 0; i < arrived; i++) {
     const node = nodes[i];
-    const age = Number.isFinite(elapsed) ? elapsed - i * CRAWL_BEAT_S : HALO_S;
+    const age = ages[i];
+    if (age < 0) {
+      continue;
+    }
     const halo = Math.max(0, 1 - age / HALO_S);
     if (halo > 0) {
       ctx.fillStyle = ink;
@@ -139,11 +160,11 @@ export function drawCrawl(
     // indigo says the whole site is being read at once.
     ctx.fillStyle = i === 0 || age < 1.2 ? ink : dim;
     ctx.beginPath();
-    ctx.arc(node.x, node.y, node.r * span(elapsed, i, POP_S), 0, Math.PI * 2);
+    ctx.arc(node.x, node.y, node.r * span(age, POP_S), 0, Math.PI * 2);
     ctx.fill();
   }
 
-  drawEvidence(ctx, nodes, arrived, elapsed, width, height, ink);
+  drawEvidence(ctx, nodes, ages, arrived, width, height, ink);
   ctx.globalAlpha = 1;
 }
 
@@ -164,23 +185,18 @@ export function drawCrawl(
 function drawEvidence(
   ctx: CanvasRenderingContext2D,
   nodes: readonly CrawlNode[],
+  ages: readonly number[],
   arrived: number,
-  elapsed: number,
   width: number,
   height: number,
   ink: string,
 ): void {
-  if (!Number.isFinite(elapsed)) {
-    // Reduced motion draws the finished graph and nothing in flight: a frozen
-    // particle mid-arc is a smudge, not a still of a movement.
-    return;
-  }
   const homeX = width * ROOT_X;
   const homeY = height / 2;
   for (let i = 1; i < arrived; i++) {
     for (let k = 0; k < MOTES_PER_PAGE; k++) {
       const span = MOTE_LIFE_S + k * 0.16;
-      const life = elapsed - i * CRAWL_BEAT_S;
+      const life = ages[i];
       if (life < 0 || life > span) {
         continue;
       }
@@ -202,10 +218,7 @@ function drawEvidence(
   }
 }
 
-/** How far through its own entrance the i-th node is, 0..1. */
-function span(elapsed: number, i: number, over: number): number {
-  if (!Number.isFinite(elapsed)) {
-    return 1;
-  }
-  return Math.max(0, Math.min(1, (elapsed - i * CRAWL_BEAT_S) / over));
+/** How far through its own entrance a node of this age is, 0..1. */
+function span(age: number, over: number): number {
+  return Math.max(0, Math.min(1, age / over));
 }

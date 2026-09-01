@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { CRAWL_BEAT_S, crawlArrived, layOutCrawl } from "./crawl-graph";
+import { crawlAges, crawlArrived, layOutCrawl } from "./crawl-graph";
 
 describe("the crawl picture's geometry", () => {
   it("draws nothing for a read that has reached no pages", () => {
@@ -47,23 +47,23 @@ describe("the crawl picture's geometry", () => {
   });
 });
 
-describe("how much of the crawl has arrived", () => {
-  it("shows the first page immediately, then one per beat", () => {
-    expect(crawlArrived(0, 10)).toBe(1);
-    expect(crawlArrived(CRAWL_BEAT_S * 1.5, 10)).toBe(2);
-    expect(crawlArrived(CRAWL_BEAT_S * 4.2, 10)).toBe(5);
+describe("when each page arrived", () => {
+  it("ages every page from its own stamp, not from one clock", () => {
+    // The defect this replaced: one elapsed-since-mount said every page landed
+    // in the first three seconds, so the graph finished, cooled to grey, and
+    // then sat still for the rest of a read that was still running.
+    const now = 10_000;
+    expect(crawlAges([10_000, 9_000, 7_500], now)).toEqual([0, 1, 2.5]);
   });
 
-  it("never draws a page the server has not sent", () => {
-    // The one way this could lie: running ahead of the read and showing
-    // progress that has not happened.
-    expect(crawlArrived(CRAWL_BEAT_S * 99, 3)).toBe(3);
-    expect(crawlArrived(CRAWL_BEAT_S * 99, 0)).toBe(0);
+  it("gives a page that has not come due yet a negative age", () => {
+    // The first hand is dealt a beat apart, so a stamp can sit in the future.
+    // Negative is what tells the painter this one has no entrance to draw yet.
+    expect(crawlAges([12_000], 10_000)).toEqual([-2]);
   });
 
-  it("is already complete under reduced motion", () => {
-    // The end state, not an empty box: the picture is worth having, the
-    // arrival is what the preference asks us to drop.
-    expect(crawlArrived(Number.POSITIVE_INFINITY, 7)).toBe(7);
+  it("draws an entrance for every page it has a stamp for", () => {
+    expect(crawlArrived(crawlAges([1, 2, 3], 10))).toBe(3);
+    expect(crawlArrived([])).toBe(0);
   });
 });

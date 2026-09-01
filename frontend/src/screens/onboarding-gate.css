@@ -332,7 +332,6 @@
   background: var(--success);
 }
 
-
 .ob-scan-counts {
   margin: 0;
   display: flex;
@@ -370,7 +369,7 @@
   font-family: var(--f-display);
   font-size: var(--fs-display);
   font-weight: var(--fw-semibold);
-  line-height: 1;
+  line-height: var(--lh-tight);
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
@@ -540,18 +539,6 @@
    the clamp, so the row never grows on its own. */
 .ob-scan-ticker-kind[aria-expanded="true"] {
   -webkit-line-clamp: unset;
-}
-
-/* The running total: the honest count beside the single page on show, so a
-   fast crawl never reads as a stalled one just because the ticker itself
-   can only ever hold one page at a time. */
-.ob-scan-ticker-total {
-  margin: 0;
-  padding: 0 var(--space-2);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-variant-numeric: tabular-nums;
-  color: var(--textMeta);
 }
 
 @keyframes ob-scan-ticker-in {

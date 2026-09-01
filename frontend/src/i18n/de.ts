@@ -6190,8 +6190,7 @@ export const de = {
   "aiRates.proposed": "Preis von OpenRouter",
   "aiRates.proposedDetail":
     "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
-  "firstRun.ai.foot":
-    "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
+  "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
   "firstRun.google.foot":
     "Das Speichern verbindet Mail und Kalender. Die Google-Anmeldung braucht noch einen Schritt von dem, der den Server betreibt.",
   "firstRun.google.helpSignIn":

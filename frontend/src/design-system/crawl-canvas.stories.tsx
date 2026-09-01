@@ -63,13 +63,13 @@ export const WithItsCounters: Story = {
         <div>
           <dt>pages read</dt>
           <dd>
-            <CountUp value={12} locale="en-GB" />
+            <CountUp value={12} locale="en" />
           </dd>
         </div>
         <div>
           <dt>facts found</dt>
           <dd>
-            <CountUp value={146} locale="en-GB" />
+            <CountUp value={146} locale="en" />
           </dd>
         </div>
       </dl>

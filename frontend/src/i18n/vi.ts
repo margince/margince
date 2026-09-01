@@ -6113,7 +6113,8 @@ export const vi = {
   "firstRun.step.model": "Mô hình",
   "firstRun.step.platform": "Nền tảng của bạn",
   "firstRun.ai.eyebrow": "Ở đây chưa có gì suy nghĩ được",
-  "firstRun.google.eyebrow": "Nó suy nghĩ được. Nhưng chưa liên lạc được với ai",
+  "firstRun.google.eyebrow":
+    "Nó suy nghĩ được. Nhưng chưa liên lạc được với ai",
   "aiRates.chatLane": "Dùng để suy luận",
   "aiRates.embedLane": "Dùng để ghi nhớ",
   "aiRates.perMTokInOut": "trên mỗi triệu token, vào → ra",

@@ -18,14 +18,14 @@ export default meta;
 type Story = StoryObj<typeof CountUp>;
 
 export const ASmallCount: Story = {
-  args: { value: 34, locale: "en-GB" },
+  args: { value: 34, locale: "en" },
 };
 
 // Grouped the reader's own way, which is the whole reason the locale is a prop
 // rather than a default: 146,203 and 146.203 are the same number to two
 // colleagues looking at one screen.
 export const GroupedForItsReader: Story = {
-  args: { value: 146203, locale: "de-DE" },
+  args: { value: 146203, locale: "de" },
 };
 
 /**
@@ -44,7 +44,7 @@ function StillReading() {
   }, []);
   return (
     <p style={{ font: "var(--fs-display)/1 var(--f-display)" }}>
-      <CountUp value={pages} locale="en-GB" />
+      <CountUp value={pages} locale="en" />
     </p>
   );
 }

@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
+import { formatNumber } from "../format/format";
+import type { Locale } from "../i18n";
 import { usePrefersReducedMotion } from "./motion";
 import "./countup.css";
 
@@ -28,8 +30,15 @@ export function CountUp({
   className,
 }: Readonly<{
   value: number;
-  /** For grouping, so a four-figure count reads as one in the reader's own way. */
-  locale: string;
+  /**
+   * For grouping, so a four-figure count reads as one in the reader's own way.
+   *
+   * The product's own locale rather than an Intl tag, and formatted through the
+   * one formatter: a component that reached for `toLocaleString` itself would be
+   * a second answer to which locale a number is written in, and the one that
+   * disagrees is always the one nobody is looking at.
+   */
+  locale: Locale;
   className?: string;
 }>) {
   const reduced = usePrefersReducedMotion();
@@ -69,7 +78,7 @@ export function CountUp({
 
   return (
     <span className={className ? `countup ${className}` : "countup"}>
-      {shown.toLocaleString(locale)}
+      {formatNumber(shown, locale)}
     </span>
   );
 }

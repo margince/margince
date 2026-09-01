@@ -327,14 +327,18 @@ describe("the first-run setup gate", () => {
 
     it("sends the Microsoft path to whoever runs the server, and says it cannot finish", async () => {
       await choose("Microsoft 365");
-      expect(screen.getByText(/MARGINCE_GRAPH_CLIENT_ID/)).toBeTruthy();
+      // Whose work it is, not which variables they set: the names are
+      // deployment detail and left this screen with the rest of them.
+      expect(
+        screen.getByText(/set up by whoever runs the server/),
+      ).toBeTruthy();
       expect(screen.getByText(STUCK)).toBeTruthy();
     });
 
     it("tells the IMAP path the credentials live on the mailbox", async () => {
       await choose("Neither");
       expect(
-        screen.getByText(/IMAP mailbox carries its own host/),
+        screen.getByText(/Each mailbox is set up under Settings/),
       ).toBeTruthy();
       expect(screen.getByText(STUCK)).toBeTruthy();
     });

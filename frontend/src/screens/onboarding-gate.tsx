@@ -597,13 +597,13 @@ function TheatreTail({
           <div>
             <dt>{t("ob.scan.tallyPages")}</dt>
             <dd>
-              <CountUp value={pagesRead} locale={INTL_LOCALE[locale]} />
+              <CountUp value={pagesRead} locale={locale} />
             </dd>
           </div>
           <div>
             <dt>{t("ob.scan.tallyFacts")}</dt>
             <dd>
-              <CountUp value={read.facts.length} locale={INTL_LOCALE[locale]} />
+              <CountUp value={read.facts.length} locale={locale} />
             </dd>
           </div>
         </dl>
