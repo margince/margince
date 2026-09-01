@@ -158,7 +158,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 | path | service |
 | --- | --- |
 | `/v1`, `/healthz`, `/readyz`, `/metrics` | api |
-| `/webhooks/gmail`, `/webhooks/hubspot` | api (present only with that connector configured) |
+| `/webhooks/gmail`, `/webhooks/graph`, `/webhooks/hubspot` | api (present only where that receiver's own token is set — which is a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
 

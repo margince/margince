@@ -114,7 +114,6 @@ import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
-import { GoogleAppCard } from "./google-app";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -131,6 +130,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard } from "./mail-sharing";
+import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
 import { MirrorUserMapCard } from "./overlay-usermap";
@@ -288,7 +288,7 @@ export function tabContent(id: SettingsTabId): ReactNode {
       // before they were merged the lock reason was explained on one tab while
       // the consequence landed on another.
       //
-      // The Google app goes LAST for that reason, not because it matters least.
+      // The vendor OAuth apps go LAST for that reason, not because it matters least.
       // It is here at all because the same OAuth client now serves sign-in as
       // well as mailbox connection, so filing it under Capture said it belonged
       // to one of the two.
@@ -298,7 +298,8 @@ export function tabContent(id: SettingsTabId): ReactNode {
           <FxRatesCard />
           <CompanyContextCard />
           <SignInMethodsCard />
-          <GoogleAppCard />
+          <OAuthAppCard provider="google" />
+          <OAuthAppCard provider="microsoft" />
         </>
       );
     case "extensions":

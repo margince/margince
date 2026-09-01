@@ -30,6 +30,13 @@ func (h Handlers) RecordAIFeedback(w http.ResponseWriter, r *http.Request) {
 		ClaimPath:   req.ClaimPath,
 		Verdict:     string(req.Verdict),
 		Note:        req.Note,
+		// What the CLIENT rendered — the value, and when it was rendered.
+		// Carried straight through: the store keeps the value beside the
+		// decision so the read can ask whether the human was looking at what
+		// the verdict is applied to, and the stamp so two submissions about one
+		// claim can be ranked rather than the later arrival simply winning.
+		ValueShown:      req.ValueShown,
+		ValueCapturedAt: req.ValueCapturedAt,
 	}
 	// Carried through only for the verdict that defines it. The store refuses
 	// the mismatch, and passing a stray value here would make that refusal

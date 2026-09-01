@@ -6584,13 +6584,13 @@ export interface paths {
          * What this installation still has to be configured with before it can be used.
          * @description The onboarding gate's one question, answered in one place. A fresh installation cannot
          *     read a company website until it can call a model, and cannot capture mail until it has a
-         *     Google app — so a client asks here rather than composing the answer out of several
+         *     connector OAuth app — so a client asks here rather than composing the answer out of several
          *     surfaces and drifting from whatever the server actually requires.
          *
          *     `blocking` is the SERVER's policy, not the screen's, and the two questions are not the
          *     same one. A step that is unconfigured and blocking is one the installation may not
          *     proceed past; a step may be unconfigured and non-blocking, which is how something an
-         *     installation can be used without (mail capture, on a deployment with no Google app) is
+         *     installation can be used without (mail capture, on a deployment with no connector OAuth app) is
          *     reported as still outstanding rather than as a gate. `complete` is exactly "no blocking
          *     step is unconfigured", so a client never recomputes it.
          *
@@ -6605,17 +6605,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/installation/google-app": {
+    "/installation/oauth-apps/{provider}": {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: "google" | "microsoft";
+            };
             cookie?: never;
         };
         /**
-         * Whether this installation has a Google OAuth app, and which one.
-         * @description One Google app per installation, supplied by whoever operates it — every mailbox a rep
-         *     connects rides it, and Gmail capture cannot run without it.
+         * Whether this installation has one vendor's OAuth app, and which one.
+         * @description One app per vendor per installation, supplied by whoever operates it — every mailbox and
+         *     calendar a rep connects rides it, and that vendor's capture cannot run without it.
          *
          *     Readable by any seat that may read capture settings, which is every seeded role: a rep
          *     about to connect their mailbox needs to know whether the installation has an app at all.
@@ -6625,13 +6628,13 @@ export interface paths {
          *     vault and this answers only whether one is held. The client ID **is** returned, because
          *     it is not a secret — it travels in every authorization redirect a browser makes — and an
          *     operator needs to see which app their installation is using to check it against the
-         *     Google console.
+         *     vendor's console.
          *
          *     Human session only. An agent never reads the installation's OAuth app.
          */
-        get: operations["getGoogleApp"];
+        get: operations["getOauthApp"];
         /**
-         * Store the installation's Google OAuth app (admin/ops).
+         * Store one vendor's OAuth app for this installation (admin/ops).
          * @description Seals the client secret in the key vault and records the app. Sending a pair when one is
          *     already stored ROTATES it: the new secret is sealed before the reference moves, and the
          *     superseded one destroyed only after the move commits, so no window exists in which the
@@ -6641,11 +6644,11 @@ export interface paths {
          *     just sent, and echoing it would put it in a response body that proxies log and browsers
          *     cache.
          *
-         *     422 for a half-supplied pair, and for a client id that is not one — Google's ids end in
-         *     `.apps.googleusercontent.com`, and a value that does not is almost always the project
-         *     number or an API key copied from the same screen. Refusing it here names the mistake,
-         *     where accepting it would surface much later as an opaque `invalid_client` from Google on
-         *     somebody's first connect attempt.
+         *     422 for a half-supplied pair, and for a client id that is not one. Google's ids end in
+         *     `.apps.googleusercontent.com`, and Microsoft's are GUIDs — a value that is neither is
+         *     almost always a neighbouring field copied from the same console screen. Refusing it here
+         *     names the mistake, where accepting it would surface much later as an opaque
+         *     `invalid_client` from the vendor on somebody's first connect attempt.
          *
          *     Takes effect immediately: the connect transport resolves the stored app per request
          *     rather than at boot, so a rotation reaches the next authorization without a restart.
@@ -6654,21 +6657,22 @@ export interface paths {
          *
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
-        put: operations["setGoogleApp"];
+        put: operations["setOauthApp"];
         post?: never;
         /**
-         * Remove the installation's Google OAuth app (admin/ops).
+         * Remove one vendor's OAuth app (admin/ops).
          * @description Drops the app and destroys the sealed secret. An installation that holds none succeeds:
          *     the caller asked for a state and that state already holds, which is why this is 204
          *     rather than 404 — and why it is safe to retry.
          *
-         *     Gmail stops being connectable immediately. Mailboxes already connected keep their own
-         *     stored tokens, which this does not touch — removing the app is not disconnecting anybody,
-         *     though their next token refresh will fail once the worker restarts without it.
+         *     That vendor's mail and calendar stop being connectable immediately. Mailboxes already
+         *     connected keep their own stored tokens, which this does not touch — removing the app is
+         *     not disconnecting anybody, though their next token refresh will fail once the worker
+         *     restarts without it.
          *
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
-        delete: operations["deleteGoogleApp"];
+        delete: operations["deleteOauthApp"];
         options?: never;
         head?: never;
         patch?: never;
@@ -12630,27 +12634,34 @@ export interface components {
         };
         InstallationSetupStep: {
             /**
-             * @description Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+             * @description Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `oauth_app` is a connector OAuth app — Google's or Microsoft's, either of which makes mailbox and calendar capture connectable, so the step is done once ANY vendor's app is available.
              * @enum {string}
              */
-            step: "ai_models" | "google_app";
+            step: "ai_models" | "oauth_app";
             /** @description Whether this step is done. */
             configured: boolean;
             /** @description Whether leaving it unconfigured stops the installation being used. The server's policy, not the screen's — a posture that does not need a step reports it non-blocking rather than expecting the client to know the rule. */
             blocking: boolean;
         };
-        GoogleApp: {
-            /** @description Whether a Google app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can Gmail and Calendar be connected", which is a different question from where the app came from. */
+        ConnectorApp: {
+            /**
+             * @description Which vendor's app this describes, echoed so a cached response cannot be misread.
+             * @enum {string}
+             */
+            provider: "google" | "microsoft";
+            /** @description Whether this vendor's app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from. */
             configured: boolean;
-            /** @description Google's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
+            /** @description The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses. */
             client_id: string;
+            /** @description The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any organization — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent. */
+            tenant?: string;
             /**
              * @description Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
              * @enum {string}
              */
             source: "stored" | "environment" | "none";
-            /** @description Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
-            redirect_uris: components["schemas"]["GoogleAppRedirectUri"][];
+            /** @description Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
+            redirect_uris: components["schemas"]["ConnectorAppRedirectUri"][];
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -12661,11 +12672,11 @@ export interface components {
             /** @description Whether this installation currently offers it on the login screen. */
             enabled: boolean;
         };
-        /** @description One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes. */
-        GoogleAppRedirectUri: {
+        /** @description One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it. */
+        ConnectorAppRedirectUri: {
             /**
-             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
-             *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
+             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+             *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
              * @enum {string}
              */
             purpose: "sign_in" | "mailbox_connect" | "calendar_connect";
@@ -12675,11 +12686,13 @@ export interface components {
              */
             url: string;
         };
-        GoogleAppInput: {
-            /** @description Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen. */
+        ConnectorAppInput: {
+            /** @description The vendor's OAuth client id. Google's end in `.apps.googleusercontent.com`; Microsoft's is the Application (client) ID from the Entra app registration's Overview, a GUID. A value of neither shape is refused: it is almost always a neighbouring field copied from the same console screen — the project number, an API key, or the app's display name. */
             client_id: string;
             /** @description The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
             client_secret: string;
+            /** @description The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's members may authorize. Omit it to authorize any organization, which is what a multi-tenant registration is for. Refused for `google`, and refused for the authority aliases `common`, `organizations` and `consumers` — each of those widens the app to a population nobody vetted, and an empty field says the same thing without an alias a reader has to know to interpret. */
+            tenant?: string;
         };
         AiProviderKeyList: {
             providers: components["schemas"]["AiProviderKeyStatus"][];
@@ -13637,7 +13650,10 @@ export interface components {
             latency_ms: number;
             cache_hit: boolean;
             degraded: boolean;
-            /** @description Stable failure code; null on success. */
+            /**
+             * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
+             *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
+             */
             error_sentinel?: string | null;
             /** @description A captured payload row exists for this call. */
             has_payload: boolean;
@@ -17187,6 +17203,19 @@ export interface components {
             corrected_value?: string;
             /** @description Why, in the human's words. Optional and never shown to a model. */
             note?: string;
+            /**
+             * @description The value the client RENDERED — the sentence the human actually had in front of them when they decided. Send back whatever the read handed you (`PersonProfileField.value`).
+             *     This is what the verdict is ABOUT, and the reader compares it against the value it is asked to apply the verdict to. A record whose value has moved on since the page was drawn keeps the verdict on file and does not apply it, which is the point: a correction to one sentence must not be applied to a different one.
+             *     Optional. Omitting it falls back to comparing WHEN the verdict was recorded against when the value last changed — a proxy, and the answer every verdict recorded before this field existed still gets.
+             */
+            value_shown?: string;
+            /**
+             * Format: date-time
+             * @description The `captured_at` of the value the client rendered. Send back whatever the read handed you (`PersonProfileField.captured_at`), beside `value_shown`.
+             *     It RANKS two submissions about the same claim rather than deciding what either is about. Both stamps are the server's own, so a page that rendered the newer value carries the later one — and a correction typed against a value that has since moved is refused with 409 rather than replacing the verdict a colleague recorded about the value that stands.
+             *     Optional, and omitting it is not an error: a submission that carries no stamp is not ranked against anything and simply lands.
+             */
+            value_captured_at?: string;
         };
         /**
          * @description One thing that happened to a relationship, with the evidence for it. Derived at read
@@ -25690,6 +25719,16 @@ export interface components {
              *     not drawing.
              */
             counts: components["schemas"]["WorklistCount"][];
+            /**
+             * @description The outcome headings, in the order a page draws them, each with how many of this
+             *     page's rows sit under it.
+             *
+             *     Every band appears, including one with no rows: "nothing needs you today" is
+             *     something to tell a reader, and a client inferring the headings from the rows it
+             *     received could not say it. The queue arrives sorted so each band's rows are
+             *     contiguous — a client draws a heading where the band changes.
+             */
+            bands?: components["schemas"]["WorklistBand"][];
         };
         /**
          * @description What one source contributed, in numbers that say what they counted.
@@ -25721,6 +25760,20 @@ export interface components {
              *     "200+" rather than "200".
              */
             more_available: boolean;
+        };
+        /**
+         * @description One outcome band and how much of it this page is showing — the headings a client draws,
+         *     in the order it draws them.
+         *
+         *     Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+         *     told something ("nothing needs you today"), and a client that inferred the headings from
+         *     the rows it received could not say it.
+         */
+        WorklistBand: {
+            /** @enum {string} */
+            band: "now" | "build_pipeline" | "keep_momentum" | "review";
+            /** @description How many rows of this band are on the page. */
+            shown: number;
         };
         /**
          * @description What one CATEGORY of work held, and how much of it reached the page.
@@ -25860,6 +25913,19 @@ export interface components {
             /** @description What this item offers, routed to the endpoint that owns the verb. */
             actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
             /**
+             * @description The heading this row sits under, as an OUTCOME rather than a priority number.
+             *
+             *     `level` says what kind of work a row is; the band says what the reader is being asked
+             *     to do about it today. Seven levels make a correct ordering and poor headings — a reader
+             *     scanning for "what must happen now" should not have to know which levels mean that.
+             *
+             *     Derived from the level and the row's own subject, so it cannot disagree with the order:
+             *     the queue arrives already sorted, and every row of one band is contiguous. A client
+             *     draws a heading when the band changes and never re-sorts.
+             * @enum {string}
+             */
+            band?: "now" | "build_pipeline" | "keep_momentum" | "review";
+            /**
              * @description The ways this row can be PUT DOWN, as the server declares them. A client
              *     never infers this from `source`: which rows a rep may judge is a server
              *     rule, and a client guessing it draws a verb that 404s or hides one the rep
@@ -25902,10 +25968,17 @@ export interface components {
          */
         WorklistComparison: {
             /**
-             * @description What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+             * @description What decided it. `order` means every comparator tied and the ids broke it, which the
+             *     client renders as no reason at all.
+             *
+             *     `crowded` means the row below is one of many of its kind: past a lead group, further
+             *     rows of the same source sort under the other kinds of work so one noisy lane cannot own
+             *     the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+             *     otherwise bury the reader's one overdue task — which is why it can be the answer even
+             *     when the two rows share a level.
              * @enum {string}
              */
-            comparator: "pin" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
+            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
             mine?: components["schemas"]["WorklistValue"];
             theirs?: components["schemas"]["WorklistValue"];
         };
@@ -27917,6 +27990,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description The claim moved on while the verdict was being made: a verdict about the value that stands was recorded from a page drawn later than this one. Nothing is written. Re-read the record and decide again on what it says now — applying this one would correct a sentence the human never saw. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -37269,11 +37351,14 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
         };
     };
-    getGoogleApp: {
+    getOauthApp: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: "google" | "microsoft";
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -37284,11 +37369,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GoogleApp"];
+                    "application/json": components["schemas"]["ConnectorApp"];
                 };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description No such vendor. This build serves `google` and `microsoft`; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description This installation has no key vault, so there is no sealed secret to report. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
                 headers: {
@@ -37300,16 +37394,19 @@ export interface operations {
             };
         };
     };
-    setGoogleApp: {
+    setOauthApp: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: "google" | "microsoft";
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GoogleAppInput"];
+                "application/json": components["schemas"]["ConnectorAppInput"];
             };
         };
         responses: {
@@ -37322,6 +37419,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description No such vendor. This build serves `google` and `microsoft`; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
             /** @description This installation has no key vault, so the client secret cannot be stored. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
@@ -37334,11 +37440,14 @@ export interface operations {
             };
         };
     };
-    deleteGoogleApp: {
+    deleteOauthApp: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Which vendor's app. `google` is the Google Cloud OAuth client behind Gmail and Google Calendar; `microsoft` is the Entra app registration behind Outlook mail and Outlook calendar. One app per vendor per installation — keying it by connector instead would let one installation hold two Google projects and hand a rep whichever their first consent happened to reach. */
+                provider: "google" | "microsoft";
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -37352,6 +37461,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description No such vendor. This build serves `google` and `microsoft`; a name outside that set is refused rather than defaulted, because guessing would store one vendor's secret under another's key. A vendor this build DOES serve with no app stored is not this — it is a 200 reporting `source: none`, or a 204 from the delete. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description This installation has no key vault, so there is no sealed secret to remove. The remedy is the operator's — the vault root key — not anything the caller sent. */
             503: {
                 headers: {

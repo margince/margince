@@ -3352,6 +3352,66 @@ func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	}
 }
 
+// Defines values for ConnectorAppProvider.
+const (
+	ConnectorAppProviderGoogle    ConnectorAppProvider = "google"
+	ConnectorAppProviderMicrosoft ConnectorAppProvider = "microsoft"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppProvider enum.
+func (e ConnectorAppProvider) Valid() bool {
+	switch e {
+	case ConnectorAppProviderGoogle:
+		return true
+	case ConnectorAppProviderMicrosoft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectorAppSource.
+const (
+	ConnectorAppSourceEnvironment ConnectorAppSource = "environment"
+	ConnectorAppSourceNone        ConnectorAppSource = "none"
+	ConnectorAppSourceStored      ConnectorAppSource = "stored"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppSource enum.
+func (e ConnectorAppSource) Valid() bool {
+	switch e {
+	case ConnectorAppSourceEnvironment:
+		return true
+	case ConnectorAppSourceNone:
+		return true
+	case ConnectorAppSourceStored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectorAppRedirectUriPurpose.
+const (
+	CalendarConnect ConnectorAppRedirectUriPurpose = "calendar_connect"
+	MailboxConnect  ConnectorAppRedirectUriPurpose = "mailbox_connect"
+	SignIn          ConnectorAppRedirectUriPurpose = "sign_in"
+)
+
+// Valid indicates whether the value is a known member of the ConnectorAppRedirectUriPurpose enum.
+func (e ConnectorAppRedirectUriPurpose) Valid() bool {
+	switch e {
+	case CalendarConnect:
+		return true
+	case MailboxConnect:
+		return true
+	case SignIn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentEventActorType.
 const (
 	ConsentEventActorTypeAgent     ConsentEventActorType = "agent"
@@ -5263,48 +5323,6 @@ func (e FinanceSummaryState) Valid() bool {
 	}
 }
 
-// Defines values for GoogleAppSource.
-const (
-	GoogleAppSourceEnvironment GoogleAppSource = "environment"
-	GoogleAppSourceNone        GoogleAppSource = "none"
-	GoogleAppSourceStored      GoogleAppSource = "stored"
-)
-
-// Valid indicates whether the value is a known member of the GoogleAppSource enum.
-func (e GoogleAppSource) Valid() bool {
-	switch e {
-	case GoogleAppSourceEnvironment:
-		return true
-	case GoogleAppSourceNone:
-		return true
-	case GoogleAppSourceStored:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GoogleAppRedirectUriPurpose.
-const (
-	CalendarConnect GoogleAppRedirectUriPurpose = "calendar_connect"
-	MailboxConnect  GoogleAppRedirectUriPurpose = "mailbox_connect"
-	SignIn          GoogleAppRedirectUriPurpose = "sign_in"
-)
-
-// Valid indicates whether the value is a known member of the GoogleAppRedirectUriPurpose enum.
-func (e GoogleAppRedirectUriPurpose) Valid() bool {
-	switch e {
-	case CalendarConnect:
-		return true
-	case MailboxConnect:
-		return true
-	case SignIn:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -5598,16 +5616,16 @@ func (e InstallationSettingsBaseLanguage) Valid() bool {
 
 // Defines values for InstallationSetupStepStep.
 const (
-	InstallationSetupStepStepAiModels  InstallationSetupStepStep = "ai_models"
-	InstallationSetupStepStepGoogleApp InstallationSetupStepStep = "google_app"
+	AiModels InstallationSetupStepStep = "ai_models"
+	OauthApp InstallationSetupStepStep = "oauth_app"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSetupStepStep enum.
 func (e InstallationSetupStepStep) Valid() bool {
 	switch e {
-	case InstallationSetupStepStepAiModels:
+	case AiModels:
 		return true
-	case InstallationSetupStepStepGoogleApp:
+	case OauthApp:
 		return true
 	default:
 		return false
@@ -11782,6 +11800,30 @@ func (e WorklistScopeOptions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistBandBand.
+const (
+	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
+	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandNow           WorklistBandBand = "now"
+	WorklistBandBandReview        WorklistBandBand = "review"
+)
+
+// Valid indicates whether the value is a known member of the WorklistBandBand enum.
+func (e WorklistBandBand) Valid() bool {
+	switch e {
+	case WorklistBandBandBuildPipeline:
+		return true
+	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandNow:
+		return true
+	case WorklistBandBandReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistBatchKey.
 const (
 	CompanyMatch     WorklistBatchKey = "company_match"
@@ -11814,6 +11856,7 @@ func (e WorklistBatchKey) Valid() bool {
 
 // Defines values for WorklistComparisonComparator.
 const (
+	WorklistComparisonComparatorCrowded         WorklistComparisonComparator = "crowded"
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
 	WorklistComparisonComparatorExpectedRevenue WorklistComparisonComparator = "expected_revenue"
 	WorklistComparisonComparatorLevel           WorklistComparisonComparator = "level"
@@ -11826,6 +11869,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistComparisonComparator enum.
 func (e WorklistComparisonComparator) Valid() bool {
 	switch e {
+	case WorklistComparisonComparatorCrowded:
+		return true
 	case WorklistComparisonComparatorDeadline:
 		return true
 	case WorklistComparisonComparatorExpectedRevenue:
@@ -11908,6 +11953,30 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemBand.
+const (
+	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
+	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandNow           WorklistItemBand = "now"
+	WorklistItemBandReview        WorklistItemBand = "review"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemBand enum.
+func (e WorklistItemBand) Valid() bool {
+	switch e {
+	case WorklistItemBandBuildPipeline:
+		return true
+	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandNow:
+		return true
+	case WorklistItemBandReview:
 		return true
 	default:
 		return false
@@ -12717,16 +12786,16 @@ func (e OidcSignInCallbackParamsProvider) Valid() bool {
 
 // Defines values for StartOidcSignInParamsProvider.
 const (
-	StartOidcSignInParamsProviderGoogle    StartOidcSignInParamsProvider = "google"
-	StartOidcSignInParamsProviderMicrosoft StartOidcSignInParamsProvider = "microsoft"
+	Google    StartOidcSignInParamsProvider = "google"
+	Microsoft StartOidcSignInParamsProvider = "microsoft"
 )
 
 // Valid indicates whether the value is a known member of the StartOidcSignInParamsProvider enum.
 func (e StartOidcSignInParamsProvider) Valid() bool {
 	switch e {
-	case StartOidcSignInParamsProviderGoogle:
+	case Google:
 		return true
-	case StartOidcSignInParamsProviderMicrosoft:
+	case Microsoft:
 		return true
 	default:
 		return false
@@ -13958,7 +14027,17 @@ type AIFeedbackInput struct {
 
 	// SubjectType The record the claim is about. One ledger across all four, so a correction made on one screen binds on the others.
 	SubjectType AIFeedbackInputSubjectType `json:"subject_type"`
-	Verdict     AIFeedbackInputVerdict     `json:"verdict"`
+
+	// ValueCapturedAt The `captured_at` of the value the client rendered. Send back whatever the read handed you (`PersonProfileField.captured_at`), beside `value_shown`.
+	// It RANKS two submissions about the same claim rather than deciding what either is about. Both stamps are the server's own, so a page that rendered the newer value carries the later one — and a correction typed against a value that has since moved is refused with 409 rather than replacing the verdict a colleague recorded about the value that stands.
+	// Optional, and omitting it is not an error: a submission that carries no stamp is not ranked against anything and simply lands.
+	ValueCapturedAt *time.Time `json:"value_captured_at,omitempty"`
+
+	// ValueShown The value the client RENDERED — the sentence the human actually had in front of them when they decided. Send back whatever the read handed you (`PersonProfileField.value`).
+	// This is what the verdict is ABOUT, and the reader compares it against the value it is asked to apply the verdict to. A record whose value has moved on since the page was drawn keeps the verdict on file and does not apply it, which is the point: a correction to one sentence must not be applied to a different one.
+	// Optional. Omitting it falls back to comparing WHEN the verdict was recorded against when the value last changed — a proxy, and the answer every verdict recorded before this field existed still gets.
+	ValueShown *string                `json:"value_shown,omitempty"`
+	Verdict    AIFeedbackInputVerdict `json:"verdict"`
 }
 
 // AIFeedbackInputClaimKind defines model for AIFeedbackInput.ClaimKind.
@@ -14488,7 +14567,8 @@ type AiCall struct {
 	CorrelationId *openapi_types.UUID `json:"correlation_id,omitempty"`
 	Degraded      bool                `json:"degraded"`
 
-	// ErrorSentinel Stable failure code; null on success.
+	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
+	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
 	// HasPayload A captured payload row exists for this call.
@@ -14560,7 +14640,8 @@ type AiCallSummary struct {
 	CallsAttempted int  `json:"calls_attempted"`
 	Degraded       bool `json:"degraded"`
 
-	// ErrorSentinel Stable failure code; null on success.
+	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
+	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
 	// HasPayload A captured payload row exists for this call.
@@ -17510,6 +17591,59 @@ type ConnectProviderRequest struct {
 	Configuration *ProviderConfiguration `json:"configuration,omitempty"`
 }
 
+// ConnectorApp defines model for ConnectorApp.
+type ConnectorApp struct {
+	// ClientId The vendor's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
+	ClientId string `json:"client_id"`
+
+	// Configured Whether this vendor's app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can this vendor's mail and calendar be connected", which is a different question from where the app came from.
+	Configured bool `json:"configured"`
+
+	// Provider Which vendor's app this describes, echoed so a cached response cannot be misread.
+	Provider ConnectorAppProvider `json:"provider"`
+
+	// RedirectUris Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
+	RedirectUris []ConnectorAppRedirectUri `json:"redirect_uris"`
+
+	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+	Source ConnectorAppSource `json:"source"`
+
+	// Tenant The Entra directory (tenant) id a Microsoft app is pinned to. OMITTED, not empty, when the app authorizes any organization — and always omitted for `google`, which has no such concept, where a value would be a field that silently does nothing. A client that expects a string here reads the unpinned case as the wrong shape rather than as absent.
+	Tenant *string `json:"tenant,omitempty"`
+}
+
+// ConnectorAppProvider Which vendor's app this describes, echoed so a cached response cannot be misread.
+type ConnectorAppProvider string
+
+// ConnectorAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
+type ConnectorAppSource string
+
+// ConnectorAppInput defines model for ConnectorAppInput.
+type ConnectorAppInput struct {
+	// ClientId The vendor's OAuth client id. Google's end in `.apps.googleusercontent.com`; Microsoft's is the Application (client) ID from the Entra app registration's Overview, a GUID. A value of neither shape is refused: it is almost always a neighbouring field copied from the same console screen — the project number, an API key, or the app's display name.
+	ClientId string `json:"client_id"`
+
+	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
+	ClientSecret *string `json:"client_secret,omitempty"`
+
+	// Tenant The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's members may authorize. Omit it to authorize any organization, which is what a multi-tenant registration is for. Refused for `google`, and refused for the authority aliases `common`, `organizations` and `consumers` — each of those widens the app to a population nobody vetted, and an empty field says the same thing without an alias a reader has to know to interpret.
+	Tenant *string `json:"tenant,omitempty"`
+}
+
+// ConnectorAppRedirectUri One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it.
+type ConnectorAppRedirectUri struct {
+	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
+	Purpose ConnectorAppRedirectUriPurpose `json:"purpose"`
+
+	// Url The absolute URL to register, exactly as it must be pasted.
+	Url string `json:"url"`
+}
+
+// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
+type ConnectorAppRedirectUriPurpose string
+
 // ConsentEvent An append-only proof row (Art. 7 demonstrability). Never updated or deleted.
 type ConsentEvent struct {
 	ActorId     *string                `json:"actor_id,omitempty"`
@@ -19845,47 +19979,6 @@ type FxRateListResponse struct {
 	Data         []FxRate `json:"data"`
 }
 
-// GoogleApp defines model for GoogleApp.
-type GoogleApp struct {
-	// ClientId Google's public identifier for the app in use, or empty when there is none. Returned in the clear because it is not a secret — it travels in every authorization redirect — and an operator needs it to check which app the installation uses.
-	ClientId string `json:"client_id"`
-
-	// Configured Whether a Google app is available to this installation from any source — true when `source` is `stored` or `environment`. It answers "can Gmail and Calendar be connected", which is a different question from where the app came from.
-	Configured bool `json:"configured"`
-
-	// RedirectUris Every callback URL that must be registered as an Authorized redirect URI on the Google OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause.
-	RedirectUris []GoogleAppRedirectUri `json:"redirect_uris"`
-
-	// Source Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
-	Source GoogleAppSource `json:"source"`
-}
-
-// GoogleAppSource Where the app in use comes from. `stored` is one saved through this surface, which wins over the deployment's. `environment` is the pair the deployment composed, used whenever nothing is stored — so removing a stored app reverts to it rather than leaving the installation with none. `none` means neither source can supply one.
-type GoogleAppSource string
-
-// GoogleAppInput defines model for GoogleAppInput.
-type GoogleAppInput struct {
-	// ClientId Google's OAuth client id, which ends in `.apps.googleusercontent.com`. A value that does not is refused: it is almost always the project number or an API key copied from the same console screen.
-	ClientId string `json:"client_id"`
-
-	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
-	ClientSecret *string `json:"client_secret,omitempty"`
-}
-
-// GoogleAppRedirectUri One callback URL that must be registered as an Authorized redirect URI on the Google OAuth client. Built by the code that SENDS it, so the value shown to an operator and the value Google receives cannot be different bytes.
-type GoogleAppRedirectUri struct {
-	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
-	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
-	Purpose GoogleAppRedirectUriPurpose `json:"purpose"`
-
-	// Url The absolute URL to register, exactly as it must be pasted.
-	Url string `json:"url"`
-}
-
-// GoogleAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user Gmail and Calendar consent callbacks, which are SEPARATE connectors served on different paths — one Google app backs all three, and registering only some of them fails the others with `redirect_uri_mismatch`.
-// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts.
-type GoogleAppRedirectUriPurpose string
-
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
 // `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -20504,11 +20597,11 @@ type InstallationSetupStep struct {
 	// Configured Whether this step is done.
 	Configured bool `json:"configured"`
 
-	// Step Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+	// Step Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `oauth_app` is a connector OAuth app — Google's or Microsoft's, either of which makes mailbox and calendar capture connectable, so the step is done once ANY vendor's app is available.
 	Step InstallationSetupStepStep `json:"step"`
 }
 
-// InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `google_app` is the installation's Google OAuth app.
+// InstallationSetupStepStep Which step this is. `ai_models` is a bound tier→model routing plus a credential for every cloud vendor it names; `oauth_app` is a connector OAuth app — Google's or Microsoft's, either of which makes mailbox and calendar capture connectable, so the step is done once ANY vendor's app is available.
 type InstallationSetupStepStep string
 
 // IntegrationsSettings The installation's provider-lookup posture. Read by every role, changed only by
@@ -28988,6 +29081,15 @@ type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// Bands The outcome headings, in the order a page draws them, each with how many of this
+	// page's rows sit under it.
+	//
+	// Every band appears, including one with no rows: "nothing needs you today" is
+	// something to tell a reader, and a client inferring the headings from the rows it
+	// received could not say it. The queue arrives sorted so each band's rows are
+	// contiguous — a client draws a heading where the band changes.
+	Bands *[]WorklistBand `json:"bands,omitempty"`
+
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
 	// before any narrowing, so a filtered page still reports the categories it is
@@ -29029,6 +29131,22 @@ type WorklistScope string
 
 // WorklistScopeOptions defines model for Worklist.ScopeOptions.
 type WorklistScopeOptions string
+
+// WorklistBand One outcome band and how much of it this page is showing — the headings a client draws,
+// in the order it draws them.
+//
+// Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+// told something ("nothing needs you today"), and a client that inferred the headings from
+// the rows it received could not say it.
+type WorklistBand struct {
+	Band WorklistBandBand `json:"band"`
+
+	// Shown How many rows of this band are on the page.
+	Shown int `json:"shown"`
+}
+
+// WorklistBandBand defines model for WorklistBand.Band.
+type WorklistBandBand string
 
 // WorklistBatch A group of routine decisions that read alike, standing on the queue as one row.
 //
@@ -29090,7 +29208,14 @@ type WorklistBatchKey string
 //
 // Absent on the last row of the page, which has nothing below it to beat.
 type WorklistComparison struct {
-	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the
+	// client renders as no reason at all.
+	//
+	// `crowded` means the row below is one of many of its kind: past a lead group, further
+	// rows of the same source sort under the other kinds of work so one noisy lane cannot own
+	// the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+	// otherwise bury the reader's one overdue task — which is why it can be the answer even
+	// when the two rows share a level.
 	Comparator WorklistComparisonComparator `json:"comparator"`
 
 	// Mine A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -29104,7 +29229,14 @@ type WorklistComparison struct {
 	Theirs *WorklistValue `json:"theirs,omitempty"`
 }
 
-// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the
+// client renders as no reason at all.
+//
+// `crowded` means the row below is one of many of its kind: past a lead group, further
+// rows of the same source sort under the other kinds of work so one noisy lane cannot own
+// the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+// otherwise bury the reader's one overdue task — which is why it can be the answer even
+// when the two rows share a level.
 type WorklistComparisonComparator string
 
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
@@ -29177,6 +29309,17 @@ type WorklistItem struct {
 
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
+
+	// Band The heading this row sits under, as an OUTCOME rather than a priority number.
+	//
+	// `level` says what kind of work a row is; the band says what the reader is being asked
+	// to do about it today. Seven levels make a correct ordering and poor headings — a reader
+	// scanning for "what must happen now" should not have to know which levels mean that.
+	//
+	// Derived from the level and the row's own subject, so it cannot disagree with the order:
+	// the queue arrives already sorted, and every row of one band is contiguous. A client
+	// draws a heading when the band changes and never re-sorts.
+	Band *WorklistItemBand `json:"band,omitempty"`
 
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
 	//
@@ -29285,6 +29428,17 @@ type WorklistItem struct {
 
 // WorklistItemActions defines model for WorklistItem.Actions.
 type WorklistItemActions string
+
+// WorklistItemBand The heading this row sits under, as an OUTCOME rather than a priority number.
+//
+// `level` says what kind of work a row is; the band says what the reader is being asked
+// to do about it today. Seven levels make a correct ordering and poor headings — a reader
+// scanning for "what must happen now" should not have to know which levels mean that.
+//
+// Derived from the level and the row's own subject, so it cannot disagree with the order:
+// the queue arrives already sorted, and every row of one band is contiguous. A client
+// draws a heading when the band changes and never re-sorts.
+type WorklistItemBand string
 
 // WorklistItemCategory The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 type WorklistItemCategory string
@@ -34284,8 +34438,8 @@ type CreateImportRunJSONRequestBody = CreateImportRunRequest
 // UploadImportSourceMultipartRequestBody defines body for UploadImportSource for multipart/form-data ContentType.
 type UploadImportSourceMultipartRequestBody UploadImportSourceMultipartBody
 
-// SetGoogleAppJSONRequestBody defines body for SetGoogleApp for application/json ContentType.
-type SetGoogleAppJSONRequestBody = GoogleAppInput
+// SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
+type SetOauthAppJSONRequestBody = ConnectorAppInput
 
 // UpdateInstallationSettingsJSONRequestBody defines body for UpdateInstallationSettings for application/json ContentType.
 type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsRequest
@@ -42992,18 +43146,18 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Remove the installation's Google OAuth app (admin/ops).
-	// (DELETE /installation/google-app)
-	DeleteGoogleApp(w http.ResponseWriter, r *http.Request)
-	// Whether this installation has a Google OAuth app, and which one.
-	// (GET /installation/google-app)
-	GetGoogleApp(w http.ResponseWriter, r *http.Request)
-	// Store the installation's Google OAuth app (admin/ops).
-	// (PUT /installation/google-app)
-	SetGoogleApp(w http.ResponseWriter, r *http.Request)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
+	// Remove one vendor's OAuth app (admin/ops).
+	// (DELETE /installation/oauth-apps/{provider})
+	DeleteOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// Whether this installation has one vendor's OAuth app, and which one.
+	// (GET /installation/oauth-apps/{provider})
+	GetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// Store one vendor's OAuth app for this installation (admin/ops).
+	// (PUT /installation/oauth-apps/{provider})
+	SetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
 	// The installation's own settings.
 	// (GET /installation/settings)
 	GetInstallationSettings(w http.ResponseWriter, r *http.Request)
@@ -45290,27 +45444,27 @@ func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Remove the installation's Google OAuth app (admin/ops).
-// (DELETE /installation/google-app)
-func (_ Unimplemented) DeleteGoogleApp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Whether this installation has a Google OAuth app, and which one.
-// (GET /installation/google-app)
-func (_ Unimplemented) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Store the installation's Google OAuth app (admin/ops).
-// (PUT /installation/google-app)
-func (_ Unimplemented) SetGoogleApp(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // The installation's entitlement and seat usage (admin/ops).
 // (GET /installation/license)
 func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove one vendor's OAuth app (admin/ops).
+// (DELETE /installation/oauth-apps/{provider})
+func (_ Unimplemented) DeleteOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether this installation has one vendor's OAuth app, and which one.
+// (GET /installation/oauth-apps/{provider})
+func (_ Unimplemented) GetOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store one vendor's OAuth app for this installation (admin/ops).
+// (PUT /installation/oauth-apps/{provider})
+func (_ Unimplemented) SetOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56211,66 +56365,6 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// DeleteGoogleApp operation middleware
-func (siw *ServerInterfaceWrapper) DeleteGoogleApp(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteGoogleApp(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetGoogleApp operation middleware
-func (siw *ServerInterfaceWrapper) GetGoogleApp(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetGoogleApp(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetGoogleApp operation middleware
-func (siw *ServerInterfaceWrapper) SetGoogleApp(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetGoogleApp(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetLicenseEntitlement operation middleware
 func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
 
@@ -56282,6 +56376,102 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLicenseEntitlement(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteOauthApp operation middleware
+func (siw *ServerInterfaceWrapper) DeleteOauthApp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteOauthApp(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOauthApp operation middleware
+func (siw *ServerInterfaceWrapper) GetOauthApp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOauthApp(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetOauthApp operation middleware
+func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetOauthApp(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71871,16 +72061,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/installation/google-app", wrapper.DeleteGoogleApp)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/installation/google-app", wrapper.GetGoogleApp)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/installation/google-app", wrapper.SetGoogleApp)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.DeleteOauthApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.GetOauthApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.SetOauthApp)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/settings", wrapper.GetInstallationSettings)

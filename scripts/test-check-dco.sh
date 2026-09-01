@@ -236,15 +236,65 @@ case_is "a merge commit needs no sign-off" "$merge_base" "$merged" 0 "are signed
 
 case_is "an empty range is refused, not passed" "$merged" "$merged" 1 "holds no commits"
 
-# A base that RESOLVES and is not behind the head is the dangerous shape, and it
-# is the one `git rev-list` answers silently: not an error, just nothing. The
-# advisory main-health lane asserted this and the required ci.yml job did not,
-# so the protection lived where it could not block a merge.
+# A BASE THAT HAS MOVED ON is the ordinary case, not a fault: main takes another
+# merge while a pull request sits open, and the base sha the caller hands over is
+# that branch's TIP rather than the point the branch was cut from. The RANGE was
+# always right — `base..head` excludes the base's own new commits — and the
+# ancestry assertion was what refused a pull request over somebody else's merge.
 git -C "$repo" checkout -q -b sideways "$base"
 sideways="$(commit_with "a commit on a branch of its own
 
 $signed")"
-case_is "a base that is not an ancestor is refused" "$sideways" "$merged" 1 "not an ancestor"
+case_is "a base that has moved on is judged, not refused" "$sideways" "$merged" 0 "are signed off"
+
+# And the same shape with the pull request's OWN commit unsigned still fails, so
+# the case above is the gate reading the right range rather than reading none.
+git -C "$repo" checkout -q -b sideways-unsigned "$base"
+unsigned_head="$(commit_with "a commit with no trailer at all")"
+git -C "$repo" checkout -q sideways
+case_is "and an unsigned commit past a moved base is still named" "$sideways" "$unsigned_head" 1 "$unsigned_head"
+
+# CRISS-CROSS, which is what makes `base..head` the right range rather than
+# merely a simpler one.
+#
+# Two branches off one root, each merged into the other: the pair then has TWO
+# best common ancestors, and `git merge-base` names one of them. A range starting
+# there reaches the commit the OTHER ancestor already gave the base — so a gate
+# reading from the merge base judges a commit this pull request did not
+# introduce, and refuses it for a trailer that is somebody else's to add.
+#
+# `base..head` excludes it by construction, which is the whole reason the range
+# is anchored on the base.
+#
+# BOTH sides unsigned, and that is what makes the case deterministic: `git
+# merge-base` names whichever of the two bests it likes, so a fixture with one
+# unsigned side passes or fails on that choice. With both, whichever it names,
+# the OTHER is in the merge-base range and in neither pull request.
+git -C "$repo" checkout -q -b cross-left "$base"
+left="$(commit_with "the left side with no trailer at all")"
+git -C "$repo" checkout -q -b cross-right "$base"
+right="$(commit_with "the right side with no trailer at all")"
+git -C "$repo" checkout -q -b cross-base "$left"
+git -C "$repo" merge -q --no-ff --no-verify -m "Merge right into base
+
+$signed" cross-right
+cross_base="$(git -C "$repo" rev-parse HEAD)"
+git -C "$repo" checkout -q -b cross-head "$right"
+git -C "$repo" merge -q --no-ff --no-verify -m "Merge left into head
+
+$signed" cross-left
+git -C "$repo" commit -q --allow-empty -m "the pull request's own commit
+
+$signed"
+cross_head="$(git -C "$repo" rev-parse HEAD)"
+case_is "a commit the base already has is not judged, however the ancestors cross" \
+    "$cross_base" "$cross_head" 0 "are signed off"
+
+# Histories that share nothing at all cannot be ranged over, and saying so beats
+# reading whatever `A..B` happens to mean for them.
+unrelated="$(git -C "$repo" mktree </dev/null)"
+orphan="$(git -C "$repo" commit-tree "$unrelated" -m "an orphan")"
+case_is "histories that share nothing are refused" "$orphan" "$merged" 1 "share no history"
 
 # And the success line carries its own DENOMINATOR, which is what makes a run
 # that read nothing unable to look like one that read everything.

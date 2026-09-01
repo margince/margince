@@ -306,7 +306,10 @@ func (e *Entry[T]) AuditImage(raw json.RawMessage) json.RawMessage {
 		return raw
 	}
 	switch string(raw) {
-	case "", "null", `""`:
+	// "{}" among them: a setting whose value is a STRUCT holding a ref reads as
+	// an empty object once removed, and rendering that as a sealed reference
+	// would record a removal as though a credential still stood behind it.
+	case "", "null", `""`, "{}":
 		return json.RawMessage(`"none"`)
 	default:
 		return json.RawMessage(`"a sealed reference (redacted)"`)

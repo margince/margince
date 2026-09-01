@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { GoogleAppCard } from "./google-app";
+import { OAuthAppCard } from "./oauth-app";
 
 afterEach(() => {
   cleanup();
@@ -22,9 +22,11 @@ afterEach(() => {
 
 const CLIENT_ID = "111-abc.apps.googleusercontent.com";
 
-type GoogleAppResponse = {
+type OAuthAppResponse = {
+  provider: "google" | "microsoft";
   configured: boolean;
   client_id: string;
+  tenant?: string;
   source: "stored" | "environment" | "none";
   redirect_uris: { purpose: string; url: string }[];
 };
@@ -36,8 +38,9 @@ type GoogleAppResponse = {
 const SIGN_IN_URI = "https://api.acme.test/v1/auth/oidc/google/callback";
 const CONNECT_URI = "https://api.acme.test/v1/connectors/google/callback";
 
-function stored(): GoogleAppResponse {
+function stored(): OAuthAppResponse {
   return {
+    provider: "google",
     configured: true,
     client_id: CLIENT_ID,
     source: "stored",
@@ -48,8 +51,9 @@ function stored(): GoogleAppResponse {
   };
 }
 
-function fromEnvironment(): GoogleAppResponse {
+function fromEnvironment(): OAuthAppResponse {
   return {
+    provider: "google",
     configured: true,
     client_id: CLIENT_ID,
     source: "environment",
@@ -57,8 +61,9 @@ function fromEnvironment(): GoogleAppResponse {
   };
 }
 
-function absent(): GoogleAppResponse {
+function absent(): OAuthAppResponse {
   return {
+    provider: "google",
     configured: false,
     client_id: "",
     source: "none",
@@ -66,7 +71,10 @@ function absent(): GoogleAppResponse {
   };
 }
 
-function mount(app: GoogleAppResponse) {
+function mount(
+  app: OAuthAppResponse,
+  provider: "google" | "microsoft" = "google",
+) {
   const calls: { method: string; url: string; body?: unknown }[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
@@ -95,7 +103,7 @@ function mount(app: GoogleAppResponse) {
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(<GoogleAppCard />, { wrapper: Wrap });
+  render(<OAuthAppCard provider={provider} />, { wrapper: Wrap });
   return { calls };
 }
 
@@ -160,7 +168,7 @@ describe("the Google app card", () => {
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0]).toMatchObject({
       method: "PUT",
-      url: "/v1/installation/google-app",
+      url: "/v1/installation/oauth-apps/google",
       body: { client_id: CLIENT_ID, client_secret: "GOCSPX-secret" },
     });
     // Cleared on the way out: the field was the only copy this app held.
@@ -179,8 +187,32 @@ describe("the Google app card", () => {
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0]).toMatchObject({
       method: "DELETE",
-      url: "/v1/installation/google-app",
+      url: "/v1/installation/oauth-apps/google",
     });
+  });
+
+  // A DRAFT THE OPERATOR ABANDONED goes with the app.
+  //
+  // Typing replacement credentials and then deciding to remove instead left
+  // both fields populated and Store app ready to press — offering to store a
+  // secret they had just decided to be rid of, against an app that no longer
+  // exists.
+  it("clears the typed credentials when the app is removed instead", async () => {
+    const user = userEvent.setup();
+    mount(stored());
+    const id = await screen.findByLabelText<HTMLInputElement>("Client ID");
+    const secret = screen.getByLabelText<HTMLInputElement>("Client secret");
+    await user.type(id, CLIENT_ID);
+    await user.type(secret, "GOCSPX-typed-then-abandoned");
+
+    await user.click(screen.getByRole("button", { name: "Remove app" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Remove app" }),
+    );
+
+    await waitFor(() => expect(secret.value).toBe(""));
+    expect(id.value).toBe("");
   });
 
   // The secret cannot be read back and every mailbox is connected through this
@@ -192,5 +224,111 @@ describe("the Google app card", () => {
     await user.click(await screen.findByRole("button", { name: "Remove app" }));
     await screen.findByRole("dialog");
     expect(calls).toEqual([]);
+  });
+});
+
+// The SAME card, rendered for the other vendor. Two things must differ and
+// nothing else: the words around the form, and the directory field — an Entra
+// app may be pinned to one tenant, and Google has no such concept, so offering
+// the field there would be one that silently does nothing.
+describe("the Microsoft app card", () => {
+  const ENTRA_ID = "11111111-2222-3333-4444-555555555555";
+  const DIRECTORY = "99999999-8888-7777-6666-555555555555";
+  // A Microsoft app's callbacks live under its OWN connector path. Reusing the
+  // Google one would read as the real Microsoft URL to the next author.
+  const GRAPH_CONNECT_URI =
+    "https://api.acme.test/v1/connectors/graph/callback";
+
+  function microsoft(): OAuthAppResponse {
+    return {
+      provider: "microsoft",
+      configured: true,
+      client_id: ENTRA_ID,
+      tenant: DIRECTORY,
+      source: "stored",
+      redirect_uris: [{ purpose: "mailbox_connect", url: GRAPH_CONNECT_URI }],
+    };
+  }
+
+  it("names the vendor whose console the operator is copying from", async () => {
+    mount(microsoft(), "microsoft");
+    expect(await screen.findByText("Microsoft app")).toBeTruthy();
+    expect(screen.queryByText("Google app")).toBeNull();
+  });
+
+  // A DEPLOYMENT-SUPPLIED app can be pinned too, and the pin is a fact about
+  // who may sign in rather than a fact about where the app came from. Hiding it
+  // for the environment case would leave an operator debugging a refused login
+  // with no way to see that the directory is the reason.
+  it("reports the directory even when the app came from the environment", async () => {
+    const app = microsoft();
+    app.source = "environment";
+    mount(app, "microsoft");
+    expect(
+      await screen.findByText(`Pinned to directory ${DIRECTORY}.`),
+    ).toBeTruthy();
+  });
+
+  it("reports the directory a stored app is pinned to", async () => {
+    mount(microsoft(), "microsoft");
+    expect(
+      await screen.findByText(`Pinned to directory ${DIRECTORY}.`),
+    ).toBeTruthy();
+  });
+
+  it("sends the directory it was given, to the vendor's own path", async () => {
+    const user = userEvent.setup();
+    const unpinned = microsoft();
+    unpinned.tenant = undefined;
+    const { calls } = mount(unpinned, "microsoft");
+    await user.type(await screen.findByLabelText("Client ID"), ENTRA_ID);
+    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.type(screen.getByLabelText("Directory (tenant) ID"), DIRECTORY);
+    await user.click(screen.getByRole("button", { name: "Replace app" }));
+
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(calls[0]).toMatchObject({
+      method: "PUT",
+      url: "/v1/installation/oauth-apps/microsoft",
+      body: { client_id: ENTRA_ID, client_secret: "s3cret", tenant: DIRECTORY },
+    });
+  });
+
+  // Rotating a secret is not a decision about which directory may authorize.
+  // A field that started blank would send no tenant and widen the app to every
+  // organization — the one change on this card nobody would see happen.
+  it("carries a pinned directory through a rotation nobody retyped", async () => {
+    const user = userEvent.setup();
+    const { calls } = mount(microsoft(), "microsoft");
+    await user.type(await screen.findByLabelText("Client ID"), ENTRA_ID);
+    await user.type(screen.getByLabelText("Client secret"), "rotated");
+    await user.click(screen.getByRole("button", { name: "Replace app" }));
+
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(calls[0]?.body).toMatchObject({ tenant: DIRECTORY });
+  });
+
+  // And widening it stays possible — as a deliberate act. An empty field is
+  // "not pinned", which is a different thing from a tenant of "": the server
+  // refuses an empty value, so the field is omitted rather than sent blank.
+  it("widens the app only when the directory is explicitly cleared", async () => {
+    const user = userEvent.setup();
+    const { calls } = mount(microsoft(), "microsoft");
+    await user.type(await screen.findByLabelText("Client ID"), ENTRA_ID);
+    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.clear(screen.getByLabelText("Directory (tenant) ID"));
+    await user.click(screen.getByRole("button", { name: "Replace app" }));
+
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(calls[0]?.body).not.toHaveProperty("tenant");
+  });
+
+  // Google has no directories. A field that accepted one would be a field that
+  // silently does nothing, which is worse than an absent one: the operator who
+  // fills it in believes they narrowed something.
+  it("offers no directory field for Google", async () => {
+    mount(stored());
+    await screen.findByLabelText("Client ID");
+    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
   });
 });

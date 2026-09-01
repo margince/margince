@@ -204,3 +204,40 @@ func TestAMalformedEnvDurationIsReportedBesideTheOtherFaults(t *testing.T) {
 		}
 	}
 }
+
+// The boot line names BOTH halves of an environment app, and neither when there
+// is no environment app at all.
+//
+// The three states are not two: an installation with no Entra app in the
+// environment has not omitted flags, it declined them, and telling it what is
+// "missing" sends an operator to supply credentials they deliberately keep in
+// Settings. Either flag ALONE is somebody part-way through, and which half is
+// absent is the whole content of the message.
+func TestTheBootLineNamesWhichHalfOfTheEnvironmentAppIsMissing(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		cfg  apiConfig
+		want string
+	}{
+		"no environment app":  {apiConfig{}, ""},
+		"complete":            {apiConfig{graphClientID: "id", graphClientSecret: "s"}, ""},
+		"id without a secret": {apiConfig{graphClientID: "id"}, "--graph-client-secret"},
+		"secret without an id": {
+			apiConfig{graphClientSecret: "s"}, "--graph-client-id",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := envAppShortfall(tc.cfg)
+			if tc.want == "" {
+				if got != "" {
+					t.Errorf("shortfall = %q, want nothing said", got)
+				}
+				return
+			}
+			if !strings.Contains(got, tc.want) {
+				t.Errorf("shortfall = %q, want it to name %s", got, tc.want)
+			}
+		})
+	}
+}

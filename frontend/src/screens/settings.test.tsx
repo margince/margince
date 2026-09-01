@@ -513,9 +513,9 @@ describe("installation-wide cards live under the admin group", () => {
     return walk(tabContent(id));
   }
 
-  it("puts the Google app on an admin entry, not beside a person's own connections", () => {
+  it("puts the vendor OAuth apps on an admin entry, not beside a person's own connections", () => {
     const hosts = SETTINGS_TABS.filter((tab) =>
-      tabRenders(tab.id, "GoogleAppCard"),
+      tabRenders(tab.id, "OAuthAppCard"),
     );
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.group).toBe("admin");

@@ -37,7 +37,7 @@ sealed in the vault, never written to the connection row, and **destroyed on dis
 | **Gmail** | OAuth standing connection | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
 | **Gmail** | IMAP standing connection | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
 | **Outlook / M365** | IMAP standing connection | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
-| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (poll-only) | a Microsoft Entra app + the vault key |
+| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (+ push) | a Microsoft Entra app + the vault key |
 | **Outlook / M365 calendar** | Graph OAuth standing connection | Rolling window (90d back / 1y ahead), no manual backfill | the *same* Entra app + `Calendars.Read`, its own consent |
 | **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
 
@@ -228,24 +228,24 @@ mailbox is easiest). This is a security guard, not a bug.
 
 ## Path C — Outlook / Microsoft 365 over Graph (standing connection)
 
-Graph is the richer Outlook path — a standing connection with delta-cursor sync and backfill — but it is
-**poll-only** (no push subscription built yet). The shape mirrors Path A, and it now has the same
-first-connect UI: an onboarding **Microsoft** chip and a Settings **Add a connection** button.
+Graph is the richer Outlook path — delta-cursor sync, backfill and push — and mirrors Path A's shape.
 
 ### C1. Prerequisites (operator config)
 
-```sh
-export MARGINCE_GRAPH_CLIENT_ID="<entra-app-id>"
-export MARGINCE_GRAPH_CLIENT_SECRET="<entra-app-secret>"
-export MARGINCE_GRAPH_TENANT="common"   # or a specific tenant id
-# plus the same MARGINCE_CONNECTOR_STATE_KEY / MARGINCE_KEYVAULT_ROOT_KEY / MARGINCE_PUBLIC_BASE_URL as A1
-```
-
 Register a Microsoft Entra (Azure AD) app with delegated permissions `offline_access User.Read
-Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`, then `make dev`
-to pick up the env. `Mail.Send` rides the same consent because Microsoft will not add a permission to
-an existing refresh token — a mailbox connected without it captures normally and refuses every send
-by name until it is reconnected.
+Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`. `Mail.Send`
+rides the same consent because Microsoft will not add a permission to an existing refresh token — a
+mailbox connected without it captures normally and refuses every send by name until it is
+reconnected.
+
+Then give the app to the installation, either way — a stored app wins and takes effect on the next
+consent, with no restart. **Settings → General → Microsoft app** takes the Application (client)
+ID and secret, optionally a Directory (tenant) ID to pin it to one directory, and lists the redirect
+URIs to register byte for byte. Or the environment, which still works: `MARGINCE_GRAPH_CLIENT_ID`,
+`MARGINCE_GRAPH_CLIENT_SECRET`, optional `MARGINCE_GRAPH_TENANT` (unset or `common` for any
+organization, a directory id to pin it), plus the same A1 keys — then `make dev`. Push is optional
+and the lane polls without it: the SAME `MARGINCE_GRAPH_PUSH_TOKEN` on api and worker, and
+`MARGINCE_GRAPH_NOTIFICATION_URL` of `https://<api>/webhooks/graph?token=<that token>`.
 
 ### C2. Connect from the UI
 

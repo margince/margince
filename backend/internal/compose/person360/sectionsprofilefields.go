@@ -113,14 +113,18 @@ func (s *Service) applyFieldVerdicts(
 		if !found {
 			continue
 		}
-		// AGAINST f.CapturedAt, which is this row's updated_at — when the
-		// value took its current form. A human's decision is about the answer
-		// that was in front of them, and something may have replaced it since:
-		// a machine fill cannot (it writes DO NOTHING over a row that exists),
-		// but an accepted research claim replaces the whole row and moves this
-		// date. A verdict older than that is about a value the record no
-		// longer holds, and ai.Verdict.AsOf is where that ruling lives.
-		decision, applies := v.AsOf(f.CapturedAt)
+		// AGAINST THE VALUE, with f.CapturedAt behind it for the rows that
+		// name none.
+		//
+		// A human's decision is about the answer that was in front of them, and
+		// something may have replaced it since: a machine fill cannot (it
+		// writes DO NOTHING over a row that exists), but an accepted research
+		// claim replaces the whole row. The value is what says whether it did.
+		// f.CapturedAt is this row's updated_at, which its trigger moves on
+		// every update — including one that revises the source and leaves the
+		// sentence alone — so it answers a different question than the one
+		// being asked. ai.Verdict.AsOf is where that ruling lives.
+		decision, applies := v.AsOf(f.Value, f.CapturedAt)
 		if !applies {
 			continue
 		}

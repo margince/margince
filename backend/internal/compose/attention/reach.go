@@ -172,7 +172,12 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 		return "meetings"
 	case sourceTask, "conversation_claim":
 		return "tasks"
-	case "approval", "dedupe_candidate":
+	case "approval", "dedupe_candidate", "introduction_request":
+		// An introduction ask is a colleague waiting on this reader to decide,
+		// which classifyIntroduction files under decisions at levelBlocking.
+		// It reached the default and was reported as `system` — so a truncated
+		// introductions lane told the reader their SYSTEM cut was short while
+		// the decisions pill, where the rows actually are, read as complete.
 		return "decisions"
 	default:
 		// Everything the product reports about ITSELF — health, notices,

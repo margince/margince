@@ -82,6 +82,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/transport.go:func writeJSON":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/sendclient.go:func SendMIME":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graphcal/client.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/oauthflow/oauthflow.go:func token":    "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",

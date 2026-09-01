@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -121,7 +123,16 @@ type Verdict struct {
 	// created_at: a human who changes their mind is looking at whatever is
 	// there now, and dating their new decision from their old one would make
 	// it stale the moment they made it.
-	recordedAt     time.Time
+	recordedAt time.Time
+	// valueCapturedAt is the value's OWN stamp as the client rendered it —
+	// what the human actually had in front of them, rather than when they
+	// answered. Nil where the verdict does not say: every row written before
+	// the column existed, and any client that sends none.
+	valueCapturedAt *time.Time
+	// valueShown is the value itself, as the client rendered it — the identity
+	// of what the human was looking at. The stamp above ranks two submissions;
+	// this one answers whether a verdict is about the value in hand.
+	valueShown     *string
 	verdict        string
 	correctedValue *string
 	note           *string
@@ -157,16 +168,32 @@ type Decision struct {
 // one transaction, where both carry the same now(), and refusing that case
 // would suppress a decision at the instant it was made.
 //
-// WHAT THIS DOES NOT ANSWER, because it is a different question and needs a
-// contract field to answer at all: whether the human was looking at THIS value
-// when they decided. A page rendered on the old value, a newer value landing,
-// and the correction submitted after it leaves a verdict that is newer than the
-// value and still about the older one. Closing that means the client sending
-// the field version it rendered and the ledger storing it, so the comparison
-// becomes an equality rather than an ordering. What this answers is the case
-// where the verdict is demonstrably older — which is the one that survives
-// forever rather than for the length of one page view.
-func (v Verdict) AsOf(valueAt time.Time) (Decision, bool) {
+// A VERDICT THAT NAMES ITS VALUE IS COMPARED AGAINST THE VALUE. The ordering
+// above is a proxy for the question that matters — was the human looking at
+// this — and the proxy is wrong for the length of one page view: a page
+// rendered on the old value, a newer value landing while it is open, and the
+// correction submitted afterwards is NEWER than the value and about the older
+// one.
+//
+// Against the VALUE and not against its timestamp, because a timestamp is not
+// the identity of what was shown. person_profile_field.updated_at moves on
+// every update of the row, so a re-capture that revises only the source or the
+// evidence bumps it while the sentence on screen is unchanged — and comparing
+// stamps would refuse a verdict about a value still in front of the reader. The
+// value answers the question directly and moves only when the answer does.
+//
+// A verdict that does NOT name one falls back to the ordering. Every row
+// written before the column existed is in that position and there is nothing
+// honest to backfill — what those humans were looking at is not recoverable —
+// so they keep the answer they have always been given rather than being
+// dropped wholesale, which would erase decisions nobody has reason to doubt.
+func (v Verdict) AsOf(value string, valueAt time.Time) (Decision, bool) {
+	if v.valueShown != nil {
+		if *v.valueShown != value {
+			return Decision{}, false
+		}
+		return Decision{Verdict: v.verdict, Note: v.note, CorrectedValue: v.correctedValue}, true
+	}
 	if v.recordedAt.Before(valueAt) {
 		return Decision{}, false
 	}
@@ -176,10 +203,13 @@ func (v Verdict) AsOf(valueAt time.Time) (Decision, bool) {
 // NewVerdict builds one. It exists because the fields above are unexported: the
 // store that reads the ledger and the tests that drive the ruling need a way to
 // set them, and a constructor is a door the recency question cannot slip past.
-func NewVerdict(claimKind, claimKey, verdict string, correctedValue, note *string, recordedAt time.Time) Verdict {
+func NewVerdict(claimKind, claimKey, verdict string, correctedValue, note *string,
+	recordedAt time.Time, valueCapturedAt *time.Time, valueShown *string,
+) Verdict {
 	return Verdict{
 		ClaimKind: claimKind, ClaimKey: claimKey, verdict: verdict,
-		correctedValue: correctedValue, note: note, recordedAt: recordedAt,
+		correctedValue: correctedValue, note: note,
+		recordedAt: recordedAt, valueCapturedAt: valueCapturedAt, valueShown: valueShown,
 	}
 }
 
@@ -195,6 +225,13 @@ type RecordInput struct {
 	Verdict        string
 	CorrectedValue *string
 	Note           *string
+	// ValueShown is the value the CLIENT rendered, which is what the verdict is
+	// about. Empty where the client sends none.
+	ValueShown *string
+	// ValueCapturedAt is the stamp the CLIENT rendered — the value the human
+	// was deciding about. Nil from a caller that does not know it, which
+	// leaves the verdict read by the ordering rather than by equality.
+	ValueCapturedAt *time.Time
 }
 
 // Record writes a human's verdict, replacing any previous one for the same
@@ -310,23 +347,60 @@ func upsertVerdict(ctx context.Context, tx pgx.Tx, in RecordInput, key, captured
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO ai_feedback
 		  (subject_type, subject_id, claim_kind, claim_key,
-		   verdict, corrected_value, note, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'human', $8)
+		   verdict, corrected_value, note, source, captured_by, value_captured_at, value_shown)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'human', $8, $9, $10)
 		ON CONFLICT (subject_type, subject_id, claim_kind, claim_key)
 		DO UPDATE SET verdict = EXCLUDED.verdict,
 		              corrected_value = EXCLUDED.corrected_value,
 		              note = EXCLUDED.note,
 		              captured_by = EXCLUDED.captured_by,
+		              -- The NEW decision's value, including where it is null:
+		              -- a re-decision from a client that sends none is about
+		              -- whatever that client was looking at, and keeping the
+		              -- previous stamp would attach the old answer's subject
+		              -- to a new answer nobody made about it.
+		              value_captured_at = EXCLUDED.value_captured_at,
+		              value_shown = EXCLUDED.value_shown,
 		              version = ai_feedback.version + 1,
 		              updated_at = now()
+		-- A SUBMISSION FROM A STALE PAGE DOES NOT REPLACE ONE ABOUT THE VALUE
+		-- THAT STANDS. Both stamps are the server's own, so they rank: a page
+		-- that rendered the newer value carries the later one. Without this a
+		-- correction typed against a value that has since moved silently
+		-- overwrites the verdict a colleague just recorded about the current
+		-- one, and that verdict is gone.
+		--
+		-- Either side missing a stamp is not a ranking, so the write proceeds:
+		-- a client that names no value is deciding about whatever it had, and
+		-- rows written before this column existed cannot be compared with
+		-- anything.
+		WHERE ai_feedback.value_captured_at IS NULL
+		   OR EXCLUDED.value_captured_at IS NULL
+		   OR EXCLUDED.value_captured_at >= ai_feedback.value_captured_at
 		RETURNING id`,
 		in.SubjectType, in.SubjectID, in.ClaimKind, key,
-		in.Verdict, in.CorrectedValue, in.Note, capturedBy,
+		in.Verdict, in.CorrectedValue, in.Note, capturedBy, in.ValueCapturedAt, in.ValueShown,
 	).Scan(&id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// The refused write above. The row that stands is about a LATER
+			// value than this submission named, so this decision is about a
+			// sentence nobody is looking at any more — and saying so is the
+			// only honest answer: applying it would correct the wrong value,
+			// and swallowing it would tell a human their correction landed.
+			return ids.Nil, fmt.Errorf("ai: this claim moved on while the verdict was being made: %w", ErrValueMovedOn)
+		}
 		return ids.Nil, fmt.Errorf("ai: recording a human's verdict on a derived claim: %w", err)
 	}
 	return id, nil
 }
+
+// ErrValueMovedOn is a verdict about a value the record has since left behind.
+//
+// A CONFLICT, wrapping the shared sentinel so the transport answers 409 without
+// this package knowing what a status code is: the human decided about a
+// sentence that is no longer on the page, and the next render shows them what
+// it says now.
+var ErrValueMovedOn = fmt.Errorf("the value this verdict is about has been superseded: %w", apperrors.ErrConflict)
 
 // VerdictsForTx returns every verdict recorded about one record, keyed by
 // "<claim_kind>:<claim_key>".
@@ -351,7 +425,7 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 		-- updated_at, not created_at: it is when this decision took its
 		-- CURRENT form, and a reader compares it against when the value took
 		-- its own. See Verdict.AsOf.
-		SELECT claim_kind, claim_key, verdict, corrected_value, note, updated_at
+		SELECT claim_kind, claim_key, verdict, corrected_value, note, updated_at, value_captured_at, value_shown
 		  FROM ai_feedback
 		 WHERE subject_type = $1 AND subject_id = $2`, subjectType, subjectID)
 	if err != nil {
@@ -364,10 +438,14 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 		var claimKind, claimKey, verdict string
 		var correctedValue, note *string
 		var recordedAt time.Time
-		if err := rows.Scan(&claimKind, &claimKey, &verdict, &correctedValue, &note, &recordedAt); err != nil {
+		var valueCapturedAt *time.Time
+		var valueShown *string
+		if err := rows.Scan(&claimKind, &claimKey, &verdict, &correctedValue, &note,
+			&recordedAt, &valueCapturedAt, &valueShown); err != nil {
 			return nil, fmt.Errorf("ai: reading a recorded verdict: %w", err)
 		}
-		out[VerdictLookupKey(claimKind, claimKey)] = NewVerdict(claimKind, claimKey, verdict, correctedValue, note, recordedAt)
+		out[VerdictLookupKey(claimKind, claimKey)] = NewVerdict(
+			claimKind, claimKey, verdict, correctedValue, note, recordedAt, valueCapturedAt, valueShown)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("ai: reading the recorded verdicts: %w", err)

@@ -87,8 +87,8 @@ type connectorHandlers struct {
 	// Empty for a same-origin deployment (the callback then rides
 	// publicBaseURL/v1); a split dev stack (SPA :5173, api :8080) sets it.
 	apiBaseURL string
-	// googleCredentials resolves the installation's STORED Google app, on each
-	// call rather than once at boot.
+	// googleCredentials and microsoftCredentials resolve the installation's
+	// STORED app for each vendor, on each call rather than once at boot.
 	//
 	// It exists so an app set through Settings works without restarting the api.
 	// The boot-composed `oauth` below is the environment's copy, and it stays as
@@ -99,7 +99,8 @@ type connectorHandlers struct {
 	// A func rather than the store, so this file needs neither the pool nor the
 	// system-principal context the read runs on — compose binds both where it
 	// wires this, and a test can hand over a fake without a database.
-	googleCredentials func(ctx context.Context) (clientID, clientSecret string, ok bool, err error)
+	googleCredentials    appResolver
+	microsoftCredentials appResolver
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -198,7 +199,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		// Classified rather than handed to httperr.Write raw — these are plain
 		// errors it does not recognise, so the caller would get a bare 500 with
 		// less to act on than the 501 this branch exists to avoid.
-		writeGoogleAppFailure(w, r, err)
+		writeConnectorAppFailure(w, r, err)
 		return
 	}
 	if h.registry == nil || !ok {
@@ -327,7 +328,11 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// client secret before anything has authenticated it, on a path with no rate
 	// limit. It also answers a browser redirect with a JSON error, where every
 	// other failure here lands the person back on a page that explains itself.
-	app, ok, err := h.oauthApp(ctx, string(provider))
+	// runCtx, not ctx: a stored app is per-workspace and this route is
+	// session-less, so the raw request context has no workspace to read it
+	// under. Under ctx the lookup finds nothing and falls back to the
+	// deployment's app, spending the code against the wrong client.
+	app, ok, err := h.oauthApp(runCtx, string(provider))
 	if err != nil || !ok {
 		if err != nil {
 			logConnectFailure(ctx, string(provider), err)
@@ -336,7 +341,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		return
 	}
 
-	auth, err := app.authenticate(ctx, *params.Code, h.callbackURL(string(provider)))
+	auth, err := app.authenticate(runCtx, *params.Code, h.callbackURL(string(provider)))
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)
 		http.Redirect(w, r, h.landingURL(connectFailureOutcome(string(provider), err), returnTo, string(provider)), http.StatusFound)
