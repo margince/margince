@@ -64,7 +64,10 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		if err != nil {
 			return err
 		}
-		if in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion {
+		// held skips this: activity_refuse_restricted_mutation below refuses
+		// every write to a held row regardless of version, so it owes 423,
+		// not a 409 inviting a retry the row can never accept.
+		if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion {
 			return apperrors.ErrVersionSkew
 		}
 		if err := renormalizeTranscriptPatch(current, &in); err != nil {
@@ -194,12 +197,20 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 		}
 		p := storekit.NewPatch()
 		p.Set("archived_at", nil, time.Now().UTC())
-		// A held row's version pin was read against the same live-or-held row
-		// this transaction already locked, so applying it under the matching
-		// filter is what lets the archive UPDATE reach
+		// held drops the filter AND the pin: the filter lets the UPDATE reach
 		// activity_refuse_restricted_mutation instead of a LiveOnly clause
-		// hiding the row a second time.
-		if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, ifVersion, activityArchivedFilter(held)); err != nil {
+		// hiding the row again, and the pin — a CAS by WHERE clause that never
+		// reaches the trigger on a mismatch — would otherwise answer stale
+		// version skew (409) instead of the reachable 423 on a row nothing
+		// can write to regardless of version. Dropping it is safe: this
+		// transaction already holds the row FOR UPDATE via
+		// lockActivityForWrite, the guard an unpinned ApplyGuardedIn falls
+		// back to.
+		pin := ifVersion
+		if held {
+			pin = nil
+		}
+		if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)

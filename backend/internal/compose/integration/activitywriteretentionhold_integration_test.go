@@ -79,6 +79,15 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 
 	_, err = e.Activities.ArchiveActivity(e.Admin(), held, nil)
 	assert423("ArchiveActivity", err)
+
+	// A stale If-Version on a held row still owes 423, not 409: every write
+	// to a held row is refused by activity_refuse_restricted_mutation
+	// regardless of version, and a version-skew answer would invite a
+	// refetch-and-retry the row can never accept.
+	staleSubject := "edited again"
+	_, err = e.Activities.UpdateActivity(e.Admin(), held,
+		activities.UpdateActivityInput{Subject: &staleSubject, IfVersion: int64Ptr(999999)})
+	assert423("UpdateActivity with a stale If-Version", err)
 }
 
 // TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter is the security
@@ -122,6 +131,45 @@ func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
 		t.Fatalf("an unrelated writer on a held row answered %v, want ErrNotFound — "+
 			"ErrPermissionDenied here is itself the disclosure that the row exists and is held, "+
 			"to a caller the ordinary DISCOVER gate would have told nothing", err)
+	}
+}
+
+// TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow is the second half
+// of the security boundary the previous test checks: OWNERSHIP is not a
+// substitute for AUDIENCE, and an unbounded human is not a substitute for
+// the system principal. auth.ActivityContentClause composes BOTH the
+// discover clause and auth.ActivityAudienceArm for every non-system
+// caller — EnsureActivityWritableIn's live=false arm skips only the
+// liveness half of that gate; it must not silently skip the audience half
+// too. The fixture is a task assigned directly to the caller (satisfying
+// EnsureActivityWritableIn's OWNERSHIP arm, assignee_id) but narrowed to
+// `participants` with the caller on none of the audience's own arms
+// (captured_by, capture_import, activity_participant, or a selected
+// membership row) — ownership and audience answer different questions, and
+// this row is built to answer them differently. The caller is e.Admin(),
+// an UNBOUNDED principal: ActivityAudienceArm exempts only the system
+// principal, so an unbounded human being waved past the ownership check
+// (auth.Unbounded's own short-circuit) must not also be waved past this.
+func TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+
+	heldTask := SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by,
+		                      assignee_id, audience,
+		                      archived_at, restricted_at, restricted_until, retention_class,
+		                      retention_class_at, restricted_reason)
+		VALUES ($1, 'task', 'Confidential Task', 'body', now(), 'manual', 'human:someone-else',
+		        $2, 'participants',
+		        now(), now(), now() + interval '5 years', 'commercial_correspondence',
+		        now(), 'commercial_correspondence')`, e.Rep1)
+	held := ids.From[ids.ActivityKind](heldTask)
+
+	subject := "rewritten"
+	if _, err := e.Activities.UpdateActivity(e.Admin(), held, activities.UpdateActivityInput{Subject: &subject}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("an unbounded caller outside a held row's narrowed audience answered %v, want ErrNotFound — "+
+			"the row's assignee_id passing the OWNERSHIP arm is not a licence to skip the AUDIENCE arm too, "+
+			"and an unbounded human is bound by that arm exactly like anyone but the system principal", err)
 	}
 }
 

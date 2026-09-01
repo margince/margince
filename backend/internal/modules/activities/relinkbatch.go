@@ -170,7 +170,11 @@ func relinkedChangedFields(entityType string, entityID ids.UUID) crmcontracts.Pu
 // app conditions on nothing, and a static-tier agent call has nothing to
 // condition on either.
 func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
-	if ifVersion == nil {
+	// held=true skips the compare: every write to a held row is refused by
+	// activity_refuse_restricted_mutation below regardless of version, so a
+	// stale version on a held row still owes 423, not a 409 that invites a
+	// retry the row can never accept.
+	if ifVersion == nil || held {
 		return nil
 	}
 	current, err := readActivityForWrite(ctx, tx, id, held)

@@ -85,7 +85,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
 			return err
 		}
-		if err := ensureVersion(ctx, tx, id, in.IfVersion); err != nil {
+		if err := ensureVersion(ctx, tx, id, in.IfVersion, held); err != nil {
 			return err
 		}
 		if err := ensureAudienceSubjectsExist(ctx, tx, members); err != nil {
@@ -202,12 +202,19 @@ func audienceMembersFor(in SetAudienceInput) ([]AudienceMember, error) {
 // ensureVersion is the If-Match compare, against the row the caller just
 // locked; a mismatch is version skew, which the wire answers as 409.
 //
-// No archived filter: lockActivityForWrite already proved the row exists,
-// live or held, before this runs, so re-filtering here would hide a held
-// row's version from under a lock that already resolved it — exactly the
-// 404-instead-of-423 lockActivityForWrite exists to remove.
-func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
-	if ifVersion == nil {
+// held=true skips the compare entirely: every write to a held row is
+// refused by activity_refuse_restricted_mutation regardless of which
+// version the caller supplied, so a stale version on a held row still owes
+// 423, the reachable answer the write below reaches — not 409, which
+// would tell the caller a refetch-and-retry could ever succeed against a
+// row nothing can write to.
+//
+// No archived filter otherwise: lockActivityForWrite already proved the
+// row exists, live or held, before this runs, so re-filtering here would
+// hide a held row's version from under a lock that already resolved it —
+// exactly the 404-instead-of-423 lockActivityForWrite exists to remove.
+func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
+	if ifVersion == nil || held {
 		return nil
 	}
 	var current int64
