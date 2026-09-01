@@ -109,6 +109,7 @@ func (a CaptureEnrichWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace 
 // signature line.
 type captureEnrichWorkspaceWorker struct {
 	enricher *CaptureEnricher
+	log      *slog.Logger
 }
 
 func (w *captureEnrichWorkspaceWorker) Work(ctx context.Context, job *river.Job[CaptureEnrichWorkspaceArgs]) error {
@@ -116,7 +117,40 @@ func (w *captureEnrichWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.enricher.RunWorkspace(wsCtx))
+	filled, err := w.enricher.RunWorkspace(wsCtx)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if filled {
+		w.enqueueContinuation(wsCtx, job.Args)
+	}
+	return nil
+}
+
+// enqueueContinuation queues the next slice of a workspace whose pass filled
+// its limit.
+//
+// Best-effort, like the backfill's digest above and for the same reason: the
+// work is already done and committed, and the nightly pass still reconciles
+// whatever this fails to queue. Failing the job instead would re-run a pass
+// that has already spent its model budget on the candidates it handled.
+//
+// The insert carries NO uniqueness. This runs inside the pass it continues, so
+// the ByArgs/active-state uniqueness the trigger uses would dedupe the
+// continuation against its own still-running parent and drop it silently —
+// which is precisely the case this exists to fix.
+func (w *captureEnrichWorkspaceWorker) enqueueContinuation(ctx context.Context, args CaptureEnrichWorkspaceArgs) {
+	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
+	if err != nil {
+		w.log.WarnContext(ctx, "signature enrich: no River client in context, so the continuation was not enqueued",
+			"workspace", args.Workspace.String(), "err", err)
+		return
+	}
+	if _, err := client.Insert(ctx, CaptureEnrichWorkspaceArgs{Workspace: args.Workspace},
+		oneOffChildOpts(CaptureEnrichWorkspaceArgs{}.Kind())); err != nil {
+		w.log.WarnContext(ctx, "signature enrich: continuation enqueue failed",
+			"workspace", args.Workspace.String(), "err", err)
+	}
 }
 
 // OrgNamePromotionArgs runs one org-name promotion pass (PO-F-2a).
