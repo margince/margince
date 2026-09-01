@@ -13,6 +13,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemMessageOf, throwProblem } from "./common";
+import { ConnectPostureStep } from "./connect-posture";
 import { imapErrorMessage } from "./imap-connect-form";
 import { OnboardingBackread } from "./onboarding-backread";
 
@@ -350,6 +351,14 @@ export function OAuthReturnPanel({
           <span className="trustpill">
             <ShieldCheck aria-hidden /> {t("ob.s4.connectLive")}
           </span>
+          {/* Asked BEFORE the backread, because the backread is what reads a
+              year of mail: a posture chosen after it has already let every
+              captured message in under the previous answer. */}
+
+          <ConnectPostureStep
+            provider={live.provider}
+            posture={live.mail_posture ?? undefined}
+          />
           {/* The mailbox is live, so the step is not finished yet: how far back
               to read it is the next question, and the backread owns the exit
               from here — its own leave controls finish onboarding, whether or
@@ -466,6 +475,14 @@ export function ImapConnectPanel({
           <CheckCircle2 aria-hidden /> {t("ob.s4.capturedTitle")}
         </div>
         <p className="ob-sub">{t("ob.s4.capturedBody")}</p>
+        {/* The same question the OAuth arm asks, in the same place: after the
+            grant, before the reader leaves for the CRM. An IMAP connect reads
+            its first messages on the spot (max_messages above), so a posture
+            chosen on the next screen would arrive after them. */}
+        <ConnectPostureStep
+          provider={connect.data.connection.provider}
+          posture={connect.data.connection.mail_posture ?? undefined}
+        />
         <Button variant="primary" onClick={() => void onComplete(false)}>
           {t("ob.s4.enterCrm")} <ArrowRight aria-hidden />
         </Button>

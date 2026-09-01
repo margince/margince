@@ -208,3 +208,98 @@ it("OAuthReturnPanel keeps the generic failure for an unrecognized outcome", asy
     await screen.findByText(/couldn't confirm the connection/i),
   ).toBeTruthy();
 });
+
+// The posture question rides the connect flow because the backread is what
+// reads a year of mail: an answer given on a later screen arrives after every
+// message it was meant to govern.
+describe("the posture step on a fresh connection", () => {
+  const connectedGmail = (posture?: string) => ({
+    id: "g1",
+    provider: "gmail",
+    status: "connected",
+    scopes: ["read"],
+    backfill: { state: "idle" },
+    ...(posture === undefined ? {} : { mail_posture: posture }),
+  });
+
+  it("offers the three postures, refusing shared until an admin allows it", async () => {
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ data: [connectedGmail()] }),
+      "GET /connectors/gmail/backfill": () => jsonResponse({ state: "idle" }),
+      "GET /capture/settings": () =>
+        jsonResponse({ shared_posture_allowed: false }),
+    });
+    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+
+    expect(
+      await screen.findByText(en["connectors.mailPosture.label"]),
+    ).toBeTruthy();
+    // The refused option is PRESENT and disabled, never absent: a missing
+    // third answer tells a reader their product has two postures.
+    // The help sentence and the admin refusal share one paragraph, so the
+    // match is on the node that carries both rather than on either alone.
+    expect(
+      await screen.findByText(
+        (_, node) =>
+          node?.tagName === "P" &&
+          (node.textContent ?? "").includes(
+            en["connectors.mailPosture.sharedNeedsAdmin"],
+          ),
+      ),
+    ).toBeTruthy();
+  });
+
+  // The whole point of asking here rather than in Settings.
+  it("saves the posture before the backread offers to read history", async () => {
+    const calls: string[] = [];
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ data: [connectedGmail()] }),
+      "GET /connectors/gmail/backfill": () => jsonResponse({ state: "idle" }),
+      "GET /capture/settings": () =>
+        jsonResponse({ shared_posture_allowed: false }),
+      // A non-GET handler is handed the PARSED body, never a Request.
+      "PUT /connectors/gmail/mail-posture": (body: unknown) => {
+        calls.push(String((body as { posture: string }).posture));
+        return jsonResponse({});
+      },
+    });
+    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+
+    await screen.findByText(en["connectors.mailPosture.label"]);
+    // Driven the way the design-system suite drives this control: the popup is
+    // a listbox the keyboard owns, and DOM focus stays on the trigger.
+    const user = userEvent.setup();
+    const trigger = screen.getByRole("combobox");
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.click(
+      await screen.findByRole("option", {
+        name: en["connectors.mailPosture.held"],
+      }),
+    );
+    await waitFor(() => expect(calls).toEqual(["held"]));
+  });
+
+  // A connection is born `classified` from the column default, so the control
+  // reports what the server already wrote rather than a local guess: a reader
+  // who never touches it still leaves with the safe answer.
+  it("shows the posture the server stored, not a client-side default", async () => {
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ data: [connectedGmail("held")] }),
+      "GET /connectors/gmail/backfill": () => jsonResponse({ state: "idle" }),
+      "GET /capture/settings": () =>
+        jsonResponse({ shared_posture_allowed: true }),
+    });
+    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+
+    expect(
+      await screen.findByText(
+        (_, node) =>
+          node?.tagName === "P" &&
+          (node.textContent ?? "").includes(
+            en["connectors.mailPosture.help.held"],
+          ),
+      ),
+    ).toBeTruthy();
+  });
+});
