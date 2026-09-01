@@ -127,3 +127,91 @@ func TestABatchedMergeFaceRefusesWithoutTheObjectGrant(t *testing.T) {
 		t.Fatalf("err = %v, want ErrPermissionDenied for a caller with no person.read", err)
 	}
 }
+
+// asOrgReader binds a caller holding the object grants named and nothing else,
+// at full row scope, so what decides the count is the GRANT rather than the scope.
+func (e *privacyEnv) asOrgReader(objects ...string) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	grants := map[string]principal.ObjectGrant{}
+	for _, object := range objects {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.owner.String(), UserID: e.owner,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"}, Objects: grants, RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// seedOrganization writes one account with an employed contact, so the count has
+// something to find and its absence means a refusal rather than an empty company.
+func (e *privacyEnv) seedOrganization(t *testing.T) ids.UUID {
+	t.Helper()
+	orgID, personID := ids.NewV7(), ids.NewV7()
+	ctx := e.as(e.owner, principal.RowScopeAll)
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO organization (id, display_name, source, captured_by)
+			VALUES ($1, 'Weber GmbH', 'seed', 'test')`, orgID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO person (id, full_name, source, captured_by)
+			VALUES ($1, 'Employed Contact', 'seed', 'test')`, personID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO relationship (id, person_id, organization_id, kind, is_current_primary, source, captured_by)
+			VALUES ($1, $2, $3, 'employment', true, 'seed', 'test')`, ids.NewV7(), personID, orgID)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding an account with a contact: %v", err)
+	}
+	return orgID
+}
+
+// THE CONTACT COUNT CARRIES THE SAME TWO GRANTS THE COMPANY LIST APPLIES.
+//
+// person.read, because a number that moves when a colleague captures a private
+// contact discloses that contact. And relationship.read, because "how many
+// people work at Acme" is a fact about the employment pairs rather than about
+// either end — a count answering without it is a counting oracle over edges the
+// role is refused on every other surface.
+func TestAMergeFacesContactCountCarriesBothObjectGrants(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	orgID := e.seedOrganization(t)
+
+	for name, tc := range map[string]struct {
+		grants []string
+		want   bool
+	}{
+		"both grants":         {[]string{"organization", "person", "relationship"}, true},
+		"no person grant":     {[]string{"organization", "relationship"}, false},
+		"no edge grant":       {[]string{"organization", "person"}, false},
+		"neither, only names": {[]string{"organization"}, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			faces, err := e.store.DescribeForMerge(e.asOrgReader(tc.grants...), "organization", []ids.UUID{orgID})
+			if err != nil {
+				t.Fatalf("DescribeForMerge: %v", err)
+			}
+			face, named := faces[orgID]
+			if !named {
+				t.Fatal("the account was not named at all, so the count below proves nothing")
+			}
+			if face.Label != "Weber GmbH" {
+				t.Errorf("Label = %q — the NAME is not what either grant governs", face.Label)
+			}
+			switch {
+			case tc.want && (face.RelatedCount == nil || *face.RelatedCount != 1):
+				t.Errorf("RelatedCount = %v, want the one employed contact", face.RelatedCount)
+			case !tc.want && face.RelatedCount != nil:
+				t.Errorf("RelatedCount = %d without both grants — absent is the answer, and zero "+
+					"would be a wrong number on screen where nothing at all is a withheld one",
+					*face.RelatedCount)
+			}
+		})
+	}
+}

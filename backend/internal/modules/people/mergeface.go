@@ -152,35 +152,47 @@ func readPersonFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map
 // the visible contact count as the roll-up.
 //
 // ORDER BY is_primary DESC, created_at matches attachOrgDomains, for the reason
-// the person read matches its own. The count is the caller's to see: it runs
-// under the same person row scope fillContactCounts applies, since a number that
-// moves when a colleague captures a private contact discloses that contact.
+// the person read matches its own.
+//
+// The count carries the SAME two gates attachOrgCounts applies, and for its
+// reasons. It needs person.read because a number that moves when a colleague
+// captures a private contact discloses that contact, and relationship.read
+// because "how many people work at Acme" is a fact about the employment pairs
+// rather than about either end — a count answering without it would be a
+// counting oracle over edges the role is refused on every other surface. Absent
+// when either is missing, never zero: zero is a wrong number on screen where
+// nothing at all is a withheld one. The row scope narrows it further, set-wise
+// here as it is per page there.
 func readOrganizationFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map[ids.UUID]MergeFace) error {
 	args := []any{rowIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	edgeBound, err := auth.RelationshipEndpointScope(ctx, "rel", arg)
-	if err != nil {
-		return err
-	}
-	if edgeBound != "" {
-		edgeBound = " AND " + edgeBound
-	}
-	scope, err := auth.ScopeClauseFor(ctx, "person", "cp", arg)
-	if err != nil {
-		return err
-	}
-	if scope != "" {
-		scope = " AND " + scope
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT o.id, o.display_name, o.created_at, d.domain,
-		       (SELECT count(*)
+	countable := grantVisible(ctx, entityPerson) && grantVisible(ctx, "relationship")
+	contacts := "NULL::bigint"
+	if countable {
+		edgeBound, err := auth.RelationshipEndpointScope(ctx, "rel", arg)
+		if err != nil {
+			return err
+		}
+		if edgeBound != "" {
+			edgeBound = " AND " + edgeBound
+		}
+		scope, err := auth.ScopeClauseFor(ctx, "person", "cp", arg)
+		if err != nil {
+			return err
+		}
+		if scope != "" {
+			scope = " AND " + scope
+		}
+		contacts = `(SELECT count(*)
 		          FROM relationship rel
 		          JOIN person cp ON cp.id = rel.person_id AND cp.archived_at IS NULL
 		         WHERE rel.organization_id = o.id
 		           AND rel.kind = 'employment'
-		           AND `+CurrentPrimaryEmploymentSQL("rel")+`
-		           AND rel.archived_at IS NULL`+edgeBound+scope+`)
+		           AND ` + CurrentPrimaryEmploymentSQL("rel") + `
+		           AND rel.archived_at IS NULL` + edgeBound + scope + `)`
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT o.id, o.display_name, o.created_at, d.domain, `+contacts+`
 		FROM organization o
 		LEFT JOIN LATERAL (
 			SELECT od.domain FROM organization_domain od
@@ -197,15 +209,14 @@ func readOrganizationFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, in
 		var id ids.UUID
 		var face MergeFace
 		var domain *string
-		var contacts int
-		if err := rows.Scan(&id, &face.Label, &face.CreatedAt, &domain, &contacts); err != nil {
+		var count *int
+		if err := rows.Scan(&id, &face.Label, &face.CreatedAt, &domain, &count); err != nil {
 			return err
 		}
 		if domain != nil {
 			face.Detail = *domain
 		}
-		count := contacts
-		face.RelatedCount = &count
+		face.RelatedCount = count
 		into[id] = face
 	}
 	return rows.Err()
