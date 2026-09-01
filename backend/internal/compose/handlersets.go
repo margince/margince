@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -88,6 +89,7 @@ type (
 	financeHandlers        = finance.Handlers
 	aiActivityHandlers     = aiactivity.Handlers
 	noticesHandlers        = notices.Handlers
+	introductionHandlers   = introductions.Handlers
 )
 
 // wirePerson360 binds the person record page — the organization page's

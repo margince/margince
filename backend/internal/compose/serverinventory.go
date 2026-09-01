@@ -153,6 +153,9 @@ type Server struct {
 	// The notices transport: one verb (mark read); the content reaches the
 	// reader on the Worklist's notices lane.
 	noticesHandlers
+	// The introductions transport: one rep asking a colleague to open a door,
+	// the colleague's bounded answer, and what came of it.
+	introductionHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
 	// deployment composed, in registration order. It exists because each

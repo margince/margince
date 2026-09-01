@@ -938,6 +938,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/intro-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The asks about this contact that the caller is party to.
+         * @description One rep asking a colleague to open a door is a favour between two people, so an ask is
+         *     visible to the two of them and to nobody else. A rep who is neither the requester nor
+         *     the introducer sees an empty list rather than a refusal: whether a colleague was asked
+         *     about this contact is exactly the fact the row protects.
+         *
+         *     Newest first. Settled asks stay in the list — what was asked and answered is the
+         *     history the next ask is decided against.
+         */
+        get: operations["listIntroRequests"];
+        put?: never;
+        /**
+         * Ask a colleague to introduce you to this contact.
+         * @description The requester is the authenticated person and is never a field on the body — an ask
+         *     that could name its own requester would let one rep spend another's goodwill, and the
+         *     colleague answering would be answering the wrong person.
+         *
+         *     The route is named by its parts (`introducer_user_id`, and `through_person_id` for an
+         *     indirect one) rather than by the `route_id` a graph read hands the client. A write
+         *     that parsed an opaque display string back apart would be trusting the client to have
+         *     kept it honest.
+         *
+         *     One open ask per route: asking the same colleague about the same contact twice while
+         *     the first is unanswered is a duplicate, not a reminder, and it answers `409`.
+         */
+        post: operations["createIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/intro-requests/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an ask made of you.
+         * @description Four answers and no others: `accepted` (I will make the introduction),
+         *     `name_drop_approved` (you may use my name, but I am not writing), `suggest_other`
+         *     (ask this colleague instead — who must be named) and `declined`.
+         *
+         *     Only the introducer answers. The requester answering on their own behalf would make
+         *     the colleague's consent a formality, so it is a `403` rather than a validation error.
+         *
+         *     `name_drop_approved` is not a weaker `accepted`. It permits a mention and nothing
+         *     more, and the ask can only ever complete as a name-drop from there — no path in this
+         *     contract turns lent permission into a handshake that happened.
+         */
+        post: operations["decideIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/intro-requests/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the introduction happened, or that the name was used.
+         * @description WHICH of the two this records comes from the state the ask is in, never from the
+         *     caller: an accepted ask completes as an introduction and a name-drop-approved one as
+         *     a name-drop. There is no field here to say which, because a caller who could choose
+         *     could report a handshake that only had permission behind it.
+         *
+         *     `source_activity_id` is optional evidence — the message the claim rests on. It must be
+         *     an activity linked to this contact, so a completion cannot cite a conversation that is
+         *     not about the person being introduced.
+         *
+         *     Either party may record it: the colleague who made the introduction knows first, and
+         *     so does the rep who watched it land.
+         */
+        post: operations["completeIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/intro-requests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw an ask you made.
+         * @description The requester withdraws their own ask; the introducer declines instead. Withdrawing
+         *     frees the route, so the same colleague can be asked about the same contact again.
+         *
+         *     An ask that was made is a thing that happened, so this closes it rather than erasing
+         *     it — the row stays, and the history keeps it.
+         */
+        post: operations["cancelIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/profile-fields": {
         parameters: {
             query?: never;
@@ -16322,6 +16457,155 @@ export interface components {
             days_since_last?: number | null;
         };
         /**
+         * @description One rep's ask that a colleague open a door, and how it was answered.
+         *
+         *     The three pieces of copy are three different messages and never one field. `internal_reason`
+         *     is why the requester wants the introduction, `value_for_target` is what is in it for the
+         *     contact, and `forwardable_note` is the only one written to be read BY the contact — the
+         *     colleague pastes it, so it carries its own authorship on `note_generated_by`.
+         *
+         *     `status` is the whole state of the thing, and the timestamps say when each step happened.
+         *     A name-drop is never an introduction: `name_dropped_at` and `introduced_at` are separate
+         *     fields for separate events, and no ask ever carries both.
+         */
+        IntroRequest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            person_id: string;
+            /** Format: uuid */
+            requester_user_id: string;
+            requester_display_name?: string;
+            /** Format: uuid */
+            introducer_user_id: string;
+            introducer_display_name?: string;
+            route_type: components["schemas"]["PersonGraphRouteType"];
+            /**
+             * Format: uuid
+             * @description Set when the ask goes via someone else at the contact's company.
+             */
+            through_person_id?: string;
+            through_display_name?: string;
+            /** @description Why the requester is asking. Read by the colleague, never by the contact. */
+            internal_reason: string;
+            /** @description What is in it for the contact, in the requester's words. */
+            value_for_target?: string;
+            /** @description The prospect-facing copy the colleague can paste. The only one of the three a person outside the company ever reads. */
+            forwardable_note?: string;
+            note_generated_by: components["schemas"]["IntroNoteOrigin"];
+            /** @description Whether a model wrote any of the note. Kept beside `note_generated_by` because it survives an edit: a human who tidies model copy has still sent model copy. */
+            note_ai_generated: boolean;
+            /** @description Whether the requester asked for permission to mention the colleague's name. */
+            name_drop_allowed: boolean;
+            fallback_policy: components["schemas"]["IntroFallbackPolicy"];
+            status: components["schemas"]["IntroRequestStatus"];
+            /** @description The colleague's words when they declined or suggested somebody else. */
+            decision_reason?: string;
+            /**
+             * Format: uuid
+             * @description Set on `suggest_other` — the colleague to ask instead.
+             */
+            suggested_user_id?: string;
+            suggested_display_name?: string;
+            /**
+             * Format: uuid
+             * @description The message an `introduced`, `name_dropped` or `replied` claim rests on, where there is one.
+             */
+            source_activity_id?: string;
+            /** Format: date-time */
+            requested_at: string;
+            /**
+             * Format: date-time
+             * @description When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+             */
+            due_at: string;
+            /** Format: date-time */
+            decided_at?: string | null;
+            /** Format: date-time */
+            introduced_at?: string | null;
+            /** Format: date-time */
+            name_dropped_at?: string | null;
+            /** Format: date-time */
+            replied_at?: string | null;
+            /** @description The row's version, sent back on every write. Two tabs open on one ask, one accepting and one declining, must not both win. */
+            version: number;
+        };
+        /**
+         * @description Where the ask stands.
+         *
+         *     `requested` is waiting on the colleague. The four answers are `accepted`,
+         *     `name_drop_approved`, `suggest_other` and `declined`. The outcomes are `introduced`
+         *     (the handshake happened), `name_dropped` (the name was used, which is a different
+         *     event), `replied` (the contact answered — observed from captured activity, never
+         *     asserted), `expired` (nobody answered in time) and `cancelled` (the requester
+         *     withdrew it).
+         * @enum {string}
+         */
+        IntroRequestStatus: "requested" | "accepted" | "name_drop_approved" | "suggest_other" | "declined" | "introduced" | "name_dropped" | "replied" | "expired" | "cancelled";
+        /**
+         * @description Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
+         * @enum {string}
+         */
+        IntroNoteOrigin: "human" | "model" | "deterministic";
+        /**
+         * @description What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
+         * @enum {string}
+         */
+        IntroFallbackPolicy: "name_drop" | "next_route" | "none";
+        IntroRequestListResponse: {
+            data: components["schemas"]["IntroRequest"][];
+        };
+        /** @description The ask. There is no requester field: that is the authenticated person, so one rep cannot put an ask in another's name. */
+        IntroRequestInput: {
+            /**
+             * Format: uuid
+             * @description The colleague being asked.
+             */
+            introducer_user_id: string;
+            route_type: components["schemas"]["PersonGraphRouteType"];
+            /**
+             * Format: uuid
+             * @description Required for `through_contact` and refused for `direct` — a route that names an intermediary and one that does not are different routes, and either half alone describes one nobody can act on.
+             */
+            through_person_id?: string;
+            /** @description Why this is worth asking. An ask without one is a favour with no case behind it. */
+            internal_reason: string;
+            value_for_target?: string;
+            forwardable_note?: string;
+            note_generated_by?: components["schemas"]["IntroNoteOrigin"];
+            note_ai_generated?: boolean;
+            name_drop_allowed?: boolean;
+            fallback_policy?: components["schemas"]["IntroFallbackPolicy"];
+        };
+        IntroRequestDecisionInput: {
+            /**
+             * @description The colleague's answer. Only these four: the outcomes are recorded by completing the ask, not by declaring them here.
+             * @enum {string}
+             */
+            decision: "accepted" | "name_drop_approved" | "suggest_other" | "declined";
+            /** @description The colleague's words. Shown to the requester as given. */
+            reason?: string;
+            /**
+             * Format: uuid
+             * @description Required for `suggest_other` — suggesting somebody else without naming them is not an answer.
+             */
+            suggested_user_id?: string;
+            /** @description The version the caller read. A stale one answers `409` rather than overwriting an answer already given. */
+            version: number;
+        };
+        IntroRequestCompleteInput: {
+            /**
+             * Format: uuid
+             * @description The message this claim rests on. Must be linked to the contact being introduced, so a completion cannot cite a conversation that is not about them.
+             */
+            source_activity_id?: string;
+            version: number;
+        };
+        IntroRequestCancelInput: {
+            reason?: string;
+            version: number;
+        };
+        /**
          * @description One reason this contact is worth attention now, with the evidence behind it.
          *
          *     Every moment in this version is DETERMINISTIC: derived from captured activity by a
@@ -27040,6 +27324,160 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listIntroRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The asks this caller is party to. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequestListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestInput"];
+            };
+        };
+        responses: {
+            /** @description The ask is recorded and the colleague can see it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    decideIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description The answer is recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    completeIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestCompleteInput"];
+            };
+        };
+        responses: {
+            /** @description The outcome is recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    cancelIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestCancelInput"];
+            };
+        };
+        responses: {
+            /** @description The ask is withdrawn. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
