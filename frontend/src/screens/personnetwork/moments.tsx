@@ -26,6 +26,7 @@ type RelationshipMoments = Pick<
  */
 export function momentWhyNow(
   view: RelationshipMoments | undefined,
+  t: ReturnType<typeof useT>,
 ): string | undefined {
   const changes = view?.relationship_changes ?? [];
   // A withheld section is not an empty one. Reading a kind out of a list the
@@ -36,7 +37,10 @@ export function momentWhyNow(
   if (withheld || changes.length === 0) {
     return undefined;
   }
-  return changes[0]?.kind;
+  // The SENTENCE, never the kind. `change.kind` is an API enum, and putting it
+  // on the strip printed "replied_after_gap" where a reader expects words.
+  const head = changes[0];
+  return head ? changeSentence(head, t) : undefined;
 }
 
 /**

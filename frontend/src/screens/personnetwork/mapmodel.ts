@@ -79,6 +79,14 @@ export function mapModelFromPersonGraph(
     ...(anchor ? [contactNode(anchor, "person")] : []),
   ];
 
+  // Left: our colleagues. Centre: the contact themselves, because THEY are the
+  // hub this whole picture is about. Right: the other people at their company,
+  // who are the routes THROUGH.
+  //
+  // The centre is one node by design — the component stacks it vertically with
+  // a wide gap, so a list there grows the drawing without adding a lane head.
+  // Putting the twelve account contacts in it drew a 1000px column with no
+  // heading and two of the three lanes missing.
   const lanes: MapLane[] = [
     {
       id: "ours",
@@ -87,16 +95,16 @@ export function mapModelFromPersonGraph(
       nodeIds: colleagues.map((n) => n.id),
     },
     {
-      id: "theirs",
-      column: "center",
-      label: copy.theirCompany,
-      nodeIds: account.map((n) => n.id),
-    },
-    {
       id: "target",
-      column: "right",
+      column: "center",
       label: copy.target,
       nodeIds: anchor ? [anchor.id] : [],
+    },
+    {
+      id: "theirs",
+      column: "right",
+      label: copy.theirCompany,
+      nodeIds: account.map((n) => n.id),
     },
   ];
 

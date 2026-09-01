@@ -112,7 +112,7 @@ export function PersonNetworkTab({
       <DecisionStrip
         lead={read.lead}
         legacyVia={read.legacy?.via_display_name}
-        whyNow={momentWhyNow(view)}
+        whyNow={momentWhyNow(view, t)}
         open={read.open}
       />
 
@@ -157,34 +157,6 @@ export function PersonNetworkTab({
               {null}
             </SurfaceState>
           ) : null}
-
-          <RelationshipMap
-            model={model}
-            focusId={read.focused}
-            onFocus={setFocus}
-            onAction={(nodeId) => {
-              const picked = read.routes.find((r) => r.via_user_id === nodeId);
-              if (picked) {
-                setAsking(picked);
-              }
-            }}
-            completenessText={complete}
-            // The account page's word set, with the one label that names the
-            // subject swapped: this drawing is about a person, not an account.
-            labels={mapLabels(t, locale, t("person.intro.mapRegion"))}
-            // The selected person's own detail, including the one write this
-            // picture offers: recording an observed acquaintance the graph
-            // spotted but nothing has written down yet.
-            panelSlot={
-              read.focused && read.anchor ? (
-                <EdgeDetail
-                  graph={data}
-                  nodeId={read.focused}
-                  anchorId={read.anchor.id}
-                />
-              ) : null
-            }
-          />
         </div>
 
         <aside className="pn-side-column">
@@ -193,6 +165,38 @@ export function PersonNetworkTab({
           {view && <MomentsCard view={view} />}
         </aside>
       </div>
+
+      {/* Full width, below the grid. The drawing is 744px wide and scrolls
+          rather than shrinking, so inside a half-width column it showed its
+          left third and nothing else — one lane, and eleven nodes painted off
+          the visible canvas. */}
+      <RelationshipMap
+        model={model}
+        focusId={read.focused}
+        onFocus={setFocus}
+        onAction={(nodeId) => {
+          const picked = read.routes.find((r) => r.via_user_id === nodeId);
+          if (picked) {
+            setAsking(picked);
+          }
+        }}
+        completenessText={complete}
+        // The account page's word set, with the one label that names the
+        // subject swapped: this drawing is about a person, not an account.
+        labels={mapLabels(t, locale, t("person.intro.mapRegion"))}
+        // The selected person's own detail, including the one write this
+        // picture offers: recording an observed acquaintance the graph
+        // spotted but nothing has written down yet.
+        panelSlot={
+          read.focused && read.anchor ? (
+            <EdgeDetail
+              graph={data}
+              nodeId={read.focused}
+              anchorId={read.anchor.id}
+            />
+          ) : null
+        }
+      />
 
       {asking ? (
         <IntroDrawer
