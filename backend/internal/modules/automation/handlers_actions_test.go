@@ -111,8 +111,24 @@ func (p *fakeUpdateProvider) Update(_ context.Context, in datasource.UpdateInput
 	return in.Ref, p.err
 }
 
-func (p *fakeUpdateProvider) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
-	panic("fakeUpdateProvider: Read not stubbed for this test")
+func (p *fakeUpdateProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	return ownerlessRecord(ref), nil
+}
+
+// ownerlessRecord is what the doubles in this package answer Provider.Read
+// with: the record that was asked for, carrying no fields.
+//
+// No owner is the honest answer. Every case here is about how many tasks a
+// firing mints and what it names them after; the task effect reads the
+// triggering record only to ATTRIBUTE the task, so "nobody owns it" is a
+// complete answer to the only question asked of it.
+//
+// A body rather than the embedded interface's nil: a double that embeds an
+// interface panics on every method it does not write, and a panic is not a
+// loud failure in a test binary — it is the end of the binary. One unmodelled
+// method stopped every other test in this package from running.
+func ownerlessRecord(ref datasource.EntityRef) datasource.Record {
+	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{}`)}
 }
 
 func (p *fakeUpdateProvider) Search(context.Context, datasource.SearchQuery) (datasource.SearchResult, error) {

@@ -38,6 +38,10 @@ func (p *countingProvider) Create(_ context.Context, in datasource.CreateInput) 
 	return datasource.EntityRef{Type: in.EntityType, ID: ids.NewV7()}, nil
 }
 
+func (p *countingProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	return ownerlessRecord(ref), nil
+}
+
 // leadCreatedEnvelope is one lead.created delivery for a fixed lead.
 func leadCreatedEnvelope(lead ids.UUID) kevents.Envelope {
 	return kevents.Envelope{
