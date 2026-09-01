@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -52,10 +53,25 @@ import (
 // past a limit of five.
 const vcardIngestMaxCards = 5
 
-// vcardIngestMaxAttempts is how often one message's import is retried before the
-// job is cancelled. A card that cannot be parsed will not parse on the fourth
-// try; what this leaves room for is a database blip or an object store timeout.
-const vcardIngestMaxAttempts = 3
+// vcardIngestInsertOpts is the trigger's insert, spelled here beside the worker
+// whose queue and attempt cap it names.
+//
+// Built directly rather than through oneOffChildOpts: that helper reads the
+// fan-out declaration, and this kind is inserted by a CONSUMER naming one
+// message rather than by a dispatcher fanning out over a tenant list — which is
+// what opts_owner: caller says in the contract. Asking the fan-out helper for a
+// caller-owned kind panics, and it panics inside the subscriber goroutine, so
+// the first mailed card would take the worker process down.
+//
+// The uniqueness is per MESSAGE: the args name one activity, so two deliveries
+// of one capture event collapse onto a single import while two messages each get
+// their own.
+func vcardIngestInsertOpts() *river.InsertOpts {
+	return &river.InsertOpts{
+		Queue:      aiCaptureQueue,
+		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+	}
+}
 
 // VCardIngestArgs is one captured message's cards.
 type VCardIngestArgs struct {
@@ -99,9 +115,10 @@ func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngest
 		w.log.InfoContext(ctx, "a mailed card was not imported: the mailbox's grant no longer writes",
 			"activity", job.Args.Activity, "workspace", job.Args.Workspace)
 		return nil
-	case job.Attempt >= vcardIngestMaxAttempts:
-		return river.JobCancel(err)
 	default:
+		// River owns the attempt cap, from the contract's own max_attempts.
+		// A second ceiling counted here would be a copy of that number, and the
+		// two would drift the first time either moved.
 		return jobs.FaultContext(ctx, err)
 	}
 }
@@ -116,6 +133,31 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 	if err != nil || len(entries) == 0 {
 		return err
 	}
+	// Liveness again, immediately before the write and after the object-store
+	// reads, because the first check cannot cover this.
+	//
+	// The lock liveCardKeys takes is released when its transaction commits, and
+	// ImportVCards opens a transaction PER CARD afterwards — so a narrowing that
+	// commits in between would find the cards already read and land them anyway.
+	// The blob reads sit in that gap, which makes it a network round trip per
+	// attachment rather than an instant.
+	//
+	// This re-read does not close the window either: the write still happens in
+	// a later transaction. What it does is shrink it from "a whole object-store
+	// walk" to "one statement", and refuse the case that actually happens — a
+	// human restricting a message while the job is fetching its attachments.
+	// Closing it completely means re-reading the source inside each card's own
+	// write transaction, which is a change to people.ImportVCards rather than to
+	// this caller; issue #3510 carries it.
+	live, err := w.sourceStillOpen(actorCtx, args.Activity)
+	if err != nil {
+		return err
+	}
+	if !live {
+		w.log.InfoContext(ctx, "a mailed card was not imported: its message was narrowed while the cards were being read",
+			"activity", args.Activity)
+		return nil
+	}
 	store := people.NewStore(InstallationDB(w.pool))
 	results, err := store.ImportVCards(actorCtx, entries)
 	if err != nil {
@@ -129,6 +171,34 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 		w.log.InfoContext(ctx, "a card attached to captured mail was imported",
 			"activity", args.Activity, "card", r.Index+1,
 			"outcome", string(r.Outcome), "reason", r.Reason)
+	}
+	return w.stageReviews(actorCtx, entries, results)
+}
+
+// stageReviews turns every near-match into a proposal a human can decide.
+//
+// ImportVCards reports a card that RESEMBLES somebody rather than merging it,
+// and that verdict is only worth having if the question outlives the import. The
+// browser upload stages each one; without this the mailed path would log the
+// same verdict and drop it, so a contact who posted their card is never created
+// and nothing ever reaches a queue — the exact silence this feature exists to
+// end, reintroduced one branch deeper.
+//
+// The stager is self-only and takes the ACTING principal as the proposal's
+// subject, which here is the mailbox's granting human. That is the right
+// reviewer: the card arrived in their mailbox.
+func (w *vcardIngestWorker) stageReviews(ctx context.Context, entries []people.VCardEntry, results []people.VCardResult) error {
+	stage := vcardCreateStager(w.pool)
+	for _, r := range results {
+		// The index is ImportVCards' own position in the slice it was handed, so
+		// the bound is a belt on a contract that already holds — but a panic in
+		// an unattended writer is worth one comparison.
+		if r.Outcome != people.VCardNeedsReview || r.Index < 0 || r.Index >= len(entries) {
+			continue
+		}
+		if err := stage(ctx, entries[r.Index], r.PersonID); err != nil {
+			return fmt.Errorf("compose: staging a mailed card for review: %w", err)
+		}
 	}
 	return nil
 }
@@ -147,6 +217,15 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 // reads they can describe an authority nobody held — permissions from before a
 // role change with a seat from after.
 func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardIngestArgs) (context.Context, error) {
+	// The declared default, from the entry that declares it rather than repeated
+	// here: a second copy of the number would be the drift the settings registry
+	// exists to prevent, and it would drift silently — a workspace that has never
+	// touched the switch would follow one answer for signatures and another for
+	// cards.
+	defaultRaw, err := capture.SignatureEnrich.DefaultJSON()
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading the declared mail-reading default: %w", err)
+	}
 	var grantedBy ids.UUID
 	var provider string
 	// The mailbox that CAPTURED this message, matched through the provenance
@@ -154,13 +233,43 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// foreign key, so this is the only join available — and a message whose
 	// captured_by names no live connection has no grantor to run as, which
 	// stops the import rather than choosing one.
-	err := w.pool.QueryRow(ctx, `
+	//
+	// The format is capture's, spelled again here because a module never imports
+	// a sibling; capture.connectorProvenance owns it, and people's own signature
+	// candidates carry a third copy for the same reason. Nothing holds the three
+	// to each other, and a change to the Go owner makes every SQL copy match zero
+	// rows — which stops this import with no failing assertion anywhere.
+	//
+	// status = 'connected' with the archive test, because a mailbox the human
+	// DISCONNECTED without archiving is a grant they took back. The signature
+	// pass reads the same connection for its own switch, and this path writes
+	// people rather than filling a field, so it may not be the looser of the two.
+	err = w.pool.QueryRow(ctx, `
 		SELECT cc.user_id, cc.provider
 		  FROM activity a
 		  JOIN capture_connection cc
 		    ON ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
-		 WHERE a.id = $1 AND a.archived_at IS NULL AND cc.archived_at IS NULL`,
-		args.Activity).Scan(&grantedBy, &provider)
+		 WHERE a.id = $1 AND a.archived_at IS NULL
+		   -- INBOUND only, the same gate the signature candidates apply. A card a
+		   -- rep SENT is our own attachment coming back: forwarding a colleague's
+		   -- .vcf out of the mailbox would otherwise file it as a contact, which
+		   -- is not "mail arriving in their mailbox" by any reading.
+		   AND a.direction = 'inbound'
+		   AND cc.archived_at IS NULL AND cc.status = 'connected'
+		   -- The per-mailbox switch, and the workspace default when the mailbox
+		   -- has not chosen. It is the SAME switch the signature pass obeys:
+		   -- both answer "read my mail for contact details", and a mailbox owner
+		   -- who turned that off has not agreed to the card half of it either.
+		   --
+		   -- Read from the setting row rather than through the settings store,
+		   -- because that store gates on auth.Require and this read is what
+		   -- DECIDES whether to build a principal — it cannot use the one it
+		   -- gates. capture.SignatureEnrich is declared MachineryApplied for
+		   -- exactly this: candidate selection reads it per mailbox, in SQL.
+		   AND COALESCE(cc.signature_enrich_enabled, (
+		       SELECT coalesce((SELECT value FROM setting WHERE key = $2),
+		                       $3::jsonb)::boolean))`,
+		args.Activity, capture.SignatureEnrich.Key(), string(defaultRaw)).Scan(&grantedBy, &provider)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("no live mailbox grants this message's import: %w", apperrors.ErrNotFound)
@@ -184,19 +293,14 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	return principal.WithCorrelationID(actorCtx, ids.NewV7()), nil
 }
 
-// readCards parses every card attached to the message, under the source's own
-// liveness check.
+// readCards parses every card attached to the message, refusing a source the
+// workspace may no longer read.
 //
-// The check is the same one the signature pass makes and it is here for the same
-// reason: the trigger fired when the message was captured, and a human or a
-// verdict can narrow, restrict or archive that message before this job runs.
-// What this writes is a name, a number and a postal address onto people every
-// seat can read — so copying a narrowed message's contents into person records
-// republishes it in a form the narrowing does not reach.
-//
-// FOR SHARE, so the answer cannot go stale between this read and the writes: at
-// read-committed a narrowing could commit in that gap and the cards would land
-// anyway.
+// The check exists because the trigger fired when the message was captured, and
+// a human or a verdict can narrow, restrict or archive that message before this
+// job runs. What this writes is a name, a number and a postal address onto
+// people every seat can read — so copying a narrowed message's contents into
+// person records republishes it in a form the narrowing does not reach.
 func (w *vcardIngestWorker) readCards(ctx context.Context, activity ids.UUID) ([]people.VCardEntry, error) {
 	keys, err := w.liveCardKeys(ctx, activity)
 	if err != nil || len(keys) == 0 {
@@ -208,22 +312,53 @@ func (w *vcardIngestWorker) readCards(ctx context.Context, activity ids.UUID) ([
 		if err != nil {
 			return nil, err
 		}
-		entries = append(entries, parsed...)
-		// Checked as the attachments accumulate rather than at the end: the cap
-		// exists to bound what an unattended path will act on, and a message
-		// carrying ten files of a thousand cards has already been parsed by the
-		// time a final count could refuse it.
-		if len(entries) > vcardIngestMaxCards {
+		// The cap refuses the MESSAGE, not the surplus, and it is checked as the
+		// attachments accumulate so a second file cannot carry the count past it.
+		//
+		// It bounds what is WRITTEN and not what is read: ParseVCards reads a
+		// whole file before returning, so one attachment of ten thousand cards is
+		// already parsed and resident by the time this sees it. Its own 4 MiB and
+		// 5000-card ceilings are what bound that read; this one decides whether
+		// an unattended path may act on what came back.
+		if len(entries)+len(parsed) > vcardIngestMaxCards {
 			w.log.WarnContext(ctx, "a mailed message carried more cards than one message may import",
-				"activity", activity, "cards", len(entries), "limit", vcardIngestMaxCards)
+				"activity", activity, "cards", len(entries)+len(parsed), "limit", vcardIngestMaxCards)
 			return nil, nil
 		}
+		entries = append(entries, parsed...)
 	}
 	return entries, nil
 }
 
+// sourceStillOpen answers whether the message may still be read for its cards.
+//
+// One statement, so the callers that need the answer at different moments ask it
+// the same way rather than each spelling the predicate. A message that is GONE
+// answers false: erased or never written, both mean nothing to import.
+func (w *vcardIngestWorker) sourceStillOpen(ctx context.Context, activity ids.UUID) (bool, error) {
+	var open bool
+	err := w.pool.QueryRow(ctx, `
+		SELECT audience = 'workspace'
+		       AND restricted_at IS NULL
+		       AND archived_at IS NULL
+		  FROM activity WHERE id = $1`, activity).Scan(&open)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("compose: reading the card's source message: %w", err)
+	}
+	return open, nil
+}
+
 // liveCardKeys reads the message's card attachments while holding the message
-// against a concurrent narrowing.
+// against a narrowing that commits during the read.
+//
+// FOR SHARE holds only for as long as this transaction, which ends when the keys
+// are returned — the blob reads and the writes both happen after it. What the
+// lock buys is that the attachment list cannot be assembled from a message that
+// is being narrowed as it is read; importCards re-checks before writing, and the
+// comment there says what remains open.
 func (w *vcardIngestWorker) liveCardKeys(ctx context.Context, activity ids.UUID) ([]string, error) {
 	var keys []string
 	err := InstallationDB(w.pool).Tx(ctx, func(tx pgx.Tx) error {
@@ -241,11 +376,13 @@ func (w *vcardIngestWorker) liveCardKeys(ctx context.Context, activity ids.UUID)
 			return fmt.Errorf("compose: reading the card's source message: %w", err)
 		}
 		if limited {
+			w.log.InfoContext(ctx, "a mailed card was not imported: its message is not workspace-readable",
+				"activity", activity)
 			return nil
 		}
 		rows, err := tx.Query(ctx, `
 			SELECT storage_key FROM attachment
-			 WHERE activity_id = $1
+			 WHERE entity_type = 'activity' AND entity_id = $1
 			   AND archived_at IS NULL
 			   AND (lower(content_type) IN ('text/vcard', 'text/x-vcard', 'text/directory')
 			        OR lower(filename) LIKE '%.vcf')

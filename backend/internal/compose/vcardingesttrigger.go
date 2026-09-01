@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -112,9 +111,7 @@ func (t *VCardIngestTrigger) HandleEvent(ctx context.Context, env events.Envelop
 	// pass — that one re-derives its own candidates, and this one cannot,
 	// because the message it names is the only place its cards live.
 	child := VCardIngestArgs{Workspace: ws.UUID, Activity: activityID}
-	opts := oneOffChildOpts(child.Kind())
-	opts.UniqueOpts = river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}
-	return t.enqueue.Enqueue(ctx, child, opts)
+	return t.enqueue.Enqueue(ctx, child, vcardIngestInsertOpts())
 }
 
 // carriesCard answers whether this message has a live attachment that could be
@@ -131,12 +128,19 @@ func (t *VCardIngestTrigger) HandleEvent(ctx context.Context, env events.Envelop
 // This is a PROBE and not the decision. It reads the attachment metadata to
 // decide whether the message is worth a job; the job re-reads under a lock and
 // parses the bytes, which is what actually establishes a card is present.
+//
+// Keyed on (entity_type, entity_id) rather than the activity_id column beside
+// them, because that pair is what idx_attachment_entity indexes and activity_id
+// is indexed by nothing. The two agree — capture writes both — but only one of
+// them keeps this off a sequential scan of a table that grows forever, and a
+// probe that costs a full scan per captured message is worse than the job it
+// was added to avoid.
 func (t *VCardIngestTrigger) carriesCard(ctx context.Context, activity ids.UUID) (bool, error) {
 	var found bool
 	err := t.pool.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM attachment
-			 WHERE activity_id = $1
+			 WHERE entity_type = 'activity' AND entity_id = $1
 			   AND archived_at IS NULL
 			   AND (lower(content_type) IN ('text/vcard', 'text/x-vcard', 'text/directory')
 			        OR lower(filename) LIKE '%.vcf')
