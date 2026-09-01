@@ -90,6 +90,47 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	assert423("UpdateActivity with a stale If-Version", err)
 }
 
+// TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError proves
+// the retention refusal outranks the captured-audience one: a row can be
+// BOTH held and captured (imported by a mailbox, which is what
+// refuseCapturedAudienceWrite normally exists to refuse a direct audience
+// write on), and the two refusals answer different things — 423 says
+// nothing about this request would ever succeed, 422 says try the owner
+// endpoint instead. A held row's request is never fixable that way, so 423
+// must win.
+func TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+
+	heldActivity := SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by,
+		                      archived_at, restricted_at, restricted_until, retention_class,
+		                      retention_class_at, restricted_reason)
+		VALUES ($1, 'email', 'Held and Captured', 'body', now(), 'gmail', 'connector:gmail',
+		        now(), now(), now() + interval '5 years', 'commercial_correspondence',
+		        now(), 'commercial_correspondence')`)
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, heldActivity, e.AdminUser); err != nil {
+		t.Fatalf("seeding the capture_import row: %v", err)
+	}
+	held := ids.From[ids.ActivityKind](heldActivity)
+
+	_, err := e.Activities.SetAudience(e.Admin(), held, activities.SetAudienceInput{Audience: "participants"})
+	if err == nil {
+		t.Fatal("SetAudience on a held captured row succeeded, want a refusal")
+	}
+	var captured *activities.CapturedAudienceError
+	if errors.As(err, &captured) {
+		t.Fatalf("SetAudience answered CapturedAudienceError (422) for a held row — "+
+			"the retention refusal must outrank it, since asking the owner endpoint instead "+
+			"could never succeed either: %v", err)
+	}
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusLocked {
+		t.Fatalf("SetAudience on a held captured row classified as %+v (ok=%v), want 423 locked", fault, ok)
+	}
+}
+
 // TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter is the security
 // boundary the previous test's fix could have quietly removed: skipping the
 // DISCOVER gate for a held row (auth.EnsureActivityWritableIn's live=false
