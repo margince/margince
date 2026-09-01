@@ -40,7 +40,7 @@
    *   --bgSidebar      #e5ebe8  the application's left edge, BELOW the page
    *   --bgCard         #e6ece9  a well inside a card: a chip, an inset row
    *   --bgHover        #e9efec  a pointer resting on a row on the page
-   *   --bgPage         #f0f7f3  the reading ground
+   *   --bgPage         #f4f8f6  the reading ground
    *   --bgElevated     #fafffd  a card, a panel, a menu, and the ACTIVE rail row
    *
    * The dark theme is NOT this list mirrored. On a dark ground every surface
@@ -51,9 +51,9 @@
    * a card is therefore separated by its own lightness rather than by the
    * shadow alone. That is what lets --shadow-card be as slight as it now is.
    */
-  --bgPage: #f0f7f3;
+  --bgPage: #f4f8f6;
   --bgElevated: #fafffd;
-  /* 1.19:1 against --bgElevated, which it usually sits on, and 1.10:1 against
+  /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
   --bgCard: #e6ece9;
@@ -75,7 +75,7 @@
    * alpha colour rather than a solid because the blur is only visible where the
    * ground is see-through, and the alpha is what makes the strip show the
    * content sliding past it. */
-  --bgTopbar: rgba(240, 247, 243, 0.9);
+  --bgTopbar: rgba(244, 248, 246, 0.9);
 
   --accent: #0b7a53;
   /* The accent as TEXT, split from the accent as a FILL, and now diverging from
@@ -88,7 +88,7 @@
    * and the grounds went grey: the home glance's count chip (--accentText on
    * --accentLight, 15px) measured 4.36:1 once the page stopped being white.
    * The fill cannot move either way — #0b7a53 is the brand emerald — so the text
-   * does: 5.04:1 on that chip now, and clear of 4.5:1 on every ground in the
+   * does: 5.14:1 on that chip now, and clear of 4.5:1 on every ground in the
    * ladder. Same shape as --tealText and the --mono*Text pairs. */
   --accentText: #0a6f4b;
   --accentLight: rgba(11, 122, 83, 0.09);
@@ -127,7 +127,7 @@
      a rectangle accepts typing, and WCAG 1.4.11 therefore asks it for 3:1
      against its background. --borderStrong measures 1.45:1 on white and cannot
      be raised to 3:1 without turning every content divider into a hard rule.
-     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.30 / 3.06),
+     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.30 / 3.11),
      since controls sit on both. */
   --borderControl: #868f89;
 
@@ -137,7 +137,7 @@
    * (a fill/accent) so the dark theme can lift the text without shifting the
    * pill fills that read --teal — and so LIGHT can darken it without them, which
    * the grey grounds now require: --tealLight is an alpha tint over whatever is
-   * behind it, and on the grey page the pair measured 4.30:1. 5.08:1 now. The
+   * behind it, and on the grey page the pair measured 4.30:1. 5.17:1 now. The
    * same move as --accentText, for the same reason; neither --teal nor
    * --tealLight shifts. */
   --tealText: #0d6882;

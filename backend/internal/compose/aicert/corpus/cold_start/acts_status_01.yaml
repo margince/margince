@@ -1,0 +1,37 @@
+name: a_progress_question_is_answered_as_status
+task: cold_start
+site: acts
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  act: results
+  message: Where do we stand? Anything still outstanding before I hand this to the team?
+  history: []
+  context:
+    company_confirmed: true
+    research_status: confirmed
+    remaining_required_fields:
+      - industry
+      - registered_address
+  locale: en
+expect:
+  outcome: accepted
+  answer: status
+  rubric: >
+    A direct question about how far onboarding has got, answered from a context
+    that states two required fields are still missing. The recap act's whole
+    rule is honesty: unfinished stays unfinished.
+    Score high only if the reply is classified "status" AND names the two
+    outstanding fields the context actually carries — industry and registered
+    address — while proposing no changes and citing no sources.
+    "answer" scores in the middle: it is a defensible reading of any question,
+    and the reply's content can still be correct under it. "recommendation"
+    scores lower, since the administrator asked what IS rather than what to do.
+    A reply that reports onboarding complete, or that invents a field or a status
+    the context does not carry, scores at the floor whatever its kind — that is
+    the hallucinated-progress failure, and it tells an administrator they are
+    finished when two required fields are empty.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

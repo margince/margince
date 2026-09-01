@@ -134,16 +134,19 @@ can't silently rot. Adding a task or a site is a checklist of its own:
 The **runtime binding** says which real provider and model serves each tier, and
 nothing about policy. It is the `ai.routing` **setting** — a row, not a file —
 read from the database by every SERVING role, so the api and the worker cannot
-drift onto different bindings and a change needs no restart. The DB-less lanes
-below are the exception by design: `worker siteread`, `worker aitask` and the
-certification runner open no database and take a routing file, because each
-probes a binding rather than serving one.
+drift onto different bindings and a change needs no restart. **No role reads a
+routing file** — `--ai-routing` / `MARGINCE_AI_ROUTING` are still accepted so an
+existing command line parses, then ignored with a warning naming what to use
+instead. The DB-less lanes are told their model outright rather than handed a
+file: `worker siteread` and `worker aitask` take `--model provider:model` or
+`--ai-fake`, and the certification runner is given `MODEL=` and `JUDGE=`, because
+each probes ONE named binding and a file on whichever machine ran it was never
+comparable between engineers.
 
 A fresh installation declares it under `seeds.ai_routing` in `margince.yaml`
-(consumed once, at bootstrap); a running one is rebound under Settings → AI or
-through `PUT /v1/ai/routing`. The shape below is that binding's, and it is also
-the file format the debug and certification lanes still take — those probe a
-binding without opening a database, which is the one job a file is right for.
+(consumed once, at bootstrap; a dev stack's is in `config/margince.dev.yaml`); a
+running one is rebound under Settings → AI or through `PUT /v1/ai/routing`. The
+shape below is that binding's.
 
 ```yaml
 profile: eu_hosted            # WHERE inference may run (the egress posture)
@@ -170,10 +173,21 @@ embeddings:    {provider: gemini}
   calls will be refused`), and `/readyz` names the AI state (`configured` |
   `fake` | `unconfigured`) so an operator reads the gap off the boot log, not off
   a refused call at 3am.
+- **Which bound models can serve a task is the ladder PLUS the `degrade_to`
+  closure**, and the second half is the one a reader forgets. `ai.LeadingTier`
+  is the rung that answers when nothing has gone wrong (the ladder's first);
+  `ai.ServableTiers` is every rung that can end up answering — the ladder, then
+  the transitive closure of `degrade_to` over it. `draft_reply`'s ladder is
+  `[cheap_cloud, premium]` and `cheap_cloud` degrades to `local_small`, so the
+  model bound at `local_small` serves `draft_reply` under budget pressure while
+  the ladder never names that rung. Any claim of the form "these models can
+  answer this task" — a certification report, an operator's own audit of what a
+  binding exposes — is built from the closure or it is answering a narrower
+  question than it looks like.
 
-Binding a tier to a provider is an edit *here*; changing a task's ladder is an
-edit to the *contract* (above). Swapping gemini for a local Ollama, or pinning a
-premium Sonnet, never touches code — see
+Binding a tier to a provider is an edit to *this setting*; changing a task's
+ladder is an edit to the *contract* (above). Swapping gemini for a local Ollama,
+or pinning a premium Sonnet, never touches code — see
 [connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md)
 and [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md).
 
@@ -307,7 +321,17 @@ Because a task names a contract and the model behind it is swappable, you can
 (`compose/aicert`) folds several cache-off runs into one verdict —
 `certified` / `supported_degraded` / `not_supported` — saved as a committed JSON
 record. That's how you compare a cheaper candidate against the model you run
-today *before* editing the routing file.
+today *before* rebinding a tier under Settings → AI.
+
+A run is told what to measure — never a default read off the runner's disk. It is
+either ONE named candidate (`MODEL=`) bound to every task, or a whole
+**deployment** (`ROUTING=`), where each task is certified against the model that
+deployment binds at the task's leading ladder rung. The second exists because
+nobody deploys a model: an install binds one model at `local_small` and another
+at `premium`, and those are the answers it actually depends on. The rungs below a
+leading one are reachable under budget pressure and want their own runs — a
+record names one model, so pooling two would leave it unable to say which
+answered.
 
 What it measures is the part worth knowing. The corpus holds
 **fixtures, not prompts**: a scenario carries the input a site is given, and the
@@ -326,11 +350,32 @@ answer is assembled from calls the run never made cannot read as fully certified
 
 Nothing about this gates a merge: the lane is paid and BYOK-gated, so
 `make e2e-ai-report` *reports* readiness per shipped site — band, counts, scope,
-binding, and whether the record is **current**, **stale** or **absent** (stale and
-absent render distinctly: staleness is a lie, absence is honest). The
-deterministic gates are what block — the census refuses a shipped task whose site
-nobody wrote, a site the contract never declared, a planned task someone quietly
-implemented, and a site with no certification case. To debug a verdict, the lane
+binding, and whether the record is **current**, **partial**, **stale** or
+**absent**. The four never collapse into each other, because they are four
+different claims: staleness is a lie, absence is honest, and a `partial` is right
+about everything it says and silent about the rest.
+
+**A record is stamped per scenario, and the task stamp is the fold of those.**
+`aicert.ScenarioStamps` digests each scenario on its own — the scenario whole,
+the request the site's own code builds from it, and the request the grader is
+sent — and `FoldScenarioStamps` folds them into the task-level `PromptVersion`
+that `PromptVersion` now delegates to; the record carries both
+(`ScenarioRecord.Stamp` beside the task's). The fold alone can only say "this
+record is no longer about what ships", never *which* case moved, so adding a
+tenth scenario used to invalidate nine measurements that were still true and
+price the fix at all ten. Per scenario the same edit reads `partial 9/10` and
+costs one — `SCENARIOS` is `measured/total`, and `partial` means every scenario
+the record measured is still current while the corpus has grown cases it has
+never seen. The guarantee is unchanged and finer rather than weaker: a record
+still cannot describe a scenario, or a prompt, it did not measure. A record
+written before those per-scenario stamps existed carries none and is judged by
+its task stamp exactly as before.
+
+The deterministic gates are what block — the census refuses a shipped task whose
+site nobody wrote, a site the contract never declared, a planned task someone
+quietly implemented, a site with no certification case, and a closed answer
+vocabulary with a kind no scenario ever asked a model to produce
+(`TestEveryClosedAnswerKindCarriesAScenario`). To debug a verdict, the lane
 dumps every candidate and judge call to a local JSONL trace — the *same*
 secret-stripped `ai_call_payload` shape (on by default, gitignored).
 

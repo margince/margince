@@ -20,7 +20,8 @@ import (
 // as a pass count reads three successes here, and there are none.
 func TestCertifyTaskCountsAnAcceptedRunThatFailedItsScenarioAsFailed(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script(
-		"the widget is blue and durable", "the widget is blue and durable", "the widget is blue and durable")
+		"the widget is blue and durable", "the widget is blue and durable", "the widget is blue and durable",
+	)
 	judgeFake := ai.NewFakeClient().Script(scoreJSON(90), scoreJSON(90), scoreJSON(90))
 
 	sc := testScenario("expects silence", wideBands)

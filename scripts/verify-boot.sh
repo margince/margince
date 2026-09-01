@@ -12,9 +12,11 @@
 # Steps:
 #   1. POST /v1/auth/login with the seeded demo admin → 200 + crm_session.
 #   2. GET /v1/people under that session → the three seeded people.
-#   3. Every composed unit's declared channel transport is published by
+#   3. The seeded conversations are readable, and are of a kind the server
+#      stamps participants for — everything network-shaped derives from those.
+#   4. Every composed unit's declared channel transport is published by
 #      GET /v1/channel-providers — the boot step really ran.
-#   4. The frontend production build compiles (pnpm build) — a real
+#   5. The frontend production build compiles (pnpm build) — a real
 #      compile+bundle, not a stale-dist check.
 
 set -euo pipefail
@@ -42,7 +44,7 @@ trap 'rm -rf "$workdir"' EXIT
 # A transport failure (refused, timeout) makes curl print status 000 and
 # exit non-zero; `|| true` keeps set -e from eating the fail() message,
 # and --max-time keeps a stalled API from hanging the proof.
-echo "== verify-boot 1/4: login as the seeded demo admin =="
+echo "== verify-boot 1/5: login as the seeded demo admin =="
 login_status="$(curl -sS --max-time 15 -o "$workdir/login.json" -D "$workdir/headers" -w '%{http_code}' \
   -X POST "$API_BASE/v1/auth/login" \
   -H 'Content-Type: application/json' \
@@ -61,7 +63,7 @@ session="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 [ -n "$session" ] || fail "login answered 200 but set no crm_session cookie"
 echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 
-echo "== verify-boot 2/4: seeded people are visible =="
+echo "== verify-boot 2/5: seeded people are visible =="
 # The rule the product reads an employment by, spelled the same way
 # scripts/seed-dev.sh writes it: primary, and not ended. `ended_at` is a date and
 # ISO dates compare as strings, so a future end is still current — the reading
@@ -194,7 +196,74 @@ while IFS= read -r body; do
   echo "  OK: '$org_name' stands at '$lifecycle'"
 done <<< "$seeded_org_bodies"
 
-echo "== verify-boot 3/4: every composed unit's transport is registered =="
+echo "== verify-boot 3/5: the seeded conversations are conversations =="
+# A LINK IS NOT A CONVERSATION. Everything network-shaped — the person graph's
+# direct and account arms, contact peers, who-knows-this-contact, the decay lane
+# — derives from activity_participant, and for a long time nothing in the seed
+# wrote a row of it: the demo stack rendered the empty state on all of them, and
+# reading one meant hand-seeding participant rows first.
+#
+# What the seed can guarantee is the KIND. The server stamps the participants
+# itself, but only for an interaction kind — a task is intent and a note is a
+# record of thinking, and neither means two people spoke — so a seed that logged
+# notes would leave every one of those surfaces exactly as empty as before while
+# every other check here still passed.
+#
+# The kind is read BACK from the api rather than off the seeder's own literal:
+# what matters is what the server accepted and stored, not what the script
+# intended to send.
+#
+# The edges themselves are deliberately not asserted here. Folding them is a
+# WORKER's job, consuming activity.captured, and this lane boots the api alone —
+# a check for them could only ever fail. TestAHandLoggedMailNamesTheRepAndEvery
+# ContactOnIt holds the step between the two, where a worker is not needed.
+#
+# The SLUGS are read from the seeder — its first argument, the stable key each
+# conversation is written under — so a conversation added there is checked here
+# without an edit, and a read that finds none says so instead of passing.
+#
+# The slug rather than the subject, and the difference is the point: a subject is
+# display copy anybody may reword or reuse, and the seeder's own row is the one
+# carrying this key. Leading whitespace allowed: a call indented into a loop or a
+# conditional is still a seeded conversation, and a census anchored on column one
+# would stop seeing it without saying so.
+seeded_conversations="$(awk -F'"' '/^[[:space:]]*ensure_conversation[[:space:]]+"/ { print $2 "\t" $4 }' \
+    "$REPO_DIR/scripts/seed-dev.sh")"
+[ -n "$seeded_conversations" ] \
+  || fail "found no 'ensure_conversation \"…\"' calls in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+# The closed set the server stamps participants for, spelled once here and once
+# in relstrength.interactionKinds because neither can call the other.
+while IFS="$(printf '\t')" read -r slug subject; do
+  [ -n "$slug" ] || continue
+  # NARROWED BY THE SUBJECT, SELECTED BY THE KEY, and the two halves are doing
+  # different jobs.
+  #
+  # `q` is a full-text search over subject and body — it does not see
+  # source_id — so the narrowing has to be something the server can search for.
+  # A page-by-page walk of every activity on an installation carrying the demo
+  # dataset is thousands of requests to answer a question the server can answer
+  # in one, which is why there is a narrowing at all.
+  #
+  # The SELECTION is the natural key, because the title alone is satisfied by
+  # any activity carrying it — a hand-logged "Quarterly review with Demo GmbH"
+  # would do — and such a row was created with no links, so the server stamped
+  # no participants for it. Read by title alone, this check and the seeder's own
+  # skip would agree on a demo stack whose network surfaces are empty.
+  logged="$(find_first "/activities?q=$(jq -rn --arg v "$subject" '$v|@uri')" \
+      '.source_system == "seed" and .source_id == $k' --arg k "$slug")"
+  [ -n "$logged" ] \
+    || fail "no activity titled '$subject' carries the seed key '$slug' in GET /v1/activities — the seed is absent or stale (make seed-dev), or something else is holding that title and the seeder seeded beside it"
+  kind="$(printf '%s' "$logged" | jq -r '.kind')"
+  case "$kind" in
+    email|call|meeting) echo "  OK: '$subject' is a seeded $kind" ;;
+    *)
+      fail "seeded conversation '$subject' is a '$kind', which the server stamps no participants for — the demo stack's relationship graph, contact peers, who-knows and decay lane all render empty"
+      ;;
+  esac
+done <<<"$seeded_conversations"
+
+echo "== verify-boot 4/5: every composed unit's transport is registered =="
 # The boot proof for the channel registry, and it belongs HERE rather than in a
 # Go test: registering the vocabulary is a BOOT STEP the api runs, so the only
 # thing that can prove the api runs it is an api that booted. This lane boots
@@ -227,7 +296,7 @@ else
   done <<<"$expected_transports"
 fi
 
-echo "== verify-boot 4/4: frontend production build =="
+echo "== verify-boot 5/5: frontend production build =="
 # --ignore-scripts: no lifecycle scripts run at install; esbuild ships
 # prebuilt platform binaries as optional deps, so the build works without
 # its validating postinstall.

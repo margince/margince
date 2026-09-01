@@ -1,0 +1,39 @@
+name: an_ambiguous_reference_is_asked_about_rather_than_guessed
+task: cold_start
+site: acts
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  act: connect
+  message: Can we turn that one off for now?
+  history: []
+  context:
+    company_confirmed: true
+    research_status: confirmed
+    remaining_required_fields: []
+  locale: en
+expect:
+  outcome: accepted
+  answer: clarification
+  rubric: >
+    "That one" refers to nothing. The history is empty, so there is no previous
+    turn to resolve it against, and the context names no purpose or grant the
+    administrator could be pointing at. The only honest reply is to ask which
+    thing they mean.
+    Score high only if the reply is classified "clarification" and asks. This is
+    the scenario where guessing is the failure: consent here is per purpose and
+    default-deny, so a reply that picks a purpose and confirms turning it off has
+    both invented the administrator's intent and — worse — implied a state change
+    this act cannot make and must never claim.
+    "answer" scores at the floor when it answers as though the referent were
+    known. It scores in the middle only if the reply's substance is itself a
+    request for the missing detail, i.e. the right behaviour under a wrong label.
+    "off_topic" scores low: the message is plainly about the act's own subject,
+    it is merely incomplete.
+    Note the trap. An empty history and a confirmed, nothing-outstanding context
+    make this look like a tidy end-of-flow moment where an agreeable "done" is
+    the natural reply, which is exactly when a model is most likely to guess.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

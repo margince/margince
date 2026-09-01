@@ -1,0 +1,48 @@
+name: a_mixed_batch_keeps_every_label_on_its_own_message
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Production classifies a BATCH in one call and applies each label by the id it
+# came back under. Every other scenario here sends one message, so nothing
+# measured whether a batch's labels stay attached to the right message — a
+# transposition would apply one sender's commitment to another sender's mail and
+# look, on every surface, like a correct classification.
+fixture:
+  - subject: 'Re: pallet reorder week 41'
+    body: |
+      Please go ahead on the same terms. I'll raise the purchase order this
+      afternoon so it's with you before the cutoff.
+  - subject: 'Automatic reply: Re: pallet reorder week 41'
+    body: |
+      Thank you for your message. Our office is closed for the public holiday
+      and reopens on Tuesday.
+  - subject: 'introduction call?'
+    body: |
+      A colleague passed on your details. Would you have 20 minutes next week to
+      talk through what you do? Tuesday or Thursday morning both work here.
+expect:
+  outcome: accepted
+  answer: [commitment, noise, meeting]
+  rubric: >
+    Three messages in one call, one per label, deliberately ordered so a
+    transposition is visible: a purchase order promised this afternoon
+    (commitment), a holiday autoresponder on the SAME subject line (noise), and a
+    request for twenty minutes with two offered mornings (meeting).
+    Score high only if all three labels are right AND each is attached to its own
+    message. The second message shares its subject with the first, which is the
+    trap: a model that carries context across the batch labels the autoresponder
+    "commitment" because the thread it sits in contains one.
+    A batch that is right on two of three scores in the middle. A batch whose
+    labels are individually all present but attached to the wrong messages scores
+    at the floor — it is the failure this scenario exists to catch, and it is
+    worse than a plain wrong label because the result reads as a confident,
+    well-formed classification of somebody else's mail.
+    Score the confidences as three separate judgements, not one: the
+    autoresponder deserves a higher confidence than the introduction request,
+    and a single flat confidence across all three is a sign the batch was not
+    actually read message by message.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

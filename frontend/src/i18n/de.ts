@@ -3934,7 +3934,7 @@ export const de = {
     "Die Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
   "connectors.disconnect": "Trennen",
-  "connectors.signatureEnrich.label": "Signaturen aus diesem Postfach lesen",
+  "connectors.signatureEnrich.label": "Kontaktdaten aus diesem Postfach lesen",
   "connectors.signatureEnrich.followingDefault":
     "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":
@@ -6361,10 +6361,9 @@ export const de = {
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
-  "captureSettings.signatureEnrich.label":
-    "Signaturen für Kontaktdaten auswerten",
+  "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiv, übernimmt ein nächtlicher Durchlauf, was ein Kontakt in seiner eigenen Signatur angibt — Position, Telefonnummer, Firma. Nichts wird erschlossen: Was die Signatur nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
+    "Wenn aktiv, übernimmt Margince, was ein Kontakt in E-Mails an Sie unter seinem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 
@@ -6838,6 +6837,7 @@ export const de = {
   "person.moment.rule.re_engaged": "Sie haben sich gemeldet",
   "person.moment.rule.job_change": "Neue Stelle",
   "person.moment.rule.overdue_promise": "Zusage überfällig",
+  "person.moment.rule.overdue_task": "Versprechen überfällig",
   "person.moment.rule.gone_quiet": "Still geworden",
   "person.moment.rule.open_promise": "Offenes Versprechen",
   "person.moment.rule.role_change": "Rolle geändert",
@@ -6890,6 +6890,7 @@ export const de = {
   "person.loops.dueInDays": "in {count} Tagen",
   "person.loops.waiting": "wartet",
   "person.loops.open": "offen",
+  "person.loops.atLeast": "mindestens {count}",
 
   "person.memory.title": "Gesprächsgedächtnis",
   "person.memory.empty": "Auf diesem Kanal wurde noch nichts erfasst.",
@@ -7023,6 +7024,10 @@ export const de = {
   "person.meeting.risks": "Risiken und Warnsignale",
   "person.meeting.talking_points": "Vorgeschlagene Gesprächspunkte",
   "person.meeting.company_context": "Letztes Treffen",
+  "person.meeting.background": "Hintergrund und Quellen",
+  "person.meeting.omittedSource": "Nicht in diesem Briefing",
+  "person.meeting.preparedFor": "Vorbereitet für {name}",
+  "person.meeting.preparedForAt": "Vorbereitet für {name} · {org}",
 
   "co.strip.healthSummary": "Zustand",
   "co.strip.healthSummary.failingOf": "{failing} von {rated} gefährdet",
@@ -7077,8 +7082,12 @@ export const de = {
   "provider.automaticLookupJurisdiction":
     "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
   "provider.buyable": "Kauf von {category} erlauben",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+  "provider.buyableHint_other":
+    "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+  "provider.buyableNeeds":
+    "Der Anbieter sucht danach nur zusammen mit {prerequisite}. Einzeln lässt es sich nicht kaufen — erlauben Sie zuerst diese Angabe.",
   "provider.backlog": "Noch nachzuschlagen",
   "provider.backlogRemaining_one": "{count} Kontakt",
   "provider.backlogRemaining_other": "{count} Kontakte",
@@ -7157,6 +7166,8 @@ export const de = {
   "provider.profile.notRequested": "Nie angefragt: {categories}.",
   "provider.profile.buy_one": "{category} kaufen · {credits} Credit",
   "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
+  "provider.profile.buyRebuys":
+    "Im Preis ist {categories} erneut enthalten: Der Anbieter sucht ohne diese Angabe nicht danach und berechnet alles, was er zurückliefert.",
   "provider.freeTier.hint":
     "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
   "provider.pricedTier.hint":
@@ -7503,12 +7514,14 @@ export const de = {
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kunde wartet",
+  "worklist.filter.leads": "Leads",
   "worklist.filter.deals_at_risk": "Gefährdete Deals",
   "worklist.filter.meetings": "Termine",
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Entscheidungen",
   "worklist.filter.system": "System",
   "worklist.category.customer_waiting": "Kunde wartet",
+  "worklist.category.leads": "Lead",
   "worklist.category.deals_at_risk": "Deal gefährdet",
   "worklist.category.meetings": "Termin",
   "worklist.category.tasks": "Aufgabe",
@@ -7540,6 +7553,10 @@ export const de = {
   "worklist.because.repeated_failure": "dasselbe schlägt immer wieder fehl",
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
+  "worklist.because.meeting_unprepared": "nichts vorbereitet",
+  "worklist.because.response_overdue": "Antwort überfällig",
+  "worklist.because.response_due_soon": "Antwort bald fällig",
+  "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
@@ -7581,6 +7598,7 @@ export const de = {
   "worklist.untitled.brief_item": "Die Nacht hat das herausgesucht",
   "worklist.untitled.conversation_claim": "Eine Zusage von dir",
   "worklist.untitled.customer_waiting": "Jemand wartet auf Antwort",
+  "worklist.untitled.lead_response": "Ein Lead",
   "worklist.untitled.deal_at_risk": "Ein Deal treibt ab",
   "worklist.untitled.meeting": "Ein Termin",
   "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",

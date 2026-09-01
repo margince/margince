@@ -12613,13 +12613,15 @@ export interface components {
              */
             auto_enrich: boolean;
             /**
-             * @description The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
-             *     number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
-             *     a value the signature does not state is not written.
+             * @description The workspace DEFAULT for reading stated contact details — a title, a phone number, an
+             *     address, a company — out of mail a contact sent us. It governs both readers: the
+             *     signature of the message, and a vCard attached to it. Nothing is inferred: a value the
+             *     mail does not state is not written. Reading happens within minutes of the mail arriving;
+             *     a daily pass is the backstop.
              *
              *     A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
              *     never chose follows this. Distinct from the exclusion list, which keeps whole messages
-             *     out of capture by address or domain and says nothing about reading a signature.
+             *     out of capture by address or domain and says nothing about reading contact details.
              *     Default is ON.
              *
              *     "Workspace" here is the storage tenant, not the word the product shows a reader —
@@ -12810,7 +12812,7 @@ export interface components {
             auto_enrich?: boolean;
             /** @description Toggle the workspace mail-sharing posture; affects mail captured from now on. */
             mail_sharing?: boolean;
-            /** @description Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it. */
+            /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
             signature_enrich?: boolean;
             /** @description Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts. */
             shared_posture_allowed?: boolean;
@@ -12940,13 +12942,14 @@ export interface components {
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
             /**
-             * @description This mailbox's own answer to the nightly signature pass, or null to follow the
-             *     tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
-             *     a missing value: a mailbox that never chose moves with the default, and one that
-             *     did keeps its answer whatever the default becomes.
+             * @description This mailbox's own answer to reading contact details out of its mail, or null to
+             *     follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
+             *     and not a missing value: a mailbox that never chose moves with the default, and one
+             *     that did keeps its answer whatever the default becomes.
              *
-             *     False means no mail from this mailbox is ever SELECTED for enrichment — the pass
-             *     never reads it, rather than reading it and discarding the result.
+             *     False means no mail from this mailbox is ever SELECTED — neither its signatures are
+             *     read nor its attached vCards imported. The passes never reach it, rather than
+             *     reading it and discarding the result.
              */
             signature_enrich_enabled?: boolean | null;
             /**
@@ -17132,7 +17135,7 @@ export interface components {
          *     card.
          * @enum {string}
          */
-        PersonMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "role_change" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
+        PersonMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "overdue_task" | "gone_quiet" | "open_promise" | "role_change" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
         /** @description One thing that actually happened, which the reader can open. */
         PersonMomentEvidence: {
             /** @enum {string} */
@@ -25527,7 +25530,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -25704,7 +25707,7 @@ export interface components {
              * @description The narrowing this read applied.
              * @enum {string}
              */
-            filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -25751,7 +25754,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "introduction_request" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "introduction_request" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -25804,7 +25807,7 @@ export interface components {
              * @description Which kind of work these numbers are about. The same vocabulary the filter uses.
              * @enum {string}
              */
-            category: "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
             /** @description How many items of this kind were read and ranked, before any narrowing. */
             considered: number;
             /** @description How many of them the page carries, counting a folded group as its members. */
@@ -25860,12 +25863,12 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
              */
-            category: "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
             /**
              * @description The hard priority band, and the whole of the product rule: 0 pinned by the
              *     reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
@@ -25960,7 +25963,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "stale";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -37209,7 +37212,7 @@ export interface operations {
                  */
                 scope?: "mine" | "unassigned" | "team" | "all";
                 /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
-                filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+                filter?: "all" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**

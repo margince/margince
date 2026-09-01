@@ -323,10 +323,13 @@ func pageOfRequest(req model.Request) string {
 	return pageURL
 }
 
-// SiteReadDebugBrain resolves the subcommand's model selection — exactly
-// one of a routing file, a direct provider:model override, or the
-// offline fake — into a Brain plus a banner naming what will serve the
-// calls. The override builds a one-tier routing config in process, so
+// SiteReadDebugBrain resolves the subcommand's model selection — exactly one of
+// a direct provider:model override or the offline fake — into a Brain plus a
+// banner naming what will serve the calls.
+//
+// There is no routing-FILE option, and this comment said there was: the binding
+// is a stored setting now, `--ai-routing` is accepted and ignored, and the debug
+// lanes take `--model` or `--ai-fake`. The override builds a one-tier routing config in process, so
 // even a pinned model rides the full routed pipeline (structured-output
 // retries, budget bands, secret stripping).
 //
@@ -385,8 +388,8 @@ func extractionLane(system string) string {
 type TaskProbeCompleter func(ctx context.Context, req model.Request) (model.Response, ai.RouteInfo, error)
 
 // TaskProbeBrain binds one task to the model that will answer it for the
-// `worker aitask` probe, under the same one-of-three rule SiteReadDebugBrain
-// uses: a routing file, a direct provider:model override, or the offline fake.
+// `worker aitask` probe, under the same rule SiteReadDebugBrain uses: exactly one
+// of a direct provider:model override or the offline fake.
 //
 // It lives HERE, beside SiteReadDebugBrain, because this file is one of the two
 // files that ARE the model-path assembly seam (backend/gates/arch_test.go's

@@ -3898,7 +3898,7 @@ export const vi = {
     "Việc thu thập thư chưa được cấu hình trên bản triển khai này.",
   "connectors.reconnect": "Kết nối lại",
   "connectors.disconnect": "Ngắt kết nối",
-  "connectors.signatureEnrich.label": "Đọc chữ ký từ hộp thư này",
+  "connectors.signatureEnrich.label": "Đọc thông tin liên hệ từ hộp thư này",
   "connectors.signatureEnrich.followingDefault":
     "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
   "connectors.signatureEnrich.ownAnswer":
@@ -6300,10 +6300,9 @@ export const vi = {
     "Tự động bổ sung thông tin cho công ty đã thu thập",
   "captureSettings.autoEnrich.help":
     "Khi bật, mỗi công ty mới tạo từ thư đã thu thập sẽ được lập hồ sơ web tự động — website của công ty được đọc và hồ sơ được điền. Chạy trong một giới hạn theo ngày.",
-  "captureSettings.signatureEnrich.label":
-    "Đọc chữ ký để lấy thông tin liên hệ",
+  "captureSettings.signatureEnrich.label": "Đọc thông tin liên hệ từ thư",
   "captureSettings.signatureEnrich.help":
-    "Khi bật, một lượt chạy hằng đêm lấy những gì người liên hệ tự ghi trong chữ ký của họ — chức danh, số điện thoại, công ty. Không suy đoán: điều chữ ký không nói thì không được ghi. Đây là mặc định của tổ chức; hộp thư đã tự chọn thì giữ lựa chọn đó.",
+    "Khi bật, Margince lấy những gì người liên hệ tự ghi dưới tên mình trong thư gửi cho bạn — trong chữ ký, và trên danh thiếp đính kèm. Chức danh, số điện thoại, địa chỉ, công ty. Việc này diễn ra trong vài phút sau khi thư đến. Không suy đoán: điều thư không nói thì không được ghi. Đây là mặc định của tổ chức; hộp thư đã tự chọn thì giữ lựa chọn đó.",
   "captureSettings.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
 
@@ -6762,6 +6761,7 @@ export const vi = {
   "person.moment.rule.re_engaged": "Họ đã quay lại",
   "person.moment.rule.job_change": "Đã đổi việc",
   "person.moment.rule.overdue_promise": "Lời hứa quá hạn",
+  "person.moment.rule.overdue_task": "Lời hứa quá hạn",
   "person.moment.rule.gone_quiet": "Đã im lặng",
   "person.moment.rule.open_promise": "Lời hứa còn mở",
   "person.moment.rule.role_change": "Đã đổi vai trò",
@@ -6813,6 +6813,7 @@ export const vi = {
   "person.loops.dueInDays": "trong {count} ngày",
   "person.loops.waiting": "đang chờ",
   "person.loops.open": "đang mở",
+  "person.loops.atLeast": "ít nhất {count}",
 
   "person.memory.title": "Ký ức trò chuyện",
   "person.memory.empty": "Chưa ghi nhận gì trên kênh này.",
@@ -6943,6 +6944,10 @@ export const vi = {
   "person.meeting.risks": "Rủi ro và điểm cần lưu ý",
   "person.meeting.talking_points": "Gợi ý nội dung trao đổi",
   "person.meeting.company_context": "Lần gặp gần nhất",
+  "person.meeting.background": "Bối cảnh và nguồn",
+  "person.meeting.omittedSource": "Không có trong bản tóm tắt này",
+  "person.meeting.preparedFor": "Chuẩn bị cho {name}",
+  "person.meeting.preparedForAt": "Chuẩn bị cho {name} · {org}",
 
   "co.strip.healthSummary": "Tình hình",
   "co.strip.healthSummary.failingOf": "{failing}/{rated} đang gặp rủi ro",
@@ -6994,8 +6999,12 @@ export const vi = {
   "provider.automaticLookupJurisdiction":
     "Hãy tắt mục này nếu liên hệ của bạn thuộc phạm vi luật cấm mua bán dữ liệu cá nhân, trong đó có luật Việt Nam. Nút trên từng liên hệ vẫn dùng được, để quyết định thuộc về người đưa ra nó.",
   "provider.buyable": "Cho phép mua {category}",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Bật công tắc này không mua gì cả. Nó đặt một nút trên mỗi liên hệ, giá {credits} tín dụng, để ai đó mua thông tin này cho từng người một.",
+  "provider.buyableHint_other":
+    "Bật công tắc này không mua gì cả. Nó đặt một nút trên mỗi liên hệ, giá {credits} tín dụng, để ai đó mua thông tin này cho từng người một.",
+  "provider.buyableNeeds":
+    "Nhà cung cấp chỉ tìm thông tin này cùng với {prerequisite}, nên không thể mua riêng. Hãy cho phép mục đó trước.",
   "provider.backlog": "Còn phải tra cứu",
   "provider.backlogRemaining_one": "{count} liên hệ",
   "provider.backlogRemaining_other": "{count} liên hệ",
@@ -7070,6 +7079,8 @@ export const vi = {
   "provider.profile.notRequested": "Chưa bao giờ hỏi tới: {categories}.",
   "provider.profile.buy_one": "Mua {category} · {credits} tín dụng",
   "provider.profile.buy_other": "Mua {category} · {credits} tín dụng",
+  "provider.profile.buyRebuys":
+    "Giá này bao gồm việc mua lại {categories}: nhà cung cấp không tìm thông tin này nếu thiếu mục đó, và tính phí cho mọi thứ họ trả về.",
   "provider.freeTier.hint":
     "Hồ sơ LinkedIn, vai trò hiện tại và quá trình làm việc không tốn tín dụng. Nên bật: mọi liên hệ mới đều có chúng mà không ai phải quyết định.",
   "provider.pricedTier.hint":
@@ -7425,12 +7436,14 @@ export const vi = {
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",
+  "worklist.filter.leads": "Khách tiềm năng",
   "worklist.filter.deals_at_risk": "Giao dịch rủi ro",
   "worklist.filter.meetings": "Cuộc họp",
   "worklist.filter.tasks": "Công việc",
   "worklist.filter.decisions": "Quyết định",
   "worklist.filter.system": "Hệ thống",
   "worklist.category.customer_waiting": "Khách đang chờ",
+  "worklist.category.leads": "Khách tiềm năng",
   "worklist.category.deals_at_risk": "Giao dịch rủi ro",
   "worklist.category.meetings": "Cuộc họp",
   "worklist.category.tasks": "Công việc",
@@ -7460,6 +7473,10 @@ export const vi = {
   "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
   "worklist.because.meeting_soon": "sắp bắt đầu",
+  "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
+  "worklist.because.response_overdue": "quá hạn trả lời",
+  "worklist.because.response_due_soon": "sắp đến hạn trả lời",
+  "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
@@ -7498,6 +7515,7 @@ export const vi = {
   "worklist.untitled.brief_item": "Đêm qua đã chọn mục này",
   "worklist.untitled.conversation_claim": "Một lời hứa của bạn",
   "worklist.untitled.customer_waiting": "Ai đó đang chờ trả lời",
+  "worklist.untitled.lead_response": "Một khách tiềm năng",
   "worklist.untitled.deal_at_risk": "Một giao dịch đang trôi",
   "worklist.untitled.meeting": "Một cuộc họp",
   "worklist.untitled.relationship_decay": "Một mối quan hệ đang nguội",

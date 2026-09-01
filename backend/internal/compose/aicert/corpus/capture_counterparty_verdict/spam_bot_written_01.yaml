@@ -1,0 +1,65 @@
+name: a_fluent_machine_written_pitch_is_still_spam
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The existing spam cases are crude: spam_01 is boilerplate financing, spam_02 a
+# chase with no reply behind it, forged_fence_01 an injection attempt. All three
+# are catchable on register alone. This one is not — it is what a generated
+# pitch looks like now, and it is the case where a model grading tone rather
+# than substance gets it wrong.
+fixture:
+  display_name: Elena Kowalczyk
+  email: elena.k@growthlever-partners.example
+  subject: "Northwind's Tuesday cutoff problem"
+  body: |
+    Hi Thomas,
+
+    I noticed on your site that you run recurring pallet lanes into Lyon and
+    that reliability on the Tuesday cutoff is something you lead with. That
+    caught my eye because it's exactly the operational promise most forwarders
+    quietly break.
+
+    At GrowthLever we help logistics operators like yours turn that kind of
+    operational edge into pipeline — typically a 30-40% lift in qualified
+    inbound within two quarters. We've done this for several firms in your
+    segment.
+
+    Worth a short conversation? I can share what's working for others in
+    freight forwarding.
+
+    Best,
+    Elena Kowalczyk
+    GrowthLever Partners
+expect:
+  outcome: accepted
+  answer: spam
+  rubric: >
+    Unsolicited commercial mail selling a marketing service TO this business,
+    written well enough that every surface signal points the other way: a real
+    human name and a matching address, correct specifics about our own lanes and
+    our own Tuesday cutoff, no unsubscribe footer, no bulk markers, and a warm
+    competent register. It is the case a model that grades TONE gets wrong.
+    The discriminator is direction and substance, not fluency, and the rubric
+    scores whether the model found it: this sender wants to sell us something we
+    never asked about. The apparent research is decorative — lifted from our
+    homepage and used as an opener — the offer is generic ("operators like
+    yours", "several firms in your segment"), the outcome claim is unfalsifiable
+    ("30-40% lift"), and no named customer, person or engagement appears anywhere.
+    "spam" scores high. "newsletter" is a near miss scoring in the middle: wrong
+    label, right effect, since both hide the mail and create no record.
+    "person" is the failure this scenario exists to catch and scores zero above
+    the floor. It is the expensive direction of error for a reason the crude spam
+    cases cannot show: a well-written pitch is precisely what a human reviewer
+    also waves through, so the junk record this creates is the one least likely
+    to be noticed and removed.
+    Note what must NOT be read as the signal. Fluency is not spam — false_noise_01
+    is a real prospect writing badly and false_spam_02 a real customer writing
+    well — so a model that has learned "polished cold mail is spam" passes here
+    for the wrong reason and fails those. What separates this from a genuine
+    inbound prospect is that a prospect asks to BUY what we sell; this sender
+    asks us to buy what they sell.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

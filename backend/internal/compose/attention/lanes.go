@@ -422,6 +422,22 @@ type Meeting struct {
 	ID       ids.UUID
 	Subject  string
 	StartsAt time.Time
+
+	// NeedsPrep is true when nothing has been written down for a meeting that
+	// is about to happen: no agenda or notes body, and nobody outside this
+	// organization recorded on it.
+	//
+	// It is a THREE-state answer squeezed into a bool plus its guard below, and
+	// the third state is why: a meeting whose content this reader may not read
+	// arrives with an empty body for a reason that has nothing to do with
+	// preparation. Calling that "needs prep" would tell a rep to prepare a
+	// meeting they cannot see, so the lane leaves PrepKnown false instead and
+	// the surface says nothing rather than something false.
+	NeedsPrep bool
+
+	// PrepKnown reports whether NeedsPrep was answerable at all. False when the
+	// row's content is withheld from this reader.
+	PrepKnown bool
 }
 
 // Notices is the acting person's own unread notices — the durable

@@ -114,6 +114,10 @@ type Service struct {
 	// admits. A lane whose absence widened a scope would be a security hole
 	// wearing the shape of a missing feature.
 	teammates Teammates
+	// leads is the inbound leads still owed a first reply. Optional in the
+	// ordinary way: nil is a feed that does not read leads at all, which the
+	// queue reports as an absent source rather than as an empty one.
+	leads LeadResponses
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked
 	// queue takes a census, because a batch row that says "10" over a pile of
@@ -228,6 +232,16 @@ func (s *Service) WithDealFacts(f DealFacts) *Service {
 // unanswerable may-I is a no.
 func (s *Service) WithTeammates(t Teammates) *Service {
 	s.teammates = t
+	return s
+}
+
+// WithLeadResponses binds the inbound leads still owed a first reply.
+//
+// Read BESIDE the assembled day rather than as a fifteenth lane, the way the
+// waiting-customer source already is: /attention publishes a fourteen-lane
+// promise, and this is not one of them. The queue is where the two orders meet.
+func (s *Service) WithLeadResponses(l LeadResponses) *Service {
+	s.leads = l
 	return s
 }
 
