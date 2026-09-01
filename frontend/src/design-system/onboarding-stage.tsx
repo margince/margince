@@ -50,24 +50,41 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
  */
 function StageBand({
   progress,
+  where,
   coreStateLabel,
-}: Readonly<{ progress?: StageProgress; coreStateLabel?: string }>) {
+  lit,
+}: Readonly<{
+  progress?: StageProgress;
+  where?: string;
+  coreStateLabel?: string;
+  lit: boolean;
+}>) {
   return (
     <div className="ob-stage-band">
-      {progress === undefined ? null : (
-        <p className="ob-stage-where">
+      <p className="ob-stage-who">
+        {/* Setup carries no other chrome, so the mark is the one place the
+            reader is told whose software they are inside. */}
+        <span className="ob-stage-mark" aria-hidden="true">
+          M
+        </span>
+        {progress === undefined ? null : (
           <span className="ob-stage-step">{progress.steps[progress.at]}</span>
-          <span className="ob-stage-dashes" aria-hidden="true">
-            {progress.steps.map((step, i) => (
-              <span
-                key={step}
-                data-at={
-                  i < progress.at ? "done" : i === progress.at ? "now" : "todo"
-                }
-              />
-            ))}
-          </span>
-        </p>
+        )}
+        {where === undefined ? null : (
+          <span className="ob-stage-where">· {where}</span>
+        )}
+      </p>
+      {progress === undefined ? null : (
+        <span className="ob-stage-dashes" aria-hidden="true">
+          {progress.steps.map((step, i) => (
+            <span
+              key={step}
+              data-at={
+                i < progress.at ? "done" : i === progress.at ? "now" : "todo"
+              }
+            />
+          ))}
+        </span>
       )}
       {coreStateLabel === undefined ? null : (
         // Readable, and deliberately NOT a live region. The orb is aria-hidden
@@ -77,7 +94,9 @@ function StageBand({
         // the status resolves on this frame label instead of on the sentence a
         // reader has to act on, and on the gate it is the read's own phase line
         // said a second time.
-        <p className="ob-stage-corestate">{coreStateLabel}</p>
+        <p className="ob-stage-corestate" data-unlit={!lit}>
+          {coreStateLabel}
+        </p>
       )}
     </div>
   );
@@ -93,6 +112,8 @@ export function OnboardingStage({
   coreScale = "hero",
   anchor = "center",
   progress,
+  where,
+  hint,
   eyebrow,
   title,
   sub,
@@ -134,11 +155,10 @@ export function OnboardingStage({
    * The Core is `aria-hidden` (WDS-CORE-4) and every state it shows has to be
    * stated in text by the surface around it — that is what makes it safe for
    * the orb to be this decorative. Stated, not announced: the band is the
-   * room's frame, and the screen standing in it owns the live region. The
-   * stage cannot compose the sentence
-   * itself: no copy lives in a primitive. A caller that passes no label draws
-   * no band reading, which is honest for a screen whose Core is not carrying a
-   * state anybody needs to act on.
+   * room's frame, and the screen standing in it owns the live region. The stage
+   * cannot compose the sentence itself: no copy lives in a primitive. A caller
+   * that passes no label draws no band reading, which is honest for a screen
+   * whose Core is not carrying a state anybody needs to act on.
    */
   coreStateLabel?: string;
   /**
@@ -149,6 +169,22 @@ export function OnboardingStage({
   anchor?: "center" | "start";
   /** How far through the flow this screen is. See `StageProgress`. */
   progress?: StageProgress;
+  /**
+   * Which part of the current step this is, beside the step's own name.
+   *
+   * A stop can take several screens ("Set up" holds the sign-in, the model and
+   * the platform question), and the dashes cannot say that: they count stops.
+   * Absent where a stop is one screen.
+   */
+  where?: string;
+  /**
+   * One line on the card's bottom edge about what the reader is looking at.
+   *
+   * For the thing the screen cannot say without becoming an essay: why a count
+   * has no total, why two addresses are not interchangeable. Chrome, so it does
+   * not arrive with the board.
+   */
+  hint?: string;
   /** The step's place in the flow. Absent where the flow does not number itself. */
   eyebrow?: string;
   title: string;
@@ -156,36 +192,49 @@ export function OnboardingStage({
   children: ReactNode;
 }>) {
   return (
-    <div
-      className="ob-stage"
-      data-lit={lit}
-      data-anchor={anchor}
-      data-core={coreScale}
-    >
-      <div className="ob-stage-light" />
-      {progress === undefined && coreStateLabel === undefined ? null : (
-        <StageBand progress={progress} coreStateLabel={coreStateLabel} />
-      )}
-      <div className="ob-stage-core">
-        {/* The Core's first light, and it is the STAGE's to place because the
-            Core's position is. Anchored to the orb's own cell rather than to a
-            remembered offset into the viewport: this layout is a centred grid,
-            so a percentage of the window is nowhere near the orb at most widths
-            and nowhere near it at all once the columns stack. */}
-        {coreFlash ? (
-          <span className="ob-stage-flash" aria-hidden="true" />
-        ) : null}
-        <MarginceCoreScene
-          state={coreState}
-          progress={coreProgress}
-          feed={coreFeed}
+    <div className="ob-page">
+      <div
+        className="ob-stage"
+        data-lit={lit}
+        data-anchor={anchor}
+        data-core={coreScale}
+      >
+        <div className="ob-stage-light" />
+        <StageBand
+          progress={progress}
+          where={where}
+          coreStateLabel={coreStateLabel}
+          lit={lit}
         />
-      </div>
-      <div className="ob-stage-column arrive-stack">
-        {eyebrow === undefined ? null : <Eyebrow as="h2">{eyebrow}</Eyebrow>}
-        <h1 className="ob-stage-title">{title}</h1>
-        <p className="ob-stage-sub">{sub}</p>
-        {children}
+        <div className="ob-stage-scene">
+          {/* The Core's place is the STAGE's to decide, and so is its first
+              light: anchored to the orb itself rather than to a remembered
+              offset into the window, which is nowhere near the ball at most
+              widths and nowhere near it at all once the scene stacks. */}
+          <div className="ob-stage-core" data-unlit={!lit}>
+            {coreFlash ? (
+              <span className="ob-stage-flash" aria-hidden="true" />
+            ) : null}
+            <MarginceCoreScene
+              state={coreState}
+              progress={coreProgress}
+              feed={coreFeed}
+            />
+          </div>
+          <div className="ob-stage-board arrive-stack">
+            {eyebrow === undefined ? null : (
+              <Eyebrow as="h2">{eyebrow}</Eyebrow>
+            )}
+            <h1 className="ob-stage-title">{title}</h1>
+            <p className="ob-stage-sub">{sub}</p>
+            {children}
+          </div>
+        </div>
+        {hint === undefined ? null : (
+          <div className="ob-stage-foot">
+            <p className="ob-stage-hint">{hint}</p>
+          </div>
+        )}
       </div>
     </div>
   );

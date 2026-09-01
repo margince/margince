@@ -2,155 +2,71 @@
  * The onboarding stage: the room every question before the working view is
  * asked in.
  *
- * WHY A STAGE AND NOT A CARD. `margince-workbench.css` makes the argument for
- * the surface that comes after this one — during setup this IS the application,
- * so a card floating on a page frames it as a dialog somebody could dismiss.
- * The same was true of every screen before it and was not true of the markup:
- * first run was a panel on an empty page, and the gate was a 540px column.
+ * WHY A CARD ON A GROUND. Setup is a passage rather than a place: it has a
+ * beginning, an end, and no navigation out of it, and a framed deck standing on
+ * a ground says that where a full-bleed page says "this is the application
+ * now". The frame also gives the band and the foot two real edges to sit on,
+ * which is what lets them read as the room's own chrome instead of as the first
+ * and last things in a scroll.
  *
- * WHY THE CORE HOLDS A COLUMN. Above the words it is an illustration of the
- * heading; beside them it is the thing the heading is about. The column
- * collapses under 60rem, where there is no room for two.
+ * WHY THE CORE IS PLACED, NOT COLUMNED. It hangs at a fixed point in the scene
+ * and the board simply keeps its distance, so the orb holds ONE position while
+ * the question beside it changes length. A column would re-centre it every time
+ * the copy grew a line, and the whole reason it can shrink from hero to work
+ * without reading as a new screen is that it never moves.
  *
  * WHY THE LIGHT IS A CLAIM. `--aiLight` means a machine did it (see README).
- * The room carries indigo only where that is true — once this installation has
- * a model bound — so `lit` is read from the server rather than set per screen.
- * One colour, one meaning.
+ * The room carries indigo only where that is true, once this installation has a
+ * model bound, so `lit` is read from the server rather than set per screen. The
+ * same flag empties the Core: an orb with something turning inside it on an
+ * installation that cannot think yet is the claim made twice and wrong twice.
  *
  * Copy never lives here, and no colour is a literal.
  */
 
-.ob-stage {
-  position: relative;
+.ob-page {
   min-height: 100vh;
   display: grid;
-  /* The band spans both columns as its own row, so it reads as the stage's
-     frame rather than as something belonging to the question under it. */
-  grid-template-columns: minmax(0, 24rem) minmax(0, 34rem);
-  grid-template-rows: auto 1fr;
-  justify-content: center;
-  /* SAFE centring: past the point where the question is taller than the room,
-     a centred row overflows equally in both directions and the top half is the
-     half that cannot be scrolled back to. Safe centring gives up and anchors
-     rather than putting the heading above the ceiling. */
-  align-items: safe center;
-  gap: var(--space-10);
-  padding: 0 var(--space-6) var(--space-12);
+  /* SAFE centring: past the point where the card is taller than the window, a
+     centred track overflows equally in both directions and the top half is the
+     half that cannot be scrolled back to. */
+  align-content: safe center;
+  padding: var(--space-6) var(--space-6);
   background: var(--bgElevated);
-  overflow-x: hidden;
 }
 @supports (min-height: 100dvh) {
   /* 100vh on mobile Safari measures the viewport with the URL bar collapsed,
-     so the stage runs taller than the screen and its own primary action begins
-     below the fold. */
-  .ob-stage {
+     so the page runs taller than the screen and the card's own primary action
+     begins below the fold. */
+  .ob-page {
     min-height: 100dvh;
   }
 }
 
-/*
- * Two anchors, and the difference is behaviour rather than taste.
- *
- * `center` is for a question of a fixed size. `start` is for a surface that
- * GROWS while somebody reads it — the read theatre gains a tile per page — and
- * there a centred column re-centres on every arrival, so the line being read
- * travels upward while it is being read. Anchored, growth extends downward into
- * the room the bottom padding already reserves.
- */
-.ob-stage[data-anchor="center"] .ob-stage-column,
-.ob-stage[data-anchor="center"] .ob-stage-core {
-  align-self: center;
-}
-.ob-stage[data-anchor="start"] .ob-stage-column,
-.ob-stage[data-anchor="start"] .ob-stage-core {
-  align-self: start;
-  padding-top: var(--space-10);
-}
-
-/*
- * The band: where the reader is, and what the Core is doing said in words.
- *
- * Full width and fixed at the top of the stage, so it reads as the room's frame
- * — it does not move when the scene under it changes, which is the whole reason
- * a reader can use it to keep their place.
- */
-.ob-stage-band {
-  grid-column: 1 / -1;
-  /* PLACED EXPLICITLY, because the band is optional: a flow that neither
-     numbers itself nor carries a Core reading draws none, and auto-placement
-     then slides the question up into the band's row. The room's whole height
-     collects underneath it as empty floor, and the heading sits against the
-     ceiling with its ascenders cut. */
-  grid-row: 1;
-  align-self: start;
-  /* Out past the stage's own inline padding: a band inset from the edges reads
-     as a wide card sitting on the page rather than as the room's own header. */
-  margin: 0 calc(var(--space-6) * -1) var(--space-8);
-  padding: var(--space-3) var(--space-6);
+.ob-stage {
+  /* The room's own proportions, held against both a laptop and a tall desktop:
+     the scene needs height to place the Core in, and a card that grows with the
+     window turns the same question into a different composition on every
+     screen. */
+  --ob-stage-min: clamp(620px, 80vh, 900px);
+  /* How far the board keeps off the left edge, which is what reserves the
+     Core's place. The Core is positioned rather than columned, so this is the
+     only thing standing between the two. */
+  --ob-board-inset: clamp(330px, 30%, 460px);
+  --ob-board-inset-work: clamp(160px, 17%, 240px);
+  --ob-core-scale: 1;
+  position: relative;
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
+  min-height: var(--ob-stage-min);
   display: flex;
-  align-items: center;
-  /* The Core's reading takes the right edge whether or not there is a step name
-     on the left — `space-between` on a single child would centre it, and a
-     reading that moves depending on which flow is running is a reading a reader
-     has to hunt for. */
-  justify-content: flex-end;
-  gap: var(--space-4);
-  border-bottom: 1px solid var(--borderSubtle);
-  background: color-mix(in srgb, var(--bgCard) 70%, transparent);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
-.ob-stage-where {
-  margin: 0;
-  /* Takes the rest of the band, so the Core's reading stays on the right edge
-     rather than sitting beside the step name. */
-  margin-right: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-.ob-stage-step {
-  color: var(--textPrimary);
-  font-weight: var(--fw-medium);
-}
-
-/* Progress as marks rather than "2 of 3": the step's own name is already beside
-   them, and a fraction next to a name is the same fact twice. The current one
-   lengthens instead of only changing colour, so the position survives being
-   read without colour. */
-.ob-stage-dashes {
-  display: flex;
-  gap: var(--space-2);
-}
-.ob-stage-dashes span {
-  display: block;
-  width: 22px;
-  height: 3px;
-  border-radius: var(--r-full);
-  background: var(--textMuted);
-  transition:
-    background var(--dur-move) var(--ease-out),
-    width var(--dur-move) var(--ease-out);
-}
-.ob-stage-dashes span[data-at="done"] {
-  background: var(--accent);
-}
-.ob-stage-dashes span[data-at="now"] {
-  background: var(--accent);
-  width: 36px;
-}
-
-/* The Core's state in words — mono because it names a machine state rather than
-   speaking to the reader, and indigo because the thing it describes is the
-   agent. */
-.ob-stage-corestate {
-  margin: 0;
-  font-family: var(--f-mono);
-  font-size: var(--fs-eyebrow);
-  color: var(--aiText);
-  white-space: nowrap;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop);
+  background: var(--bgCard);
 }
 
 /*
@@ -173,40 +89,258 @@
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* The light still arrives — it says something true about the installation —
-     it just stops being a fade. */
+  /* The light still arrives, since it says something true about the
+     installation. It just stops being a fade. */
   .ob-stage-light {
     transition: none;
   }
 }
 
-.ob-stage-core,
-.ob-stage-column {
+/*
+ * The band: where the reader is, and what the Core is doing said in words.
+ *
+ * Fixed at the top of the card, so it reads as the room's frame. It does not
+ * move when the scene under it changes, which is the whole reason a reader can
+ * use it to keep their place.
+ */
+.ob-stage-band {
   position: relative;
-  z-index: 1;
-  min-width: 0;
-  /* The question's row, named rather than inferred. See the band above. */
-  grid-row: 2;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: color-mix(in srgb, var(--bgCard) 70%, transparent);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
 }
 
-.ob-stage-core {
+.ob-stage-who {
   display: flex;
-  justify-content: center;
-  /* The frame the wash below is measured against. */
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* The product's mark, which is what makes the band a masthead rather than a
+   progress bar with a label on it. Setup has no other chrome, so this is the
+   one place the reader is told whose software this is. */
+.ob-stage-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  font-family: var(--f-display);
+  font-weight: var(--fw-bold);
+  font-size: 12px;
+}
+
+.ob-stage-step {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+.ob-stage-where {
+  color: var(--textMeta);
+  min-width: 0;
+}
+
+/* Progress as marks rather than "2 of 3": the step's own name is already beside
+   them, and a fraction next to a name is the same fact twice. The current one
+   lengthens instead of only changing colour, so the position survives being
+   read without colour. Centred in the band, because it belongs to the whole
+   passage rather than to the label it would otherwise trail. */
+.ob-stage-dashes {
+  display: flex;
+  gap: var(--space-2);
+}
+.ob-stage-dashes span {
+  display: block;
+  width: 22px;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: var(--textMuted);
+  transition:
+    background var(--dur-move) var(--ease-out),
+    width var(--dur-move) var(--ease-out);
+}
+.ob-stage-dashes span[data-at="done"] {
+  background: var(--accent);
+}
+.ob-stage-dashes span[data-at="now"] {
+  background: var(--accent);
+  width: 36px;
+}
+
+/* The Core's state in words. Mono because it names a machine state rather than
+   speaking to the reader, and indigo because the thing it describes is the
+   agent. Not a live region: see the component. */
+.ob-stage-corestate {
+  margin: 0;
+  font-family: var(--f-mono);
+  font-size: var(--fs-eyebrow);
+  color: var(--aiText);
+  white-space: nowrap;
+}
+.ob-stage-corestate[data-unlit="true"] {
+  color: var(--textTertiary);
+}
+
+/* ---- the scene ---------------------------------------------------------- */
+
+.ob-stage-scene {
   position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+/*
+ * The Core hangs at ONE point in the scene, and the board keeps its distance.
+ * See the note at the top: placed rather than columned, so the orb does not
+ * move when the question beside it grows a line.
+ */
+.ob-stage-core {
+  position: absolute;
+  z-index: 1;
+  left: 13%;
+  top: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(var(--ob-core-scale, 1));
+  transition: transform var(--dur-enter) var(--ease-out);
+}
+/*
+ * The Core gives ground as the work arrives.
+ *
+ * A TRANSFORM rather than a second `--coreSize`: the shader is drawn at one
+ * resolution and scaling the box would re-measure the canvas mid-flow, which is
+ * a resize and a repaint rather than a movement. Scaled, the orb stays the same
+ * element in the same place and simply takes less room, which is what makes it
+ * read as the subject stepping back.
+ */
+.ob-stage[data-core="work"] {
+  --ob-core-scale: 0.46;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-stage-core {
+    transition: none;
+  }
+}
+
+/* The Core is the subject of this screen rather than a mark on it, so it runs
+   larger than its own default. `--coreCap` is the documented opt-out for a
+   layout that has already reserved the Core's place: this one has, and the
+   viewport cap would otherwise shrink the sphere to two thirds of what was
+   asked for at the widths this stage is built around. */
+.ob-stage-core .core {
+  --coreSize: 300px;
+  --coreGlass: 224px;
+  --coreCap: 100%;
+}
+
+/*
+ * Glass, with nothing turning inside it.
+ *
+ * Before a model is bound the shell, the rim and the glass are the whole orb:
+ * the shader is what a bound model looks like from outside, so drawing it on an
+ * installation that cannot think is the interface claiming a capability the
+ * server does not have. `.core-still` says the same thing for a different
+ * reason (no WebGL context), and the two agree on the picture by design.
+ */
+.ob-stage-core[data-unlit="true"] .core-canvas {
+  opacity: 0;
+}
+/* The shader draws its OWN rim and glass, so a live Core hides the CSS pair to
+   avoid a double edge. Hiding the canvas therefore takes the ball away with it
+   and leaves only the glow, which is a smudge rather than a sphere. Unlit, the
+   dress comes back: it is the whole orb here. */
+.ob-stage-core[data-unlit="true"] .core-rim,
+.ob-stage-core[data-unlit="true"] .core-glass {
+  opacity: 1;
+}
+
+.ob-stage-board {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-5);
+  padding: var(--space-10) var(--space-8) var(--space-10) var(--ob-board-inset);
+}
+.ob-stage[data-core="work"] .ob-stage-board {
+  padding-left: var(--ob-board-inset-work);
+}
+/*
+ * `start` is for a surface that GROWS while somebody reads it: the read theatre
+ * gains a tile per page, and a centred board re-centres on every arrival, so the
+ * line being read travels upward while it is being read.
+ */
+.ob-stage[data-anchor="start"] .ob-stage-board {
+  align-content: start;
+}
+
+.ob-stage-title {
+  margin: 0;
+  font-size: var(--fs-hero-fluid);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+  /* A measure, not a width: a hero line that runs the full board reads as a
+     paragraph set large rather than as a title. */
+  max-width: 20ch;
+}
+
+.ob-stage-sub {
+  margin: 0;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-relaxed);
+  color: var(--textSecondary);
+  max-width: 52ch;
+}
+
+/* ---- the foot ----------------------------------------------------------- */
+
+/*
+ * One line about what the reader is looking at, on the card's bottom edge.
+ *
+ * It carries the thing the screen itself cannot say without becoming an essay:
+ * why a count is open, why two addresses are not interchangeable. Chrome, so it
+ * sits outside the board and does not arrive with it.
+ */
+.ob-stage-foot {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--borderSubtle);
+  background: color-mix(in srgb, var(--bgCard) 40%, transparent);
+}
+.ob-stage-hint {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  max-width: 62ch;
 }
 
 /*
  * The Core's first light: a dot at the orb's own centre, crossing the room once.
  *
- * ANCHORED TO THE ORB'S CELL, not to a percentage of the window. This layout is
- * a centred grid, so the orb's real position moves with every width and changes
- * column entirely under 60rem — a remembered offset into the viewport is right
- * at one width and wrong at all the others.
- *
- * It is the Core's act, so it lives with the Core rather than with the surface
- * that triggers it. Behind the orb (`z-index: 0` inside this cell, which the
- * canvas sits above) so the light comes from under the ball rather than over it.
+ * ANCHORED TO THE ORB, not to a percentage of the window, so it starts where the
+ * ball actually is at every width and after the columns stack. Behind the orb
+ * (`z-index: 0` inside this cell, which the canvas sits above) so the light
+ * comes from under the ball rather than over it.
  */
 .ob-stage-flash {
   position: absolute;
@@ -245,104 +379,45 @@
   }
 }
 
-/* The Core is the subject of this screen rather than a mark on it, so it runs
-   larger than its own default. `--coreCap` is the documented opt-out for a
-   layout that has already sized the column the Core stands in: this one has,
-   and the viewport cap would otherwise shrink the sphere to two thirds of what
-   was asked for at the widths this stage is built around. The glass keeps the
-   component's own ratio to the shell. */
-.ob-stage-core .core {
-  --coreSize: 300px;
-  --coreGlass: 224px;
-  --coreCap: 100%;
-}
-
-/*
- * The Core gives ground as the work arrives.
- *
- * A TRANSFORM rather than a second `--coreSize`: the shader is drawn at one
- * resolution and scaling the box would re-measure the canvas mid-flow, which is
- * a resize and a repaint rather than a movement. Scaled, the orb stays the same
- * element in the same place and simply takes less room — which is what makes it
- * read as the subject stepping back, not as one screen replacing another.
- */
-.ob-stage-core {
-  transform: scale(var(--ob-core-scale, 1));
-  transform-origin: center;
-  transition: transform var(--dur-enter) var(--ease-out);
-}
-.ob-stage[data-core="work"] {
-  --ob-core-scale: 0.62;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* The size still changes — it says something true about what the screen is
-     for — it just stops travelling between the two. */
-  .ob-stage-core {
-    transition: none;
-  }
-}
-
-.ob-stage-column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.ob-stage-title {
-  margin: 0;
-  font-size: var(--fs-hero-fluid);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
-  /* A measure, not a width: a hero line that runs the full column reads as a
-     paragraph set large rather than as a title. */
-  max-width: 20ch;
-}
-
-.ob-stage-sub {
-  margin: 0;
-  font-size: var(--fs-lead);
-  line-height: var(--lh-relaxed);
-  color: var(--textSecondary);
-  max-width: 52ch;
-}
-
-/* The column assembles in reading order through `.arrive-stack` (enter.css),
+/* The board assembles in reading order through `.arrive-stack` (enter.css),
    which is the product's one spelling of that: fade over `--dur-enter`, rise
    over `--dur-move`, `--stagger-enter` apart, and reduced motion already
    handled there. A second set of keyframes here would be the same intention
    said twice, free to drift. */
 
 @media (max-width: 60rem) {
+  /* No room to stand the Core beside the question, so it takes a row above it
+     and the board stops reserving a place for something that is no longer
+     there. */
+  .ob-page {
+    padding: 0;
+  }
   .ob-stage {
-    grid-template-columns: minmax(0, 34rem);
-    grid-template-rows: auto auto 1fr;
-    justify-items: center;
-    gap: var(--space-6);
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: none;
   }
-  /* Stacked, the two take a row each under the band. The wide layout's shared
-     row would put them side by side again in a single-column grid. */
+  .ob-stage-scene {
+    flex-direction: column;
+    align-items: center;
+  }
   .ob-stage-core {
-    grid-row: 2;
+    position: static;
+    transform: scale(var(--ob-core-scale, 1));
+    padding-top: var(--space-6);
   }
-  .ob-stage-column {
-    grid-row: 3;
+  .ob-stage-board {
+    align-content: start;
+    padding: var(--space-6);
   }
-  /* One column is always top-anchored, whatever the anchor says: centred, an
-     expanding form pushes the heading off the top of the screen while somebody
-     is filling it in. */
-  .ob-stage .ob-stage-column,
-  .ob-stage .ob-stage-core {
-    align-self: start;
-    padding-top: 0;
-  }
-  .ob-stage-band {
-    margin-inline: calc(var(--space-6) * -1);
+  .ob-stage[data-core="work"] .ob-stage-board {
+    padding-left: var(--space-6);
   }
   /* Back inside the component's own cap. The wide layout opts out of it because
-     it sized the Core's column; this one did not, and a 300px sphere on a 390px
-     phone is the whole screen. */
+     it reserved the Core's place; this one did not, and a 300px sphere on a
+     390px phone is the whole screen. */
   .ob-stage-core .core {
     --coreSize: 190px;
     --coreGlass: 142px;
@@ -351,5 +426,10 @@
   .ob-stage-title,
   .ob-stage-sub {
     max-width: none;
+  }
+  /* The mark alone: a step name, a sub-step and a row of dashes do not fit a
+     phone's width, and the dashes are the half that still works at a glance. */
+  .ob-stage-where {
+    display: none;
   }
 }
