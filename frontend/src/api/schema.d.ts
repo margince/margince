@@ -3205,6 +3205,56 @@ export interface paths {
         patch: operations["setActivityAudience"];
         trace?: never;
     };
+    "/activities/{id}/disposition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a waiting message down, so the Worklist stops offering it.
+         * @description The Worklist claims to be finite: work it and it empties. A message the rep has already
+         *     judged had no way to leave, so it returned every morning and the count above it stayed
+         *     wrong.
+         *
+         *     THREE JUDGEMENTS, TWO REACHES.
+         *
+         *     `not_sales` is a fact about the THREAD — recognizing the procurement newsletter settles
+         *     what the message is, for everybody. `snooze` and `not_mine` belong to the ONE READER who
+         *     set them: a rep putting a reply down until Thursday must not take it off the colleague who
+         *     owns the deal, and saying "not mine" is precisely saying somebody else must still see it.
+         *
+         *     A snooze names a moment still ahead and lifts on its own. `not_mine` names none and does
+         *     NOT lift by itself: it stands until the reader picks the message back up. Nothing watches
+         *     for the record changing hands, so a rep who hands work on and later inherits it again has
+         *     to undo their own judgement — which is the honest behaviour to publish, rather than a
+         *     re-arm no consumer performs.
+         *
+         *     Reading the message is the licence to judge it: an id the caller cannot read answers 404,
+         *     the same as one that does not exist.
+         */
+        put: operations["setActivityDisposition"];
+        post?: never;
+        /**
+         * Pick the message back up — the undo behind every set-aside verb.
+         * @description Clears what THIS reader set aside, and, with `scope=thread`, the workspace-wide `not_sales`
+         *     judgement. The two are separate because their reach is: a rep undoing their own snooze must
+         *     not also re-admit a thread a colleague ruled out.
+         *
+         *     Idempotent — picking up a message nobody set down is the same success, because the reader's
+         *     goal state already holds.
+         */
+        delete: operations["clearActivityDisposition"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/meeting-brief": {
         parameters: {
             query?: never;
@@ -16997,7 +17047,7 @@ export interface components {
          *     card.
          * @enum {string}
          */
-        PersonMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "role_change" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
+        PersonMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "role_change" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
         /** @description One thing that actually happened, which the reader can open. */
         PersonMomentEvidence: {
             /** @enum {string} */
@@ -17040,10 +17090,10 @@ export interface components {
          */
         PersonMomentDestination: {
             /**
-             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet.
+             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
              * @enum {string}
              */
-            surface: "composer" | "meeting_brief" | "research" | "record" | "task";
+            surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log";
             /** @enum {string|null} */
             entity_type?: "person" | "organization" | "deal" | "activity" | null;
             /** Format: uuid */
@@ -19118,6 +19168,24 @@ export interface components {
          * @enum {string}
          */
         ActivityAudience: "workspace" | "participants" | "selected";
+        SetActivityDispositionRequest: {
+            /**
+             * @description What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+             *     `not_mine` bind only the caller.
+             * @enum {string}
+             */
+            disposition: "snooze" | "not_mine" | "not_sales";
+            /**
+             * Format: date-time
+             * @description When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
+             *     with no moment would never lift, and a moment on `not_mine` would make a hand-off
+             *     expire on a Thursday.
+             *
+             *     A moment already past is refused rather than stored: it would write a row that hides
+             *     nothing, and read to the rep as a snooze that did not take.
+             */
+            snoozed_until?: string;
+        };
         SetActivityAudienceRequest: {
             audience: components["schemas"]["ActivityAudience"];
             /** @description The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set. */
@@ -25557,6 +25625,16 @@ export interface components {
              *     not drawing.
              */
             counts: components["schemas"]["WorklistCount"][];
+            /**
+             * @description The outcome headings, in the order a page draws them, each with how many of this
+             *     page's rows sit under it.
+             *
+             *     Every band appears, including one with no rows: "nothing needs you today" is
+             *     something to tell a reader, and a client inferring the headings from the rows it
+             *     received could not say it. The queue arrives sorted so each band's rows are
+             *     contiguous — a client draws a heading where the band changes.
+             */
+            bands?: components["schemas"]["WorklistBand"][];
         };
         /**
          * @description What one source contributed, in numbers that say what they counted.
@@ -25588,6 +25666,20 @@ export interface components {
              *     "200+" rather than "200".
              */
             more_available: boolean;
+        };
+        /**
+         * @description One outcome band and how much of it this page is showing — the headings a client draws,
+         *     in the order it draws them.
+         *
+         *     Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+         *     told something ("nothing needs you today"), and a client that inferred the headings from
+         *     the rows it received could not say it.
+         */
+        WorklistBand: {
+            /** @enum {string} */
+            band: "now" | "build_pipeline" | "keep_momentum" | "review";
+            /** @description How many rows of this band are on the page. */
+            shown: number;
         };
         /**
          * @description What one CATEGORY of work held, and how much of it reached the page.
@@ -25726,6 +25818,39 @@ export interface components {
             occurred_at?: string;
             /** @description What this item offers, routed to the endpoint that owns the verb. */
             actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
+            /**
+             * @description The heading this row sits under, as an OUTCOME rather than a priority number.
+             *
+             *     `level` says what kind of work a row is; the band says what the reader is being asked
+             *     to do about it today. Seven levels make a correct ordering and poor headings — a reader
+             *     scanning for "what must happen now" should not have to know which levels mean that.
+             *
+             *     Derived from the level and the row's own subject, so it cannot disagree with the order:
+             *     the queue arrives already sorted, and every row of one band is contiguous. A client
+             *     draws a heading when the band changes and never re-sorts.
+             * @enum {string}
+             */
+            band?: "now" | "build_pipeline" | "keep_momentum" | "review";
+            /**
+             * @description The ways this row can be PUT DOWN, as the server declares them. A client
+             *     never infers this from `source`: which rows a rep may judge is a server
+             *     rule, and a client guessing it draws a verb that 404s or hides one the rep
+             *     is entitled to.
+             *
+             *     Absent or empty means the row cannot be set aside — most sources answer
+             *     through the surface that owns them and leave nothing to dispose of here.
+             */
+            dispositions?: ("snooze" | "not_mine" | "not_sales")[];
+            /**
+             * @description The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+             *     reader arriving at a row should not have to weigh three equally-drawn
+             *     controls to find the step the ranking already implies.
+             *
+             *     Absent when the row offers no single obvious step, which is a real state
+             *     rather than a gap: a dedupe pair genuinely asks the reader to choose.
+             * @enum {string}
+             */
+            primary_action?: "decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge";
         };
         /**
          * @description One fact behind an item's rank, as a typed pair rather than a sentence: the
@@ -25749,10 +25874,17 @@ export interface components {
          */
         WorklistComparison: {
             /**
-             * @description What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+             * @description What decided it. `order` means every comparator tied and the ids broke it, which the
+             *     client renders as no reason at all.
+             *
+             *     `crowded` means the row below is one of many of its kind: past a lead group, further
+             *     rows of the same source sort under the other kinds of work so one noisy lane cannot own
+             *     the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+             *     otherwise bury the reader's one overdue task — which is why it can be the answer even
+             *     when the two rows share a level.
              * @enum {string}
              */
-            comparator: "pin" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
+            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
             mine?: components["schemas"]["WorklistValue"];
             theirs?: components["schemas"]["WorklistValue"];
         };
@@ -31580,6 +31712,65 @@ export interface operations {
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
             423: components["responses"]["RetentionHeld"];
+        };
+    };
+    setActivityDisposition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetActivityDispositionRequest"];
+            };
+        };
+        responses: {
+            /** @description Put down. Setting the same disposition again is the same success. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    clearActivityDisposition: {
+        parameters: {
+            query?: {
+                /**
+                 * @description `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
+                 *     workspace-wide not-sales judgement, which anybody who can read the message may do:
+                 *     the judgement was never one person's property.
+                 */
+                scope?: "mine" | "thread";
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Picked up, or was never put down. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getMeetingBrief: {

@@ -131,42 +131,36 @@ func rankAll(rows []ranked) []crmcontracts.WorklistItem {
 			comparison := compare(row, rows[i+1])
 			item.AboveNext = &comparison
 		}
+		// What this row offers a reader who is NOT going to answer it now, and
+		// which of its verbs is the step. Stamped here rather than by each
+		// classifier, so a source added later carries a primary action by
+		// arriving in this loop instead of by its author remembering to.
+		if item.Source == sourceWaiting {
+			offered := waitingDispositions()
+			item.Dispositions = &offered
+		}
+		item.PrimaryAction = primaryActionFor(item)
+		// The heading this row sits under. Stamped after the sort, so it
+		// describes a row's place on the page it is actually on.
+		band := crmcontracts.WorklistItemBand(bandOfRow(row))
+		item.Band = &band
 		out = append(out, item)
 	}
 	return out
 }
 
-// less is the whole ordering, in one place so the comparator and the
-// explanation cannot come to disagree — compare() below walks the same steps in
-// the same order and names the first one that decided.
+// less orders one pair by walking rankSteps until one of them decides.
+//
+// The steps live in ranksteps.go beside their own explanations, so the order a
+// reader is shown and the reason they are given come from one list rather than
+// from two functions kept in step by hand. They had already come apart there:
+// crowding was the first thing this compared and the one thing the explanation
+// never mentioned.
 func less(a, b ranked) bool {
-	// Crowding sorts BEFORE the band, and it is the one thing that does.
-	//
-	// A hundred unanswered customers are all genuinely level 1, so comparing
-	// bands first puts every one of them above the reader's overdue task and
-	// the page becomes a single kind of work again. The few that lead keep
-	// their band's precedence; the rest wait behind the other kinds — still
-	// level 1, still saying a buyer wrote last, just not all at once.
-	if a.crowded != b.crowded {
-		return b.crowded
-	}
-	if a.item.Level != b.item.Level {
-		return a.item.Level < b.item.Level
-	}
-	if decided, order := byDeadline(a, b); decided {
-		return order
-	}
-	if decided, order := byExpected(a, b); decided {
-		return order
-	}
-	if a.waitingRank != b.waitingRank {
-		return a.waitingRank > b.waitingRank
-	}
-	if a.strength != b.strength {
-		return a.strength > b.strength
-	}
-	if !a.occurredAt.Equal(b.occurredAt) {
-		return a.occurredAt.Before(b.occurredAt)
+	for _, step := range rankSteps {
+		if decided, aFirst := step.decides(a, b); decided {
+			return aFirst
+		}
 	}
 	// The ids break a complete tie, so one read's order is the next read's
 	// order. An unstable queue teaches a reader that the ranking means nothing.
@@ -209,92 +203,16 @@ func nearDeadline(r ranked) bool {
 	return !r.deadlineAt.IsZero()
 }
 
-// compare names the FIRST tie-break that decided a pair, with both sides'
-// values. It walks the same steps as less(), in the same order, so a row can
-// never claim a reason that did not decide it.
+// compare names the FIRST step that decided a pair, with both sides' values.
+//
+// Walks the SAME slice less() walks, in the same order, and asks the step that
+// decided to describe its own decision — so a row cannot claim a reason that
+// did not decide it, and a step cannot join the ordering without being given
+// words to explain itself.
 func compare(a, b ranked) crmcontracts.WorklistComparison {
-	// A pin is a level difference, and less() treats it as one — but naming it
-	// "level" would hide the only override a reader has. Same decision, the
-	// word that means something to them.
-	if a.item.Level == levelPinned && b.item.Level != levelPinned {
-		return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorPin}
-	}
-	if a.item.Level != b.item.Level {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorLevel,
-			Mine:       levelValue(a.item.Level),
-			Theirs:     levelValue(b.item.Level),
-		}
-	}
-	// Only when the two sides actually DIFFER. byDeadline can decide on
-	// overdue-versus-not while both dates read the same to a reader, and a row
-	// saying "07:30 against 07:30" claims a reason nobody can check.
-	// Compared at the resolution a READER sees. Two instants a few seconds
-	// apart render as the same minute, and "16:21 against 16:21" is a reason
-	// nobody can check — the live page printed exactly that.
-	//
-	// When the date DID decide but reads alike, the row says so plainly rather
-	// than falling through: the next comparator did not decide anything, and
-	// naming it would be a different lie than the one just fixed.
-	if decided, _ := byDeadline(a, b); decided {
-		if sameMinute(a.deadlineAt, b.deadlineAt) {
-			return crmcontracts.WorklistComparison{
-				Comparator: crmcontracts.WorklistComparisonComparatorDeadline,
-			}
-		}
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorDeadline,
-			Mine:       dateValue(a),
-			Theirs:     dateValue(b),
-		}
-	}
-	if decided, _ := byExpected(a, b); decided {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorExpectedRevenue,
-			Mine:       moneyValue(a),
-			Theirs:     moneyValue(b),
-		}
-	}
-	// Decided on the ORDERING age, because that is what less() compared — naming
-	// a comparator that did not decide is the failure this function exists to
-	// avoid. Reported as the TRUE age, because that is the number the row itself
-	// says and the one a reader can check.
-	//
-	// Where the ceiling clipped a side, the two sides can order differently from
-	// how they read: 180 and 40 days both rank as 30, tie, and the next
-	// comparator decides. Then this arm never fires, so no row ever claims an
-	// age decided it when the ages had stopped mattering.
-	if a.waitingRank != b.waitingRank {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
-			Mine:       daysValue(a.waitingDays),
-			Theirs:     daysValue(b.waitingDays),
-		}
-	}
-	if a.strength != b.strength {
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorRelationship,
-		}
-	}
-	// Occurrence decides before the ids do, and less() orders on it — so it has
-	// to be named here too. The contract's `order` means every comparator tied,
-	// and a row that reported it while occurrence had actually decided would be
-	// telling the reader something false about its own position.
-	//
-	// The two instants travel only when they READ differently. Thirteen seconds
-	// apart renders as "23:20 against 23:20" under a heading about waiting days,
-	// which is two wrong things at once — so a difference the reader cannot see
-	// names the comparator and stops.
-	if !a.occurredAt.Equal(b.occurredAt) {
-		if sameMinute(a.occurredAt, b.occurredAt) {
-			return crmcontracts.WorklistComparison{
-				Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
-			}
-		}
-		return crmcontracts.WorklistComparison{
-			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
-			Mine:       occurredValue(a),
-			Theirs:     occurredValue(b),
+	for _, step := range rankSteps {
+		if decided, _ := step.decides(a, b); decided {
+			return step.explain(a, b)
 		}
 	}
 	// Everything tied and the ids broke it. Saying so honestly is better than

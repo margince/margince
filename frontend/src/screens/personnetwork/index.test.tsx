@@ -156,3 +156,58 @@ describe("a legacy payload with one route", () => {
     expect(screen.queryByText(NO_ROUTE)).toBeNull();
   });
 });
+
+// The lead panel and the alternatives list draw the same route, and they must
+// call a blocked state the same thing.
+//
+// These three states were unreachable until the server learned to report them,
+// and in that time two copies of the label switch drifted: one said
+// "Unavailable" where the other said "Not available". Nothing failed, because
+// nothing rendered. This is what fails now.
+describe("a route that cannot be asked for", () => {
+  const taken: NonNullable<PersonGraph["routes"]>[number] = {
+    route_id: "direct:1",
+    route_type: "direct",
+    via_user_id: "018f3a1b-0000-7000-8000-0000000000a1",
+    via_display_name: "Lena Fischer",
+    strength_bucket: "strong",
+    evidence: { interactions_90d: 12, two_way: true },
+    // `unavailable` on purpose: it is the state whose two copies had actually
+    // drifted ("Unavailable" against "Not available"), so a test built on it
+    // fails when a second spelling comes back. A state whose two old spellings
+    // happened to match would pass against the drift it exists to catch.
+    availability: "unavailable",
+  };
+
+  it("is named the same way wherever it is drawn", async () => {
+    renderTab({
+      person_id: PERSON,
+      nodes: [anchor],
+      edges: [],
+      // Two routes, so the lead panel draws the first and the alternatives
+      // card draws the second: one label switch has to serve both.
+      routes: [taken, { ...taken, route_id: "direct:2" }],
+      groups_omitted: [],
+    });
+
+    const label = en["person.intro.unavailable"];
+    await waitFor(() => {
+      expect(screen.getAllByText(label).length).toBe(2);
+    });
+  });
+
+  it("offers no button that would answer 409", async () => {
+    renderTab({
+      person_id: PERSON,
+      nodes: [anchor],
+      edges: [],
+      routes: [taken],
+      groups_omitted: [],
+    });
+
+    await screen.findByText(en["person.intro.unavailable"]);
+    expect(
+      screen.queryByRole("button", { name: en["person.intro.askAction"] }),
+    ).toBeNull();
+  });
+});

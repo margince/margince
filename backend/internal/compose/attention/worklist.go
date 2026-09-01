@@ -212,7 +212,7 @@ func (s *Service) worklistFrom(
 	// "tasks, not shown", and a filtered-out source that hit its bound took its
 	// more_available signal out with it.
 	considered := rows
-	narrowed := filter != "" && filter != string(crmcontracts.GetWorklistParamsFilterAll)
+	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
 	}
@@ -231,9 +231,12 @@ func (s *Service) worklistFrom(
 	// one on screen.
 	shown := page(rows, limit)
 	ordered := rankAll(shown)
+	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
+		// The headings, in draw order, over the rows this page actually holds.
+		Bands: &bands,
 		// The bar is re-derived rather than threaded out of classifyDay: it is a
 		// pure function of the same day this call already holds, so the two
 		// cannot disagree, and threading it would change a signature twenty-odd
