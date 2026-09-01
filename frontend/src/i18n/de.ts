@@ -6256,6 +6256,8 @@ export const de = {
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
     "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",
+  "autonomy.noneDecidedYet":
+    "Darüber hast du noch nichts entschieden. Was in dieser Liste landet, hängt von den Datensätzen ab, die dir gehören, und von der Arbeit, die dein Team an dich weiterleitet. Ohne beides bleibt sie leer. Die Schalter entscheiden trotzdem, was passiert, sobald etwas auftaucht.",
   "autonomy.noRecord": "Darüber hast du noch nicht entschieden.",
   "autonomy.record":
     "Bisher: {clean} wie vorgeschlagen übernommen, {edited} nach einer Änderung, {rejected} abgelehnt.",

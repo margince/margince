@@ -6302,6 +6302,8 @@ export const en = {
   "autonomy.title": "What answers itself",
   "autonomy.sub":
     "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
+  "autonomy.noneDecidedYet":
+    "You have not decided any of these yet. What reaches this list depends on the records you own and the work your team routes to you, so a seat with neither stays empty. The switches still decide what happens when something appears.",
   "autonomy.noRecord": "You have not decided one of these yet.",
   "autonomy.record":
     "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
