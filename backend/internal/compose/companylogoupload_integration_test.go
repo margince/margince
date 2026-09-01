@@ -18,7 +18,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -200,5 +202,53 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 	}
 	if !written {
 		t.Fatal("a removal left the field held, so no read can ever give this company a mark again")
+	}
+}
+
+// The other half of the precedence rule, and the reason it is not simply "the
+// first mark wins": a company can be read AGAIN, from the settings card, to
+// pick up what its website says now. A re-read whose whole point is a fresher
+// logo has to be allowed to land one.
+func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T) {
+	e := integration.Setup(t)
+	human := e.As(e.Rep1, nil, integration.AdminPerms)
+	blob := newRecordingBlobstore()
+	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
+
+	// The first read, which is onboarding: it creates the company and gives it
+	// the mark its site declared. Driven through the real flow rather than
+	// planted, because what a planted row cannot carry is the PROVENANCE, and
+	// provenance is the whole question here — a mark stamped by hand would be a
+	// person's, which is the case that must NOT be replaced.
+	firstArgs, first := readTheAnchorsSiteFor(t, e, blob)
+	if orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, firstArgs); orgID.UUID.String() == "" {
+		t.Fatal("the first confirmation created no company")
+	}
+
+	// The second read, which is the settings card's refresh against a company
+	// that already exists.
+	args, parked := readTheAnchorsSiteFor(t, e, blob)
+	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
+	if parked == first {
+		t.Fatal("both reads parked one object, so this case cannot tell a replacement from a no-op")
+	}
+	stale := first
+
+	wearing, err := e.People.OrganizationLogoKey(human, orgID)
+	if err != nil {
+		t.Fatalf("the company lost its logo to the re-read: %v", err)
+	}
+	if wearing != parked {
+		t.Fatalf("the company wears %q, want the re-read's own mark at %q — a refresh that "+
+			"resolves a new logo and then keeps the old one reports work it did not do",
+			wearing, parked)
+	}
+	// The mark it stopped wearing is the object nothing references now, and the
+	// transport collects exactly that one.
+	if _, _, err := blob.Get(context.Background(), stale); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("the superseded object at %q answers %v, want it collected", stale, err)
+	}
+	if n := rowsNaming(t, e, stale); n != 0 {
+		t.Fatalf("%d row(s) still name the collected object at %q", n, stale)
 	}
 }
