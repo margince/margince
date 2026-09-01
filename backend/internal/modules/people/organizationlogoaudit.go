@@ -24,24 +24,27 @@ import (
 // to read: where the mark came from, where the one before it did, who made the
 // change and under which source vocabulary.
 //
-// `origin` is nil for the two writes with no page behind them — an upload,
-// which came off a person's disk, and a removal, which came from nowhere at
-// all. `named` is what the field's history shows for the change: the page a
-// read resolved from, the file a person chose, or nothing for a removal.
+// `origin` is what NAMES the mark — the page a read resolved it from, or the
+// file a person chose — and it is the one value both the row's `logo_origin`
+// and the field's history carry, so the NEXT write's before-image can say what
+// it replaced. Only a removal has none.
+//
+// `sourceURL` is narrower: the page, when there was one. An upload names a file
+// and not a URL, and putting a filename in a field called `source_url` would
+// tell every later reader of that audit row something false.
 type logoWrite struct {
 	previousOrigin *string
 	origin         *string
-	named          *string
+	sourceURL      *string
 	source         string
 	by             string
 }
 
-// resolvedLogoWrite is what a website read records. The mark is named on every
-// surface by the page it was resolved from, so that URL is both the origin
-// stored on the row and the value the field's history shows.
+// resolvedLogoWrite is what a website read records: the page it read is both
+// what names the mark and the URL the write cites.
 func resolvedLogoWrite(previousOrigin *string, originURL, by string) logoWrite {
 	return logoWrite{
-		previousOrigin: previousOrigin, origin: &originURL, named: &originURL,
+		previousOrigin: previousOrigin, origin: &originURL, sourceURL: &originURL,
 		source: companySourceSiteRead, by: by,
 	}
 }
@@ -52,14 +55,14 @@ func resolvedLogoWrite(previousOrigin *string, originURL, by string) logoWrite {
 // of who set it commit together or not at all.
 func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, write logoWrite) error {
 	if err := storekit.StampFields(ctx, tx, "organization", id.UUID, write.source, write.by,
-		[]storekit.FieldStamp{{Field: logoFieldName, EvidenceRef: write.named}}); err != nil {
+		[]storekit.FieldStamp{{Field: logoFieldName, EvidenceRef: write.origin}}); err != nil {
 		return err
 	}
 	// A removal's after-image says the field is empty, which is the one thing a
 	// reader of the history must be able to tell from "unchanged".
 	delta := map[string]any{logoFieldName: nil}
-	if write.named != nil {
-		delta[logoFieldName] = *write.named
+	if write.origin != nil {
+		delta[logoFieldName] = *write.origin
 	}
 	// The mark is named on every surface by the page it was resolved from, so
 	// that URL is the field's VALUE here — and the caller reads the outgoing one
@@ -74,8 +77,8 @@ func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, writ
 		before[logoFieldName] = *write.previousOrigin
 	}
 	evidence := map[string]any{auditKeySource: write.source}
-	if write.origin != nil {
-		evidence[auditKeySourceURL] = *write.origin
+	if write.sourceURL != nil {
+		evidence[auditKeySourceURL] = *write.sourceURL
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "organization", id.UUID,
 		before, delta, evidence)

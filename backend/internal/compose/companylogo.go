@@ -132,6 +132,14 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 		httperr.WriteMultipartRefusal(w, r, err, companyLogoUploadBytes)
 		return nil, "", false
 	}
+	// An upload past the in-memory threshold is spilled to a temporary file that
+	// closing the part does not remove. Without this every large logo somebody
+	// tries leaves a copy behind on the API host until it runs out of disk.
+	defer func(ctx context.Context) {
+		if cerr := r.MultipartForm.RemoveAll(); cerr != nil {
+			slog.WarnContext(ctx, "removing the upload's spill files", "err", cerr)
+		}
+	}(r.Context())
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("file", "required", "an image file part is required"))
@@ -183,15 +191,12 @@ func boundedFilename(name string) string {
 	return string(runes)
 }
 
-// collectLogoObject deletes bytes nothing references any more. A failure is
-// logged rather than returned: the write the caller asked for has happened, and
-// an object nobody names costs storage and nothing else.
+// collectLogoObject deletes bytes nothing references any more, through the same
+// collection the resolve lane ends with — detached from the request, so a
+// reader who closed the tab between the commit and the delete does not leave an
+// object nothing can ever find again. A failure is logged rather than returned:
+// the write the caller asked for has happened, and an object nobody names costs
+// storage and nothing else.
 func (h companyHandlers) collectLogoObject(ctx context.Context, key *string) {
-	if h.blob == nil || key == nil || *key == "" {
-		return
-	}
-	if err := h.blob.Delete(ctx, *key); err != nil {
-		slog.WarnContext(ctx, "collecting the superseded company logo failed",
-			"key", *key, "err", err)
-	}
+	deleteUnreferencedLogo(ctx, h.blob, slog.Default(), "the installation's company", key)
 }
