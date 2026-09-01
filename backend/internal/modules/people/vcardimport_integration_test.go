@@ -15,12 +15,14 @@ package people
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -57,12 +59,13 @@ func TestImportingAnUnknownCardCreatesThePersonAndTheirEmployer(t *testing.T) {
 	assertVCardEmployment(ctx, t, e, *results[0].PersonID, "Fresh Start GmbH")
 }
 
-func TestImportingACardForAKnownAddressFillsOnlyWhatIsEmpty(t *testing.T) {
+func TestImportingACardForAKnownAddressAppliesWhatTheCardStates(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	// A person a HUMAN already described: their title is not the card's to
-	// replace, however recent the card is.
+	// A person a HUMAN already described. The card is the contact's own,
+	// handed over now, so what it states is the newer answer and replaces the
+	// title — with the typed one kept where a reader can put it back.
 	humanTitle := "Chief Financial Officer"
 	incumbent, err := e.store.CreatePerson(ctx, CreatePersonInput{
 		FullName: "Dana Known", Source: "manual", Title: &humanTitle,
@@ -83,18 +86,45 @@ func TestImportingACardForAKnownAddressFillsOnlyWhatIsEmpty(t *testing.T) {
 		t.Fatalf("matched %v, want the incumbent %v", results[0].PersonID, incumbent.Id)
 	}
 
-	// The title a human typed stands.
-	after, err := e.store.GetPerson(ctx, ids.From[ids.PersonKind](ids.UUID(incumbent.Id)), storekit.LiveOnly)
+	personID := ids.From[ids.PersonKind](ids.UUID(incumbent.Id))
+	after, err := e.store.GetPerson(ctx, personID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("re-reading the person: %v", err)
 	}
-	if after.Title == nil || *after.Title != humanTitle {
-		t.Errorf("title = %v, want the human's %q — a card may fill an empty field, never replace an answered one", after.Title, humanTitle)
+	if after.Title == nil || *after.Title != "VP Finance" {
+		t.Errorf("title = %v, want the card's — a card handed over now is the newer statement", after.Title)
 	}
-	// The profile URL was empty, so the card filled it.
-	if got := profileFieldValue(ctx, t, e, ids.From[ids.PersonKind](ids.UUID(incumbent.Id)), profileURLField); got != "https://example.com/team/dana" {
-		t.Errorf("profile url = %q, want the card's — an empty field is the card's to fill", got)
+	// And the typed title is recoverable: a replacement nobody can undo is a
+	// deletion, whatever it is called.
+	if got := supersededFieldValue(ctx, t, e, personID, fieldTitle); got != humanTitle {
+		t.Errorf("superseded title = %q, want the typed %q kept for undo", got, humanTitle)
 	}
+	// A company URL is a WEBSITE. Filed as linkedin — which is what this import
+	// did to every card — the page then shows a company site as somebody's
+	// LinkedIn profile.
+	if got := profileFieldValue(ctx, t, e, personID, fieldWebsite); got != "https://example.com/team/dana" {
+		t.Errorf("website = %q, want the card's", got)
+	}
+	if got := profileFieldValue(ctx, t, e, personID, fieldLinkedin); got != "" {
+		t.Errorf("linkedin = %q, want nothing: the card states no LinkedIn profile", got)
+	}
+}
+
+// supersededFieldValue reads the undo buffer one field carries.
+func supersededFieldValue(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID, field string) string {
+	t.Helper()
+	var got *string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT superseded_value FROM person_profile_field WHERE person_id = $1 AND field = $2`,
+			personID, field).Scan(&got)
+	}); err != nil {
+		t.Fatalf("reading the superseded %s: %v", field, err)
+	}
+	if got == nil {
+		return ""
+	}
+	return *got
 }
 
 func TestImportingACardThatMerelyResemblesSomebodyIsLeftForAHuman(t *testing.T) {
@@ -236,4 +266,69 @@ func profileFieldValue(ctx context.Context, t *testing.T, e *dedupeEnv, personID
 		t.Fatalf("reading the profile field: %v", err)
 	}
 	return value
+}
+
+// Undo, and the two ways it must refuse.
+//
+// A restore that reached past a value somebody typed after the replacement
+// would undo THEIR answer in order to undo the machine's, which is the one
+// thing an undo must never do — so the refusal is the half worth planting.
+func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	typed := "Chief Financial Officer"
+	incumbent, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Rita Undo", Source: "manual", Title: &typed,
+		Emails: []PersonEmailInput{{Email: "rita@undo.example", EmailType: emailTypeWork, IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seeding the incumbent: %v", err)
+	}
+	personID := ids.From[ids.PersonKind](ids.UUID(incumbent.Id))
+
+	importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Rita Undo\nTITLE:VP Finance\n"+
+			"EMAIL;TYPE=WORK:rita@undo.example\nEND:VCARD\n")
+
+	if err := e.store.RestoreProfileField(ctx, personID, fieldTitle); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	after, err := e.store.GetPerson(ctx, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("re-reading the person: %v", err)
+	}
+	if after.Title == nil || *after.Title != typed {
+		t.Errorf("title = %v after the undo, want the typed %q back", after.Title, typed)
+	}
+	// The buffer is one level deep and now empty, so a second undo has nothing
+	// to put back rather than putting the card's value back again.
+	if got := supersededFieldValue(ctx, t, e, personID, fieldTitle); got != "" {
+		t.Errorf("superseded value = %q after the undo, want it cleared", got)
+	}
+	if err := e.store.RestoreProfileField(ctx, personID, fieldTitle); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("second undo = %v, want ErrNotFound: there is nothing left to restore", err)
+	}
+
+	// The refusal. A card replaces the title again, then somebody types their
+	// own answer over it — the undo must not reach past that.
+	importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Rita Undo\nTITLE:Group CFO\n"+
+			"EMAIL;TYPE=WORK:rita@undo.example\nEND:VCARD\n")
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET title = 'Typed Since' WHERE id = $1`, personID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.RestoreProfileField(ctx, personID, fieldTitle); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("undo over a since-typed value = %v, want ErrConflict", err)
+	}
+	moved, err := e.store.GetPerson(ctx, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if moved.Title == nil || *moved.Title != "Typed Since" {
+		t.Errorf("title = %v, want the typed answer untouched by a refused undo", moved.Title)
+	}
 }
