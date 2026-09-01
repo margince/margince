@@ -2930,12 +2930,12 @@ export const de = {
   "ai.tierAutoExecute": "Lesen & Entwerfen läuft sofort.",
   "ai.tierAutoExecuteDetail":
     "Nachschlagen, Zusammenfassen, Entwürfe — sichtbar, umkehrbar, protokolliert.",
-  "ai.tierConfirmationRequired": "Schreiben & Senden wartet auf dich.",
+  "ai.tierConfirmationRequired": "Sensible Änderungen warten auf dich.",
   "ai.tierConfirmationRequiredDetail":
-    "Externe Sendungen und Datenänderungen landen zuerst im Eingang.",
+    "Neue benutzerdefinierte Felder, Webhook-Abonnements und kostenpflichtige Anreicherung landen zuerst im Eingang. Die meisten Datensatzänderungen und Sendungen laufen sofort, innerhalb der von dir erteilten Berechtigungen.",
   "ai.connect": "Agent verbinden",
   "ai.connectDetail":
-    "Erstell in den Einstellungen einen Passport und häng einen MCP-fähigen Agenten an deine Organisation. Er liest nur, was du sehen kannst.",
+    "Verbinde einen MCP-fähigen Agenten mit deiner Organisation und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
   "ai.paletteHint": "Frag von überall mit",
 
   "settings.accountCard": "Ihr Konto",
@@ -2978,7 +2978,7 @@ export const de = {
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
   "settings.passportsLendHint":
-    "Diese kannst du verleihen. Verbindet sich ein MCP-Client, fragt er, welchen du übergibst — die Verbindung trägt danach genau die Scopes dieses Passports.",
+    "Zugangsdaten, die du für Skripte und Integrationen ausgestellt hast. Das Verbinden eines MCP-Clients nutzt diese nicht — er erstellt eine eigene Verbindung, unten aufgeführt.",
   "settings.passportLabel": "Agentenname",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
@@ -3082,10 +3082,9 @@ export const de = {
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
-    "MCP-Clients mit eigenem Credential, abgeleitet aus einem Passport, den du verliehen hast",
+    "MCP-Clients mit eigenem Credential, mit dem Zugriff, den du bei der Autorisierung angekreuzt hast",
   "agents.noneConnected": "Noch ist kein Agent verbunden.",
   "agents.connectedOn": "verbunden {date}",
-  "agents.lentFrom": "verliehen aus „{label}“",
   "agents.disconnect": "Trennen",
   "agents.disconnectOpen": "Trennen",
   "agents.disconnectNamed": "{client} trennen",
@@ -3097,10 +3096,10 @@ export const de = {
   "agents.revokeGrantOpen": "Verbindung beenden",
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.disconnectConfirm":
-    "Das beendet die ganze Verbindung, nicht nur ein Credential: der Agent verliert den Zugriff beim nächsten Aufruf und kann nicht erneuern. Für eine neue Verbindung verleihst du wieder einen Passport.",
+    "Das beendet die ganze Verbindung, nicht nur ein Credential: der Agent verliert den Zugriff beim nächsten Aufruf und kann nicht erneuern. Für eine neue Verbindung musst du den Zugriff erneut genehmigen.",
   "agents.connectHow": "Agent verbinden",
   "agents.connectSteps":
-    "Stelle oben einen Passport aus und führe dann einen dieser Befehle aus. Der Client registriert sich selbst und bringt dich hierher zurück, um zu wählen, welchen Passport du verleihst.",
+    "Führe einen dieser Befehle aus. Der Client registriert sich selbst und bringt dich hierher zurück, um den Zugriff zu wählen, den er erhalten darf.",
   "agents.connectAntigravityPath":
     "Antigravity hat keinen Add-Befehl — trage den Block in ~/.gemini/config/mcp_config.json ein.",
   "agents.connectorOff": "Der MCP-Connector ist für diese Installation aus.",
@@ -6417,40 +6416,35 @@ export const de = {
   "embedreindex.impact.queued": "würde in die Warteschlange gestellt",
 
   "consent.title": "Zugriff autorisieren",
-  "consent.asks": "{client} möchte in Margince als du handeln.",
+  "consent.asks":
+    "{client} kann in Margince als du handeln, mit dem unten angehakten Zugriff.",
   "consent.redirectsTo": "Margince sendet die Autorisierung zurück an {host}.",
   "consent.redirectsToLoopback":
     "Das ist eine Adresse auf diesem Computer, und diese Verbindung kann nicht belegen, welches Programm dort lauscht.",
-  "consent.lend": "Leih ihm einen deiner Agent-Passports",
-  "consent.grantedNote":
-    "Diese Verbindung erhält genau die gezeigten Berechtigungen — die dieses Passports.",
+  "consent.scopeNote.read": "sieht, was du siehst",
+  "consent.scopeNote.draft": "bereitet Nachrichten zu deiner Prüfung vor",
+  "consent.scopeNote.write":
+    "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
+  "consent.scopeNote.send":
+    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+  "consent.scopeNote.enrich":
+    "verbraucht Anreicherungs-Guthaben — jeder Kauf fragt dich weiterhin zuerst",
+  "consent.ceiling":
+    "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit unter Einstellungen → Agenten trennen.",
+  "consent.pickOne": "Wähle mindestens eine aus, oder verweigere den Zugriff.",
   "consent.offline":
     "Sie bleibt verbunden, ohne erneut zu fragen, und erneuert den Zugriff, bis du ihn widerrufst.",
   "consent.approve": "Autorisieren",
   "consent.deny": "Zugriff verweigern",
-  "consent.emptyTitle": "Du brauchst zuerst einen Agent-Passport",
-  "consent.emptyBody":
-    "Ein Passport ist die Vollmacht, die du einem Agenten leihst — er überschreitet nie deine eigenen Berechtigungen, und du kannst ihn jederzeit widerrufen. Stell einen aus, und wir bringen dich hierher zurück, um die Verbindung mit {client} abzuschließen.",
-  "consent.emptyCta": "Passport ausstellen",
-  "consent.expires": "läuft ab am {date}",
-  "consent.resumeTitle": "Verbindung mit {client} abschließen",
-  "consent.resumeBody":
-    "Du bist hierher gekommen, um einen Passport für {client} auszustellen. Sobald du einen hast, machst du dort weiter, wo du aufgehört hast.",
-  "consent.resume": "Verbindung fortsetzen",
-  "consent.resumeDismiss": "Diese Verbindung abbrechen",
   "consent.reentering": "Verbinde erneut…",
   "consent.backToApp": "Zurück zu Margince",
   "consent.staleTitle": "Diese Anfrage ist abgelaufen",
   "consent.staleBody":
     "Die Verbindungsanfrage ist nicht mehr gültig. Geh zurück zur App, die du verbinden wolltest, und starte erneut — ein Neuladen dieser Seite hilft nicht.",
-  "consent.unlendableTitle": "Dieser Passport kann nicht mehr verliehen werden",
-  "consent.unlendableBody":
-    "Der für {client} gewählte Passport wurde widerrufen, ist abgelaufen oder bereits an eine andere Verbindung gebunden. Wähle unten einen anderen aus.",
   "consent.invalidTitle":
     "Diese Verbindungsanfrage konnte nicht abgeschlossen werden",
   "consent.invalidBody":
     "Diese Installation autorisiert die Anfrage in dieser Form nicht — die App ist hier möglicherweise nicht mehr registriert. Geh zurück zur App, die du verbinden wolltest, und starte erneut.",
-  "consent.unnamedPassport": "Unbenannter Passport ({id})",
   "person.thin.title": "Was wir bisher wissen",
   "person.thin.known":
     "Wir haben {what} zu {name}, aber niemand hier hat bisher einen erfassten Austausch mit ihnen.",

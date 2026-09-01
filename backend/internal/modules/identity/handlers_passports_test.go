@@ -61,17 +61,13 @@ func TestAnUnlabelledPassportReadsAsAnEmptyName(t *testing.T) {
 // dropped one — or crossed connected_at with the passport's own created_at —
 // would still produce a well-formed response.
 func TestAConnectionMapsEveryFieldItWasGiven(t *testing.T) {
-	lent := ids.New[ids.PassportKind]()
-	lentLabel := "full test"
 	connectedAt := time.Date(2026, 7, 2, 9, 0, 0, 0, time.UTC)
 	row := passportRowForTest()
 	row.Connection = &PassportConnectionRow{
-		ClientID:          "dcr-client-id",
-		ClientName:        "Claude Code",
-		ConnectedAt:       connectedAt,
-		Renewable:         true,
-		LentPassportID:    &lent,
-		LentPassportLabel: &lentLabel,
+		ClientID:    "dcr-client-id",
+		ClientName:  "Claude Code",
+		ConnectedAt: connectedAt,
+		Renewable:   true,
 	}
 
 	got := passportSummary(row).Connection
@@ -88,45 +84,5 @@ func TestAConnectionMapsEveryFieldItWasGiven(t *testing.T) {
 	}
 	if !got.Renewable {
 		t.Fatal("renewable = false although the grant allows refresh; a reader would call this connection dead at its next expiry")
-	}
-	if got.LentPassportId == nil || ids.UUID(*got.LentPassportId) != lent.UUID {
-		t.Fatalf("lent passport = %v, want %s", got.LentPassportId, lent)
-	}
-	if got.LentPassportLabel == nil || *got.LentPassportLabel != lentLabel {
-		t.Fatalf("lent passport label = %v, want %q", got.LentPassportLabel, lentLabel)
-	}
-}
-
-// A connection older than the provenance column has no answer to give, and the
-// wire says nothing rather than naming the zero uuid — which a client would
-// read as a passport that exists.
-func TestAConnectionWithNoRecordedLendOmitsItRatherThanZeroingIt(t *testing.T) {
-	row := passportRowForTest()
-	row.Connection = &PassportConnectionRow{
-		ClientID:    "dcr-client-id",
-		ClientName:  "Claude Code",
-		ConnectedAt: time.Date(2026, 7, 2, 9, 0, 0, 0, time.UTC),
-	}
-
-	got := passportSummary(row).Connection
-	if got.LentPassportId != nil {
-		t.Fatalf("lent passport = %v, want nil for a connection with no lend recorded", got.LentPassportId)
-	}
-	if got.LentPassportLabel != nil {
-		t.Fatalf("lent passport label = %v, want nil", got.LentPassportLabel)
-	}
-	if got.Renewable {
-		t.Fatal("renewable = true although the row said otherwise")
-	}
-	encoded, err := json.Marshal(got)
-	if err != nil {
-		t.Fatalf("encoding the connection: %v", err)
-	}
-	var wire map[string]json.RawMessage
-	if err := json.Unmarshal(encoded, &wire); err != nil {
-		t.Fatalf("decoding the connection: %v", err)
-	}
-	if raw, present := wire["lent_passport_id"]; present && string(raw) != "null" {
-		t.Fatalf("lent_passport_id on the wire = %s, want absent or null", raw)
 	}
 }

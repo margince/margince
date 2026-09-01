@@ -35,6 +35,17 @@ func (e *revocationEnv) rotate(t *testing.T, fixture *connectFixture) {
 	fixture.refresh = refreshed
 }
 
+// mintOwnPassport issues a human-minted passport with the given scopes. It is
+// used to build passports for testing.
+func (e *revocationEnv) mintOwnPassport(t *testing.T, human Identity, scopes []string) ids.PassportID {
+	t.Helper()
+	issued, err := e.svc.IssuePassport(e.wsCtx(human), human, IssuePassportInput{Scopes: scopes})
+	if err != nil {
+		t.Fatalf("minting a passport: %v", err)
+	}
+	return issued.ID
+}
+
 // A connection is ONE row in the list, however many times it has renewed.
 // Without the grouping this is the list's worst failure mode and the least
 // visible one: nothing is wrong on the day it ships, and a week later the
@@ -109,8 +120,8 @@ func TestAConnectionIsListedOncePerConnectionNotOncePerRotation(t *testing.T) {
 // one row and silently hide credentials a human still holds.
 func TestMintedPassportsAreNeverFoldedIntoEachOther(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-list-unbound")
-	first := e.mintLendable(t, e.admin, []string{"read"})
-	second := e.mintLendable(t, e.admin, []string{"read", "write"})
+	first := e.mintOwnPassport(t, e.admin, []string{"read"})
+	second := e.mintOwnPassport(t, e.admin, []string{"read", "write"})
 
 	rows, err := e.svc.ListPassports(e.wsCtx(e.admin), e.admin)
 	if err != nil {
@@ -136,7 +147,7 @@ func TestMintedPassportsAreNeverFoldedIntoEachOther(t *testing.T) {
 // `oauth_grant_id IS NULL` from the DISTINCT ON and one of these rows vanishes.
 func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 	e := setupRevocationEnv(t, "passport-list-collision")
-	minted := e.mintLendable(t, e.admin, []string{"read"})
+	minted := e.mintOwnPassport(t, e.admin, []string{"read"})
 	ctx := context.Background()
 
 	clientID := "client-" + ids.NewV7().String()
@@ -177,60 +188,5 @@ func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 	if !mintedSeen || !connectionSeen {
 		t.Fatalf("minted listed=%v connection listed=%v: a grant id equal to a passport id must not fold the two into one row",
 			mintedSeen, connectionSeen)
-	}
-}
-
-// The provenance a human actually reads: which of their passports a connection
-// came from, by name. The label is resolved at READ time, which is why the
-// rename below happens AFTER the lend — a snapshot taken at consent would keep
-// the old name and pass a weaker version of this test. The audit row is what
-// holds the dated fact; this column holds the current one.
-func TestAConnectionNamesThePassportItWasLentFrom(t *testing.T) {
-	e := setupRevocationEnv(t, "passport-list-provenance")
-	lent := e.mintLendable(t, e.admin, []string{"read"})
-	ctx := context.Background()
-	if _, err := e.owner.Exec(ctx,
-		`UPDATE passport SET label = 'the name at consent' WHERE id = $1`, lent); err != nil {
-		t.Fatalf("labelling the lent passport: %v", err)
-	}
-	fixture := e.connectOAuthLent(t, e.admin, &lent, "provenance")
-	// The grant records the consent; the credential under it is minted by the
-	// exchange, which the rotation path stands in for here. Without one there
-	// is no row for the connection to be listed on at all.
-	e.rotate(t, &fixture)
-
-	// Renamed after the fact. A read-time join reports the new name; a snapshot
-	// reports the old one.
-	const renamed = "the name today"
-	if _, err := e.owner.Exec(ctx,
-		`UPDATE passport SET label = $2 WHERE id = $1`, lent, renamed); err != nil {
-		t.Fatalf("renaming the lent passport: %v", err)
-	}
-
-	rows, err := e.svc.ListPassports(e.wsCtx(e.admin), e.admin)
-	if err != nil {
-		t.Fatalf("listing passports: %v", err)
-	}
-	var connection *PassportConnectionRow
-	for _, row := range rows {
-		if row.Connection != nil && row.Connection.ClientID == fixture.clientID {
-			connection = row.Connection
-		}
-	}
-	if connection == nil {
-		t.Fatal("the connection is absent from the list")
-	}
-	if connection.LentPassportID == nil || *connection.LentPassportID != lent {
-		t.Fatalf("lent passport = %v, want %s", connection.LentPassportID, lent)
-	}
-	if connection.LentPassportLabel == nil || *connection.LentPassportLabel != renamed {
-		t.Fatalf("lent passport label = %v, want %q — the label is resolved when the list is read, not snapshotted at consent",
-			connection.LentPassportLabel, renamed)
-	}
-	// The grant asked for refresh, so its credential turning over is a renewal
-	// and not the end of the connection — the fact the UI needs to tell a
-	// connection between credentials from one that is over.
-	if !connection.Renewable {
-		t.Fatal("the connection reports itself non-renewable although its grant allows refresh")
 	}
 }

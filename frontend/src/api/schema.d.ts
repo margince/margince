@@ -290,11 +290,13 @@ export interface paths {
          *     only. Pairs with the mint (`POST`) and revoke (`DELETE /passports/{id}`) below.
          *
          *     Two kinds of row arrive together and `connection` is what tells them apart: a passport the
-         *     human minted (`connection: null`) is a template they may lend on the consent screen, while a
-         *     connection's credential (`connection` present) is what an MCP client received *after* a lend.
-         *     A connection is listed **once**, not once per token rotation: every refresh revokes that
-         *     connection's passport and mints a replacement under the same grant, so only the newest
-         *     passport per grant is returned and its `connection.connected_at` is the grant's own age.
+         *     human minted (`connection: null`) is a standalone REST bearer credential, unrelated to any
+         *     MCP client connection, while a connection's credential (`connection` present) is minted fresh
+         *     by the OAuth token exchange from the scopes the human ticked on the consent screen — never a
+         *     passport a human picked from a list. A connection is listed **once**, not once per token
+         *     rotation: every refresh revokes that connection's passport and mints a replacement under the
+         *     same grant, so only the newest passport per grant is returned and its `connection.connected_at`
+         *     is the grant's own age.
          */
         get: operations["listPassports"];
         put?: never;
@@ -351,10 +353,10 @@ export interface paths {
         /**
          * What the OAuth consent screen renders for one pending authorization.
          * @description Session-authenticated. Resolves the requesting client from the database and lists the
-         *     passports the signed-in human may lend to it: their own, unrevoked, unexpired, and not
-         *     already bound to a connection. What the client asked for excludes none of them, because
-         *     a lend grants the passport's own scopes. Human-only — an agent must never read or drive
-         *     a consent screen.
+         *     fixed five-scope vocabulary (read, draft, write, send, enrich) the consent screen offers,
+         *     every one of them ticked by default. What the client asked for excludes none of them: the
+         *     human's ticks — not the client's request — become the connection's authority. Human-only —
+         *     an agent must never read or drive a consent screen.
          */
         get: operations["getConsentRequest"];
         put?: never;
@@ -24689,29 +24691,19 @@ export interface components {
             expires_at: string;
         };
         /**
-         * @description One passport the signed-in human may lend to the requesting client. `scopes` is both
-         *     what the passport carries and what a connection lending it receives: the client's
-         *     request does not narrow the grant, so there is no second, smaller set beside it.
-         */
-        ConsentPassportOption: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
-            /** Format: date-time */
-            expires_at: string;
-        };
-        /**
          * @description What the consent screen renders. The client name is resolved from the database, never
-         *     from the request URL, so no caller can put words on a consent screen. The consent
-         *     nonce is NOT here: it reaches the screen in the redirect fragment, because the
-         *     consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
+         *     from the request URL, so no caller can put words on a consent screen. `scopes` is the
+         *     closed verb vocabulary the human chooses from — the ceiling, not a selection: every
+         *     one of them is offered ticked, and what the human posts back is the grant. The client's
+         *     own scope request does not narrow it; every mainstream MCP client sends none at all.
+         *     The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
+         *     the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
          */
         ConsentRequest: {
             client_name: string;
             /** @description The client asked to stay connected without asking again (offline_access). */
             offline: boolean;
-            passports: components["schemas"]["ConsentPassportOption"][];
+            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
         };
         /** @description Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token. */
         PassportSummary: {
@@ -24768,16 +24760,6 @@ export interface components {
              *     connection as newer than the consent that authorized it.
              */
             connected_at: string;
-            /**
-             * Format: uuid
-             * @description The passport the human lent to create this connection. Null for a connection established
-             *     before that provenance was recorded, and null once the lent passport is deleted outright.
-             *     It is never re-checked: a lend survives the lent passport's revocation by design, so this
-             *     answers "where did this come from", never "may this still connect".
-             */
-            lent_passport_id?: string | null;
-            /** @description The lent passport's label at read time, for display beside `lent_passport_id`. */
-            lent_passport_label?: string | null;
         };
         /**
          * @description One persisted Morning-Brief run for the acting rep (data-model §12.5 `brief_run` +
@@ -26903,8 +26885,9 @@ export interface operations {
                 client_id: string;
                 /**
                  * @description The space-delimited scopes the client requested. Only the offline_access marker in it
-                 *     is read, and reported back as `offline`: the access scopes bound nothing, since a lend
-                 *     grants the chosen passport's own.
+                 *     is read, and reported back as `offline`: the access scopes bind nothing, since the
+                 *     connection's authority is whatever the human ticks on the consent screen, not what the
+                 *     client asked for.
                  */
                 scope: string;
             };

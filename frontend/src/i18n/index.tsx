@@ -197,7 +197,10 @@ type BaseOfOtherKey<K> = K extends `${infer Base}_other` ? Base : never;
 export type PluralBase = BaseOfPluralKey<MessageKey> &
   BaseOfOtherKey<MessageKey>;
 
-function isMessageKey(value: string): value is MessageKey {
+// Exported for a caller that composes a candidate key from a value the
+// catalogue may not carry (e.g. a scope token) and needs to fall back to the
+// raw value rather than render whatever `translate` does with a miss.
+export function isMessageKey(value: string): value is MessageKey {
   return value in en;
 }
 
