@@ -84,7 +84,12 @@ const historyQuery = `
 	           AND pl.person_id = ANY($%[7]d)))
 	  AND %[1]s
 	  AND %[8]s
-	ORDER BY a.occurred_at DESC
+	-- The id breaks a tie on the timestamp. Two conversations captured in the
+	-- same second are common (one sync writes a thread), and without this the
+	-- rows that survive the cap, the messages picked for excerpting and the
+	-- subject a thread is named after would all vary between reads of an
+	-- unchanged database.
+	ORDER BY a.occurred_at DESC, a.id DESC
 	LIMIT %[9]d`
 
 // readHistory returns the room's conversations, newest first.

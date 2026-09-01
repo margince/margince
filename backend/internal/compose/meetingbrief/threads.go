@@ -29,8 +29,14 @@ type thread struct {
 	Subject string
 	First   time.Time
 	Last    time.Time
-	// IDs are the conversation's activities, newest first.
-	IDs        []string
+	// IDs are the conversation's activities this caller may READ, newest
+	// first. A withheld row is counted in Rows and never listed here: it still
+	// dates the thread, and citing it would send a reader to a record they
+	// cannot open — which also tells them a limited conversation belongs to
+	// this thread, a fact the audience narrowing exists to keep.
+	IDs []string
+	// Rows is how many conversations the thread holds, readable or not.
+	Rows       int
 	Inbound    int
 	Outbound   int
 	OnDeal     bool
@@ -85,7 +91,10 @@ func threadsOf(history []HistoryIn) []thread {
 			byKey[key] = found
 			order = append(order, key)
 		}
-		found.IDs = append(found.IDs, row.ID)
+		found.Rows++
+		if !row.Withheld {
+			found.IDs = append(found.IDs, row.ID)
+		}
 		if row.At.Before(found.First) {
 			found.First = row.At
 		}
@@ -95,7 +104,6 @@ func threadsOf(history []HistoryIn) []thread {
 		// The newest readable subject names the thread: a later message in a
 		// chain carries the subject the participants settled on.
 		if !row.Withheld {
-			found.Readable++
 			if found.Subject == "" || row.At.Equal(found.Last) {
 				if row.Subject != "" {
 					found.Subject = row.Subject

@@ -195,3 +195,48 @@
   color: var(--textContent);
   font-size: var(--fs-sm);
 }
+
+.mb-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.mb-ask-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.mb-ask-head strong {
+  color: var(--textPrimary);
+}
+
+.mb-ask-prepare {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+/* The branch and what to do about it. A grid rather than a flex row so the
+   badges share one column and the plays line up beside them. */
+.mb-path-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: 100%;
+}
+
+.mb-path-row > span {
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+@container (max-width: 26rem) {
+  .mb-path-row {
+    grid-template-columns: 1fr;
+  }
+}

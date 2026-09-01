@@ -5,9 +5,12 @@
 // objective and its arc on top of the sections a reader already had, so a
 // half-built plan can never displace what was already working.
 
-import { Target } from "lucide-react";
+import { AlertTriangle, Target } from "lucide-react";
 import type { components } from "../../api/schema";
+import { Badge } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { Eyebrow } from "../../design-system/eyebrow";
+import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { SentenceList } from "../record360";
@@ -146,6 +149,94 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
       {plan.unknowns.map((unknown) => (
         <PanelRow key={unknown.kind}>
           <span className="mb-unknown">{unknown.question}</span>
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+// What they are likely to ask us, each with the record we expect it from.
+//
+// Ordered by how likely it is to come up, and shown with its basis rather than
+// as a bare list: a hypothesis a reader cannot check is one they either trust
+// blindly or ignore, and both are worse than not printing it.
+export function LikelyAsks({
+  plan,
+  onOpenRecord,
+}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  const t = useT();
+  if (plan.likely_asks.length === 0) {
+    return null;
+  }
+  return (
+    <Panel title={t("person.meeting.likelyAsks")} titleLevel={3}>
+      {plan.likely_asks.map((ask) => (
+        <PanelRow key={ask.question}>
+          <div className="mb-ask">
+            <div className="mb-ask-head">
+              <strong>{ask.question}</strong>
+              <Badge tone={ask.relevance === "high" ? "warn" : undefined} quiet>
+                {t(`person.meeting.relevance.${ask.relevance}`)}
+              </Badge>
+            </div>
+            <Claim sentence={ask.basis} onOpenRecord={onOpenRecord} />
+            <p className="mb-ask-prepare">{ask.prepare}</p>
+          </div>
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+// The one watch-out, with what to say, show and not promise.
+export function TopRisk({
+  plan,
+  onOpenRecord,
+}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  const t = useT();
+  if (!plan.top_risk) {
+    return null;
+  }
+  const { response_plan: response } = plan.top_risk;
+  return (
+    <section className="mb-risks">
+      <h3 className="mb-section-title">{t("person.meeting.beReady")}</h3>
+      <Callout tone="warn" icon={AlertTriangle}>
+        <Claim sentence={plan.top_risk.text} onOpenRecord={onOpenRecord} />
+        <FactList
+          facts={[
+            { key: "say", term: t("person.meeting.say"), value: response.say },
+            {
+              key: "show",
+              term: t("person.meeting.show"),
+              value: response.show,
+            },
+            {
+              key: "avoid",
+              term: t("person.meeting.avoid"),
+              value: response.avoid,
+            },
+          ]}
+        />
+      </Callout>
+    </section>
+  );
+}
+
+// What the meeting may turn into, and what to do if it does.
+export function Scenarios({ plan }: Readonly<{ plan: MeetingPlan }>) {
+  const t = useT();
+  if (plan.scenarios.length === 0) {
+    return null;
+  }
+  return (
+    <Panel title={t("person.meeting.scenarios")} titleLevel={3}>
+      {plan.scenarios.map((scenario) => (
+        <PanelRow key={scenario.label}>
+          <div className="mb-path-row">
+            <Badge quiet>{scenario.label}</Badge>
+            <span>{scenario.play}</span>
+          </div>
         </PanelRow>
       ))}
     </Panel>

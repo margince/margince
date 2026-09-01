@@ -154,6 +154,64 @@ func TestAnUngroundedPlanClaimIsDropped(t *testing.T) {
 	}
 }
 
+// A citation that PARSES is not a citation that resolves. An id for a record
+// this input never carried — another workspace's activity, or one simply
+// invented — is syntactically perfect and points somewhere the reader cannot
+// go, so the check is against the record set rather than against the shape.
+func TestAPlanClaimCitingARecordTheInputNeverCarriedIsDropped(t *testing.T) {
+	in := fullInput()
+	elsewhere := "0198f000-0000-7000-8000-0000000000ff" // a real uuid, not in this input
+	plan := DeterministicPlan(in, rankClaims(in))
+	plan.Opening = &Sentence{
+		Text:     "Open on the conversation from the other workspace.",
+		Nature:   natureRecommendation,
+		Evidence: []Evidence{{EntityType: citeActivity, EntityID: elsewhere}},
+	}
+	plan.LikelyAsks = append(plan.LikelyAsks, Ask{
+		Question:  "Will you cite a record I cannot open?",
+		Basis:     Sentence{Text: "From nowhere.", Evidence: []Evidence{{EntityType: citeActivity, EntityID: elsewhere}}},
+		Relevance: crmcontracts.MeetingPlanTierHigh,
+		Prepare:   "It should not be here.",
+	})
+	before := len(plan.LikelyAsks)
+
+	wired := wirePlan(plan, in)
+	if wired.Opening != nil {
+		t.Errorf("an opening citing a record outside the input survived: %q", wired.Opening.Text)
+	}
+	if len(wired.LikelyAsks) != before-1 {
+		t.Errorf("likely asks = %d, want %d — the ungrounded one should be gone",
+			len(wired.LikelyAsks), before-1)
+	}
+	// One bad claim drops itself and nothing else.
+	if wired.Objective == nil {
+		t.Error("a dropped opening took the objective with it")
+	}
+}
+
+// The arc cites the history it was built from, so those records must be in the
+// allowlist — otherwise grounding would drop the whole arc rather than admit it.
+func TestTheArcsOwnCitationsAreGrounded(t *testing.T) {
+	in := fullInput()
+	in.History = []HistoryIn{mail(activityID, 3, "Security review", "inbound")}
+	wired := wirePlan(DeterministicPlan(in, rankClaims(in)), in)
+	if len(wired.AccountArc) == 0 {
+		t.Fatal("the arc was dropped whole — its own history is not in the allowlist")
+	}
+}
+
+// A withheld conversation is not in the allowlist, so a claim citing one is
+// refused for the same reason an invented id is: the reader cannot open it.
+func TestAWithheldConversationIsNotACitableRecord(t *testing.T) {
+	in := fullInput()
+	hidden := mail(dealID, 3, "", "inbound")
+	hidden.Withheld = true
+	in.History = []HistoryIn{hidden}
+	if knownRecords(in)[Evidence{EntityType: citeActivity, EntityID: dealID}] {
+		t.Error("a withheld conversation is citable; a reader would be sent to a record they cannot open")
+	}
+}
+
 func TestThePlanNeverSpellsARecordIDInItsProse(t *testing.T) {
 	in := fullInput()
 	in.History = []HistoryIn{mail(activityID, 3, "Security review", "inbound")}

@@ -14,26 +14,34 @@ package meetingbrief
 // leaving a reader with two ways to close and no third.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // wirePlan renders the plan, dropping what is not grounded.
+//
+// `known` is the same allowlist the sections are filtered against: the records
+// this input actually carried. Parsing a citation as a UUID is not grounding —
+// it proves the string is an id, not that it names a record this caller can
+// open — and every field below is checked against the set rather than against
+// the syntax.
 func wirePlan(plan Plan, in Input) crmcontracts.MeetingPlan {
+	known := knownRecords(in)
 	out := crmcontracts.MeetingPlan{
 		GeneratedBy: crmcontracts.Deterministic,
 		MeetingType: crmcontracts.MeetingPlanType{
 			Value:      plan.Type.Value,
 			Confidence: plan.Type.Confidence,
 		},
-		LikelyAsks: wireAsks(plan.LikelyAsks),
-		Questions:  wireQuestions(plan.Questions),
-		Scenarios:  wireScenarios(plan.Scenarios),
-		AccountArc: wireArc(plan.Arc),
-		Advance:    wireAdvance(plan.Advance, in),
+		LikelyAsks: wireAsks(plan.LikelyAsks, known),
+		Questions:  wireQuestions(plan.Questions, known),
+		Scenarios:  wireScenarios(plan.Scenarios, known),
+		AccountArc: wireArc(plan.Arc, known),
+		Advance:    wireAdvance(plan.Advance, in, known),
 		Unknowns:   wireUnknowns(plan.Unknowns),
 	}
 	if plan.Objective != nil {
-		if sentence, ok := wireSentence(plan.Objective.Sentence); ok {
+		if sentence, ok := groundedSentence(plan.Objective.Sentence, known); ok {
 			out.Objective = &crmcontracts.MeetingPlanObjective{
 				Sentence: sentence,
 				Caveat:   plan.Objective.Caveat,
@@ -41,12 +49,12 @@ func wirePlan(plan Plan, in Input) crmcontracts.MeetingPlan {
 		}
 	}
 	if plan.Opening != nil {
-		if sentence, ok := wireSentence(*plan.Opening); ok {
+		if sentence, ok := groundedSentence(*plan.Opening, known); ok {
 			out.Opening = &sentence
 		}
 	}
 	if plan.TopRisk != nil {
-		if sentence, ok := wireSentence(plan.TopRisk.Text); ok {
+		if sentence, ok := groundedSentence(plan.TopRisk.Text, known); ok {
 			out.TopRisk = &crmcontracts.MeetingPlanRisk{
 				Text: sentence,
 				ResponsePlan: crmcontracts.MeetingPlanResponse{
@@ -72,9 +80,20 @@ func wireReadiness(out crmcontracts.MeetingPlan) crmcontracts.MeetingPlanReadine
 	return crmcontracts.MeetingPlanReadinessOutline
 }
 
-// wireSentence is wireSentences for exactly one, which is the shape most of
-// the plan's fields have.
-func wireSentence(sentence Sentence) (crmcontracts.OrganizationBriefSentence, bool) {
+// groundedSentence renders one sentence, refusing it unless every record it
+// cites is one this input carried.
+//
+// Two checks, and both are load-bearing. claims.Grounded asks whether the
+// citation names a record the reader can open; wireSentences asks whether the
+// id parses at all. Either alone admits something: a syntactically valid UUID
+// for a record in another workspace passes the second, and the first cannot run
+// on a string the wire layer will later reject.
+func groundedSentence(
+	sentence Sentence, known map[Evidence]bool,
+) (crmcontracts.OrganizationBriefSentence, bool) {
+	if !claims.Grounded(sentence, known) {
+		return crmcontracts.OrganizationBriefSentence{}, false
+	}
 	wired := wireSentences([]Sentence{sentence})
 	if len(wired) == 0 {
 		return crmcontracts.OrganizationBriefSentence{}, false
@@ -82,10 +101,23 @@ func wireSentence(sentence Sentence) (crmcontracts.OrganizationBriefSentence, bo
 	return wired[0], true
 }
 
-func wireAsks(asks []Ask) []crmcontracts.MeetingPlanAsk {
+// groundedEvidence is the same rule for a field that carries citations without
+// prose of its own.
+func groundedEvidence(
+	cited []Evidence, known map[Evidence]bool,
+) ([]crmcontracts.OrganizationBriefEvidence, bool) {
+	for _, one := range cited {
+		if !known[Evidence{EntityType: one.EntityType, EntityID: one.EntityID}] {
+			return nil, false
+		}
+	}
+	return wireEvidence(cited)
+}
+
+func wireAsks(asks []Ask, known map[Evidence]bool) []crmcontracts.MeetingPlanAsk {
 	out := make([]crmcontracts.MeetingPlanAsk, 0, len(asks))
 	for _, ask := range asks {
-		basis, ok := wireSentence(ask.Basis)
+		basis, ok := groundedSentence(ask.Basis, known)
 		if !ok {
 			continue
 		}
@@ -99,10 +131,10 @@ func wireAsks(asks []Ask) []crmcontracts.MeetingPlanAsk {
 	return out
 }
 
-func wireQuestions(questions []Question) []crmcontracts.MeetingPlanQuestion {
+func wireQuestions(questions []Question, known map[Evidence]bool) []crmcontracts.MeetingPlanQuestion {
 	out := make([]crmcontracts.MeetingPlanQuestion, 0, len(questions))
 	for _, question := range questions {
-		evidence, ok := wireEvidence(question.Evidence)
+		evidence, ok := groundedEvidence(question.Evidence, known)
 		if !ok {
 			continue
 		}
@@ -116,10 +148,10 @@ func wireQuestions(questions []Question) []crmcontracts.MeetingPlanQuestion {
 	return out
 }
 
-func wireScenarios(scenarios []Scenario) []crmcontracts.MeetingPlanScenario {
+func wireScenarios(scenarios []Scenario, known map[Evidence]bool) []crmcontracts.MeetingPlanScenario {
 	out := make([]crmcontracts.MeetingPlanScenario, 0, len(scenarios))
 	for _, scenario := range scenarios {
-		evidence, ok := wireEvidence(scenario.Evidence)
+		evidence, ok := groundedEvidence(scenario.Evidence, known)
 		if !ok {
 			continue
 		}
@@ -130,10 +162,10 @@ func wireScenarios(scenarios []Scenario) []crmcontracts.MeetingPlanScenario {
 	return out
 }
 
-func wireArc(arc []ArcSentence) []crmcontracts.MeetingPlanArcMoment {
+func wireArc(arc []ArcSentence, known map[Evidence]bool) []crmcontracts.MeetingPlanArcMoment {
 	out := make([]crmcontracts.MeetingPlanArcMoment, 0, len(arc))
 	for _, moment := range arc {
-		summary, ok := wireSentence(moment.Summary)
+		summary, ok := groundedSentence(moment.Summary, known)
 		if !ok {
 			continue
 		}
@@ -153,30 +185,32 @@ func wireArc(arc []ArcSentence) []crmcontracts.MeetingPlanArcMoment {
 // replacement cites the meeting — a move whose only support is that this
 // meeting is happening, which is true of every advance and is why the floor
 // legs cite it in the first place.
-func wireAdvance(advance Advance, in Input) crmcontracts.MeetingPlanAdvance {
+func wireAdvance(advance Advance, in Input, known map[Evidence]bool) crmcontracts.MeetingPlanAdvance {
 	return crmcontracts.MeetingPlanAdvance{
-		Minimum:  advanceLeg(advance.Minimum, in, "Leave with one named next step, owned and dated."),
-		Best:     advanceLeg(advance.Best, in, "Leave with the next meeting booked and its purpose agreed."),
-		Fallback: advanceLeg(advance.Fallback, in, "Leave with what you will send and who decides on it."),
+		Minimum:  advanceLeg(advance.Minimum, in, known, "Leave with one named next step, owned and dated."),
+		Best:     advanceLeg(advance.Best, in, known, "Leave with the next meeting booked and its purpose agreed."),
+		Fallback: advanceLeg(advance.Fallback, in, known, "Leave with what you will send and who decides on it."),
 	}
 }
 
 func advanceLeg(
-	leg Sentence, in Input, floor string,
+	leg Sentence, in Input, known map[Evidence]bool, floor string,
 ) crmcontracts.OrganizationBriefSentence {
-	if wired, ok := wireSentence(leg); ok {
+	if wired, ok := groundedSentence(leg, known); ok {
 		return wired
 	}
-	wired, ok := wireSentence(Sentence{
+	wired, ok := groundedSentence(Sentence{
 		Text:     floor,
 		Nature:   natureRecommendation,
 		Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}},
-	})
+	}, known)
 	if !ok {
-		// The meeting's own id did not parse, which means this brief should not
-		// have been assembled at all. An empty leg is the honest rendering of
-		// "there is nothing here to stand on".
-		return crmcontracts.OrganizationBriefSentence{Text: floor}
+		// The meeting's own id did not ground, which means this brief should
+		// not have been assembled at all. An EMPTY leg rather than an uncited
+		// one: the contract requires three legs, and "cited or dropped" is the
+		// stronger rule of the two — a sentence shown without its receipts is
+		// the one thing this surface must never do.
+		return crmcontracts.OrganizationBriefSentence{}
 	}
 	return wired
 }

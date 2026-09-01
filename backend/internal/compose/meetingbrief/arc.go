@@ -204,7 +204,7 @@ func accountArc(in Input) []ArcMoment {
 func readableIDs(moment ArcMoment) []string {
 	var ids []string
 	for _, current := range moment.Threads {
-		if current.Readable == 0 {
+		if len(current.IDs) == 0 {
 			continue
 		}
 		for _, id := range current.IDs {

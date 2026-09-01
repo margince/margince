@@ -141,22 +141,9 @@ func arcSentences(moments []ArcMoment) []ArcSentence {
 	return out
 }
 
+// conversationCount is how many CONVERSATIONS a moment holds, which is what
+// the folding was for: a twelve-message reply chain is one conversation, and
+// reporting it as twelve would undo the fold in the sentence a reader sees.
 func conversationCount(moment ArcMoment) int {
-	count := 0
-	for _, current := range moment.Threads {
-		count += len(current.IDs)
-	}
-	return count
-}
-
-// readiness says whether this plan is a preparation or only an outline.
-//
-// The distinction is what lets a client lead with the plan when it is worth
-// leading with and keep the cited summary in front when it is not — a half
-// plan that displaces what already worked is a regression wearing new panels.
-func readinessOf(plan Plan) crmcontracts.MeetingPlanReadiness {
-	if plan.TopRisk != nil && len(plan.LikelyAsks) >= 2 && len(plan.Questions) >= 3 {
-		return crmcontracts.MeetingPlanReadinessPrepared
-	}
-	return crmcontracts.MeetingPlanReadinessOutline
+	return len(moment.Threads)
 }

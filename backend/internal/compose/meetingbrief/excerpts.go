@@ -119,7 +119,7 @@ func excerptTargets(moments []ArcMoment) []string {
 	threadsTaken := 0
 	for _, moment := range moments {
 		for _, current := range moment.Threads {
-			if current.Readable == 0 {
+			if len(current.IDs) == 0 {
 				continue
 			}
 			if threadsTaken == excerptThreads {

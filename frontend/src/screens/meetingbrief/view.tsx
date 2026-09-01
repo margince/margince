@@ -12,7 +12,15 @@ import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
-import { AccountArc, AdvancePanel, ObjectivePanel, Unknowns } from "./plan";
+import {
+  AccountArc,
+  AdvancePanel,
+  LikelyAsks,
+  ObjectivePanel,
+  Scenarios,
+  TopRisk,
+  Unknowns,
+} from "./plan";
 import {
   Background,
   BodyPanels,
@@ -123,6 +131,9 @@ export function MeetingBriefView({
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
                     />
+                    <TopRisk plan={brief.plan} onOpenRecord={onOpenRecord} />
+                    <LikelyAsks plan={brief.plan} onOpenRecord={onOpenRecord} />
+                    <Scenarios plan={brief.plan} />
                     <AccountArc
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
@@ -131,7 +142,13 @@ export function MeetingBriefView({
                   </>
                 )}
                 <GoalPanel brief={brief} onOpenRecord={onOpenRecord} />
-                <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
+                {/* The sections' risk list, unless the plan carried the one
+                    risk that matters with what to do about it — two warn
+                    callouts on one surface is no warning at all, and the
+                    plan's is the one a reader can act on. */}
+                {!brief.plan?.top_risk && (
+                  <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
+                )}
                 <BodyPanels brief={brief} onOpenRecord={onOpenRecord} />
                 {brief.plan && (
                   <>

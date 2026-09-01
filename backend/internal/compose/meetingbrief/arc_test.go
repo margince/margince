@@ -165,6 +165,54 @@ func TestAWithheldConversationNamesNothing(t *testing.T) {
 	}
 }
 
+// A withheld row inside a READABLE thread is the case the audience narrowing
+// is for. The thread is cited, and the withheld row must not be one of the
+// citations — sending a reader to a record they cannot open also tells them a
+// limited conversation belongs to this thread.
+func TestAWithheldRowIsNotCitedEvenInsideAReadableThread(t *testing.T) {
+	readable := mail(activityID, 3, "Requirements", "inbound")
+	readable.ThreadKey = "abc"
+	hidden := mail(dealID, 4, "", "outbound")
+	hidden.ThreadKey = "abc"
+	hidden.Withheld = true
+
+	threads := threadsOf([]HistoryIn{readable, hidden})
+	if len(threads) != 1 {
+		t.Fatalf("threads = %d, want 1 — one thread key is one thread", len(threads))
+	}
+	for _, id := range threads[0].IDs {
+		if id == dealID {
+			t.Error("a withheld row is citable through the thread it shares with a readable one")
+		}
+	}
+	// It still COUNTS: the thread holds two conversations, and the arc's dates
+	// are right because of it.
+	if threads[0].Rows != 2 {
+		t.Errorf("rows = %d, want 2 — a withheld row still happened", threads[0].Rows)
+	}
+}
+
+// The fold exists so a reply chain reads as one conversation. Reporting its
+// message count would undo it in the one sentence a reader actually sees.
+func TestAMomentCountsConversationsNotMessages(t *testing.T) {
+	in := fullInput()
+	var chain []HistoryIn
+	for i := range 12 {
+		row := mail(fmt.Sprintf("0198f000-0000-7000-8000-0000000%05d", i+300),
+			3+i, "Re: CRM requirements", "inbound")
+		row.ThreadKey = "one-thread"
+		chain = append(chain, row)
+	}
+	in.History = chain
+	arc := accountArc(in)
+	if len(arc) != 1 {
+		t.Fatalf("moments = %d, want 1", len(arc))
+	}
+	if got := conversationCount(arc[0]); got != 1 {
+		t.Errorf("conversation count = %d, want 1 — twelve replies are one conversation", got)
+	}
+}
+
 // A moment nobody may read is dropped rather than titled: it has no subject to
 // name and no citation the reader could open.
 func TestAMomentNobodyMayReadIsNotShown(t *testing.T) {

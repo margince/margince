@@ -164,6 +164,47 @@ describe("the preparation plan", () => {
     );
   });
 
+  it("draws one warn callout, not two", () => {
+    const withRisk = {
+      ...briefWithPlan,
+      plan: {
+        ...(briefWithPlan.plan as NonNullable<typeof briefWithPlan.plan>),
+        top_risk: {
+          text: {
+            text: "The rollout plan we promised is late.",
+            nature: "assessment" as const,
+            evidence: [
+              {
+                entity_type: "activity" as const,
+                entity_id: "3f7c1a90-0000-4000-8000-00000000a001",
+              },
+            ],
+          },
+          response_plan: {
+            say: "Own the delay and name a date.",
+            show: "What is ready today.",
+            avoid: "A date nobody agreed to.",
+          },
+        },
+      },
+    };
+    const { container } = render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: withRisk }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+        />
+      </StoryProviders>,
+    );
+    // The plan's risk carries a response; the sections' list does not. Showing
+    // both would put two warnings on one screen, which is how a reader learns
+    // to skip warnings.
+    expect(container.querySelectorAll(".callout-warn")).toHaveLength(1);
+    expect(screen.getByText("Own the delay and name a date.")).toBeTruthy();
+  });
+
   it("shows what the record does not say", () => {
     mount({ kind: "ready", brief: briefWithPlan });
     expect(
