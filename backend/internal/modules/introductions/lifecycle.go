@@ -131,8 +131,12 @@ func May(from, to Status, by Actor) error {
 }
 
 // Open reports whether an ask is still live — somebody owes an action on it.
-// The duplicate guard and the expiry sweep both ask this function rather than
-// listing the live statuses themselves, so a new status is added here once.
+//
+// The duplicate guard (the partial unique index) and the expiry sweep both
+// describe this same set. Adding a status here without adding it to the index
+// is how an ask becomes unexpirable, so the two are checked against each other.
+// Held by: TestOpenMatchesTheDuplicateGuardIndex
+// (backend/internal/modules/introductions/lifecycle_test.go)
 func Open(s Status) bool {
 	switch s {
 	case StatusRequested, StatusAccepted, StatusNameDropApproved:

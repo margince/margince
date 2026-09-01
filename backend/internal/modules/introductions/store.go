@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -201,14 +202,13 @@ func (s *Store) Decide(
 			 WHERE id = $1 AND version = $6`,
 			id, string(answer), nullIfEmpty(reason), suggested, s.now(), version)
 		return err
-	}, func(ctx context.Context, tx pgx.Tx, auditID ids.UUID, cur *Request) error {
-		return storekit.EmitEvent(ctx, tx, auditID, cur.PersonID,
-			crmcontracts.PublicEventIntroRequestDecided{
-				IntroRequestId:   openapi_types.UUID(id),
-				PersonId:         openapi_types.UUID(cur.PersonID),
-				IntroducerUserId: openapi_types.UUID(cur.IntroducerUser),
-				Decision:         crmcontracts.PublicEventIntroRequestDecidedDecision(answer),
-			})
+	}, func(cur *Request) events.Payload {
+		return crmcontracts.PublicEventIntroRequestDecided{
+			IntroRequestId:   openapi_types.UUID(id),
+			PersonId:         openapi_types.UUID(cur.PersonID),
+			IntroducerUserId: openapi_types.UUID(cur.IntroducerUser),
+			Decision:         crmcontracts.PublicEventIntroRequestDecidedDecision(answer),
+		}
 	})
 }
 
@@ -241,13 +241,12 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 			 WHERE id = $1 AND version = $5`, column),
 			id, string(outcome), s.now(), activity, version)
 		return err
-	}, func(ctx context.Context, tx pgx.Tx, auditID ids.UUID, cur *Request) error {
-		return storekit.EmitEvent(ctx, tx, auditID, cur.PersonID,
-			crmcontracts.PublicEventIntroRequestCompleted{
-				IntroRequestId: openapi_types.UUID(id),
-				PersonId:       openapi_types.UUID(cur.PersonID),
-				Outcome:        crmcontracts.PublicEventIntroRequestCompletedOutcome(outcome),
-			})
+	}, func(cur *Request) events.Payload {
+		return crmcontracts.PublicEventIntroRequestCompleted{
+			IntroRequestId: openapi_types.UUID(id),
+			PersonId:       openapi_types.UUID(cur.PersonID),
+			Outcome:        crmcontracts.PublicEventIntroRequestCompletedOutcome(outcome),
+		}
 	})
 }
 
@@ -263,21 +262,23 @@ func (s *Store) Cancel(ctx context.Context, id ids.UUID, reason string, version 
 			 WHERE id = $1 AND version = $4`,
 			id, nullIfEmpty(reason), s.now(), version)
 		return err
-	}, func(ctx context.Context, tx pgx.Tx, auditID ids.UUID, cur *Request) error {
-		return storekit.EmitEvent(ctx, tx, auditID, cur.PersonID,
-			crmcontracts.PublicEventIntroRequestClosed{
-				IntroRequestId: openapi_types.UUID(id),
-				PersonId:       openapi_types.UUID(cur.PersonID),
-				Reason:         crmcontracts.IntroRequestClosedCancelled,
-			})
+	}, func(cur *Request) events.Payload {
+		return crmcontracts.PublicEventIntroRequestClosed{
+			IntroRequestId: openapi_types.UUID(id),
+			PersonId:       openapi_types.UUID(cur.PersonID),
+			Reason:         crmcontracts.IntroRequestClosedCancelled,
+		}
 	})
 }
 
 // move is the one write path every transition takes.
 //
-// Read the row, ask the lifecycle whether this actor may make this move, write
-// it under the caller's version, then audit and emit — all in one transaction,
-// so an ask cannot change state without the trail that explains it.
+// Read the row, check the caller's version, ask the lifecycle whether this
+// actor may make this move, write it, then audit and emit — all in one
+// transaction, so an ask cannot change state without the trail that explains
+// it. The event is built by the caller and emitted HERE rather than through a
+// callback: the audit-and-emit pair is the write shape, and a pair split
+// across an injected function is a pair a reader has to go looking for.
 func (s *Store) move(
 	ctx context.Context,
 	id ids.UUID,
@@ -285,7 +286,7 @@ func (s *Store) move(
 	version int,
 	permit func(*Request) error,
 	write func(context.Context, pgx.Tx, *Request) error,
-	emit func(context.Context, pgx.Tx, ids.UUID, *Request) error,
+	event func(*Request) events.Payload,
 ) error {
 	if err := auth.Require(ctx, "introduction", principal.ActionUpdate); err != nil {
 		return err
@@ -310,12 +311,17 @@ func (s *Store) move(
 		if err := write(ctx, tx, cur); err != nil {
 			return fmt.Errorf("introductions: recording the answer: %w", err)
 		}
-		auditID, err := storekit.AuditEvent(ctx, tx, "update", "intro_request", id,
+		// The before-image is the status this ask was in, which is exactly what
+		// a dispute about an introduction asks: an accepted ask that ended up
+		// declined and one that was declined outright are different stories,
+		// and only the pair tells them apart.
+		auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
+			map[string]any{"status": string(cur.Status)},
 			map[string]any{"status": string(to)})
 		if err != nil {
 			return err
 		}
-		return emit(ctx, tx, auditID, cur)
+		return storekit.EmitEvent(ctx, tx, auditID, cur.PersonID, event(cur))
 	})
 }
 

@@ -27927,7 +27927,7 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document]
+         knowledge_corpus, knowledge_document, introduction]
 
     RbacAction:
       type: string
