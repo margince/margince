@@ -6,6 +6,7 @@ package introductions
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -317,14 +318,23 @@ func TestTheSweepReachesEveryOpenStatus(t *testing.T) {
 // simply stop covering it, report PASS, and the gap is invisible. So this
 // derives the truth from the declarations rather than from a second list.
 func TestEveryStatusIsCensused(t *testing.T) {
-	source, err := os.ReadFile("lifecycle.go")
+	// Every file in the package, not lifecycle.go alone: a status declared in
+	// a file this gate does not read is invisible to it, and invisible means
+	// PASS. The census would then be short and nothing would say so.
+	files, err := filepath.Glob("*.go")
 	if err != nil {
-		t.Fatalf("reading the lifecycle: %v", err)
+		t.Fatalf("listing the package: %v", err)
 	}
 	declared := map[Status]bool{}
-	for _, m := range regexp.MustCompile(
-		`Status[A-Za-z]+ Status = "([a-z_]+)"`).FindAllSubmatch(source, -1) {
-		declared[Status(m[1])] = true
+	pattern := regexp.MustCompile(`Status[A-Za-z]+ Status = "([a-z_]+)"`)
+	for _, name := range files {
+		source, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		for _, m := range pattern.FindAllSubmatch(source, -1) {
+			declared[Status(m[1])] = true
+		}
 	}
 	if len(declared) == 0 {
 		t.Fatal("no status constants found — this gate has stopped reading its subject")
