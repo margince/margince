@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -225,7 +226,7 @@ func wireIntroRequest(
 		Reasoning:   introReasons(facts),
 	}
 	if aiWritten {
-		disclosure := introDisclosure(facts.lang)
+		disclosure := draftfloor.AIDisclosure(facts.lang)
 		out.AiDisclosure = &disclosure
 	}
 	return out
@@ -249,31 +250,6 @@ func introReasons(facts introFacts) []crmcontracts.AccountDraftReason {
 		})
 	}
 	return out
-}
-
-// firstName is the greeting's name, which for a colleague is the given one.
-//
-// A colleague is addressed the way a colleague is addressed. "Dear Ms Meier"
-// to somebody two desks away reads as a form letter, which is the one thing an
-// ask for a favour must not.
-func firstName(full string) string {
-	fields := strings.Fields(full)
-	if len(fields) == 0 {
-		return ""
-	}
-	return fields[0]
-}
-
-// introDisclosure is the AI-authorship line, in the draft's own language.
-func introDisclosure(lang textlang.Lang) string {
-	switch lang {
-	case textlang.German:
-		return "Diese Nachricht wurde mit KI-Unterstützung verfasst."
-	case textlang.Vietnamese:
-		return "Tin nhắn này được soạn với sự hỗ trợ của AI."
-	default:
-		return "This message was drafted with AI assistance."
-	}
 }
 
 // correspondenceOf folds a contact's own messages into the text a language

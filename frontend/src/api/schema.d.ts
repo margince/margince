@@ -866,6 +866,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/intro-note-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft the forwardable note a colleague can paste into their own introduction.
+         * @description The OTHER half of asking for an introduction, and a different message from
+         *     `POST /organizations/{id}/intro-request-draft` — which writes the internal ask
+         *     TO the colleague, and says so in its own prompt.
+         *
+         *     This writes the note the colleague FORWARDS. It is prospect-facing copy: the
+         *     colleague pastes it into the mail they send to the contact, so it is addressed
+         *     to the contact, written in the register a customer is owed, and it never
+         *     mentions the internal request that produced it.
+         *
+         *     **It changes no record and it sends nothing.** The note comes back for the
+         *     requester to put on their ask, where the colleague reads it and decides. The
+         *     product never writes to a prospect on anybody's behalf.
+         *
+         *     **It accepts an indirect route.** The colleague-ask drafter only matches a
+         *     direct colleague-to-contact edge, so a route through another contact could not
+         *     be drafted for at all — which is exactly the case a rep most needs help with.
+         *     Here `through_person_id` names the intermediary, and the note is written for a
+         *     hand-off that passes through them.
+         *
+         *     **Marked as machine-authored, and stored that way.** `generated_by` travels
+         *     with the text and is persisted on the ask, so the colleague reading it sees who
+         *     wrote it rather than assuming a person did.
+         *
+         *     DEGRADES RATHER THAN FAILS, exactly as the colleague-ask drafter does: with no
+         *     model lane, an exhausted budget, or a reply that does not name the contact, the
+         *     same note is composed from a template and `generated_by` says which wrote it.
+         *     There is no 501 — a rep who cannot get a note gets a sendable one.
+         *
+         *     What is checked on the way back is SHAPE, not truth: a reply that never names
+         *     the contact is refused, because a note addressed to nobody is one the reader
+         *     must rewrite. Whether it overstates the relationship is not something a string
+         *     test can decide, and the certification rubric scores that instead.
+         */
+        post: operations["draftIntroNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/graph": {
         parameters: {
             query?: never;
@@ -27559,6 +27613,51 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    draftIntroNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description The colleague who would forward the note. Named because the note is written in their voice — they are the one the contact hears from.
+                     */
+                    via_user_id: string;
+                    /**
+                     * Format: uuid
+                     * @description The intermediary on a route that runs through another contact, when it does. Absent means the colleague knows the target directly.
+                     *     Both ids are matched against the routes this caller's own graph read returns, so an intermediary they cannot see is `422` — the route is not one they have — rather than `404`. That is deliberate and is NOT the shape a direct read uses: answering `404` here would tell the caller whether a contact they may not read exists, which is the fact the row-scope is keeping.
+                     */
+                    through_person_id?: string | null;
+                    /** @description Why this is worth the CONTACT's time, in the requester's own words. It is the one fact the product cannot derive: the records say who knows whom, and only the rep knows what they would bring. Absent writes a note that asks for a conversation without claiming a reason. */
+                    value_for_target?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The note, and what it was written from. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountEmailDraft"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
