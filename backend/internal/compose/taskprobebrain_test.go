@@ -66,10 +66,16 @@ func TestTaskProbeBrainRefusesAMalformedModelOverride(t *testing.T) {
 	}
 }
 
-// A pinned model binds ONE tier, and every task's ladder falls through to it —
-// so the override serves whichever task the probe names.
+// A pinned model reaches every rung the named task's ladder can ask for, and
+// the banner names it.
+//
+// It used to say "binds ONE tier, and every task's ladder falls through to it".
+// The second half was never true — a ladder names the tiers a task may use, it
+// does not fall through — and the sentence is what kept the local-only verdict
+// tasks unprobeable. TestAProbeBindsTheTiersItsTaskCanAskFor holds the general
+// rule; this one keeps the cheap-cloud lane and the banner honest.
 func TestTaskProbeBrainPinsOneModelForEveryLane(t *testing.T) {
-	cfg, banner, err := taskProbeRouting("someprovider:some-model")
+	cfg, banner, err := taskProbeRouting("someprovider:some-model", ai.TaskRateExtract)
 	if err != nil {
 		t.Fatalf("taskProbeRouting: %v", err)
 	}
@@ -109,5 +115,48 @@ func TestAPinnedCloudModelReadsItsKeyFromTheEnvironment(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "")
 	if _, _, err := TaskProbeBrain(provider+":claude-probe-model", false, ai.TaskRateExtract); err == nil {
 		t.Fatal("a cloud --model with NO key must fail closed — Margince provides no inference, so a missing BYOK key is a refusal")
+	}
+}
+
+// A probe binds the tiers the TASK can ask for, not one fixed tier.
+//
+// The override used to bind cheap_cloud alone, on the assumption that every
+// ladder falls through to it. A ladder does not fall through — it names the
+// tiers a task may use, and a task whose ladder omits the bound one reaches no
+// rung at all. That cost exactly the two tasks pinned to [local_small] because
+// they read private mail: the sender verdict and the confidentiality verdict.
+// Both were unprobeable, which is why a wrong sender verdict in the field had
+// to be reproduced by hand.
+func TestAProbeBindsTheTiersItsTaskCanAskFor(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "probe-key")
+
+	for _, task := range []ai.Task{
+		ai.TaskCaptureCounterpartyVerdict,
+		ai.TaskRateExtract,
+	} {
+		ladder := ai.TaskLadder(task)
+		if len(ladder) == 0 {
+			t.Fatalf("%s declares no ladder, so this test cannot say what it should bind", task)
+		}
+		cfg, err := pinnedModelRouting("gemini:probe-model", task)
+		if err != nil {
+			t.Fatalf("%s: %v", task, err)
+		}
+		for _, tier := range ladder {
+			if _, ok := cfg.Tiers[tier]; !ok {
+				t.Errorf("%s: ladder names tier %s, which the probe left unbound — the call fails with \"no bound tier can serve\"", task, tier)
+			}
+		}
+	}
+}
+
+// The whole point is reaching a task the old binding could not, so the local-only
+// verdict task is asserted from the outside too: through TaskProbeBrain, which is
+// what `worker aitask run --model` actually calls.
+func TestAProbeServesTheLocalOnlyVerdictTask(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "probe-key")
+
+	if _, _, err := TaskProbeBrain("gemini:probe-model", false, ai.TaskCaptureCounterpartyVerdict); err != nil {
+		t.Fatalf("the sender verdict is pinned to a local rung and must still be probeable, got %v", err)
 	}
 }
