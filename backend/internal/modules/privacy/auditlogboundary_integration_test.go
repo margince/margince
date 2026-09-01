@@ -42,6 +42,11 @@ type auditBoundaryEnv struct {
 	owner  *pgx.Conn
 	ws     ids.UUID
 	user   ids.UUID
+	// other is a SECOND seat, the one who captured the held mail in the
+	// audience tests next door. The audience arm admits a row's own capturer
+	// (`captured_by LIKE '%:<uuid>'`), so a fixture where the reader captured
+	// the activity would pass whatever the redaction did.
+	other ids.UUID
 }
 
 func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
@@ -65,6 +70,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 	}
 
 	ws, user, person := ids.NewV7(), ids.NewV7(), ids.New[ids.PersonKind]()
+	other := ids.NewV7()
 	for _, seed := range []struct {
 		statement string
 		args      []any
@@ -73,6 +79,10 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 		{
 			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 			[]any{user, "admin-" + user.String() + "@boundary.test"},
+		},
+		{
+			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`,
+			[]any{other, "other-" + other.String() + "@boundary.test"},
 		},
 		{`INSERT INTO person (id, full_name, source, captured_by)
 		  VALUES ($1, 'Sara Subject', 'manual', 'user:'||$2::text)`, []any{person, user}},
@@ -95,6 +105,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 		owner:  owner,
 		ws:     ws,
 		user:   user,
+		other:  other,
 	}
 }
 

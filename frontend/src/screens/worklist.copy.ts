@@ -350,8 +350,13 @@ export function dealFactsText(
 // message on its timeline, one press from the draft — and naming the step
 // honestly is worth more than a label that overstates it.
 //
-// Opening the composer from here needs a deep link the app does not have. That
-// is its own change, and the label moves back when it lands.
+// Opening the composer from here needs a deep link the app does not have. The
+// meeting brief has one now (`?prep=<activityId>` on the contact record), but
+// the composer does not: it picks its transport from the person's own
+// reachability rather than from a thread a caller names, so an address could
+// open it without opening it ON the message this row is about. The worklist
+// sends no `prepare_meeting` move either — `WorklistMove.action` has one value.
+// Both are their own change, and the label moves back when they land.
 export function moveHref(item: WorklistItem): string | undefined {
   if (item.move?.action !== "draft_reply") {
     return undefined;
