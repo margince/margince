@@ -64,8 +64,9 @@ func (h Handlers) ProtectedResourceMetadata(w http.ResponseWriter, r *http.Reque
 		// document: this is the RFC 9728 §2 field a client reads to learn what
 		// it may ask for at this resource, and a scope absent from it is one no
 		// client will ever name. What it does not do is bound a connection —
-		// the grant is the passport the human lent, so a client that names
-		// nothing still receives everything in it.
+		// the grant is whatever the human ticks on the consent screen, so a
+		// client that names nothing here still receives whatever the human
+		// chose.
 		// offline_access is absent on purpose: it buys token lifetime, not
 		// access to this resource, so it is the authorization server's to
 		// advertise and never a passport scope.

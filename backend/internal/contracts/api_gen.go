@@ -3349,33 +3349,6 @@ func (e ConsentEventNewState) Valid() bool {
 	}
 }
 
-// Defines values for ConsentPassportOptionScopes.
-const (
-	ConsentPassportOptionScopesDraft  ConsentPassportOptionScopes = "draft"
-	ConsentPassportOptionScopesEnrich ConsentPassportOptionScopes = "enrich"
-	ConsentPassportOptionScopesRead   ConsentPassportOptionScopes = "read"
-	ConsentPassportOptionScopesSend   ConsentPassportOptionScopes = "send"
-	ConsentPassportOptionScopesWrite  ConsentPassportOptionScopes = "write"
-)
-
-// Valid indicates whether the value is a known member of the ConsentPassportOptionScopes enum.
-func (e ConsentPassportOptionScopes) Valid() bool {
-	switch e {
-	case ConsentPassportOptionScopesDraft:
-		return true
-	case ConsentPassportOptionScopesEnrich:
-		return true
-	case ConsentPassportOptionScopesRead:
-		return true
-	case ConsentPassportOptionScopesSend:
-		return true
-	case ConsentPassportOptionScopesWrite:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal     ConsentQualifyingEventKind = "active_deal"
@@ -3412,6 +3385,33 @@ func (e ConsentQualifyingEventSourceEntityType) Valid() bool {
 	case ConsentQualifyingEventSourceEntityTypeActivity:
 		return true
 	case ConsentQualifyingEventSourceEntityTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsentRequestScopes.
+const (
+	ConsentRequestScopesDraft  ConsentRequestScopes = "draft"
+	ConsentRequestScopesEnrich ConsentRequestScopes = "enrich"
+	ConsentRequestScopesRead   ConsentRequestScopes = "read"
+	ConsentRequestScopesSend   ConsentRequestScopes = "send"
+	ConsentRequestScopesWrite  ConsentRequestScopes = "write"
+)
+
+// Valid indicates whether the value is a known member of the ConsentRequestScopes enum.
+func (e ConsentRequestScopes) Valid() bool {
+	switch e {
+	case ConsentRequestScopesDraft:
+		return true
+	case ConsentRequestScopesEnrich:
+		return true
+	case ConsentRequestScopesRead:
+		return true
+	case ConsentRequestScopesSend:
+		return true
+	case ConsentRequestScopesWrite:
 		return true
 	default:
 		return false
@@ -8217,6 +8217,7 @@ func (e PersonMomentDestinationEntityType) Valid() bool {
 
 // Defines values for PersonMomentDestinationSurface.
 const (
+	PersonMomentDestinationSurfaceActivityLog  PersonMomentDestinationSurface = "activity_log"
 	PersonMomentDestinationSurfaceComposer     PersonMomentDestinationSurface = "composer"
 	PersonMomentDestinationSurfaceMeetingBrief PersonMomentDestinationSurface = "meeting_brief"
 	PersonMomentDestinationSurfaceRecord       PersonMomentDestinationSurface = "record"
@@ -8227,6 +8228,8 @@ const (
 // Valid indicates whether the value is a known member of the PersonMomentDestinationSurface enum.
 func (e PersonMomentDestinationSurface) Valid() bool {
 	switch e {
+	case PersonMomentDestinationSurfaceActivityLog:
+		return true
 	case PersonMomentDestinationSurfaceComposer:
 		return true
 	case PersonMomentDestinationSurfaceMeetingBrief:
@@ -8270,6 +8273,7 @@ const (
 	PersonMomentRuleMeetingPrep      PersonMomentRule = "meeting_prep"
 	PersonMomentRuleMissingNextStep  PersonMomentRule = "missing_next_step"
 	PersonMomentRuleNothingNeeded    PersonMomentRule = "nothing_needed"
+	PersonMomentRuleOpenPromise      PersonMomentRule = "open_promise"
 	PersonMomentRuleOverduePromise   PersonMomentRule = "overdue_promise"
 	PersonMomentRulePublicSignal     PersonMomentRule = "public_signal"
 	PersonMomentRuleReEngaged        PersonMomentRule = "re_engaged"
@@ -8289,6 +8293,8 @@ func (e PersonMomentRule) Valid() bool {
 	case PersonMomentRuleMissingNextStep:
 		return true
 	case PersonMomentRuleNothingNeeded:
+		return true
+	case PersonMomentRuleOpenPromise:
 		return true
 	case PersonMomentRuleOverduePromise:
 		return true
@@ -9676,6 +9682,27 @@ func (e SetActivityAudienceRequestMembersSubjectType) Valid() bool {
 	case SetActivityAudienceRequestMembersSubjectTypeTeam:
 		return true
 	case SetActivityAudienceRequestMembersSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetActivityDispositionRequestDisposition.
+const (
+	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
+	SetActivityDispositionRequestDispositionNotSales SetActivityDispositionRequestDisposition = "not_sales"
+	SetActivityDispositionRequestDispositionSnooze   SetActivityDispositionRequestDisposition = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the SetActivityDispositionRequestDisposition enum.
+func (e SetActivityDispositionRequestDisposition) Valid() bool {
+	switch e {
+	case SetActivityDispositionRequestDispositionNotMine:
+		return true
+	case SetActivityDispositionRequestDispositionNotSales:
+		return true
+	case SetActivityDispositionRequestDispositionSnooze:
 		return true
 	default:
 		return false
@@ -11710,6 +11737,30 @@ func (e WorklistScopeOptions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistBandBand.
+const (
+	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
+	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandNow           WorklistBandBand = "now"
+	WorklistBandBandReview        WorklistBandBand = "review"
+)
+
+// Valid indicates whether the value is a known member of the WorklistBandBand enum.
+func (e WorklistBandBand) Valid() bool {
+	switch e {
+	case WorklistBandBandBuildPipeline:
+		return true
+	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandNow:
+		return true
+	case WorklistBandBandReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistBatchKey.
 const (
 	CompanyMatch     WorklistBatchKey = "company_match"
@@ -11742,6 +11793,7 @@ func (e WorklistBatchKey) Valid() bool {
 
 // Defines values for WorklistComparisonComparator.
 const (
+	WorklistComparisonComparatorCrowded         WorklistComparisonComparator = "crowded"
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
 	WorklistComparisonComparatorExpectedRevenue WorklistComparisonComparator = "expected_revenue"
 	WorklistComparisonComparatorLevel           WorklistComparisonComparator = "level"
@@ -11754,6 +11806,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistComparisonComparator enum.
 func (e WorklistComparisonComparator) Valid() bool {
 	switch e {
+	case WorklistComparisonComparatorCrowded:
+		return true
 	case WorklistComparisonComparatorDeadline:
 		return true
 	case WorklistComparisonComparatorExpectedRevenue:
@@ -11842,6 +11896,30 @@ func (e WorklistItemActions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistItemBand.
+const (
+	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
+	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandNow           WorklistItemBand = "now"
+	WorklistItemBandReview        WorklistItemBand = "review"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemBand enum.
+func (e WorklistItemBand) Valid() bool {
+	switch e {
+	case WorklistItemBandBuildPipeline:
+		return true
+	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandNow:
+		return true
+	case WorklistItemBandReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemCategory.
 const (
 	WorklistItemCategoryCustomerWaiting WorklistItemCategory = "customer_waiting"
@@ -11917,6 +11995,66 @@ func (e WorklistItemConsequence) Valid() bool {
 	case WorklistItemConsequenceWorkBlocked:
 		return true
 	case WorklistItemConsequenceYouBelieveItHappened:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemDispositions.
+const (
+	WorklistItemDispositionsNotMine  WorklistItemDispositions = "not_mine"
+	WorklistItemDispositionsNotSales WorklistItemDispositions = "not_sales"
+	WorklistItemDispositionsSnooze   WorklistItemDispositions = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
+func (e WorklistItemDispositions) Valid() bool {
+	switch e {
+	case WorklistItemDispositionsNotMine:
+		return true
+	case WorklistItemDispositionsNotSales:
+		return true
+	case WorklistItemDispositionsSnooze:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemPrimaryAction.
+const (
+	WorklistItemPrimaryActionAcknowledge WorklistItemPrimaryAction = "acknowledge"
+	WorklistItemPrimaryActionAct         WorklistItemPrimaryAction = "act"
+	WorklistItemPrimaryActionComplete    WorklistItemPrimaryAction = "complete"
+	WorklistItemPrimaryActionDecide      WorklistItemPrimaryAction = "decide"
+	WorklistItemPrimaryActionDismiss     WorklistItemPrimaryAction = "dismiss"
+	WorklistItemPrimaryActionMerge       WorklistItemPrimaryAction = "merge"
+	WorklistItemPrimaryActionOpen        WorklistItemPrimaryAction = "open"
+	WorklistItemPrimaryActionSetAside    WorklistItemPrimaryAction = "set_aside"
+	WorklistItemPrimaryActionSnooze      WorklistItemPrimaryAction = "snooze"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemPrimaryAction enum.
+func (e WorklistItemPrimaryAction) Valid() bool {
+	switch e {
+	case WorklistItemPrimaryActionAcknowledge:
+		return true
+	case WorklistItemPrimaryActionAct:
+		return true
+	case WorklistItemPrimaryActionComplete:
+		return true
+	case WorklistItemPrimaryActionDecide:
+		return true
+	case WorklistItemPrimaryActionDismiss:
+		return true
+	case WorklistItemPrimaryActionMerge:
+		return true
+	case WorklistItemPrimaryActionOpen:
+		return true
+	case WorklistItemPrimaryActionSetAside:
+		return true
+	case WorklistItemPrimaryActionSnooze:
 		return true
 	default:
 		return false
@@ -12433,6 +12571,24 @@ func (e ListActivitiesParamsEntityType) Valid() bool {
 	case ListActivitiesParamsEntityTypePerson:
 		return true
 	case ListActivitiesParamsEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClearActivityDispositionParamsScope.
+const (
+	ClearActivityDispositionParamsScopeMine   ClearActivityDispositionParamsScope = "mine"
+	ClearActivityDispositionParamsScopeThread ClearActivityDispositionParamsScope = "thread"
+)
+
+// Valid indicates whether the value is a known member of the ClearActivityDispositionParamsScope enum.
+func (e ClearActivityDispositionParamsScope) Valid() bool {
+	switch e {
+	case ClearActivityDispositionParamsScopeMine:
+		return true
+	case ClearActivityDispositionParamsScopeThread:
 		return true
 	default:
 		return false
@@ -13284,22 +13440,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -13761,31 +13917,31 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
+	All             GetWorklistParamsFilter = "all"
+	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	Decisions       GetWorklistParamsFilter = "decisions"
+	Meetings        GetWorklistParamsFilter = "meetings"
+	System          GetWorklistParamsFilter = "system"
+	Tasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
@@ -17353,19 +17509,6 @@ type ConsentEventActorType string
 // ConsentEventNewState Proof rows record only transitions to granted/withdrawn (never to unknown).
 type ConsentEventNewState string
 
-// ConsentPassportOption One passport the signed-in human may lend to the requesting client. `scopes` is both
-// what the passport carries and what a connection lending it receives: the client's
-// request does not narrow the grant, so there is no second, smaller set beside it.
-type ConsentPassportOption struct {
-	ExpiresAt time.Time                     `json:"expires_at"`
-	Id        openapi_types.UUID            `json:"id"`
-	Label     string                        `json:"label"`
-	Scopes    []ConsentPassportOptionScopes `json:"scopes"`
-}
-
-// ConsentPassportOptionScopes defines model for ConsentPassportOption.Scopes.
-type ConsentPassportOptionScopes string
-
 // ConsentPurpose defines model for ConsentPurpose.
 type ConsentPurpose struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -17400,16 +17543,22 @@ type ConsentQualifyingEventKind string
 type ConsentQualifyingEventSourceEntityType string
 
 // ConsentRequest What the consent screen renders. The client name is resolved from the database, never
-// from the request URL, so no caller can put words on a consent screen. The consent
-// nonce is NOT here: it reaches the screen in the redirect fragment, because the
-// consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
+// from the request URL, so no caller can put words on a consent screen. `scopes` is the
+// closed verb vocabulary the human chooses from — the ceiling, not a selection: every
+// one of them is offered ticked, and what the human posts back is the grant. The client's
+// own scope request does not narrow it; every mainstream MCP client sends none at all.
+// The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
+// the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
 type ConsentRequest struct {
 	ClientName string `json:"client_name"`
 
 	// Offline The client asked to stay connected without asking again (offline_access).
-	Offline   bool                    `json:"offline"`
-	Passports []ConsentPassportOption `json:"passports"`
+	Offline bool                   `json:"offline"`
+	Scopes  []ConsentRequestScopes `json:"scopes"`
 }
+
+// ConsentRequestScopes defines model for ConsentRequest.Scopes.
+type ConsentRequestScopes string
 
 // ConsumerMailBaselineResponse defines model for ConsumerMailBaselineResponse.
 type ConsumerMailBaselineResponse struct {
@@ -24094,15 +24243,6 @@ type PassportConnection struct {
 	// connection as newer than the consent that authorized it.
 	ConnectedAt time.Time `json:"connected_at"`
 
-	// LentPassportId The passport the human lent to create this connection. Null for a connection established
-	// before that provenance was recorded, and null once the lent passport is deleted outright.
-	// It is never re-checked: a lend survives the lent passport's revocation by design, so this
-	// answers "where did this come from", never "may this still connect".
-	LentPassportId *openapi_types.UUID `json:"lent_passport_id,omitempty"`
-
-	// LentPassportLabel The lent passport's label at read time, for display beside `lent_passport_id`.
-	LentPassportLabel *string `json:"lent_passport_label,omitempty"`
-
 	// Renewable Whether this connection may mint itself a replacement credential — the grant's
 	// `refresh_allowed`, set when the client asked for `offline_access`. It is what makes the
 	// passport's own `expires_at` mean two different things: a renewable connection is simply
@@ -24756,14 +24896,14 @@ type PersonMomentDestination struct {
 	// Prefill What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret.
 	Prefill *map[string]string `json:"prefill,omitempty"`
 
-	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet.
+	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
 	Surface PersonMomentDestinationSurface `json:"surface"`
 }
 
 // PersonMomentDestinationEntityType defines model for PersonMomentDestination.EntityType.
 type PersonMomentDestinationEntityType string
 
-// PersonMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet.
+// PersonMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
 type PersonMomentDestinationSurface string
 
 // PersonMomentEvidence One thing that actually happened, which the reader can open.
@@ -27101,6 +27241,25 @@ type SetActivityAudienceRequest struct {
 // SetActivityAudienceRequestMembersSubjectType defines model for SetActivityAudienceRequest.Members.SubjectType.
 type SetActivityAudienceRequestMembersSubjectType string
 
+// SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
+type SetActivityDispositionRequest struct {
+	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+	// `not_mine` bind only the caller.
+	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
+
+	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
+	// with no moment would never lift, and a moment on `not_mine` would make a hand-off
+	// expire on a Thursday.
+	//
+	// A moment already past is refused rather than stored: it would write a row that hides
+	// nothing, and read to the rep as a snooze that did not take.
+	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+}
+
+// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
+// `not_mine` bind only the caller.
+type SetActivityDispositionRequestDisposition string
+
 // SetAiModelRateRequest defines model for SetAiModelRateRequest.
 type SetAiModelRateRequest struct {
 	// CacheReadPerMtok USD per 1M cache-read tokens.
@@ -28806,6 +28965,15 @@ type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// Bands The outcome headings, in the order a page draws them, each with how many of this
+	// page's rows sit under it.
+	//
+	// Every band appears, including one with no rows: "nothing needs you today" is
+	// something to tell a reader, and a client inferring the headings from the rows it
+	// received could not say it. The queue arrives sorted so each band's rows are
+	// contiguous — a client draws a heading where the band changes.
+	Bands *[]WorklistBand `json:"bands,omitempty"`
+
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
 	// before any narrowing, so a filtered page still reports the categories it is
@@ -28847,6 +29015,22 @@ type WorklistScope string
 
 // WorklistScopeOptions defines model for Worklist.ScopeOptions.
 type WorklistScopeOptions string
+
+// WorklistBand One outcome band and how much of it this page is showing — the headings a client draws,
+// in the order it draws them.
+//
+// Sent even for a band with no rows on this page. A reader whose Now band is empty is being
+// told something ("nothing needs you today"), and a client that inferred the headings from
+// the rows it received could not say it.
+type WorklistBand struct {
+	Band WorklistBandBand `json:"band"`
+
+	// Shown How many rows of this band are on the page.
+	Shown int `json:"shown"`
+}
+
+// WorklistBandBand defines model for WorklistBand.Band.
+type WorklistBandBand string
 
 // WorklistBatch A group of routine decisions that read alike, standing on the queue as one row.
 //
@@ -28908,7 +29092,14 @@ type WorklistBatchKey string
 //
 // Absent on the last row of the page, which has nothing below it to beat.
 type WorklistComparison struct {
-	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the
+	// client renders as no reason at all.
+	//
+	// `crowded` means the row below is one of many of its kind: past a lead group, further
+	// rows of the same source sort under the other kinds of work so one noisy lane cannot own
+	// the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+	// otherwise bury the reader's one overdue task — which is why it can be the answer even
+	// when the two rows share a level.
 	Comparator WorklistComparisonComparator `json:"comparator"`
 
 	// Mine A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -28922,7 +29113,14 @@ type WorklistComparison struct {
 	Theirs *WorklistValue `json:"theirs,omitempty"`
 }
 
-// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the client renders as no reason at all.
+// WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the
+// client renders as no reason at all.
+//
+// `crowded` means the row below is one of many of its kind: past a lead group, further
+// rows of the same source sort under the other kinds of work so one noisy lane cannot own
+// the page. It is the FIRST thing compared — a hundred genuinely urgent replies would
+// otherwise bury the reader's one overdue task — which is why it can be the answer even
+// when the two rows share a level.
 type WorklistComparisonComparator string
 
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
@@ -28996,6 +29194,17 @@ type WorklistItem struct {
 	// Actions What this item offers, routed to the endpoint that owns the verb.
 	Actions []WorklistItemActions `json:"actions"`
 
+	// Band The heading this row sits under, as an OUTCOME rather than a priority number.
+	//
+	// `level` says what kind of work a row is; the band says what the reader is being asked
+	// to do about it today. Seven levels make a correct ordering and poor headings — a reader
+	// scanning for "what must happen now" should not have to know which levels mean that.
+	//
+	// Derived from the level and the row's own subject, so it cannot disagree with the order:
+	// the queue arrives already sorted, and every row of one band is contiguous. A client
+	// draws a heading when the band changes and never re-sorts.
+	Band *WorklistItemBand `json:"band,omitempty"`
+
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
 	//
 	// The pile is the problem this solves: a hundred and fifty "is this address a
@@ -29032,6 +29241,15 @@ type WorklistItem struct {
 	// Detail One supporting line.
 	Detail *string `json:"detail,omitempty"`
 
+	// Dispositions The ways this row can be PUT DOWN, as the server declares them. A client
+	// never infers this from `source`: which rows a rep may judge is a server
+	// rule, and a client guessing it draws a verb that 404s or hides one the rep
+	// is entitled to.
+	//
+	// Absent or empty means the row cannot be set aside — most sources answer
+	// through the surface that owns them and leave nothing to dispose of here.
+	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
+
 	// DueAt When this is due, or when the meeting starts.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -29067,6 +29285,14 @@ type WorklistItem struct {
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
+	// PrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+	// reader arriving at a row should not have to weigh three equally-drawn
+	// controls to find the step the ranking already implies.
+	//
+	// Absent when the row offers no single obvious step, which is a real state
+	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
+	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
+
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`
 
@@ -29087,6 +29313,17 @@ type WorklistItem struct {
 // WorklistItemActions defines model for WorklistItem.Actions.
 type WorklistItemActions string
 
+// WorklistItemBand The heading this row sits under, as an OUTCOME rather than a priority number.
+//
+// `level` says what kind of work a row is; the band says what the reader is being asked
+// to do about it today. Seven levels make a correct ordering and poor headings — a reader
+// scanning for "what must happen now" should not have to know which levels mean that.
+//
+// Derived from the level and the row's own subject, so it cannot disagree with the order:
+// the queue arrives already sorted, and every row of one band is contiguous. A client
+// draws a heading when the band changes and never re-sorts.
+type WorklistItemBand string
+
 // WorklistItemCategory The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 type WorklistItemCategory string
 
@@ -29094,6 +29331,17 @@ type WorklistItemCategory string
 // source, because one source has several honest answers: a deal past its close
 // date slips, one merely idle drifts.
 type WorklistItemConsequence string
+
+// WorklistItemDispositions defines model for WorklistItem.Dispositions.
+type WorklistItemDispositions string
+
+// WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
+// reader arriving at a row should not have to weigh three equally-drawn
+// controls to find the step the ranking already implies.
+//
+// Absent when the row offers no single obvious step, which is a real state
+// rather than a gap: a dedupe pair genuinely asks the reader to choose.
+type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
 //
@@ -29535,6 +29783,17 @@ type SetActivityAudienceParams struct {
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
+
+// ClearActivityDispositionParams defines parameters for ClearActivityDisposition.
+type ClearActivityDispositionParams struct {
+	// Scope `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
+	// workspace-wide not-sales judgement, which anybody who can read the message may do:
+	// the judgement was never one person's property.
+	Scope *ClearActivityDispositionParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+}
+
+// ClearActivityDispositionParamsScope defines parameters for ClearActivityDisposition.
+type ClearActivityDispositionParamsScope string
 
 // DraftEmailJSONBody defines parameters for DraftEmail.
 type DraftEmailJSONBody struct {
@@ -31197,8 +31456,9 @@ type GetConsentRequestParams struct {
 	ClientId string `form:"client_id" json:"client_id"`
 
 	// Scope The space-delimited scopes the client requested. Only the offline_access marker in it
-	// is read, and reported back as `offline`: the access scopes bound nothing, since a lend
-	// grants the chosen passport's own.
+	// is read, and reported back as `offline`: the access scopes bind nothing, since the
+	// connection's authority is whatever the human ticks on the consent screen, not what the
+	// client asked for.
 	Scope string `form:"scope" json:"scope"`
 }
 
@@ -33815,6 +34075,9 @@ type UpdateActivityJSONRequestBody = UpdateActivityRequest
 
 // SetActivityAudienceJSONRequestBody defines body for SetActivityAudience for application/json ContentType.
 type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
+
+// SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
+type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody DraftEmailJSONBody
@@ -42140,6 +42403,12 @@ type ServerInterface interface {
 	// Limit (or re-open) who may read this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
+	// Pick the message back up — the undo behind every set-aside verb.
+	// (DELETE /activities/{id}/disposition)
+	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
+	// Put a waiting message down, so the Worklist stops offering it.
+	// (PUT /activities/{id}/disposition)
+	SetActivityDisposition(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft a reply/follow-up email for context (the `draft_email` MCP verb).
 	// (POST /activities/{id}/draft-email)
 	DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -43799,6 +44068,18 @@ func (_ Unimplemented) UpdateActivity(w http.ResponseWriter, r *http.Request, id
 // Limit (or re-open) who may read this activity's content.
 // (PATCH /activities/{id}/audience)
 func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Pick the message back up — the undo behind every set-aside verb.
+// (DELETE /activities/{id}/disposition)
+func (_ Unimplemented) ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a waiting message down, so the Worklist stops offering it.
+// (PUT /activities/{id}/disposition)
+func (_ Unimplemented) SetActivityDisposition(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -47620,6 +47901,86 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetActivityAudience(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearActivityDisposition operation middleware
+func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ClearActivityDispositionParams
+
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope", r.URL.Query(), &params.Scope, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearActivityDisposition(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetActivityDisposition operation middleware
+func (siw *ServerInterfaceWrapper) SetActivityDisposition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetActivityDisposition(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70878,6 +71239,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/{id}/audience", wrapper.SetActivityAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/disposition", wrapper.SetActivityDisposition)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/draft-email", wrapper.DraftEmail)

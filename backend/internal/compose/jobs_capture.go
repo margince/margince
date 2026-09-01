@@ -112,6 +112,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		addDeclaredWorker[CaptureEnrichArgs](reg, &captureEnrichWorker{pool: pool})
 		addDeclaredWorker[CaptureEnrichWorkspaceArgs](reg, &captureEnrichWorkspaceWorker{
 			enricher: NewCaptureEnricher(pool, cfg.EnrichBrain, log),
+			log:      log,
 		})
 	}
 

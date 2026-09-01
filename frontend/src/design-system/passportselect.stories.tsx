@@ -87,7 +87,7 @@ export const AllowsAllPassports: Story = {
 export const Scopes: Story = {
   render: () => (
     <p>
-      <ScopeChips scopes={PASSPORTS[1].scopes} />
+      <ScopeChips labels={PASSPORTS[1].scopes} />
     </p>
   ),
 };

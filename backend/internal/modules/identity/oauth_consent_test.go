@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -24,8 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The handler's first act is to demand the human whose authority would be lent.
-// A caller without one is refused there — above the client lookup, and without
+// The handler's first act is to demand the human whose authority the consent
+// would grant. A caller without one is refused there — above the client lookup, and without
 // a database round trip — which is why the Service below carries no pool: a
 // lookup that ran anyway could not silently pass.
 func TestConsentRequestRefusesACallerWithNoSignedInHumanBeforeResolvingTheClient(t *testing.T) {
@@ -152,4 +153,16 @@ func bindsHumanPrincipalType(body *ast.BlockStmt) bool {
 		return !found
 	})
 	return found
+}
+
+func TestConsentPayloadOffersTheWholeVocabulary(t *testing.T) {
+	got := consentRequestPayload("Claude Code", true)
+
+	if got.ClientName != "Claude Code" || !got.Offline {
+		t.Fatalf("client name and offline must survive the mapping, got %+v", got)
+	}
+	want := []crmcontracts.ConsentRequestScopes{"read", "draft", "write", "send", "enrich"}
+	if !slices.Equal(got.Scopes, want) {
+		t.Fatalf("scopes = %v, want %v — the screen offers the closed vocabulary in authority order", got.Scopes, want)
+	}
 }

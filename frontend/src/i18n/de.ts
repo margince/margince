@@ -2930,12 +2930,12 @@ export const de = {
   "ai.tierAutoExecute": "Lesen & Entwerfen läuft sofort.",
   "ai.tierAutoExecuteDetail":
     "Nachschlagen, Zusammenfassen, Entwürfe — sichtbar, umkehrbar, protokolliert.",
-  "ai.tierConfirmationRequired": "Schreiben & Senden wartet auf dich.",
+  "ai.tierConfirmationRequired": "Sensible Änderungen warten auf dich.",
   "ai.tierConfirmationRequiredDetail":
-    "Externe Sendungen und Datenänderungen landen zuerst im Eingang.",
+    "Neue benutzerdefinierte Felder, Webhook-Abonnements und kostenpflichtige Anreicherung landen zuerst im Eingang. Die meisten Datensatzänderungen und Sendungen laufen sofort, innerhalb der von dir erteilten Berechtigungen.",
   "ai.connect": "Agent verbinden",
   "ai.connectDetail":
-    "Erstell in den Einstellungen einen Passport und häng einen MCP-fähigen Agenten an deine Organisation. Er liest nur, was du sehen kannst.",
+    "Verbinde einen MCP-fähigen Agenten mit deiner Organisation und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
   "ai.paletteHint": "Frag von überall mit",
 
   "settings.accountCard": "Ihr Konto",
@@ -2978,7 +2978,7 @@ export const de = {
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
   "settings.passportsLendHint":
-    "Diese kannst du verleihen. Verbindet sich ein MCP-Client, fragt er, welchen du übergibst — die Verbindung trägt danach genau die Scopes dieses Passports.",
+    "Zugangsdaten, die du für Skripte und Integrationen ausgestellt hast. Das Verbinden eines MCP-Clients nutzt diese nicht — er erstellt eine eigene Verbindung, unten aufgeführt.",
   "settings.passportLabel": "Agentenname",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
@@ -3077,15 +3077,12 @@ export const de = {
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
-  "agent.panel.finishedToday": "Heute abgeschlossen",
-  "agent.panel.stoppedEarly": "Warum es gestoppt hat",
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
-    "MCP-Clients mit eigenem Credential, abgeleitet aus einem Passport, den du verliehen hast",
+    "MCP-Clients mit eigenem Credential, mit dem Zugriff, den du bei der Autorisierung angekreuzt hast",
   "agents.noneConnected": "Noch ist kein Agent verbunden.",
   "agents.connectedOn": "verbunden {date}",
-  "agents.lentFrom": "verliehen aus „{label}“",
   "agents.disconnect": "Trennen",
   "agents.disconnectOpen": "Trennen",
   "agents.disconnectNamed": "{client} trennen",
@@ -3097,10 +3094,10 @@ export const de = {
   "agents.revokeGrantOpen": "Verbindung beenden",
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.disconnectConfirm":
-    "Das beendet die ganze Verbindung, nicht nur ein Credential: der Agent verliert den Zugriff beim nächsten Aufruf und kann nicht erneuern. Für eine neue Verbindung verleihst du wieder einen Passport.",
+    "Das beendet die ganze Verbindung, nicht nur ein Credential: der Agent verliert den Zugriff beim nächsten Aufruf und kann nicht erneuern. Für eine neue Verbindung musst du den Zugriff erneut genehmigen.",
   "agents.connectHow": "Agent verbinden",
   "agents.connectSteps":
-    "Stelle oben einen Passport aus und führe dann einen dieser Befehle aus. Der Client registriert sich selbst und bringt dich hierher zurück, um zu wählen, welchen Passport du verleihst.",
+    "Führe einen dieser Befehle aus. Der Client registriert sich selbst und bringt dich hierher zurück, um den Zugriff zu wählen, den er erhalten darf.",
   "agents.connectAntigravityPath":
     "Antigravity hat keinen Add-Befehl — trage den Block in ~/.gemini/config/mcp_config.json ein.",
   "agents.connectorOff": "Der MCP-Connector ist für diese Installation aus.",
@@ -5780,10 +5777,13 @@ export const de = {
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
+  "users.teamMembersAdminOnly":
+    "Die Mitgliedschaft ist nur für Admins sichtbar.",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt keinen Zugriff — Kunden, Kontakte, Leads und Deals dürfen hier ohnehin alle lesen.",
+  "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",
@@ -6256,6 +6256,8 @@ export const de = {
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
     "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",
+  "autonomy.noneDecidedYet":
+    "Darüber hast du noch nichts entschieden. Was in dieser Liste landet, hängt von den Datensätzen ab, die dir gehören, und von der Arbeit, die dein Team an dich weiterleitet. Ohne beides bleibt sie leer. Die Schalter entscheiden trotzdem, was passiert, sobald etwas auftaucht.",
   "autonomy.noRecord": "Darüber hast du noch nicht entschieden.",
   "autonomy.record":
     "Bisher: {clean} wie vorgeschlagen übernommen, {edited} nach einer Änderung, {rejected} abgelehnt.",
@@ -6417,40 +6419,35 @@ export const de = {
   "embedreindex.impact.queued": "würde in die Warteschlange gestellt",
 
   "consent.title": "Zugriff autorisieren",
-  "consent.asks": "{client} möchte in Margince als du handeln.",
+  "consent.asks":
+    "{client} kann in Margince als du handeln, mit dem unten angehakten Zugriff.",
   "consent.redirectsTo": "Margince sendet die Autorisierung zurück an {host}.",
   "consent.redirectsToLoopback":
     "Das ist eine Adresse auf diesem Computer, und diese Verbindung kann nicht belegen, welches Programm dort lauscht.",
-  "consent.lend": "Leih ihm einen deiner Agent-Passports",
-  "consent.grantedNote":
-    "Diese Verbindung erhält genau die gezeigten Berechtigungen — die dieses Passports.",
+  "consent.scopeNote.read": "sieht, was du siehst",
+  "consent.scopeNote.draft": "bereitet Nachrichten zu deiner Prüfung vor",
+  "consent.scopeNote.write":
+    "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
+  "consent.scopeNote.send":
+    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+  "consent.scopeNote.enrich":
+    "verbraucht Anreicherungs-Guthaben — jeder Kauf fragt dich weiterhin zuerst",
+  "consent.ceiling":
+    "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit unter Einstellungen → Agenten trennen.",
+  "consent.pickOne": "Wähle mindestens eine aus, oder verweigere den Zugriff.",
   "consent.offline":
     "Sie bleibt verbunden, ohne erneut zu fragen, und erneuert den Zugriff, bis du ihn widerrufst.",
   "consent.approve": "Autorisieren",
   "consent.deny": "Zugriff verweigern",
-  "consent.emptyTitle": "Du brauchst zuerst einen Agent-Passport",
-  "consent.emptyBody":
-    "Ein Passport ist die Vollmacht, die du einem Agenten leihst — er überschreitet nie deine eigenen Berechtigungen, und du kannst ihn jederzeit widerrufen. Stell einen aus, und wir bringen dich hierher zurück, um die Verbindung mit {client} abzuschließen.",
-  "consent.emptyCta": "Passport ausstellen",
-  "consent.expires": "läuft ab am {date}",
-  "consent.resumeTitle": "Verbindung mit {client} abschließen",
-  "consent.resumeBody":
-    "Du bist hierher gekommen, um einen Passport für {client} auszustellen. Sobald du einen hast, machst du dort weiter, wo du aufgehört hast.",
-  "consent.resume": "Verbindung fortsetzen",
-  "consent.resumeDismiss": "Diese Verbindung abbrechen",
   "consent.reentering": "Verbinde erneut…",
   "consent.backToApp": "Zurück zu Margince",
   "consent.staleTitle": "Diese Anfrage ist abgelaufen",
   "consent.staleBody":
     "Die Verbindungsanfrage ist nicht mehr gültig. Geh zurück zur App, die du verbinden wolltest, und starte erneut — ein Neuladen dieser Seite hilft nicht.",
-  "consent.unlendableTitle": "Dieser Passport kann nicht mehr verliehen werden",
-  "consent.unlendableBody":
-    "Der für {client} gewählte Passport wurde widerrufen, ist abgelaufen oder bereits an eine andere Verbindung gebunden. Wähle unten einen anderen aus.",
   "consent.invalidTitle":
     "Diese Verbindungsanfrage konnte nicht abgeschlossen werden",
   "consent.invalidBody":
     "Diese Installation autorisiert die Anfrage in dieser Form nicht — die App ist hier möglicherweise nicht mehr registriert. Geh zurück zur App, die du verbinden wolltest, und starte erneut.",
-  "consent.unnamedPassport": "Unbenannter Passport ({id})",
   "person.thin.title": "Was wir bisher wissen",
   "person.thin.known":
     "Wir haben {what} zu {name}, aber niemand hier hat bisher einen erfassten Austausch mit ihnen.",
@@ -6500,9 +6497,6 @@ export const de = {
     "Einige Kolleginnen und Kollegen werden nicht angezeigt.",
   "person.graph.withheldAccount":
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
-  "person.graph.routeAlreadyAsked": "Bereits angefragt",
-  "person.graph.routeDeclined": "Zuvor abgelehnt",
-  "person.graph.routeUnavailable": "Nicht verfügbar",
   "person.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "person.intro.leadEyebrow": "Empfohlener Weg",
   "person.intro.leadRouteBadge": "Starker Weg",
@@ -6619,6 +6613,13 @@ export const de = {
   "person.intro.asksSub":
     "Die Anfragen, an denen Sie beteiligt sind, neueste zuerst.",
   "person.intro.answerAction": "Antworten",
+  "person.intro.completeIntroducedAction": "Als vorgestellt markieren",
+  "person.intro.completeNameDroppedAction": "Als Namen verwendet markieren",
+  "person.intro.completeFailed":
+    "Das Ergebnis konnte nicht gespeichert werden.",
+  "person.intro.withdrawAction": "Zurückziehen",
+  "person.intro.withdrawFailed":
+    "Die Anfrage konnte nicht zurückgezogen werden.",
   "person.intro.stateRequested": "Wartet auf Ihre Kollegin",
   "person.intro.stateAccepted": "Sie werden vorgestellt",
   "person.intro.stateNameDropApproved": "Sie dürfen den Namen nennen",
@@ -6729,6 +6730,8 @@ export const de = {
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
   "person.action.research": "Recherche",
+  "person.action.logRefused":
+    "Sie haben keine Berechtigung, Aktivitäten zu diesem Kontakt zu erfassen.",
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
@@ -6752,6 +6755,7 @@ export const de = {
   "person.moment.rule.job_change": "Neue Stelle",
   "person.moment.rule.overdue_promise": "Zusage überfällig",
   "person.moment.rule.gone_quiet": "Still geworden",
+  "person.moment.rule.open_promise": "Offenes Versprechen",
   "person.moment.rule.role_change": "Rolle geändert",
   "person.moment.rule.public_signal": "Öffentlich gesagt",
   "person.moment.rule.missing_next_step": "Nichts geplant",
@@ -7356,6 +7360,38 @@ export const de = {
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
+  "worklist.pane.title": "Zu diesem Datensatz",
+  "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",
+  "worklist.pane.loading": "Datensatz wird gelesen…",
+  "worklist.pane.nothing": "Noch nichts erfasst.",
+  "worklist.pane.lastInbound": "Zuletzt geschrieben",
+  "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
+  "worklist.pane.never": "Nie",
+  "worklist.focus.title": "Das als Nächstes",
+  "worklist.focus.verb.decide": "Entscheiden",
+  "worklist.focus.verb.merge": "Paar prüfen",
+  "worklist.focus.verb.complete": "Erledigen",
+  "worklist.focus.verb.act": "Bearbeiten",
+  "worklist.focus.verb.acknowledge": "Zur Kenntnis nehmen",
+  "worklist.focus.verb.open": "Öffnen",
+  "worklist.focus.verb.snooze": "Öffnen",
+  "worklist.focus.verb.dismiss": "Öffnen",
+  "worklist.focus.verb.set_aside": "Öffnen",
+  "worklist.band.now": "Jetzt",
+  "worklist.band.build_pipeline": "Pipeline aufbauen",
+  "worklist.band.keep_momentum": "In Bewegung halten",
+  "worklist.band.review": "Prüfen",
+  "worklist.disposition.verb.snooze": "Später",
+  "worklist.disposition.verb.not_mine": "Nicht meins",
+  "worklist.disposition.verb.not_sales": "Kein Kunde",
+  "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
+  "worklist.disposition.done.not_mine":
+    "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
+  "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
+  "worklist.disposition.undo": "Rückgängig",
+  "worklist.disposition.undoFailed":
+    "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",
+  "worklist.disposition.failed": "Das konnte nicht abgelegt werden.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
   "worklist.scope.unassigned": "Ohne Zuständigkeit",

@@ -7,7 +7,6 @@ import {
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { clearPendingAuthorize } from "../app/pendingauthorize";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import type { Provenance } from "../design-system/trust";
 import { useT } from "../i18n";
@@ -170,12 +169,6 @@ export function timelineZoneNotice(
 // AS-1: sign out. Clears ALL cached tenant data on success, then forces the
 // ["me"] probe to re-run → 401 → AuthGate renders the login screen.
 //
-// "All tenant data" includes the one piece that lives outside the query cache:
-// the pending-authorization stash (sessionStorage survives a sign-out that
-// doesn't close the tab). Left behind, the next human to sign in on this tab
-// would be offered a connection request they never started — and the resume
-// banner would send them to a consent screen holding their OWN passports.
-//
 // resetToSignedOut drops every cached answer belonging to the session that just
 // ended, and lands the auth boundary on the login screen.
 //
@@ -211,7 +204,6 @@ export function useLogout() {
       // The next 401 at the boundary is this deliberate exit, not an
       // expired session — the login screen greets it accordingly.
       authExitNotice = "signed-out";
-      clearPendingAuthorize();
       await resetToSignedOut(queryClient);
     },
   });

@@ -97,7 +97,10 @@ For EACH supplied address emit exactly one kind:
     business relationship.
   "transactional" — automated mail from a service: receipts, invoices, notifications, delivery
     reports, calendar or ticketing systems.
-  "spam" — unsolicited commercial mail or fraud.
+  "spam" — unsolicited commercial mail or fraud: a sender pitching their own services to a
+    business that shows no sign of having asked, however personally written and however
+    plausible the offer. Cold outreach signed with a real human name is still "spam" — a name
+    is not a relationship.
   "personal" — a private correspondent of the mailbox owner rather than of the business:
     family, friends, a doctor, a school, a landlord, a personal service like a travel agent or
     an expense tool. Their mail is not this company's business at all.
@@ -106,6 +109,22 @@ For EACH supplied address emit exactly one kind:
     belongs to the mailbox owner alone.
 Judge the SENDER, not the tone: a poorly written mail from a real prospect is "person", and a
 polished newsletter from a company they never contacted is "newsletter".
+Judge the DIRECTION of the offer, not its politeness. A "person" wants something this business
+sells, or supplies something it was engaged to supply. Someone offering to sell this business a
+service it shows no sign of having asked for — financing, capital, leads, SEO, staffing,
+development, an introduction for a fee — is "spam", no matter how courteous the mail, how
+specific the offer, or how complete the sender's signature block, address and job title.
+You are NOT told the relationship history, so decide it from the message. Mail that continues
+work already agreed is "person": a quote for a named job with dates and scope, an invoice, a
+delivery date, a reply in a thread, an answer to a question. Mail that opens a relationship the
+business never started is "spam": it describes what the sender can do rather than what was
+agreed, and names no job, no date and no prior contact.
+"Re:" and a quoted history are only evidence of a conversation when THIS BUSINESS is in it.
+Read who wrote the quoted blocks: if every one is the sender chasing their own unanswered mail
+— a pitch, then "did this reach the right person?", then "happy to stop if not" — that is one
+side talking to silence, and it stays "spam" however long the thread grew. When the message genuinely leaves this
+open, prefer "person" and a lower confidence — a wrong "spam" hides a real supplier's mail from
+everyone, where a wrong "person" only leaves a record somebody can delete.
 A company NAME in the display name with no human named anywhere is "organization_sender" or
 "role_mailbox", never "person" — do not invent a contact called after a company or a product.
 If this business replied only to decline — "not interested", "please remove me", "unsubscribe" —

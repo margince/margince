@@ -4,9 +4,9 @@
 package identity
 
 // Refresh-token rotation: spending the token a connector presents and issuing
-// the successor pair in its place. The grant record itself, and the cascade
-// that ends a connection, live in oauth_grant.go — including the lock order
-// this file obeys.
+// the successor pair in its place. The grant record itself lives in
+// oauth_grant.go; the cascade that ends a connection, and the lock order this
+// file obeys, live in oauth_grantrevocation.go.
 
 import (
 	"context"
@@ -102,7 +102,7 @@ func (l lockedGrant) identity() Identity {
 
 // rotateRefreshToken spends a refresh token and issues its successor in ONE
 // transaction that opens by locking the grant and THEN the token — the lock
-// order stated in oauth_grant.go, which revokeGrantTx takes too. Every
+// order stated in oauth_grantrevocation.go, which revokeGrantTx takes too. Every
 // concurrent presentation of the same token queues behind the winner and sees
 // it already consumed, and a racing revoke serializes against it rather than
 // interleaving with the reissue or deadlocking with it. A read-then-write here
@@ -135,7 +135,7 @@ func (s *Service) rotateRefreshToken(ctx context.Context, in refreshRequest) (Is
 
 // rotateRefreshTokenTx spends the presented token and reissues under the
 // caller's transaction, taking the grant lock before the refresh row — the
-// order oauth_grant.go pins and revokeGrantTx takes too.
+// order oauth_grantrevocation.go pins and revokeGrantTx takes too.
 //
 // `reused` travels BESIDE the error, not as one, because a detected reuse has
 // to COMMIT the revoke cascade it just performed: an error return would roll
@@ -153,7 +153,7 @@ func (s *Service) rotateRefreshTokenTx(
 	if err != nil {
 		return IssuedPassport{}, "", false, err
 	}
-	// The connection-level lock (oauth_grant.go), always before the refresh
+	// The connection-level lock (oauth_grantrevocation.go), always before the refresh
 	// row below. A grant that vanished between the two reads leaves nothing
 	// to renew, which is a refusal like any other.
 	if err := lockGrant(ctx, tx, grantID); err != nil {
@@ -202,7 +202,7 @@ func (s *Service) rotateRefreshTokenTx(
 // Do not fold it back into the joined SELECT below. One joined
 // `SELECT … FOR UPDATE` locks the refresh row before the grant — the planner
 // drives the join from the token_hash index — which is the opposite of the
-// lock order in oauth_grant.go and deadlocks against revokeGrantTx (proven:
+// lock order in oauth_grantrevocation.go and deadlocks against revokeGrantTx (proven:
 // oauth_lockorder_integration_test.go reproduces the deadlock when this step
 // is removed). The unlocked read is
 // safe precisely because it decides nothing: every decision is made from the

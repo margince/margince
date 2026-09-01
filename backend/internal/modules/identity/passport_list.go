@@ -35,7 +35,8 @@ type PassportRow struct {
 // PassportConnectionRow is the connection a grant-bound passport belongs to.
 // Present exactly when the passport was issued BY the token exchange rather
 // than minted by a human, which is the distinction the Settings list is built
-// on — a human lends a passport and the client receives one of these.
+// on — the token exchange mints one of these fresh from the scopes the human
+// ticked on the consent screen, unrelated to any standalone passport.
 //
 // ClientName falls back to ClientID when the registration is gone: a
 // connection whose client was deleted still has to be nameable, because it is
@@ -49,13 +50,6 @@ type PassportConnectionRow struct {
 	// that moment is between credentials, a non-renewable one is over. Reading
 	// the expiry alone reports the first kind as dead.
 	Renewable bool
-	// LentPassport is the passport the human lent to create this connection,
-	// and its label as it reads now. Both nil for a connection older than that
-	// provenance, or one whose lent passport was deleted outright — the lend is
-	// history at this point, never a live link, so its absence costs a display
-	// line and nothing more.
-	LentPassportID    *ids.PassportID
-	LentPassportLabel *string
 }
 
 // listPassportsSQL enumerates passports as metadata, ONE ROW PER CONNECTION.
@@ -87,17 +81,15 @@ type PassportConnectionRow struct {
 // RevokePassport enforces.
 const listPassportsSQL = `
 	SELECT id, label, scopes, created_at, expires_at, revoked_at,
-	       client_id, client_name, connected_at, renewable, lent_passport_id, lent_passport_label
+	       client_id, client_name, connected_at, renewable
 	FROM (
 		SELECT DISTINCT ON (p.oauth_grant_id IS NULL, COALESCE(p.oauth_grant_id, p.id))
 		       p.id, p.label, p.scopes, p.created_at, p.expires_at, p.revoked_at,
 		       g.client_id, COALESCE(c.client_name, g.client_id) AS client_name,
-		       g.created_at AS connected_at, g.refresh_allowed AS renewable,
-		       g.lent_passport_id, lent.label AS lent_passport_label
+		       g.created_at AS connected_at, g.refresh_allowed AS renewable
 		FROM passport p
 		LEFT JOIN oauth_grant g ON g.id = p.oauth_grant_id
 		LEFT JOIN oauth_client c ON c.client_id = g.client_id
-		LEFT JOIN passport lent ON lent.id = g.lent_passport_id
 		WHERE %s
 		ORDER BY p.oauth_grant_id IS NULL, COALESCE(p.oauth_grant_id, p.id), p.created_at DESC, p.id DESC
 	) newest_per_connection
@@ -131,21 +123,17 @@ func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow
 				clientName  *string
 				connectedAt *time.Time
 				renewable   *bool
-				lentID      *ids.PassportID
-				lentLabel   *string
 			)
 			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &p.CreatedAt, &p.ExpiresAt, &p.RevokedAt,
-				&clientID, &clientName, &connectedAt, &renewable, &lentID, &lentLabel); err != nil {
+				&clientID, &clientName, &connectedAt, &renewable); err != nil {
 				return err
 			}
 			if clientID != nil && clientName != nil && connectedAt != nil && renewable != nil {
 				p.Connection = &PassportConnectionRow{
-					ClientID:          *clientID,
-					ClientName:        *clientName,
-					ConnectedAt:       *connectedAt,
-					Renewable:         *renewable,
-					LentPassportID:    lentID,
-					LentPassportLabel: lentLabel,
+					ClientID:    *clientID,
+					ClientName:  *clientName,
+					ConnectedAt: *connectedAt,
+					Renewable:   *renewable,
 				}
 			}
 			out = append(out, p)

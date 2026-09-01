@@ -87,6 +87,10 @@ var (
 	// path (data-model §3.2).
 	ErrConflict = errors.New("conflict")
 
+	// ErrInvalidArgument: the request contains invalid or malformed input that
+	// the caller must correct (400 invalid_argument).
+	ErrInvalidArgument = errors.New("invalid argument")
+
 	// ErrScopeExceeded: a tool or verb outside the Passport scope — an
 	// agent may never exceed the granting human (403 scope_exceeds_grantor).
 	ErrScopeExceeded = errors.New("scope exceeds grantor")
