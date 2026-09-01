@@ -77,10 +77,23 @@ func bandOfRow(row ranked) string {
 		// for. Both are today's work by the level's own definition.
 		return bandNow
 	}
+	// THE LEVEL DECIDES BEFORE THE SOURCE DOES, and the order matters because
+	// the bands sort above the level in the ordering: a band chosen against the
+	// level would let a level-6 row lead a level-5 one, which the contract
+	// forbids and a reader would read as the page ranking hygiene over a
+	// blocked decision.
+	//
+	// levelRoutine IS the hygiene level. A stale unfunded wait is demoted to it
+	// by classifyWaiting — whose own comment says the row "belongs to review,
+	// not to today" — and banding it by source instead would put it above the
+	// blocking decisions it was demoted past.
+	if item.Level >= levelRoutine {
+		return bandReview
+	}
 	switch categoryOfSource(item.Source) {
 	case categoryDecisions, categorySystem:
-		// Judgement and hygiene, whatever level they carry. A duplicate pair is
-		// review work at level 6 and still review work if it ever ranks higher.
+		// Judgement and hygiene that arrive ABOVE the routine level: a duplicate
+		// pair or a broken pipe is review work whatever rank it carries.
 		return bandReview
 	}
 	if buildsPipeline(item) {

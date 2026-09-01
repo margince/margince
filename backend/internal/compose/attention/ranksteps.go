@@ -74,21 +74,32 @@ var rankSteps = []rankStep{
 			ai, bi := bandRank(bandOfRow(a)), bandRank(bandOfRow(b))
 			return ai != bi, ai < bi
 		},
-		// A band difference has two possible causes and the reader needs the
-		// right one. CROWDING is named where it is what moved the row: the
-		// levels can be identical — two waiting customers, one of them the
-		// ninth — and reporting "level 1 against level 1" would be a reason
-		// nobody can check. Otherwise the level differs and says so.
+		// A band difference has three possible causes, and naming the wrong one
+		// hands the reader a reason they can check and find false.
+		//
+		// The LEVEL is named only where the levels actually differ. Where they
+		// do not, "level 4 against level 4" is a sentence that refutes itself:
+		// two agreed tasks band apart because one is a lead's follow-up and the
+		// other is not, and two waiting customers band apart because one is the
+		// ninth of its kind. Crowding has a word of its own; the subject does
+		// not, so that case falls back on the band's own name — `level` with no
+		// values, which the client draws as "a different kind of work" rather
+		// than as a number nobody can verify.
 		explain: func(a, b ranked) crmcontracts.WorklistComparison {
-			if a.crowded != b.crowded && a.item.Level == b.item.Level {
+			if a.item.Level != b.item.Level {
+				return crmcontracts.WorklistComparison{
+					Comparator: crmcontracts.WorklistComparisonComparatorLevel,
+					Mine:       levelValue(a.item.Level),
+					Theirs:     levelValue(b.item.Level),
+				}
+			}
+			if a.crowded != b.crowded {
 				return crmcontracts.WorklistComparison{
 					Comparator: crmcontracts.WorklistComparisonComparatorCrowded,
 				}
 			}
 			return crmcontracts.WorklistComparison{
 				Comparator: crmcontracts.WorklistComparisonComparatorLevel,
-				Mine:       levelValue(a.item.Level),
-				Theirs:     levelValue(b.item.Level),
 			}
 		},
 	},

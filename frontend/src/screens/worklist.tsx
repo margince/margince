@@ -66,17 +66,29 @@ function reviewFilter(item: WorklistItem): WorklistFilter {
   return item.category === "system" ? "system" : "decisions";
 }
 
-// Whether this row opens its band — the first row overall, or the first after a
-// row of a different band.
+// Whether this row opens its band — the first banded row, or the first after a
+// row of a DIFFERENT band.
 //
 // A row with no band opens nothing: an older server that does not send one
 // leaves the page ungrouped rather than drawing a heading it cannot name.
+//
+// The comparison skips BACK over unbanded rows rather than looking only at the
+// row immediately above. `band` is optional in the contract, so a queue may mix
+// banded and unbanded rows — and comparing against an unbanded neighbour would
+// read every banded row after one as opening its band again, drawing "Now"
+// twice over one contiguous run.
 function opensBand(queue: readonly WorklistItem[], index: number): boolean {
   const band = queue[index]?.band;
   if (!band) {
     return false;
   }
-  return index === 0 || queue[index - 1]?.band !== band;
+  for (let before = index - 1; before >= 0; before--) {
+    const earlier = queue[before]?.band;
+    if (earlier) {
+      return earlier !== band;
+    }
+  }
+  return true;
 }
 
 // One row.

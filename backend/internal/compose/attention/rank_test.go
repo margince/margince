@@ -585,3 +585,64 @@ func TestACrowdedWaitStillLeadsTheHygiene(t *testing.T) {
 			lead[0].Band)
 	}
 }
+
+// THE LEVELS ARE NEVER MIXED, WHICH THE BANDS MUST NOT UNDO.
+//
+// The bands sort above the level, so a band chosen against the level would let
+// a lower-priority row lead a higher-priority one — and the contract promises
+// levels are never mixed.
+//
+// The pairing that reaches it: classifyWaiting demotes a stale unfunded wait to
+// levelRoutine, and banding that row by its SOURCE put it in keep_momentum,
+// above the blocking decision at level 5 that it had just been demoted past.
+func TestAStaleWaitDoesNotOutrankABlockingDecision(t *testing.T) {
+	stale := candidate("stale-wait", levelRoutine)
+	stale.item.Source = sourceWaiting
+	blocking := candidate("blocking", levelBlocking)
+	blocking.item.Source = "approval"
+
+	got := rankAll([]ranked{stale, blocking})
+
+	if got[0].Id != "blocking" {
+		t.Fatalf("a level-%d row led a level-%d one: %v",
+			levelRoutine, levelBlocking, idsOf(got))
+	}
+	// Both are hygiene, so both head the same band — the demotion put them in
+	// the same place rather than merely reordering them.
+	for _, item := range got {
+		if item.Band == nil || string(*item.Band) != "review" {
+			t.Fatalf("row %q banded as %v, wanted review", item.Id, item.Band)
+		}
+	}
+}
+
+// A BAND DIFFERENCE THAT IS NOT A LEVEL DIFFERENCE DOES NOT CLAIM TO BE ONE.
+//
+// Two agreed tasks band apart because one is a lead's follow-up and the other
+// is not. Reporting "level 4 against level 4" would be a reason that refutes
+// itself the moment a reader checks it.
+func TestABandDifferenceOnTheSameLevelNamesNoLevelValues(t *testing.T) {
+	// Both are TASKS. Without a source the category defaults to `system`, both
+	// band as review, and the pair ties — a fixture that would pass this test
+	// while proving nothing about the distinction it is named for.
+	lead := candidate("lead-task", levelAgreed)
+	lead.item.Source = sourceTask
+	lead.item.Subject = &crmcontracts.AttentionSubject{
+		Type: crmcontracts.AttentionSubjectType("lead"),
+	}
+	plain := candidate("plain-task", levelAgreed)
+	plain.item.Source = sourceTask
+
+	got := rankAll([]ranked{plain, lead})
+
+	if got[0].Id != "lead-task" {
+		t.Fatalf("the lead follow-up did not lead: %v", idsOf(got))
+	}
+	if got[0].AboveNext == nil {
+		t.Fatal("the leading row explains nothing")
+	}
+	if got[0].AboveNext.Mine != nil || got[0].AboveNext.Theirs != nil {
+		t.Fatalf("the row claims level %v against %v, but the levels are equal",
+			got[0].AboveNext.Mine, got[0].AboveNext.Theirs)
+	}
+}
