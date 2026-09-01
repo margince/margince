@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { PreferenceCenterScreen } from "./preferences";
 
 // The public, anonymous preference center (G-6): no login, no session — the
@@ -121,7 +122,7 @@ describe("PreferenceCenterScreen", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
     render(<PreferenceCenterScreen token="tok-123" />);
-    await screen.findByText("Product updates");
+    await screen.findByText(en["prefs.purpose.marketing_email"]);
     const requests = fetchSpy.mock.calls.map(([input]) =>
       input instanceof Request ? input : new Request(String(input)),
     );
@@ -137,7 +138,7 @@ describe("PreferenceCenterScreen", () => {
     stubCenter();
     render(<PreferenceCenterScreen token="tok-123" />);
     const toggle = await screen.findByRole("checkbox", {
-      name: /deal & service/i,
+      name: en["prefs.purpose.transactional"],
     });
     expect(toggle).toBeDisabled();
     expect(screen.getByText(/always on/i)).toBeInTheDocument();
@@ -148,7 +149,9 @@ describe("PreferenceCenterScreen", () => {
     stubCenter({ "PUT /public/preferences/tok-123": put });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("checkbox", { name: /product updates/i }),
+      await screen.findByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
     );
     expect(screen.getByText(/not saved yet/i)).toBeInTheDocument();
     expect(put).not.toHaveBeenCalled();
@@ -158,7 +161,9 @@ describe("PreferenceCenterScreen", () => {
     stubCenter();
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("checkbox", { name: /product updates/i }),
+      await screen.findByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: /discard/i }));
     expect(screen.queryByText(/not saved yet/i)).not.toBeInTheDocument();
@@ -173,7 +178,9 @@ describe("PreferenceCenterScreen", () => {
     const shown = (await screen.findByTestId("wording-marketing_email"))
       .textContent;
     await userEvent.click(
-      screen.getByRole("checkbox", { name: /product updates/i }),
+      screen.getByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
@@ -232,7 +239,9 @@ describe("PreferenceCenterScreen", () => {
     });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("checkbox", { name: /product updates/i }),
+      await screen.findByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
@@ -282,14 +291,18 @@ describe("PreferenceCenterScreen", () => {
     stubCenter({ "PUT /public/preferences/tok-123": () => putPromise });
     render(<PreferenceCenterScreen token="tok-123" />);
     await userEvent.click(
-      await screen.findByRole("checkbox", { name: /product updates/i }),
+      await screen.findByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: /save preferences/i }),
     );
 
     expect(
-      screen.getByRole("checkbox", { name: /product updates/i }),
+      screen.getByRole("checkbox", {
+        name: en["prefs.purpose.marketing_email"],
+      }),
     ).toBeDisabled();
     expect(screen.getByRole("checkbox", { name: /^events$/i })).toBeDisabled();
     expect(
@@ -300,7 +313,9 @@ describe("PreferenceCenterScreen", () => {
     resolvePut(jsonResponse(CENTER));
     await waitFor(() =>
       expect(
-        screen.getByRole("checkbox", { name: /product updates/i }),
+        screen.getByRole("checkbox", {
+          name: en["prefs.purpose.marketing_email"],
+        }),
       ).toBeEnabled(),
     );
   });

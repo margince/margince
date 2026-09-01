@@ -4986,6 +4986,10 @@ export const en = {
   "prefs.unsub.retry": "Try again",
   "prefs.unsub.unknownPurpose":
     "This link doesn't name a kind of email we send. Open your preferences to see everything.",
+  "prefs.purpose.business_correspondence": "Direct correspondence",
+  "prefs.purpose.marketing_email": "Product news",
+  "prefs.purpose.transactional": "Security & service messages",
+  "prefs.sentVia": "Sent via Margince",
   "prefs.invalidLink":
     "This link is no longer valid. Preference links expire and can be withdrawn — ask for a fresh one from any recent email.",
   "buyer.opening": "Opening your Deal Room…",
@@ -5124,6 +5128,10 @@ export const en = {
   "prefs.discard": "Discard",
   "prefs.partialSave":
     "Something went wrong part-way. Some of your choices may have been saved — we've reloaded your current settings so you can see exactly where you stand.",
+  "prefs.wording.business_correspondence":
+    "“Send me replies and direct messages about our conversations.”",
+  "prefs.wording.transactional":
+    "“Send me what I need for something I asked for.”",
   "prefs.wordingGeneric": '"Send me {label}."',
   "prefs.wording.marketing_email":
     '"Send me product updates & occasional marketing email."',

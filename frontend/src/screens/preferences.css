@@ -33,9 +33,16 @@
 
 .pref-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  /* Centred against the text block rather than pinned to its first line:
+     the control governs the whole row, and at three lines of copy a
+     top-aligned box reads as belonging to the title alone. */
+  align-items: center;
+  /* NOT space-between. That pushed the box to the far edge of a 720px
+     row, where it sat closer to the window than to the sentence it
+     answers — which is how it stopped reading as this row's control. The
+     text takes the slack instead, so the box stays beside its own copy. */
+  justify-content: flex-start;
+  gap: var(--space-4);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
@@ -46,6 +53,7 @@
    floor of min-content here is what let a long purpose name push its own row
    past the card's edge. */
 .pref-row-main {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -194,4 +202,42 @@
 .pref-check {
   flex: 0 0 auto;
   margin-top: var(--space-1);
+}
+
+/* The sign-off under both public pages: quiet, and the only place either
+   page names the product that sent the message. */
+.public-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-8) 0 0;
+  color: var(--textTertiary);
+  font-size: var(--fs-sm);
+}
+
+/* The row's control, enlarged and given a target.
+   A native 16px box at the far end of a wide row reads as decoration
+   rather than as the thing you press — it was mistaken for one — so the
+   box is scaled up and the whole cell becomes the hit area. */
+.pref-check {
+  flex: 0 0 auto;
+  /* First in the row: a reader scanning a list of choices finds every
+     box in one column on the left, rather than hunting the right edge of
+     rows whose heights differ. */
+  order: -1;
+  align-self: center;
+  padding: var(--space-2);
+  margin: calc(var(--space-2) * -1);
+  border-radius: var(--r-sm);
+}
+
+.pref-check > input {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
+  accent-color: var(--accent);
+}
+
+.pref-check:not(:has(input:disabled)):hover {
+  background: var(--bgCard);
 }

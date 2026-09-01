@@ -11,16 +11,18 @@ import {
 } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { usePublicLocale } from "../i18n/publiclocale";
+
 import { problemMessageOf, throwProblem } from "./common";
 import {
   type Draft,
   dirtyKeys,
   displayOn,
   initialDraft,
+  labelOf,
   type PurposeView,
   toChoices,
 } from "./preferences.logic";
+import { PublicPage } from "./publicpage";
 import "./preferences.css";
 
 // The public, anonymous email preference center (G-6, B-E11.32): the page a
@@ -34,7 +36,9 @@ import "./preferences.css";
 // falls back to prefs.wordingGeneric — a workspace can define arbitrary
 // purposes, so this map is deliberately not exhaustive.
 const WORDING_KEYS: Record<string, MessageKey> = {
+  business_correspondence: "prefs.wording.business_correspondence",
   marketing_email: "prefs.wording.marketing_email",
+  transactional: "prefs.wording.transactional",
   events: "prefs.wording.events",
 };
 
@@ -44,9 +48,9 @@ export function PreferenceCenterScreen({
   const t = useT();
   if (!token) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <EmptyState>{t("prefs.invalidLink")}</EmptyState>
-      </div>
+      </PublicPage>
     );
   }
   return <PreferenceCenterBody token={token} />;
@@ -81,8 +85,6 @@ export function explainPublicError(
 
 function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   const t = useT();
-  // The link carried the message's language; the page speaks it too.
-  usePublicLocale();
   const queryClient = useQueryClient();
   const queryKey = ["preference-center", token];
 
@@ -119,7 +121,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
       const wordingKey = WORDING_KEYS[purpose.key];
       map[purpose.key] = wordingKey
         ? t(wordingKey)
-        : t("prefs.wordingGeneric", { label: purpose.label });
+        : t("prefs.wordingGeneric", { label: labelOf(t, purpose) });
     }
     return map;
   }, [purposes, t]);
@@ -253,31 +255,27 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
 
   if (center.isPending) {
     return (
-      <div className="pref-page">
-        <div className="pref-center arrive-stack">
-          <Skeleton width="60%" />
-          <Skeleton width="90%" />
-          <Skeleton width="75%" />
-        </div>
-      </div>
+      <PublicPage>
+        <Skeleton width="60%" />
+        <Skeleton width="90%" />
+        <Skeleton width="75%" />
+      </PublicPage>
     );
   }
 
   if (center.isError) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <EmptyState>{explainPublicError(center.error, t)}</EmptyState>
-      </div>
+      </PublicPage>
     );
   }
 
   if (!draft) {
     return (
-      <div className="pref-page">
-        <div className="pref-center arrive-stack">
-          <Skeleton width="60%" />
-        </div>
-      </div>
+      <PublicPage>
+        <Skeleton width="60%" />
+      </PublicPage>
     );
   }
 
@@ -294,111 +292,106 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
     save.isPending || unsubscribeAll.isPending || center.isFetching;
 
   return (
-    <div className="pref-page">
-      <div className="pref-center arrive-stack">
-        {/* A standalone public page, not app chrome — SectionHeader's fixed
+    <PublicPage>
+      {/* A standalone public page, not app chrome — SectionHeader's fixed
             narrow title column is built for a card header sharing a row with
             a button, and wraps this page's longer headline badly. The
             headline is this page's primary voice, so it stacks full-width
             above the subtitle instead, at its own (larger) size. */}
-        <div className="pref-header">
-          <h1 className="t-display">{t("prefs.title")}</h1>
-          <p className="t-sub">{t("prefs.sub")}</p>
-        </div>
-        <ul className="pref-list">
-          {purposes.map((purpose) => (
-            <PreferenceRow
-              key={purpose.key}
-              purpose={purpose}
-              on={draft[purpose.key] ?? displayOn(purpose.state)}
-              wording={wordingByKey[purpose.key]}
-              t={t}
-              disabled={writePending}
-              onToggle={() =>
-                setDraft((prev) =>
-                  prev ? { ...prev, [purpose.key]: !prev[purpose.key] } : prev,
-                )
-              }
-            />
-          ))}
-        </ul>
-
-        <Card as="div" inset className="pref-unsub">
-          <p className="t-caption">{t("prefs.unsubscribeAllHint")}</p>
-          <Button
-            disabled={writePending}
-            onClick={() => unsubscribeAll.mutate()}
-          >
-            {t("prefs.unsubscribeAll")}
-          </Button>
-          {unsubscribeAll.isError && (
-            <p className="t-caption pref-unsub-error">
-              {explainPublicError(unsubscribeAll.error, t)}
-            </p>
-          )}
-        </Card>
-
-        {lastUnsubscribed !== null && (
-          <Card as="div" inset className="pref-unsub-banner">
-            <p>
-              {lastUnsubscribed.length > 0
-                ? t("prefs.oneClickDone")
-                : t("prefs.oneClickAlreadyOff")}
-            </p>
-            {lastUnsubscribed.length > 0 &&
-              (undoStaged ? (
-                <p className="t-caption">{t("prefs.undoExplicit")}</p>
-              ) : (
-                <Button disabled={writePending} onClick={undoUnsubscribe}>
-                  {t("prefs.undo")}
-                </Button>
-              ))}
-          </Card>
-        )}
-
-        {partialSave && (
-          <Card as="div" inset className="pref-partial-banner">
-            <p>{t("prefs.partialSave")}</p>
-          </Card>
-        )}
-
-        {dirty.length > 0 && (
-          <div className="pref-save-bar">
-            <p className="pref-not-saved">{t("prefs.notSaved")}</p>
-            <p className="t-caption">
-              {t("prefs.savePending", {
-                changes: dirty
-                  .map(
-                    (key) =>
-                      purposes.find((purpose) => purpose.key === key)?.label ??
-                      key,
-                  )
-                  .join(", "),
-              })}
-            </p>
-            <p className="t-caption">{t("prefs.saveProof")}</p>
-            <div className="pref-save-actions">
-              <Button
-                disabled={writePending}
-                onClick={() => {
-                  setDraft(initialDraft(purposes));
-                  setPartialSave(false);
-                }}
-              >
-                {t("prefs.discard")}
-              </Button>
-              <Button
-                variant="primary"
-                disabled={writePending}
-                onClick={() => draft && save.mutate(draft)}
-              >
-                {t("prefs.save")}
-              </Button>
-            </div>
-          </div>
-        )}
+      <div className="pref-header">
+        <h1 className="t-display">{t("prefs.title")}</h1>
+        <p className="t-sub">{t("prefs.sub")}</p>
       </div>
-    </div>
+      <ul className="pref-list">
+        {purposes.map((purpose) => (
+          <PreferenceRow
+            key={purpose.key}
+            purpose={purpose}
+            on={draft[purpose.key] ?? displayOn(purpose.state)}
+            wording={wordingByKey[purpose.key]}
+            t={t}
+            disabled={writePending}
+            onToggle={() =>
+              setDraft((prev) =>
+                prev ? { ...prev, [purpose.key]: !prev[purpose.key] } : prev,
+              )
+            }
+          />
+        ))}
+      </ul>
+
+      <Card as="div" inset className="pref-unsub">
+        <p className="t-caption">{t("prefs.unsubscribeAllHint")}</p>
+        <Button disabled={writePending} onClick={() => unsubscribeAll.mutate()}>
+          {t("prefs.unsubscribeAll")}
+        </Button>
+        {unsubscribeAll.isError && (
+          <p className="t-caption pref-unsub-error">
+            {explainPublicError(unsubscribeAll.error, t)}
+          </p>
+        )}
+      </Card>
+
+      {lastUnsubscribed !== null && (
+        <Card as="div" inset className="pref-unsub-banner">
+          <p>
+            {lastUnsubscribed.length > 0
+              ? t("prefs.oneClickDone")
+              : t("prefs.oneClickAlreadyOff")}
+          </p>
+          {lastUnsubscribed.length > 0 &&
+            (undoStaged ? (
+              <p className="t-caption">{t("prefs.undoExplicit")}</p>
+            ) : (
+              <Button disabled={writePending} onClick={undoUnsubscribe}>
+                {t("prefs.undo")}
+              </Button>
+            ))}
+        </Card>
+      )}
+
+      {partialSave && (
+        <Card as="div" inset className="pref-partial-banner">
+          <p>{t("prefs.partialSave")}</p>
+        </Card>
+      )}
+
+      {dirty.length > 0 && (
+        <div className="pref-save-bar">
+          <p className="pref-not-saved">{t("prefs.notSaved")}</p>
+          <p className="t-caption">
+            {t("prefs.savePending", {
+              changes: dirty
+                .map(
+                  (key) =>
+                    purposes.find((purpose) => purpose.key === key)?.label ??
+                    key,
+                )
+                .join(", "),
+            })}
+          </p>
+          <p className="t-caption">{t("prefs.saveProof")}</p>
+          <div className="pref-save-actions">
+            <Button
+              disabled={writePending}
+              onClick={() => {
+                setDraft(initialDraft(purposes));
+                setPartialSave(false);
+              }}
+            >
+              {t("prefs.discard")}
+            </Button>
+            <Button
+              variant="primary"
+              disabled={writePending}
+              onClick={() => draft && save.mutate(draft)}
+            >
+              {t("prefs.save")}
+            </Button>
+          </div>
+        </div>
+      )}
+    </PublicPage>
   );
 }
 
@@ -431,7 +424,7 @@ function PreferenceRow({
       <div className="pref-row-main">
         <div className="pref-row-head">
           {purpose.locked && <Lock className="pref-lock-icon" aria-hidden />}
-          <span className="pref-label">{purpose.label}</span>
+          <span className="pref-label">{labelOf(t, purpose)}</span>
           {purpose.locked && (
             <span className="pref-lock-badge">{t("prefs.alwaysOn")}</span>
           )}
@@ -460,7 +453,7 @@ function PreferenceRow({
           hidden because the row draws its own richer heading above. */}
       <Checkbox
         checked={on}
-        aria-label={purpose.label}
+        aria-label={labelOf(t, purpose)}
         disabled={purpose.locked || grantBlocked || disabled}
         className="pref-check"
         // Empty, because aria-label above already names the control: a
