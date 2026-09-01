@@ -765,3 +765,150 @@ describe("the one thing to do next", () => {
     expect(screen.queryByText("Do this next")).toBeNull();
   });
 });
+
+describe("what the selected row is about", () => {
+  it("draws no pane until the reader picks a row", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "A task",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-0000000000aa",
+              label: "Kirsten Vogel",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The full-width list a reader had before selection existed. An empty
+    // column standing ready reads as a pane that failed to load.
+    await screen.findByText("A task · Kirsten Vogel");
+    expect(screen.queryByText("They last wrote")).toBeNull();
+  });
+
+  it("opens the record beside the queue, and closes it on a second press", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "A task",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-0000000000aa",
+              label: "Kirsten Vogel",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const open = await screen.findByRole("button", {
+      name: "Show what this is about",
+    });
+    await userEvent.click(open);
+    // The pane names the record and answers the question the row cannot: how
+    // long the silence has run, in both directions.
+    await screen.findByText("They last wrote");
+    expect(screen.getByText("We last wrote")).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show what this is about" }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByText("They last wrote")).toBeNull();
+    });
+  });
+
+  it("draws no pane for a row about a deal, whose figures are already on it", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "one",
+            title: "Northstar renewal",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000bb",
+              label: "Northstar",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const open = await screen.findByRole("button", {
+      name: "Show what this is about",
+    });
+    await userEvent.click(open);
+
+    // Selected, and deliberately nothing beside it: a deal row carries its own
+    // amount, close date and owner, so a pane would be a second spelling.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Show what this is about" }),
+      ).toBeTruthy();
+    });
+    expect(screen.queryByText("They last wrote")).toBeNull();
+  });
+
+  it("closes the pane when the selected row leaves the queue", async () => {
+    const withRow = day({
+      queue: [
+        row({
+          id: "one",
+          title: "A task",
+          subject: {
+            type: "person",
+            id: "01a05500-0000-7000-8000-0000000000aa",
+            label: "Kirsten Vogel",
+          },
+        }),
+      ],
+      summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+    });
+    // The same day with the row gone — a disposition, a filter, a refetch that
+    // found it answered. The pane must not go on describing a record whose row
+    // is no longer on the page.
+    let current: Worklist = withRow;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/worklist")) {
+          return jsonResponse(current);
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    renderWorklist();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Show what this is about" }),
+    );
+    await screen.findByText("They last wrote");
+
+    current = day({
+      queue: [],
+      summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+    });
+    // Re-render through the filter, which refetches: the row is gone, and the
+    // pane goes with it rather than outliving the row it describes.
+    await userEvent.click(screen.getByRole("button", { name: /Decisions/ }));
+    await waitFor(() => {
+      expect(screen.queryByText("They last wrote")).toBeNull();
+    });
+  });
+});

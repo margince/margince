@@ -36,6 +36,8 @@ export function WorklistRow({
   position,
   owner,
   asOf,
+  selected,
+  onSelect,
   onReview,
 }: Readonly<{
   item: WorklistItem;
@@ -49,6 +51,9 @@ export function WorklistRow({
   // server's, must not silently change what the row says about an order the
   // server already decided as of a fixed instant.
   asOf: string;
+  // Whether the pane beside the queue is about this row.
+  selected: boolean;
+  onSelect: () => void;
   onReview: () => void;
 }>) {
   const t = useT();
@@ -70,13 +75,28 @@ export function WorklistRow({
   );
   const consequence = consequenceText(item, t);
   return (
-    <PanelRow className="worklist-row">
-      {/* The rank is the page's central claim, so it is readable rather than
+    <PanelRow
+      className={
+        selected ? "worklist-row worklist-row-selected" : "worklist-row"
+      }
+    >
+      {/* The way INTO the pane. A button on the rank rather than the whole row
+          being pressable: the row already holds links and verbs, and a control
+          wrapping controls is a press whose target the reader has to guess. */}
+      <button
+        type="button"
+        className="worklist-rank-select"
+        aria-pressed={selected}
+        aria-label={t("worklist.pane.open")}
+        onClick={onSelect}
+      >
+        {/* The rank is the page's central claim, so it is readable rather than
           decorative: the list element carries the order for a screen reader and
           the number states it for everybody else. */}
-      <span className="t-caption worklist-rank">
-        {formatNumber(position, locale)}
-      </span>
+        <span className="t-caption worklist-rank">
+          {formatNumber(position, locale)}
+        </span>
+      </button>
       <div className="worklist-row-text">
         <p className="t-body worklist-row-title">
           {href ? (

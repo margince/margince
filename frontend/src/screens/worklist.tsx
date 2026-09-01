@@ -3,6 +3,7 @@ import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FilterPills } from "../design-system/filterpills";
+import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
@@ -14,6 +15,7 @@ import {
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { WorklistPane } from "./worklist.pane";
 import {
   useWorklist,
   type Worklist,
@@ -165,21 +167,29 @@ function WorklistBody({
   scope,
   filter,
   owner,
+  selectedId,
   onScope,
   onFilter,
   onOwner,
+  onSelect,
 }: Readonly<{
   day: Worklist;
   scope: WorklistScope;
   filter: WorklistFilter;
   owner: string;
+  selectedId: string;
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
+  onSelect: (next: string) => void;
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
   const focus = focusOf(day.queue);
+  // The row the pane is about. Resolved from the id rather than held as the
+  // item itself: a refetch replaces every row object, and a held one would go
+  // on describing a version of the day that is no longer on screen.
+  const selected = day.queue.find((item) => item.id === selectedId);
   return (
     <>
       <WorklistHeader
@@ -218,33 +228,49 @@ function WorklistBody({
             : t("worklist.clear")}
         </p>
       ) : (
-        <Panel title={t("worklist.queue")}>
-          <ol className="worklist-list">
-            {day.queue.map((item, index) => (
-              <li key={`${item.source}-${item.id}`}>
-                {/* The heading, drawn where the band CHANGES. The server sends
+        // The queue, and beside it what the SELECTED row is about. PageZones
+        // leaves the aside out of the DOM entirely when nothing is selected,
+        // so a reader who has not chosen a row gets the full-width list they
+        // had before rather than an empty column.
+        <PageZones
+          shape="aside"
+          mainClassName="worklist-main"
+          aside={selected && <WorklistPane item={selected} />}
+          asideLabel={t("worklist.pane.title")}
+          main={
+            <Panel title={t("worklist.queue")}>
+              <ol className="worklist-list">
+                {day.queue.map((item, index) => (
+                  <li key={`${item.source}-${item.id}`}>
+                    {/* The heading, drawn where the band CHANGES. The server sends
                     the queue already sorted so each band is one contiguous run,
                     so a change is a boundary and never a second visit — which
                     is what lets a heading be drawn from the row rather than by
                     grouping the list into buckets the order would then fight. */}
-                {opensBand(day.queue, index) && (
-                  <Eyebrow as="h3" className="worklist-band">
-                    {t(
-                      `worklist.band.${item.band ?? "keep_momentum"}` as const,
+                    {opensBand(day.queue, index) && (
+                      <Eyebrow as="h3" className="worklist-band">
+                        {t(
+                          `worklist.band.${item.band ?? "keep_momentum"}` as const,
+                        )}
+                      </Eyebrow>
                     )}
-                  </Eyebrow>
-                )}
-                <WorklistRow
-                  item={item}
-                  position={index + 1}
-                  owner={owner}
-                  asOf={day.as_of}
-                  onReview={() => onFilter(reviewFilter(item))}
-                />
-              </li>
-            ))}
-          </ol>
-        </Panel>
+                    <WorklistRow
+                      item={item}
+                      position={index + 1}
+                      owner={owner}
+                      asOf={day.as_of}
+                      selected={selectedId === item.id}
+                      onSelect={() =>
+                        onSelect(selectedId === item.id ? "" : item.id)
+                      }
+                      onReview={() => onFilter(reviewFilter(item))}
+                    />
+                  </li>
+                ))}
+              </ol>
+            </Panel>
+          }
+        />
       )}
     </>
   );
@@ -261,6 +287,11 @@ export function WorklistScreen() {
   // Whose queue, when it is not the reader's own. Empty means their own day,
   // which is what every seat sees and the only thing most seats may ask for.
   const [owner, setOwner] = useState("");
+  // Which row the context pane is about. Local state, not the address: the
+  // page's other dials are state too, and putting one of the four in the URL
+  // would make the address describe a fraction of what the reader is looking
+  // at. Moving them all there is its own change.
+  const [selectedId, setSelectedId] = useState("");
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
   return (
@@ -289,9 +320,11 @@ export function WorklistScreen() {
             scope={scope}
             filter={filter}
             owner={owner}
+            selectedId={selectedId}
             onScope={setScope}
             onFilter={setFilter}
             onOwner={setOwner}
+            onSelect={setSelectedId}
           />
         )}
       </SurfaceState>
