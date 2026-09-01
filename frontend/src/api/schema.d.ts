@@ -13572,7 +13572,10 @@ export interface components {
             latency_ms: number;
             cache_hit: boolean;
             degraded: boolean;
-            /** @description Stable failure code; null on success. */
+            /**
+             * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
+             *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
+             */
             error_sentinel?: string | null;
             /** @description A captured payload row exists for this call. */
             has_payload: boolean;
@@ -17122,6 +17125,19 @@ export interface components {
             corrected_value?: string;
             /** @description Why, in the human's words. Optional and never shown to a model. */
             note?: string;
+            /**
+             * @description The value the client RENDERED — the sentence the human actually had in front of them when they decided. Send back whatever the read handed you (`PersonProfileField.value`).
+             *     This is what the verdict is ABOUT, and the reader compares it against the value it is asked to apply the verdict to. A record whose value has moved on since the page was drawn keeps the verdict on file and does not apply it, which is the point: a correction to one sentence must not be applied to a different one.
+             *     Optional. Omitting it falls back to comparing WHEN the verdict was recorded against when the value last changed — a proxy, and the answer every verdict recorded before this field existed still gets.
+             */
+            value_shown?: string;
+            /**
+             * Format: date-time
+             * @description The `captured_at` of the value the client rendered. Send back whatever the read handed you (`PersonProfileField.captured_at`), beside `value_shown`.
+             *     It RANKS two submissions about the same claim rather than deciding what either is about. Both stamps are the server's own, so a page that rendered the newer value carries the later one — and a correction typed against a value that has since moved is refused with 409 rather than replacing the verdict a colleague recorded about the value that stands.
+             *     Optional, and omitting it is not an error: a submission that carries no stamp is not ranked against anything and simply lands.
+             */
+            value_captured_at?: string;
         };
         /**
          * @description One thing that happened to a relationship, with the evidence for it. Derived at read
@@ -27896,6 +27912,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description The claim moved on while the verdict was being made: a verdict about the value that stands was recorded from a page drawn later than this one. Nothing is written. Re-read the record and decide again on what it says now — applying this one would correct a sentence the human never saw. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

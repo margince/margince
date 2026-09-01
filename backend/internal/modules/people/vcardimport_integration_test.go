@@ -184,6 +184,36 @@ func TestImportingAFileReportsEveryCardInOrder(t *testing.T) {
 	}
 }
 
+// A CARD THAT NEVER ENDED, ONE CARD SHORT OF THE END OF THE FILE. Three cards
+// in, two rows out, and a 200 saying the import succeeded: the unterminated
+// middle card was dropped when the next one began over it, and nothing in the
+// report named the person who went missing.
+//
+// The import is the handed-over-card path — a batch somebody was given at an
+// event — so the report IS the record of what happened. A reader has no way to
+// notice who is absent, and the missing person is the one who never gets
+// followed up.
+//
+// The whole file is refused, which is what the end-of-file spelling of the same
+// malformation has always done. Nothing is written, not even the card that was
+// fine, and the reader is told rather than reassured.
+func TestAFileWhoseMiddleCardNeverEndsIsRefusedRatherThanShortened(t *testing.T) {
+	setupDedupe(t)
+
+	file := "BEGIN:VCARD\nFN:QC Probe Alpha\nEMAIL:alpha@probe.test\nEND:VCARD\n" +
+		"BEGIN:VCARD\nFN:QC Probe Beta\nEMAIL:beta@probe.test\n" +
+		"BEGIN:VCARD\nFN:QC Probe Gamma\nEMAIL:gamma@probe.test\nEND:VCARD\n"
+
+	if _, err := ParseVCards(strings.NewReader(file)); err == nil {
+		t.Fatal("the file parsed, so the import would report two of its three cards and call that success")
+	}
+	// Nothing of it landed, and that is STRUCTURAL rather than something to
+	// assert here: ImportVCards is only ever reached with entries ParseVCards
+	// returned, and this file has none to give it. A loop counting rows after a
+	// parse that failed is counting a database nothing was offered — it cannot
+	// fail, which is the shape this file is otherwise careful about.
+}
+
 // Two cards from the same company are two employees of ONE company. Without
 // the lookup, a ten-card export from Acme creates ten Acmes for a human to
 // merge afterwards.

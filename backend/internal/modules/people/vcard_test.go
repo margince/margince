@@ -171,15 +171,28 @@ func TestParseVCardsRefusesAFileItCannotRead(t *testing.T) {
 		// An import that quietly drops a person is worse than one that
 		// refuses: the reader has no way to notice who is missing.
 		{"a card that never ends", "BEGIN:VCARD\nFN:Truncated Person\n"},
-		// The same malformation, found mid-file instead of at EOF: a second
-		// BEGIN before the first card's END used to overwrite `current`
-		// silently, dropping the unterminated card with no error while the
-		// well-formed card after it parsed and shipped — a shorter-than-
-		// expected result with nothing to say why.
+		// THE SAME MALFORMATION ONE CARD FROM THE END. The card that never
+		// ended is in the MIDDLE, so the next BEGIN arrives before the file
+		// does — and starting a card over an open one dropped the open one and
+		// everything on it. Three cards in, two rows out, and a 200 saying so.
 		{
-			"a card that never ends, before another one",
-			"BEGIN:VCARD\nFN:Truncated Person\n" +
-				"BEGIN:VCARD\nFN:Well Formed Person\nEND:VCARD\n",
+			"a card that never ends, in the middle of the file",
+			"BEGIN:VCARD\nFN:Alpha\nEND:VCARD\n" +
+				"BEGIN:VCARD\nFN:Beta\n" +
+				"BEGIN:VCARD\nFN:Gamma\nEND:VCARD\n",
+		},
+		{"an END with nothing open", "END:VCARD\nBEGIN:VCARD\nFN:Late\nEND:VCARD\n"},
+		// A DELIMITER NAMING SOMETHING ELSE. Read past, the marker is skipped
+		// and the properties under it are not: a calendar's fields land on
+		// whichever card is open, or vanish where none is, and the file is
+		// reported as imported either way.
+		{
+			"a card wrapped in something that is not a vCard",
+			"BEGIN:VCALENDAR\nBEGIN:VCARD\nFN:Inside A Calendar\nEND:VCARD\nEND:VCALENDAR\n",
+		},
+		{
+			"a stray end marker for something else",
+			"BEGIN:VCARD\nFN:Fine\nEND:VCARD\nEND:VCALENDAR\n",
 		},
 		{"a file with no card at all", "this is not a vCard\n"},
 		{"an empty file", ""},

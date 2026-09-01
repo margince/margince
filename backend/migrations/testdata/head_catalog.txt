@@ -501,6 +501,8 @@ public.ai_feedback.source text NOT NULL gen=- def=-
 public.ai_feedback.subject_id uuid NOT NULL gen=- def=-
 public.ai_feedback.subject_type text NOT NULL gen=- def=-
 public.ai_feedback.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.ai_feedback.value_captured_at timestamp with time zone gen=- def=-
+public.ai_feedback.value_shown text gen=- def=-
 public.ai_feedback.verdict text NOT NULL gen=- def=-
 public.ai_feedback.version bigint NOT NULL gen=- def=1
 public.ai_feedback_pkey CREATE UNIQUE INDEX ai_feedback_pkey ON public.ai_feedback USING btree (id)
@@ -2814,6 +2816,7 @@ public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margin
 public.notice.body text NOT NULL gen=- def=''::text
 public.notice.captured_by text NOT NULL gen=- def=-
 public.notice.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.notice.dedupe_key text gen=- def=-
 public.notice.id uuid NOT NULL gen=- def=uuidv7()
 public.notice.kind text NOT NULL gen=- def=-
 public.notice.notice_content_bounded CHECK (((length(subject) <= 200) AND (length(body) <= 2000)))
@@ -4578,6 +4581,7 @@ public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_
 public.uq_lead_ws_id CREATE UNIQUE INDEX uq_lead_ws_id ON public.lead USING btree (id)
 public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, COALESCE(normalized_company, ''::text), COALESCE(connected_on, '1970-01-01'::date)) WHERE (provider_member_ref IS NULL)
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
+public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.uq_offer_template_default CREATE UNIQUE INDEX uq_offer_template_default ON public.offer_template USING btree (locale) WHERE (is_default AND (archived_at IS NULL))
 public.uq_offer_template_ws_id CREATE UNIQUE INDEX uq_offer_template_ws_id ON public.offer_template USING btree (id)
 public.uq_offer_ws_id CREATE UNIQUE INDEX uq_offer_ws_id ON public.offer USING btree (id)
