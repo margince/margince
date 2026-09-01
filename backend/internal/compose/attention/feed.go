@@ -97,6 +97,9 @@ type Service struct {
 	// names is OPTIONAL like the lanes above it: nil means subjects travel
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
+	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
+	// carried only a deal id travels without the deal's figures.
+	dealFacts DealFacts
 	// machine answers whether an address is a sending system, for the group a
 	// routine contact decision joins. Nil means every address reads as a
 	// person's, which under-groups rather than hiding anything.
@@ -168,6 +171,16 @@ func (s *Service) WithUndelivered(u Undelivered) *Service {
 // WithMachineSender binds the rule that tells a sending system from a person.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is
+	return s
+}
+
+// WithDealFacts binds the reader that puts a deal's own figures on a row whose
+// producer carried only its id. An option for the reason WithWaiting is one.
+//
+// Unbound, those rows travel with a name and no figures, which is what they did
+// before this seam existed — a smaller card, never a wrong one.
+func (s *Service) WithDealFacts(f DealFacts) *Service {
+	s.dealFacts = f
 	return s
 }
 

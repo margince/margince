@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -373,4 +374,29 @@ func subjectOfMeeting(row crmcontracts.Activity) string {
 		return *row.Subject
 	}
 	return ""
+}
+
+// attentionDealFacts reads deal figures through the deals store, under the
+// reader's own grants: a deal they may not see is absent from the answer and
+// the row simply states less about it.
+type attentionDealFacts struct{ store *deals.Store }
+
+func (f attentionDealFacts) Figures(
+	ctx context.Context, dealIDs []ids.UUID,
+) (map[ids.UUID]attention.DealFigures, error) {
+	found, err := f.store.Figures(ctx, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]attention.DealFigures, len(found))
+	for id, figures := range found {
+		out[id] = attention.DealFigures{
+			StageID:           figures.StageID,
+			OwnerID:           figures.OwnerID,
+			AmountMinor:       figures.AmountMinor,
+			Currency:          figures.Currency,
+			ExpectedCloseDate: figures.ExpectedCloseDate,
+		}
+	}
+	return out, nil
 }

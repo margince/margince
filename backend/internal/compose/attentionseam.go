@@ -487,5 +487,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The reader's own sends that never left, from the stamp the
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
-		WithMachineSender(capture.IsMachineAddress)
+		WithMachineSender(capture.IsMachineAddress).
+		// The figures behind a deal a row names but does not carry — the
+		// overnight brief's rows, which rank ids and keep their evidence
+		// behind the brief's own endpoint.
+		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())})
 }
