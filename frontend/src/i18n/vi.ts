@@ -6929,8 +6929,12 @@ export const vi = {
   "provider.automaticLookupJurisdiction":
     "Hãy tắt mục này nếu liên hệ của bạn thuộc phạm vi luật cấm mua bán dữ liệu cá nhân, trong đó có luật Việt Nam. Nút trên từng liên hệ vẫn dùng được, để quyết định thuộc về người đưa ra nó.",
   "provider.buyable": "Cho phép mua {category}",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Bật công tắc này không mua gì cả. Nó đặt một nút trên mỗi liên hệ, giá {credits} tín dụng, để ai đó mua thông tin này cho từng người một.",
+  "provider.buyableHint_other":
+    "Bật công tắc này không mua gì cả. Nó đặt một nút trên mỗi liên hệ, giá {credits} tín dụng, để ai đó mua thông tin này cho từng người một.",
+  "provider.buyableNeeds":
+    "Nhà cung cấp chỉ tìm thông tin này cùng với {prerequisite}, nên không thể mua riêng. Hãy cho phép mục đó trước.",
   "provider.backlog": "Còn phải tra cứu",
   "provider.backlogRemaining_one": "{count} liên hệ",
   "provider.backlogRemaining_other": "{count} liên hệ",
@@ -7005,6 +7009,8 @@ export const vi = {
   "provider.profile.notRequested": "Chưa bao giờ hỏi tới: {categories}.",
   "provider.profile.buy_one": "Mua {category} · {credits} tín dụng",
   "provider.profile.buy_other": "Mua {category} · {credits} tín dụng",
+  "provider.profile.buyRebuys":
+    "Giá này bao gồm việc mua lại {categories}: nhà cung cấp không tìm thông tin này nếu thiếu mục đó, và tính phí cho mọi thứ họ trả về.",
   "provider.freeTier.hint":
     "Hồ sơ LinkedIn, vai trò hiện tại và quá trình làm việc không tốn tín dụng. Nên bật: mọi liên hệ mới đều có chúng mà không ai phải quyết định.",
   "provider.pricedTier.hint":

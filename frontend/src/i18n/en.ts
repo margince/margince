@@ -7054,8 +7054,12 @@ export const en = {
   "provider.automaticLookupJurisdiction":
     "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
   "provider.buyable": "Allow buying {category}",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
+  "provider.buyableHint_other":
+    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credits, so somebody can buy this detail for one person at a time.",
+  "provider.buyableNeeds":
+    "The provider looks for this only alongside the {prerequisite}, so it cannot be bought on its own. Allow that one first.",
   "provider.backlog": "Still to look up",
   "provider.backlogRemaining_one": "{count} contact",
   "provider.backlogRemaining_other": "{count} contacts",
@@ -7138,6 +7142,8 @@ export const en = {
   // The price rides the button because the decision IS the spend.
   "provider.profile.buy_one": "Buy {category} · {credits} credit",
   "provider.profile.buy_other": "Buy {category} · {credits} credits",
+  "provider.profile.buyRebuys":
+    "The price includes the {categories} again: the provider will not look for this without it, and it charges for whatever it sends back.",
   "provider.freeTier.hint":
     "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
   "provider.pricedTier.hint":
