@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // restoredEvidence is the receipt a restored value carries: the value itself,
@@ -99,31 +100,8 @@ func (s *Store) RestoreProfileField(ctx context.Context, personID ids.PersonID, 
 		// mirrored field, so it has to agree too — a title somebody retyped
 		// leaves the sidecar untouched, and restoring on the sidecar alone
 		// would put the old value back under their answer.
-		// A human's CORRECTION blocks the undo, and it has to be asked for
-		// separately: a correction is recorded in the ai_feedback ledger and
-		// touches neither the column nor this row, so the CAS below cannot see
-		// one. Restoring over it would put back a value the reader looked at
-		// and rejected — and would move this row's updated_at, which is the
-		// date their verdict is judged against, retiring the correction as
-		// well as overruling it.
-		//
-		// Matched on the ledger's own key, which is a hash of the claim path:
-		// spelling the path here rather than taking the hash apart is what
-		// keeps the two sides agreeing, and ai.ProfileFieldClaimPath is the one
-		// spelling. The store cannot import that module, so the caller-facing
-		// half lives in the handler's package and this asks the table directly.
-		var corrected bool
-		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM ai_feedback
-				 WHERE subject_type = 'person' AND subject_id = $1
-				   AND claim_kind = 'profile_field' AND verdict = 'corrected'
-				   AND claim_key = encode(sha256(('profile_field:' || $2)::bytea), 'hex'))`,
-			personID, field).Scan(&corrected); err != nil {
-			return fmt.Errorf("people: looking for a correction on %s: %w", field, err)
-		}
-		if corrected {
-			return apperrors.ErrConflict
+		if err := refuseIfCorrected(ctx, tx, personID, field); err != nil {
+			return err
 		}
 
 		// The comparison is IN the statement, not before it: reading the column
@@ -141,6 +119,11 @@ func (s *Store) RestoreProfileField(ctx context.Context, personID ids.PersonID, 
 			}
 			if tag.RowsAffected() == 0 {
 				return apperrors.ErrConflict
+			}
+		}
+		if field == fieldPhone {
+			if err := restoreSupersededPhone(ctx, tx, personID, superseded); err != nil {
+				return err
 			}
 		}
 
@@ -201,4 +184,125 @@ func (h Handlers) RestorePersonProfileField(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// restoreSupersededPhone brings back the number a newer statement replaced.
+//
+// A phone is a LIST, so the sidecar row the restore rewrites is only the
+// EVIDENCE line: leaving it there would tell a reader their old number was
+// back while the record still held the replacement, and they would find out by
+// dialling. The row itself has to move.
+//
+// Identity, not value: person_phone.superseded_phone_id records exactly which
+// row a number replaced, because the table permits several live numbers of one
+// type and "unarchive the old one" names none of them.
+//
+// Both writes are CAS. The replacement is retired only while it is still live
+// and still ours to retire, and the old row is revived only while it is still
+// archived — a number somebody re-added by hand in the meantime is theirs, and
+// reviving a second copy of it would leave the person holding one number twice.
+func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, want string) error {
+	parsed, err := values.ParsePhone(want)
+	if err != nil {
+		// The buffer holds a value this reader cannot parse back into a number,
+		// so there is nothing to revive. The evidence line is still restored;
+		// the record simply has no row to match it.
+		//nolint:nilerr // an unparseable buffered value is nothing to revive, not a fault
+		return nil
+	}
+	normalized := parsed.String()
+
+	var replacementID, supersededID ids.UUID
+	// was.person_id is checked, not assumed from the join. A merge re-homes only
+	// LIVE phone rows, so a replacement can move to the survivor while the
+	// archived row it superseded stays behind on the merged-away person —
+	// following the pointer alone would then archive the survivor's number and
+	// revive one belonging to somebody else. The partial unique index cannot
+	// catch that, because the two rows carry different person_ids.
+	//
+	// NOT EXISTS for the number itself, for the other half of the same gap: a
+	// merge can leave the survivor already holding a live copy of the number
+	// being revived, and nothing on this table forbids one person holding one
+	// number twice.
+	if err := tx.QueryRow(ctx, `
+		SELECT live.id, live.superseded_phone_id
+		  FROM person_phone live
+		  JOIN person_phone was ON was.id = live.superseded_phone_id
+		 WHERE live.person_id = $1 AND live.archived_at IS NULL
+		   AND live.superseded_phone_id IS NOT NULL
+		   AND was.person_id = $1
+		   AND was.phone = $2 AND was.archived_at IS NOT NULL
+		   AND NOT EXISTS (
+			SELECT 1 FROM person_phone dup
+			 WHERE dup.person_id = $1 AND dup.phone = $2
+			   AND dup.archived_at IS NULL)
+		 ORDER BY live.observed_at DESC
+		 LIMIT 1
+		 FOR UPDATE OF live`,
+		personID, normalized).Scan(&replacementID, &supersededID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Nothing to move: the replacement is gone, or the number it
+			// replaced is live again already. Not a fault — the evidence line
+			// restores and the record already says what the reader wanted.
+			return nil
+		}
+		return fmt.Errorf("people: looking for the number to bring back: %w", err)
+	}
+
+	// The replacement first. Retiring it before the old row is revived is what
+	// keeps the primary slot free: the partial unique index permits exactly one
+	// live primary per type, and reviving first would collide with it.
+	tag, err := tx.Exec(ctx, `
+		UPDATE person_phone SET archived_at = now()
+		 WHERE id = $1 AND archived_at IS NULL`, replacementID)
+	if err != nil {
+		return fmt.Errorf("people: retiring the replacing number: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrConflict
+	}
+	revived, err := tx.Exec(ctx, `
+		UPDATE person_phone SET archived_at = NULL
+		 WHERE id = $1 AND archived_at IS NOT NULL AND person_id = $2`,
+		supersededID, personID)
+	if err != nil {
+		return fmt.Errorf("people: bringing the replaced number back: %w", err)
+	}
+	if revived.RowsAffected() == 0 {
+		// The row stopped being ours to revive between the read and here. The
+		// replacement is already retired, so refusing leaves the person one
+		// number short — but the alternative is reviving nothing while
+		// reporting success, and a caller told 204 would never look again.
+		return apperrors.ErrConflict
+	}
+	return nil
+}
+
+// refuseIfCorrected blocks an undo over a field a human has ruled on.
+//
+// A correction is recorded in the ai_feedback ledger and touches neither the
+// column nor the profile-field row, so the CAS the caller makes cannot see one.
+// Restoring over it would put back a value the reader looked at and rejected —
+// and would move the row's updated_at, which is the date their verdict is
+// judged against, retiring the correction as well as overruling it.
+//
+// Matched on the ledger's own key, which is a HASH of the claim path: spelling
+// the path here rather than taking the hash apart is what keeps the two sides
+// agreeing, and a mismatch would fail by matching nothing rather than by
+// failing. TestTheRestoreMatchesTheLedgersOwnClaimKey holds them together.
+func refuseIfCorrected(ctx context.Context, tx pgx.Tx, personID ids.PersonID, field string) error {
+	var corrected bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM ai_feedback
+			 WHERE subject_type = 'person' AND subject_id = $1
+			   AND claim_kind = 'profile_field' AND verdict = 'corrected'
+			   AND claim_key = encode(sha256(('profile_field:' || $2)::bytea), 'hex'))`,
+		personID, field).Scan(&corrected); err != nil {
+		return fmt.Errorf("people: looking for a correction on %s: %w", field, err)
+	}
+	if corrected {
+		return apperrors.ErrConflict
+	}
+	return nil
 }

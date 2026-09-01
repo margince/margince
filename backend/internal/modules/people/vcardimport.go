@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -344,10 +345,36 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.Perso
 	// snippet is what the card stated, which is what an Art. 15 answer has to
 	// be able to show.
 	evidence := vcardEvidence(entry)
-	applied, err := applyObservedCard(ctx, tx, personID, observedCard{
+	// The card's own REV when it states one it can be read from, so importing
+	// the same file twice states the same thing twice. Dated from the clock
+	// instead, a re-upload would be a NEWER statement than everything since it,
+	// and a reader re-uploading a file they were unsure landed would put back a
+	// detail a signature had already corrected.
+	//
+	// A card with no REV, an unreadable one, or one dated in the FUTURE takes
+	// the import's own clock — the behaviour every card had before this. The
+	// future case is the security-relevant one and the check below says why.
+	card := observedCard{
 		Entry: entry, Evidence: evidence, SourceRef: vcardSource,
 		Source: vcardSource, CapturedBy: by,
-	})
+	}
+	// A card's REV is written by whoever exported it, so it is attacker-supplied
+	// like every other field on the card — and unlike the others it decides
+	// what this card OUTRANKS. A REV in 2099 would win against every statement
+	// the contact ever makes afterwards, permanently, from one file somebody
+	// mailed in. A future date is therefore not read as a date: the import
+	// falls back to its own clock, which is exactly the answer a card with no
+	// REV already gets.
+	if entry.Revised != nil {
+		var now time.Time
+		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
+			return fmt.Errorf("people: dating the card against the clock: %w", err)
+		}
+		if !entry.Revised.After(now) {
+			card.ObservedAt = *entry.Revised
+		}
+	}
+	applied, err := applyObservedCard(ctx, tx, personID, card)
 	if err != nil {
 		return err
 	}
