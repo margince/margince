@@ -62,16 +62,22 @@ type TeamMember struct {
 // The parent_team_id hierarchy is NOT walked here either, for the reason it is
 // not walked there: row scope does not walk it, so a wider answer would name
 // people whose rows the reader cannot then read.
-func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, error) {
+//
+// The bool reports that the roster was CUT — more live teammates exist than the
+// answer names. A caller drawing a board says so rather than presenting a
+// hundred people as the whole team, which is the same under-reporting rule every
+// bounded read here keeps: a truncation nobody is told about reads exactly like
+// a complete answer.
+func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error) {
 	// Refuses an agent seat and a Deal Room buyer. The seated-identity check
 	// follows for the principals RequireHuman admits without a place on the
 	// chart — a background pass has no team to enumerate.
 	if err := auth.RequireHuman(ctx); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return nil, apperrors.ErrPermissionDenied
+		return nil, false, apperrors.ErrPermissionDenied
 	}
 	me := ids.From[ids.UserKind](actor.UserID)
 	var members []TeamMember
@@ -79,20 +85,32 @@ func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, erro
 		// UNION, not UNION ALL: the caller is normally on their own teams, so
 		// the two arms overlap and the duplicate has to collapse. The second
 		// arm is what makes "only you" the answer for a teamless reader.
+		//
+		// The CALLER SORTS FIRST, ahead of the alphabet, so the cap can never
+		// cut them. A bare `ORDER BY name LIMIT` dropped the caller out of a
+		// team whose first hundred names sorted above theirs — silently, and a
+		// board missing the reader's own row invites the reading that the lead
+		// carries nothing.
+		//
+		// One row past the cap is read so the caller can tell a full answer from
+		// a truncated one. Asking for the count instead would be a second query
+		// over the same joins to learn one bit.
 		rows, err := tx.Query(ctx, `
-			SELECT u.id, u.display_name, u.email
-			  FROM team_membership ma
-			  JOIN team_membership mb ON mb.team_id = ma.team_id
-			  JOIN team t ON t.id = ma.team_id AND t.archived_at IS NULL
-			  JOIN app_user u ON u.id = mb.user_id AND NOT u.is_agent
-			                 AND `+LiveMemberSQL("u")+`
-			 WHERE ma.user_id = $1
-			UNION
-			SELECT u.id, u.display_name, u.email
-			  FROM app_user u
-			 WHERE u.id = $1 AND NOT u.is_agent AND `+LiveMemberSQL("u")+`
-			 ORDER BY 2, 1
-			 LIMIT $2`, me, teamRosterCap)
+			SELECT id, display_name, email FROM (
+			  SELECT u.id, u.display_name, u.email
+			    FROM team_membership ma
+			    JOIN team_membership mb ON mb.team_id = ma.team_id
+			    JOIN team t ON t.id = ma.team_id AND t.archived_at IS NULL
+			    JOIN app_user u ON u.id = mb.user_id AND NOT u.is_agent
+			                   AND `+LiveMemberSQL("u")+`
+			   WHERE ma.user_id = $1
+			  UNION
+			  SELECT u.id, u.display_name, u.email
+			    FROM app_user u
+			   WHERE u.id = $1 AND NOT u.is_agent AND `+LiveMemberSQL("u")+`
+			) roster
+			 ORDER BY (id <> $1), display_name, id
+			 LIMIT $2`, me, teamRosterCap+1)
 		if err != nil {
 			return err
 		}
@@ -108,7 +126,13 @@ func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, erro
 		return rows.Err()
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return members, nil
+	// The extra row is the SIGNAL, never part of the answer: reporting it would
+	// put one member past the cap on the board and leave the next read's cut in
+	// a different place.
+	if len(members) > teamRosterCap {
+		return members[:teamRosterCap], true, nil
+	}
+	return members, false, nil
 }

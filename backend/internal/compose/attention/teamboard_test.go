@@ -26,8 +26,8 @@ func (r roster) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error
 	return true, nil
 }
 
-func (r roster) LiveTeammatesOfCaller(context.Context) ([]TeamMember, error) {
-	return []TeamMember(r), nil
+func (r roster) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember(r), false, nil
 }
 
 // waitingSaying is the who-is-waiting lane over a fixed list.
@@ -43,11 +43,6 @@ type overdueSaying map[ids.UUID]int
 func (o overdueSaying) OverduePerAssignee(context.Context, time.Time) (map[ids.UUID]int, error) {
 	return map[ids.UUID]int(o), nil
 }
-
-// riskSaying is the at-risk lane over a fixed list.
-type riskSaying []RiskyDeal
-
-func (r riskSaying) Quiet(context.Context) ([]RiskyDeal, error) { return []RiskyDeal(r), nil }
 
 func boardService(members ...TeamMember) *Service {
 	return &Service{
@@ -108,7 +103,7 @@ func TestEachTeammatesWorkLandsInTheirOwnRow(t *testing.T) {
 	}
 	svc.overdueLoad = overdueSaying{theColleague: 4}
 	colleague := theColleague
-	svc.atRisk = riskSaying{{OwnerID: &colleague}}
+	svc.atRisk = stubAtRisk{rows: []RiskyDeal{{OwnerID: &colleague}}}
 
 	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
 	if err != nil {
@@ -149,7 +144,7 @@ func TestWorkNobodyOwnsIsReportedRatherThanDropped(t *testing.T) {
 	svc := boardService(TeamMember{UserID: theReader, DisplayName: "the reader"})
 	svc.waiting = waitingSaying{{}, {}}
 	svc.overdueLoad = overdueSaying{{}: 3}
-	svc.atRisk = riskSaying{{OwnerID: nil}}
+	svc.atRisk = stubAtRisk{rows: []RiskyDeal{{OwnerID: nil}}}
 
 	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
 	if err != nil {
@@ -202,6 +197,74 @@ func TestACountReadToItsBoundIsReportedAsAFloor(t *testing.T) {
 	if board.Truncated {
 		t.Fatal("a lane that came back short of its bound was reported as truncated")
 	}
+}
+
+// The at-risk lane's OWN cut flag decides, never its row count.
+//
+// This is the case a row count cannot see. That lane filters after it scans, so
+// a sweep that stopped at fifty can leave three survivors — and three is exactly
+// what a small, complete pipeline returns. Inferring from the count called the
+// truncated read complete, which is the direction that tells a lead their team
+// is lighter than it is.
+func TestTheAtRiskLanesOwnCutFlagDecidesRatherThanItsRowCount(t *testing.T) {
+	t.Parallel()
+
+	owner := theColleague
+	svc := boardService(TeamMember{UserID: theReader, DisplayName: "the reader"})
+	svc.atRisk = stubAtRisk{rows: []RiskyDeal{{OwnerID: &owner}}, cut: true}
+
+	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+	if err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if !board.Truncated {
+		t.Fatal("the at-risk sweep stopped at its bound and the board called its " +
+			"single surviving row a complete count")
+	}
+
+	svc.atRisk = stubAtRisk{rows: []RiskyDeal{{OwnerID: &owner}}, cut: false}
+	board, err = svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+	if err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if board.Truncated {
+		t.Fatal("a complete at-risk sweep was reported as truncated")
+	}
+}
+
+// A roster cut at its own bound is truncation too.
+//
+// Both ways of falling short reach the reader as one flag, because what they
+// need to know is the same: the figures in front of them are floors. A board
+// that reported only the COUNT bounds would present a hundred people as the
+// whole of a larger team and say nothing.
+func TestATeamLargerThanTheRosterCapIsReportedAsTruncated(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{
+		teammates: rosterCutAt{},
+		now:       func() time.Time { return boardInstant },
+	}
+	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+	if err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if !board.Truncated {
+		t.Fatal("the roster was cut at its bound and the board presented the " +
+			"names it drew as the whole team")
+	}
+}
+
+// rosterCutAt is the membership reader answering one member and reporting that
+// more exist.
+type rosterCutAt struct{}
+
+func (rosterCutAt) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error) {
+	return true, nil
+}
+
+func (rosterCutAt) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember{{UserID: theReader, DisplayName: "the reader"}}, true, nil
 }
 
 // A source that could not answer is an ERROR, never a column of zeros.

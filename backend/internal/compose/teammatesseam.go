@@ -51,10 +51,10 @@ func (t teammatesSeam) SharesLiveTeamWithCaller(ctx context.Context, other ids.U
 // The email address identity returns is dropped here. The board prints a name
 // and links by id, and carrying an address it never draws would publish every
 // colleague's address through a surface with no reason to hold one.
-func (t teammatesSeam) LiveTeammatesOfCaller(ctx context.Context) ([]attention.TeamMember, error) {
-	members, err := t.svc.LiveTeammatesOfCaller(ctx)
+func (t teammatesSeam) LiveTeammatesOfCaller(ctx context.Context) ([]attention.TeamMember, bool, error) {
+	members, cut, err := t.svc.LiveTeammatesOfCaller(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	out := make([]attention.TeamMember, 0, len(members))
 	for _, member := range members {
@@ -63,5 +63,5 @@ func (t teammatesSeam) LiveTeammatesOfCaller(ctx context.Context) ([]attention.T
 			DisplayName: member.DisplayName,
 		})
 	}
-	return out, nil
+	return out, cut, nil
 }

@@ -15,6 +15,7 @@ import {
   sourceUnavailableText,
 } from "./worklist.copy";
 import { FocusCard, focusOf } from "./worklist.focus";
+import { TeamBoard } from "./worklist.board";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
@@ -203,6 +204,16 @@ function WorklistBody({
         onFilter={onFilter}
         onOwner={onOwner}
       />
+      {/* Who on the team is carrying what.
+          Offered on the SAME tier the server admits the board on, read off
+          scope_options so the control and the refusal cannot disagree — the
+          rule the owner picker beside it already keeps.
+          Drawn only on the reader's OWN day. On a named person's queue the
+          reader has already chosen who to look at, and a board above it would
+          offer them the choice they just made. */}
+      {owner === "" && day.scope_options.includes("team") && (
+        <TeamBoard onOwner={onOwner} />
+      )}
       {/* The verbs a lead has over somebody else's day. Drawn only on a named
           person's queue: on the reader's own there is nobody to coach. */}
       {owner !== "" && <CoachControl owner={owner} />}

@@ -37438,8 +37438,15 @@ export interface operations {
                  *     it at any tier: nothing in it belongs to a colleague, which is what unassigned
                  *     means. It exists because `mine` is exact — a task with no assignee is no
                  *     longer folded into every reader's own queue, so it needs a queue of its own or
-                 *     the product would have stopped mentioning it. Tasks only: a message has no
-                 *     assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+                 *     the product would have stopped mentioning it.
+                 *
+                 *     It carries unanswered mail too, and that is the case it matters most for. A
+                 *     message has no assignee, so its owner is the owner of the record it is filed
+                 *     under — deal, then lead, then person, then organization, first owner found. A
+                 *     thread no owned record attributes to anybody is the customer nobody is looking
+                 *     at, which is exactly what this queue is opened to find. Such a message stays
+                 *     reachable from `mine` as well, on the ground that an unowned customer writing
+                 *     in is everybody's until somebody takes them.
                  *
                  *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
                  *     going quiet, meetings and duplicate pairs are read under the caller's row

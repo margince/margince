@@ -6,6 +6,11 @@ package attention
 // WHOSE customer is waiting. The lane resolves an owner from the record the
 // thread is filed under, and these hold the three answers that owner produces:
 // the reader's own, a colleague's, and nobody's.
+//
+// Asserted through ownedByReader over a CLASSIFIED row, which is the function
+// the page actually calls. A helper taking the WaitingCustomer would prove the
+// walk and not the filter — and that gap is exactly how a named owner's queue
+// came to drop every wait while a test of the walk stayed green.
 
 import (
 	"testing"
@@ -31,8 +36,8 @@ func reader() principal.Principal {
 func TestAWaitOnTheReadersOwnRecordIsTheirs(t *testing.T) {
 	t.Parallel()
 
-	mine := WaitingCustomer{OwnerID: theReader}
-	if !waitingIsMine(mine, reader()) {
+	mine := classifyWaiting(WaitingCustomer{OwnerID: theReader}, readInstant)
+	if !ownedByReader(mine, reader()) {
 		t.Fatal("a customer waiting on the reader's own record was called somebody else's")
 	}
 }
@@ -43,8 +48,8 @@ func TestAWaitOnTheReadersOwnRecordIsTheirs(t *testing.T) {
 func TestAWaitOnAColleaguesRecordIsNotTheReaders(t *testing.T) {
 	t.Parallel()
 
-	theirs := WaitingCustomer{OwnerID: theColleague}
-	if waitingIsMine(theirs, reader()) {
+	theirs := classifyWaiting(WaitingCustomer{OwnerID: theColleague}, readInstant)
+	if ownedByReader(theirs, reader()) {
 		t.Fatal("a customer waiting on a colleague's record arrived in the reader's own queue")
 	}
 }
@@ -58,12 +63,12 @@ func TestAWaitOnAColleaguesRecordIsNotTheReaders(t *testing.T) {
 func TestAWaitNobodyOwnsStaysInEveryReadersQueue(t *testing.T) {
 	t.Parallel()
 
-	unowned := WaitingCustomer{}
-	if !waitingIsMine(unowned, reader()) {
+	unowned := classifyWaiting(WaitingCustomer{}, readInstant)
+	if !ownedByReader(unowned, reader()) {
 		t.Fatal("an unowned customer was dropped from the reader's queue, so nobody sees them")
 	}
 	other := principal.Principal{Type: principal.PrincipalHuman, UserID: theColleague}
-	if !waitingIsMine(unowned, other) {
+	if !ownedByReader(unowned, other) {
 		t.Fatal("an unowned customer reached one reader but not another")
 	}
 }

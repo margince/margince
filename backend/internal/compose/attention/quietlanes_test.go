@@ -17,10 +17,16 @@ import (
 
 type stubAtRisk struct {
 	rows []RiskyDeal
-	err  error
+	// cut says the sweep behind these rows stopped at its bound. Its own field
+	// rather than len(rows) >= some number, because that is exactly the
+	// inference the real lane cannot make: it filters after it scans.
+	cut bool
+	err error
 }
 
-func (s stubAtRisk) Quiet(context.Context) ([]RiskyDeal, error) { return s.rows, s.err }
+func (s stubAtRisk) Quiet(context.Context) ([]RiskyDeal, bool, error) {
+	return s.rows, s.cut, s.err
+}
 
 type stubDecay struct {
 	rows  []QuietRelationship

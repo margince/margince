@@ -384,8 +384,8 @@ func (t teammatesSaying) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bo
 
 // The roster half answers the reader alone, which is what a caller on no team
 // gets from the real reader. These tests are about the yes/no half.
-func (t teammatesSaying) LiveTeammatesOfCaller(context.Context) ([]TeamMember, error) {
-	return []TeamMember{{UserID: ids.UUID{1}, DisplayName: "the reader"}}, nil
+func (t teammatesSaying) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember{{UserID: ids.UUID{1}, DisplayName: "the reader"}}, false, nil
 }
 
 // teammatesFailing is the membership read that could not answer.
@@ -395,6 +395,6 @@ func (teammatesFailing) SharesLiveTeamWithCaller(context.Context, ids.UUID) (boo
 	return false, errors.New("reading team membership")
 }
 
-func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, error) {
-	return nil, errors.New("reading team membership")
+func (teammatesFailing) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return nil, false, errors.New("reading team membership")
 }

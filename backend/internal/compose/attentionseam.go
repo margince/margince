@@ -377,7 +377,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// behind it keeps its own integration test — what is NOT tested is
 		// the seam wiring itself, because nothing wires it.
 		nil,
-		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
+		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},

@@ -32,7 +32,11 @@ type Teammates interface {
 	// of. The two live on ONE interface so a binding cannot supply the yes/no
 	// half without the roster: a board listing a name the other read then
 	// refuses would show a manager a person they cannot open.
-	LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, error)
+	//
+	// The bool reports that the roster was CUT — more teammates exist than the
+	// answer names — so a board can say it is showing part of a team rather
+	// than presenting the cut as the whole of one.
+	LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error)
 }
 
 // TeamMember is one live human seat sharing a live team with the caller.

@@ -57,7 +57,7 @@ func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error)
 		// answering it as an empty team would report that nobody works here.
 		return crmcontracts.TeamBoard{}, apperrors.ErrPermissionDenied
 	}
-	roster, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	roster, rosterCut, err := s.teammates.LiveTeammatesOfCaller(ctx)
 	if err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
@@ -70,7 +70,11 @@ func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error)
 		AsOf:       asOf,
 		Members:    make([]crmcontracts.TeamBoardMember, 0, len(roster)),
 		Unassigned: load.counts[ids.UUID{}],
-		Truncated:  load.truncated,
+		// Either a count read to its bound OR a roster cut at its own: both mean
+		// the board is showing less than there is, and a reader who must not
+		// trust the figures as totals needs one flag rather than the difference
+		// between two ways of falling short.
+		Truncated: load.truncated || rosterCut,
 	}
 	for _, member := range roster {
 		board.Members = append(board.Members, crmcontracts.TeamBoardMember{
@@ -135,7 +139,7 @@ func (s *Service) teamLoad(ctx context.Context, asOf time.Time) (teamCounts, err
 		}
 	}
 	if s.atRisk != nil {
-		risky, err := s.atRisk.Quiet(ctx)
+		risky, cut, err := s.atRisk.Quiet(ctx)
 		if err != nil {
 			return teamCounts{}, err
 		}
@@ -148,10 +152,16 @@ func (s *Service) teamLoad(ctx context.Context, asOf time.Time) (teamCounts, err
 			row.AtRisk++
 			load.counts[owner] = row
 		}
-		// The at-risk lane is read to a bound of its own, so a pipeline with
-		// more risky deals than that bound reports a floor exactly as the
-		// waiting read does.
-		load.truncated = load.truncated || len(risky) >= quietDealBound
+		// The lane's OWN answer, not a count of its rows.
+		//
+		// This source filters after it scans — two bounded sweeps of the deal
+		// list, then a union keeping only what is quiet or overdue — so a lane
+		// returning ten may have read fifty and stopped with more behind it.
+		// Comparing len(risky) against the scan bound therefore fails in the one
+		// direction that must not fail: a truncated scan whose survivors are few
+		// looks exactly like a complete one, and the board would call a floor a
+		// total. The bound belongs to the reader that applied it.
+		load.truncated = load.truncated || cut
 	}
 	return load, nil
 }

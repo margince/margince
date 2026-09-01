@@ -25,7 +25,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // worklistPage is how many ranked items one read carries by default.
@@ -110,11 +109,12 @@ func (s *Service) Worklist(
 	// under the ownership dial this read already resolved, so `mine` narrows
 	// in the store's own query rather than by dropping rows afterwards.
 	leads, leadsErr := reader.owedLeads(ctx)
-	// On the READER, not on s. The narrowing lives on the copy forOwner made,
-	// and projecting from the original left s.taskOwner zero — so keepOwnedBy
-	// never ran and a page headed with a rep's name was never narrowed to them
-	// at all. The lead lane made this visible: its rows are the first that
-	// keepOwnedBy has to keep deliberately rather than by carrying a deal.
+	// The NARROWED service, not the shared one. The narrowing happens twice on
+	// this path — once when the lanes are read, once when the assembled rows are
+	// kept — and both halves read the same taskOwner. Projecting through `s`
+	// left the second half seeing no named owner: it fell through to "mine" and
+	// returned the READER's own day under the named person's heading, which is
+	// the one way this page can be wrong that its reader cannot detect.
 	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
@@ -172,36 +172,27 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf)
-	// A waiting message has no owner of its own, so its ownership is the
-	// ownership of the record it is filed under: a thread about a colleague's
-	// deal is that colleague's to answer. The lane resolves that walk and
-	// carries the owner on the row.
-	//
-	// A caller with no human behind it fails CLOSED under `mine`, exactly as
-	// keepReadersOwn does: no reader, no own work, and a queue that answered
-	// every row would widen a scope named mine.
-	reader, seated := principal.Actor(ctx)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
-	mine := make([]WaitingCustomer, 0, len(waiting))
+	waits := make([]ranked, 0, len(waiting))
 	for _, customer := range waiting {
-		if mineOnly(scope) && (!seated || !waitingIsMine(customer, reader)) {
-			continue
-		}
-		// The unassigned queue is the work that names nobody, and a resolved
-		// owner is what tells that from work whose owner is simply somebody
-		// else. Before the lane carried one this scope had to drop every waiting
-		// row rather than guess; now the unowned customer — the wait most likely
-		// to go unseen — reaches the queue somebody opens to look for exactly
-		// that.
-		if scope == scopeUnassigned && !customer.OwnerID.IsZero() {
-			continue
-		}
-		mine = append(mine, customer)
+		waits = append(waits, classifyWaiting(customer, day.AsOf))
 	}
-	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Since.Before(mine[j].Since) })
-	for i, customer := range mine {
-		row := classifyWaiting(customer, day.AsOf)
+	sort.SliceStable(waits, func(i, j int) bool {
+		return waits[i].occurredAt.Before(waits[j].occurredAt)
+	})
+	// Narrowed BEFORE the crowding mark, through the same filters every other
+	// source is narrowed by. Crowding is a fact about position — the ninth wait
+	// on THIS page — so marking it over rows the scope then removes would demote
+	// a reader's second waiting customer for standing behind seven of a
+	// colleague's.
+	//
+	// One spelling for one rule. This loop used to judge ownership itself, in
+	// terms of the WaitingCustomer rather than the ranked row, which is how the
+	// two ended up disagreeing: a named owner's queue dropped every wait because
+	// the filter below could not see an owner this loop could.
+	waits = narrowToScope(ctx, waits, scope, s.taskOwner)
+	for i, row := range waits {
 		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
 		// be one: its level still says a customer is waiting, because that is
 		// what it is and the summary counts on it. What changes is only where
@@ -238,18 +229,16 @@ func (s *Service) worklistFrom(
 	// lead this queue already shows says nothing the lead row does not.
 	rows = dropEscalationTasksAlreadyOwed(rows)
 
-	switch {
 	// Whose queue this is, applied to the rows the same way the lane applied it
-	// to the query. A deal-bearing row belonging to somebody else is not part
-	// of this person's day, and leaving it in would make a manager's answer to
-	// "show me Lena's queue" quietly include rows that are not hers.
-	case !s.taskOwner.IsZero():
-		rows = keepOwnedBy(rows, s.taskOwner)
-	case mineOnly(scope):
-		rows = keepReadersOwn(ctx, rows)
-	case scope == scopeUnassigned:
-		rows = keepUnowned(rows)
-	}
+	// to the query. A row belonging to somebody else is not part of this
+	// person's day, and leaving it in would make a manager's answer to "show me
+	// Lena's queue" quietly include rows that are not hers.
+	//
+	// The waiting rows above already ran through this — they had to, before
+	// their crowding was decided — and running them through it again keeps
+	// nothing new: each filter is a per-row test, so a row it kept once it keeps
+	// again.
+	rows = narrowToScope(ctx, rows, scope, s.taskOwner)
 	// The lead read's own bound, which boundedSources cannot see: it reads
 	// beside the assembled day rather than as one of its lanes, so the figure
 	// travels with the rows.
