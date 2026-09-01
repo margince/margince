@@ -74,9 +74,15 @@ type WaitingReply struct {
 	OwnerID ids.UUID
 }
 
-// waitingScanCap bounds the work one read does. Beyond this the answer is
+// WaitingScanCap bounds the work one read does. Beyond this the answer is
 // "there are more", never a silent truncation reported as a total.
-const waitingScanCap = 200
+//
+// Exported because the caller has to compare against it. The seam filters what
+// this read returns — machine senders out, duplicate threads folded — so only a
+// comparison against the ROWS THIS RETURNED can tell a truncated scan from a
+// complete one, and the number doing the comparing has to be this one rather
+// than a copy that can drift from it.
+const WaitingScanCap = 200
 
 // waitingHorizonDays is how far back a wait can reach and still be work.
 //
@@ -189,22 +195,37 @@ const waitingRepliesSQL = `
 	       --
 	       -- COALESCE over four aggregates rather than four correlated
 	       -- subqueries: the links are already joined and grouped here, so this
-	       -- costs the group it is already paying for. Each arm picks the first
-	       -- by text order for the same reason the record ids above do — one
-	       -- message filed under two owned deals must attribute to the same
-	       -- person on every read, or the board's numbers move on their own.
+	       -- costs the group it is already paying for.
+	       --
+	       -- ORDERED BY THE RECORD's id, not by the owner's, and that is the
+	       -- whole correctness of it. A message may be filed under two deals —
+	       -- uq_activity_link is keyed on (activity, type, id), so a second deal
+	       -- link is a legal row — and ordering by owner_id picks the smallest
+	       -- OWNER across both. That owner need not own the deal this same query
+	       -- reports: the row would name deal D1 and bill its wait to the person
+	       -- who owns D2. Ordering by the record id makes each arm walk its links
+	       -- in the SAME order the record ids above are picked in.
+	       --
+	       -- The unowned links are skipped rather than ending the walk, so a
+	       -- message on an unowned deal and an owned one is answered by the owner
+	       -- who exists. That is deliberately not the same pick as DealID, which
+	       -- names the first deal owned or not: the two answer different
+	       -- questions — what is this about, and who owes the reply — and the
+	       -- struct's own comment says they may differ. What they may NOT do is
+	       -- name an owner of some third record, which is what ordering by owner
+	       -- id allowed.
 	       --
 	       -- Every arm reads through wl, the VISIBILITY-GATED link join. An
 	       -- owner off an ungated join would name who owns a record this reader
 	       -- may not open.
 	       COALESCE(
-	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.owner_id::text)
+	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.id::text)
 	          FILTER (WHERE ownerDeal.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.owner_id::text)
+	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.id::text)
 	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerPerson.owner_id ORDER BY ownerPerson.owner_id::text)
+	         (array_agg(ownerPerson.owner_id ORDER BY ownerPerson.id::text)
 	          FILTER (WHERE ownerPerson.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerOrg.owner_id ORDER BY ownerOrg.owner_id::text)
+	         (array_agg(ownerOrg.owner_id ORDER BY ownerOrg.id::text)
 	          FILTER (WHERE ownerOrg.owner_id IS NOT NULL))[1],
 	         '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
@@ -410,7 +431,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		// job has set nothing aside.
 		reader := arg(readerOrNobody(ctx))
 		rows, err := tx.Query(ctx,
-			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingScanCap,
+			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				waitingHorizonDays,
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),

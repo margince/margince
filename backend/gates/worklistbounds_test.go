@@ -43,12 +43,6 @@ func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
 			ownerDecl: `decayCandidateCap\s*=\s*(\d+)`,
 			copyDecl:  `decayBound\s*=\s*(\d+)`,
 		},
-		{
-			name:      "waiting customers",
-			ownerFile: "internal/modules/activities/waiting.go",
-			ownerDecl: `waitingScanCap\s*=\s*(\d+)`,
-			copyDecl:  `waitingReadBound\s*=\s*(\d+)`,
-		},
 	}
 	copies := read(t, "internal/compose/attention/worklist.go")
 	for _, mirror := range mirrors {

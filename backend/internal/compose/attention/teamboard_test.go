@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,10 +32,17 @@ func (r roster) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, erro
 }
 
 // waitingSaying is the who-is-waiting lane over a fixed list.
-type waitingSaying []WaitingCustomer
+type waitingSaying struct {
+	rows []WaitingCustomer
+	// cut says the SCAN behind these rows stopped at its bound. Its own field
+	// rather than len(rows) >= some number, because that is exactly the
+	// inference the real lane cannot make: it filters after it scans, so the
+	// rows it returns are fewer than the rows it read.
+	cut bool
+}
 
-func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer, error) {
-	return []WaitingCustomer(w), nil
+func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+	return w.rows, w.cut, nil
 }
 
 // overdueSaying is the counting reader over a fixed tally.
@@ -98,9 +106,9 @@ func TestEachTeammatesWorkLandsInTheirOwnRow(t *testing.T) {
 		TeamMember{UserID: theReader, DisplayName: "Aa Reader"},
 		TeamMember{UserID: theColleague, DisplayName: "Bb Colleague"},
 	)
-	svc.waiting = waitingSaying{
+	svc.waiting = waitingSaying{rows: []WaitingCustomer{
 		{OwnerID: theColleague}, {OwnerID: theColleague}, {OwnerID: theReader},
-	}
+	}}
 	svc.overdueLoad = overdueSaying{theColleague: 4}
 	colleague := theColleague
 	svc.atRisk = stubAtRisk{rows: []RiskyDeal{{OwnerID: &colleague}}}
@@ -142,7 +150,7 @@ func TestWorkNobodyOwnsIsReportedRatherThanDropped(t *testing.T) {
 	t.Parallel()
 
 	svc := boardService(TeamMember{UserID: theReader, DisplayName: "the reader"})
-	svc.waiting = waitingSaying{{}, {}}
+	svc.waiting = waitingSaying{rows: []WaitingCustomer{{}, {}}}
 	svc.overdueLoad = overdueSaying{{}: 3}
 	svc.atRisk = stubAtRisk{rows: []RiskyDeal{{OwnerID: nil}}}
 
@@ -176,26 +184,28 @@ func TestWorkNobodyOwnsIsReportedRatherThanDropped(t *testing.T) {
 func TestACountReadToItsBoundIsReportedAsAFloor(t *testing.T) {
 	t.Parallel()
 
-	full := make(waitingSaying, waitingReadBound)
+	// ONE row, and the lane saying its scan was cut. That pairing is the whole
+	// case: the seam drops machine senders and folds duplicate threads after the
+	// SQL cap, so a scan that read two hundred can return one — and a board that
+	// inferred truncation from the row count would call this a complete answer.
 	svc := boardService(TeamMember{UserID: theReader, DisplayName: "the reader"})
-	svc.waiting = full
+	svc.waiting = waitingSaying{rows: []WaitingCustomer{{OwnerID: theReader}}, cut: true}
 
 	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
 	if err != nil {
 		t.Fatalf("the board refused a team-scoped reader: %v", err)
 	}
 	if !board.Truncated {
-		t.Fatal("the waiting lane came back exactly full and the board called its count a total")
+		t.Fatal("the waiting scan stopped at its bound and the board called its count a total")
 	}
 
-	short := make(waitingSaying, waitingReadBound-1)
-	svc.waiting = short
+	svc.waiting = waitingSaying{rows: []WaitingCustomer{{OwnerID: theReader}}, cut: false}
 	board, err = svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
 	if err != nil {
 		t.Fatalf("the board refused a team-scoped reader: %v", err)
 	}
 	if board.Truncated {
-		t.Fatal("a lane that came back short of its bound was reported as truncated")
+		t.Fatal("a complete waiting scan was reported as truncated")
 	}
 }
 
@@ -298,5 +308,63 @@ func TestAnUnboundMembershipReaderRefusesRatherThanDrawingAnEmptyTeam(t *testing
 	svc := &Service{now: func() time.Time { return boardInstant }}
 	if _, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam)); err == nil {
 		t.Fatal("a board with no membership reader drew an empty team instead of refusing")
+	}
+}
+
+// The team scope keeps the team's rows and nobody else's.
+//
+// It used to narrow NOTHING, and the gap is not theoretical: the task lane's
+// gate is a link walk, and auth.ActivityDiscoverClause coalesces the empty link
+// set to TRUE, so a task carrying no record link is discoverable by everyone in
+// the installation. A team-scoped reader asking for `team` was handed exactly
+// those rows under a heading that says "my team" — while resolveOwner refuses to
+// open that same person's queue by name.
+func TestTheTeamScopeKeepsTheTeamsRowsAndNobodyElses(t *testing.T) {
+	t.Parallel()
+
+	outsider := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
+	svc := &Service{
+		teammates: roster{
+			{UserID: theReader, DisplayName: "the reader"},
+			{UserID: theColleague, DisplayName: "a teammate"},
+		},
+		now: func() time.Time { return boardInstant },
+	}
+	rows := []ranked{
+		{item: crmcontracts.WorklistItem{Id: "mine"}, owner: theReader},
+		{item: crmcontracts.WorklistItem{Id: "teammate"}, owner: theColleague},
+		{item: crmcontracts.WorklistItem{Id: "outsider"}, owner: outsider},
+		{item: crmcontracts.WorklistItem{Id: "nobody"}},
+	}
+
+	kept := map[string]bool{}
+	for _, row := range svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{}) {
+		kept[row.item.Id] = true
+	}
+	if !kept["mine"] || !kept["teammate"] {
+		t.Errorf("the team scope dropped the reader's own or their teammate's row: %v", kept)
+	}
+	if kept["outsider"] {
+		t.Error("a colleague on no team of the reader's arrived on the team queue — the " +
+			"same person resolveOwner refuses to open by name")
+	}
+	if !kept["nobody"] {
+		t.Error("work naming nobody was dropped from the team queue, which is the only " +
+			"wider scope most readers hold")
+	}
+}
+
+// Without the membership reader the team scope answers NOTHING.
+//
+// The same fail-closed rule resolveOwner keeps for its own nil case: a scope
+// named `team` that handed back every row it had read would be widening rather
+// than narrowing, which is a security hole wearing the shape of a missing lane.
+func TestTheTeamScopeFailsClosedWithoutTheMembershipReader(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{now: func() time.Time { return boardInstant }}
+	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "somebody's"}, owner: theColleague}}
+	if got := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("the team scope answered %d rows with no membership reader bound", len(got))
 	}
 }

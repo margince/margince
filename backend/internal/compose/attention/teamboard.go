@@ -116,7 +116,7 @@ func (s *Service) teamLoad(ctx context.Context, asOf time.Time) (teamCounts, err
 		// a second query would drift from the page it summarises the first time
 		// either changed — a manager reads eleven, the rep opens their day and
 		// sees nine, and nothing says which is right.
-		waiting, err := s.waiting.Unanswered(ctx, asOf)
+		waiting, cut, err := s.waiting.Unanswered(ctx, asOf)
 		if err != nil {
 			return teamCounts{}, err
 		}
@@ -125,7 +125,14 @@ func (s *Service) teamLoad(ctx context.Context, asOf time.Time) (teamCounts, err
 			row.Waiting++
 			load.counts[customer.OwnerID] = row
 		}
-		load.truncated = load.truncated || len(waiting) >= waitingReadBound
+		// The lane's OWN answer, as the at-risk source's is, and for the same
+		// reason: this lane filters after it scans. The seam drops machine
+		// senders and folds duplicate threads out of what SQL returned, so a
+		// hundred and eighty rows can be the survivors of a full two hundred —
+		// and a hundred and eighty is what a smaller, complete installation
+		// returns too. Comparing the count against the bound therefore read a
+		// truncated scan as a total.
+		load.truncated = load.truncated || cut
 	}
 	if s.overdueLoad != nil {
 		overdue, err := s.overdueLoad.OverduePerAssignee(ctx, asOf)

@@ -17,6 +17,9 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,8 +42,8 @@ func managerReading() context.Context {
 // waitingOwnedBy is the who-is-waiting lane over rows attributed to two people.
 type waitingOwnedBy []WaitingCustomer
 
-func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustomer, error) {
-	return []WaitingCustomer(w), nil
+func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+	return []WaitingCustomer(w), false, nil
 }
 
 // Opening a named person's queue keeps THEIR waiting customers and drops the
@@ -85,5 +88,43 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 	if titles["the manager's own customer"] {
 		t.Error("the reader's OWN waiting customer arrived on a page headed with " +
 			"somebody else's name — the projection narrowed against the wrong person")
+	}
+}
+
+// The two narrowing passes keep the SAME rows.
+//
+// A waiting row is narrowed twice: once before its crowding is decided, once
+// with the whole assembled page. Between them dropDealsAlreadyWaiting absorbs a
+// drifting deal INTO the waiting row and attaches that deal's facts to it — so
+// the evidence the filter reads changes under it.
+//
+// While the deal was asked first, the two passes could answer differently. A
+// deal reassigned between the at-risk read and the waiting read gave the row a
+// lane owner of Bob and an attached deal owned by Alice: Bob's queue kept it on
+// the first pass and dropped it on the second, Alice's dropped it on the first,
+// and the waiting customer appeared on nobody's queue with nothing to say so.
+func TestBothNarrowingPassesKeepTheSameWaitingRow(t *testing.T) {
+	t.Parallel()
+
+	alice := openapi_types.UUID(theManager)
+	// The row as it stands AFTER the absorption: the lane resolved theRep, and
+	// the deal it absorbed is owned by somebody else.
+	absorbed := ranked{
+		item: crmcontracts.WorklistItem{
+			Id:     "wait-1",
+			Source: sourceWaiting,
+			Deal:   &crmcontracts.WorklistDealFacts{OwnerId: &alice},
+		},
+		owner: theRep,
+	}
+
+	reader := principal.Principal{Type: principal.PrincipalHuman, UserID: theRep}
+	if !ownedByReader(absorbed, reader) {
+		t.Fatal("the second pass judged the wait against the absorbed deal's owner rather " +
+			"than the owner its own lane resolved — the row is kept once and dropped once")
+	}
+	if got := keepOwnedBy([]ranked{absorbed}, theRep); len(got) != 1 {
+		t.Fatal("a named owner's queue dropped their own waiting customer because the row " +
+			"had absorbed a deal belonging to somebody else")
 	}
 }

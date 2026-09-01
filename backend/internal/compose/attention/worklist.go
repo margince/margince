@@ -137,14 +137,14 @@ func (s *Service) Worklist(
 // which part it could not read.
 func (s *Service) waitingCustomers(
 	ctx context.Context, asOf time.Time,
-) ([]WaitingCustomer, *crmcontracts.WorklistSourceUnavailable) {
+) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
 	if s.waiting == nil {
-		return nil, nil
+		return waitingRead{}, nil
 	}
-	rows, err := s.waiting.Unanswered(ctx, asOf)
+	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return nil, &crmcontracts.WorklistSourceUnavailable{
+		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
@@ -153,17 +153,31 @@ func (s *Service) waitingCustomers(
 		// on — which is how this one went a whole verification round without
 		// anybody being able to say what broke.
 		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
-		return nil, &crmcontracts.WorklistSourceUnavailable{
+		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	default:
-		return rows, nil
+		return waitingRead{rows: rows, read: true, cut: cut}, nil
 	}
+}
+
+// waitingRead is what the who-is-waiting source answered, and whether it ran.
+//
+// `read` tells an empty answer from an absent lane, the way the lead read's own
+// wrapper does: reach publishes a row for every source it is told about, so
+// recording a source that never ran would report it as successfully read and
+// empty. `cut` is the lane's own scan depth, which the row count cannot
+// recover — the seam drops machine senders and folds duplicate threads AFTER
+// the SQL cap, so a short answer is what a truncated scan looks like.
+type waitingRead struct {
+	rows []WaitingCustomer
+	read bool
+	cut  bool
 }
 
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting []WaitingCustomer, leads leadRead,
+	waiting waitingRead, leads leadRead,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -174,8 +188,8 @@ func (s *Service) worklistFrom(
 	rows := classifyDay(day, day.AsOf)
 	// Longest wait first, so the few that LEAD are the ones most likely to have
 	// been forgotten rather than whichever the database returned first.
-	waits := make([]ranked, 0, len(waiting))
-	for _, customer := range waiting {
+	waits := make([]ranked, 0, len(waiting.rows))
+	for _, customer := range waiting.rows {
 		waits = append(waits, classifyWaiting(customer, day.AsOf))
 	}
 	sort.SliceStable(waits, func(i, j int) bool {
@@ -191,7 +205,7 @@ func (s *Service) worklistFrom(
 	// terms of the WaitingCustomer rather than the ranked row, which is how the
 	// two ended up disagreeing: a named owner's queue dropped every wait because
 	// the filter below could not see an owner this loop could.
-	waits = narrowToScope(ctx, waits, scope, s.taskOwner)
+	waits = s.narrowToScope(ctx, waits, scope, s.taskOwner)
 	for i, row := range waits {
 		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
 		// be one: its level still says a customer is waiting, because that is
@@ -238,7 +252,7 @@ func (s *Service) worklistFrom(
 	// their crowding was decided — and running them through it again keeps
 	// nothing new: each filter is a per-row test, so a row it kept once it keeps
 	// again.
-	rows = narrowToScope(ctx, rows, scope, s.taskOwner)
+	rows = s.narrowToScope(ctx, rows, scope, s.taskOwner)
 	// The lead read's own bound, which boundedSources cannot see: it reads
 	// beside the assembled day rather than as one of its lanes, so the figure
 	// travels with the rows.
@@ -250,6 +264,13 @@ func (s *Service) worklistFrom(
 	// make.
 	if leads.read {
 		bounded[sourceLeadResponse] = leads.bounded()
+	}
+	// The same rule for the who-is-waiting source, and for the same reason it
+	// needed one: it is read beside the assembled day rather than as one of its
+	// lanes, so boundedSources never saw it and the page reported it complete
+	// however deep the scan had gone.
+	if waiting.read {
+		bounded[sourceWaiting] = waiting.cut
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
@@ -316,17 +337,20 @@ func (s *Service) worklistFrom(
 // failing row to notice — which is why every lane with a bound appears here and
 // `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
 // The bounds of the lanes whose limit lives behind their seam, where this
-// package cannot reach it. They are MIRRORS: `compose.slippingScanLimit`,
-// `compose.decayCandidateCap` and `activities.waitingScanCap` are the real
-// numbers, and `backend/gates/worklistbounds_test.go` fails in both directions
-// when either side moves, because a mirror nobody checks is a wrong number
-// waiting.
+// package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
+// `compose.decayCandidateCap` are the real numbers, and
+// `backend/gates/worklistbounds_test.go` fails in both directions when either
+// side moves, because a mirror nobody checks is a wrong number waiting.
+//
+// The waiting source held a third mirror and no longer does. A mirror exists to
+// be compared against a ROW COUNT, and for that source the row count is the
+// wrong evidence: its seam filters after the scan, so the survivors are fewer
+// than what was read and a short answer is what truncation looks like. The lane
+// reports its own scan depth instead, which is the shape any source that
+// filters after it scans needs.
 const (
 	quietDealBound = 50
 	decayBound     = 40
-	// waitingReadBound is read by the team board, which reports a count as a
-	// floor when the lane came back exactly full.
-	waitingReadBound = 200
 )
 
 func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {

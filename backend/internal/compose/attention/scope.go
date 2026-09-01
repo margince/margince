@@ -301,7 +301,9 @@ func keepUnowned(rows []ranked) []ranked {
 // A named owner outranks the scope word: "their queue" is the narrower question,
 // and answering the wider one would hand back a page that looks like the rep's
 // day and is not.
-func narrowToScope(ctx context.Context, rows []ranked, scope string, owner ids.UUID) []ranked {
+func (s *Service) narrowToScope(
+	ctx context.Context, rows []ranked, scope string, owner ids.UUID,
+) []ranked {
 	switch {
 	case !owner.IsZero():
 		return keepOwnedBy(rows, owner)
@@ -309,9 +311,56 @@ func narrowToScope(ctx context.Context, rows []ranked, scope string, owner ids.U
 		return keepReadersOwn(ctx, rows)
 	case scope == scopeUnassigned:
 		return keepUnowned(rows)
+	case scope == scopeTeam:
+		return s.keepTeams(ctx, rows)
 	default:
+		// `all`, which narrows nothing: the reader reaches every row by tier,
+		// and every row here was already read under that tier.
 		return rows
 	}
+}
+
+// keepTeams keeps the rows belonging to the reader's own team.
+//
+// `team` used to narrow NOTHING, and the gap was not academic. The row-scope
+// gate narrows the deal-bearing rows correctly, but the task lane's gate is a
+// link walk and auth.ActivityDiscoverClause coalesces the empty link set to
+// TRUE — so a task carrying no record link is discoverable by anyone in the
+// installation. A team-scoped reader asking for `team` was handed exactly those
+// rows, belonging to colleagues on no team of theirs, under a heading that says
+// "my team". resolveOwner refuses to open that same person's queue by name,
+// so the page contradicted the door beside it.
+//
+// Membership is asked ONCE for the page rather than per row: the roster is a
+// fact about the reader, and asking per row would be a query per task.
+//
+// It fails CLOSED. Without the membership reader there is no team to answer
+// for, and a queue that handed back every row it had read would be widening a
+// scope named `team` — the failure resolveOwner's own nil case exists to
+// prevent.
+func (s *Service) keepTeams(ctx context.Context, rows []ranked) []ranked {
+	if s.teammates == nil {
+		return nil
+	}
+	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	if err != nil {
+		return nil
+	}
+	team := make(map[ids.UUID]bool, len(roster))
+	for _, member := range roster {
+		team[member.UserID] = true
+	}
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		named, ok := answersTo(row)
+		// A row naming nobody stays. Unowned work is the team's as much as
+		// anybody's, and dropping it here would hide it from the only wider
+		// scope most readers hold.
+		if !ok || team[named] {
+			kept = append(kept, row)
+		}
+	}
+	return kept
 }
 
 // answersTo is WHO a row belongs to, and whether anybody does.
@@ -329,14 +378,28 @@ func narrowToScope(ctx context.Context, rows []ranked, scope string, owner ids.U
 // Two carriers, because the two kinds of row need different things. A
 // deal-bearing row carries its owner ON THE WIRE, where the client draws it;
 // everything else that has an owner carries it beside the item, where only these
-// filters read it. The deal is asked first — a row with both is a row about that
-// deal, and the deal's owner is the one the client is already showing.
+// filters read it.
+//
+// THE LANE'S OWN ANSWER WINS, and the order is the correctness of it rather than
+// a preference. This runs twice over a waiting row — once before its crowding is
+// decided, once with the whole page — and between the two passes
+// dropDealsAlreadyWaiting ATTACHES a deal to it, so the row's evidence changes
+// under the filter. Asking the deal first meant the two passes could answer
+// differently: a wait kept as its owner's on the first pass was judged against
+// the absorbed deal's owner on the second, and when the two disagreed — a deal
+// reassigned between the at-risk read and the waiting read — the customer landed
+// on neither person's queue and nothing said so.
+//
+// The lane's answer is also the better one. It resolved ownership from the
+// record the thread is actually filed under; the attached deal arrived because
+// the row absorbed a drifting deal's facts for DISPLAY, which is a different
+// question from who owes the reply.
 func answersTo(row ranked) (ids.UUID, bool) {
-	if row.item.Deal != nil && row.item.Deal.OwnerId != nil {
-		return ids.UUID(*row.item.Deal.OwnerId), true
-	}
 	if !row.owner.IsZero() {
 		return row.owner, true
+	}
+	if row.item.Deal != nil && row.item.Deal.OwnerId != nil {
+		return ids.UUID(*row.item.Deal.OwnerId), true
 	}
 	return ids.UUID{}, false
 }

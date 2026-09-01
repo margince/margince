@@ -178,7 +178,10 @@ func TestADealOnTheThreadOutranksThePersonOnIt(t *testing.T) {
 	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
-	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, 'Standard')`, pipeline)
+	// Named for its own id: pipeline_name_unique is installation-wide and the
+	// lane template is shared across this package, so a fixed name collides with
+	// whatever another test in this file seeded first.
+	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, organization_id, pipeline_id, stage_id, source, captured_by)
@@ -253,5 +256,62 @@ func TestOverdueTasksAreCountedPerAssignee(t *testing.T) {
 	}
 	if _, counted := per[e.rep]; counted {
 		t.Error("the reader was credited with overdue tasks they were never assigned")
+	}
+}
+
+// The owner named is the owner OF the record named, not the smallest owner id
+// among the links.
+//
+// A message may be filed under two deals — uq_activity_link keys on (activity,
+// type, id), so a second deal link is a legal row. The record id and the owner
+// were picked by two independent orderings, so a message could report deal D1
+// and bill its wait to whoever owned D2. Both figures are real people and real
+// deals, the row count is unchanged, and nothing but this says which pairing is
+// right.
+//
+// The fixture pins the two orderings AGAINST each other: the deal that sorts
+// first is owned by the user that sorts second. Order by owner and the answer is
+// the other rep; order by the record and it is this one.
+func TestAWaitNamesTheOwnerOfTheRecordItNames(t *testing.T) {
+	e := setupLoad(t)
+	pipeline, stage := ids.NewV7(), ids.NewV7()
+	// Named for its own id: pipeline_name_unique is installation-wide and the
+	// lane template is shared across this package, so a fixed name collides with
+	// whatever another test in this file seeded first.
+	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
+	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
+		stage, pipeline)
+
+	// Two owners, told apart by how their ids sort.
+	firstOwner, secondOwner := e.rep, e.other
+	if secondOwner.String() < firstOwner.String() {
+		firstOwner, secondOwner = secondOwner, firstOwner
+	}
+	// Two deals, likewise — and the FIRST deal goes to the SECOND owner, which
+	// is what makes the two orderings disagree.
+	firstDeal, secondDeal := ids.NewV7(), ids.NewV7()
+	if secondDeal.String() < firstDeal.String() {
+		firstDeal, secondDeal = secondDeal, firstDeal
+	}
+	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
+		VALUES ($1, 'First by id', 'open', $2, $3, $4, 'seed', 'system')`,
+		firstDeal, secondOwner, pipeline, stage)
+	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
+		VALUES ($1, 'Second by id', 'open', $2, $3, $4, 'seed', 'system')`,
+		secondDeal, firstOwner, pipeline, stage)
+
+	activity := e.seedWait(t, "Which deal is this about", "deal_id", firstDeal)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), activity, secondDeal)
+
+	got := e.waitFor(t, activity)
+	if got.DealID != firstDeal {
+		t.Fatalf("the row named deal %v, wanted the first by id %v — the fixture no longer "+
+			"pins the two orderings against each other", got.DealID, firstDeal)
+	}
+	if got.OwnerID != secondOwner {
+		t.Fatalf("the wait named deal %v but was billed to %v, who owns the OTHER deal on "+
+			"this thread — the owner must be the owner of the record named, which is %v",
+			got.DealID, got.OwnerID, secondOwner)
 	}
 }

@@ -254,11 +254,20 @@ type attentionWaiting struct {
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
-func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]attention.WaitingCustomer, error) {
+func (w attentionWaiting) Unanswered(
+	ctx context.Context, asOf time.Time,
+) ([]attention.WaitingCustomer, bool, error) {
 	rows, err := w.store.WaitingReplies(ctx, asOf)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	// Asked of what the STORE returned, before keepWaitingCustomers runs.
+	//
+	// That filter drops machine senders and folds duplicate threads, so what it
+	// returns is smaller than what was read — and a caller comparing the
+	// SURVIVORS against the scan bound would read a full scan whose survivors
+	// are few as a complete one. This is the only place both numbers exist.
+	cut := len(rows) >= activities.WaitingScanCap
 	out := make([]attention.WaitingCustomer, 0, len(rows))
 	for _, row := range keepWaitingCustomers(rows) {
 		out = append(out, attention.WaitingCustomer{
@@ -272,7 +281,7 @@ func (w attentionWaiting) Unanswered(ctx context.Context, asOf time.Time) ([]att
 			OwnerID:        row.OwnerID,
 		})
 	}
-	return out, nil
+	return out, cut, nil
 }
 
 // keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
