@@ -14,6 +14,13 @@ export type WorklistValue = components["schemas"]["WorklistValue"];
 export type WorklistScope = Worklist["scope"];
 export type WorklistFilter = NonNullable<Worklist["filter"]>;
 export type WorklistCategory = WorklistItem["category"];
+// The ways a row can be put down, derived from the item rather than spelled
+// again: the contract declares them inline, and a hand-written union would go
+// stale the moment the server gained a fourth — silently, because nothing
+// compares the two.
+export type WorklistDisposition = NonNullable<
+  WorklistItem["dispositions"]
+>[number];
 
 export const worklistKey = ["worklist"] as const;
 
@@ -126,6 +133,71 @@ export function useApproval(id: string, enabled: boolean) {
         throwProblem(error);
       }
       return data;
+    },
+  });
+}
+
+// Put a waiting message down, or pick it back up.
+//
+// The Worklist claims to be finite: work it and it empties. A message the rep
+// has already judged had no way to leave, so it returned every morning and the
+// count above it stayed wrong.
+//
+// The queue is invalidated rather than edited in place, for the reason the
+// reassign mutation states: the rank numbers and the summary above them are the
+// server's, and a row removed locally leaves both describing a page that is no
+// longer on screen.
+export function useSetDisposition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      activityId: string;
+      disposition: WorklistDisposition;
+      snoozedUntil?: string;
+    }) => {
+      const { error } = await api.PUT("/activities/{id}/disposition", {
+        params: { path: { id: input.activityId } },
+        body: {
+          disposition: input.disposition,
+          // Only a snooze names a moment. Sending one on the others is a 422,
+          // because a hand-off that expires on a Thursday is not a hand-off.
+          ...(input.snoozedUntil ? { snoozed_until: input.snoozedUntil } : {}),
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: worklistKey });
+    },
+  });
+}
+
+// The undo behind every set-aside verb.
+//
+// `scope` decides the REACH of the undo, and the default is deliberately the
+// narrow one: clearing your own snooze must not also re-admit a thread a
+// colleague ruled out for the whole workspace.
+export function useClearDisposition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      activityId: string;
+      scope: "mine" | "thread";
+    }) => {
+      const { error } = await api.DELETE("/activities/{id}/disposition", {
+        params: {
+          path: { id: input.activityId },
+          query: { scope: input.scope },
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }

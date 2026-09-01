@@ -19,7 +19,7 @@ import {
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
-import { categoryNames } from "./provider-categories";
+import { categoryNames, categoryNamesTogether } from "./provider-categories";
 import {
   canEnrichNow,
   profileLabel,
@@ -330,7 +330,7 @@ function BuyPriced({
           }
         >
           {plural("provider.profile.buy", creditsOf(entry), {
-            category: categoryNames(boughtWith(entry), t),
+            category: categoryNamesTogether(boughtWith(entry), t, locale),
             credits: formatNumber(creditsOf(entry), locale),
           })}
         </Button>
@@ -349,7 +349,16 @@ function BuyPriced({
  *  now; this is what stops the button making it.
  *
  *  `entry.cost` is already the price of the pair, so the figure beside this
- *  needs no adjusting — the two are derived from one descriptor rule. */
+ *  needs no adjusting: the server prices a category together with the one it
+ *  requires (`pricedWith`, backend/internal/modules/integrations/store.go),
+ *  so cost and request are derived from one descriptor rule. Held by
+ *  TestAPricedCategoryCarriesItsPrerequisitesPrice
+ *  (backend/internal/modules/integrations/catalog_test.go), which fails if a
+ *  catalog entry ever quotes a lone price for a paired purchase.
+ *
+ *  The button names both, joined by the locale's conjunction rather than a
+ *  comma — a comma reads as a list to pick from, and a rep who read one as the
+ *  work-email button bought a mobile number he had not asked for. */
 function boughtWith(
   entry: components["schemas"]["ProviderCategoryCost"],
 ): string[] {

@@ -190,6 +190,7 @@ var momentLadder = []func(time.Time, *crmcontracts.Person360) (crmcontracts.Pers
 	reEngagedMoment,        // 2. new inbound after a material quiet period
 	overduePromiseMoment,   // 4. an open commitment of ours is overdue
 	goneQuietMoment,        // 5. outbound unanswered past the configured rule
+	openPromiseMoment,      // 5b. an open task we owe them, dated or not
 	roleChangeMoment,       // 6. a new deal role or material relationship change
 	missingNextStepMoment,  // 8. an open deal with no next step involving them
 	thinRelationshipMoment, // 9. no captured interaction or network
@@ -204,6 +205,7 @@ var momentLadderNames = []string{
 	"re_engaged",
 	"overdue_promise",
 	"gone_quiet",
+	"open_promise",
 	"role_change",
 	"missing_next_step",
 	"thin_relationship",
