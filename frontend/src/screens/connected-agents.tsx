@@ -9,7 +9,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { ScopeChips } from "../design-system/passportselect";
+import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -340,7 +340,9 @@ function ConnectionFacts({
         {deadline && <span>{deadline}</span>}
       </span>
       <span className="agents-scopes">
-        <ScopeChips scopes={passport.scopes} />
+        <ScopeChips
+          labels={passport.scopes.map((scope) => scopeChipLabel(t, scope))}
+        />
       </span>
     </>
   );

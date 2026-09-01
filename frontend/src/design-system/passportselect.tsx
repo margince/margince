@@ -15,25 +15,34 @@ export type PassportOption = {
   scopes: string[];
 };
 
-// A scope chip row: every chip a scope the passport carries. There is no
-// "granted versus not" distinction to draw — a connection's scopes are exactly
-// what its consent screen was ticked for, and the tool console lists a whole
-// passport's scopes — so a chip means one thing on both surfaces.
-export function ScopeChips({ scopes }: Readonly<{ scopes: string[] }>) {
-  const t = useT();
+// scopeChipLabel resolves one scope token to the words a reader sees,
+// falling back to the raw token when the catalogue has no entry — an
+// unrecognized chip is a sign the vocabulary grew, not a reason to hide
+// what was granted. Exported so every caller of ScopeChips translates the
+// same way, rather than each re-deriving the fallback rule: the design
+// system lays chips out, but copy is authored where every other label on
+// these screens is (PassportOption.label above is the same convention).
+export function scopeChipLabel(
+  t: ReturnType<typeof useT>,
+  scope: string,
+): string {
+  const key = `passport.scope.${scope}`;
+  return isMessageKey(key) ? t(key) : scope;
+}
+
+// A scope chip row: every chip a scope the passport carries, already
+// resolved to its display label by the caller. There is no "granted versus
+// not" distinction to draw — the tool console lists a whole passport's
+// scopes and a connection's own summary is scoped the same way — so a chip
+// means one thing on both surfaces.
+export function ScopeChips({ labels }: Readonly<{ labels: string[] }>) {
   return (
     <>
-      {scopes.map((scope) => {
-        const key = `passport.scope.${scope}`;
-        return (
-          <span key={scope} className="badge">
-            {/* A scope the catalogue has no entry for still renders — as the
-                raw token — rather than vanish: an unrecognized chip is a sign
-                the vocabulary grew, not a reason to hide what was granted. */}
-            {isMessageKey(key) ? t(key) : scope}
-          </span>
-        );
-      })}
+      {labels.map((label) => (
+        <span key={label} className="badge">
+          {label}
+        </span>
+      ))}
     </>
   );
 }

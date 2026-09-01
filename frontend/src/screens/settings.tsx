@@ -63,7 +63,11 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
-import { PassportSelect, ScopeChips } from "../design-system/passportselect";
+import {
+  PassportSelect,
+  ScopeChips,
+  scopeChipLabel,
+} from "../design-system/passportselect";
 import { FieldGuard, RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -1732,7 +1736,9 @@ function PassportRow({
                 mint) — masked reads as "withheld", not absent. */}
             <span className="t-label">{t("settings.token")}</span>
             <FieldGuard mode="masked" />
-            <ScopeChips scopes={passport.scopes} />
+            <ScopeChips
+              labels={passport.scopes.map((scope) => scopeChipLabel(t, scope))}
+            />
           </span>
         }
         control={

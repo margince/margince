@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { PassportSelect, ScopeChips } from "./passportselect";
+import { PassportSelect, ScopeChips, scopeChipLabel } from "./passportselect";
 import { pickOption } from "./select-testing";
 
 // PassportSelect and ScopeChips are the extracted shapes the tool console's
@@ -52,21 +52,31 @@ describe("PassportSelect", () => {
 });
 
 describe("ScopeChips", () => {
-  it("renders every scope as one chip, localized, all reading the same", () => {
-    render(<ScopeChips scopes={["read", "write"]} />);
+  it("renders every label as one chip, all reading the same", () => {
+    render(<ScopeChips labels={["Read records", "Change records"]} />);
     const read = screen.getByText("Read records");
     const write = screen.getByText("Change records");
-    // Each chip is the catalogue's word for its scope, with nothing appended:
-    // a connection's scopes are exactly what the human ticked, so no chip is
-    // qualified as withheld, and neither chip may read as weaker than the
-    // other.
+    // Each chip is exactly the label its caller passed, with nothing
+    // appended: a connection's scopes are exactly what the human ticked, so
+    // no chip is qualified as withheld, and neither chip may read as weaker
+    // than the other.
     expect(read.textContent).toBe("Read records");
     expect(write.textContent).toBe("Change records");
     expect(write.className).toBe(read.className);
   });
+});
+
+describe("scopeChipLabel", () => {
+  const t = ((key: string) =>
+    key === "passport.scope.read"
+      ? "Read records"
+      : key) as unknown as Parameters<typeof scopeChipLabel>[0];
+
+  it("resolves a known scope to the catalogue's word", () => {
+    expect(scopeChipLabel(t, "read")).toBe("Read records");
+  });
 
   it("falls back to the raw token for a scope the catalogue has no word for", () => {
-    render(<ScopeChips scopes={["nonexistent-scope"]} />);
-    expect(screen.getByText("nonexistent-scope")).toBeTruthy();
+    expect(scopeChipLabel(t, "nonexistent-scope")).toBe("nonexistent-scope");
   });
 });
