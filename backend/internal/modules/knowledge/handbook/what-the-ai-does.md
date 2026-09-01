@@ -331,8 +331,8 @@ Nobody but the person who approved the connection can answer a step-up. Not an
 administrator, not the owner of the organization. An agent's ceiling is that
 person's own authority.
 
-The app's own summary: "Mint a passport in Settings and point any MCP-capable
-agent at your organization. It reads only what you can see."
+The app's own summary: "Point any MCP-capable agent at your organization and
+approve the access it asks for. There is nothing to set up first."
 
 When an outside application asks to connect, you get a consent screen that
 says plainly "{client} will be able to act in Margince as you, with the access

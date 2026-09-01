@@ -2935,7 +2935,7 @@ export const de = {
     "Externe Sendungen und Datenänderungen landen zuerst im Eingang.",
   "ai.connect": "Agent verbinden",
   "ai.connectDetail":
-    "Erstell in den Einstellungen einen Passport und häng einen MCP-fähigen Agenten an deine Organisation. Er liest nur, was du sehen kannst.",
+    "Verbinde einen MCP-fähigen Agenten mit deiner Organisation und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
   "ai.paletteHint": "Frag von überall mit",
 
   "settings.accountCard": "Ihr Konto",
@@ -2978,7 +2978,7 @@ export const de = {
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
   "settings.passportsLendHint":
-    "Credentials, die du für Skripte und Integrationen ausgestellt hast. Das Verbinden eines MCP-Clients nutzt diese nicht — er erstellt eine eigene Verbindung, unten aufgeführt.",
+    "Zugangsdaten, die du für Skripte und Integrationen ausgestellt hast. Das Verbinden eines MCP-Clients nutzt diese nicht — er erstellt eine eigene Verbindung, unten aufgeführt.",
   "settings.passportLabel": "Agentenname",
   "settings.mint": "Passport ausstellen",
   "settings.minting": "Wird ausgestellt…",
@@ -6424,8 +6424,9 @@ export const de = {
   "consent.scopeNote.read": "sieht, was du siehst",
   "consent.scopeNote.draft": "bereitet Mails zu deiner Prüfung vor",
   "consent.scopeNote.write":
-    "erstellt, bearbeitet und archiviert Datensätze als du",
-  "consent.scopeNote.send": "sendet Nachrichten als du, ohne vorher zu fragen",
+    "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
+  "consent.scopeNote.send":
+    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
   "consent.scopeNote.enrich":
     "verbraucht Anreicherungs-Guthaben — jeder Kauf fragt dich weiterhin zuerst",
   "consent.ceiling":

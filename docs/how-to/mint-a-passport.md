@@ -1,9 +1,12 @@
 # Mint an Agent Seat Passport
 
 A passport is a REST bearer credential you mint yourself for a script or
-integration to call the api directly — unrelated to connecting an MCP client,
-which mints its own. It is scoped, expiring, revocable, and bound to the
-human who minted it — the agent never has more rights than that human,
+integration to call the api directly. It authenticates on the `/mcp`
+transport too, the same way any bearer passport does, but that is not how
+an MCP client normally gets one: the OAuth consent flow mints its own
+credential when the human approves a connection, so there is nothing to
+prepare here for that path. It is scoped, expiring, revocable, and bound to
+the human who minted it — the agent never has more rights than that human,
 and the human's seat + RBAC are re-derived on every call, so revocation
 binds mid-session.
 

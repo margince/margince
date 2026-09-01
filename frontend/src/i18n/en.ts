@@ -2972,7 +2972,7 @@ export const en = {
     "External sends and record changes stage into the inbox first.",
   "ai.connect": "Connect an agent",
   "ai.connectDetail":
-    "Mint a passport in Settings and point any MCP-capable agent at your organization. It reads only what you can see.",
+    "Point any MCP-capable agent at your organization and approve the access it asks for. There is nothing to set up first.",
   "ai.paletteHint": "Ask from anywhere with",
 
   "settings.accountCard": "Your account",

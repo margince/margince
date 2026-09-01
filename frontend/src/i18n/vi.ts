@@ -2909,7 +2909,7 @@ export const vi = {
     "Lượt gửi ra ngoài và thay đổi bản ghi được xếp vào hộp phê duyệt trước.",
   "ai.connect": "Kết nối một Agent",
   "ai.connectDetail":
-    "Hãy tạo một passport trong Cài đặt rồi trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn. Agent chỉ đọc được những gì bạn thấy được.",
+    "Trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn và cho phép quyền truy cập mà nó yêu cầu. Không cần chuẩn bị gì trước.",
   "ai.paletteHint": "Hỏi từ bất cứ đâu bằng",
 
   "settings.accountCard": "Tài khoản của bạn",
