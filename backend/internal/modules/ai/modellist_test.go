@@ -373,6 +373,36 @@ func TestTheHostAskedIsStableAcrossReads(t *testing.T) {
 	}
 }
 
+// A lane that names the vendor with NO host of its own means the adapter's
+// default, and that is an answer — not an absent binding to look past.
+//
+// Looking past it reached for a sibling lane's override and asked the wrong
+// host, which is the defect naming the lane exists to prevent, arrived at from
+// the other side.
+func TestALaneWithNoHostMeansTheAdapterDefaultRatherThanASibling(t *testing.T) {
+	cfg := RoutingConfig{
+		Tiers: map[Tier]ProviderConfig{
+			// Reached wherever the adapter reaches this vendor by default.
+			TierPremium: {Provider: providerGemini},
+			// A sibling on the same vendor that DOES override the host.
+			TierFrontier: {Provider: providerGemini, BaseURL: "https://proxy.example"},
+		},
+	}
+	if got := boundProviderConfig(cfg, providerGemini, string(TierPremium)).BaseURL; got != "" {
+		t.Fatalf("premium was asked at %q; its own binding names no host, so the answer is the adapter's default", got)
+	}
+	// The sibling still gets its own, so this is not the guard being too wide.
+	if got := boundProviderConfig(cfg, providerGemini, string(TierFrontier)).BaseURL; got != "https://proxy.example" {
+		t.Fatalf("frontier was asked at %q, want its own override", got)
+	}
+	// And a lane naming a DIFFERENT vendor falls through, because the question
+	// is about the vendor rather than about that lane.
+	cfg.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerAnthropic}
+	if got := boundProviderConfig(cfg, providerGemini, string(TierCheapCloud)).BaseURL; got != "https://proxy.example" {
+		t.Fatalf("a lane on another vendor should fall through to this vendor's own binding, got %q", got)
+	}
+}
+
 // A vendor this installation has not bound falls back to the adapter's own
 // default, which is what makes the picker useful before anything is bound.
 func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {

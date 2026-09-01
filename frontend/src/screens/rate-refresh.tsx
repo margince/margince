@@ -44,7 +44,11 @@ export function RefreshFromSources({
         variant="ghost"
         small
         onClick={() => refresh.mutate()}
-        disabled={refresh.isPending}
+        // `pending`, not `disabled`. A natively disabled button drops the focus
+        // of the reader who just pressed it and announces nothing; `pending` is
+        // what this design system reserves for a write in flight, and it blocks
+        // the repeat press without taking the focus away.
+        pending={refresh.isPending}
       >
         {t("settings.rates.refresh")}
       </Button>

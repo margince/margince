@@ -168,12 +168,15 @@ func unavailableFor(err error) ModelAvailability {
 // default, which is what makes the picker useful before anything is bound. No
 // model id: this asks what the vendor serves, not what one lane names.
 func boundProviderConfig(cfg RoutingConfig, provider, tier string) ProviderConfig {
-	if binding, ok := cfg.Tiers[Tier(tier)]; ok &&
-		binding.Provider == provider && binding.BaseURL != "" {
+	// The named lane is the answer WHENEVER it names this vendor, empty host
+	// included: an empty BaseURL means "the adapter's own default", which is
+	// where that lane is actually reached. Reading it as "this lane binds
+	// nothing" fell through to a sibling lane's override and asked the wrong
+	// host — the defect naming the lane exists to prevent, inverted.
+	if binding, ok := cfg.Tiers[Tier(tier)]; ok && binding.Provider == provider {
 		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
 	}
-	if tier == string(LaneEmbeddings) &&
-		cfg.Embeddings.Provider == provider && cfg.Embeddings.BaseURL != "" {
+	if tier == string(LaneEmbeddings) && cfg.Embeddings.Provider == provider {
 		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
 	}
 	for _, t := range sortedTiers(cfg.Tiers) {

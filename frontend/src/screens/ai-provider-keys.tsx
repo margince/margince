@@ -342,6 +342,11 @@ function ProviderKeyRow({
               onSuccess: () => {
                 setConfirming(false);
                 setEditing(false);
+                // And the draft with it. A replacement typed before the
+                // operator decided to REMOVE instead would otherwise come back
+                // the next time the row is opened — a key they chose to be rid
+                // of, one press from being submitted again.
+                setValue("");
               },
             },
           );
