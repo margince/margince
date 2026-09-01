@@ -2319,6 +2319,10 @@ export function ComposeModal({
   // counterparty while the pane showed another's messages, and a reply to the
   // second conversation went to the first one's correspondent.
   const offeredAddress = useRef<string | undefined>(undefined);
+  // The offer's slot was just emptied by a change of conversation, so the next
+  // anchor's address goes in even beside recipients the reader typed — the
+  // slot is ours, and what stands next to it is theirs.
+  const vacated = useRef(false);
   // The reader has taken the field over. Set on the first keystroke, which is
   // the only signal there is — the committed values stay empty until they
   // press Enter.
@@ -2327,30 +2331,44 @@ export function ComposeModal({
   }, []);
   // A reader who picks a DIFFERENT conversation is owed its address: the offer
   // is once per anchor, not once per composer. Without this the field kept the
-  // first thread's counterparty while the pane showed another's messages.
+  // first thread's counterparty while the pane showed another's messages. The
+  // previous offer leaves the field HERE, on the change itself, rather than
+  // when the new address resolves — a lookup still out, or a conversation with
+  // no address on record, must not leave the old counterparty standing as the
+  // recipient of a reply to somebody else. What the reader added beside it is
+  // theirs and stays.
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the anchor alone — this re-arms the offer when the conversation changes, not when its address resolves.
   useEffect(() => {
     offered.current = false;
+    const previous = offeredAddress.current;
+    if (previous === undefined) {
+      return;
+    }
+    offeredAddress.current = undefined;
+    vacated.current = true;
+    setTo((current) => current.filter((address) => address !== previous));
   }, [answering]);
   useEffect(() => {
     if (threadRecipient === undefined || offered.current) {
       return;
     }
     offered.current = true;
+    offeredAddress.current = threadRecipient;
     // A draft that named its own recipient, or a reader who committed one
-    // before the lookup answered, both outrank the thread's default. The one
-    // exception is the address a previous anchor's offer put there: that one
-    // gives way to this anchor's, and only that one — what the reader added
-    // beside it is theirs and stays.
+    // before the lookup answered, both outrank the thread's default — unless
+    // the field is non-empty only because the slot a previous offer held was
+    // just vacated, in which case this anchor's address takes that slot.
+    // The refs are settled before the updater, which stays a pure function
+    // of the field: StrictMode may run it twice.
+    const fillsVacancy = vacated.current;
+    vacated.current = false;
     setTo((current) => {
-      const previous = offeredAddress.current;
-      offeredAddress.current = threadRecipient;
-      if (previous !== undefined && current.includes(previous)) {
-        return current.map((address) =>
-          address === previous ? threadRecipient : address,
-        );
+      if (current.length > 0 && !fillsVacancy) {
+        return current;
       }
-      return current.length > 0 ? current : [threadRecipient];
+      return current.includes(threadRecipient)
+        ? current
+        : [...current, threadRecipient];
     });
   }, [threadRecipient]);
   // The anchor as a RECORD, not just an id: the conversation pane reads its

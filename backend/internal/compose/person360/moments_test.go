@@ -428,7 +428,7 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 // "I'll send you the whitepaper" without one, and the card used to fall past
 // every rung to "nothing is owed" while that task sat directly beneath it.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	// A pinned morning, not the wall clock. The case below files a task two
+	// A pinned morning, not the wall clock. The case below sets a task due two
 	// hours from now and expects "Due today", which is only true while two
 	// hours from now IS today — read from the real clock, this test failed
 	// every evening after 22:00 UTC and passed again at midnight.
