@@ -2350,10 +2350,18 @@ export function ComposeModal({
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
   const anchorRead = useThreadProject(activityId ?? chosen);
+  // The latest message stands in only when it IS the anchor being answered.
+  // While a caller-named or picked anchor is still loading, standing the
+  // newest message in would draw a conversation the reader did not choose —
+  // and offer its counterparty — for a beat, then swap it.
   const anchorActivity = answering
-    ? (anchorRead.activity ?? latest.activity)
+    ? (anchorRead.activity ??
+      (answering === latest.activity?.id ? latest.activity : undefined))
     : undefined;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
+  // An anchor named but not yet read. The pane holds its place on this, so
+  // the drawer does not open narrow and snap wide when the read answers.
+  const anchorUnresolved = Boolean(answering) && anchorActivity === undefined;
   const recent = useRecentConversations(
     entityType,
     entityId,
@@ -2398,8 +2406,16 @@ export function ComposeModal({
   // reply continues.
   const answeringCorrespondence =
     anchorActivity?.kind === "email" || anchorActivity?.kind === "message";
+  // Held open while the anchor or its thread is still loading, for the same
+  // reason the offer column below holds its place: the shape is decided by
+  // what is being answered, not by when the network answers. An anchor that
+  // resolves to a filed note collapses the column then — the one case that
+  // still changes shape, and the honest one.
   const showConversation =
-    asDrawer && answeringCorrespondence && conversation.messages.length > 0;
+    asDrawer &&
+    ((answeringCorrespondence &&
+      (conversation.messages.length > 0 || conversation.pending)) ||
+      anchorUnresolved);
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
   // While the lookup is still out, the column holds its place with the
@@ -2816,7 +2832,7 @@ export function ComposeModal({
           {showConversation && (
             <ThreadPane
               messages={conversation.messages}
-              pending={conversation.pending}
+              pending={conversation.pending || anchorUnresolved}
               viewerUserId={viewerId}
               nameOf={nameOf}
               named

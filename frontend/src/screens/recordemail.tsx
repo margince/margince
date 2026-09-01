@@ -18,7 +18,7 @@
 // job: this component only draws it, from whichever of the two sources the
 // caller chose.
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -102,12 +102,24 @@ export function RecordEmailAside({
   }>;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const [composing, setComposing] = useState(false);
   const waitingReply = useWaitingReply(
     entityType,
     entityId,
     detectWaitingReply,
   );
+  // The composer may have answered the very message this box is about, so the
+  // question is asked again when it closes — a box still reading "an answer
+  // is owed" after the answer was sent offers a reply to a settled thread.
+  const closeComposer = () => {
+    setComposing(false);
+    if (detectWaitingReply) {
+      void queryClient.invalidateQueries({
+        queryKey: ["record-waiting-reply", entityType, entityId],
+      });
+    }
+  };
   const effectiveReplyTo = replyTo ?? waitingReply;
   const title = strings?.title ?? "recordmail.title";
   const subReply = strings?.subReply ?? "recordmail.sub.reply";
@@ -135,7 +147,7 @@ export function RecordEmailAside({
           personId={personId}
           kind="email"
           open={composing}
-          onClose={() => setComposing(false)}
+          onClose={closeComposer}
         />
       ) : null}
     </Panel>

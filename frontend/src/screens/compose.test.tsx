@@ -2644,10 +2644,13 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
+    // Waited for by its rows: the pane holds its place with a pending body
+    // while the thread read is out, so the region existing does not yet mean
+    // the messages are drawn.
     const pane = await screen.findByRole("region", {
       name: /this conversation/i,
     });
-    expect(pane.querySelectorAll("li")).toHaveLength(2);
+    await waitFor(() => expect(pane.querySelectorAll("li")).toHaveLength(2));
   });
 
   it("anchors nothing until the reader picks a conversation", async () => {
