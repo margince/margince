@@ -112,9 +112,10 @@ type Service struct {
 	// behaviour; the ranked queue's default scope sets it), because the same
 	// service answers both surfaces.
 	mineOnly bool
-	// tasks read at this scope. Separate from mineOnly because the task lane is
-	// the one producer with a third answer: unowned work, which is nobody's
-	// rather than everybody's.
+	// tasks read at this scope. Separate from mineOnly because a task carries an
+	// assignee and so has a third answer available to it — unowned work, which
+	// is nobody's rather than everybody's — where a mailbox or a notice is
+	// per-reader by construction and has only two.
 	taskScope TaskScope
 }
 

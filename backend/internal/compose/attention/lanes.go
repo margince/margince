@@ -106,7 +106,8 @@ type RecordFace struct {
 type TaskScope int
 
 const (
-	// TasksVisible is every open task the reader may see.
+	// TasksVisible adds no narrowing of its own: the store's row-scope gate
+	// decides what comes back.
 	TasksVisible TaskScope = iota
 	// TasksMine is the open tasks assigned to the reader, and no others.
 	TasksMine
