@@ -93,7 +93,8 @@ func validateRoutedBindings(cfg RunnerConfig, log *slog.Logger) error {
 // nothing downstream could tell.
 //
 // Decided here rather than trusted from the caller because Run is the last place
-// that knows both, and the paid lane is not the only caller.
+// that knows both, and a programmatic caller has no reason to have kept them
+// consistent — the paid lane is not the only way in.
 func (c RunnerConfig) recordProfile() ai.Profile {
 	if c.Routing != nil {
 		return c.Routing.Profile
