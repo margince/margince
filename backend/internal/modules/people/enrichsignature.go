@@ -272,24 +272,23 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 	}
 
 	// The person's own dated statement, applied by the writer both this pass
-	// and the card import share. A phone goes to the number list, because a
-	// contact has several and a signature names one of them; everything else is
-	// a single answer that the newer statement replaces.
+	// and the card import share. Every field records its evidence row, which is
+	// what keeps the value auditable back to the verbatim signature line; a
+	// phone ALSO reaches the number list, because a contact has several numbers
+	// and the sidecar holds one answer per field.
+	outcome, err := applyObservedField(ctx, tx, personID, observedField{
+		Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,
+		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
+		ObservedAt: observedAt, CorrectionAt: f.CorrectedAt,
+	})
+	if err != nil || outcome != observedApplied {
+		return signatureVerdict{}, err
+	}
 	if f.Name == "phone" {
-		outcome, err := applyObservedPhone(ctx, tx, personID, observedPhone{
+		if _, err := applyObservedPhone(ctx, tx, personID, observedPhone{
 			Phone: value, PhoneType: emailTypeWork, SourceRef: sourceRef,
 			Source: enrichSource, CapturedBy: enrichCapturedBy, ObservedAt: observedAt,
-		})
-		if err != nil || outcome != observedApplied {
-			return signatureVerdict{}, err
-		}
-	} else {
-		outcome, err := applyObservedField(ctx, tx, personID, observedField{
-			Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,
-			Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
-			ObservedAt: observedAt, CorrectionAt: f.CorrectedAt,
-		})
-		if err != nil || outcome != observedApplied {
+		}); err != nil {
 			return signatureVerdict{}, err
 		}
 	}

@@ -3580,14 +3580,17 @@ public.person_phone.captured_by text NOT NULL gen=- def=-
 public.person_phone.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.person_phone.id uuid NOT NULL gen=- def=uuidv7()
 public.person_phone.is_primary boolean NOT NULL gen=- def=false
+public.person_phone.observed_at timestamp with time zone NOT NULL gen=- def=now()
 public.person_phone.person_id uuid NOT NULL gen=- def=-
 public.person_phone.person_phone_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.person_phone.person_phone_phone_type_check CHECK ((phone_type = ANY (ARRAY['work'::text, 'mobile'::text, 'home'::text, 'other'::text])))
 public.person_phone.person_phone_pkey PRIMARY KEY (id)
+public.person_phone.person_phone_superseded_phone_id_fkey FOREIGN KEY (superseded_phone_id) REFERENCES person_phone(id) ON DELETE SET NULL
 public.person_phone.phone text NOT NULL gen=- def=-
 public.person_phone.phone_type text NOT NULL gen=- def='work'::text
 public.person_phone.position integer NOT NULL gen=- def=0
 public.person_phone.source text NOT NULL gen=- def=-
+public.person_phone.superseded_phone_id uuid gen=- def=-
 public.person_phone.trg_person_phone_updated CREATE TRIGGER trg_person_phone_updated BEFORE UPDATE ON public.person_phone FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.person_phone.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.person_phone.version bigint NOT NULL gen=- def=1
@@ -3600,13 +3603,17 @@ public.person_profile_field.created_at timestamp with time zone NOT NULL gen=- d
 public.person_profile_field.evidence_snippet text NOT NULL gen=- def=-
 public.person_profile_field.field text NOT NULL gen=- def=-
 public.person_profile_field.id uuid NOT NULL gen=- def=uuidv7()
+public.person_profile_field.observed_at timestamp with time zone NOT NULL gen=- def=now()
 public.person_profile_field.person_id uuid NOT NULL gen=- def=-
 public.person_profile_field.person_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
-public.person_profile_field.person_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'org_name'::text])))
+public.person_profile_field.person_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'org_name'::text, 'address'::text, 'website'::text])))
 public.person_profile_field.person_profile_field_person_fk FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.person_profile_field.person_profile_field_pkey PRIMARY KEY (id)
 public.person_profile_field.source text NOT NULL gen=- def=-
 public.person_profile_field.source_ref text NOT NULL gen=- def=-
+public.person_profile_field.superseded_captured_by text gen=- def=-
+public.person_profile_field.superseded_observed_at timestamp with time zone gen=- def=-
+public.person_profile_field.superseded_value text gen=- def=-
 public.person_profile_field.trg_person_profile_field_updated CREATE TRIGGER trg_person_profile_field_updated BEFORE UPDATE ON public.person_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.person_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.person_profile_field.uq_person_profile_field UNIQUE (person_id, field)
