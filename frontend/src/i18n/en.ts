@@ -6819,7 +6819,6 @@ export const en = {
   "person.moment.rule.re_engaged": "They came back",
   "person.moment.rule.job_change": "They moved on",
   "person.moment.rule.overdue_promise": "Promise overdue",
-  "person.moment.rule.overdue_task": "Promise overdue",
   "person.moment.rule.gone_quiet": "Gone quiet",
   "person.moment.rule.open_promise": "You owe them",
   "person.moment.rule.role_change": "Role changed",

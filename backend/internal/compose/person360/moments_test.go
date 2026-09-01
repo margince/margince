@@ -197,8 +197,8 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 				Subject: ptr("Send the MCP whitepaper"), OccurredAt: at(1),
 			}}},
 		},
-		// Rung 4b wants an open task whose date has passed — the same lateness
-		// the claim rung above reads, from the task list instead.
+		// The overdue rung reads BOTH sources; this page reaches it through the
+		// task list, the one above it through a claim.
 		"overdue task": {
 			NextSteps: &struct {
 				Data []crmcontracts.Activity `json:"data"`
@@ -527,8 +527,9 @@ func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 		Page crmcontracts.PageInfo   `json:"page"`
 	}{Data: task(now.Add(-30 * time.Hour))}
 	moment := deriveMoment(readerCtx(), now, late)
-	if moment.Rule != crmcontracts.PersonMomentRuleOverdueTask {
-		t.Errorf("rule = %q, want overdue_task — a promise we are late on outranks their silence", moment.Rule)
+	if moment.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+		t.Errorf("rule = %q, want overdue_promise — a promise we are late on outranks their silence, "+
+			"and one rung covers both places a promise is written down", moment.Rule)
 	}
 	if moment.Headline != "You owe them: Send the signed contract" {
 		t.Errorf("headline = %q, want the overdue promise named", moment.Headline)
@@ -584,5 +585,132 @@ func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
 	if theirs.EvidenceFingerprint == ours.EvidenceFingerprint {
 		t.Error("the fingerprint is unchanged across a reassignment, so a dismissal of one card " +
 			"silences the other — the promise disappears exactly when it changes hands")
+	}
+}
+
+// One rung, two sources, and when both are late it shows the promise closest
+// to its deadline. The reader is likeliest to be able to still act on that
+// one, and which source recorded it says nothing about that.
+func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
+	now := time.Now()
+	claimDue := now.Add(-10 * 24 * time.Hour)
+	overdueClaim := []crmcontracts.ConversationClaim{{
+		Kind:             crmcontracts.CommitmentOurs,
+		Status:           crmcontracts.ConversationClaimStatusOpen,
+		Body:             "Send the revised quote",
+		SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
+		SourceActivityId: openapi_types.UUID(ids.NewV7()),
+		DueAt:            &claimDue,
+	}}
+	pageWith := func(taskDue time.Time) *crmcontracts.Person360 {
+		return &crmcontracts.Person360{
+			Claims: &overdueClaim,
+			NextSteps: &struct {
+				Data []crmcontracts.Activity `json:"data"`
+				Page crmcontracts.PageInfo   `json:"page"`
+			}{Data: []crmcontracts.Activity{{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+				Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
+				DueAt: &taskDue,
+			}}},
+		}
+	}
+
+	// The task is the more recent deadline, so it leads.
+	recent := deriveMoment(readerCtx(), now, pageWith(now.Add(-2*24*time.Hour)))
+	if recent.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+		t.Fatalf("rule = %q, want overdue_promise", recent.Rule)
+	}
+	if recent.Headline != "You owe them: Send the signed contract" {
+		t.Errorf("headline = %q, want the task, whose deadline passed most recently", recent.Headline)
+	}
+
+	// The claim is, so it leads — and it brings the quote a task cannot.
+	older := deriveMoment(readerCtx(), now, pageWith(now.Add(-30*24*time.Hour)))
+	if older.Headline != "You owe them: Send the revised quote" {
+		t.Errorf("headline = %q, want the claim, whose deadline passed most recently", older.Headline)
+	}
+	if older.Evidence[0].Snippet == nil {
+		t.Error("the claim's card carries no quote; the conversation it was read from is the " +
+			"one thing a claim has that a task does not")
+	}
+}
+
+// The rung shows the promise that slipped MOST RECENTLY, and it has to look at
+// all of them to know which that is. Picking the earliest overdue claim and
+// comparing only that one against the tasks named the oldest, least
+// recoverable promise while one that slipped yesterday went unmentioned.
+func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
+	now := time.Now()
+	claimDue := func(days int) *time.Time {
+		at := now.Add(-time.Duration(days) * 24 * time.Hour)
+		return &at
+	}
+	claims := []crmcontracts.ConversationClaim{
+		{
+			Kind: crmcontracts.CommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
+			Body: "Send the ancient quote", SourceQuote: "Bis Montag.",
+			SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: claimDue(10),
+		},
+		{
+			Kind: crmcontracts.CommitmentOurs, Status: crmcontracts.ConversationClaimStatusOpen,
+			Body: "Send yesterday's quote", SourceQuote: "Bis gestern.",
+			SourceActivityId: openapi_types.UUID(ids.NewV7()), DueAt: claimDue(1),
+		},
+	}
+	taskDue := now.Add(-5 * 24 * time.Hour)
+	page := &crmcontracts.Person360{
+		Claims: &claims,
+		NextSteps: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{Data: []crmcontracts.Activity{{
+			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
+			DueAt: &taskDue,
+		}}},
+	}
+
+	// Yesterday's claim is the most recent slip, ahead of the 5-day task and
+	// the 10-day claim.
+	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send yesterday's quote" {
+		t.Errorf("headline = %q, want the promise that slipped most recently", got)
+	}
+
+	// Among several overdue TASKS the same rule holds.
+	recent := now.Add(-2 * time.Hour)
+	page.NextSteps.Data = append(page.NextSteps.Data, crmcontracts.Activity{
+		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+		Subject: ptr("Send this morning's file"), OccurredAt: now.Add(-24 * time.Hour),
+		DueAt: &recent,
+	})
+	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send this morning's file" {
+		t.Errorf("headline = %q, want the task that slipped most recently", got)
+	}
+}
+
+// A dismissal is stored against the claim key, so the key a task's late card
+// carries must not change when the rule around it is renamed — every task a
+// reader had put away would come back on deploy.
+func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
+	now := time.Now()
+	due := now.Add(-24 * time.Hour)
+	page := &crmcontracts.Person360{
+		NextSteps: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{Data: []crmcontracts.Activity{{
+			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
+			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: &due,
+		}}},
+	}
+
+	moment := deriveMoment(readerCtx(), now, page)
+	if moment.ClaimKey != "moment:overdue_task" {
+		t.Errorf("claim key = %q, want moment:overdue_task — dismissals are looked up by exact "+
+			"key, so renaming it un-dismisses every task a reader already put away", moment.ClaimKey)
+	}
+	if moment.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+		t.Errorf("rule = %q, want overdue_promise — one rung covers both sources", moment.Rule)
 	}
 }

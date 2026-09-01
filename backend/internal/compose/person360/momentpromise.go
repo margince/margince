@@ -157,31 +157,114 @@ func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 	if past, ok := deadline.DaysPast(task.DueAt, now); ok {
 		return fmt.Sprintf("Due %d days ago and still open.", past)
 	}
-	// A task logged from the record page carries today's date unless the
-	// writer picks another, so "in 0 days" is the common case, not a corner.
-	if days := elapsed.Days(now, *task.DueAt); days > 0 {
+	// Whole days of REMAINING TIME, not calendar boundaries crossed — see
+	// elapsed.FullDaysUntil for why a deadline counts differently from a pair
+	// of dates. A task logged from the record page is due at the end of
+	// today, so this is the common case rather than a corner.
+	if days := elapsed.FullDaysUntil(now, *task.DueAt); days > 0 {
 		return fmt.Sprintf("Due in %d days.", days)
 	}
 	return "Due today."
 }
 
-// overdueTaskMoment: a task we owe them was due and is still open.
+// overduePromiseMoment: we are past the date on something we said we would
+// do. ONE rung over both places a promise is written down — a commitment an
+// extractor read out of a conversation, and a task somebody filed — because
+// where a promise was recorded is a fact about this system, not about what
+// the reader should do next. Ranking them apart made identical lateness
+// outrank a silence from one source and lose to it from the other.
 //
-// It sits directly under the overdue-claim rung and ABOVE gone_quiet, which
-// is the whole point of separating it from openPromiseMoment below. The two
-// rungs read one fact — we are late on something we agreed — from the two
-// places a promise gets written down: a claim an extractor read out of an
-// email, and a task a person filed or confirmed. Ranking them apart made the
-// same lateness outrank a silence when it came from mail and lose to one when
-// it came from the task list, which is a rule about provenance rather than
-// about what the reader should do next.
-func overdueTaskMoment(ctx context.Context, now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
-	task, ok := nearestOpenTask(page)
-	if !ok || !deadline.Passed(task.DueAt, now) {
+// When both are late the LATER date wins: the promise closest to its
+// deadline is the one still recoverable, and the one a reader is most likely
+// to be able to act on today. A tie goes to the claim, which carries a quote
+// from the conversation the promise was made in.
+func overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Person360) (crmcontracts.PersonMoment, bool) {
+	claim, hasClaim := latestOverdueCommitment(now, page)
+	task, hasTask := latestOverdueTask(now, page)
+	switch {
+	case hasClaim && hasTask:
+		if task.DueAt.After(*claim.DueAt) {
+			return overdueTaskCard(ctx, now, task), true
+		}
+		return overdueClaimCard(now, claim), true
+	case hasClaim:
+		return overdueClaimCard(now, claim), true
+	case hasTask:
+		return overdueTaskCard(ctx, now, task), true
+	default:
 		return crmcontracts.PersonMoment{}, false
 	}
+}
+
+// latestOverdueTask is the overdue task whose date passed MOST RECENTLY, which
+// is the one the rung asks for. Not the section's first row: that one is the
+// EARLIEST deadline, so on a record owing three late promises it would name
+// the oldest — the least recoverable — while the one that slipped yesterday
+// went unmentioned.
+func latestOverdueTask(now time.Time, page *crmcontracts.Person360) (crmcontracts.Activity, bool) {
+	if page.NextSteps == nil {
+		return crmcontracts.Activity{}, false
+	}
+	var latest *crmcontracts.Activity
+	for i := range page.NextSteps.Data {
+		task := &page.NextSteps.Data[i]
+		if !deadline.Passed(task.DueAt, now) {
+			continue
+		}
+		if latest == nil || task.DueAt.After(*latest.DueAt) {
+			latest = task
+		}
+	}
+	if latest == nil {
+		return crmcontracts.Activity{}, false
+	}
+	return *latest, true
+}
+
+// overdueTaskCard is the promise card for a late TASK.
+//
+// Its claim key stays "moment:overdue_task" even though the rule is now the
+// merged overdue_promise. A dismissal is stored against the claim key and
+// looked up by exact match, so renaming the key would resurrect every task a
+// reader had already put away — and the key is also what keeps a dismissal of
+// the late card from silencing the not-yet-due one, which shares the task but
+// says something different about it.
+func overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.PersonMoment {
 	moment := openPromiseFrom(ctx, now, task)
 	moment.ClaimKey = "moment:overdue_task"
-	moment.Rule = crmcontracts.PersonMomentRuleOverdueTask
-	return moment, true
+	moment.Rule = crmcontracts.PersonMomentRuleOverduePromise
+	return moment
+}
+
+// overdueClaimCard is the card for a promise read out of a conversation. It
+// carries the quote it was read from, which a task has nothing to match.
+func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.PersonMoment {
+	overdue := elapsed.Days(*claim.DueAt, now)
+	evidence := []crmcontracts.PersonMomentEvidence{{
+		Type:       crmcontracts.PersonMomentEvidenceTypeActivity,
+		Id:         &claim.SourceActivityId,
+		Label:      claim.Body,
+		Snippet:    &claim.SourceQuote,
+		ObservedAt: claim.DueAt,
+	}}
+	return crmcontracts.PersonMoment{
+		ClaimKey:            "moment:overdue_promise",
+		Rule:                crmcontracts.PersonMomentRuleOverduePromise,
+		RuleVersion:         ptr(ruleVersion),
+		EvidenceFingerprint: fingerprintOf(evidence),
+		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
+		WhyNow:              fmt.Sprintf("Promised for a date that passed %d days ago.", overdue),
+		Confidence:          crmcontracts.PersonMomentConfidenceObservedFact,
+		Evidence:            evidence,
+		FreshnessAt:         claim.DueAt,
+		RecommendedAction: crmcontracts.PersonMomentAction{
+			Kind:  crmcontracts.PersonMomentActionKindDraftReply,
+			Label: "Send it now",
+			State: crmcontracts.PersonMomentActionStateWillConfirm,
+			Destination: &crmcontracts.PersonMomentDestination{
+				Surface: crmcontracts.PersonMomentDestinationSurfaceComposer,
+				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
+			},
+		},
+	}
 }

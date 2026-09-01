@@ -6771,7 +6771,6 @@ export const de = {
   "person.moment.rule.re_engaged": "Sie haben sich gemeldet",
   "person.moment.rule.job_change": "Neue Stelle",
   "person.moment.rule.overdue_promise": "Zusage überfällig",
-  "person.moment.rule.overdue_task": "Versprechen überfällig",
   "person.moment.rule.gone_quiet": "Still geworden",
   "person.moment.rule.open_promise": "Offenes Versprechen",
   "person.moment.rule.role_change": "Rolle geändert",

@@ -41,7 +41,6 @@ const MOMENT_RULE_LABEL = {
   re_engaged: "person.moment.rule.re_engaged",
   job_change: "person.moment.rule.job_change",
   overdue_promise: "person.moment.rule.overdue_promise",
-  overdue_task: "person.moment.rule.overdue_task",
   gone_quiet: "person.moment.rule.gone_quiet",
   open_promise: "person.moment.rule.open_promise",
   role_change: "person.moment.rule.role_change",
@@ -71,16 +70,12 @@ function standingTone(rule: PersonMoment["rule"]): StandingTone {
   return rule === "nothing_needed" ? "calm" : "accent";
 }
 
-// The three rules that mean somebody is being kept waiting. A promise past
-// its date is late whether it was read out of an email or filed as a task, so
-// both rungs colour the card the same; a promise not yet due is a live thread,
-// not a warning.
+// The two rules that mean somebody is being kept waiting. A promise past its
+// date is late whether it was read out of an email or filed as a task — one
+// rung covers both — while a promise not yet due is a live thread, not a
+// warning.
 function isLate(rule: PersonMoment["rule"]): boolean {
-  return (
-    rule === "gone_quiet" ||
-    rule === "overdue_promise" ||
-    rule === "overdue_task"
-  );
+  return rule === "gone_quiet" || rule === "overdue_promise";
 }
 
 export function PersonToday({
