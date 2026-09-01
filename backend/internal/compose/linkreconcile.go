@@ -172,6 +172,12 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 // actor for both.
 func (w *linkReconcileWorker) systemContext(ctx context.Context, ws ids.UUID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
+	// The correlation id is not decoration: storekit.EmitEvent REFUSES to
+	// publish without one, so a pass that omitted it repaired nothing at all —
+	// every contact failed on its own event, the whole sweep retried three
+	// times and was discarded, and the backlog it exists to clear sat there
+	// looking as though the job had simply not run yet.
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,
 		ID:   linkReconcileActor,
@@ -181,3 +187,17 @@ func (w *linkReconcileWorker) systemContext(ctx context.Context, ws ids.UUID) co
 // linkReconcileActor names the sweep in the trail, so a link that appeared with
 // nobody clicking is attributable to the pass that wrote it.
 const linkReconcileActor = "link-reconcile"
+
+// NewLinkReconcileWorkspaceWorkerForTest builds the workspace pass for an
+// integration test that drives it the way River does.
+//
+// It exists because the store-level tests build their OWN context, so they
+// prove the repair's SQL and nothing about the context this job runs under —
+// and that is exactly where a defect hid: a missing correlation id made every
+// publish refuse, so the sweep repaired nothing while looking like a job that
+// had simply not run yet.
+func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *people.Store) *linkReconcileWorkspaceWorker {
+	return &linkReconcileWorkspaceWorker{
+		linkReconcileWorker: newLinkReconcileWorker(pool, store, slog.Default()),
+	}
+}
