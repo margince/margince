@@ -33,10 +33,14 @@ const routeCandidateCap = 5
 
 // chooseRoutes orders every askable way in, best first.
 //
-// The preference is the recommendation's, spelled once: a direct relationship
-// beats an indirect one however warm the indirect one looks, then two-way
-// beats one-sided, then volume, then the node id so that two identical edges
-// never swap places between reads.
+// The preference: a direct relationship beats an indirect one however warm the
+// indirect one looks, then two-way beats one-sided, then volume, then the node
+// id so that two identical edges never swap places between reads.
+//
+// chooseRoute reads the head of this list rather than ranking the edges again,
+// so the card's recommendation and the list's first row cannot disagree.
+// Held by: TestTheRecommendationIsTheHeadOfTheList
+// (backend/internal/compose/network/personroutes_test.go)
 func chooseRoutes(out *crmcontracts.PersonGraph, now time.Time) []crmcontracts.PersonGraphRouteCandidate {
 	idx := indexNodes(out)
 	if idx.anchor == "" {

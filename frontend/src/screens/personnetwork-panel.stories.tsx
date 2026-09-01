@@ -81,6 +81,41 @@ const graph = {
     via_display_name: "Lars Brandt",
     why: "6 two-way exchanges in 90 days · last contact yesterday",
   },
+  // The server sends both, and `route` is `routes[0]`. The fixture keeps that
+  // true: a story where the card recommends one colleague while the list leads
+  // with another models a payload the server cannot produce.
+  routes: [
+    {
+      route_id: "direct:u-1",
+      route_type: "direct",
+      via_user_id: "u-1",
+      via_display_name: "Lars Brandt",
+      strength_bucket: "strong",
+      evidence: {
+        interactions_90d: 6,
+        inbound_90d: 3,
+        outbound_90d: 3,
+        two_way: true,
+        days_since_last: 1,
+      },
+      availability: "available",
+    },
+    {
+      route_id: "direct:u-2",
+      route_type: "direct",
+      via_user_id: "u-2",
+      via_display_name: "Mara Vogel",
+      strength_bucket: "weak",
+      evidence: {
+        interactions_90d: 1,
+        inbound_90d: 0,
+        outbound_90d: 1,
+        two_way: false,
+        days_since_last: 12,
+      },
+      availability: "available",
+    },
+  ],
 };
 
 // The 360 the moments card reads. Only the fields it touches are set; the

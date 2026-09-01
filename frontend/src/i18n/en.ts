@@ -6441,7 +6441,6 @@ export const en = {
   "person.enriched.save": "Save the correction",
   "person.enriched.cancel": "Cancel",
   "person.graph.loading": "Reading the network around this contact…",
-  "person.graph.routeTitle": "The warmest way in",
   "person.graph.routeDirect": "{name} already corresponds with them.",
   "person.graph.routeVia":
     "{name} corresponds with {through} at the same company.",
@@ -6463,6 +6462,22 @@ export const en = {
     "Counts only — the messages themselves stay on the timeline.",
   "person.graph.untitledMessage": "Message with no subject",
   "person.graph.dropped": "{count} more not shown.",
+  "person.intro.routesTitle": "Ways in",
+  "person.intro.routesSub":
+    "Best first. Pick the one you can actually use — the second is here because the first is not always available.",
+  "person.intro.best": "Best",
+  "person.intro.alternative": "Alternative",
+  "person.intro.evidenceTwoWay":
+    "{total} two-way exchanges in 90 days · {when}",
+  "person.intro.evidenceOneSided":
+    "{total} interactions in 90 days, one-sided · {when}",
+  "person.intro.whenToday": "last contact today",
+  "person.intro.whenYesterday": "last contact yesterday",
+  "person.intro.whenDays": "last contact {days} days ago",
+  "person.intro.whenNever": "no recent contact",
+  "person.intro.alreadyRequested": "Already asked",
+  "person.intro.declined": "Declined before",
+  "person.intro.unavailable": "Not available",
   "person.network.ringTitle": "Who reaches them",
   "person.network.ringSub":
     "Our side and this account, by how warm the relationship is. Pick anyone to see what it is made of.",

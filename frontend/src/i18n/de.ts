@@ -6396,7 +6396,6 @@ export const de = {
   "person.enriched.save": "Korrektur speichern",
   "person.enriched.cancel": "Abbrechen",
   "person.graph.loading": "Das Netzwerk um diesen Kontakt wird gelesen \u2026",
-  "person.graph.routeTitle": "Der w\u00e4rmste Weg hinein",
   "person.graph.routeDirect": "{name} steht bereits im Austausch mit ihnen.",
   "person.graph.routeVia":
     "{name} steht im Austausch mit {through} im selben Unternehmen.",
@@ -6419,6 +6418,22 @@ export const de = {
     "Nur Z\u00e4hlwerte \u2014 die Nachrichten selbst bleiben in der Chronik.",
   "person.graph.untitledMessage": "Nachricht ohne Betreff",
   "person.graph.dropped": "{count} weitere werden nicht angezeigt.",
+  "person.intro.routesTitle": "Wege hinein",
+  "person.intro.routesSub":
+    "Bester zuerst. Nimm den, der sich wirklich nutzen lässt — der zweite steht hier, weil der erste nicht immer verfügbar ist.",
+  "person.intro.best": "Bester Weg",
+  "person.intro.alternative": "Alternative",
+  "person.intro.evidenceTwoWay":
+    "{total} Austausche in beide Richtungen in 90 Tagen · {when}",
+  "person.intro.evidenceOneSided":
+    "{total} Kontakte in 90 Tagen, einseitig · {when}",
+  "person.intro.whenToday": "letzter Kontakt heute",
+  "person.intro.whenYesterday": "letzter Kontakt gestern",
+  "person.intro.whenDays": "letzter Kontakt vor {days} Tagen",
+  "person.intro.whenNever": "kein Kontakt in letzter Zeit",
+  "person.intro.alreadyRequested": "Bereits angefragt",
+  "person.intro.declined": "Früher abgelehnt",
+  "person.intro.unavailable": "Nicht verfügbar",
   "person.network.ringTitle": "Wer diese Person erreicht",
   "person.network.ringSub":
     "Unsere Seite und dieser Account, nach der Wärme der Beziehung. Wählen Sie jemanden aus, um zu sehen, worauf sie beruht.",

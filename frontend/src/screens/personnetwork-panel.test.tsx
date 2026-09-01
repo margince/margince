@@ -108,6 +108,23 @@ describe("PersonNetworkTab", () => {
         via_display_name: "Direct Dana",
         why: "6 two-way exchanges in 90 days · last contact yesterday",
       },
+      routes: [
+        {
+          route_id: "direct:u-1",
+          route_type: "direct",
+          via_user_id: "u-1",
+          via_display_name: "Direct Dana",
+          strength_bucket: "strong",
+          evidence: {
+            interactions_90d: 6,
+            inbound_90d: 3,
+            outbound_90d: 3,
+            two_way: true,
+            days_since_last: 1,
+          },
+          availability: "available",
+        },
+      ],
     });
     renderPanel();
     await waitFor(() =>
@@ -115,6 +132,9 @@ describe("PersonNetworkTab", () => {
         screen.getByText("Direct Dana already corresponds with them."),
       ).toBeTruthy(),
     );
+    // The sentence the server used to write in English, now assembled from the
+    // counts in the reader's own language. Asserting the words rather than the
+    // field is what proves the translation still says the same thing.
     expect(
       screen.getByText(
         "6 two-way exchanges in 90 days · last contact yesterday",

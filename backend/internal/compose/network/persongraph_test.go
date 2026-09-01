@@ -78,7 +78,7 @@ func TestChooseRouteAlwaysPrefersADirectRelationship(t *testing.T) {
 			},
 		})
 
-	route := chooseRoute(chooseRoutes(graph, graphNow), graphNow)
+	route := chooseRoute(chooseRoutes(graph, graphNow))
 	if route == nil {
 		t.Fatal("two candidate routes produced no recommendation")
 	}
@@ -104,7 +104,7 @@ func TestChooseRouteNamesTheIntermediaryWhenTheHopIsIndirect(t *testing.T) {
 			Interactions90d: 12, Inbound90d: intp(6), Outbound90d: intp(6), LastAt: daysBefore(2),
 		}})
 
-	route := chooseRoute(chooseRoutes(graph, graphNow), graphNow)
+	route := chooseRoute(chooseRoutes(graph, graphNow))
 	if route == nil {
 		t.Fatal("an indirect route was available and none was recommended")
 	}
@@ -136,7 +136,7 @@ func TestChooseRoutePrefersAnExchangeOverAOneSidedRelationship(t *testing.T) {
 			},
 		})
 
-	route := chooseRoute(chooseRoutes(graph, graphNow), graphNow)
+	route := chooseRoute(chooseRoutes(graph, graphNow))
 	if route == nil {
 		t.Fatal("no route was chosen")
 	}
@@ -151,7 +151,7 @@ func TestChooseRoutePrefersAnExchangeOverAOneSidedRelationship(t *testing.T) {
 // A graph with nothing in it recommends nothing. Inventing a route from an
 // empty picture is the failure the whole evidence posture exists to avoid.
 func TestChooseRouteRecommendsNothingWhenThereIsNoEdge(t *testing.T) {
-	if route := chooseRoute(chooseRoutes(graphWith(nil, nil), graphNow), graphNow); route != nil {
+	if route := chooseRoute(chooseRoutes(graphWith(nil, nil), graphNow)); route != nil {
 		t.Errorf("an empty graph produced a route via %q", route.ViaDisplayName)
 	}
 }

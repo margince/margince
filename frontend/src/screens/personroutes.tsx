@@ -1,0 +1,137 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Every way in to this contact, best first.
+//
+// The server ranks; this file renders. It states each route's evidence in the
+// reader's own language rather than printing the server's `why`, which is
+// English whatever locale the app is in — the counts cross the wire as facts
+// for exactly that reason.
+
+import type { components } from "../api/schema";
+import { Badge, Card } from "../design-system/atoms";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
+import "./personnetwork.css";
+
+type Graph = components["schemas"]["PersonGraph"];
+type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
+type RouteEvidence = components["schemas"]["PersonGraphRouteEvidence"];
+type Translate = ReturnType<typeof useT>;
+
+/**
+ * RoutesCard lists the ways in, the recommendation first.
+ *
+ * One list, not a lead card plus a list: the server's recommendation IS the
+ * head of this list, so drawing it twice would invite the two to disagree on
+ * screen the moment one of them was rendered from stale data.
+ */
+export function RoutesCard({ graph }: Readonly<{ graph: Graph }>) {
+  const t = useT();
+  const routes = graph.routes ?? [];
+  return (
+    <Card
+      title={t("person.intro.routesTitle")}
+      sub={t("person.intro.routesSub")}
+    >
+      {routes.length === 0 ? (
+        <p className="pn-route">{t("person.graph.noRoute")}</p>
+      ) : (
+        <ol className="pn-routes">
+          {routes.map((route, index) => (
+            <li className="pn-route-row" key={route.route_id}>
+              <RouteRow route={route} lead={index === 0} />
+            </li>
+          ))}
+        </ol>
+      )}
+    </Card>
+  );
+}
+
+function RouteRow({
+  route,
+  lead,
+}: Readonly<{ route: RouteCandidate; lead: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const blocked = availabilityLabel(route.availability, t);
+  return (
+    <>
+      <p className="pn-route">
+        {/* The same two sentences the single-route card used, because they are
+            the same claim: naming the colleague and how they reach the contact.
+            A second wording for one fact is how two surfaces start disagreeing
+            about what a route is. */}
+        {route.through_display_name
+          ? t("person.graph.routeVia", {
+              name: route.via_display_name,
+              through: route.through_display_name,
+            })
+          : t("person.graph.routeDirect", {
+              name: route.via_display_name,
+            })}{" "}
+        <Badge tone={lead ? "accent" : undefined} quiet={!lead}>
+          {lead ? t("person.intro.best") : t("person.intro.alternative")}
+        </Badge>
+        {/* A route that cannot be used says so beside itself. Rendering it
+            identically to an open one would send a rep to ask a colleague who
+            has already declined. */}
+        {blocked ? <Badge quiet>{blocked}</Badge> : null}
+      </p>
+      <p className="pn-counts">{evidenceSentence(route.evidence, t, locale)}</p>
+    </>
+  );
+}
+
+/**
+ * evidenceSentence writes the proof line the reader acts on.
+ *
+ * Two-way and one-sided are different claims, and the difference is the whole
+ * point: thirty unanswered sends are not a relationship, and a line that
+ * printed one number for both would say they were.
+ */
+export function evidenceSentence(
+  ev: RouteEvidence,
+  t: Translate,
+  locale: Locale,
+): string {
+  const when = lastContactPhrase(ev, t, locale);
+  const key = ev.two_way
+    ? "person.intro.evidenceTwoWay"
+    : "person.intro.evidenceOneSided";
+  return t(key, { total: formatNumber(ev.interactions_90d, locale), when });
+}
+
+// The server counts the days, so the client never re-derives today from a
+// timestamp — two clocks disagreeing is how "yesterday" becomes "2 days ago"
+// for a reader in another timezone.
+function lastContactPhrase(
+  ev: RouteEvidence,
+  t: Translate,
+  locale: Locale,
+): string {
+  const days = ev.days_since_last;
+  if (days === null || days === undefined) return t("person.intro.whenNever");
+  if (days === 0) return t("person.intro.whenToday");
+  if (days === 1) return t("person.intro.whenYesterday");
+  return t("person.intro.whenDays", { days: formatNumber(days, locale) });
+}
+
+// An available route needs no label; the other three each say something the
+// reader would otherwise learn by asking and being turned down.
+function availabilityLabel(
+  availability: RouteCandidate["availability"],
+  t: Translate,
+): string | null {
+  switch (availability) {
+    case "already_requested":
+      return t("person.intro.alreadyRequested");
+    case "declined":
+      return t("person.intro.declined");
+    case "unavailable":
+      return t("person.intro.unavailable");
+    default:
+      return null;
+  }
+}

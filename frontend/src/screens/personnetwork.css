@@ -107,6 +107,21 @@
   line-height: 1.5;
 }
 
+/* The ways in, best first. An ordered list because the order is the meaning:
+   the first row is the recommendation, and a reader who has to work out which
+   one that is has lost what the ranking was for. */
+.pn-routes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pn-route-row + .pn-route-row {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
 /* The region the ring's selection writes into. */
 .pn-live {
   margin-top: var(--space-3);

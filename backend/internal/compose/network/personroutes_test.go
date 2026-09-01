@@ -32,7 +32,7 @@ func TestTheRecommendationIsTheHeadOfTheList(t *testing.T) {
 		})
 
 	routes := chooseRoutes(graph, graphNow)
-	route := chooseRoute(routes, graphNow)
+	route := chooseRoute(routes)
 	if len(routes) != 2 {
 		t.Fatalf("two askable routes produced %d candidates", len(routes))
 	}
@@ -77,7 +77,7 @@ func TestAContactToContactEdgeIsNeverARoute(t *testing.T) {
 		t.Errorf("route goes via %q; a pair of their own people is not a door",
 			routes[0].ViaDisplayName)
 	}
-	if route := chooseRoute(routes, graphNow); route == nil {
+	if route := chooseRoute(routes); route == nil {
 		t.Error("a usable direct route existed and the card recommended nothing")
 	}
 }

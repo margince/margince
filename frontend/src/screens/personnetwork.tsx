@@ -23,6 +23,7 @@ import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { usePersonGraph } from "./persongraph";
+import { RoutesCard } from "./personroutes";
 import { changeSentence } from "./relationshipchange";
 import "./personnetwork.css";
 
@@ -165,7 +166,7 @@ export function PersonNetworkTab({
 
   return (
     <div className="pn-stack">
-      <RouteCard graph={data} />
+      <RoutesCard graph={data} />
 
       <Card
         title={t("person.network.ringTitle")}
@@ -222,37 +223,6 @@ export function PersonNetworkTab({
 
 function isOmitted(graph: Graph, group: string): boolean {
   return (graph.groups_omitted ?? []).some((g) => g === group);
-}
-
-/**
- * RouteCard is the answer: the warmest way in and the evidence for it. It
- * leads because a reader who reads nothing else should still leave knowing
- * who to ask.
- */
-function RouteCard({ graph }: Readonly<{ graph: Graph }>) {
-  const t = useT();
-  const route = graph.route;
-  return (
-    <Card title={t("person.graph.routeTitle")}>
-      {route ? (
-        <>
-          <p className="pn-route">
-            {route.through_display_name
-              ? t("person.graph.routeVia", {
-                  name: route.via_display_name,
-                  through: route.through_display_name,
-                })
-              : t("person.graph.routeDirect", {
-                  name: route.via_display_name,
-                })}
-          </p>
-          <p className="pn-counts">{route.why}</p>
-        </>
-      ) : (
-        <p className="pn-route">{t("person.graph.noRoute")}</p>
-      )}
-    </Card>
-  );
 }
 
 /**

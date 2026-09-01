@@ -136,7 +136,7 @@ func (h Reads) buildPersonGraph(
 	out.DroppedCount = &dropped
 	routes := chooseRoutes(out, now)
 	out.Routes = &routes
-	out.Route = chooseRoute(routes, now)
+	out.Route = chooseRoute(routes)
 	return nil
 }
 
@@ -288,7 +288,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, personID ids.UUID) ([]
 // second time. Two rankings over one set of facts are two answers to one
 // question, and the day they disagree the card recommends one colleague and
 // lists a different one first.
-func chooseRoute(candidates []crmcontracts.PersonGraphRouteCandidate, now time.Time) *crmcontracts.PersonGraphRoute {
+func chooseRoute(candidates []crmcontracts.PersonGraphRouteCandidate) *crmcontracts.PersonGraphRoute {
 	if len(candidates) == 0 {
 		return nil
 	}

@@ -6336,7 +6336,6 @@ export const vi = {
   "person.enriched.save": "Lưu bản sửa",
   "person.enriched.cancel": "Huỷ",
   "person.graph.loading": "Đang đọc mạng lưới quanh contact này…",
-  "person.graph.routeTitle": "Đường tiếp cận thân thiết nhất",
   "person.graph.routeDirect": "{name} đã có trao đổi với họ.",
   "person.graph.routeVia": "{name} có trao đổi với {through} ở cùng công ty.",
   "person.graph.noRoute":
@@ -6358,6 +6357,22 @@ export const vi = {
     "Chỉ là số đếm — nội dung tin nhắn vẫn nằm trên timeline.",
   "person.graph.untitledMessage": "Tin nhắn không có tiêu đề",
   "person.graph.dropped": "Còn {count} mục không hiển thị.",
+  "person.intro.routesTitle": "Các lối vào",
+  "person.intro.routesSub":
+    "Tốt nhất trước. Chọn lối bạn thực sự dùng được — lối thứ hai có ở đây vì lối đầu không phải lúc nào cũng sẵn sàng.",
+  "person.intro.best": "Tốt nhất",
+  "person.intro.alternative": "Lựa chọn khác",
+  "person.intro.evidenceTwoWay":
+    "{total} lượt trao đổi hai chiều trong 90 ngày · {when}",
+  "person.intro.evidenceOneSided":
+    "{total} lượt tương tác trong 90 ngày, một chiều · {when}",
+  "person.intro.whenToday": "liên hệ gần nhất hôm nay",
+  "person.intro.whenYesterday": "liên hệ gần nhất hôm qua",
+  "person.intro.whenDays": "liên hệ gần nhất {days} ngày trước",
+  "person.intro.whenNever": "không có liên hệ gần đây",
+  "person.intro.alreadyRequested": "Đã hỏi rồi",
+  "person.intro.declined": "Đã từ chối trước đó",
+  "person.intro.unavailable": "Không khả dụng",
   "person.network.ringTitle": "Ai tiếp cận được người này",
   "person.network.ringSub":
     "Phía chúng ta và khách hàng này, theo độ ấm của quan hệ. Chọn một người để xem quan hệ đó dựa trên điều gì.",
