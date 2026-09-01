@@ -202,6 +202,32 @@ describe("the contact record's tabs", () => {
   });
 });
 
+// The confirm/correct control for a field Margince read off a signature or a
+// card existed and worked, but was unreachable from this page — built on the
+// dead PersonScreen and never carried over here (margince#3184). Logging an
+// interaction directly from this page (margince#3526) shipped separately, in
+// #3529.
+describe("the overview tab's added capabilities", () => {
+  it("lets a reader confirm or correct a field Margince read off a signature (margince#3184)", async () => {
+    const withEnrichment: Person360 = {
+      ...view,
+      profile_fields: [
+        {
+          field: "title",
+          value: "Head of Procurement",
+          evidence_snippet: "Head of Procurement, Brandt Automotive GmbH",
+          source: "capture_enrich",
+          captured_by: "agent:enrich",
+          captured_at: "2026-08-01T08:00:00Z",
+        },
+      ],
+    };
+    mount("overview", withEnrichment);
+    expect(await screen.findByText("What Margince read")).toBeTruthy();
+    expect(screen.getByText("Head of Procurement")).toBeTruthy();
+  });
+});
+
 describe("a moment action that opens the composer", () => {
   // The steering field's own value, read off the element rather than through a
   // matcher: this file carries no jest-dom, and narrowing beats asserting.

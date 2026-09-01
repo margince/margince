@@ -3,7 +3,9 @@ import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useHoldsAdminRole } from "../app/capability";
 import {
+  Badge,
   Button,
   Checkbox,
   Disclosure,
@@ -20,7 +22,7 @@ import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import "./users-access.css";
 
@@ -145,6 +147,12 @@ export function TeamsCard() {
   const t = useT();
   const toast = useToast();
   const qc = useQueryClient();
+  const me = useMe();
+  // Team membership is admin surface, the same authority `UsersAdminCard`
+  // gates on: an ops seat reads the roster below but does not change who is
+  // on a team. `probeSettled` (`me.isSuccess`) keeps the read-only line from
+  // flashing at an admin while /me is still in flight.
+  const canAdminister = useHoldsAdminRole();
   // The shared roster read, not a second query of this card's own. Both spell
   // the same list under the same cache key, so whichever mounted first decided
   // what the other one read back — and only one of the two follows the
@@ -206,9 +214,15 @@ export function TeamsCard() {
     // create verb goes. It used to be the LAST ROW of the team list, labelled
     // "New team" beside a button reading "Create team" — a row that was not a
     // team, inside a list of teams, saying its own name twice.
-    <Panel title={t("users.teamsTitle")} titleAction={<NewTeamAction />}>
+    <Panel
+      title={t("users.teamsTitle")}
+      titleAction={canAdminister ? <NewTeamAction /> : undefined}
+    >
       <PanelBody>
-        <p className="settings-panel-sub">{t("users.teamsSub")}</p>
+        <p className="settings-panel-sub">
+          {t("users.teamsSub")}
+          {me.isSuccess && !canAdminister && ` ${t("users.teamsAdminOnly")}`}
+        </p>
         {/* A refused archive belongs to the card, not to the row: the roster
             below is refetched on success, so the only thing left to say is that
             the write did not land. Callout's `danger` tone is what the rest of
@@ -244,6 +258,7 @@ export function TeamsCard() {
                     team={team}
                     archiving={archive.isPending}
                     onArchive={() => archive.mutate(team.id)}
+                    canAdminister={canAdminister}
                   />
                 ))}
               </SettingList>
@@ -270,10 +285,12 @@ function TeamRow({
   team,
   archiving,
   onArchive,
+  canAdminister,
 }: Readonly<{
   team: Team;
   archiving: boolean;
   onArchive: () => void;
+  canAdminister: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -296,19 +313,21 @@ function TeamRow({
         </span>
       }
       action={
-        <Button
-          small
-          variant="ghost"
-          iconOnly
-          aria-label={t("users.archiveTeam", { name: team.name })}
-          disabled={archiving}
-          onClick={onArchive}
-        >
-          <Trash2 aria-hidden />
-        </Button>
+        canAdminister ? (
+          <Button
+            small
+            variant="ghost"
+            iconOnly
+            aria-label={t("users.archiveTeam", { name: team.name })}
+            disabled={archiving}
+            onClick={onArchive}
+          >
+            <Trash2 aria-hidden />
+          </Button>
+        ) : undefined
       }
     >
-      <TeamMembers team={team} />
+      <TeamMembers team={team} canAdminister={canAdminister} />
     </Disclosure>
   );
 }
@@ -320,7 +339,17 @@ function TeamRow({
 // a filter over a list this screen has already loaded. A second endpoint would
 // be a second answer to "who is in this team", and the two would disagree the
 // first time one of them was cached.
-function TeamMembers({ team }: Readonly<{ team: Team }>) {
+//
+// `canAdminister` swaps the checkbox for plain text rather than merely
+// disabling it: an ops seat that can read this roster but not change it is a
+// permission denial, and design-system/README.md's "Absent, disabled, or
+// withheld" table names that a WITHHOLDING of the write affordance, stated
+// once at the card level (`TeamsCard`'s sub line) — not a control that looks
+// pressable and 403s (margince#3225).
+function TeamMembers({
+  team,
+  canAdminister,
+}: Readonly<{ team: Team; canAdminister: boolean }>) {
   const t = useT();
   const qc = useQueryClient();
   const users = useRoster("user", true);
@@ -380,7 +409,7 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
                 </legend>
                 {people.map((person) => {
                   const member = (person.team_ids ?? []).includes(team.id);
-                  return (
+                  return canAdminister ? (
                     <Checkbox
                       key={person.id}
                       className="t-body"
@@ -394,6 +423,16 @@ function TeamMembers({ team }: Readonly<{ team: Team }>) {
                         })
                       }
                     />
+                  ) : (
+                    <p
+                      key={person.id}
+                      className="t-body users-team-member-readonly"
+                    >
+                      {person.display_name}
+                      {member && (
+                        <Badge quiet>{t("users.teamMemberBadge")}</Badge>
+                      )}
+                    </p>
                   );
                 })}
               </fieldset>

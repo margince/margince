@@ -35,6 +35,7 @@ import {
   PersonCommitmentsCard,
   PersonMattersCard,
 } from "./personcards";
+import { EnrichedFields } from "./personcorrections";
 import {
   PersonComposer,
   PersonMeetingBrief,
@@ -418,6 +419,9 @@ export function PersonPageV2({
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
             <ConsentSection personId={id} />
+            {/* The fields Margince read off a signature or a card, and the
+                one place a reader can confirm or correct them. */}
+            <EnrichedFields personId={id} view={view.data} />
           </div>
         )}
 

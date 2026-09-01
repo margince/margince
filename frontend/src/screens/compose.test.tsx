@@ -1747,6 +1747,47 @@ describe("TimelineActions", () => {
       expect(screen.queryByRole("button", { name: "Reply" })).toBeNull(),
     );
   });
+
+  // margince#3447 and margince#3430 are one defect, seen from opposite sides:
+  // which audience control renders was keyed off `audience_reason`, but that
+  // field is null on an untouched CAPTURED row and non-null on a NARROWED
+  // hand-typed one — the exact opposite of what each case needs. thread_key is
+  // the field that actually means "this row belongs to a thread" either way.
+  it("offers the thread-level control on captured mail before it is ever narrowed (margince#3447)", () => {
+    const captured: Activity = {
+      ...activity202,
+      id: "a4",
+      thread_key: "thread:abc",
+      audience_reason: undefined,
+    };
+    stubRoutes();
+    render(
+      <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
+    );
+    expect(screen.getByRole("button", { name: "Share thread" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+  });
+
+  it("keeps the per-message control on hand-typed mail once narrowed (margince#3430)", () => {
+    const narrowedHandTyped: Activity = {
+      ...activity202,
+      id: "a5",
+      audience: "participants",
+      audience_reason: "manual",
+      thread_key: undefined,
+    };
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={narrowedHandTyped}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Keep private" })).toBeNull();
+  });
 });
 
 // An account-started send is the SAME send with a different origin (ADR-0087

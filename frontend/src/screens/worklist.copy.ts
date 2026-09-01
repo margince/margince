@@ -1,6 +1,7 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
 import {
+  calendarDaysBetween,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -219,6 +220,26 @@ function paired(
   return comparator in PAIRED_COMPARATORS;
 }
 
+// waitingDaysSideText reads one side of a `waiting_days` tie-break.
+//
+// The bucketed comparator always sends a `days` value. When two items tie on
+// the bucket, the server's own tie-break falls back to the exact instant each
+// occurred (a `date` value) — the true signal that broke the tie — but the
+// heading above this line promises a day count either way. Converting that
+// instant to days-since-then here keeps the line honest with its own heading,
+// instead of printing two clock times under "how many days".
+function waitingDaysSideText(
+  value: WorklistValue | undefined,
+  locale: Locale,
+  zone: string,
+  now: Date,
+): string | null {
+  if (value?.kind === "date" && value.date) {
+    return formatNumber(calendarDaysBetween(new Date(value.date), now), locale);
+  }
+  return valueText(value, locale, zone);
+}
+
 // Why this row sits above the next one.
 //
 // The comparator that DECIDED, with both sides' values — so a reader can check
@@ -230,6 +251,7 @@ export function comparisonText(
   t: T,
   locale: Locale,
   zone: string,
+  now: Date = new Date(),
 ): string | null {
   if (
     !comparison ||
@@ -238,8 +260,14 @@ export function comparisonText(
   ) {
     return null;
   }
-  const mine = valueText(comparison.mine, locale, zone);
-  const theirs = valueText(comparison.theirs, locale, zone);
+  const mine =
+    comparison.comparator === "waiting_days"
+      ? waitingDaysSideText(comparison.mine, locale, zone, now)
+      : valueText(comparison.mine, locale, zone);
+  const theirs =
+    comparison.comparator === "waiting_days"
+      ? waitingDaysSideText(comparison.theirs, locale, zone, now)
+      : valueText(comparison.theirs, locale, zone);
   if (mine === null || theirs === null || !paired(comparison.comparator)) {
     return t(`worklist.above.${comparison.comparator}` as const);
   }

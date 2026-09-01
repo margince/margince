@@ -58,6 +58,14 @@ function backend(
     users?: RosterUser[];
     /** Answers one write with a problem document, to drive the refusal arms. */
     refuse?: (call: Call) => boolean;
+    /**
+     * The caller's own roles, off `/me` — admin by default, so the write
+     * assertions in this suite exercise the same seat they always have. A
+     * test naming `["ops"]` or `[]` here gets the read-only case, which is a
+     * different render (margince#3225) rather than the same one with fewer
+     * writes attempted.
+     */
+    me?: readonly string[];
   }>,
 ) {
   const calls: Call[] = [];
@@ -81,6 +89,18 @@ function backend(
             ? undefined
             : await request.clone().json(),
       });
+      if (path.endsWith("/me")) {
+        // `user` is required on MeResponse — useMe() treats a payload
+        // without it as an availability failure and never resolves `.data`,
+        // which would silently read every seat here as non-admin.
+        return new Response(
+          JSON.stringify({
+            user: { email: "you@acme.test" },
+            roles: opts.me ?? ["admin"],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
       if (opts.refuse?.(calls[calls.length - 1])) {
         return new Response(JSON.stringify({ detail: "the team was merged" }), {
           status: 409,
@@ -514,5 +534,41 @@ describe("TeamsCard membership", () => {
     );
 
     expect(await screen.findByText("the team was merged")).toBeTruthy();
+  });
+
+  // margince#3225: an ops seat used to see the same checkboxes an admin does
+  // — enabled-looking, and refused the moment one was pressed. Team
+  // membership is admin surface, so a non-admin gets the read-only render
+  // instead: no checkbox to press, and the card states why once.
+  it("shows membership as read-only text to a seat that may not change it", async () => {
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+      me: ["ops"],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    await openTeam();
+
+    expect(
+      await screen.findByText(
+        "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here. Managing teams is available to admins only.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Ada Inside")).toBeTruthy();
+    expect(screen.getByText("Member")).toBeTruthy();
+    expect(screen.getByText("Bo Outside")).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
+
+    // Pressing nothing means writing nothing: an ops seat that cannot see a
+    // control cannot press it into a 403.
+    expect(calls.some((call) => call.method === "PUT")).toBe(false);
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+    expect(calls.some((call) => call.method === "PATCH")).toBe(false);
   });
 });

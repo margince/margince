@@ -114,6 +114,13 @@ function WorklistRow({
           <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
           {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
         </p>
+        {/* The server's one supporting line — a deal's name on a notice whose
+            title has nowhere to put it (margince#3360), a hygiene group's
+            cause, whatever else a source has to add beyond its title. Sent on
+            every row that has one; only the notice source went unrendered. */}
+        {item.detail && (
+          <p className="t-caption worklist-row-detail">{item.detail}</p>
+        )}
         {item.batch?.sample && item.batch.sample.length > 0 && (
           // A group nobody can see into is a group nobody trusts, and an
           // untrusted group is worse than the pile it replaced.

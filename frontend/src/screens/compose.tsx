@@ -2921,7 +2921,16 @@ export function TimelineActions({
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
-      {activity.audience_reason ? (
+      {/* Captured mail's audience is derived, never a direct write — its own
+          thread_key is what says so, and it carries one on every row, narrowed
+          or not. `audience_reason` is the wrong signal to branch on here: it is
+          null on an UNTOUCHED captured row (margince#3447, the wrong per-message
+          dialog was offered first) and becomes non-null on a NARROWED hand-typed
+          one, which has no thread for ThreadAudienceAction to act on and so
+          renders nothing at all (margince#3430, the control vanished for good).
+          thread_key is the one field that means "this row belongs to a thread"
+          in both directions. */}
+      {activity.thread_key ? (
         <ThreadAudienceAction
           activity={activity}
           entityType={entityType}

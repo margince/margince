@@ -5780,10 +5780,12 @@ export const de = {
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
+  "users.teamMemberBadge": "Mitglied",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt keinen Zugriff — Kunden, Kontakte, Leads und Deals dürfen hier ohnehin alle lesen.",
+  "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",
@@ -6619,6 +6621,13 @@ export const de = {
   "person.intro.asksSub":
     "Die Anfragen, an denen Sie beteiligt sind, neueste zuerst.",
   "person.intro.answerAction": "Antworten",
+  "person.intro.completeIntroducedAction": "Als vorgestellt markieren",
+  "person.intro.completeNameDroppedAction": "Als Namen verwendet markieren",
+  "person.intro.completeFailed":
+    "Das Ergebnis konnte nicht gespeichert werden.",
+  "person.intro.withdrawAction": "Zurückziehen",
+  "person.intro.withdrawFailed":
+    "Die Anfrage konnte nicht zurückgezogen werden.",
   "person.intro.stateRequested": "Wartet auf Ihre Kollegin",
   "person.intro.stateAccepted": "Sie werden vorgestellt",
   "person.intro.stateNameDropApproved": "Sie dürfen den Namen nennen",
