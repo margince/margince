@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -88,6 +89,17 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	var id ids.UUID
 	var priorRef *string
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The SAME lock the OAuth-app write takes, before this row is counted
+		// by anything. refuseStrandingConnections reads the connection count
+		// under it and then commits the new client id; without this the count
+		// and that commit straddle a window in which this row can land, and the
+		// mailbox is connected against an id that no longer exists — the exact
+		// outcome the refusal is there to prevent, arrived at by timing.
+		if key := appSettingKeyForConnector(name); key != "" {
+			if err := settings.LockForWrite(ctx, tx, key); err != nil {
+				return err
+			}
+		}
 		var err error
 		id, priorRef, err = upsertConnection(ctx, tx, row)
 		return err

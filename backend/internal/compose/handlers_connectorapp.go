@@ -160,6 +160,16 @@ func (h connectorAppHandlers) DeleteOauthApp(w http.ResponseWriter, r *http.Requ
 func (h connectorAppHandlers) ready(
 	w http.ResponseWriter, r *http.Request, provider string, action principal.Action,
 ) (capture.AppProvider, bool) {
+	// HUMAN ONLY, and asked here rather than per-handler because every route on
+	// this surface carries x-agent-access: human-only. An agent holding a
+	// borrowed passport with capture_settings.read would otherwise read back
+	// the installation's client id, its pinned directory and its callback URLs
+	// — none of them secret on their own, and together a description of the
+	// identity boundary the operator configured.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return "", false
+	}
 	if err := auth.Require(r.Context(), capture.SettingsObject, action); err != nil {
 		httperr.Write(w, r, err)
 		return "", false

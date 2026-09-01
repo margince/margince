@@ -331,3 +331,19 @@ const googleClientIDSuffix = ".apps.googleusercontent.com"
 // unanchored match would accept a GUID with anything pasted around it — which is
 // exactly what a copy that caught a neighbouring label looks like.
 var guid = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// appSettingKeyForConnector is the OAuth-app setting a capture connector
+// authorizes under, or empty for one no app backs.
+//
+// Exists so the CONNECT path can take the same lock the app write takes. The
+// two guard one invariant from opposite sides — a client id may not change out
+// from under a live connection, and a connection may not appear under an id
+// that is being replaced — and a lock only one of them holds is not a lock.
+func appSettingKeyForConnector(name string) string {
+	for _, k := range appKinds {
+		if slices.Contains(k.connectors, name) {
+			return k.entry.Key()
+		}
+	}
+	return ""
+}

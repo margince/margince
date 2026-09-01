@@ -201,3 +201,28 @@ func TestTheTwoSpellingsOfTheAppRuleRefuseTheSameValues(t *testing.T) {
 		}
 	}
 }
+
+// EVERY app-backed connector resolves to the setting its app lives under, and
+// nothing else does.
+//
+// Derived from appKinds rather than listed here: a connector added to a vendor
+// and missed by the lookup would connect without taking the app write's lock,
+// and the stranding refusal would go back to counting across a window a row can
+// land in. A hand-written list would go on passing after exactly that mistake.
+func TestEveryAppBackedConnectorResolvesToItsAppSetting(t *testing.T) {
+	for provider, kind := range appKinds {
+		for _, name := range kind.connectors {
+			if got := appSettingKeyForConnector(name); got != kind.entry.Key() {
+				t.Errorf("%s connector %q resolves to %q, want %q — it would connect without the app write's lock",
+					provider, name, got, kind.entry.Key())
+			}
+		}
+	}
+	// A connector no app backs takes no lock, rather than defaulting to one
+	// vendor's and serializing against a write that has nothing to do with it.
+	for _, name := range []string{"telegram", "imap", ""} {
+		if got := appSettingKeyForConnector(name); got != "" {
+			t.Errorf("connector %q resolves to %q, want no setting", name, got)
+		}
+	}
+}

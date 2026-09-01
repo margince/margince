@@ -65,10 +65,34 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logge
 	// ARE set, and telling an operator to supply them would send them to change
 	// values that are already right. A stored Entra app is sealed, so no vault
 	// means nowhere to keep its secret — the blocker is the vault, not them.
+	//
+	// It says so ALONGSIDE whatever the environment app is still missing, not
+	// instead of it. An operator here can have two problems at once — no vault
+	// AND a half-supplied app — and a line naming one sends them to fix it and
+	// boot into the same 501.
 	case graphCfg.TransportMountable():
-		_, _ = fmt.Fprintln(stdout, "api graph capture transport NOT mounted — no keyvault is configured, and a Settings-supplied Entra app has nowhere to seal its client secret; surface stays 501")
+		_, _ = fmt.Fprintf(stdout, "api graph capture transport NOT mounted — no keyvault is configured, "+
+			"and a Settings-supplied Entra app has nowhere to seal its client secret%s; surface stays 501\n",
+			envAppShortfall(cfg))
 	case cfg.graphClientID != "":
 		_, _ = fmt.Fprintln(stdout, "api graph capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) and --public-base-url; surface stays 501")
 	}
 	return opts, nil
+}
+
+// envAppShortfall names what the ENVIRONMENT's Entra app is still missing, as a
+// clause to append, or nothing when the environment supplies none at all.
+//
+// Nothing, in that last case, because an installation configuring its app
+// through Settings is not missing flags — it declined to use them, and listing
+// them would read as a fault.
+func envAppShortfall(cfg apiConfig) string {
+	switch {
+	case cfg.graphClientID == "":
+		return ""
+	case cfg.graphClientSecret == "":
+		return ", and the environment app is missing --graph-client-secret"
+	default:
+		return ""
+	}
 }
