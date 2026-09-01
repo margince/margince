@@ -71,6 +71,14 @@ import (
 // of under-recognition. Naming the owners means a vocabulary cannot go missing
 // without the diff saying which one.
 //
+// Kept in lexicographic order: the comparison sorts what it finds and compares
+// exactly, so an entry added out of order fails a gate nothing is wrong with.
+//
+// The blind spot, stated: two DISTINCT vocabularies owned by the same set of
+// sites are indistinguishable here, because a row is the owner string. One site
+// sending two closed answer enums would need this list to carry that owner
+// twice. No site does today.
+//
 // Update deliberately when a task's vocabulary genuinely arrives or leaves;
 // never edit it to make a run green.
 var recognisedOwners = []string{
@@ -206,7 +214,13 @@ func siteEnums(group []Scenario, census *aitasks.Registry) (map[string][]string,
 			return nil, fmt.Errorf("scenario %q: %w", sc.Name, err)
 		}
 		for _, enum := range members {
-			enums[strings.Join(enum, "\x00")] = enum
+			// Keyed on the SORTED members: enum order does not change which
+			// answers a schema admits, so two orderings of one vocabulary are one
+			// vocabulary. Keying on the raw order would split them in two and fail
+			// the owners comparison for a difference that means nothing.
+			key := append([]string(nil), enum...)
+			sort.Strings(key)
+			enums[strings.Join(key, "\x00")] = enum
 		}
 	}
 	return enums, nil

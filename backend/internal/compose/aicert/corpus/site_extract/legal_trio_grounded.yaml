@@ -5,9 +5,10 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # The legal trio — legal_form, register_court, register_number — is the only part
 # of this site's field vocabulary no scenario grounded. legal_abstention.yaml
-# proves the extractor withholds them from a page that does not state them, and
-# a rule that only fires one way is half a rule: nothing showed it will READ them
-# from a page that does.
+# covers the withholding half for a NEIGHBOURING set — its not_grounded list is
+# legal_name, registered_address and register_vat — so for the trio itself
+# neither half fired: nothing showed the extractor withholds them, and nothing
+# showed it will READ them from a page that states them plainly.
 #
 # German content is load-bearing here rather than incidental. A Handelsregister
 # entry is the form these three fields exist for, and its shape — "GmbH",

@@ -82,7 +82,10 @@ expect:
     rubric should reward getting it right: both are enthusiastic and neither
     signs. Dev shapes the decision from outside it; Marta actively pushes it
     through. Swapping the two scores in the middle rather than at the floor.
+  # This site's policy, not the corpus default: a wrong role is written straight
+  # to a seat, so committee_evidenced_buyer_01 sets the bar higher and every
+  # scenario here holds the same one.
   bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
