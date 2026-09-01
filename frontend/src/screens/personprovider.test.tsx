@@ -518,9 +518,13 @@ describe("the details that cost credits", () => {
     // will not look for a number without an email to anchor it, so a button
     // offering "mobile, 1 credit" would promise a purchase that cannot happen
     // and understate what it spends.
+    //
+    // Joined by "and", not a comma: a comma read as a list of things the press
+    // might pick from, and a rep who took it for the work-email button bought
+    // a mobile number he had not asked for.
     expect(
       await screen.findByRole("button", {
-        name: /Buy work email, mobile number · 2 credits/,
+        name: /Buy work email and mobile number · 2 credits/,
       }),
     ).toBeDefined();
 
@@ -561,7 +565,7 @@ describe("the details that cost credits", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: /Buy work email, mobile number · 2 credits/,
+        name: /Buy work email and mobile number · 2 credits/,
       }),
     );
 
