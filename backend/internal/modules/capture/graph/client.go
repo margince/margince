@@ -102,11 +102,16 @@ type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
 	// userPrincipalName for a mailbox with no mail attribute).
 	Profile(ctx context.Context, accessToken string) (email string, err error)
-	// DeltaInit starts a fresh inbox delta bounded to messages received on or
-	// after the given instant, walks it to completion, and returns the
-	// deltaLink the next Delta resumes from.
-	DeltaInit(ctx context.Context, accessToken string, after time.Time) (ids []string, deltaLink string, err error)
-	// Delta resumes an inbox delta from a stored deltaLink and returns the
+	// DeltaInit starts a fresh delta over ONE well-known folder, bounded to
+	// messages received on or after the given instant, walks it to completion,
+	// and returns the deltaLink the next Delta resumes from.
+	//
+	// Per folder rather than over the whole mailbox: /me/messages/delta would
+	// also yield Drafts, Deleted Items and Junk. A draft was never sent, so
+	// putting one on a customer's timeline would be recording a message that
+	// does not exist.
+	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) (ids []string, deltaLink string, err error)
+	// Delta resumes a folder's delta from a stored deltaLink and returns the
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	Delta(ctx context.Context, accessToken, deltaLink string) (ids []string, newDeltaLink string, err error)
@@ -249,7 +254,16 @@ func receivedAfterFilter(after time.Time) string {
 	return "receivedDateTime ge " + after.UTC().Format(time.RFC3339)
 }
 
-// deltaPage is one page of the inbox messages delta. A tombstoned entry
+// The two well-known folders a standing sync follows. Named constants because
+// they are Microsoft's own identifiers rather than folder names a person chose,
+// and because which folder a message came from is what attests whether the
+// owner sent it.
+const (
+	folderInbox = "inbox"
+	folderSent  = "sentitems"
+)
+
+// deltaPage is one page of a messages delta. A tombstoned entry
 // carries @removed instead of message fields — nothing to fetch for it.
 type deltaPage struct {
 	Value []struct {
@@ -260,9 +274,13 @@ type deltaPage struct {
 	DeltaLink string `json:"@odata.deltaLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 }
 
-func (a *httpAPI) DeltaInit(ctx context.Context, accessToken string, after time.Time) ([]string, string, error) {
+func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]string, string, error) {
 	q := url.Values{paramFilter: {receivedAfterFilter(after)}}
-	return a.deltaWalk(ctx, accessToken, a.base+"/me/mailFolders/inbox/messages/delta?"+q.Encode())
+	// receivedDateTime bounds BOTH folders: Exchange stamps it on a sent
+	// message too, so one filter serves the pair rather than the sent side
+	// needing sentDateTime and a second spelling of "recently".
+	return a.deltaWalk(ctx, accessToken,
+		a.base+"/me/mailFolders/"+url.PathEscape(folder)+"/messages/delta?"+q.Encode())
 }
 
 func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]string, string, error) {

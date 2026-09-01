@@ -107,7 +107,7 @@ func TestARotationIsReportedEvenWhenThePullThenFails(t *testing.T) {
 	api := &fakeAPI{email: owner, deltaErr: ErrUnreachable}
 	c := rotatingConnector(t, &fakeOAuth{access: "a", rotated: "r-2"}, api, sink)
 
-	prior := marshalCursor("https://graph/delta?stale", owner)
+	prior := marshalCursor("https://graph/delta?stale", "https://graph/sent?stale", owner)
 	if _, err := c.Sync(context.Background(), sealedAuth(t), prior, &recordingSink{}); err == nil {
 		t.Fatal("expected the pull to fail in this fixture")
 	}
