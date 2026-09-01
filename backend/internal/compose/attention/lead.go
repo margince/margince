@@ -165,32 +165,54 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	return kept
 }
 
+// leadRead is what one lead-response read produced: the rows, and whether the
+// read HAPPENED at all.
+//
+// The two travel together because `bounded` is only meaningful when `read` is
+// true — an unread source is absent from the page, and an absent source has no
+// bound to report. Held apart as two booleans they could be set independently,
+// and the combination that says "not read, but bounded" would publish a reach
+// row for a source the page never consulted.
+type leadRead struct {
+	rows []OwedLead
+	// read is false when no lead source is bound, when the installation
+	// measures no first response, or when the read was refused or failed.
+	read bool
+}
+
+// bounded reports whether the read stopped at its cap, so the page can say
+// there is more than it is showing. Only ever asked of a read that happened —
+// an unread source is absent from the page and has no bound to report.
+func (l leadRead) bounded() bool {
+	return len(l.rows) >= leadResponseBound
+}
+
 // owedLeads reads the leads still owed a first reply, or names why it could not.
 //
-// The `tracked` half is not an error and not an empty list: an installation
-// with no first-response target has no leads that are LATE, so the source is
-// absent from the page entirely. Reporting zero overdue leads where nothing
-// measures overdue would be a number the product cannot stand behind.
+// An installation with no first-response target has no leads that are LATE, so
+// the source is absent from the page entirely. Reporting zero overdue leads
+// where nothing measures overdue would be a number the product cannot stand
+// behind.
 func (s *Service) owedLeads(
 	ctx context.Context,
-) (rows []OwedLead, read, bounded bool, unavailable *crmcontracts.WorklistSourceUnavailable) {
+) (leadRead, *crmcontracts.WorklistSourceUnavailable) {
 	if s.leads == nil {
-		return nil, false, false, nil
+		return leadRead{}, nil
 	}
 	owed, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return nil, false, false, &crmcontracts.WorklistSourceUnavailable{
+		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
 		slog.ErrorContext(ctx, "the leads-owed-a-reply read failed", "error", err)
-		return nil, false, false, &crmcontracts.WorklistSourceUnavailable{
+		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	case !tracked:
-		return nil, false, false, nil
+		return leadRead{}, nil
 	default:
-		return owed, true, len(owed) >= leadResponseBound, nil
+		return leadRead{rows: owed, read: true}, nil
 	}
 }

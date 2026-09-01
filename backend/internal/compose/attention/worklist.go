@@ -109,13 +109,13 @@ func (s *Service) Worklist(
 	// The same rule for the leads still owed a reply: read beside the day,
 	// under the ownership dial this read already resolved, so `mine` narrows
 	// in the store's own query rather than by dropping rows afterwards.
-	leads, leadsRead, leadsBounded, leadsErr := reader.owedLeads(ctx)
+	leads, leadsErr := reader.owedLeads(ctx)
 	// On the READER, not on s. The narrowing lives on the copy forOwner made,
 	// and projecting from the original left s.taskOwner zero — so keepOwnedBy
 	// never ran and a page headed with a rep's name was never narrowed to them
 	// at all. The lead lane made this visible: its rows are the first that
 	// keepOwnedBy has to keep deliberately rather than by carrying a deal.
-	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads, leadsRead, leadsBounded)
+	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
 	}
@@ -163,7 +163,7 @@ func (s *Service) waitingCustomers(
 
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting []WaitingCustomer, leads []OwedLead, leadsRead, leadsBounded bool,
+	waiting []WaitingCustomer, leads leadRead,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -213,8 +213,10 @@ func (s *Service) worklistFrom(
 	// The leads still owed a first reply, ranked among everything else rather
 	// than in a queue of their own. Longest overdue first, so the few that LEAD
 	// are the ones most likely to have been forgotten.
-	sort.SliceStable(leads, func(i, j int) bool { return leads[i].DeadlineAt.Before(leads[j].DeadlineAt) })
-	for i, lead := range leads {
+	sort.SliceStable(leads.rows, func(i, j int) bool {
+		return leads.rows[i].DeadlineAt.Before(leads.rows[j].DeadlineAt)
+	})
+	for i, lead := range leads.rows {
 		row := classifyLead(lead, day.AsOf)
 		// Past the lead, an overdue lead sorts BELOW the other kinds without
 		// ceasing to be one — the same treatment a ninth waiting customer gets,
@@ -252,8 +254,8 @@ func (s *Service) worklistFrom(
 	// zero-valued reach entry — the page reporting a source as successfully
 	// read and empty, which is exactly the claim an untracked policy must not
 	// make.
-	if leadsRead {
-		bounded[sourceLeadResponse] = leadsBounded
+	if leads.read {
+		bounded[sourceLeadResponse] = leads.bounded()
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
