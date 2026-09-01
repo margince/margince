@@ -98,17 +98,80 @@ func TestPendingThreadsComeFirst(t *testing.T) {
 // classifier already held. An inner join would drop exactly those rows.
 func TestAThreadWhoseMessageWasErasedIsStillListed(t *testing.T) {
 	e := integration.Setup(t)
-	seedVerdict(t, e, e.Rep1, "thread-orphan", "held", "personal", 1)
+	seedVerdictOrphan(t, e, e.Rep1, "thread-orphan", "held", "personal", 1)
 
 	got := heldThreads(t, e, e.Rep1)
 	if len(got) != 1 {
 		t.Fatalf("%d threads, want 1 — a verdict with no activity still holds", len(got))
 	}
-	if got[0].Subject != "" {
-		t.Errorf("subject = %q, want empty — there is no message to read one from", got[0].Subject)
+	if got[0].HasActivity {
+		t.Error("an orphaned verdict reports an activity it does not have — " +
+			"which the card draws as a message with a blank subject line")
 	}
 	if got[0].Kind != "personal" {
 		t.Errorf("kind = %q, want personal — the verdict survives its evidence", got[0].Kind)
+	}
+}
+
+// The subject is activity CONTENT, and it reaches the reader through the same
+// clause every other reader of that table composes.
+//
+// This is the caller's OWN mailbox, so the clause admits them and the subject
+// arrives — which is exactly why the rule is easy to leave out and why nothing
+// on the happy path notices. What it buys is the row the clause refuses: a
+// verdict whose activity the caller may not read the content of is still listed
+// (they are holding it, and must be able to release it) and carries no subject.
+func TestAHeldThreadCarriesItsSubjectOnlyWhenTheReaderMayReadIt(t *testing.T) {
+	e := integration.Setup(t)
+	seedVerdict(t, e, e.Rep1, "thread-mine", "held", "legal", 1)
+
+	got := heldThreads(t, e, e.Rep1)
+	if len(got) != 1 {
+		t.Fatalf("%d threads, want 1", len(got))
+	}
+	if !got[0].HasActivity {
+		t.Fatal("the reader's own message did not reach them — the content clause " +
+			"is refusing a row it should admit")
+	}
+	if got[0].Subject != "Subject of thread-mine" {
+		t.Errorf("subject = %q, want the seeded one", got[0].Subject)
+	}
+}
+
+// A message a colleague imported and holds, whose verdict row is the CALLER's.
+// The ledger row is theirs to see and release; the message's content is not
+// theirs to read, and the two answers are separate.
+func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
+	e := integration.Setup(t)
+	var activityID ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		activityID = ids.NewV7()
+		// Captured by SOMEBODY ELSE and held to its participants, so the
+		// caller is outside the audience.
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Entwurf Aufhebungsvertrag', now(), 'gmail', $2, 'participants')`,
+			activityID, "human:"+e.Rep2.String())
+		return err
+	}); err != nil {
+		t.Fatalf("seeding a colleague's message: %v", err)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, attempts, first_activity_id)
+			VALUES ('thread-colleagues', $1, 'held', 'personnel', 1, $2)`, e.Rep1, activityID)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the verdict: %v", err)
+	}
+
+	got := heldThreads(t, e, e.Rep1)
+	if len(got) != 1 {
+		t.Fatalf("%d threads, want 1 — the row is the caller's to see", len(got))
+	}
+	if got[0].Subject == "Entwurf Aufhebungsvertrag" {
+		t.Error("a message the caller is not on handed them its subject — " +
+			"the content clause is not composed")
 	}
 }
 
@@ -121,16 +184,48 @@ func heldThreads(t *testing.T, e *integration.Env, user ids.UUID) []capture.Held
 	return got
 }
 
-// seedVerdict writes one ledger row directly. The engine that normally writes
-// these needs a model and a whole capture to run; what these cases are about is
-// the READ, and a row is the honest input to that.
+// seedVerdict writes one ledger row and the message it was raised about. The
+// engine that normally writes these needs a model and a whole capture to run;
+// what these cases are about is the READ, and a row is the honest input to that.
+//
+// The ACTIVITY is not optional here even though the column is. Every case in
+// this file seeded a verdict with a null first_activity_id at first, which left
+// the activity join — and the content clause on it — unexercised by the whole
+// suite: the subject leaked without an audience test and every case stayed
+// green. A fixture that omits the field models a different record.
 func seedVerdict(t *testing.T, e *integration.Env, user ids.UUID, threadKey, status, kind string, attempts int) {
 	t.Helper()
+	seedVerdictWithActivity(t, e, user, threadKey, status, kind, attempts, true)
+}
+
+// seedVerdictOrphan is the verdict whose message was erased while it stood,
+// which is the state ON DELETE SET NULL exists to produce.
+func seedVerdictOrphan(t *testing.T, e *integration.Env, user ids.UUID, threadKey, status, kind string, attempts int) {
+	t.Helper()
+	seedVerdictWithActivity(t, e, user, threadKey, status, kind, attempts, false)
+}
+
+func seedVerdictWithActivity(t *testing.T, e *integration.Env, user ids.UUID,
+	threadKey, status, kind string, attempts int, withActivity bool,
+) {
+	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, attempts)
-			VALUES ($1, $2, $3, nullif($4, ''), $5)`,
-			threadKey, user, status, kind, attempts)
+		ctx := context.Background()
+		var activityID *ids.UUID
+		if withActivity {
+			id := ids.NewV7()
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)
+				VALUES ($1, 'email', $2, now(), 'gmail', $3, 'participants')`,
+				id, "Subject of "+threadKey, "human:"+user.String()); err != nil {
+				return err
+			}
+			activityID = &id
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, attempts, first_activity_id)
+			VALUES ($1, $2, $3, nullif($4, ''), $5, $6)`,
+			threadKey, user, status, kind, attempts, activityID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a verdict: %v", err)

@@ -65,10 +65,11 @@ func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Re
 // sent with a blank subject line.
 func toContractHeldThread(t capture.HeldThread) crmcontracts.HeldThread {
 	out := crmcontracts.HeldThread{
-		ThreadKey: t.ThreadKey,
-		Status:    t.Status,
-		Pending:   t.Pending(),
-		Attempts:  t.Attempts,
+		ThreadKey:  t.ThreadKey,
+		Status:     t.Status,
+		Pending:    t.Pending(),
+		Attempts:   t.Attempts,
+		HasMessage: t.HasActivity,
 	}
 	if t.Kind != "" {
 		out.Kind = &t.Kind

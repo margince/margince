@@ -40,11 +40,15 @@ type HeldThread struct {
 	// personnel, financial_corporate and the rest — empty while pending.
 	Kind string
 	// Subject and OccurredAt come from the message that opened the thread, so
-	// a reader can tell one held thread from another. Both absent when that
-	// activity was erased while the verdict stood, which is a state the ledger
-	// deliberately survives.
+	// a reader can tell one held thread from another.
 	Subject    string
 	OccurredAt *time.Time
+	// HasActivity separates "no message to read a subject from" — erased while
+	// the verdict stood, which the ledger deliberately survives — from a
+	// message somebody sent with a blank subject line. Collapsing the two would
+	// tell a reader their evidence was destroyed when it is sitting there
+	// unnamed.
+	HasActivity bool
 	// Attempts is how many times a verdict has been asked for. It is the
 	// outage signal: a pending row whose attempts stop climbing is a model
 	// that stopped answering, not a thread that is merely slow.
@@ -74,44 +78,69 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 	if !ok || actor.UserID == ids.Nil {
 		return nil, apperrors.ErrPermissionDenied
 	}
+	// The arguments the clause and the query share, numbered together: the
+	// content clause mints its own placeholders and they must not collide with
+	// the seat's.
+	args := []any{actor.UserID}
+	arg := func(v any) int {
+		args = append(args, v)
+		return len(args)
+	}
+	// The subject is activity CONTENT, so it is read through the same clause
+	// every other reader of that table composes. This is the caller's own
+	// mailbox, so the clause admits them — but writing the read unconditionally
+	// would leave a projection of activity text that no audience rule governs,
+	// which is the shape audiencereaders_test refuses. A held thread the caller
+	// may not read the content of still appears, with no subject.
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
 	var out []HeldThread
-	err := db.Tx(ctx, func(tx pgx.Tx) error {
+	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		// The activity join is a LEFT one and the ledger is the driving table:
 		// a verdict outlives the message it was raised about (first_activity_id
 		// is ON DELETE SET NULL, so an erasure inside the window nulls it
 		// rather than dropping the row), and an inner join would silently drop
 		// exactly the threads whose evidence is gone while the hold stands.
 		//
-		// The subject is read through the same content rule the timeline uses.
-		// This is the owner's own mailbox so the rule admits them, but writing
-		// it as an unconditional read would leave a projection of activity text
-		// that no audience clause governs — the shape audiencereaders_test
-		// exists to refuse.
+		// The content clause rides the JOIN rather than the WHERE for the same
+		// reason: in the WHERE it would turn the outer join into an inner one
+		// and drop every row whose activity is absent or withheld.
 		rows, err := tx.Query(ctx, `
 			SELECT v.thread_key,
 			       v.status,
 			       coalesce(v.kind, '')    AS kind,
-			       coalesce(a.subject, '') AS subject,
+			       a.subject,
 			       a.occurred_at,
 			       v.attempts
 			  FROM capture_thread_verdict v
 			  LEFT JOIN activity a
 			    ON a.id = v.first_activity_id
 			   AND a.archived_at IS NULL
+			   AND `+content+`
 			 WHERE v.user_id = $1
 			   AND v.status NOT IN ('cleared', 'shared_by_owner')
 			 ORDER BY (v.status = 'pending') DESC,
 			          a.occurred_at DESC NULLS LAST,
-			          v.created_at DESC`, actor.UserID)
+			          v.created_at DESC`, args...)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's held threads: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var t HeldThread
+			var subject *string
 			if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind,
-				&t.Subject, &t.OccurredAt, &t.Attempts); err != nil {
+				&subject, &t.OccurredAt, &t.Attempts); err != nil {
 				return fmt.Errorf("capture: listing a seat's held threads: %w", err)
+			}
+			// NULL is "no message to read one from"; an empty string is a
+			// message somebody sent with a blank subject line. The two read
+			// differently on screen, so they stay different here.
+			t.HasActivity = subject != nil
+			if subject != nil {
+				t.Subject = *subject
 			}
 			out = append(out, t)
 		}

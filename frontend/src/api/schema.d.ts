@@ -12821,10 +12821,21 @@ export interface components {
              */
             kind?: string;
             /**
+             * @description The message this thread began with is still readable by you. False where it was erased
+             *     while the verdict stood — which the ledger deliberately survives, because losing the
+             *     verdict would re-open a thread a classifier already held — and false where its content
+             *     is withheld from you.
+             *
+             *     Separate from `subject` because absence has two causes that read differently: no
+             *     message to name, versus a message somebody sent with a blank subject line. It also
+             *     decides whether releasing is offered at all: the release works on your own messages on
+             *     the thread, so with none left there is nothing to share.
+             */
+            has_message: boolean;
+            /**
              * @description The subject of the message that opened the thread, so one held thread reads differently
-             *     from another. Absent when that message was erased while the verdict stood, which the
-             *     ledger deliberately survives — losing the verdict would re-open a thread a classifier
-             *     already held.
+             *     from another. Absent when there is no message to read one from, and absent when the
+             *     message carries no subject — `has_message` tells the two apart.
              */
             subject?: string;
             /**

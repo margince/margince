@@ -26,6 +26,7 @@ const PENDING: HeldThread = {
   status: "pending",
   pending: true,
   attempts: 3,
+  has_message: true,
   subject: "Angebot Q4",
   occurred_at: "2026-08-30T09:12:00Z",
 };
@@ -35,6 +36,7 @@ const JUDGED: HeldThread = {
   status: "held",
   pending: false,
   attempts: 1,
+  has_message: true,
   kind: "legal",
   subject: "Entwurf Aufhebungsvertrag",
   occurred_at: "2026-08-29T15:40:00Z",
@@ -115,10 +117,39 @@ describe("held threads", () => {
   it("says the opening message is gone rather than drawing an empty subject", async () => {
     // The verdict outlives its evidence on purpose — losing it would re-open a
     // thread a classifier already held — so this row is normal, not broken.
-    renderCard([{ ...JUDGED, subject: undefined, occurred_at: undefined }]);
+    renderCard([
+      {
+        ...JUDGED,
+        has_message: false,
+        subject: undefined,
+        occurred_at: undefined,
+      },
+    ]);
     expect(
       await screen.findByText(/the message this began with is gone/i),
     ).toBeInTheDocument();
+  });
+
+  it("tells a message with no subject from no message at all", async () => {
+    // Both draw an unnamed row, and collapsing them would tell a reader their
+    // evidence was destroyed when it is sitting there unnamed.
+    renderCard([{ ...JUDGED, subject: undefined }]);
+    expect(await screen.findByText(/^no subject$/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/the message this began with is gone/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("refuses the release when there is no message left to share", async () => {
+    // The release works on the seat's own messages on the thread, so with none
+    // left it answers not-found. A control whose only outcome is an error is
+    // worse than one that says why it cannot run.
+    renderCard([{ ...JUDGED, has_message: false, subject: undefined }]);
+    const button = await screen.findByRole("button", {
+      name: /share with the team/i,
+    });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/no message left to share/i)).toBeInTheDocument();
   });
 
   it("reports a release that opened nothing", async () => {

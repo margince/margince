@@ -3881,6 +3881,9 @@ export const en = {
   "heldThreads.release": "Share with the team",
   "heldThreads.released": "Shared with the team",
   "heldThreads.noSubject": "the message this began with is gone",
+  "heldThreads.blankSubject": "no subject",
+  "heldThreads.nothingToShare":
+    "There is no message left to share — this thread\u2019s first message was erased, and the hold stays so a later reply does not arrive open.",
   "heldThreads.pending": "Waiting on a verdict",
   "heldThreads.attempts": "asked {count} time(s)",
   "heldThreads.heldByOthers":

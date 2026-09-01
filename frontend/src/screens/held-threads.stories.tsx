@@ -26,6 +26,7 @@ const MIXED: HeldThread[] = [
     status: "pending",
     pending: true,
     attempts: 4,
+    has_message: true,
     subject: "Angebot Q4 — Rückfragen",
     occurred_at: "2026-08-30T09:12:00Z",
   },
@@ -34,6 +35,7 @@ const MIXED: HeldThread[] = [
     status: "held",
     pending: false,
     attempts: 1,
+    has_message: true,
     kind: "legal",
     subject: "Entwurf Aufhebungsvertrag",
     occurred_at: "2026-08-29T15:40:00Z",
@@ -43,6 +45,7 @@ const MIXED: HeldThread[] = [
     status: "unsure",
     pending: false,
     attempts: 2,
+    has_message: true,
     subject: "Re: Termin",
     occurred_at: "2026-08-28T11:02:00Z",
   },
@@ -54,6 +57,9 @@ const MIXED: HeldThread[] = [
     status: "held",
     pending: false,
     attempts: 1,
+    // No message left: the release is refused with a reason rather than
+    // offering a control whose only outcome is an error.
+    has_message: false,
     kind: "personal",
   },
 ];

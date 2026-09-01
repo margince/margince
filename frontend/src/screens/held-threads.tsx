@@ -131,7 +131,17 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               // A thread whose opening message was erased has no subject to
               // show. It is still held, and saying so beats an empty cell that
               // reads as a message sent with a blank subject line.
-              row.subject ?? (
+              // Three states, not two: a subject, a message that carries
+              // none, and no message at all. Collapsing the last two would tell
+              // a reader their evidence was destroyed when it is sitting there
+              // unnamed.
+              row.has_message ? (
+                (row.subject ?? (
+                  <span className="t-meta">
+                    {t("heldThreads.blankSubject")}
+                  </span>
+                ))
+              ) : (
                 <span className="t-meta">{t("heldThreads.noSubject")}</span>
               ),
           },
@@ -156,6 +166,15 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             render: (row) => (
               <Button
                 small
+                // A verdict outlives the message it was raised about, and the
+                // release endpoint works on the seat's MESSAGES on the thread —
+                // with none left it answers not-found. Offering the verb anyway
+                // would be a control whose only outcome is an error, so it says
+                // why instead. The row stays listed: the verdict still governs
+                // what a later message on this thread inherits.
+                reason={
+                  row.has_message ? undefined : t("heldThreads.nothingToShare")
+                }
                 pending={
                   release.isPending && release.variables === row.thread_key
                 }

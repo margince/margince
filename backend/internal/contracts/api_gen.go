@@ -19702,6 +19702,17 @@ type HeldThread struct {
 	// whose attempts stop climbing is a model that stopped answering.
 	Attempts int `json:"attempts"`
 
+	// HasMessage The message this thread began with is still readable by you. False where it was erased
+	// while the verdict stood — which the ledger deliberately survives, because losing the
+	// verdict would re-open a thread a classifier already held — and false where its content
+	// is withheld from you.
+	//
+	// Separate from `subject` because absence has two causes that read differently: no
+	// message to name, versus a message somebody sent with a blank subject line. It also
+	// decides whether releasing is offered at all: the release works on your own messages on
+	// the thread, so with none left there is nothing to share.
+	HasMessage bool `json:"has_message"`
+
 	// Kind What the classifier concluded the thread is ABOUT — legal, personnel,
 	// financial_corporate, personal, security_incident, explicitly_confidential. Absent while
 	// pending, because nothing has concluded anything yet.
@@ -19720,9 +19731,8 @@ type HeldThread struct {
 	Status string `json:"status"`
 
 	// Subject The subject of the message that opened the thread, so one held thread reads differently
-	// from another. Absent when that message was erased while the verdict stood, which the
-	// ledger deliberately survives — losing the verdict would re-open a thread a classifier
-	// already held.
+	// from another. Absent when there is no message to read one from, and absent when the
+	// message carries no subject — `has_message` tells the two apart.
 	Subject *string `json:"subject,omitempty"`
 
 	// ThreadKey The thread this holds, and the key `POST /activities/threads/{thread_key}/audience`
