@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
@@ -36,19 +36,31 @@ type MailPosture = NonNullable<
 
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 
+// How strict each posture is. Only a NARROWING has anything to offer history:
+// opening what was captured under a stricter answer is a separate decision the
+// server refuses to make as a side effect of this one.
+const postureRank: Record<MailPosture, number> = {
+  shared: 0,
+  classified: 1,
+  held: 2,
+};
+
 function useSetConnectPosture(provider: Provider) {
   const queryClient = useQueryClient();
   return useMutation({
     // The posture rides as a variable rather than closed over, for the reason
     // frontend/AGENTS.md gives: a mutationFn reading rendered state answers
     // with the previous render's.
-    mutationFn: async (vars: { posture: MailPosture }) => {
+    mutationFn: async (vars: {
+      posture: MailPosture;
+      applyToHistory: boolean;
+    }) => {
       const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
         params: { path: { provider } },
-        // Never true here, and not a variable: there is no captured mail to
-        // narrow at connect time. Sending the flag would ask the server to walk
-        // a set that is empty by construction.
-        body: { posture: vars.posture, apply_to_history: false },
+        body: {
+          posture: vars.posture,
+          apply_to_history: vars.applyToHistory,
+        },
       });
       if (error) {
         throwProblem(error);
@@ -71,18 +83,32 @@ function useSetConnectPosture(provider: Provider) {
 export function ConnectPostureStep({
   provider,
   posture,
-}: Readonly<{ provider: Provider; posture: MailPosture | undefined }>) {
+  onPendingChange,
+}: Readonly<{
+  provider: Provider;
+  posture: MailPosture | undefined;
+  /** Raised while a posture write is in flight, so a caller can hold back the
+   *  controls that read history or leave the flow: a backread that starts
+   *  mid-write imports under whichever answer wins the race. */
+  onPendingChange?: (pending: boolean) => void;
+}>) {
   const t = useT();
   const settings = useCaptureSettings();
   const save = useSetConnectPosture(provider);
-  // What the server says this connection is, until a save of our own succeeds.
-  // Optimism here would be a lie a reader acts on: the one option that can be
-  // refused (shared, 422 when the workspace has not allowed it) is exactly the
-  // one whose refusal matters.
-  const [saved, setSaved] = useState<MailPosture | null>(null);
   const labelId = useId();
   const helpId = useId();
-  const current = saved ?? posture ?? "classified";
+  // The server's answer, always — never a local echo of the last successful
+  // save. A save invalidates the connectors query, so the prop is what comes
+  // back; holding a local copy beside it would keep showing this session's
+  // choice after another session, a reconnect or a later refusal changed the
+  // real value. Optimism is wrong here for the same reason: the one option
+  // that can be refused (shared, 422 without the workspace opt-in) is the one
+  // whose refusal a reader must see.
+  const current = posture ?? "classified";
+
+  useEffect(() => {
+    onPendingChange?.(save.isPending);
+  }, [save.isPending, onPendingChange]);
   const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
 
   return (
@@ -100,10 +126,10 @@ export function ConnectPostureStep({
         disabled={save.isPending}
         onChange={(next) => {
           const chosen = next as MailPosture;
-          save.mutate(
-            { posture: chosen },
-            { onSuccess: () => setSaved(chosen) },
-          );
+          save.mutate({
+            posture: chosen,
+            applyToHistory: postureRank[chosen] > postureRank[current],
+          });
         }}
         options={[
           {

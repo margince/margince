@@ -278,6 +278,10 @@ export function OAuthReturnPanel({
     },
   });
   const returning = asOAuthProvider(provider);
+  // Raised while the posture write is in flight. The backread is what reads a
+  // year of mail, so starting one before the answer commits imports under
+  // whichever of the two wins.
+  const [postureSaving, setPostureSaving] = useState(false);
   // A segment this build cannot resolve to a provider names no mailbox, and
   // falling back would offer the import for one the human did not just connect.
   // That is precisely the failure the exact match exists to prevent, so it lands
@@ -355,10 +359,19 @@ export function OAuthReturnPanel({
               year of mail: a posture chosen after it has already let every
               captured message in under the previous answer. */}
 
-          <ConnectPostureStep
-            provider={live.provider}
-            posture={live.mail_posture ?? undefined}
-          />
+          {/* Only when the return NAMED its provider. With the segment absent
+              `live` is the roster's first live OAuth mailbox — a good enough
+              guess for the backread, which offers to read a mailbox and can be
+              declined, and the wrong basis for this: writing a posture to a
+              guessed row silently changes who may read a DIFFERENT inbox. The
+              posture is then left to Settings, where the row is named. */}
+          {returning !== null && (
+            <ConnectPostureStep
+              provider={live.provider}
+              posture={live.mail_posture ?? undefined}
+              onPendingChange={setPostureSaving}
+            />
+          )}
           {/* The mailbox is live, so the step is not finished yet: how far back
               to read it is the next question, and the backread owns the exit
               from here — its own leave controls finish onboarding, whether or
@@ -366,6 +379,7 @@ export function OAuthReturnPanel({
           <OnboardingBackread
             provider={live.provider}
             initial={live.backfill}
+            disabled={postureSaving}
             onFinish={(skipped) => void onComplete(skipped)}
           />
         </>
@@ -409,6 +423,10 @@ export function ImapConnectPanel({
 }>) {
   const t = useT();
   const qc = useQueryClient();
+  // This panel's own flag: the OAuth arm above is a different component with a
+  // different lifetime, and sharing one would couple two flows that never run
+  // together.
+  const [postureSaving, setPostureSaving] = useState(false);
   const [host, setHostVal] = useState("imap.gmail.com");
   const [port, setPort] = useState(IMAP_DEFAULT_PORT);
   const [email, setEmail] = useState("");
@@ -476,14 +494,22 @@ export function ImapConnectPanel({
         </div>
         <p className="ob-sub">{t("ob.s4.capturedBody")}</p>
         {/* The same question the OAuth arm asks, in the same place: after the
-            grant, before the reader leaves for the CRM. An IMAP connect reads
-            its first messages on the spot (max_messages above), so a posture
-            chosen on the next screen would arrive after them. */}
+            grant, before the reader leaves for the CRM. The connect stores the
+            credentials; the first window of mail is read afterwards by the
+            standing sync, and the row is due the moment it exists — so this is
+            the last screen on which the answer can still precede the mail. */}
         <ConnectPostureStep
           provider={connect.data.connection.provider}
           posture={connect.data.connection.mail_posture ?? undefined}
+          onPendingChange={setPostureSaving}
         />
-        <Button variant="primary" onClick={() => void onComplete(false)}>
+        <Button
+          variant="primary"
+          // Leaving mid-write lands the reader in the CRM while the answer is
+          // still in flight, with no surface left to show a refusal.
+          disabled={postureSaving}
+          onClick={() => void onComplete(false)}
+        >
           {t("ob.s4.enterCrm")} <ArrowRight aria-hidden />
         </Button>
       </div>

@@ -229,7 +229,9 @@ describe("the posture step on a fresh connection", () => {
       "GET /capture/settings": () =>
         jsonResponse({ shared_posture_allowed: false }),
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(
+      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
+    );
 
     expect(
       await screen.findByText(en["connectors.mailPosture.label"]),
@@ -263,7 +265,9 @@ describe("the posture step on a fresh connection", () => {
         return jsonResponse({});
       },
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(
+      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
+    );
 
     await screen.findByText(en["connectors.mailPosture.label"]);
     // Driven the way the design-system suite drives this control: the popup is
@@ -290,7 +294,9 @@ describe("the posture step on a fresh connection", () => {
       "GET /capture/settings": () =>
         jsonResponse({ shared_posture_allowed: true }),
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(
+      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
+    );
 
     expect(
       await screen.findByText(
@@ -301,5 +307,70 @@ describe("the posture step on a fresh connection", () => {
           ),
       ),
     ).toBeTruthy();
+  });
+});
+
+// The three things the review found, each as a case that fails without its fix.
+describe("the posture step and the mail already captured", () => {
+  const gmail = (posture?: string) => ({
+    id: "g1",
+    provider: "gmail",
+    status: "connected",
+    scopes: ["read"],
+    backfill: { state: "idle" },
+    ...(posture === undefined ? {} : { mail_posture: posture }),
+  });
+
+  // A same-account reconnect lands on the row it already had (the grant upserts
+  // on (user_id, provider)), so "nothing is captured yet" is not something this
+  // screen can assume. Narrowing therefore carries the history with it.
+  it("narrows the mail already captured when the posture tightens", async () => {
+    const bodies: { posture: string; apply: boolean }[] = [];
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ data: [gmail("classified")] }),
+      "GET /connectors/gmail/backfill": () => jsonResponse({ state: "idle" }),
+      "GET /capture/settings": () =>
+        jsonResponse({ shared_posture_allowed: false }),
+      "PUT /connectors/gmail/mail-posture": (body: unknown) => {
+        const b = body as { posture: string; apply_to_history: boolean };
+        bodies.push({ posture: b.posture, apply: b.apply_to_history });
+        return jsonResponse({});
+      },
+    });
+    render(
+      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
+    );
+
+    await screen.findByText(en["connectors.mailPosture.label"]);
+    const user = userEvent.setup();
+    const trigger = screen.getByRole("combobox");
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.click(
+      await screen.findByRole("option", {
+        name: en["connectors.mailPosture.held"],
+      }),
+    );
+    await waitFor(() =>
+      expect(bodies).toEqual([{ posture: "held", apply: true }]),
+    );
+  });
+
+  // With no provider on the return, `live` is the roster's FIRST live OAuth
+  // mailbox — a guess. It is good enough to offer a history read, which the
+  // reader can decline, and wrong for a write that changes who may read a
+  // mailbox they did not just connect.
+  it("asks nothing when the return did not name its mailbox", async () => {
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ data: [gmail("classified")] }),
+      "GET /connectors/gmail/backfill": () => jsonResponse({ state: "idle" }),
+      "GET /capture/settings": () =>
+        jsonResponse({ shared_posture_allowed: false }),
+    });
+    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+
+    // The panel itself still resolves — this is about the posture control only.
+    expect(await screen.findByText("Live and capturing")).toBeTruthy();
+    expect(screen.queryByText(en["connectors.mailPosture.label"])).toBeNull();
   });
 });
