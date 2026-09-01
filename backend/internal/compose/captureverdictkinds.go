@@ -97,7 +97,9 @@ For EACH supplied address emit exactly one kind:
     business relationship.
   "transactional" — automated mail from a service: receipts, invoices, notifications, delivery
     reports, calendar or ticketing systems.
-  "spam" — unsolicited commercial mail or fraud.
+  "spam" — unsolicited commercial mail or fraud: a sender this business never contacted,
+    pitching their own services, however personally written and however plausible the offer.
+    Cold outreach signed with a real human name is still "spam" — a name is not a relationship.
   "personal" — a private correspondent of the mailbox owner rather than of the business:
     family, friends, a doctor, a school, a landlord, a personal service like a travel agent or
     an expense tool. Their mail is not this company's business at all.
@@ -106,6 +108,11 @@ For EACH supplied address emit exactly one kind:
     belongs to the mailbox owner alone.
 Judge the SENDER, not the tone: a poorly written mail from a real prospect is "person", and a
 polished newsletter from a company they never contacted is "newsletter".
+Judge the DIRECTION of the offer, not its politeness. A "person" wants something this business
+sells, or supplies something this business asked for. A stranger offering to sell this business
+something it never asked about — financing, capital, leads, SEO, staffing, development, an
+introduction for a fee — is "spam", no matter how courteous the mail, how specific the offer, or
+how complete the sender's signature block, address and job title.
 A company NAME in the display name with no human named anywhere is "organization_sender" or
 "role_mailbox", never "person" — do not invent a contact called after a company or a product.
 If this business replied only to decline — "not interested", "please remove me", "unsubscribe" —
