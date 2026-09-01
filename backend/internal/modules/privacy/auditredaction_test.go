@@ -116,10 +116,26 @@ func TestRedactionKeepsGovernanceAndDropsContent(t *testing.T) {
 		image:      `{"attachment_id":"a-uuid","requested_by":"human:b-uuid"}`,
 		wantKeys:   []string{"attachment_id", "requested_by"},
 	}, {
-		name:       "a transcript read keeps who read it and how much",
+		// line_count measures the transcript, so it is content by the same
+		// argument that drops a subject: it tells a reader outside the audience
+		// how long the held conversation was. It also survives the transcript's
+		// own erasure — the purge deletes the routing row without a tombstone,
+		// so the route resolves NULL and this same redactor runs again.
+		name:       "a transcript read keeps who read it and loses how long it was",
 		entityType: "transcript_read",
-		image:      `{"activity_id":"a-uuid","requested_by":"human:b-uuid","line_count":412}`,
-		wantKeys:   []string{"activity_id", "requested_by", "line_count"},
+		image:      `{"activity_id":"a-uuid","requested_by":"human:b-uuid","status":"done","line_count":412}`,
+		wantKeys:   []string{"activity_id", "requested_by", "status", "content_state"},
+		gone:       []string{"line_count"},
+	}, {
+		name:       "a finished extraction keeps its job progress",
+		entityType: "attachment_extraction",
+		image:      `{"status":"done","grounded":4}`,
+		wantKeys:   []string{"status", "grounded"},
+	}, {
+		name:       "a hidden deal document keeps which deal and which way",
+		entityType: "attachment",
+		image:      `{"deal_id":"a-uuid","hidden_from_deal":true}`,
+		wantKeys:   []string{"deal_id", "hidden_from_deal"},
 	}, {
 		// scheduledsend.go writes the message's own subject line onto this
 		// image, so the send is a content carrier exactly like the activity.

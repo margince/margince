@@ -42,16 +42,31 @@ var auditGovernedTypes = []string{
 //
 // The four collateral routes, each verified against the baseline schema:
 //
-//   - attachment is polymorphic AND carries activity_id. The capture path writes
-//     both (capturedfiles.go); a manual upload writes only the pair
-//     (attachmentupload.go). Reading either column is what covers both writers.
-//     Reading one alone leaves the other writer's rows unresolved, and an
-//     unresolved row is withheld — no disclosure, so no disclosure test can see
-//     it, while every manually uploaded file's image collapses to the withheld
-//     marker even for a reader the thread is open to.
-//     TestAnUploadedFileOnAnOpenThreadKeepsItsName is the case that fails.
+//   - attachment hangs off SEVEN parent types, not one: person, organization,
+//     deal, lead, activity, project and relationship, by its own CHECK. Only the
+//     activity parent has an audience, so the route reads the polymorphic
+//     (entity_type, entity_id) pair and resolves nothing for the other six.
+//     TestADocumentOnAPersonKeepsItsName is the case that fails.
+//
+//     Which is why the route answers TWO questions rather than one. "No activity
+//     resolved" has two meanings and they take opposite answers: a document
+//     filed on a person is not governed at all and must reach a compliance
+//     reader whole, while an unreleased account-origin scheduled send IS
+//     governed and simply cannot be checked — that one is withheld. The
+//     `governed` column is what tells them apart, so neither has to be inferred
+//     from a NULL.
+//
+//     The nullable activity_id column is deliberately NOT read. It duplicates
+//     the pair for capture-path rows, and no FK or CHECK ties the two together,
+//     so a schema-valid row naming a held activity in the pair and an open one
+//     in activity_id would resolve the open one and release the image. The
+//     authoritative parent is the pair; a second, unconstrained answer to the
+//     same question is one a reader can be pointed at.
+//
 //   - attachment_extraction reaches its activity through attachment, two hops.
+//
 //   - transcript_read carries activity_id NOT NULL.
+//
 //   - scheduled_send carries activity_id once released and anchor_activity_id for
 //     a reply; an origin_kind='account' send that has not been released has
 //     NEITHER, by its own CHECK constraint. Those rows resolve to NULL and are
@@ -61,12 +76,10 @@ const auditActivityRouteSQL = `
 		  SELECT CASE a.entity_type
 		           WHEN 'activity' THEN a.entity_id
 		           WHEN 'attachment' THEN (
-		             SELECT coalesce(att.activity_id,
-		                             CASE WHEN att.entity_type = 'activity' THEN att.entity_id END)
+		             SELECT CASE WHEN att.entity_type = 'activity' THEN att.entity_id END
 		               FROM attachment att WHERE att.id = a.entity_id)
 		           WHEN 'attachment_extraction' THEN (
-		             SELECT coalesce(att.activity_id,
-		                             CASE WHEN att.entity_type = 'activity' THEN att.entity_id END)
+		             SELECT CASE WHEN att.entity_type = 'activity' THEN att.entity_id END
 		               FROM attachment_extraction ext
 		               JOIN attachment att ON att.id = ext.attachment_id
 		              WHERE ext.id = a.entity_id)
@@ -75,7 +88,18 @@ const auditActivityRouteSQL = `
 		           WHEN 'scheduled_send' THEN (
 		             SELECT coalesce(ss.activity_id, ss.anchor_activity_id)
 		               FROM scheduled_send ss WHERE ss.id = a.entity_id)
-		         END AS activity_id`
+		         END AS activity_id,
+		         CASE a.entity_type
+		           WHEN 'attachment' THEN (
+		             SELECT att.entity_type = 'activity'
+		               FROM attachment att WHERE att.id = a.entity_id)
+		           WHEN 'attachment_extraction' THEN (
+		             SELECT att.entity_type = 'activity'
+		               FROM attachment_extraction ext
+		               JOIN attachment att ON att.id = ext.attachment_id
+		              WHERE ext.id = a.entity_id)
+		           ELSE true
+		         END AS governed`
 
 // auditActivityJoin reaches the activity an audit row's image describes, and
 // only for rows that describe one.
@@ -177,12 +201,26 @@ var auditCollateralGovernanceKeys = map[string]map[string]func(json.RawMessage) 
 		"entity_type": anyValue, "entity_id": anyValue,
 		"category": anyValue, "byte_size": anyValue, "source_system": anyValue,
 		"doc_state": anyValue, "pinned": anyValue, "supersedes_id": anyValue,
+		// dealdocuments.go's hide/unhide image.
+		"deal_id": anyValue, "hidden_from_deal": anyValue,
 	},
 	"attachment_extraction": {
 		"attachment_id": anyValue, "requested_by": anyValue,
+		// extractionclaim.go's finish image. `grounded` counts the FIELDS the
+		// reading proposed, not the document's words.
+		"status": anyValue, "grounded": anyValue,
 	},
 	"transcript_read": {
-		"activity_id": anyValue, "requested_by": anyValue, "line_count": anyValue,
+		"activity_id": anyValue, "requested_by": anyValue,
+		// transcriptread.go's finish image. `status` is the job's own progress.
+		"status": anyValue,
+		// line_count and proposals are ABSENT, and that is the finding this set
+		// exists to record: both measure the transcript itself. A line count is
+		// how long the held conversation was, and it survives the transcript's
+		// erasure — purgeTranscriptReadings deletes the routing row without a
+		// tombstone, so the route resolves NULL and the same redactor runs. A
+		// measurement of content is content when the content is what the
+		// audience withholds.
 	},
 	// Spelled as literals, not as activities.FieldScheduledAt/TZ: privacy is a
 	// sibling module and the layout forbids the import. The two spellings are

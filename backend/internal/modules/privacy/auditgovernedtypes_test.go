@@ -69,7 +69,13 @@ func TestNoGovernanceKeySetAdmitsAKnownContentKey(t *testing.T) {
 	// may appear in any key set, on any type. `body` is the documented exception
 	// on the activity: the writer reduces it to a presence flag and
 	// isJSONBool re-checks that here rather than trusting it.
-	content := []string{"subject", "filename", "title", "source_id", "snippet", "text"}
+	// line_count and proposals are here because a MEASUREMENT of content is
+	// content when the content is what the audience withholds: both say how
+	// long the held conversation was.
+	content := []string{
+		"subject", "filename", "title", "source_id", "snippet", "text",
+		"line_count", "proposals",
+	}
 	for _, entityType := range auditGovernedTypes {
 		keys := governanceKeysFor(entityType)
 		for _, key := range content {

@@ -255,6 +255,132 @@ func TestAnUploadedFileOnAnOpenThreadKeepsItsName(t *testing.T) {
 	}
 }
 
+// TestADocumentOnAPersonKeepsItsName holds the other six parent types.
+//
+// An attachment hangs off person, organization, deal, lead, activity, project or
+// relationship. Only the activity parent has an audience, so treating every
+// attachment row as governed would withhold the filename of a contract filed on
+// a deal from the compliance log — audit data destroyed to protect an audience
+// that does not exist. The route resolves nothing for those six, and a row that
+// resolves nothing is not governed.
+func TestADocumentOnAPersonKeepsItsName(t *testing.T) {
+	e := setupAuditBoundary(t)
+	attachment := e.seedID(t, `
+		INSERT INTO attachment (id, entity_type, entity_id, filename,
+		                        storage_key, source, captured_by)
+		VALUES ($1, 'person', $2, 'Kuendigung.pdf', 'blob/p', 'upload',
+		        'human:'||$3::text)`, e.person, e.other)
+	e.seedCollateralAudit(t, "attachment", attachment)
+
+	entityType, limit := "attachment", 50
+	page, err := ListAuditLog(e.ctx, e.db,
+		AuditFilter{EntityType: &entityType, EntityID: &attachment, Limit: &limit})
+	if err != nil {
+		t.Fatalf("ListAuditLog: %v", err)
+	}
+	found := false
+	for _, entry := range page.Entries {
+		if entry.Action != "create" {
+			continue
+		}
+		found = true
+		if !strings.Contains(string(entry.After), "Kuendigung") {
+			t.Errorf("a document filed on a person was redacted; there is no activity audience "+
+				"to enforce, so this is audit data destroyed for nothing: %s", entry.After)
+		}
+	}
+	if !found {
+		t.Fatal("the attachment's create row is absent from the page, so this proved nothing")
+	}
+}
+
+// TestEachRouteResolvesItsOwnActivity is the test the disclosure cases cannot
+// be: a route that returns NULL, or resolves the WRONG activity, withholds — and
+// withholding is what every "was content disclosed?" assertion reads as correct.
+//
+// So each route is exercised from an activity the reader MAY read. A working
+// route resolves that activity, the audience admits it, and nothing is redacted.
+// A broken one resolves NULL and the content vanishes.
+func TestEachRouteResolvesItsOwnActivity(t *testing.T) {
+	for _, tc := range []struct {
+		entityType string
+		seed       func(t *testing.T, e *auditBoundaryEnv, activity ids.UUID) ids.UUID
+	}{{
+		entityType: "attachment",
+		seed: func(t *testing.T, e *auditBoundaryEnv, activity ids.UUID) ids.UUID {
+			return e.seedID(t, `
+				INSERT INTO attachment (id, entity_type, entity_id, activity_id, filename,
+				                        storage_key, source, captured_by)
+				VALUES ($1, 'activity', $2, $2, 'Kuendigung.pdf', 'blob/r1', 'gmail',
+				        'connector:gmail:'||$3::text)`, activity, e.other)
+		},
+	}, {
+		entityType: "attachment_extraction",
+		seed: func(t *testing.T, e *auditBoundaryEnv, activity ids.UUID) ids.UUID {
+			attachment := e.seedID(t, `
+				INSERT INTO attachment (id, entity_type, entity_id, activity_id, filename,
+				                        storage_key, source, captured_by)
+				VALUES ($1, 'activity', $2, $2, 'Kuendigung.pdf', 'blob/r2', 'gmail',
+				        'connector:gmail:'||$3::text)`, activity, e.other)
+			return e.seedID(t, `
+				INSERT INTO attachment_extraction (id, attachment_id, requested_by)
+				VALUES ($1, $2, 'human:'||$3::text)`, attachment, e.other)
+		},
+	}, {
+		entityType: "transcript_read",
+		seed: func(t *testing.T, e *auditBoundaryEnv, activity ids.UUID) ids.UUID {
+			return e.seedID(t, `
+				INSERT INTO transcript_read (id, activity_id, requested_by)
+				VALUES ($1, $2, 'human:'||$3::text)`, activity, e.other)
+		},
+	}, {
+		entityType: "scheduled_send",
+		seed: func(t *testing.T, e *auditBoundaryEnv, activity ids.UUID) ids.UUID {
+			return e.seedID(t, `
+				INSERT INTO scheduled_send (id, anchor_activity_id, origin_kind, status,
+				                            scheduled_at, scheduled_tz, payload,
+				                            scheduled_by, principal_kind)
+				VALUES ($1, $2, 'reply', 'scheduled', now(), 'Europe/Berlin',
+				        '{"subject":"Re: Aufhebungsvertrag"}'::jsonb, $3, 'human')`, activity, e.other)
+		},
+	}} {
+		t.Run(tc.entityType, func(t *testing.T) {
+			e := setupAuditBoundary(t)
+			// Workspace, not participants: the audience admits the reader, so
+			// anything redacted here was redacted because the ROUTE failed.
+			activity := e.seedID(t, `
+				INSERT INTO activity (id, kind, audience, source, captured_by, occurred_at)
+				VALUES ($1, 'email', 'workspace', 'gmail', 'connector:gmail:'||$2::text, $3)`,
+				e.other, boundaryEarlier)
+			id := tc.seed(t, e, activity)
+			e.seedCollateralAudit(t, tc.entityType, id)
+
+			limit := 50
+			page, err := ListAuditLog(e.ctx, e.db,
+				AuditFilter{EntityType: &tc.entityType, EntityID: &id, Limit: &limit})
+			if err != nil {
+				t.Fatalf("ListAuditLog: %v", err)
+			}
+			found := false
+			for _, entry := range page.Entries {
+				if entry.Action != "create" {
+					continue
+				}
+				found = true
+				if !strings.Contains(string(entry.After), "Kuendigung") {
+					t.Errorf("the %s's image was redacted on an activity the reader may read in "+
+						"full, so its route resolved NULL or the wrong row: %s",
+						tc.entityType, entry.After)
+				}
+			}
+			if !found {
+				t.Fatalf("the %s's create row is absent from the page, so this proved nothing",
+					tc.entityType)
+			}
+		})
+	}
+}
+
 // TestAScheduledSendWithNoActivityIsWithheld pins the fail-closed direction. An
 // account-origin send that has not been released has neither activity_id nor
 // anchor_activity_id, by its own CHECK constraint, so the route resolves NULL

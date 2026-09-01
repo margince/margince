@@ -288,14 +288,19 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	// holes in it is its own defect: the row, its actor, its action and its
 	// timestamp are all still answered, and only the IMAGE is withheld.
 	//
-	// A row of no governed type has no audience to answer to and is untouched.
-	// A governed row whose activity does not resolve is withheld, not passed
-	// through: the route returning NULL is not evidence that the caller may read
-	// the image, and a predicate spelled `id IS NULL OR audience` would answer
-	// "readable" for exactly the rows whose audience can no longer be checked.
-	// That direction re-opens the disclosure silently and no test would notice,
-	// and it is reachable today — an unreleased account-origin scheduled_send has
-	// no activity at all.
+	// Two conditions, not one. The TYPE says whether this kind of row can carry
+	// an activity's content; the route's `governed` column says whether THIS row
+	// actually hangs off an activity, which for an attachment depends on its
+	// polymorphic parent. A contract filed on a deal is an attachment and is not
+	// governed by anybody's audience, and withholding its filename would destroy
+	// audit data to protect an audience that does not exist.
+	//
+	// A row that IS governed and whose activity does not resolve is withheld, not
+	// passed through: an unresolvable route is not evidence that the caller may
+	// read the image, and a predicate answering "readable" for exactly the rows
+	// whose audience cannot be checked re-opens the disclosure silently. That is
+	// reachable today — an unreleased account-origin scheduled_send has no
+	// activity at all, by its own CHECK constraint.
 	//
 	// The four collateral types are governed for the same reason the activity is:
 	// their images carry its content. An attachment's image carries the
@@ -314,7 +319,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.action, a.entity_type, a.entity_id, a.before, a.after, a.authorization_rule,
 			        a.evidence, a.occurred_at,
 			        actor_user.display_name, obo.display_name,
-			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`))
+			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND aud_route.governed)
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditActorNameJoins+auditActivityJoin+`
