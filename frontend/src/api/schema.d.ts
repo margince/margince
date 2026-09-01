@@ -31514,7 +31514,10 @@ export interface operations {
                 occurred_after?: string;
                 /** @description Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`. */
                 occurred_before?: string;
-                /** @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. */
+                /**
+                 * @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+                 *     Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses the filter with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified.
+                 */
                 waiting_reply?: boolean;
             };
             header?: never;
