@@ -3898,6 +3898,31 @@ export const de = {
     "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":
     "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Organisation einstellt.",
+  "hold.sectionTitle": "Private Korrespondenz",
+  "hold.notHeld":
+    "E-Mails mit diesem Kontakt folgen der Einstellung Ihres Postfachs.",
+  "hold.heldByAddress":
+    "Sie behalten E-Mails mit dieser Adresse bei den Beteiligten.",
+  "hold.heldByDomain": "Sie behalten E-Mails mit {domain} bei den Beteiligten.",
+  "hold.holdAddress": "Privat halten",
+  "hold.holdDomain": "Ganz {domain} privat halten",
+  "hold.lift": "Aufheben",
+  "hold.liftingWidensNothing":
+    "Das Aufheben gilt für neue E-Mails. Bereits Zurückgehaltenes bleibt zurückgehalten.",
+  "hold.confirmVerb": "Privat halten",
+  "hold.confirmTitle": "Diese Korrespondenz privat halten?",
+  "hold.confirmAddressBody":
+    "E-Mails mit {address} bleiben bei den Beteiligten. Sie werden weiterhin erfasst und sind für Sie lesbar — Kolleginnen und Kollegen sehen sie nicht.",
+  "hold.confirmDomainBody":
+    "E-Mails mit allen bei {domain}, einschließlich Subdomains, bleiben bei den Beteiligten. Sie werden weiterhin erfasst und sind für Sie lesbar — Kolleginnen und Kollegen sehen sie nicht.",
+  "hold.confirmHistoryNote":
+    "Das gilt ab jetzt. Bereits erfasste E-Mails behalten ihre bisherige Sichtbarkeit.",
+  "captureNotice.whatHappens":
+    "Margince liest dieses Postfach und legt ab, was es findet: die Nachrichten, wer daran beteiligt war, sowie die Kontakte und Firmen hinter den Adressen. Anhänge werden mit ihrer Nachricht gespeichert.",
+  "captureNotice.whoReads":
+    "Ein neues Postfach ist standardmäßig zurückgehalten. Eine Nachricht bleibt bei den Beteiligten, bis eine Einstufung den Verlauf als gewöhnliche geschäftliche Korrespondenz beurteilt — erst dann können Kolleginnen und Kollegen sie lesen. Sie können das Postfach jederzeit so einstellen, dass alles zurückgehalten bleibt.",
+  "captureNotice.yourControl":
+    "Sie entscheiden pro Absender und pro Verlauf unter Einstellungen → Verbindungen: eine Korrespondenz ganz heraushalten, einen Verlauf mit dem Team teilen oder löschen, was ein Absender eingebracht hat. Hier wird um nichts gebeten — so läuft es ab, damit Sie es vor dem Verbinden wissen.",
   "connectors.mailPosture.label": "Wer E-Mails aus diesem Postfach lesen darf",
   "connectors.mailPosture.classified": "Zurückgehalten bis eingestuft",
   "connectors.mailPosture.held": "Immer zurückgehalten",

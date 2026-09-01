@@ -3862,6 +3862,31 @@ export const vi = {
     "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
   "connectors.signatureEnrich.ownAnswer":
     "Lựa chọn riêng của hộp thư này, giữ nguyên dù thiết lập của tổ chức thay đổi.",
+  "hold.sectionTitle": "Trao đổi riêng tư",
+  "hold.notHeld": "Thư với liên hệ này theo thiết lập hộp thư của bạn.",
+  "hold.heldByAddress":
+    "Bạn giữ thư với địa chỉ này chỉ cho những người có trong thư.",
+  "hold.heldByDomain":
+    "Bạn giữ thư với {domain} chỉ cho những người có trong thư.",
+  "hold.holdAddress": "Giữ riêng tư",
+  "hold.holdDomain": "Giữ riêng tư toàn bộ {domain}",
+  "hold.lift": "Bỏ giữ",
+  "hold.liftingWidensNothing":
+    "Việc bỏ giữ áp dụng cho thư mới. Những gì đã giữ vẫn được giữ.",
+  "hold.confirmVerb": "Giữ riêng tư",
+  "hold.confirmTitle": "Giữ riêng tư trao đổi này?",
+  "hold.confirmAddressBody":
+    "Thư với {address} chỉ dành cho những người có trong thư. Thư vẫn được thu thập và bạn vẫn đọc được — đồng nghiệp thì không.",
+  "hold.confirmDomainBody":
+    "Thư với bất kỳ ai tại {domain}, kể cả tên miền phụ, chỉ dành cho những người có trong thư. Thư vẫn được thu thập và bạn vẫn đọc được — đồng nghiệp thì không.",
+  "hold.confirmHistoryNote":
+    "Điều này áp dụng từ nay về sau. Thư đã thu thập giữ nguyên phạm vi hiển thị hiện tại.",
+  "captureNotice.whatHappens":
+    "Margince đọc hộp thư này và lưu lại những gì tìm thấy: các thư, những ai có trong thư, cùng liên hệ và công ty đứng sau các địa chỉ. Tệp đính kèm được lưu cùng thư của nó.",
+  "captureNotice.whoReads":
+    "Hộp thư mới mặc định được giữ lại. Một thư chỉ dành cho những người có trong thư cho đến khi bộ phân loại đánh giá chuỗi thư là công việc thông thường — khi đó đồng nghiệp mới đọc được. Bạn có thể đặt hộp thư giữ lại mọi thứ bất cứ lúc nào.",
+  "captureNotice.yourControl":
+    "Bạn quyết định theo từng người gửi và từng chuỗi thư, tại Cài đặt → Kết nối: chặn hẳn một người liên hệ, chia sẻ chuỗi thư với nhóm, hoặc xóa những gì một người gửi đã mang vào. Ở đây không yêu cầu bạn đồng ý — đây là điều sẽ xảy ra, để bạn biết trước khi kết nối.",
   "connectors.mailPosture.label": "Ai được đọc thư từ hộp thư này",
   "connectors.mailPosture.classified": "Giữ lại cho đến khi phân loại",
   "connectors.mailPosture.held": "Luôn giữ lại",

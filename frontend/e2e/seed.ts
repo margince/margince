@@ -918,6 +918,65 @@ export async function mockApi(
   // vanishing the row or reporting 404 — a 404 means no connection was ever
   // inserted, a different state than "disconnected".
   let connection = { ...overlayConnection };
+  // The mailbox-privacy fixtures, per page for the same reason as the rest:
+  // a posture change, a sender overrule and a hold all have to be readable
+  // back within one test.
+  const captureSettings: Record<string, boolean> = {
+    auto_enrich: true,
+    mail_sharing: true,
+    shared_posture_allowed: false,
+    signature_enrich: true,
+  };
+  const captureConnections = [
+    {
+      id: "conn-gmail",
+      provider: "gmail",
+      status: "connected",
+      account_label: "admin@demo.test",
+      scopes: [],
+      mail_posture: "classified",
+      backfill: { state: "none" },
+    },
+  ];
+  // One of each shape the Senders table draws: an admitted kind, a refused
+  // one, and a personal sender — the three rows that differ on screen.
+  const captureSenders: {
+    address: string;
+    kind?: string;
+    status?: string;
+    decision?: string;
+    overruled_kind?: string;
+    overruled: boolean;
+    record_exists: boolean;
+  }[] = [
+    {
+      address: "jana@commercetools.com",
+      kind: "person",
+      status: "real",
+      overruled: false,
+      record_exists: true,
+    },
+    {
+      address: "news@substack.com",
+      kind: "newsletter",
+      status: "noise",
+      overruled: false,
+      record_exists: false,
+    },
+    {
+      address: "anne@hotmail.com",
+      kind: "personal",
+      status: "noise",
+      overruled: false,
+      record_exists: false,
+    },
+  ];
+  const counterpartyHolds: {
+    id: string;
+    kind: string;
+    value: string;
+    created_at: string;
+  }[] = [];
   // per-page mapping state so a map/unmap actually MOVES something. A generic
   // 200 would let the card report a successful write and then reload the
   // untouched fixture — the workflow would pass having done nothing, which is
@@ -2110,6 +2169,89 @@ export async function mockApi(
     }
     if (path === "/admin/job-health") {
       return json(jobHealth);
+    }
+    // The mailbox-privacy surfaces. Held per page so a spec that flips a
+    // setting or overrules a sender reads back what it wrote: a mock that
+    // answered a fixed fixture would let a write "succeed" and then show the
+    // untouched value, which passes while doing nothing.
+    if (path === "/capture/settings") {
+      if (method === "PATCH") {
+        Object.assign(captureSettings, route.request().postDataJSON());
+      }
+      return json(captureSettings);
+    }
+    if (path === "/capture/senders") {
+      return json({ data: captureSenders });
+    }
+    if (path.startsWith("/capture/senders/") && path.endsWith("/decision")) {
+      const address = decodeURIComponent(
+        path.slice("/capture/senders/".length, -"/decision".length),
+      );
+      const row = captureSenders.find((s) => s.address === address);
+      if (!row) {
+        return route.fulfill({ status: 404 });
+      }
+      if (method === "DELETE") {
+        row.decision = undefined;
+        row.overruled = false;
+        return route.fulfill({ status: 204 });
+      }
+      row.decision = route.request().postDataJSON()?.decision;
+      row.overruled_kind = row.kind;
+      row.overruled = true;
+      return json(row);
+    }
+    if (path === "/capture/counterparty-holds") {
+      if (method === "POST") {
+        const body = route.request().postDataJSON();
+        const hold = {
+          id: `hold-${counterpartyHolds.length + 1}`,
+          kind: body.kind,
+          value: body.value,
+          created_at: "2026-08-01T09:00:00Z",
+        };
+        counterpartyHolds.push(hold);
+        return json(hold, 201);
+      }
+      return json({ data: counterpartyHolds });
+    }
+    if (path.startsWith("/capture/counterparty-holds/")) {
+      const id = path.slice("/capture/counterparty-holds/".length);
+      const at = counterpartyHolds.findIndex((h) => h.id === id);
+      if (at === -1) {
+        return route.fulfill({ status: 404 });
+      }
+      counterpartyHolds.splice(at, 1);
+      return route.fulfill({ status: 204 });
+    }
+    if (path.startsWith("/connectors/") && path.endsWith("/mail-posture")) {
+      const provider = path.slice(
+        "/connectors/".length,
+        -"/mail-posture".length,
+      );
+      const conn = captureConnections.find((c) => c.provider === provider);
+      const posture = route.request().postDataJSON()?.posture;
+      if (!conn) {
+        return route.fulfill({ status: 404 });
+      }
+      // The server's own refusal, which is what the option's disabled state
+      // and the row's second sentence are both about. A mock that accepted it
+      // would let a spec prove the opt-in works while it does not.
+      if (posture === "shared" && !captureSettings.shared_posture_allowed) {
+        return json(
+          {
+            title: "Unprocessable Entity",
+            code: "validation_error",
+            detail: "this workspace does not allow a shared mailbox",
+          },
+          422,
+        );
+      }
+      conn.mail_posture = posture;
+      return json(conn);
+    }
+    if (path === "/connectors") {
+      return json({ data: captureConnections });
     }
     if (path === "/agent-tools") {
       return json({

@@ -3934,6 +3934,29 @@ export const en = {
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox's own answer, kept whatever your organization's setting becomes.",
+  "hold.sectionTitle": "Private correspondence",
+  "hold.notHeld": "Mail with this contact follows your mailbox setting.",
+  "hold.heldByAddress": "You keep mail with this address to the people on it.",
+  "hold.heldByDomain": "You keep mail with {domain} to the people on it.",
+  "hold.holdAddress": "Keep private",
+  "hold.holdDomain": "Keep all of {domain} private",
+  "hold.lift": "Lift",
+  "hold.liftingWidensNothing":
+    "Lifting applies to new mail. What was held stays held.",
+  "hold.confirmVerb": "Keep private",
+  "hold.confirmTitle": "Keep this correspondence private?",
+  "hold.confirmAddressBody":
+    "Mail with {address} stays with the people who were on it. It is still captured and still yours to read — colleagues do not see it.",
+  "hold.confirmDomainBody":
+    "Mail with anyone at {domain}, including subdomains, stays with the people who were on it. It is still captured and still yours to read — colleagues do not see it.",
+  "hold.confirmHistoryNote":
+    "This covers mail from here on. Mail already captured keeps the visibility it has.",
+  "captureNotice.whatHappens":
+    "Margince reads this mailbox and files what it finds: the messages, who was on them, and the contacts and companies behind the addresses. Attachments are stored with their message.",
+  "captureNotice.whoReads":
+    "A new mailbox is held by default. A message stays with the people who were on it until a classifier judges the thread to be ordinary business — only then can colleagues read it. You can set the mailbox to hold everything instead, at any time.",
+  "captureNotice.yourControl":
+    "You decide per sender and per thread, under Settings → Connections: keep a correspondent out entirely, share a thread with the team, or delete what a sender brought in. Nothing here asks you to agree — this is what happens, so you know it before you connect.",
   "connectors.mailPosture.label": "Who may read mail from this inbox",
   "connectors.mailPosture.classified": "Held until classified",
   "connectors.mailPosture.held": "Always held",

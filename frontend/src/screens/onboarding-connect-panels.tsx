@@ -11,6 +11,7 @@ import { api } from "../api/client";
 import { Button, Disclosure, Field } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CaptureNotice } from "./capture-notice";
 import { problemMessageOf, throwProblem } from "./common";
 import { imapErrorMessage } from "./imap-connect-form";
 import { OnboardingBackread } from "./onboarding-backread";
@@ -201,6 +202,9 @@ export function OAuthConnectPanel({
           is wrong with the thing they just pressed. A caution about what a
           button does belongs beside the button, never behind a fold. */}
       <p className="t-small ob-google-unverified">{t(copy.unverified)}</p>
+      {/* Last thing read before the grant screen, because after it the mailbox
+          is connected and the telling is too late. */}
+      <CaptureNotice />
       <div className="ob-connect-dialog-actions">
         <Button
           variant="primary"
@@ -557,6 +561,10 @@ export function ImapConnectPanel({
           body={imapErrorMessage(connect.error, t)}
         />
       )}
+
+      {/* Same words as the OAuth panel, and in the same place: the last thing
+          read before the mailbox is connected. */}
+      <CaptureNotice />
 
       <div className="ob-connect-dialog-actions">
         <Button
