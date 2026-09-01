@@ -60,7 +60,15 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
   "screens/settings.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",
+  // The two activity writes stay for the reason the FACT writes above do:
+  // Activity carries no version on the wire, so no caller can pin one. The
+  // server honours the precondition when one arrives
+  // (activities/handlers_lifecycle.go), so what is missing is the client's
+  // ability to KNOW the version — and closing that means putting it on the
+  // entity for every caller at once, rather than threading ETag reads through
+  // one screen.
   "screens/taskactions.tsx PATCH /activities/{id}",
+  "screens/worklist.queries.ts PATCH /activities/{id}",
   "screens/voice-dna.tsx DELETE /voice-profiles/{id}/sources/{sourceId}",
   "screens/voice-dna.tsx PATCH /voice-profiles/{id}",
 ];

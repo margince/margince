@@ -14956,6 +14956,50 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /notices:
+    post:
+      tags: [Notices]
+      operationId: raiseNotice
+      summary: Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
+      x-agent-access: human-only
+      description: |
+        A lead nudges somebody on their team about work the queue is already showing them.
+
+        The KIND is a closed vocabulary, not free text, and it is what the recipient reads as the
+        headline. A note may be added, and is the coach's own words; without one the notice still
+        says what it is. Nothing here can address a notice to a person the caller could not already
+        open the queue of: the recipient must be a teammate, resolved the same way `GET /worklist`
+        resolves `owner`, so this endpoint grants no reach the Worklist did not already grant.
+
+        Not the transport automations use. Those raise their own kinds under the system principal
+        (`automation`, `lead_sla`) and are not reachable from here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RaiseNoticeRequest' }
+      responses:
+        '201':
+          description: Raised. The recipient sees it on their next Worklist read.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notice' }
+        '403':
+          description: The caller may not coach this person — not a teammate, or the seat does not coach at all.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404':
+          description: No such live person to address (a departed or unknown recipient reads the same).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: An unknown kind, or a note past its ceiling.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /notices/{id}/read:
     parameters:
       - name: id
@@ -20462,6 +20506,51 @@ components:
         incumbent_user_id: { type: string, minLength: 1 }
 
     # ---- error (RFC 7807) ----
+    NoticeKind:
+      type: string
+      description: |
+        What a coaching notice is about. A closed vocabulary, because a notice addressed to a
+        colleague is words in their queue: the kind is what the recipient reads as the headline,
+        and the coach supplies only the note beneath it.
+
+        The kinds an automation raises under the system principal (`automation`, `lead_sla`) are
+        deliberately absent — a person may not raise a notice that looks like the system spoke.
+      enum:
+        - coach_reply_aging
+        - coach_deal_needs_next_step
+        - coach_review_backlog
+        - coach_general
+    RaiseNoticeRequest:
+      type: object
+      additionalProperties: false
+      required: [recipient_user_id, kind]
+      properties:
+        recipient_user_id:
+          type: string
+          format: uuid
+          description: |
+            Who the notice is for. Must be a teammate of the caller, resolved through live team
+            membership exactly as `GET /worklist`'s `owner` parameter is, so coaching reaches no
+            further than the queue the caller could already open.
+        kind: { $ref: '#/components/schemas/NoticeKind' }
+        note:
+          type: string
+          maxLength: 500
+          description: |
+            The coach's own words, shown beneath the kind's headline. Optional: without one the
+            notice still says what it is about, which is why the kind is closed and this is not.
+    Notice:
+      type: object
+      description: One durable line addressed to one person, as the raising call returns it.
+      required: [id, kind, subject, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/NoticeKind' }
+        subject:
+          type: string
+          description: The headline the recipient reads, derived from the kind rather than supplied.
+        body: { type: string, description: 'The coach''s note. Absent when none was given.' }
+        created_at: { type: string, format: date-time }
     Problem:
       type: object
       description: RFC 7807 problem+json with a stable machine `code` and structured `details`.

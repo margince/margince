@@ -10142,6 +10142,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
+         * @description A lead nudges somebody on their team about work the queue is already showing them.
+         *
+         *     The KIND is a closed vocabulary, not free text, and it is what the recipient reads as the
+         *     headline. A note may be added, and is the coach's own words; without one the notice still
+         *     says what it is. Nothing here can address a notice to a person the caller could not already
+         *     open the queue of: the recipient must be a teammate, resolved the same way `GET /worklist`
+         *     resolves `owner`, so this endpoint grants no reach the Worklist did not already grant.
+         *
+         *     Not the transport automations use. Those raise their own kinds under the system principal
+         *     (`automation`, `lead_sla`) and are not reachable from here.
+         */
+        post: operations["raiseNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notices/{id}/read": {
         parameters: {
             query?: never;
@@ -13997,6 +14026,43 @@ export interface components {
         };
         SetOverlayUserMapRequest: {
             incumbent_user_id: string;
+        };
+        /**
+         * @description What a coaching notice is about. A closed vocabulary, because a notice addressed to a
+         *     colleague is words in their queue: the kind is what the recipient reads as the headline,
+         *     and the coach supplies only the note beneath it.
+         *
+         *     The kinds an automation raises under the system principal (`automation`, `lead_sla`) are
+         *     deliberately absent — a person may not raise a notice that looks like the system spoke.
+         * @enum {string}
+         */
+        NoticeKind: "coach_reply_aging" | "coach_deal_needs_next_step" | "coach_review_backlog" | "coach_general";
+        RaiseNoticeRequest: {
+            /**
+             * Format: uuid
+             * @description Who the notice is for. Must be a teammate of the caller, resolved through live team
+             *     membership exactly as `GET /worklist`'s `owner` parameter is, so coaching reaches no
+             *     further than the queue the caller could already open.
+             */
+            recipient_user_id: string;
+            kind: components["schemas"]["NoticeKind"];
+            /**
+             * @description The coach's own words, shown beneath the kind's headline. Optional: without one the
+             *     notice still says what it is about, which is why the kind is closed and this is not.
+             */
+            note?: string;
+        };
+        /** @description One durable line addressed to one person, as the raising call returns it. */
+        Notice: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["NoticeKind"];
+            /** @description The headline the recipient reads, derived from the kind rather than supplied. */
+            subject: string;
+            /** @description The coach's note. Absent when none was given. */
+            body?: string;
+            /** Format: date-time */
+            created_at: string;
         };
         /** @description RFC 7807 problem+json with a stable machine `code` and structured `details`. */
         Problem: {
@@ -43041,6 +43107,57 @@ export interface operations {
             };
             /** @description The item was already acted on or dismissed. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    raiseNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RaiseNoticeRequest"];
+            };
+        };
+        responses: {
+            /** @description Raised. The recipient sees it on their next Worklist read. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notice"];
+                };
+            };
+            /** @description The caller may not coach this person — not a teammate, or the seat does not coach at all. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such live person to address (a departed or unknown recipient reads the same). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description An unknown kind, or a note past its ceiling. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

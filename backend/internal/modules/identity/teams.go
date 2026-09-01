@@ -258,10 +258,17 @@ func (s *Service) SharesLiveTeamWithCaller(ctx context.Context, other ids.UserID
 	}
 	var shares bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The other party must be a LIVE seat, not merely a row.
+		// team_membership survives a deactivation — SetTeamMember refuses to
+		// ADD a suspended member but nothing removes one who leaves — so a
+		// membership-only answer would call a departed colleague a teammate,
+		// and the callers act on that: one opens their queue, the other puts a
+		// notice in it that nobody will ever read.
 		return tx.QueryRow(ctx, `SELECT EXISTS (
 		         SELECT 1 FROM team_membership ma
 		           JOIN team_membership mb ON mb.team_id = ma.team_id AND mb.user_id = $2
 		           JOIN team t ON t.id = ma.team_id AND t.archived_at IS NULL
+		           JOIN app_user u ON u.id = mb.user_id AND `+LiveMemberSQL("u")+`
 		          WHERE ma.user_id = $1)`, me, other).Scan(&shares)
 	})
 	return shares, err

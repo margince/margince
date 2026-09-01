@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
@@ -17,23 +17,93 @@ export type WorklistCategory = WorklistItem["category"];
 
 export const worklistKey = ["worklist"] as const;
 
-// The whole day in one read, at one scope and one filter.
+// The whole day in one read, at one scope or one named owner, and one filter.
 //
-// The key carries both dials, so switching either is a different query rather
-// than a refetch of the same one — which is what lets the reader move back to a
-// view they have already loaded without watching it reassemble.
-export function useWorklist(scope: WorklistScope, filter: WorklistFilter) {
+// The key carries every dial, so switching any of them is a different query
+// rather than a refetch of the same one — which is what lets the reader move
+// back to a view they have already loaded without watching it reassemble.
+//
+// A named owner narrows the day to one person's queue and OUTRANKS the scope
+// word: "their queue" is a narrower question than any of mine/team/all, and the
+// server answers 422 for the pair rather than guessing which was meant. So the
+// scope travels only when nobody is named.
+export function useWorklist(
+  scope: WorklistScope,
+  filter: WorklistFilter,
+  owner?: string,
+) {
   return useQuery({
-    queryKey: [...worklistKey, scope, filter],
+    queryKey: [...worklistKey, scope, filter, owner ?? ""],
     refetchOnWindowFocus: true,
     queryFn: async (): Promise<Worklist> => {
       const { data, error } = await api.GET("/worklist", {
-        params: { query: { scope, filter } },
+        params: {
+          query: owner ? { owner, filter } : { scope, filter },
+        },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
+    },
+  });
+}
+
+// Hand one task to somebody else.
+//
+// The SAME endpoint the record surface calls. This page adds no rule of its own
+// about who may be assigned what — it puts the existing verb where the reader
+// is standing, and the server answers exactly as it would from anywhere else.
+export function useReassignTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { activityId: string; assigneeId: string }) => {
+      const { error } = await api.PATCH("/activities/{id}", {
+        params: { path: { id: input.activityId } },
+        body: { assignee_id: input.assigneeId },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: (_data, input) => {
+      // Every scope and owner of this queue, because the task left one
+      // person's day and arrived in another's: refetching only the view in
+      // front of the reader would leave the receiving queue stale until
+      // something else happened to invalidate it.
+      queryClient.invalidateQueries({ queryKey: worklistKey });
+      queryClient.invalidateQueries({
+        queryKey: ["activity", input.activityId],
+      });
+    },
+  });
+}
+
+// Leave a note on a teammate's queue.
+//
+// Nothing is invalidated here: the notice lands in the RECIPIENT's day, which
+// is not a view this reader is holding. Their own page is unchanged, and
+// pretending otherwise by refetching it would only make the press feel like it
+// had done something local.
+export function useCoachTeammate() {
+  return useMutation({
+    mutationFn: async (input: {
+      recipientUserId: string;
+      kind: components["schemas"]["NoticeKind"];
+      note: string;
+    }) => {
+      const { error } = await api.POST("/notices", {
+        body: {
+          recipient_user_id: input.recipientUserId,
+          kind: input.kind,
+          // An empty note is ABSENT rather than an empty string: the coach
+          // added none, which the kind's own headline already covers.
+          ...(input.note.trim() === "" ? {} : { note: input.note }),
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
     },
   });
 }
