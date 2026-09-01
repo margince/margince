@@ -54,6 +54,12 @@ import (
 // the pathological one.
 const cohortRepairBatch = 500
 
+// maxMeetingLinksPerActivity mirrors activities.maxActivityLinks: an activity
+// may be filed under at most 25 records. Spelled again rather than imported
+// because a module never imports a sibling — capture.maxDerivedMeetingLinks is
+// the third spelling, for the same reason and against the same number.
+const maxMeetingLinksPerActivity = 25
+
 // CohortPromotion is what one repair pass did, so a caller counts honestly
 // rather than reporting the work it attempted.
 type CohortPromotion struct {
@@ -89,6 +95,13 @@ func (s *Store) PromotePersonCohortTx(
 	if err != nil {
 		return CohortPromotion{}, err
 	}
+	// After the promotion, never before it: this reads the person-resolved
+	// attendee rows the promotion above has just written.
+	meetings, err := linkAttendedMeetings(ctx, tx, canonical)
+	if err != nil {
+		return CohortPromotion{}, err
+	}
+	linked = append(linked, meetings...)
 	if len(linked) == 0 && len(promoted) == 0 {
 		// Nothing moved. A repair that found nothing is not an event in this
 		// person's history, and auditing every replayed person.updated would
@@ -247,12 +260,31 @@ func (s *Store) PeopleOwedACohortRepair(ctx context.Context, limit int) ([]ids.P
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_link l
 				        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+				UNION
+				-- Meetings this contact attended but is not filed under. A
+				-- separate arm because the one above finds work by
+				-- counterparty_email, and a meeting has none: attendance is a
+				-- list, so the only thing naming the attendee is a participant
+				-- row. Without this arm a person owed nothing BUT meeting links
+				-- is never offered, and the sweep reports a drained backlog
+				-- while every synced meeting stays off their page.
+				SELECT ap.person_id
+				  FROM activity_participant ap
+				  JOIN activity a ON a.id = ap.activity_id
+				 WHERE ap.person_id IS NOT NULL
+				   AND a.kind = 'meeting'
+				   AND a.captured_by LIKE 'connector:%' AND a.restricted_at IS NULL
+				   AND NOT EXISTS (
+				       SELECT 1 FROM activity_link l
+				        WHERE l.activity_id = a.id AND l.person_id = ap.person_id)
+				   AND (SELECT count(*) FROM activity_link cap
+				         WHERE cap.activity_id = a.id) < $2
 			)
 			SELECT owed.person_id FROM owed
 			  JOIN person live ON live.id = owed.person_id
 			 WHERE live.archived_at IS NULL AND live.merged_into_id IS NULL
 			 ORDER BY owed.person_id
-			 LIMIT $1`, limit)
+			 LIMIT $1`, limit, maxMeetingLinksPerActivity)
 		if err != nil {
 			return fmt.Errorf("people: listing the contacts owed a cohort repair: %w", err)
 		}
@@ -387,4 +419,72 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		return 0, err
 	}
 	return planted, nil
+}
+
+// linkAttendedMeetings files a meeting under a person who was IN it.
+//
+// This is the arm linkCapturedCohort cannot be. That one keys on
+// counterparty_email, which is how mail names its other party — and a meeting
+// has no counterparty at all, because attendance is a LIST and the calendar
+// mapper leaves the field unset. Keying the repair on a column meetings never
+// carry is why every synced meeting in a workspace could sit unlinked while the
+// sweep reported nothing owed.
+//
+// So this arm reads what a meeting DOES carry: the participant rows.
+// capture.linkResolvedMeetingParticipants does exactly this at capture time, for
+// an attendee who was already a contact. Here it is for the other ordering — the
+// meeting synced first and the person arrived later — and it is the same three
+// rules, because a repair that filed a meeting the capture path would have
+// refused is not a repair.
+//
+// It must run AFTER promoteParticipantsToPerson in the same transaction. The
+// promotion is what turns this person's address-only attendee row into a
+// person-resolved one, and this arm reads person-resolved rows. Reversed, a
+// meeting whose attendee was only ever an address is offered to no arm at all.
+//
+// PERSON links only, never the company: a meeting may not link straight to an
+// organization, and the account reaches it through the attendee's employment.
+//
+// The 25-link ceiling is activities.maxActivityLinks — an activity may be filed
+// under at most 25 records, whatever wrote them. It is re-spelled rather than
+// imported because a module never imports a sibling; what must not drift is the
+// NUMBER. A meeting already at the cap is left alone rather than failed: the
+// cohort scan carries this same guard, so a row this refuses is not offered
+// again on every pass, and the sweep still drains.
+func linkAttendedMeetings(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		SELECT a.id, 'person', $1
+		  FROM activity a
+		 WHERE a.kind = 'meeting'
+		   AND a.captured_by LIKE 'connector:%'
+		   AND a.restricted_at IS NULL
+		   AND EXISTS (
+		       SELECT 1 FROM activity_participant ap
+		        WHERE ap.activity_id = a.id AND ap.person_id = $1)
+		   AND NOT EXISTS (
+		       SELECT 1 FROM activity_link l
+		        WHERE l.activity_id = a.id AND l.person_id = $1)
+		   AND (SELECT count(*) FROM activity_link cap
+		         WHERE cap.activity_id = a.id) < $3
+		 ORDER BY a.occurred_at DESC, a.id
+		 LIMIT $2
+		ON CONFLICT DO NOTHING
+		RETURNING activity_id`, personID, cohortRepairBatch, maxMeetingLinksPerActivity)
+	if err != nil {
+		return nil, fmt.Errorf("people: filing a person's attended meetings: %w", err)
+	}
+	defer rows.Close()
+	var linked []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("people: filing a person's attended meetings: %w", err)
+		}
+		linked = append(linked, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("people: filing a person's attended meetings: %w", err)
+	}
+	return linked, nil
 }
