@@ -118,7 +118,11 @@ You are NOT told the relationship history, so decide it from the message. Mail t
 work already agreed is "person": a quote for a named job with dates and scope, an invoice, a
 delivery date, a reply in a thread, an answer to a question. Mail that opens a relationship the
 business never started is "spam": it describes what the sender can do rather than what was
-agreed, and names no job, no date and no prior contact. When the message genuinely leaves this
+agreed, and names no job, no date and no prior contact.
+"Re:" and a quoted history are only evidence of a conversation when THIS BUSINESS is in it.
+Read who wrote the quoted blocks: if every one is the sender chasing their own unanswered mail
+— a pitch, then "did this reach the right person?", then "happy to stop if not" — that is one
+side talking to silence, and it stays "spam" however long the thread grew. When the message genuinely leaves this
 open, prefer "person" and a lower confidence — a wrong "spam" hides a real supplier's mail from
 everyone, where a wrong "person" only leaves a record somebody can delete.
 A company NAME in the display name with no human named anywhere is "organization_sender" or

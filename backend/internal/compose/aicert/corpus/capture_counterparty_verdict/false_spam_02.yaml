@@ -1,0 +1,46 @@
+name: a_two_sided_thread_is_a_conversation
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Marta Kovac
+  email: m.kovac@steinbach-tech.example
+  subject: "Re: Lieferzeiten Q4"
+  body: |
+    Guten Tag Herr Weber,
+
+    danke fuer die schnelle Rueckmeldung. Die 6 Wochen passen fuer uns.
+    Ich schicke die Bestellung heute noch raus.
+
+    Viele Gruesse
+    Marta Kovac
+    Steinbach Tech GmbH
+
+    On Mon, Aug 25, 2026, Thomas Weber <t.weber@ourcompany.example> wrote:
+
+    > Hallo Frau Kovac,
+    >
+    > aktuell liegen wir bei 6 Wochen Lieferzeit fuer die Serie 400.
+    > Passt das fuer Ihren Termin?
+    >
+    > Viele Gruesse
+    > Thomas Weber
+expect:
+  outcome: accepted
+  answer: person
+  rubric: >
+    The guard on the quoted-history rule that spam_02 forced. spam_02 says a
+    thread of the sender chasing their own unanswered mail is not a
+    conversation; this is the case that keeps that from swallowing every reply.
+    The quoted block is written by somebody at THIS business, and the sender is
+    answering it: a delivery time was asked and given, accepted, and an order
+    follows. That is the ordinary correspondence a CRM exists to file.
+    A verdict of "person" scores high. "spam" scores zero, and it is the costly
+    direction — a spam verdict suppresses the sender's whole domain
+    workspace-wide, so reading a genuine customer reply as a pitch would hide
+    an active supplier relationship from every colleague.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
