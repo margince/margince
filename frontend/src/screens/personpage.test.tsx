@@ -232,6 +232,17 @@ describe("the overview tab's added capabilities", () => {
     mount("overview", withEnrichment);
     expect(await screen.findByText("What Margince read")).toBeTruthy();
     expect(screen.getByText("Head of Procurement")).toBeTruthy();
+    // The heading and the value alone don't prove the page reaches the
+    // control the ticket was about — the confirm/correct buttons themselves
+    // have to be there too, or this passes on a row that reads but does not
+    // write.
+    // Both buttons are gated on the caller's own grant, off a SEPARATE query
+    // (/me) than the field's own read — findByRole waits it out rather than
+    // catching the render before that query has settled.
+    expect(
+      await screen.findByRole("button", { name: "That is right" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Correct" })).toBeTruthy();
   });
 });
 

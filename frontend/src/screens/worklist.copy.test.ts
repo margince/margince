@@ -46,13 +46,29 @@ describe("comparisonText — waiting_days tie-break", () => {
     expect(line).not.toContain(":24");
   });
 
+  it("floors at zero rather than printing a negative count on clock skew", () => {
+    // `now` is the server's own snapshot instant in production
+    // (Worklist.as_of), so an occurred_at reading later than it means the
+    // two clocks disagree at the margin, never that the row is from the
+    // future. A negative count under "how many days" is the same dishonest
+    // line this function exists to remove, just spelled with a minus sign.
+    const now = new Date("2026-08-30T00:00:00.000Z");
+    const comparison: WorklistComparison = {
+      comparator: "waiting_days",
+      mine: { kind: "date", date: "2026-08-31T09:00:00.000Z" },
+      theirs: { kind: "date", date: "2026-08-29T09:00:00.000Z" },
+    };
+    expect(comparisonText(comparison, t, "en", zone, now)).toBe(
+      "Above the next: 0 against 1.",
+    );
+  });
+
   it("falls back to the bare sentence when a same-day tie-break would print equal numbers", () => {
     // Two different instants that still round to the same calendar day.
-    // Printing "0 against 0" would
-    // claim they tied, when the comparator's whole reason for firing is that
-    // they did not — so this reads as the plain "how long it has waited"
-    // sentence instead, the same call the backend's own same-minute guard
-    // makes one level finer.
+    // Printing "0 against 0" would claim they tied, when the comparator's
+    // whole reason for firing is that they did not — so this reads as the
+    // plain "how long it has waited" sentence instead, the same call the
+    // backend's own same-minute guard makes one level finer.
     const now = new Date("2026-08-31T23:00:00.000Z");
     const comparison: WorklistComparison = {
       comparator: "waiting_days",

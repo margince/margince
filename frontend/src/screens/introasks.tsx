@@ -130,13 +130,11 @@ function AskRow({
   const cancellingThis = cancel.variables?.id === ask.id;
   // Complete and withdraw are mutually exclusive moves on the SAME row —
   // once one lands the other's precondition is gone — so either one in
-  // flight for this row holds the other back too, not only its own button.
-  // Otherwise a press on each before the first answer returns fires both at
-  // once, and whichever the server processes second only ever meets a stale
-  // version.
-  const rowBusy =
-    (completingThis && complete.isPending) ||
-    (cancellingThis && cancel.isPending);
+  // flight for this row holds the OTHER back too. Each button uses `pending`
+  // for its OWN mutation (Button's contract: a wait, not a precondition —
+  // detaching focus from the control the reader just pressed is worse than
+  // leaving it focused and inert) and `disabled` for the sibling's, so a
+  // press on each before the first answer returns cannot fire both at once.
   return (
     <li className="pn-ask">
       <Badge quiet>{t(STATUS_LABEL[ask.status])}</Badge> {ask.internal_reason}
@@ -146,7 +144,8 @@ function AskRow({
       {outcome ? (
         <Button
           onClick={() => complete.mutate({ id: ask.id, version: ask.version })}
-          disabled={rowBusy}
+          pending={completingThis && complete.isPending}
+          disabled={cancellingThis && cancel.isPending}
         >
           {t(outcome)}
         </Button>
@@ -155,7 +154,8 @@ function AskRow({
         <Button
           variant="ghost"
           onClick={() => cancel.mutate({ id: ask.id, version: ask.version })}
-          disabled={rowBusy}
+          pending={cancellingThis && cancel.isPending}
+          disabled={completingThis && complete.isPending}
         >
           {t("person.intro.withdrawAction")}
         </Button>

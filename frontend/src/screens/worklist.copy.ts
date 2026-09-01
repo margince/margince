@@ -232,12 +232,18 @@ function paired(
 // instead of printing two clock times under "how many days". Left as a raw
 // number rather than formatted text: the caller has to compare the two sides
 // before it can decide whether showing them is honest at all.
+// Floored at zero: `now` is the server's own snapshot instant (Worklist.as_of)
+// and every occurred_at it ranked against is one it already read as past, so a
+// negative count here means only that the two clocks disagree at the margin
+// (a leap second, a snapshot mid-write) — never a real reading of the future.
+// A negative count under "how many days" is the same dishonest line this
+// function exists to remove, just spelled with a minus sign.
 function waitingDaysSideDays(
   value: WorklistValue | undefined,
   now: Date,
 ): number | null {
   return value?.kind === "date" && value.date
-    ? calendarDaysBetween(new Date(value.date), now)
+    ? Math.max(0, calendarDaysBetween(new Date(value.date), now))
     : null;
 }
 

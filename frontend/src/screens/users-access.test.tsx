@@ -559,12 +559,10 @@ describe("TeamsCard membership", () => {
 
     expect(
       await screen.findByText(
-        "Named groups you can share records with. Being in a team grants no access on its own — customers, contacts, leads and deals are readable by everyone here. Managing teams is available to admins only.",
+        `${en["users.teamsSub"]} ${en["users.teamsAdminOnly"]}`,
       ),
     ).toBeTruthy();
-    expect(
-      screen.getByText("Membership is visible to admins only."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["users.teamMembersAdminOnly"])).toBeTruthy();
     expect(screen.queryByText("Ada Inside")).toBeNull();
     expect(screen.queryByText("Bo Outside")).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();
