@@ -169,6 +169,11 @@ type Server struct {
 	// is configured — the route is absent otherwise, never open.
 	gmailPush http.Handler
 
+	// graphPush is the Microsoft Graph change-notification webhook (the same
+	// chassis), injected by WithGraphPush only when a notification token is
+	// configured — the route is absent otherwise, never open.
+	graphPush http.Handler
+
 	// overlayWebhook is the HubSpot webhook-as-signal receiver (OVA-WIRE-10),
 	// injected by WithOverlayWebhook only when the overlay app secret is
 	// configured — the route is absent otherwise, never an open unverified

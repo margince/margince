@@ -28,6 +28,21 @@ import (
 // for a foreign address is a no-op, never an error (Pub/Sub redelivers on
 // errors, and there is nothing here a retry would fix).
 func BumpDueByMailbox(ctx context.Context, pool *pgxpool.Pool, provider, email string) ([]DueConnection, error) {
+	return BumpDueByMailboxes(ctx, pool, provider, []string{email})
+}
+
+// BumpDueByMailboxes is the same for a DELIVERY naming several mailboxes at
+// once, which Graph's batched change notifications do.
+//
+// ONE fleet walk for the whole batch, not one per address. The walk opens a
+// transaction per workspace, so a per-address loop made the cost of a single
+// public request the product of the batch size and the installation's workspace
+// count — an unauthenticated caller's lever on this server's connection pool.
+// Matching a set inside the walk costs one predicate.
+func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string, emails []string) ([]DueConnection, error) {
+	if len(emails) == 0 {
+		return nil, nil
+	}
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; the push carries no tenant, so every workspace is probed under its own GUC.
 	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL`)
 	if err != nil {
@@ -53,9 +68,9 @@ func BumpDueByMailbox(ctx context.Context, pool *pgxpool.Pool, provider, email s
 				WHERE c.provider = $1
 				  AND c.status IN ('connected','error')
 				  AND c.archived_at IS NULL
-				  AND c.sync_cursor->>'email' = $2
+				  AND c.sync_cursor->>'email' = ANY($2)
 				ON CONFLICT (connection_id) DO UPDATE SET next_sync_at = now()
-				RETURNING connection_id`, provider, email)
+				RETURNING connection_id`, provider, emails)
 			if err != nil {
 				return err
 			}

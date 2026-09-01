@@ -38,6 +38,7 @@ type apiConfig struct {
 	gmailPushAudience     string
 	gmailPushSA           string
 	gmailJWKSURL          string
+	graphPushToken        string
 	graphClientID         string
 	graphClientSecret     string
 	graphTenant           string
@@ -99,6 +100,7 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.gmailJWKSURL, "gmail-jwks-url", "MARGINCE_GMAIL_JWKS_URL", "", "override Google's OIDC JWKS URL; test/dev only")
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; with the secret, state key and public-base-url, enables /connectors/graph/*")
 	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
+	env.String(fs, &cfg.graphPushToken, "graph-push-token", "MARGINCE_GRAPH_PUSH_TOKEN", "", "shared secret on the Graph change-notification URL; enables POST /webhooks/graph (empty = route absent)")
 	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for the consent endpoint (default: common — any organization)")
 	env.String(fs, &cfg.microsoftSignInTenant, "microsoft-signin-tenant", "MARGINCE_MICROSOFT_SIGNIN_TENANT", "", "Entra DIRECTORY ID (a GUID) whose members may sign in; defaults to --graph-tenant when that names a directory. Sign-in cannot run on common/organizations/consumers — it matches a token address to a member, and any tenant admin controls their own users mail attribute")
 	env.String(fs, &cfg.hubspotAppSecret, "hubspot-app-secret", "MARGINCE_HUBSPOT_APP_SECRET", "", "HubSpot app client secret; verifies inbound overlay webhook v3 signatures and, when set, mounts /webhooks/hubspot (absent otherwise)")

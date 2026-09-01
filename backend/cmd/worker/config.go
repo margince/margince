@@ -51,6 +51,9 @@ type workerConfig struct {
 	gmailPubsubTopic     string
 	gmailWatchInterval   time.Duration
 	gmailWatchRenew      time.Duration
+	graphNotifyURL       string
+	graphWatchInterval   time.Duration
+	graphWatchRenew      time.Duration
 	overlayInterval      time.Duration
 	overlayBackfillLimit int
 	sendRateLimit        int
@@ -124,6 +127,9 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.gmailPubsubTopic, "gmail-pubsub-topic", "MARGINCE_GMAIL_PUBSUB_TOPIC", "", "Gmail Pub/Sub topic (projects/<p>/topics/<t>); enables the push-watch register+renew job. Empty leaves capture on the poll.")
 	fs.DurationVar(&cfg.gmailWatchInterval, "gmail-watch-interval", 6*time.Hour, "Gmail push-watch maintenance scan interval")
 	fs.DurationVar(&cfg.gmailWatchRenew, "gmail-watch-renew-within", 48*time.Hour, "renew a Gmail watch this far ahead of its 7-day expiry")
+	env.String(fs, &cfg.graphNotifyURL, "graph-notification-url", "MARGINCE_GRAPH_NOTIFICATION_URL", "", "public URL Microsoft posts Graph change notifications to, operator token and all (https://<api>/webhooks/graph?token=...); enables the subscription register+renew job. Empty leaves Outlook capture on the poll.")
+	fs.DurationVar(&cfg.graphWatchInterval, "graph-watch-interval", 6*time.Hour, "Graph subscription maintenance scan interval")
+	fs.DurationVar(&cfg.graphWatchRenew, "graph-watch-renew-within", 24*time.Hour, "renew a Graph subscription this far ahead of its <3-day deadline")
 	fs.DurationVar(&cfg.overlayInterval, "overlay-reconcile-interval", 2*time.Minute, "overlay-mode incumbent mirror reconcile poll interval (design.md §4.4)")
 	fs.IntVar(&cfg.overlayBackfillLimit, "overlay-backfill-limit", 0, "cap the overlay initial mirror backfill at this many records per object class (dev/demo; 0 = uncapped)")
 	if err := registerDeepReadFlags(fs, cfg); err != nil {
@@ -278,6 +284,7 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 		{"time-scan-interval", cfg.timeScanInterval},
 		{"gmail-sync-interval", cfg.gmailSyncInterval},
 		{"gmail-watch-interval", cfg.gmailWatchInterval},
+		{"graph-watch-interval", cfg.graphWatchInterval},
 		{"overlay-reconcile-interval", cfg.overlayInterval},
 		{"webhook-retry-interval", cfg.webhookRetryInterval},
 	}
@@ -290,6 +297,9 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 	// never negative (renew in the past is nonsensical).
 	if cfg.gmailWatchRenew < 0 {
 		return fmt.Errorf("worker: --gmail-watch-renew-within must be zero or positive, got %s", cfg.gmailWatchRenew)
+	}
+	if cfg.graphWatchRenew < 0 {
+		return fmt.Errorf("worker: --graph-watch-renew-within must be zero or positive, got %s", cfg.graphWatchRenew)
 	}
 	return nil
 }

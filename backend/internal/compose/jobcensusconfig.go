@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -72,6 +73,16 @@ func everyDeclaredDependencySupplied(cfg JobRunnerConfig) error {
 // and which kinds that leaves wired is the whole subject of the registration
 // postures; this one exists so the census reads the contract's full extent
 // rather than one deployment's slice of it.
+// censusCaptureRegistry is a registry holding the connectors the census needs a
+// job to be able to look up. Only Graph today: it is the one watch pass that
+// asks, because it is the one whose worker role registers its connector from
+// environment credentials alone.
+func censusCaptureRegistry() *capture.Registry {
+	reg := capture.NewRegistry(nil, nil, nil, nil)
+	reg.Register(graph.New(nil, nil))
+	return reg
+}
+
 func censusJobConfig() JobRunnerConfig {
 	seam := censusSeam{}
 	return JobRunnerConfig{
@@ -80,11 +91,17 @@ func censusJobConfig() JobRunnerConfig {
 		// stages a delivery, so the kind is gated on this machinery existing;
 		// the census supplies every declared dependency so a kind can never be
 		// declared and silently unregistered.
-		SendDelivery:  censusDeliveryMachinery{},
-		GmailRegistry: &capture.Registry{},
-		// The watch pass is the one conjunction in the file: a registry alone
-		// does not wire it, so the topic has to be here too.
+		SendDelivery: censusDeliveryMachinery{},
+		// Carrying a Graph connector, because the Graph watch pass asks whether
+		// this registry has one to renew through — a bare registry would make
+		// the census report that pair as unregisterable, which is a fact about
+		// the census rather than about the build.
+		GmailRegistry: censusCaptureRegistry(),
+		// The watch passes are the conjunctions in this file: a registry alone
+		// does not wire either, so the topic has to be here too — and for Graph,
+		// the notification URL AND the connector above.
 		GmailWatch:             GmailWatchConfig{Topic: "projects/census/topics/census", Interval: censusInterval},
+		GraphWatch:             GraphWatchConfig{NotificationURL: "https://census.example/webhooks/graph", Interval: censusInterval},
 		ChannelVault:           keyvault.NewMemory(),
 		OverlayVault:           keyvault.NewMemory(),
 		ClassifyBrain:          seam,

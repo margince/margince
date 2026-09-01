@@ -30,6 +30,17 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout
 		APIBaseURL:    cfg.apiBaseURL,
 	}
 	opts := []compose.Option{compose.WithGraphCapture(graphCfg)}
+	// The notification webhook needs only the pool and an insert-only client —
+	// not the OAuth transport — so a configured token mounts it even while the
+	// Entra app is incomplete (connections synced by the worker still route).
+	if cfg.graphPushToken != "" {
+		pushInserter, err := jobs.NewInserter(pool, logger)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, compose.WithGraphPush(pushInserter, compose.GraphPushConfig{Token: cfg.graphPushToken}))
+		_, _ = fmt.Fprintln(stdout, "api graph push webhook enabled (/webhooks/graph)")
+	}
 	switch {
 	case graphCfg.Enabled():
 		// The backfill ops ride the shared connect registry plus an

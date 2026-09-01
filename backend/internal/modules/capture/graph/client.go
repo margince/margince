@@ -95,9 +95,12 @@ type OAuth interface {
 	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
 }
 
-// API is the Graph mail surface the connector uses — read-only but for the two
-// send calls at the end, which ride the separate Mail.Send permission. All calls take
-// a short-lived access token (minted from the refresh token per Sync).
+// API is the Graph mail surface the connector uses. Reading is what almost all
+// of it does; the writes are named and few — the two send calls at the end,
+// which ride the separate Mail.Send permission, and EnsureSubscription, which
+// registers the change-notification subscription push arrives through. All
+// calls take a short-lived access token (minted from the refresh token per
+// Sync).
 type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
 	// userPrincipalName for a mailbox with no mail attribute).
@@ -115,6 +118,15 @@ type API interface {
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	Delta(ctx context.Context, accessToken, deltaLink string) (ids []string, newDeltaLink string, err error)
+	// EnsureSubscription registers or renews the Graph change-notification
+	// subscription pointing at notificationURL, carrying clientState, and
+	// reports the subscription that now covers this mailbox.
+	//
+	// One call rather than a list/create/renew trio on this seam: which of
+	// those a round performs is Microsoft's business, and a seam that spelled
+	// the three would make every test double re-decide the renew-then-create
+	// order the real one exists to hold.
+	EnsureSubscription(ctx context.Context, accessToken, notificationURL, clientState string, deadline time.Time) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
 	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
 	// EstimateAfter returns the provider-side count of messages received on
