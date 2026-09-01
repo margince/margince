@@ -10,6 +10,7 @@ package integrations
 // cost table they are computed from.
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -145,5 +146,75 @@ func TestEveryRegisteredAdapterPricesWhatItDeclares(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A category the provider only issues alongside another must be priced with
+// it. The buy button asks for both (boughtWith, frontend/src/screens/
+// personprovider.tsx) and quotes ONE figure — this entry's — so an entry
+// carrying only its own price would name a number smaller than the press
+// spends.
+//
+// Derived from the descriptor's own RequiresAnswerTo rather than naming a
+// category: the defect is a property of the pairing rule, so an adapter that
+// declares a new pair is covered the day it lands.
+//
+// Run over the offline fake, which is the only adapter this module may import
+// — a module never imports a sibling, and surfe is one. That costs nothing
+// here: TestTheOfflineFakeDescribesTheSameProductAsTheLiveAdapter
+// (backend/internal/compose/providerdescriptorparity_test.go) compares
+// RequiresAnswerTo and CostTable between the fake and the live adapter, so a
+// fake that passes this and a live adapter that would not cannot both exist.
+func TestAPricedCategoryCarriesItsPrerequisitesPrice(t *testing.T) {
+	desc := NewOfflineProvider(0, func() time.Time { return time.Unix(0, 0).UTC() }).Descriptor()
+	if len(desc.RequiresAnswerTo) == 0 {
+		// Under-recognition is the one way this gate must not break: with no
+		// pairs to walk it would report PASS over a rule nobody checked.
+		t.Fatal("the fake declares no prerequisites, so this gate walked nothing — it mirrors an adapter that has one")
+	}
+	entries := map[string]CategoryCost{}
+	for _, entry := range catalogOf(desc) {
+		entries[entry.Category] = entry
+	}
+	for category, prerequisite := range desc.RequiresAnswerTo {
+		paired, ok := entries[string(category)]
+		if !ok {
+			t.Errorf("category %q has a prerequisite but no catalog entry to price it in", category)
+			continue
+		}
+		if paired.Requires != string(prerequisite) {
+			t.Errorf("%q names prerequisite %q, catalog entry says %q",
+				category, prerequisite, paired.Requires)
+		}
+		// The exact price of the pair, pool by pool.
+		//
+		// Pool by pool because a pair spanning two pools is the case here: one
+		// summed total would pass a price that charged the mobile pool twice
+		// and the email pool not at all.
+		//
+		// Exact rather than "at least the prerequisite's share": a floor is
+		// satisfied by 1 >= 1 the moment a pair shares a pool with its
+		// prerequisite, so a catalog that had dropped one half's cost would
+		// still pass while the button quoted half what the press spends. No
+		// shipped pair shares a pool today, which is exactly why the weaker
+		// check looked green — the first pair that does would be the one it
+		// could not see.
+		want := map[string]int{}
+		for _, priced := range []provider.Category{category, prerequisite} {
+			for pool, n := range desc.CostTable[priced] {
+				want[string(pool)] += n
+			}
+		}
+		// catalogOf drops a pool costing nothing, so the expectation must too
+		// or every comparison fails on a zero neither side charges.
+		for pool, n := range want {
+			if n == 0 {
+				delete(want, pool)
+			}
+		}
+		if !maps.Equal(paired.Cost, want) {
+			t.Errorf("%q costs %v, want %v — its own price plus prerequisite %q's, which is what one press spends",
+				category, paired.Cost, want, prerequisite)
+		}
 	}
 }

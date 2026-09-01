@@ -104,7 +104,14 @@ function composerIntentOf(
   t: ReturnType<typeof useT>,
 ): string {
   const key = COMPOSER_INTENT_KEYS[prefill?.intent ?? ""];
-  return key ? t(key) : "";
+  if (!key) {
+    return "";
+  }
+  // The promise itself rides in `subject`. Without it, a rung firing on one of
+  // several open commitments asks the composer to deliver "what we promised"
+  // and leaves the drafter to guess which.
+  const subject = prefill?.subject?.trim();
+  return subject ? `${t(key)}: ${subject}` : t(key);
 }
 
 /**
