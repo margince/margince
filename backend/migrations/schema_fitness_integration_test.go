@@ -389,6 +389,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"finance_customer_link.organization_id":   "schema only, no writer yet (#725): the mapping write does not exist, and when it lands it must put the named company through auth.EnsureLinkTarget — this entry is the obligation, not a record of one already met",
 	"finance_invoice.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
 	"finance_payment.organization_id":         "schema only, no writer yet (#725): the sync pass does not exist, and when it lands it must resolve the organization from the customer link rather than from any request body",
+	"intro_request.person_id":                 "gated: Store.Create puts the contact through auth.EnsureVisibleLive before the insert, so an ask cannot name a person its requester could not open",
+	"intro_request.through_person_id":         "gated: the intermediary is caller-supplied like the contact, and Store.Create puts it through the same auth.EnsureVisibleLive — without it a rep could learn a contact exists by routing an ask through them and reading which error came back",
+	"intro_request.source_activity_id":        "server-derived: the reply consumer names the activity it is already processing, and a human marking the handshake names one from the timeline they are already reading. ON DELETE SET NULL, so the ask still answers after the message is gone",
 })
 
 // TestFK_rowScopedTargetsHaveVisibilityDecision derives the H1 obligation

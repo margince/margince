@@ -120,6 +120,14 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		if err := auth.EnsureVisibleLive(ctx, tx, "person", req.PersonID); err != nil {
 			return err
 		}
+		// The intermediary is named by the caller too, and naming a record is
+		// reading it: without this a rep could learn that a contact exists by
+		// routing an ask through them and reading which error came back.
+		if req.ThroughPersonID != nil {
+			if err := auth.EnsureVisibleLive(ctx, tx, "person", *req.ThroughPersonID); err != nil {
+				return err
+			}
+		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO intro_request (
 				id, person_id, requester_user_id, introducer_user_id,
