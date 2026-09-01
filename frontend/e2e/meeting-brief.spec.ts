@@ -22,10 +22,12 @@ function copy(key: MessageKey): string {
 // has already started keeps running, and a box measured mid-fade is a box in a
 // place the reader never sees it.
 //
-// The shell's own idling orb (.core-rim, .core-glass) is not an arrival and
-// never settles — it is the product's ambient mark, running on every screen by
-// design. It is excluded by name rather than by widening the check to "some
-// animations are fine", which would also excuse a drawer still fading in.
+// The shell's core mark (.core-rim, .core-glass) is excluded by name. Its only
+// motion is a 0.3s opacity transition (margince-core.css) — it cannot move a
+// box, so it cannot put a measurement anywhere the reader does not see it, and
+// it is still in flight whenever the drawer opens over it. Excluded by NAME
+// rather than by widening the check to "some animations are fine", which would
+// also excuse a drawer still sliding in.
 const AMBIENT = ["core-rim", "core-glass"];
 
 async function settleAnimations(page: Page) {

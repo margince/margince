@@ -146,6 +146,17 @@ describe("the states a read can land in", () => {
     ).toBeTruthy();
   });
 
+  it("still names a withheld source when nothing else survived", () => {
+    // "Nothing is recorded" and "you are not being shown what is" are
+    // different facts. A brief whose only content is an omission must state
+    // the omission rather than report itself empty.
+    mount({ kind: "ready", brief: { ...briefOmitted, sections: [] } });
+    expect(
+      screen.queryByText("There is nothing recorded for this meeting yet."),
+    ).toBeNull();
+    expect(screen.getByText(/do not have access to Deal Rooms/)).toBeTruthy();
+  });
+
   it("keeps the server's own reason on a failure, and offers a retry", async () => {
     const onRetry = vi.fn();
     mount({

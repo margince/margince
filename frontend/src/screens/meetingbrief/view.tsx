@@ -38,7 +38,13 @@ function stateOf(state: BriefViewState) {
     case "failed":
       return "failed" as const;
     default:
-      return state.brief.sections.length === 0
+      // A brief with no sections but a withheld source is NOT empty. "Nothing
+      // is recorded for this meeting" and "you are not being shown what is"
+      // are different facts, and answering the second with the first is the
+      // silence the omissions exist to break: a reader would walk in believing
+      // the record was blank.
+      return state.brief.sections.length === 0 &&
+        (state.brief.omitted ?? []).length === 0
         ? ("empty" as const)
         : ("ready" as const);
   }
