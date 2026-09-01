@@ -6425,7 +6425,7 @@ export const de = {
   "consent.scopeNote.draft": "bereitet Mails zu deiner Prüfung vor",
   "consent.scopeNote.write":
     "erstellt, bearbeitet und archiviert Datensätze als du",
-  "consent.scopeNote.send": "sendet Mails als du, ohne vorher zu fragen",
+  "consent.scopeNote.send": "sendet Nachrichten als du, ohne vorher zu fragen",
   "consent.scopeNote.enrich":
     "verbraucht Anreicherungs-Guthaben — jeder Kauf fragt dich weiterhin zuerst",
   "consent.ceiling":

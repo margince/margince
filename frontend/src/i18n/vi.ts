@@ -6364,9 +6364,9 @@ export const vi = {
   "consent.scopeNote.read": "xem những gì bạn xem được",
   "consent.scopeNote.draft": "soạn thư để bạn xem lại",
   "consent.scopeNote.write": "tạo, sửa và lưu trữ hồ sơ với danh nghĩa của bạn",
-  "consent.scopeNote.send": "gửi thư với danh nghĩa của bạn, không hỏi trước",
+  "consent.scopeNote.send": "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
   "consent.scopeNote.enrich":
-    "tiêu điểm tín dụng làm giàu dữ liệu — mỗi lần mua vẫn hỏi bạn trước",
+    "tiêu tốn tín dụng làm giàu dữ liệu — mỗi lần mua vẫn hỏi bạn trước",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Bạn có thể ngắt kết nối bất cứ lúc nào tại Cài đặt → AI & quyền tự chủ.",
   "consent.pickOne": "Chọn ít nhất một, hoặc từ chối.",
