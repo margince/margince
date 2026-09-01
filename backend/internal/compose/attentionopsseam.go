@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 )
@@ -196,6 +197,38 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 			Subject:   notice.Subject,
 			Body:      notice.Body,
 			CreatedAt: notice.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+// attentionIntroductions binds the introductions lane to the store's own
+// per-user read.
+//
+// Per-user for the reason attentionNotices is: an ask names one colleague, so
+// the store refuses a caller with no human behind it and the lane renders that
+// as withheld. Nothing here widens, and there is no scope argument to pass —
+// the read takes none.
+type attentionIntroductions struct{ store *introductions.Store }
+
+func (a attentionIntroductions) Pending(
+	ctx context.Context, limit int,
+) ([]attention.PendingIntroduction, error) {
+	asks, err := a.store.AwaitingMyAnswer(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.PendingIntroduction, 0, len(asks))
+	for _, ask := range asks {
+		out = append(out, attention.PendingIntroduction{
+			ID:       ask.ID,
+			PersonID: ask.PersonID,
+			// The requester's own words, carried rather than summarised: the
+			// colleague is deciding whether to spend their relationship, and a
+			// paraphrase is not what they would be agreeing to.
+			Reason:      ask.InternalReason,
+			RequestedAt: ask.RequestedAt,
+			DueAt:       ask.DueAt,
 		})
 	}
 	return out, nil

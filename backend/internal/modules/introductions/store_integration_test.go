@@ -739,3 +739,114 @@ func linkEvidence(t *testing.T, e *introEnv, activity, person ids.UUID) {
 		t.Fatal(err)
 	}
 }
+
+// The queue answers with YOUR asks and nobody else's.
+//
+// This is the whole reason the lane does not widen to `team` or `all`. An ask
+// names one colleague, and whose favour was asked for is between the two of
+// them until one answers — so the read is bound to the acting person rather
+// than to a scope a manager could widen.
+func TestTheQueueCarriesOnlyTheAsksWaitingOnYou(t *testing.T) {
+	e := setupIntro(t)
+	mine, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// A second ask about the same contact, waiting on somebody else. The
+	// duplicate guard is per (contact, introducer), so this is a legal row and
+	// exactly the one that must not appear in the introducer's queue.
+	other := e.ask()
+	other.IntroducerUser = e.stranger
+	if _, err := e.store.Create(e.asUser(e.requester), other); err != nil {
+		t.Fatalf("Create for the other colleague: %v", err)
+	}
+
+	queue, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer: %v", err)
+	}
+	if len(queue) != 1 || queue[0].ID != mine {
+		t.Fatalf("the queue carries %d ask(s) %v; want only the one waiting on this "+
+			"colleague (%v)", len(queue), queue, mine)
+	}
+	// The requester's own queue is empty: asking for a favour does not put the
+	// ask in your own list of favours to grant.
+	asking, err := e.store.AwaitingMyAnswer(e.asUser(e.requester), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer for the requester: %v", err)
+	}
+	if len(asking) != 0 {
+		t.Errorf("the requester's own queue carries their own ask: %v", asking)
+	}
+}
+
+// An answered ask leaves the queue.
+//
+// The lane's verb is `decide`, and a decided ask has nothing left to decide. It
+// stays on the contact's own page, where the requester follows what happened —
+// leaving it in the colleague's queue would ask them to answer twice.
+func TestAnAnsweredAskLeavesTheQueue(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	before, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer: %v", err)
+	}
+	if len(before) != 1 {
+		t.Fatalf("the queue carries %d ask(s) before the answer; want one", len(before))
+	}
+
+	if err := e.store.Decide(
+		e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+
+	after, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer after the answer: %v", err)
+	}
+	if len(after) != 0 {
+		t.Errorf("an answered ask is still in the colleague's queue: %v", after)
+	}
+}
+
+// The soonest to lapse comes first.
+//
+// A lapsed ask reads to the requester exactly like a refusal, and the
+// difference is whether anybody looked in time. So the queue is ordered by
+// deadline rather than by age: the ask about to expire is the one a colleague
+// needs to see at the top.
+func TestTheQueueLeadsWithTheAskAboutToLapse(t *testing.T) {
+	e := setupIntro(t)
+	later := e.ask()
+	later.DueAt = testNow.AddDate(0, 0, 9)
+	lateID, err := e.store.Create(e.asUser(e.requester), later)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	// A second contact, so the duplicate guard admits a second ask on the same
+	// colleague.
+	soonest := e.ask()
+	soonest.PersonID = e.unseen
+	soonest.DueAt = testNow.AddDate(0, 0, 2)
+	soonID, err := e.store.Create(e.asUser(e.requester), soonest)
+	if err != nil {
+		t.Fatalf("Create the sooner ask: %v", err)
+	}
+
+	queue, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer: %v", err)
+	}
+	if len(queue) != 2 {
+		t.Fatalf("the queue carries %d ask(s); want two", len(queue))
+	}
+	if queue[0].ID != soonID || queue[1].ID != lateID {
+		t.Errorf("the queue leads with %v; want the ask due soonest (%v)",
+			queue[0].ID, soonID)
+	}
+}

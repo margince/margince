@@ -1263,6 +1263,7 @@ const (
 	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
 	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedDsr               AttentionLanesOmitted = "dsr"
+	AttentionLanesOmittedIntroductions     AttentionLanesOmitted = "introductions"
 	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
 	AttentionLanesOmittedNotices           AttentionLanesOmitted = "notices"
@@ -1293,6 +1294,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedDoneForYou:
 		return true
 	case AttentionLanesOmittedDsr:
+		return true
+	case AttentionLanesOmittedIntroductions:
 		return true
 	case AttentionLanesOmittedMeetings:
 		return true
@@ -1377,24 +1380,25 @@ func (e AttentionItemActions) Valid() bool {
 
 // Defines values for AttentionItemSource.
 const (
-	AttentionItemSourceAiWorkHealth      AttentionItemSource = "ai_work_health"
-	AttentionItemSourceApproval          AttentionItemSource = "approval"
-	AttentionItemSourceAutomationRun     AttentionItemSource = "automation_run"
-	AttentionItemSourceBounce            AttentionItemSource = "bounce"
-	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
-	AttentionItemSourceCaptureHealth     AttentionItemSource = "capture_health"
-	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
-	AttentionItemSourceCustomerWaiting   AttentionItemSource = "customer_waiting"
-	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
-	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
-	AttentionItemSourceDsr               AttentionItemSource = "dsr"
-	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
-	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
-	AttentionItemSourceNotice            AttentionItemSource = "notice"
-	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
-	AttentionItemSourceSyncHealth        AttentionItemSource = "sync_health"
-	AttentionItemSourceTask              AttentionItemSource = "task"
-	AttentionItemSourceUndelivered       AttentionItemSource = "undelivered"
+	AttentionItemSourceAiWorkHealth        AttentionItemSource = "ai_work_health"
+	AttentionItemSourceApproval            AttentionItemSource = "approval"
+	AttentionItemSourceAutomationRun       AttentionItemSource = "automation_run"
+	AttentionItemSourceBounce              AttentionItemSource = "bounce"
+	AttentionItemSourceBriefItem           AttentionItemSource = "brief_item"
+	AttentionItemSourceCaptureHealth       AttentionItemSource = "capture_health"
+	AttentionItemSourceConversationClaim   AttentionItemSource = "conversation_claim"
+	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
+	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
+	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
+	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
+	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
+	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
+	AttentionItemSourceNotice              AttentionItemSource = "notice"
+	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
+	AttentionItemSourceSyncHealth          AttentionItemSource = "sync_health"
+	AttentionItemSourceTask                AttentionItemSource = "task"
+	AttentionItemSourceUndelivered         AttentionItemSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemSource enum.
@@ -1423,6 +1427,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDsr:
 		return true
 	case AttentionItemSourceFailedApproval:
+		return true
+	case AttentionItemSourceIntroductionRequest:
 		return true
 	case AttentionItemSourceMeeting:
 		return true
@@ -11895,25 +11901,26 @@ func (e WorklistItemConsequence) Valid() bool {
 
 // Defines values for WorklistItemSource.
 const (
-	WorklistItemSourceAiWorkHealth      WorklistItemSource = "ai_work_health"
-	WorklistItemSourceApproval          WorklistItemSource = "approval"
-	WorklistItemSourceAutomationRun     WorklistItemSource = "automation_run"
-	WorklistItemSourceBatch             WorklistItemSource = "batch"
-	WorklistItemSourceBounce            WorklistItemSource = "bounce"
-	WorklistItemSourceBriefItem         WorklistItemSource = "brief_item"
-	WorklistItemSourceCaptureHealth     WorklistItemSource = "capture_health"
-	WorklistItemSourceConversationClaim WorklistItemSource = "conversation_claim"
-	WorklistItemSourceCustomerWaiting   WorklistItemSource = "customer_waiting"
-	WorklistItemSourceDealAtRisk        WorklistItemSource = "deal_at_risk"
-	WorklistItemSourceDedupeCandidate   WorklistItemSource = "dedupe_candidate"
-	WorklistItemSourceDsr               WorklistItemSource = "dsr"
-	WorklistItemSourceFailedApproval    WorklistItemSource = "failed_approval"
-	WorklistItemSourceMeeting           WorklistItemSource = "meeting"
-	WorklistItemSourceNotice            WorklistItemSource = "notice"
-	WorklistItemSourceRelationshipDecay WorklistItemSource = "relationship_decay"
-	WorklistItemSourceSyncHealth        WorklistItemSource = "sync_health"
-	WorklistItemSourceTask              WorklistItemSource = "task"
-	WorklistItemSourceUndelivered       WorklistItemSource = "undelivered"
+	WorklistItemSourceAiWorkHealth        WorklistItemSource = "ai_work_health"
+	WorklistItemSourceApproval            WorklistItemSource = "approval"
+	WorklistItemSourceAutomationRun       WorklistItemSource = "automation_run"
+	WorklistItemSourceBatch               WorklistItemSource = "batch"
+	WorklistItemSourceBounce              WorklistItemSource = "bounce"
+	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
+	WorklistItemSourceCaptureHealth       WorklistItemSource = "capture_health"
+	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
+	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
+	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
+	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
+	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
+	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
+	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
+	WorklistItemSourceNotice              WorklistItemSource = "notice"
+	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
+	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
+	WorklistItemSourceTask                WorklistItemSource = "task"
+	WorklistItemSourceUndelivered         WorklistItemSource = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemSource enum.
@@ -11944,6 +11951,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceDsr:
 		return true
 	case WorklistItemSourceFailedApproval:
+		return true
+	case WorklistItemSourceIntroductionRequest:
 		return true
 	case WorklistItemSourceMeeting:
 		return true
@@ -11979,24 +11988,25 @@ func (e WorklistMoveAction) Valid() bool {
 
 // Defines values for WorklistReachSource.
 const (
-	WorklistReachSourceAiWorkHealth      WorklistReachSource = "ai_work_health"
-	WorklistReachSourceApproval          WorklistReachSource = "approval"
-	WorklistReachSourceAutomationRun     WorklistReachSource = "automation_run"
-	WorklistReachSourceBatch             WorklistReachSource = "batch"
-	WorklistReachSourceBounce            WorklistReachSource = "bounce"
-	WorklistReachSourceBriefItem         WorklistReachSource = "brief_item"
-	WorklistReachSourceCaptureHealth     WorklistReachSource = "capture_health"
-	WorklistReachSourceConversationClaim WorklistReachSource = "conversation_claim"
-	WorklistReachSourceCustomerWaiting   WorklistReachSource = "customer_waiting"
-	WorklistReachSourceDealAtRisk        WorklistReachSource = "deal_at_risk"
-	WorklistReachSourceDedupeCandidate   WorklistReachSource = "dedupe_candidate"
-	WorklistReachSourceDsr               WorklistReachSource = "dsr"
-	WorklistReachSourceFailedApproval    WorklistReachSource = "failed_approval"
-	WorklistReachSourceMeeting           WorklistReachSource = "meeting"
-	WorklistReachSourceNotice            WorklistReachSource = "notice"
-	WorklistReachSourceRelationshipDecay WorklistReachSource = "relationship_decay"
-	WorklistReachSourceSyncHealth        WorklistReachSource = "sync_health"
-	WorklistReachSourceTask              WorklistReachSource = "task"
+	WorklistReachSourceAiWorkHealth        WorklistReachSource = "ai_work_health"
+	WorklistReachSourceApproval            WorklistReachSource = "approval"
+	WorklistReachSourceAutomationRun       WorklistReachSource = "automation_run"
+	WorklistReachSourceBatch               WorklistReachSource = "batch"
+	WorklistReachSourceBounce              WorklistReachSource = "bounce"
+	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
+	WorklistReachSourceCaptureHealth       WorklistReachSource = "capture_health"
+	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
+	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
+	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
+	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
+	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
+	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
+	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
+	WorklistReachSourceNotice              WorklistReachSource = "notice"
+	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
+	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
+	WorklistReachSourceTask                WorklistReachSource = "task"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -12027,6 +12037,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceDsr:
 		return true
 	case WorklistReachSourceFailedApproval:
+		return true
+	case WorklistReachSourceIntroductionRequest:
 		return true
 	case WorklistReachSourceMeeting:
 		return true
@@ -15121,6 +15133,29 @@ type Attention struct {
 	// the case queue.
 	Dsr *[]AttentionItem `json:"dsr,omitempty"`
 
+	// Introductions Introductions a colleague has asked THIS reader to make, oldest first —
+	// the ask waiting on them, which nothing else on this page shows. Until
+	// this lane existed a colleague only learned they had been asked by
+	// opening that contact's Network tab, so an ask nobody happened to look
+	// for simply expired.
+	//
+	// `subject` names the contact the introduction is to, `detail` is the
+	// requester's own reason, and `due_at` is when the ask lapses. The one
+	// verb is `decide`: the answer is the colleague's to give and it is
+	// irreversible, so it routes to `/intro-requests/{id}/decision` rather
+	// than being settled from a queue row.
+	//
+	// PER-READER, and it does not widen. An ask is addressed to one
+	// colleague the way a notice is, so `team` and `all` do not reach a
+	// colleague's asks — the wider scopes are for shared record-bearing
+	// work, not for reading whose favour somebody else was asked for. A
+	// manager who needs the team's picture reads it on the contact.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human
+	// behind it. Absent — not empty — on an installation whose feed does
+	// not read introductions.
+	Introductions *[]AttentionItem `json:"introductions,omitempty"`
+
 	// LanesOmitted Lanes withheld because the caller may not read what they contain. Never returned empty instead.
 	LanesOmitted *[]AttentionLanesOmitted `json:"lanes_omitted,omitempty"`
 
@@ -15273,6 +15308,9 @@ type AttentionCounts struct {
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
+
+	// Introductions How many introduction asks the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the ones lapsing soonest, which is the order this lane pages in.
+	Introductions *int `json:"introductions,omitempty"`
 
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
@@ -20349,7 +20387,7 @@ type IntroRequest struct {
 	// RouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 	RouteType PersonGraphRouteType `json:"route_type"`
 
-	// SourceActivityId The message an `introduced`, `name_dropped` or `replied` claim rests on, where there is one.
+	// SourceActivityId The message the ask's CURRENT claim rests on — the introduction, the name-drop, or the reply — where there is one. It moves with the status rather than accumulating: a reply replaces the handshake's message, because a row reading `replied` whose receipt is the introduction sends a reader to check the wrong mail. The earlier evidence stays in the audit trail.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// Status Where the ask stands.
@@ -20360,6 +20398,18 @@ type IntroRequest struct {
 	// event), `replied` (the contact answered — observed from captured activity, never
 	// asserted), `expired` (nobody answered in time) and `cancelled` (the requester
 	// withdrew it).
+	//
+	// WHAT `replied` MEANS, exactly. It is set only by the server, from a message
+	// this workspace's own connectors captured: inbound, sent BY the contact, and
+	// after the introduction. Nothing a person types can reach it.
+	//
+	// It is a fact about the CONTACT, not about one thread. The colleague makes
+	// the introduction from their own mailbox, outside the product, so there is
+	// no thread for a reply to be matched against — what the server can honestly
+	// observe is that the contact wrote to this workspace after being introduced.
+	// Where several asks about one contact are awaiting a reply, that message
+	// answers all of them. Reading it as more than that — as proof they answered
+	// one specific introduction — is a claim the evidence does not carry.
 	Status               IntroRequestStatus `json:"status"`
 	SuggestedDisplayName *string            `json:"suggested_display_name,omitempty"`
 
@@ -20446,6 +20496,18 @@ type IntroRequestListResponse struct {
 // event), `replied` (the contact answered — observed from captured activity, never
 // asserted), `expired` (nobody answered in time) and `cancelled` (the requester
 // withdrew it).
+//
+// WHAT `replied` MEANS, exactly. It is set only by the server, from a message
+// this workspace's own connectors captured: inbound, sent BY the contact, and
+// after the introduction. Nothing a person types can reach it.
+//
+// It is a fact about the CONTACT, not about one thread. The colleague makes
+// the introduction from their own mailbox, outside the product, so there is
+// no thread for a reply to be matched against — what the server can honestly
+// observe is that the contact wrote to this workspace after being introduced.
+// Where several asks about one contact are awaiting a reply, that message
+// answers all of them. Reading it as more than that — as proof they answered
+// one specific introduction — is a claim the evidence does not carry.
 type IntroRequestStatus string
 
 // InviteDealRoomParticipantRequest defines model for InviteDealRoomParticipantRequest.

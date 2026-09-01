@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -419,6 +420,13 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		},
 		now,
 	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
+		// The asks waiting on this colleague to answer. Until this lane existed
+		// a colleague learned they had been asked only by opening that
+		// contact's Network tab, so an ask nobody went looking for expired
+		// unanswered — which to the requester reads exactly like a refusal.
+		WithIntroductions(attentionIntroductions{
+			store: introductions.NewStore(db, time.Now),
+		}).
 		// The reader's own sends that never left, from the stamp the
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).

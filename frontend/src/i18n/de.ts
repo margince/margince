@@ -7456,6 +7456,8 @@ export const de = {
   "worklist.untitled.undelivered": "Eine E-Mail wurde nie gesendet",
   "worklist.untitled.automation_run": "Eine Regel hat nicht funktioniert",
   "worklist.untitled.notice": "Ein Hinweis für dich",
+  "worklist.untitled.introduction_request":
+    "Ein Kollege bittet dich um eine Vorstellung",
   "worklist.verb.decide": "Entscheiden",
   "worklist.verb.merge": "Zusammenführen",
   "worklist.verb.open": "Öffnen",

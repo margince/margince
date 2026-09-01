@@ -95,6 +95,9 @@ type Service struct {
 	automations AutomationHealth
 	// notices is OPTIONAL and per-user exactly as captureHealth is.
 	notices Notices
+	// introductions is OPTIONAL and per-user exactly as notices is: an ask names
+	// one colleague, so there is no wider tier for it to widen to.
+	introductions Introductions
 	// names is OPTIONAL like the lanes above it: nil means subjects travel
 	// unnamed and the client resolves display names itself (labels.go).
 	names Names
@@ -186,6 +189,17 @@ func (s *Service) WithWaiting(w Waiting) *Service {
 // disprove.
 func (s *Service) WithUndelivered(u Undelivered) *Service {
 	s.undelivered = u
+	return s
+}
+
+// WithIntroductions binds the reader for asks waiting on this colleague — an
+// option for the reason WithWaiting is one.
+//
+// Unbound, the lane is ABSENT rather than empty: "this installation does not do
+// introductions" is a different fact from "nobody has asked you for one", and a
+// colleague told the second when the first is true would stop looking.
+func (s *Service) WithIntroductions(i Introductions) *Service {
+	s.introductions = i
 	return s
 }
 

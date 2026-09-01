@@ -10,10 +10,49 @@ package attention
 
 import (
 	"context"
+	"reflect"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// everyItemLane answers every lane on the day that holds cards.
+//
+// Derived from the payload rather than listed, because the list it replaces
+// failed SILENTLY: a lane left off it kept its cards and lost their names, so
+// the reader saw a row about a record with no record on it and nothing
+// anywhere reported a fault. Twelve entries had to be kept right by hand, and
+// the thirteenth was the one that noticed.
+//
+// Reflection is worth its cost here for the same reason a fitness function is
+// worth one: the obligation is "every lane", and the only spelling of "every"
+// that cannot drift is the type itself. Both shapes are read — a required lane
+// is a slice, an optional one a pointer to one, and a nil optional is skipped
+// exactly as the hand-written loop skipped it.
+func everyItemLane(out *crmcontracts.Attention) []*[]crmcontracts.AttentionItem {
+	var lanes []*[]crmcontracts.AttentionItem
+	value := reflect.ValueOf(out).Elem()
+	sliceType := reflect.TypeOf([]crmcontracts.AttentionItem(nil))
+	for i := range value.NumField() {
+		field := value.Field(i)
+		// A required lane is addressable and gives its own pointer; an optional
+		// one already IS the pointer. Both assertions are guarded by the type
+		// test beside them rather than trusted — a panic inside a feed read
+		// would take down the whole day over a field somebody added.
+		if field.Type() == sliceType {
+			if lane, ok := field.Addr().Interface().(*[]crmcontracts.AttentionItem); ok {
+				lanes = append(lanes, lane)
+			}
+			continue
+		}
+		if field.Type() == reflect.PointerTo(sliceType) && !field.IsNil() {
+			if lane, ok := field.Interface().(*[]crmcontracts.AttentionItem); ok {
+				lanes = append(lanes, lane)
+			}
+		}
+	}
+	return lanes
+}
 
 // Names resolves one record's display name under the caller's own scope.
 //
@@ -65,16 +104,7 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 	if s.names == nil {
 		return nil
 	}
-	lanes := []*[]crmcontracts.AttentionItem{
-		&out.ThisMorning, &out.NeedsYou, &out.Planned, &out.DoneForYou,
-	}
-	for _, optional := range []*[]crmcontracts.AttentionItem{
-		out.Commitments, out.AtRisk, out.Meetings, out.RelationshipDecay, out.DidNotRun, out.Dsr, out.SyncHealth, out.CaptureHealth, out.AiWorkHealth, out.Bounces, out.AutomationHealth, out.Notices,
-	} {
-		if optional != nil {
-			lanes = append(lanes, optional)
-		}
-	}
+	lanes := everyItemLane(out)
 	// Gathered before anything is asked, so each type is one question. The
 	// ids are DEDUPED per type — the same person on three cards is one id in
 	// the query — and the order they were met in is kept, so a store that

@@ -7378,6 +7378,8 @@ export const vi = {
   "worklist.untitled.undelivered": "Một email chưa từng được gửi",
   "worklist.untitled.automation_run": "Một quy tắc đã không chạy",
   "worklist.untitled.notice": "Một thông báo cho bạn",
+  "worklist.untitled.introduction_request":
+    "Một đồng nghiệp nhờ bạn giới thiệu",
   "worklist.verb.decide": "Quyết định",
   "worklist.verb.merge": "Gộp",
   "worklist.verb.open": "Mở",

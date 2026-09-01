@@ -7526,6 +7526,8 @@ export const en = {
   "worklist.untitled.undelivered": "An email was never sent",
   "worklist.untitled.automation_run": "A rule did not do its work",
   "worklist.untitled.notice": "A notice for you",
+  "worklist.untitled.introduction_request":
+    "A colleague asked you for an introduction",
   "worklist.verb.decide": "Decide",
   "worklist.verb.merge": "Merge",
   "worklist.verb.open": "Open",
