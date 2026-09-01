@@ -83,15 +83,19 @@ func graphOptions(cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logge
 // envAppShortfall names what the ENVIRONMENT's Entra app is still missing, as a
 // clause to append, or nothing when the environment supplies none at all.
 //
-// Nothing, in that last case, because an installation configuring its app
-// through Settings is not missing flags — it declined to use them, and listing
-// them would read as a fault.
+// Nothing in that last case, because an installation configuring its app
+// through Settings has not omitted those flags — it declined them, and listing
+// them would read as a fault. HALF-supplied is the opposite situation and the
+// one worth naming: either flag alone is somebody part-way through, and which
+// half is missing is the whole content of the message.
 func envAppShortfall(cfg apiConfig) string {
 	switch {
-	case cfg.graphClientID == "":
+	case cfg.graphClientID == "" && cfg.graphClientSecret == "":
 		return ""
 	case cfg.graphClientSecret == "":
 		return ", and the environment app is missing --graph-client-secret"
+	case cfg.graphClientID == "":
+		return ", and the environment app is missing --graph-client-id"
 	default:
 		return ""
 	}
