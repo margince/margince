@@ -415,3 +415,438 @@ func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
 		t.Errorf("a live contact could not be asked about: %v", err)
 	}
 }
+
+// asCapture is the reply consumer's own principal: a system actor, unbounded by
+// design, because an ask between two colleagues is not readable by anybody the
+// consumer could pretend to be.
+func (e *introEnv) asCapture() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:intro-advance",
+	})
+	return principal.WithCorrelationID(ctx, ids.NewV7())
+}
+
+// evidence seeds a real captured message and answers its id.
+//
+// source_activity_id carries a foreign key to activity, which is the contract:
+// the evidence a reply rests on must be a message somebody can open. A test
+// passing a made-up id would be describing a row the database refuses.
+func (e *introEnv) evidence(t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, direction, source, captured_by)
+		VALUES ($1, 'email', 'Re: retrofit', 'inbound', 'sync', 'test')`, id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// introduced walks a fresh ask to the handshake and answers its id.
+func (e *introEnv) introduced(t *testing.T) ids.UUID {
+	t.Helper()
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	if err := e.store.Complete(e.asUser(e.introducer), id, nil, 2); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	return id
+}
+
+// The reply the product may record, and the write shape that carries it.
+//
+// `replied` is the one status no endpoint can reach, so this is the ONLY path
+// that produces it — and it still audits and emits like every other mutation.
+func TestACapturedReplyClosesTheAskAndLeavesATrail(t *testing.T) {
+	e := setupIntro(t)
+	id := e.introduced(t)
+	evidence := e.evidence(t)
+	repliedAt := testNow.Add(time.Hour)
+
+	recorded, err := e.store.RecordReply(e.asCapture(), id, evidence, repliedAt)
+	if err != nil {
+		t.Fatalf("RecordReply: %v", err)
+	}
+	if !recorded {
+		t.Fatal("a reply to an introduced ask recorded nothing")
+	}
+
+	ctx := context.Background()
+	var status string
+	var at *time.Time
+	var source *ids.UUID
+	if err := e.owner.QueryRow(ctx,
+		`SELECT status, replied_at, source_activity_id FROM intro_request WHERE id = $1`,
+		id).Scan(&status, &at, &source); err != nil {
+		t.Fatal(err)
+	}
+	if status != string(StatusReplied) {
+		t.Errorf("status is %q; want replied", status)
+	}
+	// The message's own instant, not the consumer's clock: a mail sent Friday
+	// and captured Monday was answered on Friday.
+	if at == nil || !at.Equal(repliedAt) {
+		t.Errorf("replied_at is %v; want the message's own %v", at, repliedAt)
+	}
+	// The evidence the claim rests on, so a reader can open the message.
+	if source == nil || *source != evidence {
+		t.Errorf("source_activity_id is %v; want the message %v", source, evidence)
+	}
+
+	var events int
+	if err := e.owner.QueryRow(ctx,
+		`SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'intro_request.replied'`).
+		Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if events != 1 {
+		t.Errorf("%d intro_request.replied events; want one", events)
+	}
+}
+
+// A second message on the same thread is the ordinary case, not a fault.
+//
+// The bus is at-least-once and a captured thread carries many messages, so this
+// path is walked constantly. It must write nothing, emit nothing, and report
+// itself as having done nothing — an error here would wedge the consumer group
+// on a message that will never stop being a duplicate.
+func TestASecondReplyChangesNothingAndIsNotAnError(t *testing.T) {
+	e := setupIntro(t)
+	id := e.introduced(t)
+	first := e.evidence(t)
+	if _, err := e.store.RecordReply(e.asCapture(), id, first, testNow.Add(time.Hour)); err != nil {
+		t.Fatalf("the first reply: %v", err)
+	}
+
+	recorded, err := e.store.RecordReply(
+		e.asCapture(), id, e.evidence(t), testNow.Add(2*time.Hour))
+	if err != nil {
+		t.Fatalf("a second reply errored: %v", err)
+	}
+	if recorded {
+		t.Error("a second reply reported itself as having recorded something")
+	}
+
+	ctx := context.Background()
+	var source ids.UUID
+	var version int
+	if err := e.owner.QueryRow(ctx,
+		`SELECT source_activity_id, version FROM intro_request WHERE id = $1`,
+		id).Scan(&source, &version); err != nil {
+		t.Fatal(err)
+	}
+	// The FIRST message stays the evidence. A later one overwriting it would
+	// re-point the trail at a message that did not close the ask.
+	if source != first {
+		t.Errorf("the evidence moved to a later message (%v); want the first %v", source, first)
+	}
+
+	var events int
+	if err := e.owner.QueryRow(ctx,
+		`SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'intro_request.replied'`).
+		Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if events != 1 {
+		t.Errorf("%d replied events after two messages; want one", events)
+	}
+}
+
+// A reply can only follow a handshake or a lent name.
+//
+// An ask still waiting on the colleague has had no introduction to answer, so a
+// message from the contact — which arrives constantly, since the rep is already
+// corresponding with them — must not close it. This is the clause that keeps
+// `requested` from silently becoming `replied` on ordinary traffic.
+func TestOnlyAHandshakeCanBeReplied(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	recorded, err := e.store.RecordReply(
+		e.asCapture(), id, e.evidence(t), testNow.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("RecordReply on a pending ask errored: %v", err)
+	}
+	if recorded {
+		t.Error("a message closed an ask nobody had answered yet")
+	}
+	var status string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT status FROM intro_request WHERE id = $1`, id).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != string(StatusRequested) {
+		t.Errorf("a pending ask moved to %q", status)
+	}
+}
+
+// AwaitingReply answers only what a reply could close, and says when the wait
+// started.
+//
+// `Since` is the whole reason this method exists rather than the consumer
+// reading statuses itself: capture backfills years of correspondence, and every
+// one of those messages is inbound and from the contact. Without the instant to
+// compare against, the first import would mark every introduction ever made as
+// answered.
+func TestAwaitingReplyNamesTheHandshakeInstant(t *testing.T) {
+	e := setupIntro(t)
+	id := e.introduced(t)
+
+	pending, err := e.store.AwaitingReply(e.asCapture(), e.contact)
+	if err != nil {
+		t.Fatalf("AwaitingReply: %v", err)
+	}
+	if len(pending) != 1 || pending[0].ID != id {
+		t.Fatalf("AwaitingReply gave %v; want the one introduced ask %v", pending, id)
+	}
+	// The handshake instant, which is what a message's occurred_at is compared
+	// against. The store's clock is testNow, so that is when Complete landed.
+	if !pending[0].Since.Equal(testNow) {
+		t.Errorf("Since is %v; want the handshake instant %v", pending[0].Since, testNow)
+	}
+
+	if _, err := e.store.RecordReply(
+		e.asCapture(), id, e.evidence(t), testNow.Add(time.Hour)); err != nil {
+		t.Fatalf("RecordReply: %v", err)
+	}
+	after, err := e.store.AwaitingReply(e.asCapture(), e.contact)
+	if err != nil {
+		t.Fatalf("AwaitingReply after the reply: %v", err)
+	}
+	if len(after) != 0 {
+		t.Errorf("an answered ask is still awaiting a reply: %v", after)
+	}
+}
+
+// A lent name that was used is answerable too, and it stays a name-drop.
+//
+// The two paths reach `replied` from different states, and the transition table
+// admits both. A test that only walked the handshake would leave the name-drop
+// path unreachable without anything failing.
+func TestAUsedNameDropCanBeAnsweredToo(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(
+		e.asUser(e.introducer), id, StatusNameDropApproved, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	if err := e.store.Complete(e.asUser(e.requester), id, nil, 2); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+
+	recorded, err := e.store.RecordReply(
+		e.asCapture(), id, e.evidence(t), testNow.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("RecordReply: %v", err)
+	}
+	if !recorded {
+		t.Fatal("a contact answering a name-drop recorded nothing")
+	}
+	// The before-image in the trail says name_dropped, not introduced. A
+	// dispute about whether a door was opened is settled by this row.
+	var before string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT before->>'status' FROM audit_log
+		  WHERE entity_type = 'intro_request' AND entity_id = $1
+		    AND after->>'status' = 'replied'`, id).Scan(&before); err != nil {
+		t.Fatal(err)
+	}
+	if before != string(StatusNameDropped) {
+		t.Errorf("the trail says the reply followed %q; want name_dropped", before)
+	}
+}
+
+// The receipt names the message the CURRENT claim rests on.
+//
+// One column serves three claims — introduced, name_dropped, replied — so a
+// reply has to REPLACE the handshake's evidence rather than sit behind it. A
+// row saying `replied` whose source_activity_id is the introduction sends a
+// reader who opens the receipt to the wrong mail: they check the claim and find
+// the message that preceded it.
+//
+// This is the branch a coalescing write leaves untested — every other case here
+// completes with no evidence, so the old value was null and any rule looked
+// right.
+func TestAReplyReplacesTheHandshakesEvidence(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	// The handshake cites its own message, which is the case the reply must
+	// then overwrite.
+	handshake := e.evidence(t)
+	linkEvidence(t, e, handshake, e.contact)
+	if err := e.store.Complete(e.asUser(e.introducer), id, &handshake, 2); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+
+	answer := e.evidence(t)
+	if _, err := e.store.RecordReply(
+		e.asCapture(), id, answer, testNow.Add(time.Hour)); err != nil {
+		t.Fatalf("RecordReply: %v", err)
+	}
+
+	var source ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT source_activity_id FROM intro_request WHERE id = $1`, id).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if source != answer {
+		t.Errorf("the receipt on a replied ask is %v; want the reply %v, not the "+
+			"handshake %v — a reader opening it would check the wrong message",
+			source, answer, handshake)
+	}
+
+	// The handshake's evidence is not lost, only moved: the audit row for that
+	// transition still carries it, which is where a dispute about whether the
+	// introduction happened is settled.
+	var trail int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM audit_log
+		  WHERE entity_type = 'intro_request' AND entity_id = $1
+		    AND after->>'status' = 'introduced'`, id).Scan(&trail); err != nil {
+		t.Fatal(err)
+	}
+	if trail != 1 {
+		t.Errorf("%d audit rows record the handshake; want one", trail)
+	}
+}
+
+// linkEvidence files a message under a contact, which is what Complete's
+// evidence check requires: an activity cited as proof has to be about the ask's
+// own contact.
+func linkEvidence(t *testing.T, e *introEnv, activity, person ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, person_id)
+		VALUES ($1, 'person', $2)`, activity, person); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The queue answers with YOUR asks and nobody else's.
+//
+// This is the whole reason the lane does not widen to `team` or `all`. An ask
+// names one colleague, and whose favour was asked for is between the two of
+// them until one answers — so the read is bound to the acting person rather
+// than to a scope a manager could widen.
+func TestTheQueueCarriesOnlyTheAsksWaitingOnYou(t *testing.T) {
+	e := setupIntro(t)
+	mine, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// A second ask about the same contact, waiting on somebody else. The
+	// duplicate guard is per (contact, introducer), so this is a legal row and
+	// exactly the one that must not appear in the introducer's queue.
+	other := e.ask()
+	other.IntroducerUser = e.stranger
+	if _, err := e.store.Create(e.asUser(e.requester), other); err != nil {
+		t.Fatalf("Create for the other colleague: %v", err)
+	}
+
+	queue, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer: %v", err)
+	}
+	if len(queue) != 1 || queue[0].ID != mine {
+		t.Fatalf("the queue carries %d ask(s) %v; want only the one waiting on this "+
+			"colleague (%v)", len(queue), queue, mine)
+	}
+	// The requester's own queue is empty: asking for a favour does not put the
+	// ask in your own list of favours to grant.
+	asking, err := e.store.AwaitingMyAnswer(e.asUser(e.requester), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer for the requester: %v", err)
+	}
+	if len(asking) != 0 {
+		t.Errorf("the requester's own queue carries their own ask: %v", asking)
+	}
+}
+
+// An answered ask leaves the queue.
+//
+// The lane's verb is `decide`, and a decided ask has nothing left to decide. It
+// stays on the contact's own page, where the requester follows what happened —
+// leaving it in the colleague's queue would ask them to answer twice.
+func TestAnAnsweredAskLeavesTheQueue(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	before, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer: %v", err)
+	}
+	if len(before) != 1 {
+		t.Fatalf("the queue carries %d ask(s) before the answer; want one", len(before))
+	}
+
+	if err := e.store.Decide(
+		e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+
+	after, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer after the answer: %v", err)
+	}
+	if len(after) != 0 {
+		t.Errorf("an answered ask is still in the colleague's queue: %v", after)
+	}
+}
+
+// The soonest to lapse comes first.
+//
+// A lapsed ask reads to the requester exactly like a refusal, and the
+// difference is whether anybody looked in time. So the queue is ordered by
+// deadline rather than by age: the ask about to expire is the one a colleague
+// needs to see at the top.
+func TestTheQueueLeadsWithTheAskAboutToLapse(t *testing.T) {
+	e := setupIntro(t)
+	later := e.ask()
+	later.DueAt = testNow.AddDate(0, 0, 9)
+	lateID, err := e.store.Create(e.asUser(e.requester), later)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	// A second contact, so the duplicate guard admits a second ask on the same
+	// colleague.
+	soonest := e.ask()
+	soonest.PersonID = e.unseen
+	soonest.DueAt = testNow.AddDate(0, 0, 2)
+	soonID, err := e.store.Create(e.asUser(e.requester), soonest)
+	if err != nil {
+		t.Fatalf("Create the sooner ask: %v", err)
+	}
+
+	queue, err := e.store.AwaitingMyAnswer(e.asUser(e.introducer), 25)
+	if err != nil {
+		t.Fatalf("AwaitingMyAnswer: %v", err)
+	}
+	if len(queue) != 2 {
+		t.Fatalf("the queue carries %d ask(s); want two", len(queue))
+	}
+	if queue[0].ID != soonID || queue[1].ID != lateID {
+		t.Errorf("the queue leads with %v; want the ask due soonest (%v)",
+			queue[0].ID, soonID)
+	}
+}

@@ -65,7 +65,23 @@ const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
 // neither — a system condition fixed on a settings screen the card does not
 // pretend to know.
 export function rowHref(item: WorklistItem): string | undefined {
-  return subjectHref(item) ?? SOURCE_QUEUE[item.source];
+  return askHref(item) ?? subjectHref(item) ?? SOURCE_QUEUE[item.source];
+}
+
+// An introduction ask goes to the contact's NETWORK tab, not the contact.
+//
+// The ask is answered there and nowhere else, and the default tab is a page
+// that does not mention it. Landing a colleague on the contact's overview and
+// leaving them to find the right tab is the hand-off this queue exists to
+// remove — they came here because somebody is waiting on them.
+export function askHref(item: WorklistItem): string | undefined {
+  if (
+    item.source !== "introduction_request" ||
+    item.subject?.type !== "person"
+  ) {
+    return undefined;
+  }
+  return routeHash({ screen: "contacts", id: item.subject.id, id2: "network" });
 }
 
 // One comparator value, in the reader's notation.
@@ -370,6 +386,7 @@ const KNOWN_SOURCES = {
   undelivered: true,
   automation_run: true,
   notice: true,
+  introduction_request: true,
   // A group of routine decisions, which names no single record.
   batch: true,
 } as const;

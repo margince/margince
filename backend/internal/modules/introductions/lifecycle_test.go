@@ -6,6 +6,8 @@ package introductions
 import (
 	"errors"
 	"os"
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -190,6 +192,80 @@ func TestOpenMatchesTheDuplicateGuardIndex(t *testing.T) {
 		if named != Open(s) {
 			t.Errorf("%q: Open()=%v but the guard index names it=%v — the two have drifted",
 				s, Open(s), named)
+		}
+	}
+}
+
+// The reply predicate in SQL and the transition table say the same thing.
+//
+// RecordReply spells its admissible statuses as a literal `status IN (...)`
+// because a SQL statement cannot ask the Go transition table. That makes two
+// spellings of one rule, and the way they fail is silent: adding a state a
+// capture may reply from — a follow-up sent, say — updates the table, leaves
+// the statement behind, and the new state simply never advances. Nothing
+// errors; the ask just sits there looking unanswered forever.
+//
+// So this reads the statuses back OUT of the store's own SQL and checks the
+// table agrees, in both directions.
+func TestTheReplyPredicateMatchesTheLifecycle(t *testing.T) {
+	source, err := os.ReadFile("reply.go")
+	if err != nil {
+		t.Fatalf("reading the reply path: %v", err)
+	}
+	// BOTH status lists in the statement: the CTE's, which chooses and locks
+	// the row, and the UPDATE's, which re-checks it after the lock is released
+	// by a winner. They must agree with each other AND with the table — a
+	// mismatch between the two is how the loser of a race writes a second
+	// transition over a reply that already happened.
+	statement := regexp.MustCompile(
+		`(?s)WITH prior AS \(.*?RETURNING prior\.status`).Find(source)
+	if statement == nil {
+		t.Fatal("RecordReply's statement is no longer where this test looks — " +
+			"re-point it, do not delete it")
+	}
+	lists := regexp.MustCompile(`status IN \(([^)]*)\)`).FindAllSubmatch(statement, -1)
+	if len(lists) != 2 {
+		t.Fatalf("the statement carries %d status list(s); want two — the CTE's, which "+
+			"locks the row, and the UPDATE's, which re-checks it after a winner "+
+			"commits. One alone lets a concurrent reply write a second transition",
+			len(lists))
+	}
+	inSQL := map[Status]bool{}
+	for i, list := range lists {
+		names := map[Status]bool{}
+		for _, quoted := range regexp.MustCompile(`'([a-z_]+)'`).FindAllSubmatch(list[1], -1) {
+			names[Status(quoted[1])] = true
+		}
+		if len(names) == 0 {
+			t.Fatalf("status list %d names nothing, so it admits nothing", i+1)
+		}
+		if i == 0 {
+			inSQL = names
+			continue
+		}
+		if !reflect.DeepEqual(names, inSQL) {
+			t.Errorf("the two status lists disagree (%v vs %v) — the looser one decides, "+
+				"and a status only the UPDATE admits is one a concurrent reply can "+
+				"transition twice", inSQL, names)
+		}
+	}
+
+	inTable := map[Status]bool{}
+	for _, tr := range transitions {
+		if tr.to == StatusReplied && tr.by == ActorCapture {
+			inTable[tr.from] = true
+		}
+	}
+
+	for from := range inTable {
+		if !inSQL[from] {
+			t.Errorf("the lifecycle lets a capture reply from %q, but the SQL never matches it — "+
+				"an ask in that state would wait forever", from)
+		}
+	}
+	for from := range inSQL {
+		if !inTable[from] {
+			t.Errorf("the SQL admits a reply from %q, which the lifecycle forbids", from)
 		}
 	}
 }

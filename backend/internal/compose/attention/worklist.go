@@ -301,6 +301,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("notice", day.Notices, doneCap)
 	atCap("automation_run", day.AutomationHealth, doneCap)
 	atCap("bounce", day.Bounces, doneCap)
+	atCap("introduction_request", day.Introductions, doneCap)
 	// Each of these carries its own, declared where the lane is read.
 	atCap("task", &day.Planned, plannedCap)
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)

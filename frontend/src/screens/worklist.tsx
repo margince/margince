@@ -207,7 +207,15 @@ function RowVerbs({
 }>) {
   const t = useT();
   const drawn = new Set<string>();
-  const verbs = item.actions.flatMap((action) => {
+  type Verb = {
+    action: WorklistItem["actions"][number];
+    destination: string;
+  };
+  const verbs = item.actions.flatMap<Verb>((action) => {
+    if (action === "decide") {
+      const to = decideDestination(item, href);
+      return to ? [{ action, destination: to }] : [];
+    }
     const route = VERB_DESTINATION[action];
     if (!route) {
       // A verb this build cannot route draws nothing. A control that looks
@@ -269,6 +277,20 @@ const VERB_DESTINATION: Partial<
   snooze: (href) => href,
   acknowledge: (href) => href,
 };
+
+// The one verb whose routing depends on the SOURCE rather than only the verb.
+//
+// `decide` is answered inline for an approval — the card is right there, so a
+// link would send the reader where they already are. An introduction ask has no
+// inline card: its four answers are the colleague's own, given on the contact's
+// Network tab. Without this the ask row names somebody waiting and offers
+// nothing at all, which is the worst of both.
+function decideDestination(
+  item: WorklistItem,
+  href: string | undefined,
+): string | undefined {
+  return item.source === "introduction_request" ? href : undefined;
+}
 
 // What each routable verb is called. Spelled as a map of functions rather than
 // a composed key, so a verb the contract adds without copy here does not

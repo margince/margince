@@ -596,3 +596,78 @@ describe("what the ranked queue tells a reader", () => {
     });
   });
 });
+
+// An introduction ask is the one row whose `decide` leads somewhere.
+//
+// It has no inline card — the four answers are the colleague's own, given on
+// the contact's Network tab — so without a routed verb the row names somebody
+// waiting on them and offers nothing to press. An approval's `decide` still
+// routes nowhere, because that decision IS this page.
+describe("an introduction ask on the queue", () => {
+  it("sends the colleague to the tab where the ask is answered", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "ask-1",
+            source: "introduction_request",
+            category: "decisions",
+            level: 5,
+            consequence: "work_blocked",
+            detail: "Dana reopened the retrofit conversation.",
+            actions: ["decide"],
+            subject: {
+              type: "person",
+              id: "018f3a1b-0000-7000-8000-000000000010",
+              label: "Dana Buyer",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const verb = await screen.findByRole("link", { name: "Decide" });
+    // The NETWORK tab, not the contact's default page: the ask is not
+    // mentioned anywhere else, and landing a colleague on the overview leaves
+    // them to go and find it.
+    expect(verb.getAttribute("href")).toBe(
+      "#/contacts/018f3a1b-0000-7000-8000-000000000010/network",
+    );
+  });
+
+  it("leaves an approval's decide unrouted, because that decision is this page", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "appr-1",
+            source: "approval",
+            category: "decisions",
+            level: 5,
+            consequence: "work_blocked",
+            title: "Send the retrofit quote",
+            actions: ["decide"],
+            subject: {
+              type: "person",
+              id: "018f3a1b-0000-7000-8000-000000000011",
+              label: "Someone Else",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+      { id: "appr-1", kind: "send_email", status: "pending" },
+    );
+    renderWorklist();
+
+    // Wait for the queue itself to render before asserting an absence: a
+    // findBy on a link that must NOT exist would pass against a page that had
+    // not drawn anything yet.
+    await screen.findByText("0 urgent · 0 due · 1 lower-priority");
+    // A "Decide" LINK beside an inline decision card would ask the reader to
+    // choose between answering here and going somewhere to answer.
+    expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
+  });
+});

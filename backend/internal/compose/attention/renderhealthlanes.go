@@ -211,3 +211,37 @@ func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 	}
 	return item
 }
+
+// introductionItem draws one ask a colleague is waiting on this reader to
+// answer.
+//
+// No title. The headline this card needs is the contact's name, and that
+// arrives on `subject` through fillSubjectLabels, which reads it under the
+// reader's own grants. A title written HERE would be an English sentence on a
+// product that ships three languages, and a name resolved here would be a read
+// this assembler does not hold the grants to make.
+//
+// The requester's own reason is the detail, quoted rather than summarised: the
+// colleague is deciding whether to spend their own relationship, and a
+// paraphrase of why is not what they would be agreeing to.
+//
+// One verb, `decide`, and it routes to the ask's own endpoint. Answering is
+// irreversible and only the introducer may do it, so it is never settled from
+// the queue row itself.
+func introductionItem(ask PendingIntroduction) crmcontracts.AttentionItem {
+	requested := ask.RequestedAt
+	due := ask.DueAt
+	item := crmcontracts.AttentionItem{
+		Id:         ask.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("introduction_request"),
+		OccurredAt: &requested,
+		DueAt:      &due,
+		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("decide")},
+		Subject:    subjectOf("person", ask.PersonID),
+	}
+	if ask.Reason != "" {
+		reason := ask.Reason
+		item.Detail = &reason
+	}
+	return item
+}

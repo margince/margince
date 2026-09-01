@@ -69,6 +69,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time) []ranked {
 	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.SyncHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.Notices, asOf, classifySystem)
+	rows = appendLane(rows, day.Introductions, asOf, classifyIntroduction)
 	return rows
 }
 
@@ -168,6 +169,29 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 	row := base(item, levelPromise, "system", "you_believe_it_happened")
 	row.Because = []crmcontracts.WorklistReason{reason("approved_and_failed", nil)}
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
+}
+
+// classifyIntroduction: a colleague is waiting on this reader to answer.
+//
+// levelBlocking, which is "a decision that holds up customer work", because
+// that is precisely what it is: a rep's deal is stopped until this colleague
+// says yes, no, or ask somebody else. It is a DECISION rather than system news
+// — a person must choose, and only this person can.
+//
+// The deadline is stamped like the DSR's, because both are somebody else's
+// clock running and the queue orders by it. An ask that lapses reads to the
+// requester exactly like a refusal, and the difference is whether anybody
+// looked in time.
+func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	row := base(item, levelBlocking, "decisions", "work_blocked")
+	stampDeadline(&row, item.DueAt, asOf)
+	row.Because = []crmcontracts.WorklistReason{reason("blocks_customer_work", nil)}
+	return ranked{
+		item:       row,
+		deadlineAt: deadlineOf(item.DueAt),
+		overdue:    overdueAt(item.DueAt, asOf),
+		occurredAt: occurredOf(item, asOf),
+	}
 }
 
 // classifyDSR: a clock the law started. It reaches only privacy admins — the

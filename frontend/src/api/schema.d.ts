@@ -16716,7 +16716,7 @@ export interface components {
             suggested_display_name?: string;
             /**
              * Format: uuid
-             * @description The message an `introduced`, `name_dropped` or `replied` claim rests on, where there is one.
+             * @description The message the ask's CURRENT claim rests on — the introduction, the name-drop, or the reply — where there is one. It moves with the status rather than accumulating: a reply replaces the handshake's message, because a row reading `replied` whose receipt is the introduction sends a reader to check the wrong mail. The earlier evidence stays in the audit trail.
              */
             source_activity_id?: string;
             /** Format: date-time */
@@ -16746,6 +16746,18 @@ export interface components {
          *     event), `replied` (the contact answered — observed from captured activity, never
          *     asserted), `expired` (nobody answered in time) and `cancelled` (the requester
          *     withdrew it).
+         *
+         *     WHAT `replied` MEANS, exactly. It is set only by the server, from a message
+         *     this workspace's own connectors captured: inbound, sent BY the contact, and
+         *     after the introduction. Nothing a person types can reach it.
+         *
+         *     It is a fact about the CONTACT, not about one thread. The colleague makes
+         *     the introduction from their own mailbox, outside the product, so there is
+         *     no thread for a reply to be matched against — what the server can honestly
+         *     observe is that the contact wrote to this workspace after being introduced.
+         *     Where several asks about one contact are awaiting a reply, that message
+         *     answers all of them. Reading it as more than that — as proof they answered
+         *     one specific introduction — is a claim the evidence does not carry.
          * @enum {string}
          */
         IntroRequestStatus: "requested" | "accepted" | "name_drop_approved" | "suggest_other" | "declined" | "introduced" | "name_dropped" | "replied" | "expired" | "cancelled";
@@ -25165,8 +25177,32 @@ export interface components {
              *     not read notices.
              */
             notices?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Introductions a colleague has asked THIS reader to make, oldest first —
+             *     the ask waiting on them, which nothing else on this page shows. Until
+             *     this lane existed a colleague only learned they had been asked by
+             *     opening that contact's Network tab, so an ask nobody happened to look
+             *     for simply expired.
+             *
+             *     `subject` names the contact the introduction is to, `detail` is the
+             *     requester's own reason, and `due_at` is when the ask lapses. The one
+             *     verb is `decide`: the answer is the colleague's to give and it is
+             *     irreversible, so it routes to `/intro-requests/{id}/decision` rather
+             *     than being settled from a queue row.
+             *
+             *     PER-READER, and it does not widen. An ask is addressed to one
+             *     colleague the way a notice is, so `team` and `all` do not reach a
+             *     colleague's asks — the wider scopes are for shared record-bearing
+             *     work, not for reading whose favour somebody else was asked for. A
+             *     manager who needs the team's picture reads it on the contact.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human
+             *     behind it. Absent — not empty — on an installation whose feed does
+             *     not read introductions.
+             */
+            introductions?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -25207,6 +25243,8 @@ export interface components {
             automation_health?: number;
             /** @description How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest. */
             notices?: number;
+            /** @description How many introduction asks the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the ones lapsing soonest, which is the order this lane pages in. */
+            introductions?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -25221,7 +25259,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -25435,7 +25473,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "automation_run" | "notice" | "introduction_request" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -25530,7 +25568,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}

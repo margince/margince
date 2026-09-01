@@ -148,3 +148,54 @@ func (s *Store) ForPerson(ctx context.Context, personID ids.UUID, limit int) ([]
 	}
 	return out, nil
 }
+
+// AwaitingMyAnswer lists the asks waiting on the CALLER to answer, the ones
+// closest to lapsing first.
+//
+// Bound to the acting person and to no other, exactly as a notice is: an ask
+// names one colleague, and there is no wider scope for it to widen to. A
+// manager asking for `team` does not reach a colleague's asks, because the
+// question "whose favour was somebody asked for" is not shared record-bearing
+// work — it is between the two of them until one of them answers.
+//
+// Ordered by due date rather than by age, because the one about to expire is
+// the one a colleague most needs to see: a lapsed ask reads to the requester
+// exactly like a refusal, and the difference is whether anybody looked.
+func (s *Store) AwaitingMyAnswer(ctx context.Context, limit int) ([]Request, error) {
+	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		// No human, no queue. A caller with no person behind it has nobody
+		// whose favour was asked for, and answering with somebody else's asks
+		// would be handing an agent a colleague's inbox.
+		return nil, apperrors.ErrPermissionDenied
+	}
+	var out []Request
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, requestColumns+`
+			  FROM intro_request
+			 WHERE introducer_user_id = $1 AND archived_at IS NULL
+			   AND status = 'requested'
+			 ORDER BY due_at, id
+			 LIMIT $2`, actor.UserID, limit)
+		if err != nil {
+			return fmt.Errorf("introductions: listing the asks waiting on you: %w", err)
+		}
+		defer rows.Close()
+		out = []Request{}
+		for rows.Next() {
+			var r Request
+			if err := scanRequest(rows, &r); err != nil {
+				return fmt.Errorf("introductions: reading an ask: %w", err)
+			}
+			out = append(out, r)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}

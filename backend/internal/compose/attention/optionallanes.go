@@ -177,6 +177,18 @@ func (s *Service) operationalLanes(
 			into: &out.Notices, count: &out.Counts.Notices,
 		},
 		{
+			name: "introductions", bound: s.introductions != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window, for the notices lane's reason turned around: an ask
+				// carries its OWN deadline, and the seam orders by it. Aging one
+				// out here would hide the request closest to lapsing, which is
+				// the one a colleague most needs to see.
+				pending, err := s.introductions.Pending(ctx, doneCap)
+				return renderEach(pending, introductionItem), err
+			},
+			into: &out.Introductions, count: &out.Counts.Introductions,
+		},
+		{
 			name: "automation_health", bound: s.automations != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// The same week the bounce lane keeps: a broken rule needs
