@@ -37,7 +37,7 @@ sealed in the vault, never written to the connection row, and **destroyed on dis
 | **Gmail** | OAuth standing connection | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
 | **Gmail** | IMAP standing connection | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
 | **Outlook / M365** | IMAP standing connection | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
-| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (poll-only) | a Microsoft Entra app + the vault key |
+| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (+ push) | a Microsoft Entra app + the vault key |
 | **Outlook / M365 calendar** | Graph OAuth standing connection | Rolling window (90d back / 1y ahead), no manual backfill | the *same* Entra app + `Calendars.Read`, its own consent |
 | **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
 
@@ -228,9 +228,7 @@ mailbox is easiest). This is a security guard, not a bug.
 
 ## Path C — Outlook / Microsoft 365 over Graph (standing connection)
 
-Graph is the richer Outlook path — a standing connection with delta-cursor sync and backfill — but it is
-**poll-only** (no push subscription built yet). The shape mirrors Path A, and it now has the same
-first-connect UI: an onboarding **Microsoft** chip and a Settings **Add a connection** button.
+Graph is the richer Outlook path — delta-cursor sync, backfill and push — and mirrors Path A's shape.
 
 ### C1. Prerequisites (operator config)
 
@@ -239,6 +237,8 @@ export MARGINCE_GRAPH_CLIENT_ID="<entra-app-id>"
 export MARGINCE_GRAPH_CLIENT_SECRET="<entra-app-secret>"
 export MARGINCE_GRAPH_TENANT="common"   # or a specific tenant id
 # plus the same MARGINCE_CONNECTOR_STATE_KEY / MARGINCE_KEYVAULT_ROOT_KEY / MARGINCE_PUBLIC_BASE_URL as A1
+# Optional push (else poll-only) — the SAME secret on both roles: api mounts the route, worker registers against it
+# export MARGINCE_GRAPH_PUSH_TOKEN="<secret>"; export MARGINCE_GRAPH_NOTIFICATION_URL="https://<api>/webhooks/graph?token=<secret>"
 ```
 
 Register a Microsoft Entra (Azure AD) app with delegated permissions `offline_access User.Read

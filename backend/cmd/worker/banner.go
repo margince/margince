@@ -16,7 +16,7 @@ import (
 
 // jobRunnerBanner names, for every lane, the configuration that enabled it or
 // the reason it is off.
-func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, modelPath compose.ModelPath, vault keyvault.Vault, runnerSvc *compose.RunnerService) string {
+func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphWatchRuns bool, modelPath compose.ModelPath, vault keyvault.Vault, runnerSvc *compose.RunnerService) string {
 	gmailWired := cfg.gmailAppWired()
 	providers := "imap"
 	if gmailWired {
@@ -32,6 +32,7 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, modelP
 	case gmailWired:
 		captureNote = fmt.Sprintf("capture sweep every %s: %s (watch off: no pubsub topic)", cfg.gmailSyncInterval, providers)
 	}
+	captureNote += graphWatchNote(cfg, graphWatchRuns)
 	overlayNote := "overlay reconcile off (no keyvault configured)"
 	if vault != nil {
 		overlayNote = fmt.Sprintf("overlay reconcile every %s", cfg.overlayInterval)
@@ -70,4 +71,29 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, modelP
 	return fmt.Sprintf("worker running River jobs (close-date every %s, reconcile every %s, time-scan every %s, retention every %s, %s, %s, %s, %s, %s, %s)",
 		cfg.closeDateInterval, cfg.reconcileInterval, cfg.timeScanInterval, cfg.retentionInterval,
 		captureNote, channelNote, overlayNote, deepReadNote, webhookNote, schedulerNote)
+}
+
+// graphWatchNote says what the Graph push lane is doing, in the banner's own
+// voice.
+//
+// WHAT CAME UP, not what was asked for. The renewal pair needs a notification
+// url AND a Graph connector in the registry, so a worker given the url with
+// incomplete client credentials registers nothing — and a banner reading the url
+// alone told an operator the lane was running while no job existed to run it.
+// This is the one place they look to check.
+//
+// Its own function because the banner is a series of these and the linter counts
+// the branches of all of them together; splitting one out is the cheapest way to
+// keep the next line from having to argue with a budget.
+func graphWatchNote(cfg workerConfig, runs bool) string {
+	switch {
+	case cfg.graphClientID == "" && cfg.graphNotifyURL == "":
+		return ""
+	case runs:
+		return fmt.Sprintf(", graph subscription renew every %s", cfg.graphWatchInterval)
+	case cfg.graphNotifyURL == "":
+		return ", graph push off: no notification url"
+	default:
+		return ", graph push off: no graph app configured for this role"
+	}
 }

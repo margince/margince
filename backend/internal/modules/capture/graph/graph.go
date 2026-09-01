@@ -92,6 +92,7 @@ func New(oauth OAuth, api API) *Connector {
 var (
 	_ connector.Connector         = (*Connector)(nil)
 	_ connector.Backfiller        = (*Connector)(nil)
+	_ connector.Watcher           = (*Connector)(nil)
 	_ connector.GrantedScoper     = (*Connector)(nil)
 	_ connector.AccountLabeler    = (*Connector)(nil)
 	_ connector.CredentialRotator = (*Connector)(nil)

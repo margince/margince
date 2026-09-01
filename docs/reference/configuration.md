@@ -479,6 +479,9 @@ runs the background sync.
 | `--gmail-push-token` | `MARGINCE_GMAIL_PUSH_TOKEN` | api | shared secret on the Pub/Sub push subscription URL; enables `POST /webhooks/gmail` (empty = route absent) |
 | `--gmail-push-audience` / `--gmail-push-service-account` | `MARGINCE_GMAIL_PUSH_AUDIENCE` / `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | api | OIDC audience + signing service-account email; set both and the push webhook also verifies Google's OIDC token |
 | `--gmail-jwks-url` | `MARGINCE_GMAIL_JWKS_URL` | api | override Google's OIDC JWKS URL; test/dev only |
+| `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft posts Graph change notifications to, operator token and all (`https://<api>/webhooks/graph?token=…`); enables the subscription register+renew job (empty = poll only) |
+| `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
+| `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
 
 ## Object storage (api, worker) — attachments and company logos
 

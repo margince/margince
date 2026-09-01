@@ -20,6 +20,7 @@
 package graph
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -116,7 +117,7 @@ func (a *httpAPI) get(ctx context.Context, accessToken, fullURL string, hdr http
 	}
 	//craft:ignore swallowed-errors best-effort close of the response body — the decoded result/status is what matters
 	defer func() { _ = resp.Body.Close() }()
-	body, readErr := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	body, readErr := readBounded(resp)
 	// Classify on status/headers first: a 429/401 must be honored even if the
 	// body read failed. Only on an otherwise-OK response does a read failure
 	// matter — a truncated-but-valid-JSON prefix must never pass as complete.
@@ -131,3 +132,82 @@ func (a *httpAPI) get(ctx context.Context, accessToken, fullURL string, hdr http
 	}
 	return resp.StatusCode, nil
 }
+
+// writeJSON performs a JSON-bodied request (POST or PATCH) and decodes the
+// response into out, which may be nil for a call that answers with nothing.
+//
+// Beside get rather than inside each caller: the Authorization header, the
+// bounded read, the status classification and the "a truncated prefix is not a
+// complete response" rule are the same on a write as on a read, and a second
+// spelling of them is the one that would forget the classification.
+//
+//craft:ignore naked-any in and out are the caller-supplied JSON body and decode target — their concrete types vary per endpoint
+func (a *httpAPI) writeJSON(ctx context.Context, method, fullURL, accessToken string, in, out any) (int, error) {
+	payload, err := json.Marshal(in)
+	if err != nil {
+		return 0, fmt.Errorf("graph: encoding request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, fullURL, bytes.NewReader(payload))
+	if err != nil {
+		return 0, fmt.Errorf("graph: building request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("graph: request: %w", ErrUnreachable)
+	}
+	//craft:ignore swallowed-errors best-effort close of the response body — the decoded result/status is what matters
+	defer func() { _ = resp.Body.Close() }()
+	// The same budget the read path uses, not the error-body one: a write here
+	// decodes a real response — a subscription listing, say — and the smaller
+	// bound would truncate it into a decode failure that reads as the provider
+	// being unreachable.
+	body, readErr := readBounded(resp)
+	if err := classifyStatus(resp, a.requestOp(fullURL), body); err != nil {
+		return resp.StatusCode, err
+	}
+	if out == nil {
+		return resp.StatusCode, nil
+	}
+	if readErr != nil {
+		return resp.StatusCode, fmt.Errorf("graph: reading response: %w", ErrUnreachable)
+	}
+	if err := json.Unmarshal(body, out); err != nil {
+		return resp.StatusCode, fmt.Errorf("graph: decoding response: %w", ErrUnreachable)
+	}
+	return resp.StatusCode, nil
+}
+
+// readBounded reads a response body up to the budget, and REFUSES one that
+// exceeds it.
+//
+// One byte past the cap, because a LimitReader alone cannot tell "the body ended
+// here" from "the budget did". io.ReadAll over one returns exactly the cap with
+// no error, so a body longer than the budget arrived as a prefix — and a prefix
+// that happens to parse decodes into a partial answer nothing reports: a
+// subscription listing missing its tail reads as a mailbox with no subscription,
+// and the renewal creates a second one.
+//
+// The extra byte is read and discarded. What it proves is that there was more.
+func readBounded(resp *http.Response) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
+	if err != nil {
+		return body, err
+	}
+	if len(body) > maxResponseBytes {
+		return body[:maxResponseBytes], errResponseTooLarge
+	}
+	return body, nil
+}
+
+// errResponseTooLarge is a body past the budget. Reported as unreachable
+// because that is what it is from here: the provider answered with more than
+// this process will hold, and the answer cannot be trusted in part.
+var errResponseTooLarge = fmt.Errorf(
+	"graph: the response exceeds %d bytes and cannot be read whole: %w", maxResponseBytes, ErrUnreachable,
+)
+
+// maxResponseBytes bounds a decoded response, so a provider answering without
+// end cannot exhaust this process.
+const maxResponseBytes = 8 << 20
