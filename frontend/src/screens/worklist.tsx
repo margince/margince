@@ -325,6 +325,7 @@ function WorklistHeader({
           label={t("worklist.scope.label")}
           labels={{
             mine: t("worklist.scope.mine"),
+            unassigned: t("worklist.scope.unassigned"),
             team: t("worklist.scope.team"),
             all: t("worklist.scope.all"),
           }}

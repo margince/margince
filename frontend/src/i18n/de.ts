@@ -7161,6 +7161,7 @@ export const de = {
   "worklist.overdue": "Überfällig",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
+  "worklist.scope.unassigned": "Ohne Zuständigkeit",
   "worklist.scope.team": "Mein Team",
   "worklist.scope.all": "Alle",
   "worklist.filter.label": "Art der Arbeit",

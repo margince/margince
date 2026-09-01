@@ -11511,9 +11511,10 @@ func (e WorklistFilter) Valid() bool {
 
 // Defines values for WorklistScope.
 const (
-	WorklistScopeAll  WorklistScope = "all"
-	WorklistScopeMine WorklistScope = "mine"
-	WorklistScopeTeam WorklistScope = "team"
+	WorklistScopeAll        WorklistScope = "all"
+	WorklistScopeMine       WorklistScope = "mine"
+	WorklistScopeTeam       WorklistScope = "team"
+	WorklistScopeUnassigned WorklistScope = "unassigned"
 )
 
 // Valid indicates whether the value is a known member of the WorklistScope enum.
@@ -11525,6 +11526,8 @@ func (e WorklistScope) Valid() bool {
 		return true
 	case WorklistScopeTeam:
 		return true
+	case WorklistScopeUnassigned:
+		return true
 	default:
 		return false
 	}
@@ -11532,9 +11535,10 @@ func (e WorklistScope) Valid() bool {
 
 // Defines values for WorklistScopeOptions.
 const (
-	WorklistScopeOptionsAll  WorklistScopeOptions = "all"
-	WorklistScopeOptionsMine WorklistScopeOptions = "mine"
-	WorklistScopeOptionsTeam WorklistScopeOptions = "team"
+	WorklistScopeOptionsAll        WorklistScopeOptions = "all"
+	WorklistScopeOptionsMine       WorklistScopeOptions = "mine"
+	WorklistScopeOptionsTeam       WorklistScopeOptions = "team"
+	WorklistScopeOptionsUnassigned WorklistScopeOptions = "unassigned"
 )
 
 // Valid indicates whether the value is a known member of the WorklistScopeOptions enum.
@@ -11545,6 +11549,8 @@ func (e WorklistScopeOptions) Valid() bool {
 	case WorklistScopeOptionsMine:
 		return true
 	case WorklistScopeOptionsTeam:
+		return true
+	case WorklistScopeOptionsUnassigned:
 		return true
 	default:
 		return false
@@ -13509,9 +13515,10 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 
 // Defines values for GetWorklistParamsScope.
 const (
-	GetWorklistParamsScopeAll  GetWorklistParamsScope = "all"
-	GetWorklistParamsScopeMine GetWorklistParamsScope = "mine"
-	GetWorklistParamsScopeTeam GetWorklistParamsScope = "team"
+	GetWorklistParamsScopeAll        GetWorklistParamsScope = "all"
+	GetWorklistParamsScopeMine       GetWorklistParamsScope = "mine"
+	GetWorklistParamsScopeTeam       GetWorklistParamsScope = "team"
+	GetWorklistParamsScopeUnassigned GetWorklistParamsScope = "unassigned"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsScope enum.
@@ -13522,6 +13529,8 @@ func (e GetWorklistParamsScope) Valid() bool {
 	case GetWorklistParamsScopeMine:
 		return true
 	case GetWorklistParamsScopeTeam:
+		return true
+	case GetWorklistParamsScopeUnassigned:
 		return true
 	default:
 		return false
@@ -33070,6 +33079,13 @@ type GetWorklistParams struct {
 	// A scope the reader's own row scope does not reach is refused with 403 rather
 	// than quietly narrowed — answering a question about the team with facts about
 	// one person, with no way for the reader to tell, is the worse failure.
+	//
+	// `unassigned` is the open work nobody answers for, and every reader may ask for
+	// it at any tier: nothing in it belongs to a colleague, which is what unassigned
+	// means. It exists because `mine` is exact — a task with no assignee is no
+	// longer folded into every reader's own queue, so it needs a queue of its own or
+	// the product would have stopped mentioning it. Tasks only: a message has no
+	// assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
 	//
 	// WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
 	// going quiet, meetings and duplicate pairs are read under the caller's row

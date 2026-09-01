@@ -28,8 +28,14 @@ import (
 // The scopes a reader may ask the queue for.
 const (
 	scopeMine = "mine"
-	scopeTeam = "team"
-	scopeAll  = "all"
+	// scopeUnassigned is the work nobody answers for.
+	//
+	// Its own scope because "mine" stopped carrying it. Unowned work is real and
+	// somebody has to pick it up, but it arrives in a queue a reader opens on
+	// purpose rather than in the one that claims to be theirs.
+	scopeUnassigned = "unassigned"
+	scopeTeam       = "team"
+	scopeAll        = "all"
 )
 
 // scopeOptionsFor answers which scopes this reader may ask for, narrowest
@@ -39,8 +45,13 @@ const (
 // the tier is a fact about the principal, and asking the database whether a
 // colleague's deal is visible would be re-deriving per row what the policy
 // already decided once (P11).
+// Unassigned is offered to EVERY reader, at every tier. It is the other half of
+// making "mine" exact: work that belongs to nobody stopped appearing in each
+// reader's own queue, so it has to be reachable from every one of them or the
+// change would have hidden it. Nothing in it is a colleague's — that is what
+// unassigned means — so no tier gates it.
 func scopeOptionsFor(ctx context.Context) []string {
-	options := []string{scopeMine}
+	options := []string{scopeMine, scopeUnassigned}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return options
@@ -114,9 +125,18 @@ func ownedByReader(item crmcontracts.WorklistItem, reader principal.Principal) b
 //
 // A message has no owner column, so the question is answered by the RECORD it
 // is filed under: a thread about a colleague's deal is that colleague's to
-// answer. A message filed under nothing names nobody, and stays — an unowned
-// customer writing in is everybody's, and dropping it would leave nobody
-// looking at it.
+// answer.
+//
+// A message filed under nothing names nobody, and stays — an unowned customer
+// writing in is everybody's, and dropping it would leave nobody looking at it.
+//
+// That reading is the one this queue is otherwise moving away from, and it
+// survives here for a reason worth stating: ownedDeals is built from the
+// at-risk lane alone, so a deal the reader owns which is perfectly healthy is
+// absent from it and reads as unowned. Judging a wait exactly against that set
+// would drop the reader's own waiting customer whenever their deal was doing
+// well. Making it exact needs the owner on the row itself, which is the read
+// the waiting query does not yet carry.
 func waitingIsMine(waiting WaitingCustomer, ownedDeals map[ids.UUID]bool) bool {
 	if waiting.DealID.IsZero() {
 		return true

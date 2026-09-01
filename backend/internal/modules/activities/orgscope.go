@@ -217,18 +217,34 @@ func openTaskAssigneeClause(assignee *ids.UserID, arg func(any) int) string {
 }
 
 // ownQueueClause narrows to the open tasks one person is answerable for:
-// assigned to them, or assigned to NOBODY.
+// assigned to them, and to nobody else.
 //
-// The unassigned arm is the difference from openTaskAssigneeClause, and it is
-// the point. A rep who writes themselves a task without filling in an assignee
-// still owns it, and a "my work" queue that dropped it would hide the reader's
-// own to-do from them — worse than carrying one row too many.
+// It used to admit unassigned tasks too, on the ground that a rep who writes
+// themselves a task without filling in an assignee still owns it. That reading
+// was true of the case it named and wrong about every other: an automation
+// mints a follow-up with no assignee, and "or nobody" put that one task on
+// every colleague's queue at once — a manager opening "mine" found a rep's
+// lead work waiting for them, which is the report this rule comes from.
+//
+// The self-written task is kept where it belongs by owning it at the point of
+// writing instead (taskAssignee, activity.go), so this clause can mean exactly
+// what it says. Work that genuinely belongs to nobody is answered by
+// unassignedQueueClause, which is a queue somebody chooses to open rather than
+// one that arrives in everybody's.
 func ownQueueClause(reader *ids.UserID, arg func(any) int) string {
 	if reader == nil {
 		return ""
 	}
-	return sprintf("(a.assignee_id = $%d OR a.assignee_id IS NULL) AND a.kind = 'task' AND NOT a.is_done",
-		arg(*reader))
+	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*reader))
+}
+
+// unassignedQueueClause is the open tasks nobody answers for.
+//
+// Its own scope rather than a corner of somebody's queue: unowned work is real
+// and has to be visible, but it is picked up deliberately. Arriving unbidden in
+// every reader's "mine" is what taught reps that the queue was not theirs.
+func unassignedQueueClause() string {
+	return "a.assignee_id IS NULL AND a.kind = 'task' AND NOT a.is_done"
 }
 
 // listActivitiesFilter builds the timeline query's join, WHERE terms and
@@ -274,6 +290,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
+	}
+	if in.UnassignedQueue {
+		where = append(where, unassignedQueueClause())
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)

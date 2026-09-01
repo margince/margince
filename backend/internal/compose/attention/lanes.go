@@ -99,15 +99,30 @@ type RecordFace struct {
 	RelatedCount *int
 }
 
+// TaskScope says whose open tasks a read answers.
+//
+// Three answers, not a boolean, because "nobody's" is a real one: unowned work
+// has to be reachable without arriving in every reader's own queue.
+type TaskScope int
+
+const (
+	// TasksVisible adds no narrowing of its own: the store's row-scope gate
+	// decides what comes back.
+	TasksVisible TaskScope = iota
+	// TasksMine is the open tasks assigned to the reader, and no others.
+	TasksMine
+	// TasksUnassigned is the open tasks assigned to nobody.
+	TasksUnassigned
+)
+
 // Tasks is the open-task read, through the activities module.
 //
-// mineOnly asks the store for the READER'S OWN open tasks rather than every
-// task they may see. It belongs in the query and not in a filter afterwards:
-// the store bounds what it returns, so narrowing later would cut a colleague's
-// twelve rows out of a page of twelve and leave the reader's own overdue task
+// The scope belongs in the QUERY and not in a filter afterwards: the store
+// bounds what it returns, so narrowing later would cut a colleague's twelve
+// rows out of a page of twelve and leave the reader's own overdue task
 // unreachable behind them.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, until time.Time, limit int, mineOnly bool) ([]Task, error)
+	OpenForViewer(ctx context.Context, until time.Time, limit int, scope TaskScope) ([]Task, error)
 }
 
 // Task is one piece of agreed work.

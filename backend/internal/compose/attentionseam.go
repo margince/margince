@@ -135,7 +135,7 @@ func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 type attentionTasks struct{ store *activities.Store }
 
 func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, mineOnly bool,
+	ctx context.Context, until time.Time, limit int, scope attention.TaskScope,
 ) ([]attention.Task, error) {
 	// The store answers "open and due by then" itself, so the limit bounds the
 	// rows that QUALIFY. This used to read ten times the lane and narrow
@@ -146,7 +146,8 @@ func (t attentionTasks) OpenForViewer(
 	// Narrowed in the QUERY, so the store's own bound applies to the rows that
 	// qualify. Filtering the answer instead would let a colleague's twelve
 	// tasks fill the page and hide the reader's own overdue one behind them.
-	if mineOnly {
+	switch scope {
+	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
 		if !ok || actor.UserID.IsZero() {
 			// No human, no "own work" to answer for. Reading every task and
@@ -154,10 +155,17 @@ func (t attentionTasks) OpenForViewer(
 			// to prevent.
 			return nil, nil
 		}
-		// Mine, or nobody's: a task the reader wrote themselves without an
-		// assignee is still theirs to do.
+		// Exactly theirs. A task they wrote themselves carries their name from
+		// the moment it is written, so this needs no unassigned arm — and the
+		// arm it used to have is what put an automation's follow-up on every
+		// colleague's queue.
 		assignee := ids.From[ids.UserKind](actor.UserID)
 		in.OwnQueueOf = &assignee
+	case attention.TasksUnassigned:
+		in.UnassignedQueue = true
+	case attention.TasksVisible:
+		// Every open task the reader may see; the row-scope gate in the store
+		// is the only narrowing.
 	}
 	rows, _, err := t.store.ListActivities(ctx, in)
 	if err != nil {

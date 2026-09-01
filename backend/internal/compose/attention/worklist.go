@@ -64,8 +64,11 @@ func (s *Service) Worklist(ctx context.Context, scope, filter string, limit int)
 	// Deeper than the lane feed reads: a batch row counts a pile, and a count
 	// taken from a page of ten would report ten over a hundred and fifty.
 	reader := s.countingDecisions()
-	if mineOnly(resolved) {
+	switch {
+	case mineOnly(resolved):
 		reader = reader.forReader()
+	case resolved == scopeUnassigned:
+		reader = reader.forUnowned()
 	}
 	day, err := reader.Assemble(ctx)
 	if err != nil {
@@ -108,6 +111,21 @@ func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
 		if ownedByReader(row.item, actor) {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// keepUnowned keeps the rows that answer to nobody.
+//
+// The counterpart to keepReadersOwn, over the same evidence: a deal-bearing row
+// with an owner belongs to that person and not to this queue. A row with no
+// owner to check stays, which is what the scope is for.
+func keepUnowned(rows []ranked) []ranked {
+	kept := make([]ranked, 0, len(rows))
+	for _, row := range rows {
+		if row.item.Deal == nil || row.item.Deal.OwnerId == nil {
 			kept = append(kept, row)
 		}
 	}
@@ -180,6 +198,14 @@ func (s *Service) worklistFrom(
 		if mineOnly(scope) && !waitingIsMine(customer, owned) {
 			continue
 		}
+		// The unassigned queue is about work with no ASSIGNEE, and a message has
+		// no assignee column — waitingIsMine reads the record it is filed under,
+		// which cannot tell "nobody owns this" from "the owner's deal is
+		// healthy". Rather than guess, this scope carries no waiting rows and
+		// every one of them stays reachable from mine, team and all.
+		if scope == scopeUnassigned {
+			continue
+		}
 		mine = append(mine, customer)
 	}
 	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Since.Before(mine[j].Since) })
@@ -202,8 +228,11 @@ func (s *Service) worklistFrom(
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
 
-	if mineOnly(scope) {
+	switch {
+	case mineOnly(scope):
 		rows = keepReadersOwn(ctx, rows)
+	case scope == scopeUnassigned:
+		rows = keepUnowned(rows)
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach

@@ -131,8 +131,8 @@ func May(from, to Status, by Actor) error {
 }
 
 // Open reports whether an ask is still live — somebody owes an action on it.
-// The duplicate guard and the expiry sweep read the same answer, so a status
-// added to one and forgotten in the other cannot drift.
+// The duplicate guard and the expiry sweep both ask this function rather than
+// listing the live statuses themselves, so a new status is added here once.
 func Open(s Status) bool {
 	switch s {
 	case StatusRequested, StatusAccepted, StatusNameDropApproved:

@@ -107,11 +107,14 @@ type Service struct {
 	// a hundred and fifty is a wrong number rather than a bounded one.
 	decisionDepth int
 	now           Clock
-	// mineOnly narrows the producers that can be narrowed to the acting
-	// reader's own work. Set per read (Assemble keeps the lane feed's
-	// behaviour; the ranked queue's default scope sets it), because the same
-	// service answers both surfaces.
-	mineOnly bool
+	// taskScope narrows the task lane to whose work this read answers for. Set
+	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
+	// resolved scope sets it), because the same service answers both surfaces.
+	//
+	// A task carries an assignee and so has three answers available to it —
+	// anybody's, the reader's, nobody's — where a mailbox or a notice is
+	// per-reader by construction and has only one.
+	taskScope TaskScope
 }
 
 // forReader returns a copy of this service that reads only the acting reader's
@@ -120,7 +123,15 @@ type Service struct {
 // reader's page.
 func (s *Service) forReader() *Service {
 	narrowed := *s
-	narrowed.mineOnly = true
+	narrowed.taskScope = TasksMine
+	return &narrowed
+}
+
+// forUnowned returns a copy that reads the work nobody answers for. Same
+// copy-per-read reason as forReader.
+func (s *Service) forUnowned() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksUnassigned
 	return &narrowed
 }
 
@@ -212,7 +223,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf, s.mineOnly)
+	planned, err := s.planned(ctx, asOf, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
@@ -369,8 +380,8 @@ func endOfDay(asOf time.Time) time.Time {
 }
 
 // planned is today's agreed work, overdue first.
-func (s *Service) planned(ctx context.Context, asOf time.Time, mineOnly bool) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, mineOnly)
+func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
+	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope)
 	if err != nil {
 		return nil, err
 	}
