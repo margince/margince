@@ -20,9 +20,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { PendingBody } from "../design-system/atoms";
+import { Button, PendingBody } from "../design-system/atoms";
 import { TimelineRow } from "../design-system/composed";
 import type { NameOf } from "../design-system/participants";
+import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
@@ -57,10 +58,7 @@ const SCANNED = 40;
  * the list read is skipped rather than run with an empty key, which would ask
  * the server for every activity that has no thread.
  */
-export function useThreadMessages(anchor: Activity | undefined): {
-  messages: Activity[];
-  pending: boolean;
-} {
+export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
   const threadKey = anchor?.thread_key ?? undefined;
   const query = useQuery({
     queryKey: ["compose-thread", threadKey],
@@ -75,20 +73,39 @@ export function useThreadMessages(anchor: Activity | undefined): {
     },
     enabled: Boolean(threadKey),
   });
+  const retry = () => {
+    void query.refetch();
+  };
   if (!anchor) {
-    return { messages: [], pending: false };
+    return { messages: [], pending: false, failed: false, retry };
   }
   if (!threadKey) {
-    return { messages: [anchor], pending: false };
+    return { messages: [anchor], pending: false, failed: false, retry };
   }
   // A read that has not answered yet must not render as a thread of one: the
   // anchor alone looks like a settled answer ("this conversation is a single
-  // message") rather than like a list still arriving.
+  // message") rather than like a list still arriving. Nor may one that FAILED
+  // render as a thread of none: an empty list is a settled answer too, and the
+  // pane would then claim the conversation is a single message it cannot show.
   return {
     messages: query.data?.data ?? [],
     pending: query.isPending,
+    failed: query.isError,
+    retry,
   };
 }
+
+/**
+ * What a thread read knows: its rows, and whether the read is still out or
+ * came back refused. `failed` and `pending` are never both true, and a pane
+ * that draws neither draws the rows.
+ */
+export type ThreadRead = {
+  messages: Activity[];
+  pending: boolean;
+  failed: boolean;
+  retry: () => void;
+};
 
 /**
  * The pane. Newest first, matching the chronology it is drawn from — a reply
@@ -98,6 +115,8 @@ export function useThreadMessages(anchor: Activity | undefined): {
 export function ThreadPane({
   messages,
   pending,
+  failed,
+  onRetry,
   viewerUserId,
   nameOf,
   named,
@@ -105,6 +124,11 @@ export function ThreadPane({
 }: Readonly<{
   messages: readonly Activity[];
   pending: boolean;
+  // The read came back refused. Drawn as the failure it is, with the retry,
+  // rather than as an empty conversation — which would be a settled answer
+  // the pane does not have.
+  failed: boolean;
+  onRetry: () => void;
   viewerUserId?: string;
   nameOf: NameOf;
   /**
@@ -144,24 +168,26 @@ export function ThreadPane({
           {t(named ? "compose.threadHeading" : "compose.threadContinuing")}
         </h3>
         {onLeave && (
-          <button
-            type="button"
-            className="compose-thread-leave"
-            onClick={onLeave}
-          >
+          <Button small className="compose-thread-leave" onClick={onLeave}>
             {t("compose.threadLeave")}
-          </button>
+          </Button>
         )}
       </div>
       <div className="compose-thread-scroll">
         {pending ? (
           <PendingBody label={t("compose.threadPending")} lines={3} />
         ) : (
-          <ul className="timeline compose-thread-list">
-            {entries.map((entry) => (
-              <TimelineRow key={entry.id} entry={entry} zone={zone} />
-            ))}
-          </ul>
+          <SurfaceState
+            state={failed ? "failed" : "ready"}
+            emptyLabel={t("compose.threadPending")}
+            detail={{ onRetry }}
+          >
+            <ul className="timeline compose-thread-list">
+              {entries.map((entry) => (
+                <TimelineRow key={entry.id} entry={entry} zone={zone} />
+              ))}
+            </ul>
+          </SurfaceState>
         )}
       </div>
     </section>
@@ -190,7 +216,12 @@ export function useRecentConversations(
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
-): { conversations: readonly Conversation[]; pending: boolean } {
+): {
+  conversations: readonly Conversation[];
+  pending: boolean;
+  failed: boolean;
+  retry: () => void;
+} {
   const query = useQuery({
     queryKey: ["compose-recent-threads", entityType, entityId],
     queryFn: async () => {
@@ -219,7 +250,13 @@ export function useRecentConversations(
     (activity) => activity.content_state !== "withheld",
   );
   const entries = activityTimeline(readable, undefined, undefined, who);
+  // A bulk send is not a conversation. It is one message the sender addressed
+  // to several people and has no thread of its own, so "continuing" it would
+  // anchor a reply to a mailing nobody wrote back to. Threads and single
+  // messages are the ways in; the bulk groups are left where the History tab
+  // draws them.
   const conversations = groupChronology(entries)
+    .filter((group) => group.kind !== "bulk")
     .slice(0, OFFERED)
     .map((group) => ({
       // The newest member: continuing a conversation means answering its last
@@ -231,7 +268,17 @@ export function useRecentConversations(
       count: group.entries.length,
       partial: group.partial,
     }));
-  return { conversations, pending: query.isPending };
+  // A failed read is reported as one rather than as a record with no history:
+  // folded into an empty list it would send the reader to a fresh mail with
+  // nothing said, which is the surprise the offer exists to prevent.
+  return {
+    conversations,
+    pending: query.isPending,
+    failed: query.isError,
+    retry: () => {
+      void query.refetch();
+    },
+  };
 }
 
 export type Conversation = {
@@ -252,10 +299,14 @@ export type Conversation = {
 export function ConversationChoices({
   conversations,
   pending,
+  failed,
+  onRetry,
   onChoose,
 }: Readonly<{
   conversations: readonly Conversation[];
   pending: boolean;
+  failed: boolean;
+  onRetry: () => void;
   onChoose: (anchorId: string) => void;
 }>) {
   const t = useT();
@@ -270,37 +321,44 @@ export function ConversationChoices({
         {pending ? (
           <PendingBody label={t("compose.threadPending")} lines={3} />
         ) : (
-          <ul className="compose-choices">
-            {conversations.map((conversation) => (
-              <li key={conversation.anchorId}>
-                <button
-                  type="button"
-                  className="compose-choice"
-                  onClick={() => onChoose(conversation.anchorId)}
-                >
-                  <span className="compose-choice-subject">
-                    {conversation.subject}
-                  </span>
-                  <span className="compose-choice-meta t-caption">
-                    {[
-                      conversation.counterparts,
-                      formatDate(conversation.atIso, locale, zone),
-                      conversation.count > 1
-                        ? translatePlural(
-                            locale,
-                            "compose.messageCount",
-                            conversation.count,
-                            { count: formatNumber(conversation.count, locale) },
-                          )
-                        : undefined,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <SurfaceState
+            state={failed ? "failed" : "ready"}
+            emptyLabel={t("compose.threadPending")}
+            detail={{ onRetry }}
+          >
+            <ul className="compose-choices">
+              {conversations.map((conversation) => (
+                <li key={conversation.anchorId}>
+                  <Button
+                    className="compose-choice"
+                    onClick={() => onChoose(conversation.anchorId)}
+                  >
+                    <span className="compose-choice-subject">
+                      {conversation.subject}
+                    </span>
+                    <span className="compose-choice-meta t-caption">
+                      {[
+                        conversation.counterparts,
+                        formatDate(conversation.atIso, locale, zone),
+                        conversation.count > 1
+                          ? translatePlural(
+                              locale,
+                              "compose.messageCount",
+                              conversation.count,
+                              {
+                                count: formatNumber(conversation.count, locale),
+                              },
+                            )
+                          : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </SurfaceState>
         )}
       </div>
     </section>

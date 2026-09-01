@@ -71,6 +71,11 @@
 @media (max-width: 1100px) {
   .compose-split {
     grid-template-columns: minmax(0, 1fr);
+    /* The thread row takes what its capped scroll needs and the form takes the
+       rest. Left to stretch, the grid split the drawer's height between the
+       two rows and the thread — capped at 14rem below — sat over a band of
+       nothing, above a form that had been given half the drawer for no reason. */
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .compose-thread {
     border-inline-end: 0;
@@ -92,17 +97,21 @@
   gap: var(--space-3);
 }
 
+/* The design system's button, worn as a text link: the head's baseline row has
+   no room for a boxed control, and the way back is a small move rather than a
+   verb. Focus, refusal and pending semantics stay the shared ones. */
 .compose-thread-leave {
   flex: none;
-  background: none;
-  border: 0;
+  min-inline-size: 0;
+  block-size: auto;
   padding: 0;
-  font: inherit;
+  border-color: transparent;
+  background: none;
   font-size: var(--fs-meta);
   color: var(--accentText);
-  cursor: pointer;
 }
 .compose-thread-leave:hover {
+  background: none;
   text-decoration: underline;
 }
 
@@ -117,18 +126,21 @@
   padding: 0;
 }
 
+/* The design system's button, laid out as a two-line row: stacked, start-aligned
+   and as wide as the list, where the shared shape is one centred line. */
 .compose-choice {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: var(--space-1);
   inline-size: 100%;
+  block-size: auto;
   text-align: start;
   background: none;
-  border: 1px solid transparent;
+  border-color: transparent;
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
-  font: inherit;
-  cursor: pointer;
+  font-weight: inherit;
 }
 .compose-choice:hover {
   background: var(--bgHover);

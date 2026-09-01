@@ -29711,7 +29711,7 @@ type ListActivitiesParams struct {
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
-	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses the filter with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified.
+	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 

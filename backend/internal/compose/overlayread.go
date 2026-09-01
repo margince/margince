@@ -375,8 +375,9 @@ func (s Server) ListActivities(w http.ResponseWriter, r *http.Request, params cr
 			// The mirror carries no thread walk: no thread_key, no direction,
 			// no anti-join over its own history, so "still awaiting an answer"
 			// cannot be answered from it — refused rather than returning the
-			// whole mirrored set as though every row qualified.
-			{"waiting_reply", params.WaitingReply != nil},
+			// whole mirrored set as though every row qualified. `false` asks
+			// for nothing, natively too, so it is the one value let through.
+			{"waiting_reply", params.WaitingReply != nil && *params.WaitingReply},
 		},
 		params.Q, params.Cursor, params.Limit, overlayWireActivity,
 		func(data []crmcontracts.Activity, page crmcontracts.PageInfo) any {

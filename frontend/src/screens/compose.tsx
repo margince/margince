@@ -609,6 +609,7 @@ function useThreadProject(activityId?: string): {
   activity?: Activity;
   projectId?: string;
   settled: boolean;
+  failed: boolean;
 } {
   const query = useQuery({
     queryKey: ["activity", activityId, "filing"],
@@ -628,6 +629,11 @@ function useThreadProject(activityId?: string): {
     // `thread_key` this same read already carries, and a second GET of one
     // activity to reach one field is two answers to "what is being answered".
     activity: query.data,
+    // Its own flag rather than folded into `settled`, because the two callers
+    // want different halves: the filing says nothing on a failure, while the
+    // pane must stop holding its place — a read that failed is not one still
+    // arriving, and a placeholder kept on it is a wait that never ends.
+    failed: query.isError,
     projectId: (query.data?.links ?? []).find(
       (link) => link.entity_type === "project",
     )?.entity_id,
@@ -2176,6 +2182,7 @@ export function ComposeModal({
   kind,
   open,
   onClose,
+  onSent,
 }: Readonly<{
   // Absent means this is an ACCOUNT-STARTED send: a new conversation with no
   // prior message to anchor to (ADR-0087 §1). It is the same send either way —
@@ -2193,6 +2200,10 @@ export function ComposeModal({
   kind?: Activity["kind"];
   open: boolean;
   onClose: () => void;
+  // A message left this composer — sent now or scheduled. Called before the
+  // close, and only then: a caller whose own reading of the record depends on
+  // what was sent re-asks on this, and not on a cancel that changed nothing.
+  onSent?: () => void;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -2303,6 +2314,11 @@ export function ComposeModal({
   // The ref, not state: this decides whether to offer at all, so re-rendering
   // on it would be a render caused by the thing it is trying not to do twice.
   const offered = useRef(false);
+  // WHICH address was offered, so that on a change of conversation it is the
+  // one thing replaced. Without it the field kept the first thread's
+  // counterparty while the pane showed another's messages, and a reply to the
+  // second conversation went to the first one's correspondent.
+  const offeredAddress = useRef<string | undefined>(undefined);
   // The reader has taken the field over. Set on the first keystroke, which is
   // the only signal there is — the committed values stay empty until they
   // press Enter.
@@ -2322,8 +2338,20 @@ export function ComposeModal({
     }
     offered.current = true;
     // A draft that named its own recipient, or a reader who committed one
-    // before the lookup answered, both outrank the thread's default.
-    setTo((current) => (current.length > 0 ? current : [threadRecipient]));
+    // before the lookup answered, both outrank the thread's default. The one
+    // exception is the address a previous anchor's offer put there: that one
+    // gives way to this anchor's, and only that one — what the reader added
+    // beside it is theirs and stays.
+    setTo((current) => {
+      const previous = offeredAddress.current;
+      offeredAddress.current = threadRecipient;
+      if (previous !== undefined && current.includes(previous)) {
+        return current.map((address) =>
+          address === previous ? threadRecipient : address,
+        );
+      }
+      return current.length > 0 ? current : [threadRecipient];
+    });
   }, [threadRecipient]);
   // The anchor as a RECORD, not just an id: the conversation pane reads its
   // `thread_key`. A caller-named activity is fetched (that read already runs,
@@ -2360,8 +2388,11 @@ export function ComposeModal({
     : undefined;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // An anchor named but not yet read. The pane holds its place on this, so
-  // the drawer does not open narrow and snap wide when the read answers.
-  const anchorUnresolved = Boolean(answering) && anchorActivity === undefined;
+  // the drawer does not open narrow and snap wide when the read answers. A
+  // read that FAILED is not one still arriving: the pane lets go, and the
+  // composer keeps answering the anchor it was given without drawing it.
+  const anchorUnresolved =
+    Boolean(answering) && anchorActivity === undefined && !anchorRead.failed;
   const recent = useRecentConversations(
     entityType,
     entityId,
@@ -2414,7 +2445,9 @@ export function ComposeModal({
   const showConversation =
     asDrawer &&
     ((answeringCorrespondence &&
-      (conversation.messages.length > 0 || conversation.pending)) ||
+      (conversation.messages.length > 0 ||
+        conversation.pending ||
+        conversation.failed)) ||
       anchorUnresolved);
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
@@ -2422,10 +2455,13 @@ export function ComposeModal({
   // pending body — decided by the answer, the drawer opened narrow and
   // snapped wide a beat later, a shape change under a reader already aiming
   // at a field.
+  // A read that failed keeps the column too, with the failure and a retry in
+  // it: collapsed, the composer would offer a fresh mail as though the record
+  // had no history, which is the surprise the choices exist to prevent.
   const showChoices =
     offeringThreads &&
     !chosen &&
-    (recent.pending || recent.conversations.length > 0);
+    (recent.pending || recent.failed || recent.conversations.length > 0);
   const splitColumns = showConversation || showChoices;
   // Where this send files, and the subject tag that travels with it. The
   // account path keeps its own picker (it chooses a project rather than
@@ -2618,6 +2654,7 @@ export function ComposeModal({
           },
         });
       }
+      onSent?.();
       onClose();
     },
   });
@@ -2826,6 +2863,8 @@ export function ComposeModal({
             <ConversationChoices
               conversations={recent.conversations}
               pending={recent.pending}
+              failed={recent.failed}
+              onRetry={recent.retry}
               onChoose={setChosen}
             />
           )}
@@ -2833,6 +2872,8 @@ export function ComposeModal({
             <ThreadPane
               messages={conversation.messages}
               pending={conversation.pending || anchorUnresolved}
+              failed={conversation.failed}
+              onRetry={conversation.retry}
               viewerUserId={viewerId}
               nameOf={nameOf}
               named

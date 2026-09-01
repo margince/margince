@@ -40,10 +40,12 @@ import { ComposeModal, type RelinkKind } from "./compose";
  * have two sources answering one question. A person or lead page turns it on
  * because it has no other read of the same fact.
  *
- * Undefined while the read is unsettled or finds nothing: fresh mail, the
- * safe half. A rep who meant to reply sees the thread missing, where the
- * other way round would silently file a new message onto a thread they
- * never chose — the same reasoning DealEmailAside's mid-flight state uses.
+ * Undefined while the read is unsettled, finds nothing, or FAILED: fresh
+ * mail, the safe half. A rep who meant to reply sees the thread missing, where
+ * the other way round would silently file a new message onto a thread they
+ * never chose — the same reasoning DealEmailAside's mid-flight state uses. A
+ * failure after an earlier answer is the same case: the cached target may be
+ * a thread somebody has since answered, and offering it is the unsafe half.
  */
 function useWaitingReply(
   entityType: RelinkKind,
@@ -70,7 +72,7 @@ function useWaitingReply(
     },
     enabled,
   });
-  return query.data?.data?.[0]?.id;
+  return enabled && !query.isError ? query.data?.data?.[0]?.id : undefined;
 }
 
 export function RecordEmailAside({
@@ -110,10 +112,11 @@ export function RecordEmailAside({
     detectWaitingReply,
   );
   // The composer may have answered the very message this box is about, so the
-  // question is asked again when it closes — a box still reading "an answer
-  // is owed" after the answer was sent offers a reply to a settled thread.
-  const closeComposer = () => {
-    setComposing(false);
+  // question is asked again when a message LEAVES it — a box still reading "an
+  // answer is owed" after the answer was sent offers a reply to a settled
+  // thread. On a send and not on a close: a cancel changed nothing the box
+  // reads, and re-asking on it is a read for no reason.
+  const messageSent = () => {
     if (detectWaitingReply) {
       void queryClient.invalidateQueries({
         queryKey: ["record-waiting-reply", entityType, entityId],
@@ -147,7 +150,8 @@ export function RecordEmailAside({
           personId={personId}
           kind="email"
           open={composing}
-          onClose={closeComposer}
+          onClose={() => setComposing(false)}
+          onSent={messageSent}
         />
       ) : null}
     </Panel>
