@@ -87,43 +87,6 @@
   color: var(--textTertiary);
 }
 
-.pref-toggle {
-  flex: none;
-  width: 40px;
-  height: 22px;
-  border-radius: var(--r-full);
-  border: 1px solid var(--borderStrong);
-  background: var(--bgCard);
-  position: relative;
-  cursor: pointer;
-  padding: 0;
-}
-
-.pref-toggle:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.pref-toggle.on {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.pref-toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--r-full);
-  background: var(--bgElevated);
-  transition: transform 0.15s ease;
-}
-
-.pref-toggle.on .pref-toggle-knob {
-  transform: translateX(18px);
-}
-
 .pref-save-bar {
   position: sticky;
   bottom: 16px;
@@ -224,4 +187,11 @@
   border-radius: 50%;
   color: var(--success);
   background: var(--successBg);
+}
+
+/* The row's control sits beside a heading that already names it, so the
+   checkbox carries only a screen-reader label of its own. */
+.pref-check {
+  flex: 0 0 auto;
+  margin-top: var(--space-1);
 }

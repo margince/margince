@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import {
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  Skeleton,
+} from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -442,17 +448,25 @@ function PreferenceRow({
           </p>
         )}
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
+      {/* A Checkbox, not a Switch, and the difference is not cosmetic: a
+          Switch IS the write, while a Checkbox states an intent something
+          later submits (design-system/README.md). This page stages every
+          change and commits them from the save bar below, so announcing
+          role="switch" would tell a screen-reader user their choice had
+          already taken effect when it has not. The visible label is
+          hidden because the row draws its own richer heading above. */}
+      <Checkbox
+        checked={on}
         aria-label={purpose.label}
         disabled={purpose.locked || grantBlocked || disabled}
-        className={`pref-toggle${on ? " on" : ""}`}
-        onClick={onToggle}
-      >
-        <span className="pref-toggle-knob" aria-hidden />
-      </button>
+        className="pref-check"
+        // Empty, because aria-label above already names the control: a
+        // second copy of the purpose name would put the same words on the
+        // page twice for a sighted reader and read them twice to everyone
+        // else.
+        label=""
+        onChange={onToggle}
+      />
     </li>
   );
 }

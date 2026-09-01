@@ -67,7 +67,7 @@ export const Dirty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("switch", { name: /product updates/i }),
+      await canvas.findByRole("checkbox", { name: /product updates/i }),
     );
   },
 };
@@ -108,7 +108,7 @@ export const PartialSave: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("switch", { name: /product updates/i }),
+      await canvas.findByRole("checkbox", { name: /product updates/i }),
     );
     await userEvent.click(
       canvas.getByRole("button", { name: /save preferences/i }),
