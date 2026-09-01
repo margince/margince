@@ -243,6 +243,102 @@ func TestCompletingANameDropRecordsANameDrop(t *testing.T) {
 	if nameDroppedAt == nil {
 		t.Error("a name-drop recorded no time for itself")
 	}
+
+	// The row is only half the record. A dispute about whether an introduction
+	// actually happened is settled from the audit trail, so an after-image
+	// reading `introduced` would put the claimed handshake back exactly where
+	// it carries the most weight.
+	var after string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT after ->> 'status' FROM audit_log
+		  WHERE entity_type = 'intro_request' AND entity_id = $1 AND action = 'update'
+		  ORDER BY occurred_at DESC LIMIT 1`, id).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if after != string(StatusNameDropped) {
+		t.Errorf("the audit trail records a completed name-drop as %q", after)
+	}
+}
+
+// The version check in Go reads a row it does not lock, so two transactions can
+// both pass it. Only `AND version = $N` inside the UPDATE is atomic, and it
+// reports a loss by matching zero rows. If nothing reads that count, the loser
+// still writes an audit row and emits an event for a move it never made.
+func TestALostRaceWritesNoAuditTrail(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	// The race has to happen the way a real one does. An interloper that
+	// commits BEFORE the call starts is caught by the Go-side version check,
+	// which proves nothing about the UPDATE. So: open a transaction, take a
+	// row lock, let Complete read version 2 and block on the lock, then commit
+	// the interloper. Complete resumes with a version the row no longer has,
+	// and only its own UPDATE can still tell.
+	ctx := context.Background()
+	blocker, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := blocker.Exec(ctx,
+		`SELECT 1 FROM intro_request WHERE id = $1 FOR UPDATE`, id); err != nil {
+		t.Fatal(err)
+	}
+
+	before := auditRowsFor(t, e, id)
+	done := make(chan error, 1)
+	go func() { done <- e.store.Complete(e.asUser(e.requester), id, nil, 2) }()
+
+	// Let the goroutine reach the lock. It is waiting on Postgres, so this is
+	// a poll of pg_locks and not a sleep-and-hope.
+	waitForLockOn(t, e, id)
+	if _, err := blocker.Exec(ctx,
+		`UPDATE intro_request SET version = version + 1 WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := blocker.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := <-done; !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a caller whose UPDATE matched no row was told: %v", err)
+	}
+	if got := auditRowsFor(t, e, id); got != before {
+		t.Errorf("a lost race wrote %d audit rows for a move it did not make", got-before)
+	}
+}
+
+// waitForLockOn blocks until some backend is WAITING for a lock, which is the
+// observable fact that the racing call has reached the row and stopped.
+func waitForLockOn(t *testing.T, e *introEnv, id ids.UUID) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		var waiting bool
+		if err := e.owner.QueryRow(context.Background(),
+			`SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted)`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting {
+			return
+		}
+	}
+	t.Fatal("no backend ever blocked on the row — the race never happened")
+}
+
+func auditRowsFor(t *testing.T, e *introEnv, id ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'intro_request' AND entity_id = $1`,
+		id).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
 }
 
 // Two tabs open on one ask, one accepting and one declining, must not both

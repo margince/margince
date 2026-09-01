@@ -83,7 +83,7 @@ var managerObjects = objects(crud, crud, crud, crud, crud, readOnly, crud, crud,
 
 var defaults = map[string]Document{
 	"admin": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete),
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
@@ -206,7 +206,10 @@ var defaults = map[string]Document{
 			// the surface; WHICH of the two parties they are on a given row is
 			// the row's own check, and no grant stands in for it. No delete: an
 			// ask that was made is a thing that happened, so it is withdrawn
-			// rather than erased.
+			// rather than erased — a property of the object, so EVERY seat
+			// carries it, admin and ops included. The backfill migration grants
+			// the same, so a database that upgraded into this object and one
+			// created after it answer alike.
 			writeNoDelete),
 		// Own scope, not team: membership of a team is not by itself permission
 		// to rewrite a teammate's records. Writing somebody else's customer
@@ -227,7 +230,7 @@ var defaults = map[string]Document{
 		RowScope: principal.RowScopeAll,
 	},
 	"ops": {
-		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, crud),
+		Objects:  objects(crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, crud, readOnly, crud, crud, crud, readUpdate, crud, writeNoDelete, writeNoDelete, writeNoDelete, crud, crud, crud, readUpdate, crud, crud, crud, readOnly, readOnly, crud, readUpdate, crud, crud, crud, crud, writeNoDelete),
 		RowScope: principal.RowScopeAll,
 	},
 }

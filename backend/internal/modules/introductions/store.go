@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -191,17 +192,16 @@ func (s *Store) Decide(
 	if answer == StatusSuggestOther && suggested == nil {
 		return errors.New("introductions: suggesting somebody else names them")
 	}
-	return s.move(ctx, id, answer, version, func(cur *Request) error {
+	return s.move(ctx, id, func() Status { return answer }, version, func(cur *Request) error {
 		return May(cur.Status, answer, s.roleOf(ctx, cur))
-	}, func(ctx context.Context, tx pgx.Tx, cur *Request) error {
-		_, err := tx.Exec(ctx, `
+	}, func(ctx context.Context, tx pgx.Tx, cur *Request) (pgconn.CommandTag, error) {
+		return tx.Exec(ctx, `
 			UPDATE intro_request
 			   SET status = $2, decision_reason = $3, suggested_user_id = $4,
 			       decided_at = $5, version = version + 1, updated_at = now(),
 			       closed_at = CASE WHEN $2 IN ('declined','suggest_other') THEN $5 ELSE closed_at END
 			 WHERE id = $1 AND version = $6`,
 			id, string(answer), nullIfEmpty(reason), suggested, s.now(), version)
-		return err
 	}, func(cur *Request) events.Payload {
 		return crmcontracts.PublicEventIntroRequestDecided{
 			IntroRequestId:   openapi_types.UUID(id),
@@ -220,13 +220,39 @@ func (s *Store) Decide(
 // behind it.
 func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, version int) error {
 	var outcome Status
-	return s.move(ctx, id, StatusIntroduced, version, func(cur *Request) error {
+	// The audit after-image is read from `outcome`, not from a status fixed at
+	// call time: a name-drop audited as `introduced` would put the claimed
+	// handshake back into the trail that exists to deny it.
+	return s.move(ctx, id, func() Status { return outcome }, version, func(cur *Request) error {
 		outcome = StatusIntroduced
 		if cur.Status == StatusNameDropApproved {
 			outcome = StatusNameDropped
 		}
 		return May(cur.Status, outcome, s.roleOf(ctx, cur))
-	}, func(ctx context.Context, tx pgx.Tx, cur *Request) error {
+	}, func(ctx context.Context, tx pgx.Tx, cur *Request) (pgconn.CommandTag, error) {
+		// The activity is the evidence the claim rests on, and the caller names
+		// it. Bound it to this ask's own contact: without that, a party could
+		// cite any message id as proof of an introduction that never happened.
+		//
+		// Audience is what governs who may READ an activity's content, and it
+		// lives in another module — so this refuses on the one relation this
+		// module owns the question for, and stores no content it cannot show.
+		if activity != nil {
+			var linked bool
+			if err := tx.QueryRow(ctx, `
+				SELECT EXISTS (
+					SELECT 1 FROM activity_link
+					 WHERE activity_id = $1 AND entity_type = 'person' AND person_id = $2)`,
+				*activity, cur.PersonID).Scan(&linked); err != nil {
+				return pgconn.CommandTag{}, fmt.Errorf(
+					"introductions: checking the evidence: %w", err)
+			}
+			if !linked {
+				return pgconn.CommandTag{}, fmt.Errorf(
+					"introductions: that message is not about this contact: %w",
+					apperrors.ErrNotFound)
+			}
+		}
 		column := "introduced_at"
 		if outcome == StatusNameDropped {
 			column = "name_dropped_at"
@@ -234,13 +260,12 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 		// The column name is a compile-time literal chosen from two, never a
 		// value off a request: a formatted identifier from a body is how a
 		// write becomes an injection.
-		_, err := tx.Exec(ctx, fmt.Sprintf(`
+		return tx.Exec(ctx, fmt.Sprintf(`
 			UPDATE intro_request
 			   SET status = $2, %s = $3, source_activity_id = COALESCE($4, source_activity_id),
 			       version = version + 1, updated_at = now()
 			 WHERE id = $1 AND version = $5`, column),
 			id, string(outcome), s.now(), activity, version)
-		return err
 	}, func(cur *Request) events.Payload {
 		return crmcontracts.PublicEventIntroRequestCompleted{
 			IntroRequestId: openapi_types.UUID(id),
@@ -252,16 +277,15 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 
 // Cancel withdraws the ask.
 func (s *Store) Cancel(ctx context.Context, id ids.UUID, reason string, version int) error {
-	return s.move(ctx, id, StatusCancelled, version, func(cur *Request) error {
+	return s.move(ctx, id, func() Status { return StatusCancelled }, version, func(cur *Request) error {
 		return May(cur.Status, StatusCancelled, s.roleOf(ctx, cur))
-	}, func(ctx context.Context, tx pgx.Tx, cur *Request) error {
-		_, err := tx.Exec(ctx, `
+	}, func(ctx context.Context, tx pgx.Tx, cur *Request) (pgconn.CommandTag, error) {
+		return tx.Exec(ctx, `
 			UPDATE intro_request
 			   SET status = 'cancelled', decision_reason = $2, closed_at = $3,
 			       version = version + 1, updated_at = now()
 			 WHERE id = $1 AND version = $4`,
 			id, nullIfEmpty(reason), s.now(), version)
-		return err
 	}, func(cur *Request) events.Payload {
 		return crmcontracts.PublicEventIntroRequestClosed{
 			IntroRequestId: openapi_types.UUID(id),
@@ -282,10 +306,10 @@ func (s *Store) Cancel(ctx context.Context, id ids.UUID, reason string, version 
 func (s *Store) move(
 	ctx context.Context,
 	id ids.UUID,
-	to Status,
+	to func() Status,
 	version int,
 	permit func(*Request) error,
-	write func(context.Context, pgx.Tx, *Request) error,
+	write func(context.Context, pgx.Tx, *Request) (pgconn.CommandTag, error),
 	event func(*Request) events.Payload,
 ) error {
 	if err := auth.Require(ctx, "introduction", principal.ActionUpdate); err != nil {
@@ -308,16 +332,31 @@ func (s *Store) move(
 		if err := permit(cur); err != nil {
 			return err
 		}
-		if err := write(ctx, tx, cur); err != nil {
+		tag, err := write(ctx, tx, cur)
+		if err != nil {
 			return fmt.Errorf("introductions: recording the answer: %w", err)
 		}
+		// The read above took no row lock, so the version check can pass in two
+		// transactions at once. Only `AND version = $N` inside the UPDATE is
+		// atomic, and it reports a loss by matching zero rows. Without this the
+		// loser writes an audit row and emits an event for a move it never made.
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf(
+				"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
+		}
+		// The read above took no lock, so the version check at line 304 can pass
+		// in two transactions at once. Only `AND version = $N` inside the UPDATE
+		// is atomic, and it reports a loss by matching zero rows. Without this,
+		// the loser writes an audit row and emits an event for a transition that
+		// did not happen — the trail would say an ask was declined when it was
+		// accepted.
 		// The before-image is the status this ask was in, which is exactly what
 		// a dispute about an introduction asks: an accepted ask that ended up
 		// declined and one that was declined outright are different stories,
 		// and only the pair tells them apart.
 		auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
 			map[string]any{"status": string(cur.Status)},
-			map[string]any{"status": string(to)})
+			map[string]any{"status": string(to())})
 		if err != nil {
 			return err
 		}
