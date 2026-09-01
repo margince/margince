@@ -1477,6 +1477,8 @@ export const de = {
   "timeline.kind.message": "Nachricht",
   "timeline.kind.change": "Datensatz",
   "timeline.withheld": "Inhalt nur f\u00fcr Beteiligte",
+  "compose.deadRecipients":
+    "E-Mails an {addresses} kommen nicht an. Die letzte Zustellung dorthin wurde abgelehnt, und seitdem ist keine Zustellung mehr durchgekommen. Trotzdem senden oder eine andere Adresse verwenden.",
   "compose.threadShare": "Verlauf teilen",
   "compose.threadKeepPrivate": "Privat halten",
   "compose.threadStillHeld":
