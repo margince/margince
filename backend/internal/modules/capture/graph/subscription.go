@@ -246,18 +246,44 @@ func (a *httpAPI) findSubscription(ctx context.Context, accessToken, notificatio
 	return "", errSubscriptionListUnbounded
 }
 
+// isSubscriptionID reports whether id can be spliced into a URL path as ONE
+// segment naming a subscription.
+//
+// The test is that the id is ALREADY its own escaping, plus the two dot
+// segments that survive escaping untouched. Anything needing an escape — a
+// separator, a query or fragment marker, a space, a stray percent — is not an
+// identifier Microsoft minted, and `.` and `..` are path instructions wearing an
+// id's clothes.
+//
+// Stated as what an id IS rather than as a list of traversal spellings: a
+// blacklist is a list somebody has to keep complete, against an input whose
+// whole point is that it was chosen by the far end.
+func isSubscriptionID(id string) bool {
+	return id != "" && id != "." && id != ".." && url.PathEscape(id) == id
+}
+
 // errSubscriptionListUnbounded is a subscription listing that would not end.
 var errSubscriptionListUnbounded = fmt.Errorf(
 	"graph: the subscription listing did not end within %d pages: %w", maxSubscriptionPages, ErrUnreachable,
 )
 
 func (a *httpAPI) renewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error) {
+	// REFUSED, not merely escaped. The id arrives as a decoded field of a
+	// provider response, and one carrying a path segment would aim this
+	// authenticated PATCH — the user's own delegated token on it — at another
+	// resource. url.PathEscape alone does not settle that: it escapes the
+	// separators and leaves `..` intact, so a server that decodes %2F before
+	// resolving the path still walks out of the collection. Rejecting the id
+	// does not depend on how the far end normalizes.
+	if !isSubscriptionID(id) {
+		// GONE, not unreachable: the subscription this names cannot be
+		// addressed, so from the round's seat there is nothing to renew — and
+		// the round answers that by creating one, which is the safe direction.
+		// Failing instead would leave the mailbox on the poll for as long as
+		// the provider kept answering with an id like this.
+		return Subscription{}, errSubscriptionGone
+	}
 	var out subscription
-	// Escaped even though Microsoft mints it: it arrives as a decoded field of a
-	// provider response, and an id carrying a path segment or a query would aim
-	// this authenticated PATCH — the user's own delegated token on it — at a
-	// different resource. Only identifiers are ever formatted into a URL here,
-	// and never unescaped.
 	status, err := a.writeJSON(ctx, http.MethodPatch,
 		a.base+subscriptionsPath+"/"+url.PathEscape(id), accessToken,
 		subscriptionRequest{Expiration: deadline}, &out)

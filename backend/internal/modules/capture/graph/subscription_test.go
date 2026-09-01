@@ -10,7 +10,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -295,8 +294,12 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 			NotificationURL: "https://api.example/webhooks/graph?token=t",
 		}}})
 	})
+	// The RAW path, as it went over the wire. r.URL.Path is the decoded view,
+	// which is the wrong thing to assert on twice over: it would read
+	// `/subscriptions/../../me/messages` as though the escaping had failed, and
+	// it hides that the bytes sent never left the collection.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		patched = r.URL.Path
+		patched = r.URL.EscapedPath()
 		writeJSON(w, map[string]any{
 			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 		})
@@ -304,12 +307,37 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
+	// The round SUCCEEDS: refusing the id is not refusing the mailbox. It falls
+	// through to creating a subscription, which is the safe direction — a
+	// duplicate notification costs one redundant sync, where declining to renew
+	// costs the mailbox its push.
 	if _, err := NewAPI(srv.Client(), srv.URL).EnsureSubscription(context.Background(), "at",
 		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour)); err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
-	if !strings.HasPrefix(patched, subscriptionsPath+"/") {
-		t.Errorf("the renewal reached %q — a provider-supplied id steered it out of the subscription collection", patched)
+	// Nothing was PATCHed at all: the id is refused before a request is built,
+	// so this does not rest on how the far end normalizes what it received.
+	if patched != "" {
+		t.Errorf("a renewal was sent to %q for a provider-supplied id that is not a subscription id", patched)
+	}
+}
+
+// The refusal itself, at the seam, so the case above cannot pass by accident of
+// routing. Every spelling here is one a server that decodes before resolving
+// would walk out of the subscription collection on, whatever url.PathEscape did
+// to the separators.
+func TestOnlyASubscriptionIDCanAddressARenewal(t *testing.T) {
+	for _, id := range []string{
+		"", "../../me/messages", "..", "a/b", `a\b`, "sub 1", "sub?x=1", "sub#f", "%2e%2e",
+	} {
+		if isSubscriptionID(id) {
+			t.Errorf("%q was accepted as a subscription id", id)
+		}
+	}
+	// And a real one still is, or the refusal above would be refusing every
+	// renewal this client ever makes.
+	if !isSubscriptionID("0fc1b2a3-3d4e-5f60-8a1b-2c3d4e5f6071") {
+		t.Error("a GUID Microsoft would mint was refused as a subscription id")
 	}
 }
 

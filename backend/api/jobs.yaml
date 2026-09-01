@@ -883,7 +883,7 @@ kinds:
     timeout: 2m
     opts_owner: caller
     cadence: {operator: GraphWatch.Interval, schedule_when_positive: GraphWatch.Interval}
-    registration: {when: [GmailRegistry, GraphWatch.NotificationURL], absent: registers_nothing}
+    registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
     fans_out_to: graph_watch_renew_connection
     fan_out_unit: connection
     reason: >-
@@ -900,7 +900,7 @@ kinds:
     timeout: 2m
     max_attempts: 3
     opts_owner: fan_out
-    registration: {when: [GmailRegistry, GraphWatch.NotificationURL], absent: registers_nothing}
+    registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
     args:
       Workspace: id
       ConnectionID: id

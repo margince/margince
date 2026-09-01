@@ -124,13 +124,19 @@ func operatorInterval(cfg JobRunnerConfig, kind, path string) time.Duration {
 // other direction — a declared path with no entry — is a fitness test.
 func configDependencies(cfg JobRunnerConfig) map[string]bool {
 	return map[string]bool{
-		"AgentScheduler.Service":     cfg.AgentScheduler.Service != nil,
-		"ChannelVault":               cfg.ChannelVault != nil,
-		"ClassifyBrain":              cfg.ClassifyBrain != nil,
-		"DeepReadBrain":              cfg.DeepReadBrain != nil,
-		"Embedder":                   cfg.Embedder != nil,
-		"EnrichBrain":                cfg.EnrichBrain != nil,
-		"GmailRegistry":              cfg.GmailRegistry != nil,
+		"AgentScheduler.Service": cfg.AgentScheduler.Service != nil,
+		"ChannelVault":           cfg.ChannelVault != nil,
+		"ClassifyBrain":          cfg.ClassifyBrain != nil,
+		"DeepReadBrain":          cfg.DeepReadBrain != nil,
+		"Embedder":               cfg.Embedder != nil,
+		"EnrichBrain":            cfg.EnrichBrain != nil,
+		"GmailRegistry":          cfg.GmailRegistry != nil,
+		// The registry OFFERING graph, not merely existing. The Gmail registry
+		// is the same object for both vendors, so "a registry is present" is
+		// true on a worker that has Gmail credentials and no Microsoft ones —
+		// and scheduling under that while the workers gate on the connector
+		// leaves rows nothing can claim.
+		"GmailRegistry.OffersGraph":  cfg.GmailRegistry != nil && registryOffers(cfg.GmailRegistry, providerGraph),
 		"GmailWatch.Topic":           cfg.GmailWatch.Topic != "",
 		"GraphWatch.NotificationURL": cfg.GraphWatch.NotificationURL != "",
 		"OverlayVault":               cfg.OverlayVault != nil,
