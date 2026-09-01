@@ -87,12 +87,14 @@ type CaptureConfig struct {
 	// retention of their colleagues' subjects in either direction.
 	//
 	// A plain bool here on purpose: the three-state question is the operator's
-	// and is answered once, at the boundary.
+	// and is answered at the boundary, by deployconfig's TracesPayloads.
 	//
-	// Held by: TestOnlyTheResolverDereferencesTracePayloads (backend/internal/platform/deployconfig/capture_test.go) Every zero value below this line —
-	// the site_lead accept path's `CaptureConfig{}`, the registry enumerations —
-	// means no deployment config at all, and those keep the off behaviour they
-	// have today rather than inheriting a default meant for a booted role.
+	// Every zero value below this line — the site_lead accept path's
+	// `CaptureConfig{}`, the registry enumerations — means no deployment config
+	// at all, and those keep the off behaviour they have today rather than
+	// inheriting a default meant for a booted role.
+	//
+	// Held by: TestOnlyTheResolverReadsTheTracePayloadsField (backend/internal/platform/deployconfig/capture_test.go)
 	TracePayloads bool
 	// Logger carries the process logger to the post-commit steps the Sink
 	// drives, where a fault is reported rather than returned (nothing may fail

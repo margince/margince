@@ -481,7 +481,7 @@ describe("the pipeline drill-down", () => {
       screen.getByRole("button", { name: /every step this message/i }),
     );
     expect(
-      await screen.findByText(/did not turn payload capture on/i),
+      await screen.findByText(/turned payload capture off/i),
     ).toBeInTheDocument();
   });
 });

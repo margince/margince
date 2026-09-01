@@ -4,15 +4,14 @@
 package deployconfig
 
 import (
-	"strings"
-	"testing"
-
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"strings"
+	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -121,8 +120,8 @@ func ptr(b bool) *bool { return &b }
 // only the most obvious spelling, and `p := c.TracePayloads; return *p` reaches
 // the same wrong answer through a local a pattern match never sees. Nothing
 // outside the resolver has any business naming the field at all, so naming it
-// is what the gate refuses — and a reader can then reach the value only through
-// the one function that applies the default.
+// is what the gate refuses, which leaves TracesPayloads as the way a reader
+// reaches the value.
 //
 // AST rather than text for the same reason: a match on source characters is
 // defeated by a line break, a rename, or a parenthesis, and this is a privacy

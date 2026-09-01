@@ -178,6 +178,13 @@ var googleBackedConnectors = []struct {
 	{crmcontracts.CalendarConnect, providerGcal},
 }
 
+// WithGmailCapture mounts the Gmail and Google Calendar connect flow on the
+// server: the OAuth clients, the signed state, and the registry the background
+// sync shares with them.
+//
+// It records whether the deployment's Google app is configured at all before it
+// gates anything, because the send pre-flight and the setup surface both answer
+// from that one fact rather than each deciding for themselves.
 func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.gmailAppConfigured = c.canSync() // the send pre-flight's fact, recorded before the gate below
