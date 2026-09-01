@@ -428,7 +428,12 @@ func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
 // "I'll send you the whitepaper" without one, and the card used to fall past
 // every rung to "nothing is owed" while that task sat directly beneath it.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	now := time.Now()
+	// A FIXED INSTANT, and midday UTC at that. The card counts days in UTC, so
+	// a `now` taken from the clock puts "due two hours from now" on TOMORROW's
+	// UTC day for the two hours before midnight — and the case below asks for
+	// "Due today." A test that passes for twenty-two hours a day is one that
+	// fails the merge queue at random and tells whoever hits it nothing.
+	now := time.Date(2026, 5, 14, 12, 0, 0, 0, time.UTC)
 	page := &crmcontracts.Person360{
 		NextSteps: &struct {
 			Data []crmcontracts.Activity `json:"data"`
