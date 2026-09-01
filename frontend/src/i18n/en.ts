@@ -7543,6 +7543,7 @@ export const en = {
   "worklist.because.repeated_failure": "the same thing keeps failing",
   "worklist.because.legal_deadline": "a legal deadline is running",
   "worklist.because.meeting_soon": "starting shortly",
+  "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.stale": "waiting a long time",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
