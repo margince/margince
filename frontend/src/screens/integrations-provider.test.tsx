@@ -37,6 +37,16 @@ const CONNECTION: ProviderConnection = {
   catalog: [
     { category: "linkedin_profile", free: true, cost: {} },
     { category: "professional_email", free: false, cost: { email: 1 } },
+    // A category the provider only issues alongside another, priced for the
+    // pair. The real Surfe descriptor has exactly one, and without it here the
+    // card's dependency handling would be tested against a catalog where every
+    // purchase stands alone.
+    {
+      category: "mobile",
+      free: false,
+      cost: { email: 1, mobile: 1 },
+      requires: "professional_email",
+    },
   ],
   credits: { pools: { email: 120 } },
   version: 4,
@@ -328,7 +338,75 @@ describe("ProviderCard write posture", () => {
       // rendering a switch for every category the provider sells.
       expect(
         screen.getAllByRole("switch", { name: /^Allow buying / }),
-      ).toHaveLength(1);
+      ).toHaveLength(2);
+    },
+    RENDER_TEST_MS,
+  );
+
+  // The card let an admin allow a mobile purchase with the work email it
+  // depends on switched off. That combination buys nothing: the vendor refuses
+  // a mobile lookup without the email flag, so the contact page showed no
+  // button and the card gave no reason — a switch that was on, and a purchase
+  // that never appeared anywhere.
+  it(
+    "refuses a purchase whose prerequisite is off, and says what it needs",
+    async () => {
+      await renderAs(ME_OPERATOR);
+
+      // professional_email is false in the fixture's saved selection.
+      //
+      // The native attribute, which is what a stated reason sets: Switch reads
+      // `reason` as the refusal itself, so a caller cannot announce a denial
+      // and leave the control live.
+      const mobile = screen.getByRole("switch", {
+        name: "Allow buying mobile number",
+      });
+      expect(mobile).toHaveProperty("disabled", true);
+      // The reason is on screen, not merely implied by a dead control: an
+      // admin looking for the mobile has to learn what it depends on, and a
+      // disabled switch with no sentence reads as a permission they lack.
+      //
+      // ONCE, counted rather than merely present. The sentence belongs to the
+      // Switch's `reason`, which both renders and announces it; a copy in the
+      // row's description printed it twice on the card and read it twice to a
+      // screen reader, and a `getAllByText(...).length > 0` assertion passed
+      // over exactly that.
+      expect(screen.getAllByText(/only alongside the work email/)).toHaveLength(
+        1,
+      );
+
+      // The row it depends on is unaffected — the dependency runs one way.
+      expect(
+        screen.getByRole("switch", { name: "Allow buying work email" }),
+      ).toHaveProperty("disabled", false);
+
+      // Priced for the PAIR, and plural. The row quotes the whole press, so a
+      // dependent category never names a figure smaller than pressing its
+      // button spends — and "2 credit" is what a figure formatted without a
+      // plural form prints, which no assertion here used to notice.
+      expect(screen.getByText(/priced at 2 credits/)).toBeDefined();
+      expect(screen.queryByText(/priced at 2 credit,/)).toBeNull();
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "allows the dependent purchase once its prerequisite is on",
+    async () => {
+      await renderAs(ME_OPERATOR, {
+        ...CONNECTION,
+        configuration: {
+          ...CONNECTION.configuration,
+          categories: { linkedin_profile: true, professional_email: true },
+        },
+      });
+
+      // Mutation guard for the case above: a switch disabled for a reason
+      // unrelated to the dependency would pass that test and this one would
+      // catch it.
+      expect(
+        screen.getByRole("switch", { name: "Allow buying mobile number" }),
+      ).toHaveProperty("disabled", false);
     },
     RENDER_TEST_MS,
   );

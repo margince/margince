@@ -231,3 +231,34 @@ export const OperatorConnectedPhone: Story = {
   tags: ["uat-phone"],
   render: cardStory(OPERATOR, [connected]),
 };
+
+/**
+ * The paid half of the card, which no other story reaches: none of them carries
+ * a catalog, so the switches that decide what a rep may buy render nowhere.
+ *
+ * The mobile row is the case worth looking at. The provider only issues a
+ * number alongside the work email, so with that switch off the mobile cannot be
+ * bought at all — the switch is refused and says what it needs, rather than
+ * sitting on while the buy button it promises never appears on any contact.
+ */
+export const OperatorPricedCategories: Story = {
+  render: cardStory(OPERATOR, [
+    {
+      ...connected,
+      configuration: {
+        ...connected.configuration,
+        categories: { linkedin_profile: true, professional_email: false },
+      },
+      catalog: [
+        { category: "linkedin_profile", free: true, cost: {} },
+        { category: "professional_email", free: false, cost: { email: 1 } },
+        {
+          category: "mobile",
+          free: false,
+          cost: { email: 1, mobile: 1 },
+          requires: "professional_email",
+        },
+      ],
+    },
+  ]),
+};

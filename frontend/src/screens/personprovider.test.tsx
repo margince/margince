@@ -581,6 +581,85 @@ describe("the details that cost credits", () => {
     });
   });
 
+  it("offers the mobile with the email already held, and says the email is re-bought", async () => {
+    mountWithCatalog(
+      {
+        ...neverRun(),
+        state: "completed",
+        // The 819-contact case in a real installation: a work email bought
+        // earlier, no number yet.
+        emails: [
+          {
+            value: "dana.buyer@surfe.example",
+            email_type: "professional",
+            email_type_source: "provider",
+            validation_status: "valid",
+          },
+        ],
+      },
+      queuedRun,
+    );
+
+    // Still offered. Filtering on the button's own category alone was right;
+    // filtering on the whole press would have removed the only way to buy a
+    // number for somebody whose email is already on record.
+    const button = await screen.findByRole("button", {
+      name: /Buy mobile number · 2 credits/,
+    });
+    expect(button).toBeDefined();
+
+    // And the second credit is named. Surfe charges per pool that returns
+    // anything and cannot be told to skip an address we already hold, so this
+    // press pays for that email twice — a fact the reader has to see BEFORE
+    // pressing, not discover on the spend history.
+    expect(
+      await screen.findByText(/includes the work email again/),
+    ).toBeDefined();
+
+    // The button does not offer to buy the email: the reader can see they
+    // have it, and naming it there would read as a second purchase of a
+    // detail already on screen.
+    expect(
+      screen.queryByRole("button", { name: /Buy work email and mobile/ }),
+    ).toBeNull();
+  });
+
+  it("says nothing about re-buying when neither half is held", async () => {
+    mountWithCatalog({ ...neverRun(), state: "completed" }, queuedRun);
+
+    // The note is the exception, not the furniture. A line about re-buying on
+    // every button would train the reader to skip it, which is exactly when
+    // it matters.
+    await screen.findByRole("button", {
+      name: /Buy work email and mobile number · 2 credits/,
+    });
+    expect(screen.queryByText(/includes the work email again/)).toBeNull();
+  });
+
+  it("offers nothing once both halves of a press are held", async () => {
+    mountWithCatalog(
+      {
+        ...neverRun(),
+        state: "completed",
+        emails: [
+          {
+            value: "dana.buyer@surfe.example",
+            email_type: "professional",
+            email_type_source: "provider",
+            validation_status: "valid",
+          },
+        ],
+        mobile_phones: [{ value: "+491701234567", confidence: 0.82 }],
+      },
+      queuedRun,
+    );
+
+    await screen.findByText(/dana\.buyer@surfe\.example/);
+    // Nothing left to look for, so no offer — and in particular not a
+    // two-credit button that would buy both again.
+    expect(screen.queryByRole("button", { name: /^Buy / })).toBeNull();
+  });
+
   it("names the free categories when the plain lookup button is pressed", async () => {
     const user = userEvent.setup();
     const posted = mountWithCatalog(

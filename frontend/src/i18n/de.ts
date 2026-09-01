@@ -7010,8 +7010,12 @@ export const de = {
   "provider.automaticLookupJurisdiction":
     "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
   "provider.buyable": "Kauf von {category} erlauben",
-  "provider.buyableHint":
+  "provider.buyableHint_one":
     "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+  "provider.buyableHint_other":
+    "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+  "provider.buyableNeeds":
+    "Der Anbieter sucht danach nur zusammen mit {prerequisite}. Einzeln lässt es sich nicht kaufen — erlauben Sie zuerst diese Angabe.",
   "provider.backlog": "Noch nachzuschlagen",
   "provider.backlogRemaining_one": "{count} Kontakt",
   "provider.backlogRemaining_other": "{count} Kontakte",
@@ -7090,6 +7094,8 @@ export const de = {
   "provider.profile.notRequested": "Nie angefragt: {categories}.",
   "provider.profile.buy_one": "{category} kaufen · {credits} Credit",
   "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
+  "provider.profile.buyRebuys":
+    "Im Preis ist {categories} erneut enthalten: Der Anbieter sucht ohne diese Angabe nicht danach und berechnet alles, was er zurückliefert.",
   "provider.freeTier.hint":
     "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
   "provider.pricedTier.hint":

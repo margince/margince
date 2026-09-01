@@ -303,6 +303,12 @@ function BuyPriced({
   // stays true if this asks about the same set the press does.
   const enabled = (category: string) =>
     connection?.configuration.categories?.[category] ?? false;
+  // Offered on the button's OWN category, not on everything the press sends.
+  // The detail being sought is what decides whether there is anything to buy:
+  // a mobile is still worth offering when the work email it needs is already
+  // held — that is the common case, and the note below says what the second
+  // half costs — while a press whose own category is held has nothing left to
+  // find and would only re-buy what is on screen.
   const buyable = (connection?.catalog ?? []).filter(
     (entry) =>
       !entry.free &&
@@ -314,27 +320,55 @@ function BuyPriced({
   }
   return (
     <div className="pe-buy-row">
-      {buyable.map((entry) => (
-        <Button
-          key={entry.category}
-          small
-          type="button"
-          pending={enrich.isPending}
-          busyLabel={t("provider.profile.lookingUp")}
-          onClick={() =>
-            enrich.mutate({
-              personId,
-              provider: profile.provider,
-              categories: boughtWith(entry),
-            })
-          }
-        >
-          {plural("provider.profile.buy", creditsOf(entry), {
-            category: categoryNamesTogether(boughtWith(entry), t, locale),
-            credits: formatNumber(creditsOf(entry), locale),
-          })}
-        </Button>
-      ))}
+      {buyable.map((entry) => {
+        const asks = boughtWith(entry);
+        const rebought = asks.filter((category) =>
+          alreadyHeld(profile, category),
+        );
+        return (
+          <div className="pe-buy-offer" key={entry.category}>
+            <Button
+              small
+              type="button"
+              pending={enrich.isPending}
+              busyLabel={t("provider.profile.lookingUp")}
+              onClick={() =>
+                enrich.mutate({
+                  personId,
+                  provider: profile.provider,
+                  categories: asks,
+                })
+              }
+            >
+              {plural("provider.profile.buy", creditsOf(entry), {
+                // The category being SOUGHT, not everything the press sends.
+                // Naming a detail already on the record would read as an
+                // offer to buy what the reader can see they have.
+                category: categoryNamesTogether(
+                  asks.filter((category) => !alreadyHeld(profile, category)),
+                  t,
+                  locale,
+                ),
+                credits: formatNumber(creditsOf(entry), locale),
+              })}
+            </Button>
+            {rebought.length > 0 && (
+              // The price above is the whole press, and part of it buys again
+              // what this record already holds. Surfe charges one credit per
+              // pool that returns anything and does not know we hold the
+              // address, and it refuses to look for a number with the email
+              // flag off — so the second charge is the vendor's rule, not a
+              // choice this product makes. Said plainly rather than hidden
+              // behind a cheaper-looking number or a button that disappears.
+              <p className="t-caption">
+                {t("provider.profile.buyRebuys", {
+                  categories: categoryNamesTogether(rebought, t, locale),
+                })}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -374,8 +408,17 @@ function creditsOf(
   return Object.values(entry.cost).reduce((total, n) => total + n, 0);
 }
 
-/** Whether the section already shows what this category buys, so a button does
- *  not offer to buy again what is on screen. */
+/** Whether the section already shows what this category buys.
+ *
+ *  Asked TWICE about one press, for two different questions. Whether to offer
+ *  the button reads the category being sought — a mobile is worth offering
+ *  when the work email it needs is already held. What the button says reads
+ *  every category the press sends, because the provider bills for whatever it
+ *  returns and cannot be told to skip an address we hold, so that press pays
+ *  for the email a second time.
+ *
+ *  Answering only the first question is what let the second charge go
+ *  unmentioned. */
 function alreadyHeld(profile: Profile, category: string): boolean {
   switch (category) {
     case "professional_email":
