@@ -53,6 +53,12 @@ func TestOneClickAcceptsAnEmptyBody(t *testing.T) {
 	if err := requireOneClickBody(oneClickRequest("", "application/x-www-form-urlencoded")); err != nil {
 		t.Errorf("refused an empty form body: %v", err)
 	}
+	// A caller that declares a content type it never fills — e.g. a client
+	// that always sets Content-Type: application/json — is still an absent
+	// body, not a malformed one.
+	if err := requireOneClickBody(oneClickRequest("", "application/json")); err != nil {
+		t.Errorf("refused an empty body carrying an unrelated content type: %v", err)
+	}
 }
 
 // A charset parameter is ordinary and must not change the verdict.
@@ -73,6 +79,7 @@ func TestOneClickRefusesABodyThatIsNotOneClick(t *testing.T) {
 		{"the wrong value", "List-Unsubscribe=Two-Click", "application/x-www-form-urlencoded"},
 		{"json", `{"List-Unsubscribe":"One-Click"}`, "application/json"},
 		{"multipart with no boundary", "whatever", "multipart/form-data"},
+		{"no content type, junk body", "hello", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -89,5 +96,10 @@ func TestOneClickRefusesAnOversizedBody(t *testing.T) {
 	huge := "List-Unsubscribe=One-Click&pad=" + strings.Repeat("x", oneClickBodyLimit)
 	if err := requireOneClickBody(oneClickRequest(huge, "application/x-www-form-urlencoded")); err == nil {
 		t.Error("admitted an oversized one-click body")
+	}
+	// The same ceiling holds on the stray-content-type path, which reads
+	// the body through the same helper rather than a copy of the check.
+	if err := requireOneClickBody(oneClickRequest(strings.Repeat("x", oneClickBodyLimit+1), "application/json")); err == nil {
+		t.Error("admitted an oversized body behind an unrelated content type")
 	}
 }

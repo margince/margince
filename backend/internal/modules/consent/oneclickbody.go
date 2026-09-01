@@ -46,24 +46,14 @@ const (
 )
 
 // requireOneClickBody admits an empty body, either RFC 8058 encoding of
-// the one-click pair, and nothing else.
+// the one-click pair, and nothing else — regardless of what Content-Type,
+// if any, declared it. A declared type is only ever used to pick which
+// encoding a NON-empty body must match; it never on its own excuses a
+// body that turns out to hold nothing.
 func requireOneClickBody(r *http.Request) error {
 	raw := strings.TrimSpace(r.Header.Get("Content-Type"))
 	if raw == "" {
-		// No content type: only an empty body is meaningful. Read one byte
-		// PAST the ceiling rather than draining to it — a reader stopped at
-		// the limit cannot tell a body that ended from one that went on, so
-		// draining to the cap would accept any size while appearing to
-		// enforce one.
-		n, err := io.Copy(io.Discard, io.LimitReader(r.Body, oneClickBodyLimit+1))
-		if err != nil {
-			slog.DebugContext(r.Context(), "one-click unsubscribe body could not be drained", "error", err)
-			return nil
-		}
-		if n > oneClickBodyLimit {
-			return httperr.Validation("body", "too_large", "a one-click unsubscribe body is a single short field")
-		}
-		return nil
+		return requireEmptyBody(r)
 	}
 	mediaType, params, err := mime.ParseMediaType(raw)
 	if err != nil {
@@ -75,18 +65,49 @@ func requireOneClickBody(r *http.Request) error {
 	case "application/x-www-form-urlencoded":
 		return oneClickFromForm(r)
 	default:
-		return httperr.Validation("body", "not_one_click", "a one-click unsubscribe carries the RFC 8058 form body")
+		// A stray content type on a body that turns out to be empty is still
+		// the absent-body case the module comment promises: a caller that
+		// declares a type it never fills must not be refused for content it
+		// did not send.
+		return requireEmptyBody(r)
 	}
+}
+
+// readOneClickBody reads the body bounded to the ceiling. It reads one
+// byte PAST the ceiling rather than draining to it — a reader stopped at
+// the limit cannot tell a body that ended from one that went on, so
+// draining to the cap would accept any size while appearing to enforce
+// one. A read failure refuses rather than admits: a transport hiccup is
+// not proof of an absent body, and this endpoint fails closed.
+func readOneClickBody(r *http.Request) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, oneClickBodyLimit+1))
+	if err != nil {
+		return nil, httperr.Validation("body", "not_one_click", "could not read the one-click body")
+	}
+	if len(body) > oneClickBodyLimit {
+		return nil, httperr.Validation("body", "too_large", "a one-click unsubscribe body is a single short field")
+	}
+	return body, nil
+}
+
+// requireEmptyBody admits a body only if it turns out to hold nothing,
+// regardless of what content type, if any, declared it.
+func requireEmptyBody(r *http.Request) error {
+	body, err := readOneClickBody(r)
+	if err != nil {
+		return err
+	}
+	if len(body) == 0 {
+		return nil
+	}
+	return httperr.Validation("body", "not_one_click", "a one-click unsubscribe carries the RFC 8058 form body")
 }
 
 // oneClickFromForm reads the URL-encoded spelling.
 func oneClickFromForm(r *http.Request) error {
-	body, err := io.ReadAll(io.LimitReader(r.Body, oneClickBodyLimit+1))
+	body, err := readOneClickBody(r)
 	if err != nil {
-		return httperr.Validation("body", "not_one_click", "could not read the one-click body")
-	}
-	if len(body) > oneClickBodyLimit {
-		return httperr.Validation("body", "too_large", "a one-click unsubscribe body is a single short field")
+		return err
 	}
 	if len(body) == 0 {
 		return nil
