@@ -79,17 +79,20 @@ type stubTasks struct {
 	// boundary rather than assume it. A pointer receiver only where it is
 	// read back; the value form stays valid for every test that ignores it.
 	until *time.Time
-	// mineOnly records whether the lane asked for the reader's own tasks, so a
-	// test can prove the narrowing reaches the QUERY rather than trusting that
-	// a filter ran afterwards.
-	mineOnly bool
+	// scope records WHOSE tasks the lane asked for, so a test can prove the
+	// narrowing reaches the QUERY rather than trusting that a filter ran
+	// afterwards.
+	scope TaskScope
 }
 
-func (s *stubTasks) OpenForViewer(_ context.Context, until time.Time, _ int, mineOnly bool) ([]Task, error) {
+func (s *stubTasks) OpenForViewer(_ context.Context, until time.Time, _ int, scope TaskScope) ([]Task, error) {
 	s.until = &until
-	s.mineOnly = mineOnly
+	s.scope = scope
 	return s.rows, s.err
 }
+
+// mineOnly is what most callers actually ask of the recorded scope.
+func (s *stubTasks) mineOnly() bool { return s.scope == TasksMine }
 
 type stubReceipts struct {
 	rows []Receipt

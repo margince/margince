@@ -45,10 +45,13 @@ func TestEveryReaderDefaultsToTheirOwnWork(t *testing.T) {
 // A reader is offered exactly the scopes their row scope reaches, so a client
 // never draws a control that would 403 when pressed.
 func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
+	// Unassigned is offered at EVERY tier: nothing in it belongs to a
+	// colleague, and it is where ownerless work lives now that "mine" no longer
+	// folds it into each reader's own queue.
 	cases := map[principal.RowScope][]string{
-		principal.RowScopeOwn:  {scopeMine},
-		principal.RowScopeTeam: {scopeMine, scopeTeam},
-		principal.RowScopeAll:  {scopeMine, scopeTeam, scopeAll},
+		principal.RowScopeOwn:  {scopeMine, scopeUnassigned},
+		principal.RowScopeTeam: {scopeMine, scopeUnassigned, scopeTeam},
+		principal.RowScopeAll:  {scopeMine, scopeUnassigned, scopeTeam, scopeAll},
 	}
 	for tier, want := range cases {
 		got := scopeOptionsFor(readerAt(tier))
@@ -201,7 +204,7 @@ func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
 		t.Fatalf("assembling the day: %v", err)
 	}
 
-	if !tasks.mineOnly {
+	if !tasks.mineOnly() {
 		t.Fatal("the task lane was asked for every visible task on a read scoped to the reader")
 	}
 }
@@ -219,7 +222,7 @@ func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
 		t.Fatalf("assembling the day: %v", err)
 	}
 
-	if tasks.mineOnly {
+	if tasks.mineOnly() {
 		t.Fatal("the lane feed narrowed to the reader, changing a surface this did not set out to change")
 	}
 }

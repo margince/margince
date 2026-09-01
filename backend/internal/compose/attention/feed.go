@@ -112,6 +112,10 @@ type Service struct {
 	// behaviour; the ranked queue's default scope sets it), because the same
 	// service answers both surfaces.
 	mineOnly bool
+	// tasks read at this scope. Separate from mineOnly because the task lane is
+	// the one producer with a third answer: unowned work, which is nobody's
+	// rather than everybody's.
+	taskScope TaskScope
 }
 
 // forReader returns a copy of this service that reads only the acting reader's
@@ -121,6 +125,15 @@ type Service struct {
 func (s *Service) forReader() *Service {
 	narrowed := *s
 	narrowed.mineOnly = true
+	narrowed.taskScope = TasksMine
+	return &narrowed
+}
+
+// forUnowned returns a copy that reads the work nobody answers for. Same
+// copy-per-read reason as forReader.
+func (s *Service) forUnowned() *Service {
+	narrowed := *s
+	narrowed.taskScope = TasksUnassigned
 	return &narrowed
 }
 
@@ -212,7 +225,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return crmcontracts.Attention{}, err
 	}
 
-	planned, err := s.planned(ctx, asOf, s.mineOnly)
+	planned, err := s.planned(ctx, asOf, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
@@ -369,8 +382,8 @@ func endOfDay(asOf time.Time) time.Time {
 }
 
 // planned is today's agreed work, overdue first.
-func (s *Service) planned(ctx context.Context, asOf time.Time, mineOnly bool) ([]crmcontracts.AttentionItem, error) {
-	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, mineOnly)
+func (s *Service) planned(ctx context.Context, asOf time.Time, scope TaskScope) ([]crmcontracts.AttentionItem, error) {
+	open, err := s.tasks.OpenForViewer(ctx, endOfDay(asOf), plannedCap, scope)
 	if err != nil {
 		return nil, err
 	}

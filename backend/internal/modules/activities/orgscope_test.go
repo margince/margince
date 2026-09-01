@@ -149,21 +149,40 @@ func TestAnUnknownEntityTypeIsRefusedRatherThanBuiltIntoSQL(t *testing.T) {
 	}
 }
 
-// A "my work" queue is mine OR nobody's. A rep who writes themselves a task
-// without filling in an assignee still owns it, and dropping it would hide the
-// reader's own to-do from them.
-func TestTheOwnQueueClauseAdmitsUnassignedWork(t *testing.T) {
+// A "my work" queue is MINE, and nobody else's.
+//
+// It used to admit unassigned work too, so a task a rep wrote themselves
+// without an assignee still reached them. That kept one case and broke the
+// queue for every other: an automation's follow-up carries no assignee either,
+// and every colleague found it in their own day at once. The self-written task
+// is answered by owning it as it is written (taskAssignee), not by widening
+// what "mine" means.
+func TestTheOwnQueueClauseIsExactlyTheReaders(t *testing.T) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	reader := ids.From[ids.UserKind](ids.MustParse("01a05500-0000-7000-8000-000000000001"))
 
 	clause := ownQueueClause(&reader, arg)
 
-	if !strings.Contains(clause, "a.assignee_id IS NULL") {
-		t.Fatalf("the own-queue clause %q drops unassigned work", clause)
+	if strings.Contains(clause, "IS NULL") {
+		t.Fatalf("the own-queue clause %q still admits work nobody owns", clause)
 	}
 	if !strings.Contains(clause, "a.assignee_id = $1") {
 		t.Fatalf("the own-queue clause %q does not bind the reader", clause)
+	}
+}
+
+// And ownerless work is still reachable, through a clause of its own. Making
+// "mine" exact without this would not have moved that work — it would have
+// hidden it.
+func TestTheUnassignedQueueClauseAnswersOwnerlessWork(t *testing.T) {
+	clause := unassignedQueueClause()
+
+	if !strings.Contains(clause, "a.assignee_id IS NULL") {
+		t.Fatalf("the unassigned clause %q does not select ownerless work", clause)
+	}
+	if !strings.Contains(clause, "NOT a.is_done") {
+		t.Fatalf("the unassigned clause %q carries finished work", clause)
 	}
 }
 

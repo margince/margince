@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -152,14 +153,34 @@ func activityStaleMatch(ev workflow.Event, days clockDaysExtractor) (bool, error
 // so an editor-facing schema change lands once, not in three hand-copied
 // maps that could drift.
 func taskCreateEffect(ev workflow.Event, subject string, dueAt time.Time) (workflow.Effect, error) {
-	args, err := json.Marshal(map[string]any{
+	return taskCreateEffectFor(ev, subject, dueAt, nil)
+}
+
+// taskCreateEffectFor is taskCreateEffect with an owner.
+//
+// A task minted for a record somebody already answers for belongs to that
+// person. Left unowned it lands in the unassigned queue — the right home for
+// work nobody owns, and the wrong answer when the owner is named on the record
+// that fired: a routed lead mints a follow-up, the follow-up carries no
+// assignee, and the rep whose lead it is never sees it in their own queue.
+//
+// A nil owner is the honest answer for a record nobody owns yet, and it stays
+// nil rather than falling back to whoever the workflow happened to run as.
+func taskCreateEffectFor(
+	ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID,
+) (workflow.Effect, error) {
+	fields := map[string]any{
 		fieldKind: "task",
 		"subject": subject,
 		"due_at":  dueAt,
 		"links": []map[string]any{{
 			"entity_type": string(ev.Entity.Type), "entity_id": ev.Entity.ID,
 		}},
-	})
+	}
+	if owner != nil {
+		fields["assignee_id"] = *owner
+	}
+	args, err := json.Marshal(fields)
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the task: %w", err)
 	}

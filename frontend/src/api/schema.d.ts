@@ -24858,13 +24858,13 @@ export interface components {
              * @description Whose work this read answered for.
              * @enum {string}
              */
-            scope: "mine" | "team" | "all";
+            scope: "mine" | "unassigned" | "team" | "all";
             /**
              * @description The scopes this reader may ask for, narrowest first — derived from their own
              *     row scope. A client draws a control only when there is more than one, so a
              *     rep who can only see their own work is never offered a switch that would 403.
              */
-            scope_options: ("mine" | "team" | "all")[];
+            scope_options: ("mine" | "unassigned" | "team" | "all")[];
             /**
              * @description The narrowing this read applied.
              * @enum {string}
@@ -35924,6 +35924,13 @@ export interface operations {
                  *     than quietly narrowed — answering a question about the team with facts about
                  *     one person, with no way for the reader to tell, is the worse failure.
                  *
+                 *     `unassigned` is the open work nobody answers for, and every reader may ask for
+                 *     it at any tier: nothing in it belongs to a colleague, which is what unassigned
+                 *     means. It exists because `mine` is exact — a task with no assignee is no
+                 *     longer folded into every reader's own queue, so it needs a queue of its own or
+                 *     the product would have stopped mentioning it. Tasks only: a message has no
+                 *     assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
+                 *
                  *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
                  *     going quiet, meetings and duplicate pairs are read under the caller's row
                  *     scope, so `team` and `all` return what that tier reaches and `mine` narrows
@@ -35933,7 +35940,7 @@ export interface operations {
                  *     means "every shared record I may see, plus my own personal queue" — not a
                  *     licence to read a colleague's inbox.
                  */
-                scope?: "mine" | "team" | "all";
+                scope?: "mine" | "unassigned" | "team" | "all";
                 /** @description Narrow the queue to one kind of work. Omitted means everything, which is the default view. */
                 filter?: "all" | "customer_waiting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
                 /** @description How many ranked items to return. */

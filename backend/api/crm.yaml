@@ -9147,7 +9147,7 @@ paths:
       parameters:
         - name: scope
           in: query
-          schema: { type: string, enum: [mine, team, all] }
+          schema: { type: string, enum: [mine, unassigned, team, all] }
           description: |
             Whose work to answer for. Omitted means `mine`, which is the default for
             every reader: an admin account can read every deal in the installation, and a
@@ -9157,6 +9157,13 @@ paths:
             A scope the reader's own row scope does not reach is refused with 403 rather
             than quietly narrowed — answering a question about the team with facts about
             one person, with no way for the reader to tell, is the worse failure.
+
+            `unassigned` is the open work nobody answers for, and every reader may ask for
+            it at any tier: nothing in it belongs to a colleague, which is what unassigned
+            means. It exists because `mine` is exact — a task with no assignee is no
+            longer folded into every reader's own queue, so it needs a queue of its own or
+            the product would have stopped mentioning it. Tasks only: a message has no
+            assignee, so unanswered mail stays reachable from `mine`, `team` and `all`.
 
             WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
             going quiet, meetings and duplicate pairs are read under the caller's row
@@ -32905,11 +32912,11 @@ components:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
         scope:
           type: string
-          enum: [mine, team, all]
+          enum: [mine, unassigned, team, all]
           description: 'Whose work this read answered for.'
         scope_options:
           type: array
-          items: { type: string, enum: [mine, team, all] }
+          items: { type: string, enum: [mine, unassigned, team, all] }
           description: |
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a

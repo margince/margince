@@ -150,13 +150,38 @@ func (routeLeadCreateTask) Match(_ context.Context, _ workflow.Event) (bool, err
 	return true, nil
 }
 
-func (w routeLeadCreateTask) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
+// Plan mints the follow-up ASSIGNED to whoever answers for the lead.
+//
+// The owner is read off the lead through the same provider stage_change_notify
+// reads its deal through, rather than imported from the people module: this
+// module reaches no sibling, and the record is already in front of it.
+//
+// A lead nobody owns yet mints an unassigned task, which is the honest answer —
+// it lands in the unassigned queue for somebody to pick up. Owner routing is a
+// separate workflow on the same event with no ordering guarantee between them,
+// so the two orders differ in WHERE the task first appears and never in whether
+// it appears at all.
+func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
 	dueInDays, err := DueInDays(ev.Params, defaultRouteLeadDueInDays)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return taskCreateEffect(ev, "Follow up with the new lead",
-		ev.OccurredAt.AddDate(0, 0, dueInDays))
+	rec, err := w.ex.Provider.Read(ctx, ev.Entity)
+	if err != nil {
+		return workflow.Effect{}, fmt.Errorf("automation: reading the new lead: %w", err)
+	}
+	var lead leadOwnerFields
+	if err := json.Unmarshal(rec.Fields, &lead); err != nil {
+		return workflow.Effect{}, fmt.Errorf("automation: decoding the lead's owner: %w", err)
+	}
+	return taskCreateEffectFor(ev, "Follow up with the new lead",
+		ev.OccurredAt.AddDate(0, 0, dueInDays), lead.OwnerID)
+}
+
+// leadOwnerFields is the one column route_lead needs off the new lead's record.
+// A local shape for the same reason dealOwnerFields is one.
+type leadOwnerFields struct {
+	OwnerID *ids.UUID `json:"owner_id"`
 }
 
 func (w routeLeadCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

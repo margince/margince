@@ -31,8 +31,15 @@ func (p *fakeCreateRecorder) Create(_ context.Context, in datasource.CreateInput
 	return datasource.EntityRef{}, p.err
 }
 
-func (p *fakeCreateRecorder) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
-	panic("fakeCreateRecorder: Read not stubbed for this test")
+// Read answers a lead nobody owns. Plan reads the record to decide who the
+// follow-up belongs to, so a recorder that refused the read would fail every
+// test of the create path for a reason about the fixture.
+func (p *fakeCreateRecorder) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	fields, err := json.Marshal(leadOwnerFields{})
+	if err != nil {
+		return datasource.Record{}, err
+	}
+	return datasource.Record{Ref: ref, Fields: fields}, nil
 }
 
 func (p *fakeCreateRecorder) Search(context.Context, datasource.SearchQuery) (datasource.SearchResult, error) {
@@ -131,7 +138,7 @@ func TestRouteLeadPlanEmitsOneCreateTaskOnTheLead(t *testing.T) {
 		OccurredAt: occurredAt,
 	}
 
-	eff, err := routeLeadCreateTask{}.Plan(context.Background(), ev)
+	eff, err := routeLeadPlanner(t, leadID, nil).Plan(context.Background(), ev)
 	if err != nil {
 		t.Fatalf("Plan err = %v, want nil", err)
 	}
@@ -183,7 +190,7 @@ func TestRouteLeadPlanHonorsTheInstancesOwnDueInDays(t *testing.T) {
 		OccurredAt: occurredAt,
 		Params:     json.RawMessage(`{"due_in_days": 5}`),
 	}
-	eff, err := routeLeadCreateTask{}.Plan(context.Background(), ev)
+	eff, err := routeLeadPlanner(t, ev.Entity.ID, nil).Plan(context.Background(), ev)
 	if err != nil {
 		t.Fatalf("Plan err = %v, want nil", err)
 	}
@@ -259,5 +266,71 @@ func TestRouteLeadIdempotencyKeyIsStablePerEvent(t *testing.T) {
 	other := routeLeadCreateTask{}.IdempotencyKey(workflow.Event{ID: ids.NewV7()})
 	if key1 == other {
 		t.Error("IdempotencyKey did not vary across distinct events — replays of different events would collide")
+	}
+}
+
+// routeLeadPlanner builds the handler over a lead record the given owner owns,
+// which is what Plan reads to decide who the follow-up belongs to. A nil owner
+// models a lead routing has not reached yet.
+func routeLeadPlanner(t *testing.T, leadID ids.UUID, owner *ids.UUID) routeLeadCreateTask {
+	t.Helper()
+	fields, err := json.Marshal(leadOwnerFields{OwnerID: owner})
+	if err != nil {
+		t.Fatalf("marshal the lead fixture: %v", err)
+	}
+	return routeLeadCreateTask{ex: Executors{Provider: &fakeReadProvider{record: datasource.Record{
+		Ref:    datasource.EntityRef{Type: datasource.EntityLead, ID: leadID},
+		Fields: fields,
+	}}}}
+}
+
+// The follow-up a routed lead mints belongs to the rep the lead was routed to.
+//
+// Without this the task is created with no assignee, and the queue that used to
+// treat unassigned work as everybody's put one rep's lead follow-up in front of
+// every colleague at once.
+func TestRouteLeadAssignsTheFollowUpToTheLeadsOwner(t *testing.T) {
+	leadID := ids.NewV7()
+	owner := ids.NewV7()
+	ev := workflow.Event{
+		Entity:     datasource.EntityRef{Type: datasource.EntityLead, ID: leadID},
+		OccurredAt: time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC),
+	}
+
+	eff, err := routeLeadPlanner(t, leadID, &owner).Plan(context.Background(), ev)
+	if err != nil {
+		t.Fatalf("Plan err = %v, want nil", err)
+	}
+	var args struct {
+		AssigneeID string `json:"assignee_id"`
+	}
+	if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+		t.Fatalf("action.Args do not decode: %v", err)
+	}
+	if args.AssigneeID != owner.String() {
+		t.Fatalf("the follow-up was assigned to %q, wanted the lead's owner %v", args.AssigneeID, owner)
+	}
+}
+
+// A lead nobody owns mints a task nobody owns. Falling back to whoever the
+// workflow ran as would hand the work to the system principal and hide it from
+// the unassigned queue that exists to surface it.
+func TestRouteLeadLeavesAnUnownedLeadsFollowUpUnassigned(t *testing.T) {
+	leadID := ids.NewV7()
+	ev := workflow.Event{
+		Entity:     datasource.EntityRef{Type: datasource.EntityLead, ID: leadID},
+		OccurredAt: time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC),
+	}
+
+	eff, err := routeLeadPlanner(t, leadID, nil).Plan(context.Background(), ev)
+	if err != nil {
+		t.Fatalf("Plan err = %v, want nil", err)
+	}
+	var args map[string]any
+	if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+		t.Fatalf("action.Args do not decode: %v", err)
+	}
+	if _, named := args["assignee_id"]; named {
+		t.Fatalf("an unowned lead named an assignee: %v", args["assignee_id"])
 	}
 }
