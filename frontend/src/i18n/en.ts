@@ -6464,6 +6464,7 @@ export const en = {
   "person.enriched.field.address": "Address",
   "person.enriched.field.website": "Website",
   "person.enriched.readFrom": "Read from {source} on {when}",
+  "person.enriched.undo": "Undo",
   "person.enriched.replaced": "Replaced “{was}”, which was older.",
   "person.enriched.correctedByYou": "Corrected by you",
   "person.enriched.confirmed": "Confirmed",

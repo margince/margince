@@ -157,6 +157,18 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	if err := startOrgAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
+	// The same shape for captured mail: a contact who wrote this morning has
+	// their signature read now rather than tonight.
+	//
+	// Only where the pass it queues is REGISTERED. River discards a job whose
+	// kind no worker claims — it does not hold it — and discarded is outside
+	// the uniqueness states, so an installation with no enrich lane would turn
+	// every inbound mail into a discarded row rather than a queue that waits.
+	if modelPath.Enrich != nil {
+		if err := startCaptureEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
+			return lanes, err
+		}
+	}
 
 	announceGeocoding(cfg.geocodeBaseURL, stdout)
 

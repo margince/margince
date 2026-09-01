@@ -5,11 +5,11 @@ package people
 
 // Applying what the person themselves stated, on a date.
 //
-// A mail signature is the contact describing their own details, at a moment
-// that can be dated. A business card is the same kind of input and belongs
-// here too; the card import still fills only blanks (vcardimport.go), so today
-// which one arrives decides whether a stale number is corrected. Moving it is
-// the next piece of this work, not a claim this file can make yet.
+// A mail signature and a business card are the same kind of input: the contact
+// describing their own details, at a moment that can be dated. Both land here,
+// so the rule they obey is written once — while the card import filled only
+// blanks, whether a stale number got corrected depended on whether the details
+// arrived by mail or on paper.
 //
 // The rule is recency, and it holds against a human's typed value too. A rep who
 // typed a number in March is not more right than the contact who signed a new
@@ -28,6 +28,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -36,6 +39,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// The rest of the shared vocabulary: the fields a card and a signature both
+// state, as constants so a typo cannot file a value under a key no reader looks
+// for. fieldTitle and fieldPhone are declared where their own writers first
+// needed them.
+const (
+	fieldRole     = "role"
+	fieldOrgName  = "org_name"
+	fieldAddress  = "address"
+	fieldLinkedin = "linkedin"
+	fieldWebsite  = "website"
 )
 
 // observedField is one dated statement about one field.
@@ -101,11 +116,19 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f
 		return observedSkipped, err
 	}
 
-	observedAt := f.ObservedAt
+	// Nil rather than the zero time, so the statement below takes the
+	// transaction's own clock. A zero time.Time sent as a timestamp is year 1,
+	// which is older than every row on the table — it would supersede nothing
+	// and look exactly like a statement that simply lost.
+	var observedAt *time.Time
+	if !f.ObservedAt.IsZero() {
+		at := f.ObservedAt
+		observedAt = &at
+	}
 	landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 		Field: f.Field, Value: f.Value, EvidenceSnippet: f.Evidence, SourceRef: f.SourceRef,
 		Source: f.Source, CapturedBy: f.CapturedBy, Confidence: f.Confidence,
-		ObservedAt: &observedAt, Superseded: seeded,
+		ObservedAt: observedAt, Superseded: seeded,
 	}, supersedeOnNewerObservation)
 	if err != nil || !landed {
 		return observedSkipped, err
@@ -233,10 +256,21 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	if phoneType == "" {
 		phoneType = emailTypeWork
 	}
+	// The transaction's own clock when the caller states no date — a card
+	// carries none. Read from the database rather than the process so it
+	// compares against the stored dates on the same clock that wrote them, and
+	// so the four statements below all use ONE date rather than drifting apart
+	// across the transaction.
+	observedAt := p.ObservedAt
+	if observedAt.IsZero() {
+		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&observedAt); err != nil {
+			return observedSkipped, fmt.Errorf("people: dating an undated statement: %w", err)
+		}
+	}
 
 	// A number the record already carries is confirmed rather than duplicated,
 	// and either way the caller is done with it.
-	known, err := confirmKnownNumber(ctx, tx, personID, normalized, p.ObservedAt)
+	known, err := confirmKnownNumber(ctx, tx, personID, normalized, observedAt)
 	if err != nil || known != observedSkipped {
 		return known, err
 	}
@@ -247,13 +281,18 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	// different situations that would otherwise both end in an insert: a
 	// re-delivered old mail would file its number beside the current one, and
 	// the record would carry two work numbers with no way to tell which rings.
+	// STRICTLY newer, not "at least as new". A business card states two work
+	// numbers as one statement and they share its date; > would let the first
+	// one written reject the second as already superseded, and the card would
+	// silently import half its numbers. A tie is two numbers the person gave
+	// together, which is a person with two numbers.
 	var newerStands bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM person_phone
 			WHERE person_id = $1 AND phone_type = $2 AND archived_at IS NULL
-			  AND observed_at >= $3)`,
-		personID, phoneType, p.ObservedAt).Scan(&newerStands); err != nil {
+			  AND observed_at > $3)`,
+		personID, phoneType, observedAt).Scan(&newerStands); err != nil {
 		return observedSkipped, fmt.Errorf("people: looking for a number stated later: %w", err)
 	}
 	if newerStands {
@@ -269,7 +308,7 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 		WHERE person_id = $1 AND phone_type = $2 AND archived_at IS NULL AND observed_at < $3
 		ORDER BY is_primary DESC, position, created_at
 		LIMIT 1`,
-		personID, phoneType, p.ObservedAt).Scan(&supersededID); err != nil &&
+		personID, phoneType, observedAt).Scan(&supersededID); err != nil &&
 		!errors.Is(err, pgx.ErrNoRows) {
 		return observedSkipped, fmt.Errorf("people: looking for the number this replaces: %w", err)
 	}
@@ -296,7 +335,7 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 			WHERE person_id = $1 AND archived_at IS NULL), 0),
 		  $4, $5, $6, $7
 		WHERE EXISTS (SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)`,
-		personID, normalized, phoneType, p.Source, p.CapturedBy, p.ObservedAt, supersededID)
+		personID, normalized, phoneType, p.Source, p.CapturedBy, observedAt, supersededID)
 	if err != nil {
 		return observedSkipped, fmt.Errorf("people: writing the observed number: %w", err)
 	}
@@ -338,4 +377,114 @@ func confirmKnownNumber(ctx context.Context, tx pgx.Tx, personID ids.PersonID, n
 		return observedConfirmed, nil
 	}
 	return observedSkipped, nil
+}
+
+// observedCard is one business card, as a dated statement by the person on it.
+type observedCard struct {
+	Entry      VCardEntry
+	Evidence   string
+	SourceRef  string
+	Source     string
+	CapturedBy string
+	// ObservedAt is when the card was handed over. Zero means now, which is the
+	// honest answer for an import: a .vcf carries no date of its own, and the
+	// moment a human chose to import it is what there is.
+	ObservedAt time.Time
+}
+
+// applyObservedCard writes everything a card states, and reports which fields
+// moved so the caller can audit them.
+//
+// The same writer the signature pass uses, deliberately: a card and a signature
+// are one kind of input — the contact describing themselves — and two writers
+// would let the ARRIVAL ROUTE decide whether a stale number gets corrected.
+//
+// Emails are the exception and stay additive. An address the card omits is not
+// an address retired, and no automatic path may take away a way to reach
+// somebody; the card's own addresses are added on the create path and left
+// alone here.
+func applyObservedCard(ctx context.Context, tx pgx.Tx, personID ids.PersonID, c observedCard) ([]string, error) {
+	var applied []string
+	for _, f := range cardFields(c.Entry) {
+		outcome, err := applyObservedField(ctx, tx, personID, observedField{
+			Field: f.name, Value: f.value, Evidence: c.Evidence, SourceRef: c.SourceRef,
+			Source: c.Source, CapturedBy: c.CapturedBy, ObservedAt: c.ObservedAt,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if outcome == observedApplied {
+			applied = append(applied, f.name)
+		}
+	}
+	for _, phone := range c.Entry.Phones {
+		outcome, err := applyObservedPhone(ctx, tx, personID, observedPhone{
+			Phone: phone.Value, PhoneType: phone.Kind, SourceRef: c.SourceRef,
+			Source: c.Source, CapturedBy: c.CapturedBy, ObservedAt: c.ObservedAt,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if outcome == observedApplied && !slices.Contains(applied, fieldPhone) {
+			applied = append(applied, fieldPhone)
+		}
+	}
+	return applied, nil
+}
+
+// cardField is one of the card's single-answer fields, named in the shared
+// vocabulary.
+type cardField struct{ name, value string }
+
+// cardFields reads a card into that vocabulary, dropping what it does not
+// state.
+//
+// TITLE fills `title` and NOT `role`. They are different claims — a title is
+// what somebody is called, a role is what they do in a deal — and person360
+// attaches role evidence to the employment role, so a card saying "VP Finance"
+// would make an unrelated role like "Decision maker" display with that as its
+// evidence.
+//
+// URL is split rather than filed as linkedin, which is what the old import did
+// to every card: a company website landed under a person's LinkedIn profile and
+// the page then showed it as one. Host, not guesswork.
+func cardFields(entry VCardEntry) []cardField {
+	out := make([]cardField, 0, 5)
+	add := func(name, value string) {
+		if v := strings.TrimSpace(value); v != "" {
+			out = append(out, cardField{name: name, value: v})
+		}
+	}
+	add(fieldTitle, entry.Title)
+	add(fieldOrgName, entry.Organization)
+	add(fieldAddress, entry.Address)
+	if u := strings.TrimSpace(entry.URL); u != "" {
+		if isLinkedinURL(u) {
+			add(fieldLinkedin, u)
+		} else {
+			add(fieldWebsite, u)
+		}
+	}
+	return out
+}
+
+// isLinkedinURL reports whether a URL names a LinkedIn profile, by host rather
+// than by substring: a website whose path merely mentions linkedin is not one.
+//
+// Subdomains count, because LinkedIn's own localized profile links carry them —
+// de.linkedin.com and www.linkedin.com are the same site, and a reader who
+// pasted either meant their profile. Hostname() rather than Host, so an
+// explicit port does not turn a profile into a website.
+func isLinkedinURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "" {
+		// A bare "linkedin.com/in/x" with no scheme parses as a path.
+		host, _, _ = strings.Cut(strings.ToLower(raw), "/")
+		host, _, _ = strings.Cut(host, ":")
+	}
+	return host == "linkedin.com" || strings.HasSuffix(host, ".linkedin.com")
 }

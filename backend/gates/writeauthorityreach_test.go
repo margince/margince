@@ -68,7 +68,6 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	// are different because the surfaces are — a site read must not abort a
 	// whole page over one employee, and an import must not silently omit a
 	// card — and a probe inside the shared writer could only give one of them.
-	"internal/modules/people:fillSitePersonFields": "the fill both the site read and the vCard import share, reached only past each caller's own auth.EnsureWritableLive on the matched person. The probe is in the callers because what a refusal MEANS differs between them: the site read skips to staging, the import reports the card as skipped. A probe here would have to pick one of those answers for both",
 
 	// Capture. A colleague's mail must reach the record it is about, which is
 	// the case the access model deliberately keeps open: Rep B emailing Rep A's

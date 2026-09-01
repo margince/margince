@@ -1571,6 +1571,10 @@ func (stubs) GetPersonProfileFields(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "GetPersonProfileFields")
 }
 
+func (stubs) RestorePersonProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.PersonProfileFieldKey) {
+	httperr.NotImplemented(w, r, "RestorePersonProfileField")
+}
+
 func (stubs) RunPersonResearch(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RunPersonResearch")
 }

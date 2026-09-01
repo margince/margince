@@ -6420,6 +6420,7 @@ export const de = {
   "person.enriched.field.address": "Adresse",
   "person.enriched.field.website": "Website",
   "person.enriched.readFrom": "Gelesen aus {source} am {when}",
+  "person.enriched.undo": "Rückgängig",
   "person.enriched.replaced": "Ersetzt „{was}“ — der ältere Stand.",
   "person.enriched.correctedByYou": "Von Ihnen korrigiert",
   "person.enriched.confirmed": "Best\u00e4tigt",

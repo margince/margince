@@ -123,6 +123,24 @@ function EnrichedField({
     },
   });
 
+  // Undo for one field. The server decides whether it still may: a field
+  // somebody has corrected since, or that a later statement replaced again,
+  // is refused rather than reached past.
+  const restore = useMutation({
+    mutationFn: async () => {
+      const { error } = await api.POST(
+        "/people/{id}/profile-fields/{field}/restore",
+        { params: { path: { id: personId, field: field.field } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["person360", personId] });
+    },
+  });
+
   return (
     <div>
       <div
@@ -184,7 +202,16 @@ function EnrichedField({
             opacity: 0.75,
           }}
         >
-          {t("person.enriched.replaced", { was: field.superseded_value })}
+          {t("person.enriched.replaced", { was: field.superseded_value })}{" "}
+          {mayCorrect && (
+            <Button
+              small
+              pending={restore.isPending}
+              onClick={() => restore.mutate()}
+            >
+              {t("person.enriched.undo")}
+            </Button>
+          )}
         </p>
       )}
 

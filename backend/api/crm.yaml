@@ -953,9 +953,12 @@ paths:
         an automatic read proposes and a human click writes.
 
         Three outcomes per card, reported in the order the file listed them. An exact email
-        match fills only the fields the record leaves empty, so a value a human typed is never
-        replaced by a card. No match creates the person, the company the card names, and the
-        employment edge between them. A card that merely RESEMBLES somebody is written nowhere
+        match applies what the card states by RECENCY: a card handed over now is the contact's
+        own newer statement, so it replaces what the record holds — a value somebody typed
+        included — and the replaced value is kept in `superseded_value` for
+        `POST /people/{id}/profile-fields/{field}/restore`. A field a human CORRECTED through
+        `POST /ai/feedback` is the exception and stands. No match creates the person, the
+        company the card names, and the employment edge between them. A card that merely RESEMBLES somebody is written nowhere
         and returned as `needs_review` with the candidate it resembles: guessing there is how
         one person becomes two records, and neither direction is recoverable by the reader who
         imported the file.
@@ -1760,6 +1763,43 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /people/{id}/profile-fields/{field}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/PersonProfileFieldKey'
+    post:
+      tags: [People]
+      operationId: restorePersonProfileField
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put back the value a newer statement replaced.
+      description: |
+        Undo for one enriched field. A signature or a business card stating something newer
+        replaces what the record holds and keeps the replaced value in `superseded_value`;
+        this puts that value back and clears the buffer.
+
+        Human-only, and deliberately: the machine is what wrote the replacement, so an agent
+        undoing it would be one authority arguing with itself.
+
+        **Refused when the record has moved on.** The restore applies only while the field
+        still holds exactly what was written — the same "is this still ours" test the
+        provider-claim revert makes. A field somebody has since corrected by hand, or that a
+        later statement has replaced again, answers 409 rather than reaching past their
+        answer to an older one.
+
+        Answers 404 when the field has nothing to restore, which is the honest reply to an
+        undo of something that never happened.
+      responses:
+        '204':
+          description: |
+            Restored. No body: the field's own read overlays a human's verdict onto the
+            stored value, and answering with the row this write just made would serve the
+            value from under that overlay. Re-read `GET /people/{id}/profile-fields`.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
 
   /people/{id}/strength:
     parameters:
@@ -17570,6 +17610,14 @@ components:
         stays — and the response's `scope` says so. The cache fingerprint carries the
         project, so a scoped and an unscoped brief never serve each other. Must be a live
         project the caller can read; an invisible or archived one is `404`.
+    PersonProfileFieldKey:
+      name: field
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [title, phone, role, linkedin, org_name, address, website]
+      description: The profile field's key — the same closed vocabulary `PersonProfileField.field` carries.
     ProfileFieldKey:
       name: field
       in: path
