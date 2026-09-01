@@ -59,6 +59,21 @@ type issueGrantInput struct {
 // may learn.
 var errConsentingUserInactive = errors.New("oauth: the consenting user is not active")
 
+// lockClientRegistration is the FIRST lock issueGrant takes — ahead of
+// app_user (requireLiveConsentingUser) and oauth_grant — because "one row per
+// client REGISTRATION" is a fact about the client_id, and only a lock on that
+// row serializes two consents racing for the same registration. Without it,
+// two transactions can each read supersedePriorGrants' "no active grant yet"
+// snapshot before either commits its INSERT, and both succeed: two live
+// grants for one registration, the exact state the invariant forbids. Reading
+// no columns is deliberate, matching lockGrant (oauth_grantrevocation.go):
+// the row's own state is read authoritatively after the lock, under it.
+func lockClientRegistration(ctx context.Context, tx pgx.Tx, clientID string) error {
+	var locked string
+	return tx.QueryRow(ctx,
+		`SELECT client_id FROM oauth_client WHERE client_id = $1 FOR UPDATE`, clientID).Scan(&locked)
+}
+
 // requireLiveConsentingUser refuses to build a connection on authority its
 // human no longer has, and takes app_user FOR UPDATE to do it.
 //
@@ -104,6 +119,9 @@ func requireLiveConsentingUser(ctx context.Context, tx pgx.Tx, in issueGrantInpu
 // stored. It is empty when the grant does not allow refresh — then there is
 // no credential to hand back.
 func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids.UUID, refresh string, err error) {
+	if err := lockClientRegistration(ctx, tx, in.ClientID); err != nil {
+		return ids.Nil, "", err
+	}
 	if err := requireLiveConsentingUser(ctx, tx, in); err != nil {
 		return ids.Nil, "", err
 	}
@@ -198,15 +216,19 @@ const supersededRevokeReason = "superseded by a later consent from the same clie
 // header's invariant is one row per client REGISTRATION, and a client_id
 // re-authorized by a second human (a shared machine, a handed-off install)
 // is still one registration changing hands, not two connections coexisting.
-// The lock story needs nothing new — issueGrant already holds app_user FOR
-// UPDATE for the CONSENTING human (requireLiveConsentingUser), and
-// revokeGrantTx takes the grant lock first regardless of whose grant it is,
-// so entering through it preserves the cascade's existing lock order without
-// needing the prior human's own app_user row.
+// issueGrant already holds oauth_client FOR UPDATE (lockClientRegistration)
+// before calling here, which is what makes "no active grant yet" a fact
+// rather than a snapshot two racing consents could both read; the query below
+// orders by id so a registration with more than one prior grant releases its
+// locks in a fixed sequence. revokeGrantTx takes the grant lock first
+// regardless of whose grant it is, so entering through it preserves the
+// cascade's existing lock order without needing the prior human's own
+// app_user row.
 func supersedePriorGrants(ctx context.Context, tx pgx.Tx, clientID string) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM oauth_grant
-		WHERE client_id = $1 AND revoked_at IS NULL`, clientID)
+		WHERE client_id = $1 AND revoked_at IS NULL
+		ORDER BY id`, clientID)
 	if err != nil {
 		return err
 	}

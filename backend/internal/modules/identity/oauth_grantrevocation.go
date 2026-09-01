@@ -30,7 +30,12 @@ import (
 // Postgres aborting one side with a 500 — is not serialization. A new path
 // that takes a refresh row before its grant re-opens exactly that hole.
 //
-// app_user sits AHEAD of all three: requireLiveConsentingUser locks it before
+// oauth_client sits AHEAD of everything: lockClientRegistration
+// (oauth_grant.go) takes it before app_user, because "one row per client
+// REGISTRATION" is a fact about the client_id and only that lock serializes
+// two consents racing for the same registration.
+//
+// app_user comes next: requireLiveConsentingUser locks it before
 // the grant insert below, and DeactivateUser locks it before revoking the
 // human's own passports (users.go). A consent itself takes no passport lock at
 // all — the human's ticks are not a row that can go stale between render and
