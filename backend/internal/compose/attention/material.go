@@ -71,3 +71,27 @@ func materialBarOf(day crmcontracts.Attention, money dayMoney) materialBar {
 	// day it was the biggest thing the rep had.
 	return materialBar{minor: amounts[(len(amounts)-1)/2], known: true, currency: money.base}
 }
+
+// stateOn writes the bar onto the summary the header draws.
+//
+// Why a deal ranked where it did, in the figure the ranking actually used. The
+// contract has promised the threshold since the queue shipped and the
+// projection never sent it, so every "material" and "below material" reason on
+// the page was a verdict with its threshold withheld: a reader could see that a
+// deal had been called big, and had no way to ask compared to what.
+//
+// base_currency travels only when the amounts genuinely went through one
+// currency. Without the FX seam the bar is a median of raw amount_minor values
+// in no one currency, and naming one would assert a conversion that did not
+// happen — worse than a number the client formats cautiously.
+func (b materialBar) stateOn(summary *crmcontracts.WorklistSummary) {
+	if !b.known {
+		return
+	}
+	minor := b.minor
+	summary.MaterialThresholdMinor = &minor
+	if b.currency != "" {
+		currency := b.currency
+		summary.BaseCurrency = &currency
+	}
+}

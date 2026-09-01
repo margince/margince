@@ -104,14 +104,10 @@ type Service struct {
 	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
 	// carried only a deal id travels without the deal's figures.
 	dealFacts DealFacts
-	// fx is OPTIONAL in the same way: nil means amounts stay in raw minor
-	// units and the ordering makes the weaker cross-currency promise the zero
-	// dayMoney documents. Production wiring always binds it.
-	fx BaseMoney
-	// money is one read's conversion answer, set per read on the request's own
-	// service copy (the taskScope pattern): one Service is shared by every
-	// request, and a day's rates written to the shared one would price another
-	// reader's page at another moment's reading.
+	// fx is OPTIONAL in the same way, and money is one read's answer from it,
+	// written per read onto the request's own copy the way taskScope is.
+	// basemoney.go states what each means and why the copy matters.
+	fx    BaseMoney
 	money dayMoney
 	// machine answers whether an address is a sending system, for the group a
 	// routine contact decision joins. Nil means every address reads as a

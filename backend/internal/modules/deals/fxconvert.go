@@ -134,7 +134,14 @@ type PricedAmount struct {
 // company page's open pipeline — spelled once beside the engine it drives, so
 // the four decisions inside it (which rate, what a missing one means, what an
 // unrepresentable product means, and the two minor-unit scales) cannot come
-// apart between callers. It was two copies before, agreeing by inspection.
+// apart between callers. It was two copies before, agreeing by inspection, and
+// they stopped agreeing on the fourth.
+//
+// Held by: TestOnlyOnePlaceMultipliesAnAmountByAStoredRate
+// (backend/gates/fxconversioncallers_test.go), which fails when a second Go
+// site multiplies an amount by a stored rate itself. The SQL spellings are
+// outside what that test can read; the gate's own comment says which tests
+// hold those.
 //
 // A caller wanting the OTHER missing-rate policy — refuse the read rather than
 // report a partial figure, which is what the hierarchy rollup owes its readers

@@ -101,16 +101,11 @@ func (s *Service) Worklist(
 	if err := reader.nameTheMoney(ctx, &day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	// The amounts the ordering is about to compare, put into one currency
-	// BEFORE anything reads them. A failed conversion fails the read: a page
-	// ranked on raw cross-currency numbers is the defect this seam exists to
-	// end, not a degraded mode to fall back into. Set on the reader — this
-	// request's own copy — never on the shared service.
-	money, err := reader.priceTheDay(ctx, day)
-	if err != nil {
+	// The amounts the ordering compares, put into one currency BEFORE anything
+	// reads them; basemoney.go states the whole rule.
+	if err := reader.priceDayOnto(ctx, day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	reader.money = money
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
@@ -433,26 +428,7 @@ func keepCategory(rows []ranked, want crmcontracts.WorklistItemCategory) []ranke
 // (backend/internal/compose/attention/worklist_test.go).
 func summarize(items []crmcontracts.WorklistItem, bar materialBar) crmcontracts.WorklistSummary {
 	summary := crmcontracts.WorklistSummary{Total: len(items)}
-	// Why a deal ranked where it did, in the figure the ranking actually used.
-	// The contract has promised this since the queue shipped and the projection
-	// never sent it, so every "material" and "below material" reason on the page
-	// was a verdict with its threshold withheld: a reader could see that a deal
-	// had been called big, and had no way to ask compared to what.
-	//
-	// base_currency travels only when the bar's amounts genuinely went through
-	// one currency — the bound FX seam converts them all, and the bar carries
-	// the currency it is stated in. In an assembly without the seam the bar is
-	// a median of raw amount_minor values in no one currency, and naming one
-	// would assert a conversion that did not happen — worse than sending a
-	// number the client formats cautiously.
-	if bar.known {
-		minor := bar.minor
-		summary.MaterialThresholdMinor = &minor
-		if bar.currency != "" {
-			currency := bar.currency
-			summary.BaseCurrency = &currency
-		}
-	}
+	bar.stateOn(&summary)
 	for _, item := range items {
 		switch {
 		case item.Level <= levelPromise:

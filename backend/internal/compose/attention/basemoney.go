@@ -79,6 +79,27 @@ func (m dayMoney) value(minor int64, deal *crmcontracts.AttentionDealFacts) *crm
 	return &crmcontracts.WorklistValue{Kind: valueMoney, Minor: &value, Currency: &currency}
 }
 
+// priceDayOnto prices the day and keeps the answer on THIS service value.
+//
+// The caller is always a per-request copy (forReader, forOwner and their
+// siblings in feed.go), never the shared Service: one Service serves every
+// request, and a day's rates written to it would price another reader's page
+// at another moment's reading. Writing the field here rather than at the call
+// site is what keeps that pairing in one place.
+//
+// A failed conversion fails the READ. A page ranked on raw cross-currency
+// numbers is the defect this seam exists to end, not a degraded mode to fall
+// back into — the unconverted path below is for an assembly with no seam
+// bound at all, which production never is.
+func (s *Service) priceDayOnto(ctx context.Context, day crmcontracts.Attention) error {
+	money, err := s.priceTheDay(ctx, day)
+	if err != nil {
+		return err
+	}
+	s.money = money
+	return nil
+}
+
 // priceTheDay converts the amounts the ordering is about to compare.
 //
 // Only the at-risk lane feeds the expected-revenue tie-break and the material
@@ -114,4 +135,19 @@ func (s *Service) priceTheDay(ctx context.Context, day crmcontracts.Attention) (
 		}
 	}
 	return money, nil
+}
+
+// WithBaseMoney binds the conversion that puts the day's amounts into the
+// installation's base currency before the ordering compares them.
+//
+// An option for the reason WithWaiting is one, and it lives HERE rather than
+// beside the other options because everything it binds is in this file: the
+// seam, the per-read answer, and the pass that fills it. A reader asking how
+// the queue gets its money finds one file rather than two.
+//
+// Unbound, amounts stay in raw minor units — comparable only while every deal
+// shares one currency, which is why production wiring always binds this.
+func (s *Service) WithBaseMoney(fx BaseMoney) *Service {
+	s.fx = fx
+	return s
 }
