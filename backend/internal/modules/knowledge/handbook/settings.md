@@ -49,12 +49,13 @@ version exists and "Rebuild Voice DNA" after.
 Where you mint and revoke **passports** — the credentials that let an AI agent
 work as you.
 
-Every member gets this page, ungated. A passport is lent by a person, so making
-it administrator-only would mean only administrators could lend one.
+Every member gets this page, ungated. A passport is minted by a person for
+their own use, so making it administrator-only would mean only administrators
+could mint one.
 
 You also see the governed tool list and connected agents here. Disconnecting an
 agent ends the whole connection, not one credential: "the agent loses access on
-its next call and cannot renew. Reconnecting means lending a passport again."
+its next call and cannot renew. Reconnecting means approving access again."
 
 See [What the AI does](what-the-ai-does.md#passports-how-an-agent-is-connected).
 

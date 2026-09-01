@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CalendarDays,
   CheckSquare,
+  FileText,
   Link as LinkIcon,
   Mail,
   MapPin,
@@ -12,6 +13,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -26,6 +28,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { ConsentSection } from "./consent";
+import { LogActivityAction } from "./logactivity";
 import {
   hasCommercial,
   hasCommitments,
@@ -313,6 +316,9 @@ export function PersonPageV2({
           navigate({ screen: "deals", id: destination.entity_id });
         }
         return;
+      case "activity_log":
+        setDrawer("activity_log");
+        return;
       default:
         // `task` has no surface on this page yet. Doing nothing is the honest
         // outcome; inventing a navigation would take the reader somewhere they
@@ -337,6 +343,7 @@ export function PersonPageV2({
               personId={id}
               onWrite={() => openComposer("")}
               onResearch={() => setDrawer("research")}
+              onLogActivity={() => setDrawer("activity_log")}
             />
             <PageAsideToggle />
           </>
@@ -452,6 +459,16 @@ export function PersonPageV2({
           onClose={() => setDrawer(null)}
           projects={liveProjects(view.data.projects)}
         />
+        {/* Mounted only while open, so the form starts fresh each time and the
+            day it offers is today's, not the day the drawer was first built. */}
+        {drawer === "activity_log" && (
+          <LogActivityAction
+            entityType="person"
+            entityId={id}
+            openOnMount
+            onClose={() => setDrawer(null)}
+          />
+        )}
       </RecordView>
     </div>
   );
@@ -468,6 +485,7 @@ export function PersonPageV2({
 type Drawer =
   | "composer"
   | "research"
+  | "activity_log"
   | { kind: "meeting"; activityId: string }
   | null;
 
@@ -621,6 +639,7 @@ function PersonActions({
   personId,
   onWrite,
   onResearch,
+  onLogActivity,
 }: Readonly<{
   view: Person360;
   consentAllows: boolean;
@@ -628,8 +647,14 @@ function PersonActions({
   personId: string;
   onWrite: () => void;
   onResearch: () => void;
+  onLogActivity: () => void;
 }>): ReactNode {
   const t = useT();
+  // useCanWrite, not useCan: the form issues a POST, and a read seat is
+  // refused before RBAC is consulted. The button stays on the page and says
+  // why it will not press, so a reader can tell "not mine to do" from "this
+  // build has no such button".
+  const canLog = useCanWrite("activity", "create");
   // The transports the composer would offer, read here so the button NAMES
   // what pressing it does. The same reachability the drawer resolves: a label
   // computed from anything else is a promise the composer then breaks.
@@ -673,6 +698,16 @@ function PersonActions({
       <Button onClick={() => navigate({ screen: "worklist" })}>
         <CheckSquare size={15} aria-hidden="true" />{" "}
         {t("person.action.addTask")}
+      </Button>
+      {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
+          This is the standing way in; the moment card offers the same form
+          when its rung decides logging is the thing to do next. */}
+      <Button
+        disabled={!canLog}
+        reason={canLog ? undefined : t("person.action.logRefused")}
+        onClick={onLogActivity}
+      >
+        <FileText size={15} aria-hidden="true" /> {t("log.title")}
       </Button>
       {/* A real menu. This was a button labelled "More actions" that navigated
           to the timeline tab — the same place the Call button went — so the one

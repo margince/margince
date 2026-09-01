@@ -146,7 +146,6 @@ internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
 internal/compose/installation.go#func seedRoutingBinding
 internal/compose/integration/agentaccess/oauth_integration_test.go#method oauthEnv.postToken
-internal/compose/integration/agentaccess/oauth_lend_integration_test.go#method oauthEnv.approve
 internal/compose/integration/apptest/appdsn.go#func AppDSN
 internal/compose/integration/auditlog_integration_test.go#func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience
 internal/compose/integration/channels/telegram_fixture_integration_test.go#method fakeTelegramAPI.sentMessages
@@ -444,13 +443,10 @@ internal/modules/identity/installationsettings.go#method InstallationSettingsSto
 internal/modules/identity/internal/policy/composable_test.go#func reset
 internal/modules/identity/nonproduction.go#method Handlers.WithDataResetAvailable
 internal/modules/identity/oauth_audience.go#func audienceMatches
-internal/modules/identity/oauth_consent.go#const lendablePassportPredicate
 internal/modules/identity/oauth_consentnonce.go#func setConsentCookie
 internal/modules/identity/oauth_consentscreen.go#func redirectToConsentScreen
 internal/modules/identity/oauth_discovery.go#func requestIssuer
 internal/modules/identity/oauth_grant.go#func oauthPassportLabel
-internal/modules/identity/oauth_lend_lock_integration_test.go#func lockWaitBoundedService
-internal/modules/identity/oauth_lockorder_integration_test.go#method revocationEnv.connectOAuthLent
 internal/modules/identity/oauth_redirect.go#var responseParams
 internal/modules/identity/oauth_refresh.go#var errRefreshRejected
 internal/modules/identity/oauth_token.go#func writeTokenResponse

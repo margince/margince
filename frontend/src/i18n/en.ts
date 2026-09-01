@@ -2967,12 +2967,12 @@ export const en = {
   "ai.tierAutoExecute": "Read & draft run instantly.",
   "ai.tierAutoExecuteDetail":
     "Lookups, summaries, drafts — visible, reversible, logged.",
-  "ai.tierConfirmationRequired": "Write & send wait for you.",
+  "ai.tierConfirmationRequired": "Sensitive changes wait for you.",
   "ai.tierConfirmationRequiredDetail":
-    "External sends and record changes stage into the inbox first.",
+    "New custom fields, webhook subscriptions and paid enrichment stage into the inbox first. Most record changes and sends run instantly, within the scopes you granted.",
   "ai.connect": "Connect an agent",
   "ai.connectDetail":
-    "Mint a passport in Settings and point any MCP-capable agent at your organization. It reads only what you can see.",
+    "Point any MCP-capable agent at your organization and approve the access it asks for. There is nothing to set up first.",
   "ai.paletteHint": "Ask from anywhere with",
 
   "settings.accountCard": "Your account",
@@ -3019,7 +3019,7 @@ export const en = {
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
   "settings.passportsLendHint":
-    "These are yours to lend. Connect an MCP client and it asks which one to hand over — the connection then carries exactly that passport's scopes.",
+    "Credentials you have minted for scripts and integrations. Connecting an MCP client does not use these — it creates its own connection, listed below.",
   "settings.passportLabel": "Agent name",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
@@ -3123,10 +3123,9 @@ export const en = {
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":
-    "MCP clients holding their own credential, derived from a passport you lent",
+    "MCP clients holding their own credential, scoped to what you ticked when you authorized them",
   "agents.noneConnected": "No agent is connected yet.",
   "agents.connectedOn": "connected {date}",
-  "agents.lentFrom": "lent from “{label}”",
   "agents.disconnect": "Disconnect",
   "agents.disconnectOpen": "Disconnect",
   "agents.disconnectNamed": "Disconnect {client}",
@@ -3138,10 +3137,10 @@ export const en = {
   "agents.revokeGrantOpen": "End connection",
   "agents.revokeGrantNamed": "End the connection to {client}",
   "agents.disconnectConfirm":
-    "This ends the whole connection, not just one credential: the agent loses access on its next call and cannot renew. Reconnecting means lending a passport again.",
+    "This ends the whole connection, not just one credential: the agent loses access on its next call and cannot renew. Reconnecting means approving access again.",
   "agents.connectHow": "Connect an agent",
   "agents.connectSteps":
-    "Mint a passport above, then run one of these. The client registers itself and brings you back here to choose which passport to lend.",
+    "Run one of these. The client registers itself and brings you back here to choose the access it can have.",
   "agents.connectAntigravityPath":
     "Antigravity has no add command — put that block in ~/.gemini/config/mcp_config.json.",
   "agents.connectorOff": "The MCP connector is off for this installation.",
@@ -6461,27 +6460,24 @@ export const en = {
   "embedreindex.impact.queued": "would be queued",
 
   "consent.title": "Authorize access",
-  "consent.asks": "{client} wants to act in Margince as you.",
+  "consent.asks":
+    "{client} will be able to act in Margince as you, with the access checked below.",
   "consent.redirectsTo": "Margince will send the authorization back to {host}.",
   "consent.redirectsToLoopback":
     "That is an address on this computer, and this connection cannot prove which program is listening on it.",
-  "consent.lend": "Lend it one of your agent passports",
-  "consent.grantedNote":
-    "This connection gets exactly the scopes shown — the ones this passport carries.",
+  "consent.scopeNote.read": "sees what you can see",
+  "consent.scopeNote.draft": "prepares messages for your review",
+  "consent.scopeNote.write": "creates, edits and archives records as you",
+  "consent.scopeNote.send": "sends messages as you, without asking first",
+  "consent.scopeNote.enrich":
+    "spends enrichment credits — each purchase still asks you first",
+  "consent.ceiling":
+    "Never more than your own permissions. You can disconnect any time in Settings → Agents.",
+  "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It will stay connected without asking again, renewing access until you revoke it.",
   "consent.approve": "Authorize",
   "consent.deny": "Deny access",
-  "consent.emptyTitle": "You need an agent passport first",
-  "consent.emptyBody":
-    "A passport is the authority you lend an agent — it never exceeds your own permissions, and you can revoke it at any time. Mint one and we'll bring you back here to finish connecting {client}.",
-  "consent.emptyCta": "Mint a passport",
-  "consent.expires": "expires {date}",
-  "consent.resumeTitle": "Finish connecting {client}",
-  "consent.resumeBody":
-    "You came here to mint a passport for {client}. Once you have one, pick up where you left off.",
-  "consent.resume": "Continue connecting",
-  "consent.resumeDismiss": "Cancel this connection",
   "consent.reentering": "Reconnecting…",
   "consent.backToApp": "Back to Margince",
   "consent.staleTitle": "This request has expired",
@@ -6489,13 +6485,9 @@ export const en = {
   // client's name is not available to name here.
   "consent.staleBody":
     "The connection request is no longer valid. Go back to the app you were connecting and start again — reloading this page will not help.",
-  "consent.unlendableTitle": "That passport can no longer be lent",
-  "consent.unlendableBody":
-    "The passport you chose for {client} was revoked, expired, or is already bound to another connection. Choose a different one below.",
   "consent.invalidTitle": "This connection request could not be completed",
   "consent.invalidBody":
     "This installation will not authorize the request as it stands — the app may no longer be registered here. Go back to the app you were connecting and start again.",
-  "consent.unnamedPassport": "Unnamed passport ({id})",
   "person.thin.title": "What we know so far",
   "person.thin.known":
     "We have {what} for {name}, but nobody here has a recorded exchange with them yet.",
@@ -6789,6 +6781,8 @@ export const en = {
   "person.action.meetings": "See meetings",
   "person.action.addTask": "Add task",
   "person.action.research": "Research",
+  "person.action.logRefused":
+    "You do not have permission to log activities on this record.",
 
   "person.strip.lastInbound": "Last inbound",
   "person.strip.lastOutbound": "Last outbound",

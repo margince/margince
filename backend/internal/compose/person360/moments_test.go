@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -234,6 +235,7 @@ var dispatchedByThePersonPage = map[crmcontracts.PersonMomentDestinationSurface]
 	crmcontracts.PersonMomentDestinationSurfaceResearch:     true,
 	crmcontracts.PersonMomentDestinationSurfaceMeetingBrief: true,
 	crmcontracts.PersonMomentDestinationSurfaceRecord:       true,
+	crmcontracts.PersonMomentDestinationSurfaceActivityLog:  true,
 }
 
 // assertActionsAreHonest holds the rule for one moment: available means
@@ -379,5 +381,34 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 	}
 	if !strings.Contains(partial.WhyNow, "not yours to see") {
 		t.Errorf("and it must say WHY the picture is partial, got %q", partial.WhyNow)
+	}
+}
+
+// The ladder offers "log an interaction" from the page alone; whether the
+// reader may actually log one is the caller's grant, and the store refuses a
+// save without it. So the action a reader cannot complete is handed to them
+// blocked, with the reason, rather than as a live button that fails on save.
+func TestLogActivityIsWithheldFromACallerWithoutTheCreateGrant(t *testing.T) {
+	quiet := nothingNeededMoment(time.Now(), &crmcontracts.Person360{})
+	if quiet.RecommendedAction.Kind != crmcontracts.PersonMomentActionKindLogActivity {
+		t.Fatalf("the quiet moment's action is %q, want log_activity — this test needs that rung", quiet.RecommendedAction.Kind)
+	}
+
+	reader := quiet
+	withholdLogActivity(as(map[string]principal.ObjectGrant{"person": {Read: true}}), &reader)
+	if reader.RecommendedAction.State != crmcontracts.PersonMomentActionStateBlocked {
+		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
+	}
+	if reader.RecommendedAction.BlockedReason == nil || *reader.RecommendedAction.BlockedReason == "" {
+		t.Error("a withheld action carries no reason, so the reader is refused without being told why")
+	}
+	if reader.RecommendedAction.Destination != nil {
+		t.Error("a withheld action still names a destination, which the client would treat as reachable")
+	}
+
+	writer := quiet
+	withholdLogActivity(as(map[string]principal.ObjectGrant{"person": {Read: true}, "activity": {Create: true}}), &writer)
+	if writer.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
+		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
 	}
 }
