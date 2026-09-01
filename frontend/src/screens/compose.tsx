@@ -2530,11 +2530,24 @@ export function ComposeModal({
   const scheduling = !isChannelReply && sendAt !== "";
   const scheduled = momentOf(sendAt);
   // The person this mail is TO, however the composer came to know them: a
-  // channel reply is handed one, a person page names it as the record the
-  // composer was opened from, and a company draft picks a recipient in the
-  // account context. A deal timeline names none, and warns about nothing.
-  const recipientPerson =
-    personId ?? (entityType === "person" ? entityId : undefined);
+  // person page names it as the record the composer was opened from, and a
+  // company draft PICKS one in the account context — which is the flow with the
+  // most reason to warn, since the rep is choosing between the account's
+  // contacts rather than answering somebody who already wrote. A deal timeline
+  // names none, and warns about nothing.
+  //
+  // The chosen recipient wins where there is one: on an account draft the
+  // record the composer was opened from is the organization, and the person is
+  // whoever the reader just picked.
+  //
+  // Nothing at all for a channel reply. MailOnlyFields is not rendered for one
+  // — its recipient is resolved server-side and there are no address fields to
+  // warn under — so asking would spend a composite read on an answer with
+  // nowhere to go.
+  const recipientPerson = isChannelReply
+    ? undefined
+    : ((account.recipientId || undefined) ??
+      (entityType === "person" ? entityId : undefined));
   const deadRecipients = useDeadRecipients(recipientPerson, [...to, ...cc]);
   return (
     <>
@@ -2752,7 +2765,17 @@ function useDeadRecipients(
   // Addresses compare case-insensitively — a rep who types Anna@… must be
   // warned about anna@…, and the ledger stores what the provider reported.
   const marked = new Set(dead.map((address) => address.toLowerCase()));
-  return recipients.filter((address) => marked.has(address.toLowerCase()));
+  // ONE MENTION PER ADDRESS. To and Cc are asked about together, and a rep who
+  // has the same address in both would otherwise read it named twice in a
+  // sentence about one thing being wrong with it.
+  const named = new Map<string, string>();
+  for (const address of recipients) {
+    const key = address.toLowerCase();
+    if (marked.has(key) && !named.has(key)) {
+      named.set(key, address);
+    }
+  }
+  return [...named.values()];
 }
 
 // A channel reply can only land on a live, unblocked identity, and the

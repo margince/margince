@@ -1475,7 +1475,7 @@ export const vi = {
   "timeline.kind.change": "Bản ghi",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
   "compose.deadRecipients":
-    "Thư gửi đến {addresses} đang bị trả lại — lần gửi gần nhất bị từ chối và từ đó không có thư nào đến. Vẫn gửi, hoặc dùng địa chỉ khác.",
+    "Thư gửi đến {addresses} đang bị trả lại. Lần gửi gần nhất đến đó bị từ chối, và từ đó chưa có lần gửi nào thành công. Vẫn gửi, hoặc dùng địa chỉ khác.",
   "compose.threadShare": "Chia sẻ chuỗi",
   "compose.threadKeepPrivate": "Giữ riêng tư",
   "compose.threadStillHeld":

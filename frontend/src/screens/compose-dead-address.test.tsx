@@ -153,13 +153,17 @@ describe("ComposeModal dead recipients", () => {
     ).toBeTruthy();
   });
 
-  it("says nothing about an address the ledger does not mark", async () => {
+  // The live address is asserted absent from a warning that IS on screen, not
+  // from a render that may simply not have finished. A `waitFor` over an
+  // absence passes on the first tick, before the 360 has answered — so the
+  // dead sibling is what proves this reader got as far as knowing.
+  it("names only the address the ledger marks, not the one beside it", async () => {
     stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse({
           full_name: "Anna Weiss",
           first_name: "Anna",
-          address: "anna@live.example",
+          address: "anna@dead.example",
         }),
       "GET /people/p-1/360": () =>
         jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
@@ -174,14 +178,18 @@ describe("ComposeModal dead recipients", () => {
       />,
     );
 
-    expect(await screen.findByText("anna@live.example")).toBeTruthy();
-    await waitFor(() => {
-      expect(screen.queryByText(/is bouncing/)).toBeNull();
-    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText("To"));
+    await user.paste("anna@live.example");
+    await user.keyboard("{Enter}");
+
+    const warning = await screen.findByText(/is bouncing/);
+    expect(warning.textContent).toContain("anna@dead.example");
+    expect(warning.textContent).not.toContain("anna@live.example");
   });
 
   it("says nothing when the caller may not read the send ledger", async () => {
-    stubRoutes({
+    const seen = stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse(THREAD_RECIPIENT),
       // Omitted, not empty: the two are different facts, and inventing a
@@ -200,10 +208,14 @@ describe("ComposeModal dead recipients", () => {
       />,
     );
 
+    // The 360 has ANSWERED before this is asserted — the section is omitted,
+    // not pending — so the absence is a decision rather than a render that had
+    // not caught up.
     expect(await screen.findByText("anna@dead.example")).toBeTruthy();
     await waitFor(() => {
-      expect(screen.queryByText(/is bouncing/)).toBeNull();
+      expect(seen.filter((key) => key.endsWith("/360"))).toHaveLength(1);
     });
+    expect(screen.queryByText(/is bouncing/)).toBeNull();
   });
 
   it("asks for no person page when the composer knows no person", async () => {
@@ -223,9 +235,125 @@ describe("ComposeModal dead recipients", () => {
 
     // A deal timeline names no single person, so there is nobody to ask about
     // — and asking anyway would spend a composite read on every open.
+    //
+    // Asserted once the composer has SETTLED: the recipient it fetched is on
+    // screen, so every query this render was going to start has started. An
+    // absence checked before that would pass on a request merely not made yet.
     expect(await screen.findByText("anna@dead.example")).toBeTruthy();
     await waitFor(() => {
-      expect(seen.some((key) => key.includes("/360"))).toBe(false);
+      expect(seen).toContain("GET /activities/act-1/reply-recipient");
     });
+    expect(seen.some((key) => key.includes("/360"))).toBe(false);
+  });
+
+  // ONE MENTION. To and Cc are asked about together, and a rep who has the same
+  // address in both would otherwise read it named twice in a sentence about one
+  // thing being wrong with it.
+  it("names an address in both To and Cc once", async () => {
+    stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+      "GET /people/p-1/360": () =>
+        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText("Cc"));
+    // A different case as well, since that is how the same address arrives
+    // twice without looking like it.
+    await user.paste("Anna@Dead.Example");
+    await user.keyboard("{Enter}");
+
+    const warning = await screen.findByText(/is bouncing/);
+    const mentions = warning.textContent
+      ?.toLowerCase()
+      .split("anna@dead.example").length;
+    if (mentions !== 2) {
+      throw new Error(
+        `the warning names the address ${(mentions ?? 1) - 1} times, want once: ${warning.textContent}`,
+      );
+    }
+  });
+
+  // THE ACCOUNT FLOW, which is the one with the most reason to warn: the rep is
+  // choosing between an account's contacts rather than answering somebody who
+  // already wrote, so the composer learns the person from the picker and not
+  // from the record it was opened on.
+  it("warns for the contact picked in an account draft", async () => {
+    stubRoutes({
+      "GET /organizations/org-1/360": () =>
+        jsonResponse({
+          state: "ready",
+          as_of: "2026-01-01T00:00:00Z",
+          organization: { id: "org-1", display_name: "Demo GmbH" },
+          people: { data: [{ person_id: "p-1", full_name: "Anna Weiss" }] },
+          deals: { data: [] },
+          sections_omitted: [],
+        }),
+      "GET /people/p-1/360": () =>
+        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+    });
+    render(
+      <ComposeModal
+        entityType="organization"
+        entityId="org-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    const user = userEvent.setup();
+    // Pick the contact, which is what tells this composer whose addresses to
+    // ask about — before that it knows an organization and nobody.
+    await user.click(await screen.findByRole("combobox", { name: "Draft to" }));
+    await user.click(await screen.findByRole("option", { name: "Anna Weiss" }));
+    await user.click(await screen.findByLabelText("To"));
+    await user.paste("anna@dead.example");
+    await user.keyboard("{Enter}");
+
+    expect(
+      await screen.findByText(/anna@dead\.example is bouncing/),
+    ).toBeTruthy();
+  });
+
+  // A channel reply renders no address fields at all — its recipient is
+  // resolved server-side — so the warning has nowhere to go and the composite
+  // read would buy nothing.
+  it("asks for no person page for a channel reply, even knowing the person", async () => {
+    const seen = stubRoutes({
+      "GET /activities/act-1/reply-recipient": () =>
+        jsonResponse(THREAD_RECIPIENT),
+      "GET /people/p-1/360": () =>
+        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        personId="p-1"
+        kind="message"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Waited for the CHANNEL-REPLY's own read to land, not merely for the Send
+    // control: the confirm dialog renders that while the reply is still
+    // settling, so an absence asserted on it would pass before a re-enabled 360
+    // query had reached fetch at all.
+    await waitFor(() => {
+      expect(seen).toContain("GET /activities/act-1");
+    });
+    expect(seen.some((key) => key.includes("/360"))).toBe(false);
   });
 });
