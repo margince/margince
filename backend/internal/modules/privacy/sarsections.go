@@ -41,14 +41,26 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		{&pkg.Emails, `SELECT email, email_type, is_primary, archived_at FROM person_email WHERE person_id = $1`, nil},
 		// The number this row replaced is exported as the NUMBER, not as the
 		// superseded_phone_id the column holds: a bare row id tells the subject
-		// nothing, and the point of the export is what is known about them. The
-		// join is left, because the replaced row is deleted outright by erasure
-		// while this one survives archived, and a subject whose old number has
-		// already gone should still receive the row that replaced it.
+		// nothing, and the point of the export is what is known about them.
+		//
+		// The join is LEFT because the replaced row is deleted outright by
+		// erasure while this one survives archived, and a subject whose old
+		// number has already gone should still receive the row that replaced
+		// it. A plain JOIN would also drop every number that replaced nothing,
+		// which is most of them.
+		//
+		// prev.person_id = p.person_id is the tenant predicate this join cannot
+		// do without. A merge re-homes only LIVE phone rows, so the survivor
+		// can carry a live row still pointing at the merged-away person's
+		// ARCHIVED one — and without this clause the survivor's export hands
+		// out a number belonging to somebody else. The pointer is left
+		// unresolved in that case rather than followed.
 		{&pkg.Phones, `SELECT p.phone, p.phone_type, p.archived_at, p.observed_at,
+		          p.source, p.captured_by,
 		          prev.phone AS replaced_phone, prev.observed_at AS replaced_observed_at
 		   FROM person_phone p
-		   LEFT JOIN person_phone prev ON prev.id = p.superseded_phone_id
+		   LEFT JOIN person_phone prev
+		          ON prev.id = p.superseded_phone_id AND prev.person_id = p.person_id
 		  WHERE p.person_id = $1`, nil},
 		{&pkg.ChannelIdentities, `SELECT provider, channel_user_id, username, blocked_at, source, created_at, archived_at
 		   FROM person_channel_identity WHERE person_id = $1`, nil},

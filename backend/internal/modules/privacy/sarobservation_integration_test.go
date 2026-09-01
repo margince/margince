@@ -192,6 +192,69 @@ func TestAPhoneThatReplacedNothingStillReachesTheExport(t *testing.T) {
 	}
 }
 
+// TestTheExportNeverNamesAStrangersReplacedNumber is the merge case.
+//
+// A merge re-homes only LIVE phone rows, so the survivor ends up carrying a
+// live row that still points at the merged-away person's ARCHIVED one. The
+// pointer therefore crosses subjects in ordinary use, and an export that
+// followed it would hand this subject a number belonging to somebody else —
+// the single worst thing a privacy export can do.
+func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
+	e := setupSARIdentifiers(t)
+
+	// A second person, holding the number, whose live row is then re-homed to
+	// our subject exactly as relinkDemotingPrimary does it: the archived
+	// predecessor stays behind.
+	stranger := ids.New[ids.PersonKind]()
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO person (id, full_name, source, captured_by)
+		VALUES ($1, 'Merged Away', 'manual', 'user:test')`, stranger); err != nil {
+		t.Fatal(err)
+	}
+	var strangersOld ids.UUID
+	if err := e.owner.QueryRow(e.ctx, `
+		INSERT INTO person_phone (person_id, phone, source, captured_by, observed_at, archived_at)
+		VALUES ($1, $2, 'manual', 'user:test', $3, $4)
+		RETURNING id`,
+		stranger, ident(stranger, replacedPhone), replacedObservedAt, retiredAt).Scan(&strangersOld); err != nil {
+		t.Fatal(err)
+	}
+	// The survivor's live row points at it, which is what the merge leaves.
+	if _, err := e.owner.Exec(e.ctx, `
+		UPDATE person_phone SET superseded_phone_id = $1
+		 WHERE person_id = $2 AND phone = $3`,
+		strangersOld, e.person, ident(e.person, livePhone)); err != nil {
+		t.Fatal(err)
+	}
+
+	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+
+	strangersNumber := ident(stranger, replacedPhone)
+	for _, row := range pkg.Phones {
+		if row["replaced_phone"] == strangersNumber {
+			t.Fatalf("the export named a number held by another person as this subject's "+
+				"replaced number: %v", row)
+		}
+	}
+	// And the row itself still reaches the export: the pointer is left
+	// unresolved, not dropped along with the number that carries it.
+	var live map[string]any
+	for _, row := range pkg.Phones {
+		if row["phone"] == ident(e.person, livePhone) {
+			live = row
+		}
+	}
+	if live == nil {
+		t.Fatalf("the subject's own live phone vanished with the unresolvable pointer: %v", pkg.Phones)
+	}
+	if got := live["replaced_phone"]; got != nil {
+		t.Errorf("replaced_phone = %v, want nil for a pointer that crosses subjects", got)
+	}
+}
+
 // TestEveryHeldColumnReachesTheExport is the census. It reads the live table
 // definition and fails on a column no section projects.
 //
@@ -233,8 +296,6 @@ func TestEveryHeldColumnReachesTheExport(t *testing.T) {
 				"created_at":          "bookkeeping; observed_at is what the record believes",
 				"updated_at":          "bookkeeping; observed_at is what the record believes",
 				"superseded_phone_id": "exported resolved, as replaced_phone",
-				"source":              "how it was captured, reported by the provenance section",
-				"captured_by":         "who captured it, reported by the provenance section",
 				"is_primary":          "a display choice this installation made, not the subject's data",
 				"position":            "the order the numbers are listed in, a display choice",
 				"version":             "optimistic-locking counter; says how often the row was written, not what it says",
