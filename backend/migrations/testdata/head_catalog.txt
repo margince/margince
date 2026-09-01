@@ -1462,6 +1462,12 @@ public.conversation_claim.version bigint NOT NULL gen=- def=1
 public.conversation_claim_activity_ix CREATE INDEX conversation_claim_activity_ix ON public.conversation_claim USING btree (source_activity_id) WHERE (archived_at IS NULL)
 public.conversation_claim_person_ix CREATE INDEX conversation_claim_person_ix ON public.conversation_claim USING btree (person_id, kind) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
+public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
+public.currency_minor_digits.currency character(3) NOT NULL gen=- def=-
+public.currency_minor_digits.currency_minor_digits_digits_check CHECK (((digits >= 0) AND (digits <= 4)))
+public.currency_minor_digits.currency_minor_digits_pkey PRIMARY KEY (currency)
+public.currency_minor_digits.digits smallint NOT NULL gen=- def=-
+public.currency_minor_digits_pkey CREATE UNIQUE INDEX currency_minor_digits_pkey ON public.currency_minor_digits USING btree (currency)
 public.custom_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.custom_field.archived_at timestamp with time zone gen=- def=-
 public.custom_field.column_name text NOT NULL gen=- def=-
@@ -3258,7 +3264,7 @@ public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.or
         END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
     count(*) FILTER (WHERE (conv.minor_base IS NOT NULL)) AS priced_deal_count
-   FROM (((deal d
+   FROM (((((deal d
      LEFT JOIN LATERAL ( SELECT (setting.value #>> '{}'::text[]) AS code
            FROM setting
           WHERE (setting.key = 'installation.base_currency'::text)) base ON (true))
@@ -3267,10 +3273,12 @@ public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.or
           WHERE (((d.currency)::text IS DISTINCT FROM base.code) AND (r.from_currency = d.currency) AND ((r.to_currency)::text = base.code) AND (r.rate_date <= CURRENT_DATE))
           ORDER BY r.rate_date DESC
          LIMIT 1) live ON (true))
+     LEFT JOIN currency_minor_digits deal_digits ON ((deal_digits.currency = d.currency)))
+     LEFT JOIN currency_minor_digits base_digits ON (((base_digits.currency)::text = base.code)))
      LEFT JOIN LATERAL ( SELECT
                 CASE
                     WHEN ((d.currency)::text = base.code) THEN d.amount_minor
-                    WHEN ((live.rate IS NOT NULL) AND ((round(((d.amount_minor)::numeric * live.rate)) >= ('-9223372036854775808'::bigint)::numeric) AND (round(((d.amount_minor)::numeric * live.rate)) <= ('9223372036854775807'::bigint)::numeric))) THEN (round(((d.amount_minor)::numeric * live.rate)))::bigint
+                    WHEN ((live.rate IS NOT NULL) AND ((round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))) >= ('-9223372036854775808'::bigint)::numeric) AND (round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))) <= ('9223372036854775807'::bigint)::numeric))) THEN (round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))))::bigint
                     ELSE NULL::bigint
                 END AS minor_base) conv ON (true))
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
