@@ -570,3 +570,90 @@ func (o *countingOAuth) AccessToken(ctx context.Context, refresh string) (string
 	o.calls++
 	return o.OAuth.AccessToken(ctx, refresh)
 }
+
+// oneSubscriptionStub answers GET /subscriptions/{id} with the given status and
+// body, and records the raw path the request took.
+func oneSubscriptionStub(t *testing.T, status int, body map[string]any) (*httptest.Server, *string) {
+	t.Helper()
+	var path string
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.EscapedPath()
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+			return
+		}
+		writeJSON(w, body)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv, &path
+}
+
+func TestReadingASubscriptionReportsWhereItDelivers(t *testing.T) {
+	deadline := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	srv, path := oneSubscriptionStub(t, http.StatusOK, map[string]any{
+		"id":                 "sub-1",
+		"notificationUrl":    testNotifyURL,
+		"expirationDateTime": deadline.Format(time.RFC3339),
+	})
+
+	sub, err := NewAPI(srv.Client(), srv.URL).GetSubscription(context.Background(), "at", "sub-1")
+	if err != nil {
+		t.Fatalf("GetSubscription: %v", err)
+	}
+	if sub.ID != "sub-1" || !sub.Expiration.Equal(deadline) {
+		t.Errorf("sub = %+v, want the id and deadline Microsoft reported", sub)
+	}
+	if sub.NotificationURL != testNotifyURL {
+		t.Errorf("NotificationURL = %q, want the endpoint — it is the whole reason for this read",
+			sub.NotificationURL)
+	}
+	if *path != "/subscriptions/sub-1" {
+		t.Errorf("read %q, want the subscription addressed inside its own collection", *path)
+	}
+}
+
+// A SUBSCRIPTION MICROSOFT NO LONGER KNOWS reads as gone, so the renewal above
+// it registers afresh rather than reporting a fault the caller cannot act on.
+func TestReadingAVanishedSubscriptionIsGoneRatherThanAnError(t *testing.T) {
+	srv, _ := oneSubscriptionStub(t, http.StatusNotFound, nil)
+	if _, err := NewAPI(srv.Client(), srv.URL).
+		GetSubscription(context.Background(), "at", "sub-gone"); !errors.Is(err, ErrSubscriptionGone) {
+		t.Fatalf("err = %v, want ErrSubscriptionGone", err)
+	}
+}
+
+// AND A READ CANNOT BE AIMED BY A PROVIDER-SUPPLIED ID. The id arrives as a
+// decoded field of a provider response, and one carrying a path segment would
+// aim this authenticated GET — the user's own delegated token on it — at
+// another resource. Refused rather than escaped: url.PathEscape leaves `..`
+// intact, so a server that decodes %2F before resolving still walks out of the
+// collection.
+func TestAReadCannotBeAimedByAProviderSuppliedID(t *testing.T) {
+	srv, path := oneSubscriptionStub(t, http.StatusOK, map[string]any{"id": "x"})
+	if _, err := NewAPI(srv.Client(), srv.URL).
+		GetSubscription(context.Background(), "at", "../../me/messages"); !errors.Is(err, ErrSubscriptionGone) {
+		t.Fatalf("err = %v, want ErrSubscriptionGone for an id that cannot be addressed", err)
+	}
+	if *path != "" {
+		t.Errorf("the request went out to %q — an id like this must not reach the wire at all", *path)
+	}
+}
+
+// A FAULT READING THE SUBSCRIPTION IS REPORTED, not turned into a fresh
+// registration. Microsoft being unreachable for a moment is not evidence that
+// the subscription is gone, and registering on it would leave the mailbox with
+// a second subscription delivering the same notifications.
+func TestAFaultReadingTheSubscriptionDoesNotRegisterASecondOne(t *testing.T) {
+	api := &fakeAPI{email: owner, getSubErr: ErrUnreachable}
+	c := pinnedConn(api)
+
+	if _, err := c.RenewWatch(context.Background(), authBytes(t), testNotifyURL, "sub-stored"); !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("err = %v, want the fault reported", err)
+	}
+	if api.subCalls != 0 || api.renewCalls != 0 {
+		t.Errorf("ensured %d and renewed %d after a failed read, want neither — a moment's "+
+			"unreachability is not evidence the subscription is gone", api.subCalls, api.renewCalls)
+	}
+}
