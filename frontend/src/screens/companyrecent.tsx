@@ -85,9 +85,16 @@ function durationLabel(
  */
 export function CompanyRecentList({
   activities,
+  nameOf,
   onOpenRecord,
 }: Readonly<{
   activities: readonly Activity[];
+  // Resolves a linked record's id to its display name, off the reading the
+  // caller already holds. A row about a deal then NAMES the deal — "on Acme
+  // Expansion" is a fact a rep acts on, "on a deal" is a click to find out —
+  // and falls back to the unnamed phrase for a record the reading no longer
+  // carries (a closed deal, a capped list).
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
 }>) {
   const t = useT();
@@ -103,6 +110,7 @@ export function CompanyRecentList({
             when={formatDateAbbrev(activity.occurred_at, locale, zone)}
             direction={directionLabel(activity)}
             duration={durationLabel(activity, t, locale)}
+            nameOf={nameOf}
             onOpenRecord={onOpenRecord}
           />
         ))}
@@ -116,12 +124,14 @@ function RecentRow({
   when,
   direction,
   duration,
+  nameOf,
   onOpenRecord,
 }: Readonly<{
   activity: Activity;
   when: string;
   direction?: MessageKey;
   duration?: string;
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
 }>) {
   const t = useT();
@@ -131,12 +141,20 @@ function RecentRow({
   // headline goes reads as a row that failed to load.
   const title = activity.subject?.trim() || kind;
   const deal = activity.links?.find((link) => link.entity_type === "deal");
+  const dealName = deal && nameOf?.("deal", deal.entity_id);
+  const dealLabel = dealName
+    ? t("co.recent.reNamed", { name: dealName })
+    : t("co.recent.re");
   return (
     <li className="co-recent-row">
       <Avatar name={title} identity={activity.id} size="xs" />
       <span className="co-recent-body">
         <span className="co-recent-head">
-          <Badge tone="ai">{kind}</Badge>
+          {/* No tone: the chip says what KIND of exchange this was, and every
+              row here is the account's own correspondence. The AI indigo is a
+              provenance claim — "an agent did this" — and painting it on a
+              human's email tells the reader something false. */}
+          <Badge>{kind}</Badge>
           {direction && <span className="co-recent-dir">{t(direction)}</span>}
         </span>
         <span className="co-recent-title">{title}</span>
@@ -149,10 +167,10 @@ function RecentRow({
                 className="co-rowlink"
                 onClick={() => onOpenRecord("deal", deal.entity_id)}
               >
-                {t("co.recent.re")}
+                {dealLabel}
               </button>
             ) : (
-              <span>{t("co.recent.re")}</span>
+              <span>{dealLabel}</span>
             ))}
         </span>
       </span>

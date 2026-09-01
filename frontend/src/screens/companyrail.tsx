@@ -68,7 +68,6 @@ export function CompanyRail({
   org,
   view,
   loading,
-  withPeople,
   composerOpen,
   onTab,
 }: Readonly<{
@@ -86,8 +85,6 @@ export function CompanyRail({
   // every one of them reads the failed state for as long as the read runs,
   // flashing "could not be loaded" on every ordinary page open.
   loading: boolean;
-  // False where the page's own body is already the roster in full.
-  withPeople: boolean;
   // A composer drawer is open in this column. The rail stands down entirely
   // rather than narrowing: squeezed to a third of its width it is a column of
   // broken cards, and no mockup draws the two side by side.
@@ -106,10 +103,12 @@ export function CompanyRail({
     // second labelled region inside it would give a reader two names for one
     // column.
     <div className="co-rail">
+      {/* Both summaries stand on EVERY tab, the open one included: the rail
+          is the reader's anchor while they move between tabs, and each card
+          shows only the top RAIL_ROW_LIMIT rows — a summary beside a tab is
+          not a duplicate of it, a full copy would be. */}
       <DealsSection view={view} loading={loading} onTab={onTab} />
-      {withPeople && (
-        <PeopleSection view={view} loading={loading} onTab={onTab} />
-      )}
+      <PeopleSection view={view} loading={loading} onTab={onTab} />
       <Panel
         title={t("co.details.title")}
         titleAction={
@@ -132,13 +131,22 @@ export function CompanyRail({
   );
 }
 
+// How many rows a rail card shows before pointing at the tab. The rail is a
+// glance, and a twenty-row card beside the work column is a second page, not
+// an anchor — the "All N" header verb is the way to the rest.
+const RAIL_ROW_LIMIT = 3;
+
 /**
- * DealsSection is the account's open pipeline: one row per deal, its stage
- * and expected close beside it, the deal's own reason for needing attention
- * ahead of everything else about it. `view.deals.data` is already open-only
- * (the 360's own contract — closed deals are reported through `won_lifetime`
- * and `lost_count`, never listed), so this draws every row it is handed
- * rather than filtering on `status` a second time.
+ * DealsSection is the account's open pipeline at a glance: the top
+ * RAIL_ROW_LIMIT deals, each with its stage, expected close, and the deal's
+ * own reason for needing attention ahead of everything else about it.
+ * `view.deals.data` is already open-only (the 360's own contract — closed
+ * deals are reported through `won_lifetime` and `lost_count`, never listed),
+ * so nothing here filters on `status` a second time.
+ *
+ * "Top" means: a deal carrying an attention flag before one without, and the
+ * larger amount before the smaller — the row a rep would want surfaced is
+ * the one that needs a move or carries the money.
  */
 function DealsSection({
   view,
@@ -152,7 +160,7 @@ function DealsSection({
   const t = useT();
   const { locale } = useLocale();
   const deals = view?.deals;
-  const rows = deals?.data ?? [];
+  const rows = [...(deals?.data ?? [])].sort(byDealWeight);
   const state = sectionState(
     view,
     "deals",
@@ -182,7 +190,9 @@ function DealsSection({
       }
     >
       {state === "ready" ? (
-        rows.map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
+        rows
+          .slice(0, RAIL_ROW_LIMIT)
+          .map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
       ) : (
         <PanelBody>
           <SurfaceState
@@ -223,6 +233,19 @@ function DealsCreateVerb({
       />
     </div>
   );
+}
+
+// The rail's own ranking: a deal that needs a move outranks one that does
+// not, and past that the money decides. Stable for equal weights, so the
+// server's own order — the one every other deal surface shows — is what
+// breaks ties rather than an accident of the sort.
+function byDealWeight(a: Deal, b: Deal): number {
+  const needsMove = (deal: Deal) => (deal.attention || deal.stalled ? 1 : 0);
+  const moved = needsMove(b) - needsMove(a);
+  if (moved !== 0) {
+    return moved;
+  }
+  return (b.amount?.amount_minor ?? 0) - (a.amount?.amount_minor ?? 0);
 }
 
 // One flag a deal can carry ahead of its stage and close date: an overdue
@@ -313,7 +336,9 @@ function PeopleSection({
       }
     >
       {state === "ready" ? (
-        contacts.map((contact) => (
+        // The top of the byReach order: the rail glances at who matters most
+        // on the account, and the People tab is the full roster.
+        contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
           <PanelRow key={contact.person_id} className="co-person-row">
             <PersonRow contact={contact} />
           </PanelRow>

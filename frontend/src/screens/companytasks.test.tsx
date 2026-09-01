@@ -198,7 +198,7 @@ describe("CompanyScreen — the Tasks tab", () => {
     // Scoped to the tab's own panel: the account facts strip says the same
     // sentence about a withheld deal or project count, and a page-wide match
     // would pass on either of those while this tab drew nothing at all.
-    const heading = await screen.findByRole("heading", { name: "Next steps" });
+    const heading = await screen.findByRole("heading", { name: "Tasks" });
     const tasks = heading.closest("section");
     if (!tasks) {
       throw new Error("the tasks tab has no section wrapper");

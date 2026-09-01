@@ -471,7 +471,7 @@ describe("company view — withheld sections", () => {
       name: "Where this account stands",
     });
     const relationship = within(strip)
-      .getByText("Relationship")
+      .getByText("Conversation")
       .closest(".stat-card");
     if (!(relationship instanceof HTMLElement)) {
       throw new Error("the relationship card has no wrapper");
@@ -520,11 +520,12 @@ describe("company view — the verbs that change a section", () => {
     renderCompany();
 
     // Four surfaces read the same missing grant: the header's own fact strip
-    // (Open pipeline, In flight), the rail's Deals panel — which rides on the
-    // page's own mount and never unmounts across a tab switch — and the Deals
-    // tab body itself. The count is pinned EXACTLY rather than as "at least
-    // one": a floor would pass on a tab that rendered nothing while some other
-    // surface still spoke.
+    // (Open pipeline, In flight), the Deals tab body itself, and the rail's
+    // own Deals panel — which renders on every tab now, this one included,
+    // rather than standing down because the tab it is already on shows the
+    // pipeline in full. The count is pinned EXACTLY rather than as "at least
+    // one": a floor would pass on a tab that rendered nothing while some
+    // other surface still spoke.
     await userEvent.click(
       await screen.findByRole("button", { name: /^Deals/ }),
     );
@@ -606,11 +607,24 @@ describe("company view — consent is per purpose", () => {
       await screen.findByRole("button", { name: /^People/ }),
     );
 
+    // The rail's own people card is mounted beside the tab body and carries
+    // the same name as a plain row link with no chip set, so the link query
+    // is scoped to the tab's own section (titled "People") rather than the
+    // rail's (titled "Their key people").
+    const peopleHeading = await screen.findByRole("heading", {
+      name: "People",
+    });
+    const roster = peopleHeading.closest("section");
+    if (!roster) {
+      throw new Error("the people card has no section wrapper");
+    }
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
+      expect(
+        within(roster).getByRole("link", { name: "Dana Buyer" }),
+      ).toBeTruthy(),
     );
-    expect(screen.getByText("No consent on file")).toBeTruthy();
-    expect(screen.queryByText("May contact")).toBeNull();
+    expect(within(roster).getByText("No consent on file")).toBeTruthy();
+    expect(within(roster).queryByText("May contact")).toBeNull();
   });
 
   it("reads one granted purpose as contactable", async () => {
@@ -688,10 +702,10 @@ describe("company view — the context column belongs to the account, not to a t
     // The chronology moved off the overview when the page gained its own
     // History tab, so it is not under the partner form either.
     await userEvent.click(screen.getByRole("button", { name: "History" }));
-    expect(screen.getByRole("region", { name: "Timeline" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "History" })).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Partner" }));
-    expect(screen.queryByRole("region", { name: "Timeline" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "History" })).toBeNull();
   });
 });
 
@@ -1473,8 +1487,20 @@ describe("company view — naming the buying committee", () => {
       await screen.findByRole("button", { name: /^People/ }),
     );
 
-    await screen.findByRole("link", { name: "Christian Hagemeyer" });
-    expect(screen.queryByRole("button", { name: "Set role" })).toBeNull();
+    // The rail's own people card also carries this contact now, so the link
+    // and the missing verb are both checked inside the tab's own section
+    // (titled "People") rather than the rail's (titled "Their key people").
+    const peopleHeading = await screen.findByRole("heading", {
+      name: "People",
+    });
+    const roster = peopleHeading.closest("section");
+    if (!roster) {
+      throw new Error("the people card has no section wrapper");
+    }
+    await within(roster).findByRole("link", { name: "Christian Hagemeyer" });
+    expect(
+      within(roster).queryByRole("button", { name: "Set role" }),
+    ).toBeNull();
   });
 });
 
@@ -1515,17 +1541,28 @@ describe("company view — a buying role names the deal it is on", () => {
     );
     renderCompany();
     // The stakeholder-role badge is ContactRow's, drawn on the People tab's
-    // own roster; the rail's glance no longer carries it.
+    // own roster; the rail's glance no longer carries it. The rail card
+    // still shows this contact's name, so both queries are scoped to the
+    // tab's own section (titled "People") rather than the rail's.
     await userEvent.click(
       await screen.findByRole("button", { name: /^People/ }),
     );
 
+    const peopleHeading = await screen.findByRole("heading", {
+      name: "People",
+    });
+    const roster = peopleHeading.closest("section");
+    if (!roster) {
+      throw new Error("the people card has no section wrapper");
+    }
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
+      expect(
+        within(roster).getByRole("link", { name: "Dana Buyer" }),
+      ).toBeTruthy(),
     );
     // Both roles read as one quiet line under the name, not as two badges.
     expect(
-      screen.getByText("champion · Renewal · champion · New business"),
+      within(roster).getByText("champion · Renewal · champion · New business"),
     ).toBeTruthy();
   });
 
@@ -1552,10 +1589,21 @@ describe("company view — a buying role names the deal it is on", () => {
       await screen.findByRole("button", { name: /^People/ }),
     );
 
+    // Scoped to the tab's own section (titled "People"): the rail card
+    // beside it carries the same name.
+    const peopleHeading = await screen.findByRole("heading", {
+      name: "People",
+    });
+    const roster = peopleHeading.closest("section");
+    if (!roster) {
+      throw new Error("the people card has no section wrapper");
+    }
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Dana Buyer" })).toBeTruthy(),
+      expect(
+        within(roster).getByRole("link", { name: "Dana Buyer" }),
+      ).toBeTruthy(),
     );
-    expect(screen.getByText("champion")).toBeTruthy();
+    expect(within(roster).getByText("champion")).toBeTruthy();
   });
 });
 
@@ -2100,9 +2148,9 @@ describe("company view — the KPI row never invents a figure", () => {
       name: "Where this account stands",
     });
     expect(within(strip).getByText("Not a customer yet")).toBeTruthy();
-    // Relationship and health are on BOTH rows — a prospect is not asked to
+    // Conversation and health are on BOTH rows — a prospect is not asked to
     // give up knowing how the relationship stands.
-    expect(within(strip).getByText("Relationship")).toBeTruthy();
+    expect(within(strip).getByText("Conversation")).toBeTruthy();
 
     cleanup();
     stub(
@@ -2125,7 +2173,7 @@ describe("company view — the KPI row never invents a figure", () => {
     strip = await screen.findByRole("region", {
       name: "Where this account stands",
     });
-    expect(within(strip).getByText("Relationship")).toBeTruthy();
+    expect(within(strip).getByText("Conversation")).toBeTruthy();
     expect(within(strip).getByText("Gone quiet")).toBeTruthy();
     expect(within(strip).queryByText("Not a customer yet")).toBeNull();
   });
@@ -2289,7 +2337,7 @@ describe("company view — where the record came from", () => {
 });
 
 describe("company view — the account's own tabs", () => {
-  it("gives People the whole middle column", async () => {
+  it("keeps the rail summary beside the People tab", async () => {
     stub(
       view({
         people: {
@@ -2320,13 +2368,23 @@ describe("company view — the account's own tabs", () => {
       }),
     );
     renderCompany();
-    await screen.findByRole("complementary", { name: "Context" });
+    const rail = await screen.findByRole("complementary", { name: "Context" });
 
     await userEvent.click(screen.getByRole("button", { name: /^People/ }));
-    // ONCE. The tab is the roster in full, and the rail's summary of it stands
-    // down while the tab is open — the same names twice, side by side, is a
-    // list a reader has to reconcile with itself.
-    expect(screen.getAllByText("Christian Hagemeyer")).toHaveLength(1);
+    // The rail's own people summary is mounted on every tab now, this one
+    // included, so the name legitimately appears TWICE: once in the rail's
+    // glance, once in the tab's own roster. Each is asserted in its own
+    // section rather than counted together, so the test still fails if
+    // either one goes missing.
+    expect(within(rail).getByText("Christian Hagemeyer")).toBeTruthy();
+    const peopleHeading = await screen.findByRole("heading", {
+      name: "People",
+    });
+    const roster = peopleHeading.closest("section");
+    if (!roster) {
+      throw new Error("the people card has no section wrapper");
+    }
+    expect(within(roster).getByText("Christian Hagemeyer")).toBeTruthy();
   });
 
   it("offers the four tabs the record page has, in order", async () => {
@@ -2754,7 +2812,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
   // whole suite exists for was the standing readings disappearing behind the
   // money, not the money itself.
   // A relationship dimension and a live reply balance are enough to draw
-  // both HealthStat ("Relationship") and HealthSummaryStat ("Health") with real
+  // both HealthStat ("Conversation") and HealthSummaryStat ("Health") with real
   // verdicts rather than their unassessed readings, which is what makes the
   // standing half of the row worth asserting here.
   const withStanding = () =>
@@ -2793,9 +2851,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
 
     expect(within(region).getByText("Open pipeline")).toBeTruthy();
     // The card's own label rather than any match: the health verdict's basis
-    // disclosure names "Relationship" a second time as one of its dimensions.
+    // disclosure names "Conversation" a second time as one of its dimensions.
     expect(
-      within(region).getByText("Relationship", {
+      within(region).getByText("Conversation", {
         selector: ".stat-card-label",
       }),
     ).toBeTruthy();
@@ -2818,9 +2876,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
 
     expect(within(region).getByText("Open pipeline")).toBeTruthy();
     // The card's own label rather than any match: the health verdict's basis
-    // disclosure names "Relationship" a second time as one of its dimensions.
+    // disclosure names "Conversation" a second time as one of its dimensions.
     expect(
-      within(region).getByText("Relationship", {
+      within(region).getByText("Conversation", {
         selector: ".stat-card-label",
       }),
     ).toBeTruthy();

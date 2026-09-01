@@ -1035,6 +1035,50 @@ function directionClass(direction: TimelineEntry["direction"]): string {
   return direction === "inbound" ? "tl-in" : "";
 }
 
+function noteClass(entry: TimelineEntry): string {
+  return entry.kind === "note" ? "tl-note" : "";
+}
+
+// A conversation is an exchange somebody can answer: mail, or a message on a
+// connected transport. Calls, meetings and notes are events and asides.
+const CONVERSATION_KINDS: ReadonlySet<string> = new Set(["email", "message"]);
+
+/**
+ * MoveFlag is whose move a conversation is waiting on, read off its newest
+ * message: their word standing last means the move is ours. ONE spelling for
+ * every cut — the same chip on the row in the full chronology and in the
+ * Conversations reading, because a thread that read "your move" on one cut
+ * and said nothing on the other would be two claims about one conversation.
+ *
+ * Only on the row that STANDS FOR the conversation — a collapsed thread, or
+ * a lone message — never on the members inside an expanded thread, where
+ * every reply would otherwise carry a verdict about the whole exchange.
+ */
+// Whether the entry carries a direction a move can be read off — the guard
+// both flag sites share, so a wrapper cannot render an empty chip row.
+function conversationDirection(
+  entry: TimelineEntry,
+): "inbound" | "outbound" | undefined {
+  if (!CONVERSATION_KINDS.has(entry.kind)) {
+    return undefined;
+  }
+  return entry.direction === "inbound" || entry.direction === "outbound"
+    ? entry.direction
+    : undefined;
+}
+
+function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const t = useT();
+  const direction = conversationDirection(entry);
+  if (direction === "inbound") {
+    return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
+  }
+  if (direction === "outbound") {
+    return <Badge quiet>{t("convo.waitingOnThem")}</Badge>;
+  }
+  return null;
+}
+
 function TimelineList({
   entries,
   zone,
@@ -1074,7 +1118,12 @@ export function GroupedTimelineList({
     <ul className="timeline">
       {groups.map((group) =>
         group.kind === "single" ? (
-          <TimelineRow key={group.id} entry={group.entries[0]} zone={zone} />
+          <TimelineRow
+            key={group.id}
+            entry={group.entries[0]}
+            zone={zone}
+            flag={<MoveFlag entry={group.entries[0]} />}
+          />
         ) : (
           <TimelineGroupRow
             key={group.id}
@@ -1132,7 +1181,22 @@ function TimelineGroupRow({
         </span>
       </span>
       <div className="tl-body">
+        {/* Whose move the conversation waits on, on the row that stands for
+            it. A bulk group is one outbound send with no reply expected, so
+            it carries no claim. */}
+        {group.kind === "thread" && conversationDirection(newest) && (
+          <span className="tl-head">
+            <MoveFlag entry={newest} />
+          </span>
+        )}
         <span className="tl-title">{newest.title}</span>
+        {/* The newest message's own words, while the thread is closed: what
+            the conversation is ABOUT, without opening it. Expanded, the
+            members carry their bodies themselves and a preview above them
+            would say the newest one twice. */}
+        {!open && newest.body && (
+          <TimelineText text={newest.body} email={newest.kind === "email"} />
+        )}
         <span className="tl-meta">
           <span className="tl-group-count">
             {groupCountLabel(group, locale)}
@@ -1207,11 +1271,26 @@ function directionPhrase(
 export function TimelineRow({
   entry,
   zone,
-}: Readonly<{ entry: TimelineEntry; zone: string }>) {
+  flag,
+}: Readonly<{
+  entry: TimelineEntry;
+  zone: string;
+  // A chip qualifying the whole exchange this row STANDS FOR — the whose-move
+  // flag on a lone message. Passed by the grouped list rather than derived
+  // here, because the same row rendered as a member of an expanded thread
+  // must not carry a verdict about the conversation it is one reply in.
+  flag?: ReactNode;
+}>) {
   const { locale } = useLocale();
   const t = useT();
+  // A note is the rep's own words about the record, not an exchange with it,
+  // and the row says so: its body sits on a plate of its own instead of
+  // running in the message rhythm around it.
+  const rowClass = [directionClass(entry.direction), noteClass(entry)]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <li className={directionClass(entry.direction)}>
+    <li className={rowClass}>
       {/* The date leads the row, in its own gutter. A chronology is read down
           the dates — a reader looking for "what happened in August" scans one
           column rather than the end of every line — and the mono face keeps
@@ -1250,6 +1329,7 @@ export function TimelineRow({
             <span className="tl-direction">{directionPhrase(entry, t)}</span>
           )}
           {entry.via}
+          {flag}
         </span>
         {entry.withheld ? (
           <span className="tl-title tl-withheld">

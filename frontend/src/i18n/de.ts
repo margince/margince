@@ -984,7 +984,7 @@ export const de = {
   "co.strip.fin.loading": "Wird geladen…",
   "co.strip.unpriced": "Keine umrechenbaren Beträge hinterlegt",
   "co.strip.pricedPartly": "{priced} von {total} Deals mit Betrag",
-  "co.strip.health": "Beziehung",
+  "co.strip.health": "Austausch",
   "co.strip.healthOneSided": "Einseitig",
   "co.strip.healthBalanced": "Ausgeglichener Austausch",
   "co.strip.replyShare": "{percent}% des Austauschs kommt von ihnen",
@@ -1216,6 +1216,8 @@ export const de = {
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
+  "finance.syncing":
+    "Abgleich mit der Buchhaltungsquelle läuft — Zahlen erscheinen nach dem ersten Durchlauf.",
   "finance.noConnection":
     "Keine Finanzquelle verbunden — verbinde eine, um zu sehen, was diesem Kunden berechnet wurde und ob er pünktlich zahlt",
   "finance.unmapped":
@@ -1335,7 +1337,7 @@ export const de = {
   "co.coverage.gaps_other": "{count} Rollenlücken",
   "co.section.restricted":
     "Ausgeblendet \u2014 deine Rolle darf das nicht lesen",
-  "co.next.title": "Nächste Schritte",
+  "co.next.title": "Aufgaben",
   "co.next.empty": "Keine offene Aufgabe zu diesem Account.",
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
@@ -1362,18 +1364,11 @@ export const de = {
   "co.work.count": "{count} laufend",
   "co.work.countAtLeast": "{count}+ laufend",
   "co.work.deals": "Deals",
-  "co.work.projects": "Projekte",
   "co.work.noDealsDetail":
     "Im Deal stehen Betrag und Abschlussdatum. Leg einen an, sobald es etwas zu gewinnen gibt.",
-  "co.work.noProjectsDetail":
-    "Ein Projekt hält die Lieferung zusammen: die Beteiligten, die Deals darunter und den Endtermin.",
   "co.work.noDeals": "Keine offenen Deals.",
-  "co.work.noProjects": "Keine laufenden Projekte.",
   "co.work.closes": "Abschluss {date}",
-  "co.work.targetEnd": "Ende geplant {date}",
   "co.work.stalled": "Zu diesem Deal wurde seit 60 Tagen nichts erfasst.",
-  "co.work.quiet": "Zu diesem Projekt wurde seit {when} nichts erfasst.",
-  "co.work.neverTouched": "Zu diesem Projekt wurde noch nie etwas erfasst.",
   "co.work.overdueTask":
     "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
   "co.work.overdueTaskUnnamed":
@@ -1661,6 +1656,10 @@ export const de = {
   "chronology.changes": "Änderungen",
   "filter.label": "Liste eingrenzen",
   "chronology.all": "Alles",
+  "chronology.conversations": "Gespräche",
+  "chronology.conversationsEmpty": "Noch keine Gespräche mit ihnen.",
+  "convo.yourMove": "Du bist dran",
+  "convo.waitingOnThem": "Wartet auf Antwort",
   "chronology.changesEmpty":
     "Seit dem Anlegen wurde kein Feld dieses Datensatzes geändert.",
   "chronology.allEmpty": "Zu diesem Datensatz ist noch nichts passiert.",
@@ -1846,6 +1845,7 @@ export const de = {
   "co.recent.dir.both": "beide Seiten",
   "co.recent.minutes": "{count} Min.",
   "co.recent.re": "zu einem Deal",
+  "co.recent.reNamed": "zu {name}",
   "co.tags.title": "Listen & Tags",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
   "co.overlayFallback":

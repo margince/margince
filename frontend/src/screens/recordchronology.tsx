@@ -28,9 +28,14 @@ type Activity = components["schemas"]["Activity"];
 type ChangesQuery = ReturnType<typeof useFieldHistory>;
 
 // All first: it is where a reader starts, and a row of cuts reads left to
-// right from the whole to its parts.
+// right from the whole to its parts. `conversations` is in the vocabulary
+// but not in the base row — a page offers it through `ChronologyFilter`'s
+// own flag once it wires a renderer for the cut, because a pill whose press
+// changes nothing teaches the reader the row is broken.
 export const TIMELINE_FILTERS = ["all", "activities", "changes"] as const;
-export type TimelineFilter = (typeof TIMELINE_FILTERS)[number];
+export type TimelineFilter =
+  | (typeof TIMELINE_FILTERS)[number]
+  | "conversations";
 
 /**
  * useChronologyFilter owns the filter for ONE record rather than for the
@@ -61,9 +66,14 @@ export function useChronologyFilter(
  */
 export function ChronologyFilter({
   filter,
+  conversations = false,
   onFilter,
 }: Readonly<{
   filter: TimelineFilter;
+  // Whether this page offers the Conversations cut — the mail and message
+  // threads alone, drawn as conversations rather than as chronicle rows.
+  // Opt-in per page: the pill only stands where the page renders the cut.
+  conversations?: boolean;
   // Whether the caller has narrowed the exchanges — by kind, by words, by a
   // date range. A narrowed read is a question about what was SAID, and a field
   // edit is not a meeting: leaving the changes in answered a question nobody
@@ -78,12 +88,18 @@ export function ChronologyFilter({
   const t = useT();
   const labels: Record<TimelineFilter, string> = {
     all: t("chronology.all"),
+    conversations: t("chronology.conversations"),
     activities: t("chronology.activities"),
     changes: t("chronology.changes"),
   };
+  // Conversations sits between the whole and the parts: it is a READING of
+  // the exchanges, narrower than All and wider than one kind.
+  const cuts: readonly TimelineFilter[] = conversations
+    ? ["all", "conversations", "activities", "changes"]
+    : TIMELINE_FILTERS;
   return (
     <FilterPills
-      pills={TIMELINE_FILTERS.map((value) => ({
+      pills={cuts.map((value) => ({
         value,
         label: labels[value],
         // No counts. Each cut is its own paged read, so this page knows a
@@ -170,7 +186,9 @@ export function useRecordChronology({
 }>): RecordChronology {
   const t = useT();
   const viewerId = useViewerId();
-  const wantsChanges = filter !== "activities" && !narrowed;
+  // Only the cuts that DRAW change rows read them: Conversations is about
+  // what was said, exactly as a narrowed read is.
+  const wantsChanges = (filter === "all" || filter === "changes") && !narrowed;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
   // `page.data ?? []`, not `page.data`: a 200 with no body is a shape the
   // contract permits and the overlay mirror actually returns, and flattening
@@ -227,7 +245,9 @@ export function useRecordChronology({
   // and that is a change to what the footer says rather than to this test.
   const failed = wantsChanges && changes.isError && !holdingRows;
 
-  if (filter === "activities") {
+  // Conversations reads the same feed as Activities — the exchanges — and
+  // its renderer, not this hook, is what narrows the rows to threads.
+  if (filter === "activities" || filter === "conversations") {
     return {
       entries: activityEntries,
       // The composite read caps this section, and a capped list that says
@@ -357,6 +377,7 @@ function activitiesCanGrow(
   }
   return (
     filter === "activities" ||
+    filter === "conversations" ||
     (filter === "all" && !chronology.changesAreTheLimit)
   );
 }
@@ -372,6 +393,7 @@ export const CHRONOLOGY_EMPTY_KEYS: Readonly<
 > = {
   changes: "chronology.changesEmpty",
   all: "chronology.allEmpty",
+  conversations: "chronology.conversationsEmpty",
 };
 
 // The merged view is cut at the newest "oldest loaded" among the feeds that

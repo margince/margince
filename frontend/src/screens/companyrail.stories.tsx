@@ -148,7 +148,6 @@ function Rail({ view }: Readonly<{ view: View }>) {
           orgId="o-1"
           view={view}
           loading={false}
-          withPeople
           composerOpen={false}
           onTab={() => {}}
         />

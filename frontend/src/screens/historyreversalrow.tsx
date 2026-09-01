@@ -167,7 +167,10 @@ export function ReversalPairRow({
           {t(open ? "history.reversal.collapse" : "history.reversal.expand")}
         </Button>
         {open && (
-          <ul id={regionId} className="timeline reversal-pair-body">
+          <ul
+            id={regionId}
+            className="timeline timeline-plain reversal-pair-body"
+          >
             {children}
           </ul>
         )}

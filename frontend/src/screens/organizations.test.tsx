@@ -1539,7 +1539,7 @@ describe("CompanyScreen — the record's history", () => {
 
   // Field changes are the account's own chronology, so they sit in the
   // timeline behind a filter — not on a screen of their own.
-  it("shows the record's history under the Changes filter, with the control that puts one back", async () => {
+  it("draws the Changes cut as the chronicle's own change rows, without the restore control", async () => {
     stubFetch(async (url) => {
       if (/\/records\/[^/]+\/[^/]+\/history/.test(url)) {
         return jsonResponse({
@@ -1590,17 +1590,19 @@ describe("CompanyScreen — the record's history", () => {
 
     // Scoped to the timeline: the account is called "Brandt Automotive GmbH",
     // so a page-wide match on the old value would pass on the heading.
-    const timeline = await screen.findByRole("region", { name: "Timeline" });
+    const timeline = await screen.findByRole("region", { name: "History" });
     await waitFor(() =>
       expect(within(timeline).getByText("Manufacturing")).toBeTruthy(),
     );
     expect(within(timeline).getByText("Automotive")).toBeTruthy();
     expect(within(timeline).getByText("Industry")).toBeTruthy();
-    // The point of this view being the record's history: the change can be put
-    // back from where the reader is already looking at it.
+    // The Changes cut draws the SAME chronicle rows the All view interleaves
+    // — no second rendering of the audit rows, and no restore control here:
+    // put-back lives on the record's Full history (the header's overflow
+    // menu), the one surface that carries that write.
     expect(
-      within(timeline).getByRole("button", { name: "Put back" }),
-    ).toBeTruthy();
+      within(timeline).queryByRole("button", { name: "Put back" }),
+    ).toBeNull();
   });
 });
 
@@ -1934,17 +1936,10 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // wants a decision, rather than in the context column.
     expect(stack?.textContent).toContain("Margince also spotted");
 
-    // The pipeline and the commercial picture have their own tab too. Named by
-    // prefix: a tab carries the count of what is behind it, so its accessible
-    // name is the label AND the figure.
-    await userEvent.click(screen.getByRole("button", { name: /^Deals/ }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy(),
-    );
-
     // The relationship around it, and how the account is filed, live in the
     // PAGE's context column — queried off the document, because that column is
-    // the shell's and is portalled out of this record's own tree.
+    // the shell's and is portalled out of this record's own tree. The rail's
+    // summaries stand on every tab, capped to their top rows.
     const rail = document.querySelector(".co-rail");
     expect(rail).toBeTruthy();
     for (const card of [
@@ -1955,6 +1950,14 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     ]) {
       expect(rail?.textContent).toContain(card);
     }
+
+    // The pipeline and the commercial picture have their own tab too. Named by
+    // prefix: a tab carries the count of what is behind it, so its accessible
+    // name is the label AND the figure.
+    await userEvent.click(screen.getByRole("button", { name: /^Deals/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy(),
+    );
   });
 
   // The drawer opens INTO the rail's column. Both composers do — the header's
