@@ -24,6 +24,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -64,7 +65,19 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 	// Set even when empty — a pointer to no sections says "nobody is
 	// connected", which is a different fact from the nil the grant check
 	// leaves behind, and `sections_omitted` is what names the second.
-	profiles, err := s.profilesFor(namesToShow(statuses, runs, claims), statuses, runs, claims)
+	// What this record carries that a provider could match on. Resolved once
+	// for the section and asked of each provider's own rules below, because a
+	// failed run means something different depending on the answer: a vendor
+	// that could not place a contact carrying a profile link had a bad day,
+	// and one asked about a contact carrying nothing was never going to.
+	//
+	// The SAME function the queue asks, so the page and the lookup cannot
+	// disagree about whether this person is findable.
+	idents, err := people.SubjectIdentifiers(ctx, tx, personID.String())
+	if err != nil {
+		return err
+	}
+	profiles, err := s.profilesFor(namesToShow(statuses, runs, claims), statuses, runs, claims, idents)
 	if err != nil {
 		return err
 	}
@@ -104,16 +117,6 @@ func (s *Service) connectionStatuses(ctx context.Context, tx pgx.Tx) (map[string
 	return statuses, nil
 }
 
-// impairedStates maps a connection that EXISTS but cannot buy onto the sentence
-// the page shows. Each names the installation's own condition, because that is
-// where the fix is — none of them is a fact about the contact.
-var impairedStates = map[string]crmcontracts.PersonProviderProfileState{
-	"invalid_credentials":  crmcontracts.PersonProviderProfileStateInvalidCredentials,
-	"insufficient_credits": crmcontracts.PersonProviderProfileStateInsufficientCredits,
-	"rate_limited":         crmcontracts.PersonProviderProfileStateRateLimited,
-	"provider_error":       crmcontracts.PersonProviderProfileStateProviderError,
-}
-
 // namesToShow collects the providers the page owes the reader a section for:
 // the connected ones, plus any that already hold a run or a purchase here.
 // Sorted, so the sections keep their order between reads rather than
@@ -146,10 +149,10 @@ func namesToShow(statuses map[string]string, runs []providerRunRow, claims []sto
 // profilesFor builds one snapshot per named provider, each seeing only its own
 // runs and its own claims. The partition is the whole point: a value bought
 // from one vendor must never appear under another's name.
-func (s *Service) profilesFor(names []string, statuses map[string]string, runs []providerRunRow, claims []storedClaim) ([]crmcontracts.PersonProviderProfile, error) {
+func (s *Service) profilesFor(names []string, statuses map[string]string, runs []providerRunRow, claims []storedClaim, idents provider.PersonIdentifiers) ([]crmcontracts.PersonProviderProfile, error) {
 	profiles := make([]crmcontracts.PersonProviderProfile, 0, len(names))
 	for _, name := range names {
-		profile, err := s.profileFor(name, statuses[name], runsOf(name, runs), claimsOf(name, claims))
+		profile, err := s.profileFor(name, statuses[name], runsOf(name, runs), claimsOf(name, claims), idents)
 		if err != nil {
 			return nil, err
 		}
@@ -160,10 +163,10 @@ func (s *Service) profilesFor(names []string, statuses map[string]string, runs [
 
 // profileFor is one provider's section: what it was asked, what it answered,
 // and what it sold us.
-func (s *Service) profileFor(name string, status string, runs []providerRunRow, claims []storedClaim) (crmcontracts.PersonProviderProfile, error) {
+func (s *Service) profileFor(name string, status string, runs []providerRunRow, claims []storedClaim, idents provider.PersonIdentifiers) (crmcontracts.PersonProviderProfile, error) {
 	profile := crmcontracts.PersonProviderProfile{
 		Provider:               crmcontracts.Provider(name),
-		State:                  resolveProviderState(runs, status),
+		State:                  resolveProviderState(runs, status, s.lookupable(name, idents)),
 		CategoriesNotRequested: []string{},
 		Emails:                 []crmcontracts.PersonProviderEmail{},
 		MobilePhones:           []crmcontracts.PersonProviderPhone{},
@@ -368,92 +371,4 @@ func categoriesNotRequested(desc provider.Descriptor, runs []providerRunRow, cla
 	}
 	sort.Strings(out)
 	return out
-}
-
-// resolveProviderState answers the ONE sentence the page shows about this
-// person's enrichment. The three "nothing here" states are three different
-// facts and must never collapse into one: nobody connected a provider, this
-// person is not eligible for one, and nobody has asked yet are different
-// answers to "why is this empty", and only the reader can act on the right
-// one.
-func resolveProviderState(runs []providerRunRow, status string) crmcontracts.PersonProviderProfileState {
-	// A connection that exists but cannot buy says WHY, before anything about
-	// this person's runs. The condition is the installation's — a refused key,
-	// an exhausted wallet — and it outranks the run history because it is what
-	// the next lookup will hit, and the only thing anybody can act on.
-	if impaired, ok := impairedStates[status]; ok {
-		return impaired
-	}
-	if status != "connected" {
-		// Disconnected, and the data this installation already PAID for is
-		// still on the page below — disconnecting stops new egress, it does
-		// not delete what was bought. So the honest word is stale, not
-		// not_connected: telling the reader the platform knows nothing while
-		// showing them a purchased mobile number is the one thing this state
-		// exists to prevent. not_connected is for a page with nothing on it.
-		if len(runs) > 0 {
-			return crmcontracts.PersonProviderProfileStateStale
-		}
-		return crmcontracts.PersonProviderProfileStateNotConnected
-	}
-	if len(runs) == 0 {
-		return crmcontracts.PersonProviderProfileStateNeverRun
-	}
-	latest := runs[0]
-	if latest.state == string(provider.RunCompleted) && latest.claimsUnwritten {
-		// Paid, and the values never reached the record. Its own state
-		// because it is neither a success nor a failure: the customer was
-		// charged and has nothing to show for it, which is a thing somebody
-		// needs to see rather than a completed run with empty fields.
-		return crmcontracts.PersonProviderProfileStateCompletedClaimsUnwritten
-	}
-	if latest.state == string(provider.RunSkipped) {
-		// A skip is a decision, and its REASON is what the reader needs. An
-		// exhausted budget is a fact about the installation's wallet; telling
-		// somebody "this person is not eligible" instead would send them
-		// looking at the contact for a problem that is not there.
-		return skipStates[latest.skipReason]
-	}
-	if mapped, ok := providerRunStates[latest.state]; ok {
-		return mapped
-	}
-	return crmcontracts.PersonProviderProfileStateProviderError
-}
-
-// skipStates says WHY nothing was bought, in the page's vocabulary. The zero
-// value is not_eligible, which is the honest default for the two reasons that
-// really are about the subject; everything else names the installation's own
-// condition instead.
-var skipStates = map[string]crmcontracts.PersonProviderProfileState{
-	"":                            crmcontracts.PersonProviderProfileStateNotEligible,
-	"not_eligible":                crmcontracts.PersonProviderProfileStateNotEligible,
-	"duplicate_subject_candidate": crmcontracts.PersonProviderProfileStateNotEligible,
-	// A consent decision, not an eligibility one. It reads as not_eligible
-	// today because the contract has no suppressed state; the difference is
-	// worth a spec change rather than a wrong word invented here.
-	"suppressed": crmcontracts.PersonProviderProfileStateNotEligible,
-	// Its own state, not a kind of not_eligible: nothing forbids this
-	// purchase. The record carries no profile link and no company, so the
-	// provider has nothing to match on — and the reader's next step is to add
-	// one of those, which is the next step for nothing else in this map.
-	"no_identifiers":   crmcontracts.PersonProviderProfileStateNothingToLookUp,
-	"budget_exhausted": crmcontracts.PersonProviderProfileStateInsufficientCredits,
-	"low_balance":      crmcontracts.PersonProviderProfileStateInsufficientCredits,
-	"rate_limited":     crmcontracts.PersonProviderProfileStateRateLimited,
-	// Nothing was bought because we already hold an answer inside the refresh
-	// window — which is a completed enrichment, not a refusal.
-	"already_fresh": crmcontracts.PersonProviderProfileStateCompleted,
-}
-
-// providerRunStates maps the run machine onto the page's vocabulary. The two
-// are deliberately separate: a run state is what the platform is doing, and
-// this is what the reader is told.
-var providerRunStates = map[string]crmcontracts.PersonProviderProfileState{
-	string(provider.RunQueued):            crmcontracts.PersonProviderProfileStateQueued,
-	string(provider.RunSubmitting):        crmcontracts.PersonProviderProfileStateInProgress,
-	string(provider.RunInProgress):        crmcontracts.PersonProviderProfileStateInProgress,
-	string(provider.RunCompleted):         crmcontracts.PersonProviderProfileStateCompleted,
-	string(provider.RunNoMatch):           crmcontracts.PersonProviderProfileStateNoMatch,
-	string(provider.RunSubmissionUnknown): crmcontracts.PersonProviderProfileStateSubmissionUnknown,
-	string(provider.RunCancelled):         crmcontracts.PersonProviderProfileStateNeverRun,
 }

@@ -52,7 +52,7 @@ func TestEachProviderSectionCarriesOnlyItsOwnPurchases(t *testing.T) {
 	connected := map[string]string{"surfe": "connected", "otherco": "connected"}
 
 	svc := &Service{}
-	profiles, err := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims, lookupableSubject())
 	if err != nil {
 		t.Fatalf("folding the sections: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestSectionsKeepAStableOrderBetweenReads(t *testing.T) {
 	connected := map[string]string{"zeta": "connected", "alpha": "connected", "surfe": "connected"}
 
 	svc := &Service{}
-	profiles, err := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil, lookupableSubject())
 	if err != nil {
 		t.Fatalf("folding the sections: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestAProviderNobodyRunsYetStillGetsItsSection(t *testing.T) {
 	connected := map[string]string{"surfe": "connected"}
 
 	svc := &Service{}
-	profiles, err := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil, lookupableSubject())
 	if err != nil {
 		t.Fatalf("folding the sections: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestAPurchaseSurvivesItsProviderBeingDisconnected(t *testing.T) {
 	connected := map[string]string{"surfe": "connected"}
 
 	svc := &Service{}
-	profiles, err := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims, lookupableSubject())
 	if err != nil {
 		t.Fatalf("folding the sections: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestAnImpairedConnectionSaysWhatIsWrongRatherThanReadingAsStale(t *testing.
 			statuses := map[string]string{"surfe": tc.status}
 
 			svc := &Service{}
-			profiles, err := svc.profilesFor(namesToShow(statuses, nil, claims), statuses, nil, claims)
+			profiles, err := svc.profilesFor(namesToShow(statuses, nil, claims), statuses, nil, claims, lookupableSubject())
 			if err != nil {
 				t.Fatalf("folding the sections: %v", err)
 			}
@@ -396,5 +396,17 @@ func TestTheAskedSetExcludesWhatWasNeverSent(t *testing.T) {
 		if got[i] != name {
 			t.Errorf("position %d is %q, want %q", i, got[i], name)
 		}
+	}
+}
+
+// lookupableSubject is a contact a provider CAN match on, which is what these
+// partition cases are about: they ask which provider's values land in which
+// section, and a subject nothing can look up would answer every one of them
+// with "nothing to look them up by" before the partition was reached.
+func lookupableSubject() provider.PersonIdentifiers {
+	return provider.PersonIdentifiers{
+		FirstName:   "Anna",
+		LastName:    "Muster",
+		CompanyName: "Example GmbH",
 	}
 }

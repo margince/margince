@@ -6963,7 +6963,7 @@ export const vi = {
   "provider.profile.rateLimited":
     "Không mua: nhà cung cấp yêu cầu chúng ta chậm lại.",
   "provider.profile.providerError":
-    "Lần gọi gần nhất tới nhà cung cấp đã thất bại. Tra cứu tự động đang tạm dừng; một lượt kiểm tra miễn phí thành công sẽ tiếp tục chúng.",
+    "Lần tra cứu gần nhất cho liên hệ này không thành công. Hãy thử lại, hoặc xem thẻ nhà cung cấp trong Cài đặt nếu vẫn tiếp diễn.",
   "provider.profile.submissionUnknown":
     "Chúng ta không bao giờ biết lượt tra cứu này kết thúc ra sao. Nó có thể đã bị tính phí.",
   "provider.profile.claimsUnwritten":
