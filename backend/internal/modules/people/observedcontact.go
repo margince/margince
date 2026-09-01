@@ -28,9 +28,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -82,6 +79,9 @@ const (
 	// observedConfirmed: the record already carried it, stated at least as
 	// recently. Nothing was written and nothing needs to be.
 	observedConfirmed
+	// observedReplaced: the value landed AND retired an older one, which is
+	// the case an undo exists for.
+	observedReplaced
 )
 
 // applyObservedField writes one dated statement, superseding what is older.
@@ -181,6 +181,9 @@ func observedFieldColumn(field string) (string, bool) {
 // what tells those apart: a column that disagrees with the sidecar was written
 // by somebody else, and it is the value a reader wants back.
 func seedFromColumn(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f observedField) (string, error) {
+	if f.Field == fieldPhone {
+		return seedFromLiveNumber(ctx, tx, personID, f)
+	}
 	column, mirrored := observedFieldColumn(f.Field)
 	if !mirrored {
 		return "", nil
@@ -299,18 +302,9 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 		return observedSkipped, nil
 	}
 
-	// The row of this type this statement replaces, if it is older. Chosen by
-	// id so the archive and the insert name the same row: several live numbers
-	// of one type are permitted, and the primary is the one displayed.
-	var supersededID *ids.UUID
-	if err := tx.QueryRow(ctx, `
-		SELECT id FROM person_phone
-		WHERE person_id = $1 AND phone_type = $2 AND archived_at IS NULL AND observed_at < $3
-		ORDER BY is_primary DESC, position, created_at
-		LIMIT 1`,
-		personID, phoneType, observedAt).Scan(&supersededID); err != nil &&
-		!errors.Is(err, pgx.ErrNoRows) {
-		return observedSkipped, fmt.Errorf("people: looking for the number this replaces: %w", err)
+	supersededID, err := numberThisReplaces(ctx, tx, personID, phoneType, observedAt)
+	if err != nil {
+		return observedSkipped, err
 	}
 
 	if supersededID != nil {
@@ -341,6 +335,12 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, personID ids.PersonID, p
 	}
 	if tag.RowsAffected() == 0 {
 		return observedSkipped, nil
+	}
+	if supersededID != nil {
+		// This number took another's place, which is what the undo buffer is
+		// for. The caller records the evidence line against THIS number rather
+		// than against whichever the card happened to list first.
+		return observedReplaced, nil
 	}
 	return observedApplied, nil
 }
@@ -379,132 +379,63 @@ func confirmKnownNumber(ctx context.Context, tx pgx.Tx, personID ids.PersonID, n
 	return observedSkipped, nil
 }
 
-// observedCard is one business card, as a dated statement by the person on it.
-type observedCard struct {
-	Entry      VCardEntry
-	Evidence   string
-	SourceRef  string
-	Source     string
-	CapturedBy string
-	// ObservedAt is when the card was handed over. Zero means now, which is the
-	// honest answer for an import: a .vcf carries no date of its own, and the
-	// moment a human chose to import it is what there is.
-	ObservedAt time.Time
+// seedFromLiveNumber is seedFromColumn's phone arm: the number about to be
+// replaced, read from the list rather than from a column.
+//
+// A phone has no mirror column, so the general path seeds nothing — and a
+// number that only ever lived in person_phone (one typed at create, say) would
+// then be replaced with superseded_value left NULL, which is exactly the state
+// RestoreProfileField reads as "nothing to undo". The undo would be silently
+// unavailable for the commonest phone there is.
+//
+// The PRIMARY of the type being stated, because that is the number a reader is
+// shown and therefore the one they would expect back.
+func seedFromLiveNumber(ctx context.Context, tx pgx.Tx, personID ids.PersonID, f observedField) (string, error) {
+	// The number this one REPLACED, read from the row that says so, and not
+	// from whatever is live now: the numbers are written before this line is,
+	// so by the time it runs the old row is already archived and "live" names
+	// the replacement itself. Falling back to the live primary covers the
+	// signature path, where the line is written first and no supersede has
+	// happened yet.
+	var current *string
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(
+			(SELECT was.phone
+			   FROM person_phone live
+			   JOIN person_phone was ON was.id = live.superseded_phone_id
+			  WHERE live.person_id = $1 AND live.archived_at IS NULL
+			    AND live.phone = $2 AND was.person_id = $1
+			  LIMIT 1),
+			(SELECT phone FROM person_phone
+			  WHERE person_id = $1 AND archived_at IS NULL
+			  ORDER BY is_primary DESC, position, created_at
+			  LIMIT 1))`, personID, f.Value).Scan(&current); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("people: reading the number before it is superseded: %w", err)
+	}
+	if current == nil || *current == f.Value {
+		return "", nil
+	}
+	return *current, nil
 }
 
-// applyObservedCard writes everything a card states, and reports which fields
-// moved so the caller can audit them.
+// numberThisReplaces finds the row of this type a statement supersedes, or nil
+// where it supersedes none.
 //
-// The same writer the signature pass uses, deliberately: a card and a signature
-// are one kind of input — the contact describing themselves — and two writers
-// would let the ARRIVAL ROUTE decide whether a stale number gets corrected.
-//
-// Emails are the exception and stay additive. An address the card omits is not
-// an address retired, and no automatic path may take away a way to reach
-// somebody; the card's own addresses are added on the create path and left
-// alone here.
-func applyObservedCard(ctx context.Context, tx pgx.Tx, personID ids.PersonID, c observedCard) ([]string, error) {
-	var applied []string
-	for _, f := range cardFields(c.Entry) {
-		outcome, err := applyObservedField(ctx, tx, personID, observedField{
-			Field: f.name, Value: f.value, Evidence: c.Evidence, SourceRef: c.SourceRef,
-			Source: c.Source, CapturedBy: c.CapturedBy, ObservedAt: c.ObservedAt,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if outcome == observedApplied {
-			applied = append(applied, f.name)
-		}
+// Chosen by id so the archive and the insert name the same row: several live
+// numbers of one type are permitted, and the primary is the one displayed.
+func numberThisReplaces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, phoneType string, observedAt time.Time) (*ids.UUID, error) {
+	var supersededID *ids.UUID
+	if err := tx.QueryRow(ctx, `
+		SELECT id FROM person_phone
+		WHERE person_id = $1 AND phone_type = $2 AND archived_at IS NULL AND observed_at < $3
+		ORDER BY is_primary DESC, position, created_at
+		LIMIT 1`,
+		personID, phoneType, observedAt).Scan(&supersededID); err != nil &&
+		!errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("people: looking for the number this replaces: %w", err)
 	}
-	wroteEvidence := false
-	for _, phone := range c.Entry.Phones {
-		outcome, err := applyObservedPhone(ctx, tx, personID, observedPhone{
-			Phone: phone.Value, PhoneType: phone.Kind, SourceRef: c.SourceRef,
-			Source: c.Source, CapturedBy: c.CapturedBy, ObservedAt: c.ObservedAt,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if outcome != observedApplied {
-			continue
-		}
-		if !slices.Contains(applied, fieldPhone) {
-			applied = append(applied, fieldPhone)
-		}
-		// The evidence line for the number, written once for the first number
-		// this card LANDS: the sidecar holds one row per field while a card may
-		// state several numbers, so writing it per number would be the same row
-		// overwritten and the undo would offer whichever happened to be last.
-		// The signature pass writes this line too, and it is what gives a
-		// replaced number something to undo.
-		if !wroteEvidence {
-			wroteEvidence = true
-			if _, err := applyObservedField(ctx, tx, personID, observedField{
-				Field: fieldPhone, Value: phone.Value, Evidence: c.Evidence,
-				SourceRef: c.SourceRef, Source: c.Source, CapturedBy: c.CapturedBy,
-				ObservedAt: c.ObservedAt,
-			}); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return applied, nil
-}
-
-// cardField is one of the card's single-answer fields, named in the shared
-// vocabulary.
-type cardField struct{ name, value string }
-
-// cardFields reads a card into that vocabulary, dropping what it does not
-// state.
-//
-// TITLE fills `title` and NOT `role`. They are different claims — a title is
-// what somebody is called, a role is what they do in a deal — and person360
-// attaches role evidence to the employment role, so a card saying "VP Finance"
-// would make an unrelated role like "Decision maker" display with that as its
-// evidence.
-//
-// URL is split rather than filed as linkedin, which is what the old import did
-// to every card: a company website landed under a person's LinkedIn profile and
-// the page then showed it as one. Host, not guesswork.
-func cardFields(entry VCardEntry) []cardField {
-	out := make([]cardField, 0, 5)
-	add := func(name, value string) {
-		if v := strings.TrimSpace(value); v != "" {
-			out = append(out, cardField{name: name, value: v})
-		}
-	}
-	add(fieldTitle, entry.Title)
-	add(fieldOrgName, entry.Organization)
-	add(fieldAddress, entry.Address)
-	if u := strings.TrimSpace(entry.URL); u != "" {
-		if isLinkedinURL(u) {
-			add(fieldLinkedin, u)
-		} else {
-			add(fieldWebsite, u)
-		}
-	}
-	return out
-}
-
-// isLinkedinURL reports whether a URL names a LinkedIn profile, by host rather
-// than by substring: a website whose path merely mentions linkedin is not one.
-//
-// Subdomains count, because LinkedIn's own localized profile links carry them —
-// de.linkedin.com and www.linkedin.com are the same site, and a reader who
-// pasted either meant their profile. Hostname() rather than Host, so an
-// explicit port does not turn a profile into a website.
-func isLinkedinURL(raw string) bool {
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return false
-	}
-	host := strings.ToLower(parsed.Hostname())
-	if host == "" {
-		// A bare "linkedin.com/in/x" with no scheme parses as a path.
-		host, _, _ = strings.Cut(strings.ToLower(raw), "/")
-		host, _, _ = strings.Cut(host, ":")
-	}
-	return host == "linkedin.com" || strings.HasSuffix(host, ".linkedin.com")
+	return supersededID, nil
 }

@@ -18,6 +18,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -521,5 +522,58 @@ func TestACardCannotDateItselfIntoTheFuture(t *testing.T) {
 	}
 	if after.Title == nil || *after.Title != "Head of Present" {
 		t.Errorf("title = %v, want the statement made now to win over a card claiming 2099", after.Title)
+	}
+}
+
+// A card listing several numbers points the undo at the one that REPLACED
+// something, not at whichever it happened to list first.
+//
+// The sidecar holds one row per field and the undo reads the value out of it,
+// so a card stating a new mobile and a replacing work number would otherwise
+// point the undo at the mobile — and the reader clicking Undo would revive a
+// number they were not looking at while the mobile stayed put.
+func TestACardWithSeveralNumbersPointsTheUndoAtTheReplacement(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Mila Multi", "mila@multi.example", "Multi AS", "multi.example")
+
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by, observed_at)
+			VALUES ($1, '+49301111111', 'work', true, 0, 'manual', 'human:test', now() - interval '30 days')`,
+			personID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A HOME number is listed first and replaces nothing, so it would take the
+	// one evidence line the field has. The work number comes second and
+	// replaces what the record holds, which is the number an undo is about.
+	importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Mila Multi\nTEL;TYPE=HOME:+49 170 3333333\nTEL;TYPE=WORK:+49 30 2222222\n"+
+			"EMAIL;TYPE=WORK:mila@multi.example\nEND:VCARD\n")
+
+	// The evidence line is what the undo reads, so assert it names the number
+	// that replaced one. Without this the test can pass on the restore alone,
+	// which follows superseded_phone_id and would find the right row even when
+	// the line names the wrong number.
+	if got := profileFieldValue(ctx, t, e, personID, fieldPhone); got != "+49302222222" {
+		t.Errorf("phone evidence line = %q, want the number that REPLACED one — "+
+			"the undo reads its value out of this row", got)
+	}
+	if err := e.store.RestoreProfileField(ctx, personID, fieldPhone); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	live := livePhones(ctx, t, e, personID)
+	if !slices.Contains(live, "+49301111111") {
+		t.Errorf("live numbers = %v after the undo, want the replaced work number back", live)
+	}
+	if !slices.Contains(live, "+491703333333") {
+		t.Errorf("live numbers = %v, want the mobile untouched: the undo was about the work number", live)
+	}
+	if slices.Contains(live, "+49302222222") {
+		t.Errorf("live numbers = %v, want the replacing work number retired", live)
 	}
 }

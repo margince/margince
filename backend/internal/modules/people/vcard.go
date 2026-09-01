@@ -276,9 +276,26 @@ func parseVCardRevision(value string) *time.Time {
 	if v == "" {
 		return nil
 	}
+	// Zoned forms FIRST, and the hour-only offset among them: RFC 6350 admits
+	// -05 as well as -0500, and a card carrying one would otherwise fall
+	// through to the zoneless layouts, be read as UTC, and claim a time hours
+	// from what it says.
 	for _, layout := range []string{
-		"20060102T150405Z0700", "20060102T150405Z07:00", "20060102T150405",
-		time.RFC3339, "2006-01-02T15:04:05", "20060102", "2006-01-02",
+		"20060102T150405Z0700", "20060102T150405Z07:00", "20060102T150405Z07",
+		time.RFC3339, "2006-01-02T15:04:05Z07", "2006-01-02T15:04:05Z0700",
+	} {
+		if at, err := time.Parse(layout, v); err == nil {
+			return &at
+		}
+	}
+	// Zoneless forms are read as UTC, which is a GUESS — the card states a wall
+	// clock and not an instant. It is the safe direction to guess in: UTC is at
+	// or behind every zone east of it, so a card read this way can be older
+	// than it is and lose a comparison it should have won, never newer and win
+	// one it should have lost. A card that loses is a detail not corrected; a
+	// card that wrongly wins overwrites a statement made after it.
+	for _, layout := range []string{
+		"20060102T150405", "2006-01-02T15:04:05", "20060102", "2006-01-02",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
 			return &at
