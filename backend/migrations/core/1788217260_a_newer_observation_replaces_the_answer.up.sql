@@ -30,7 +30,19 @@ ALTER TABLE person_profile_field
     ADD COLUMN superseded_captured_by text,
     ADD COLUMN superseded_observed_at timestamptz;
 
+-- The backfill runs with the row's own updated-at trigger DISABLED.
+--
+-- A plain UPDATE here would fire trg_person_profile_field_updated, which
+-- rewrites updated_at and bumps version on every existing row. A human's
+-- correction is judged against that column (ai.Verdict.AsOf, applied by
+-- person360's readProfileFields): a verdict older than the value's current form
+-- is treated as being about a value the record no longer holds, and is not
+-- shown. Touching updated_at across the table would therefore retire every
+-- correction anybody has ever made, in one statement, at deploy time — with no
+-- value changed and nothing to notice.
+ALTER TABLE person_profile_field DISABLE TRIGGER trg_person_profile_field_updated;
 UPDATE person_profile_field SET observed_at = created_at;
+ALTER TABLE person_profile_field ENABLE TRIGGER trg_person_profile_field_updated;
 
 COMMENT ON COLUMN person_profile_field.observed_at IS
     'When the source stated this value, not when the pass read it. A newer observation replaces the row; an older or equal one leaves it alone.';
@@ -41,7 +53,13 @@ ALTER TABLE person_phone
     ADD COLUMN observed_at timestamptz NOT NULL DEFAULT now(),
     ADD COLUMN superseded_phone_id uuid REFERENCES person_phone (id) ON DELETE SET NULL;
 
+-- Trigger disabled for the profile-field backfill's reason: a version bump
+-- across every number on the installation is a change nobody made, and an
+-- If-Match write held by a client that read the row a moment earlier would
+-- start failing on a row whose value never moved.
+ALTER TABLE person_phone DISABLE TRIGGER trg_person_phone_updated;
 UPDATE person_phone SET observed_at = created_at;
+ALTER TABLE person_phone ENABLE TRIGGER trg_person_phone_updated;
 
 COMMENT ON COLUMN person_phone.superseded_phone_id IS
     'The archived row this number replaced. Identity and not value, because several live numbers of one type are permitted.';

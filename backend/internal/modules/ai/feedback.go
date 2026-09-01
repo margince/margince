@@ -47,6 +47,15 @@ const (
 	ClaimResearchClaim = "research_claim"
 )
 
+// ProfileFieldClaimPath names one enriched profile field as a claim.
+//
+// Exported, and a function rather than a format string at each call site,
+// because the page that RENDERS a verdict and the passes that must DEFER to one
+// have to agree character for character. The stored key is a HASH of this path,
+// so a second spelling matches nothing, loses every correction, and fails
+// silently — there is no wrong value to notice, only a veto that never fires.
+func ProfileFieldClaimPath(field string) string { return ClaimProfileField + ":" + field }
+
 // Verdicts. Each one changes what a later re-derivation is allowed to do.
 const (
 	// VerdictSuppressed: never surface this claim again.

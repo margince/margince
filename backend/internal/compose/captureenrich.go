@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -140,8 +139,8 @@ func unparseableReply(dropped []droppedFinding) bool {
 	return false
 }
 
-// enrichOne reads one candidate's signature block, gates the model's
-// fields against it, and applies the survivors fill-only-empty.
+// enrichOne reads one candidate's signature block, gates the model's fields
+// against it, and applies the survivors by recency.
 func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCandidate) error {
 	lines := signatureBlock(cand.Body)
 	if lines == "" {
@@ -176,22 +175,19 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 		e.log.DebugContext(ctx, "signature enrich: fields dropped by the evidence gate",
 			"person", cand.PersonID.String(), "dropped", len(dropped))
 	}
-	corrections, err := e.correctedAt(ctx, cand.PersonID)
-	if err != nil {
-		return err
-	}
 	fields := make([]people.SignatureField, 0, len(gated))
 	for _, f := range gated {
 		if float64(f.Confidence) < enrichConfidenceFloor {
 			continue
 		}
-		field := people.SignatureField{
+		fields = append(fields, people.SignatureField{
 			Name: f.Field, Value: f.Value, Evidence: f.EvidenceSnippet, Confidence: float64(f.Confidence),
-		}
-		if at, ruled := corrections[f.Field]; ruled {
-			field.CorrectedAt = &at
-		}
-		fields = append(fields, field)
+			// The claim key the correction ledger stores for this field. The
+			// apply re-reads the ledger under its own lock and defers to any
+			// ruling it finds; computing the key here is what lets it, because
+			// the key is a hash only this module can build.
+			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath(f.Field)),
+		})
 	}
 	if len(fields) == 0 {
 		// The model answered and nothing survived the gate — an answer, and
@@ -204,44 +200,6 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 	// A model error above returns before this point on purpose: an
 	// unanswered call is a call still owed, so the person stays a candidate.
 	return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
-}
-
-// correctedAt is when a human last corrected each of this person's enriched
-// fields, keyed by field name.
-//
-// The one veto over recency. A newer statement by the contact replaces what the
-// record holds, including a value somebody typed — but not a value somebody
-// RULED on after reading the machine's answer, because the field contract
-// promises that ruling will not be silently re-inferred. The pass reads the
-// ledger here, in compose, because the ledger belongs to the ai module and the
-// people store may not import a sibling.
-//
-// Only `corrected` counts. A `confirmed` verdict agrees with what was there and
-// says nothing against a later statement; `suppressed` hides the claim from the
-// page and is not an answer about the value.
-func (e *CaptureEnricher) correctedAt(ctx context.Context, personID ids.PersonID) (map[string]time.Time, error) {
-	rows, err := e.pool.Query(ctx, `
-		SELECT claim_key, updated_at
-		FROM ai_feedback
-		WHERE subject_type = 'person' AND subject_id = $1
-		  AND claim_kind = 'profile_field' AND verdict = 'corrected'`, personID)
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading this person's corrections: %w", err)
-	}
-	defer rows.Close()
-	out := map[string]time.Time{}
-	for rows.Next() {
-		var key string
-		var at time.Time
-		if err := rows.Scan(&key, &at); err != nil {
-			return nil, fmt.Errorf("compose: reading a correction: %w", err)
-		}
-		out[strings.TrimPrefix(key, "profile_field:")] = at
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("compose: reading this person's corrections: %w", err)
-	}
-	return out, nil
 }
 
 // signatureEnrichRequest builds the ONE model call that reads one candidate's

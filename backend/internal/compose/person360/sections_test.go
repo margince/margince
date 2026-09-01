@@ -14,16 +14,16 @@ import (
 // is filed against a claim nothing ever consults again — and the failure is
 // silent, looking exactly like the correction not sticking.
 func TestProfileFieldClaimPathIsStableAndPerField(t *testing.T) {
-	title := profileFieldClaimPath("title")
+	title := ai.ProfileFieldClaimPath("title")
 	if title != "profile_field:title" {
 		t.Errorf("claim path = %q, want profile_field:title", title)
 	}
-	if profileFieldClaimPath("phone") == title {
+	if ai.ProfileFieldClaimPath("phone") == title {
 		t.Error("two different fields produced one claim path; correcting one would correct both")
 	}
 	// The ledger hashes the path, and the hash has to agree across calls or a
 	// verdict recorded today is unreadable tomorrow.
-	if ai.ClaimKey(title) != ai.ClaimKey(profileFieldClaimPath("title")) {
+	if ai.ClaimKey(title) != ai.ClaimKey(ai.ProfileFieldClaimPath("title")) {
 		t.Error("the same claim path hashed to two different keys")
 	}
 }

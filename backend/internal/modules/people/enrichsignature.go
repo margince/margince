@@ -10,8 +10,10 @@ package people
 // PO-DDL-12 evidence row so the value stays auditable back to the verbatim
 // signature line, and the field-provenance stamp rides the same commit.
 //
-// The rule the recency does not override is a human's correction, which the
-// caller supplies as SignatureField.CorrectedAt.
+// The rule recency does not override is a human's correction. The caller names
+// each field in the ledger's own terms (SignatureField.ClaimKey) and this
+// re-reads it inside the write transaction, so a correction made while the
+// model was thinking still wins.
 //
 // org_name is evidence-only: it NEVER creates or renames an organization (the
 // deterministic domain path owns employer derivation).
@@ -45,14 +47,15 @@ type SignatureField struct {
 	Value      string
 	Evidence   string // verbatim snippet — the caller's gate already verified it
 	Confidence float64
-	// CorrectedAt is when a human last corrected THIS field, when one has. It
-	// is the one thing a newer statement does not outrank: somebody read the
-	// machine's answer and ruled on it, and the contract promises them it will
-	// not be silently re-inferred. Nil where nobody has ruled.
+	// ClaimKey identifies this field in the correction ledger — the one thing a
+	// newer statement does not outrank, because somebody who ruled on a field
+	// was promised no fresh inference would replace their answer without a
+	// confirm.
 	//
-	// Supplied by the caller because the ruling lives in another module's
-	// ledger, which this one may not read.
-	CorrectedAt *time.Time
+	// Supplied by the caller: the key is a hash of the claim path, and only the
+	// module that owns the ledger can compute one. Empty means the caller
+	// cannot see the ledger, and the apply then runs on plain recency.
+	ClaimKey string
 }
 
 // SignatureApplyResult counts what one apply did — honest numbers for the
@@ -158,6 +161,15 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 			res.Skipped += len(fields)
 			return nil
 		}
+		// The corrections, re-read INSIDE this transaction. The caller supplies
+		// them from the ledger it owns, but that read happened before this
+		// transaction opened, and a reader who corrected a field in the gap
+		// would have their answer overwritten by a pass that never saw it.
+		// Under the subject lock taken above, this read cannot go stale.
+		corrected, err := correctedFields(ctx, tx, personID, fields)
+		if err != nil {
+			return err
+		}
 		var appliedFields []string
 		// Every field this pass landed, as it found it and as it left it —
 		// keyed by the field name, whether it is a column of the person or a
@@ -167,6 +179,13 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// histories.
 		before, after := map[string]any{}, map[string]any{}
 		for _, f := range fields {
+			if corrected[f.Name] {
+				// A human ruled on this field. Their answer stands until they
+				// confirm a replacement, so the statement is evidence for that
+				// confirm and not a write.
+				res.Skipped++
+				continue
+			}
 			verdict, err := s.applySignatureField(ctx, tx, personID, sourceRef, observedAt, f)
 			if err != nil {
 				return err
@@ -279,7 +298,7 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 	outcome, err := applyObservedField(ctx, tx, personID, observedField{
 		Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,
 		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
-		ObservedAt: observedAt, CorrectionAt: f.CorrectedAt,
+		ObservedAt: observedAt,
 	})
 	if err != nil || outcome != observedApplied {
 		return signatureVerdict{}, err
