@@ -339,12 +339,9 @@ type WaitingCustomer struct {
 	PersonID       ids.UUID
 	OrganizationID ids.UUID
 	DealID         ids.UUID
-	// OwnerID is who answers for the linked record. Zero means nobody does, and
-	// that is a routing answer rather than a missing one — an unowned wait
-	// belongs to the unassigned queue, not to whoever happens to read the page.
-	OwnerID ids.UUID
-	// HasOpenDeal reports whether money is still on this thread. It is what
-	// keeps a long wait in execution instead of sending it to review.
+	// HasOpenDeal reports whether money this reader can see is still on this
+	// thread. It is what keeps a long wait in execution instead of sending it
+	// to review.
 	HasOpenDeal bool
 }
 

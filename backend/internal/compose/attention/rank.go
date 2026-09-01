@@ -79,9 +79,20 @@ type ranked struct {
 	// units compare a yen to a euro and get it wrong.
 	expectedBase int64
 	hasExpected  bool
-	waitingDays  int
-	strength     int
-	occurredAt   time.Time
+	// waitingDays is the TRUE age of a wait, in days, and it is what a reader is
+	// ever shown — both in the row's own reasons and in the comparison naming
+	// why it sits above the next one.
+	//
+	// waitingRank is the same age bounded by the ordering ceiling, and it is
+	// what decides the order. The two are separate fields because they are read
+	// by different callers for different purposes, and a single field serving
+	// both published the bounded number as though it were the real one: a row
+	// saying "waiting 180 days" while its own explanation compared 30 against
+	// 20, which is a reason nobody can check.
+	waitingDays int
+	waitingRank int
+	strength    int
+	occurredAt  time.Time
 	// foldedFrom names the sources of the rows this one stands for, once per
 	// member. A folded group is shown INSTEAD of its members, so a count of
 	// what the reader can see has to attribute it back to them — otherwise
@@ -148,8 +159,8 @@ func less(a, b ranked) bool {
 	if decided, order := byExpected(a, b); decided {
 		return order
 	}
-	if a.waitingDays != b.waitingDays {
-		return a.waitingDays > b.waitingDays
+	if a.waitingRank != b.waitingRank {
+		return a.waitingRank > b.waitingRank
 	}
 	if a.strength != b.strength {
 		return a.strength > b.strength
@@ -244,7 +255,16 @@ func compare(a, b ranked) crmcontracts.WorklistComparison {
 			Theirs:     moneyValue(b),
 		}
 	}
-	if a.waitingDays != b.waitingDays {
+	// Decided on the ORDERING age, because that is what less() compared — naming
+	// a comparator that did not decide is the failure this function exists to
+	// avoid. Reported as the TRUE age, because that is the number the row itself
+	// says and the one a reader can check.
+	//
+	// Where the ceiling clipped a side, the two sides can order differently from
+	// how they read: 180 and 40 days both rank as 30, tie, and the next
+	// comparator decides. Then this arm never fires, so no row ever claims an
+	// age decided it when the ages had stopped mattering.
+	if a.waitingRank != b.waitingRank {
 		return crmcontracts.WorklistComparison{
 			Comparator: crmcontracts.WorklistComparisonComparatorWaitingDays,
 			Mine:       daysValue(a.waitingDays),

@@ -52,8 +52,15 @@ func expected(minor int64) func(*ranked) {
 	}
 }
 
+// quiet builds a wait of the given age the way classifyWaiting does: the true
+// age for what a reader is shown, the bounded age for the order. Setting only
+// one would model a row production never produces, and the ordering tests would
+// then pass against a shape that cannot occur.
 func quiet(days int) func(*ranked) {
-	return func(r *ranked) { r.waitingDays = days }
+	return func(r *ranked) {
+		r.waitingDays = days
+		r.waitingRank = min(days, waitingDaysCeiling)
+	}
 }
 
 func idsOf(items []crmcontracts.WorklistItem) []string {

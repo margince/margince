@@ -189,17 +189,41 @@ func TestAWaitOlderThanTheHorizonIsNotReported(t *testing.T) {
 	}
 }
 
-// The wait carries whoever answers for the record, so "mine" can mean mine.
-// Without this the queue has no owner to compare against and falls back to
-// showing unowned work to everybody.
-func TestAWaitCarriesTheOwnerOfItsRecord(t *testing.T) {
+// Money outlives the horizon. A wait past ninety days with an open deal on it
+// still reaches the reader, because the caller's staleness rule promises to keep
+// exactly that case and a horizon that removed it first would leave that promise
+// with nothing to act on.
+func TestAnOldWaitWithAnOpenDealSurvivesTheHorizon(t *testing.T) {
 	e := Setup(t)
 	person := seedWaitingPerson(t, e)
-	if _, err := OwnerConn(t).Exec(context.Background(),
-		`UPDATE person SET owner_id = $1 WHERE id = $2`, e.AdminUser, person); err != nil {
-		t.Fatalf("giving the person an owner: %v", err)
+	deal := seedWaitingDeal(t, "open")
+	seedWaitingMessageLinked(t, e, "thread-old-funded", "inbound", "Still open",
+		waitingInstant.Add(-200*24*time.Hour), person)
+	linkActivityToDeal(t, "Still open", deal)
+
+	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
 	}
-	seedWaitingMessageLinked(t, e, "thread-owned", "inbound", "Owned thread",
+
+	if !containsSubject(waiting, "Still open") {
+		t.Fatal("a 200-day wait on an OPEN deal was dropped by the horizon")
+	}
+}
+
+// A thread with an open deal on it says so, and one without says so too.
+//
+// Both halves in one test because the flag only means something as a pair: a
+// query that answered true for everything would pass the first half alone, and
+// that is the answer that keeps every ancient thread in the day forever.
+func TestAWaitReportsWhetherAnOpenDealIsOnIt(t *testing.T) {
+	e := Setup(t)
+	person := seedWaitingPerson(t, e)
+	deal := seedWaitingDeal(t, "open")
+	seedWaitingMessageLinked(t, e, "thread-funded", "inbound", "Funded thread",
+		waitingInstant.Add(-2*24*time.Hour), person)
+	linkActivityToDeal(t, "Funded thread", deal)
+	seedWaitingMessageLinked(t, e, "thread-unfunded", "inbound", "Unfunded thread",
 		waitingInstant.Add(-2*24*time.Hour), person)
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
@@ -207,42 +231,70 @@ func TestAWaitCarriesTheOwnerOfItsRecord(t *testing.T) {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
 
-	for _, row := range waiting {
-		if row.Subject != "Owned thread" {
-			continue
-		}
-		if row.OwnerID != ids.UUID(e.AdminUser) {
-			t.Fatalf("the wait came back owned by %v, wanted the person's owner %v",
-				row.OwnerID, e.AdminUser)
-		}
-		return
-	}
-	t.Fatal("the owned thread never reached the reader at all")
+	assertOpenDeal(t, waiting, "Funded thread", true)
+	assertOpenDeal(t, waiting, "Unfunded thread", false)
 }
 
-// An unowned record yields an unowned wait. Zero is the routing answer that
-// sends it to the unassigned queue; guessing an owner here is what put every
-// colleague's mail on everybody's page.
-func TestAWaitOnAnUnownedRecordHasNoOwner(t *testing.T) {
+// A deal that is WON is not money still on the thread. Without the status
+// predicate every closed deal would keep its thread in the day forever.
+func TestAClosedDealIsNotAnOpenOne(t *testing.T) {
 	e := Setup(t)
-	seedWaitingMessage(t, e, "thread-unowned", "inbound", "Unowned thread",
-		waitingInstant.Add(-2*24*time.Hour))
+	person := seedWaitingPerson(t, e)
+	deal := seedWaitingDeal(t, "won")
+	seedWaitingMessageLinked(t, e, "thread-won", "inbound", "Won thread",
+		waitingInstant.Add(-2*24*time.Hour), person)
+	linkActivityToDeal(t, "Won thread", deal)
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
 
-	for _, row := range waiting {
-		if row.Subject != "Unowned thread" {
+	assertOpenDeal(t, waiting, "Won thread", false)
+}
+
+// seedWaitingDeal creates one deal in the given status, with the pipeline and
+// stage every deal needs. A closed deal carries a closed_at, which its own CHECK
+// constraint requires.
+func seedWaitingDeal(t *testing.T, status string) ids.UUID {
+	t.Helper()
+	owner := OwnerConn(t)
+	pipeline := SeedIDRow(t, owner, `INSERT INTO pipeline (id, name, is_default, position)
+		VALUES ($1, 'Sales', true, 0)`)
+	stage := SeedIDRow(t, owner, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
+		VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipeline)
+	var closedAt any
+	if status != "open" {
+		closedAt = waitingInstant.Add(-24 * time.Hour)
+	}
+	return SeedIDRow(t, owner, `INSERT INTO deal (id, name, pipeline_id, stage_id, status, closed_at, source, captured_by)
+		VALUES ($1, 'A deal', $2, $3, $4, $5, 'manual', 'human:x')`,
+		pipeline, stage, status, closedAt)
+}
+
+// linkActivityToDeal files an already-seeded message under a deal as well.
+func linkActivityToDeal(t *testing.T, subject string, deal ids.UUID) {
+	t.Helper()
+	if _, err := OwnerConn(t).Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, deal_id)
+		SELECT id, 'deal', $1 FROM activity WHERE subject = $2`,
+		deal, subject); err != nil {
+		t.Fatalf("filing %q under a deal: %v", subject, err)
+	}
+}
+
+func assertOpenDeal(t *testing.T, rows []activities.WaitingReply, subject string, want bool) {
+	t.Helper()
+	for _, row := range rows {
+		if row.Subject != subject {
 			continue
 		}
-		if !row.OwnerID.IsZero() {
-			t.Fatalf("an unowned record produced owner %v", row.OwnerID)
+		if row.HasOpenDeal != want {
+			t.Fatalf("%q reported HasOpenDeal=%v, wanted %v", subject, row.HasOpenDeal, want)
 		}
 		return
 	}
-	t.Fatal("the unowned thread never reached the reader at all")
+	t.Fatalf("%q never reached the reader at all", subject)
 }
 
 func containsSubject(rows []activities.WaitingReply, subject string) bool {

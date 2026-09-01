@@ -95,12 +95,44 @@ func TestAgeStopsRaisingUrgencyAtTheCeiling(t *testing.T) {
 		HasOpenDeal: true,
 	}, rankInstant)
 
-	if older.waitingDays != newer.waitingDays {
+	if older.waitingRank != newer.waitingRank {
 		t.Fatalf("waits of %d and %d ordering days past the ceiling did not tie",
-			older.waitingDays, newer.waitingDays)
+			older.waitingRank, newer.waitingRank)
 	}
-	if older.waitingDays != waitingDaysCeiling {
-		t.Fatalf("the ordering age was %d, wanted the ceiling %d", older.waitingDays, waitingDaysCeiling)
+	if older.waitingRank != waitingDaysCeiling {
+		t.Fatalf("the ordering age was %d, wanted the ceiling %d", older.waitingRank, waitingDaysCeiling)
+	}
+	// And the two still SAY different ages, because they waited different
+	// lengths of time. Bounding the order must not reach the reader.
+	if older.waitingDays == newer.waitingDays {
+		t.Fatalf("both rows reported %d days, so the bound reached what the reader is told",
+			older.waitingDays)
+	}
+}
+
+// The comparison a reader is shown reports the TRUE ages. A row saying "waiting
+// 183 days" whose own explanation compares 30 against 20 is a reason nobody can
+// check — the failure the comparator exists to avoid, reintroduced by bounding
+// the field it reads.
+func TestTheComparisonReportsTheAgeTheRowClaims(t *testing.T) {
+	older := classifyWaiting(WaitingCustomer{
+		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000f1"),
+		Since:       rankInstant.Add(-183 * 24 * time.Hour),
+		HasOpenDeal: true,
+	}, rankInstant)
+	newer := classifyWaiting(WaitingCustomer{
+		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000f2"),
+		Since:       rankInstant.Add(-20 * 24 * time.Hour),
+		HasOpenDeal: true,
+	}, rankInstant)
+
+	got := compare(older, newer)
+
+	if got.Comparator != crmcontracts.WorklistComparisonComparatorWaitingDays {
+		t.Fatalf("the ages decided this pair, and the comparison named %q", got.Comparator)
+	}
+	if got.Mine == nil || got.Mine.Days == nil || *got.Mine.Days != 183 {
+		t.Fatalf("the comparison reported %v days, and the row says it waited 183", got.Mine)
 	}
 }
 

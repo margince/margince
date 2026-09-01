@@ -269,14 +269,20 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Action:     "draft_reply",
 		ActivityId: openapi_types.UUID(waiting.ActivityID),
 	}
-	// The row SAYS the true age and SORTS on the capped one. A rep reading
-	// "waiting 180 days" is being told something true; the queue placing that
-	// row above everything for the rest of its life is not.
+	// Both ages travel: the true one for everything a reader is shown, the
+	// bounded one for the order. A rep reading "waiting 180 days" is being told
+	// something true; the queue placing that row above everything for the rest
+	// of its life is not.
 	ordering := days
 	if ordering > waitingDaysCeiling {
 		ordering = waitingDaysCeiling
 	}
-	return ranked{item: row, waitingDays: ordering, occurredAt: waiting.Since}
+	return ranked{
+		item:        row,
+		waitingDays: days,
+		waitingRank: ordering,
+		occurredAt:  waiting.Since,
+	}
 }
 
 // dropDealsAlreadyWaiting removes the at-risk row for a deal somebody is
