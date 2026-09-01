@@ -173,6 +173,20 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// makes them able to find a duplicate at all — so handing the id
 			// back unchecked would turn an upload into a lookup for records
 			// outside the caller's scope.
+			// The source, before the candidate is even named. This arm writes
+			// nothing itself, but what it RETURNS becomes a durable proposal
+			// carrying the whole card — so a narrowed message would reach a
+			// review queue instead of a person record, which is the same leak
+			// in a different table.
+			narrowed, err := sourceIsNarrowed(ctx, tx, source)
+			if err != nil {
+				return err
+			}
+			if narrowed {
+				result.Outcome = VCardSkipped
+				result.Reason = vcardSourceNarrowed
+				return nil
+			}
 			result.Outcome = VCardNeedsReview
 			if err := auth.EnsureVisible(ctx, tx, entityPerson, decision.PersonID.UUID); err != nil {
 				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {

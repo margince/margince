@@ -181,6 +181,42 @@ func TestTheCardsLivenessCheckIsInsideItsWriteTransaction(t *testing.T) {
 	}
 }
 
+// The review arm leaks too, and differently: it writes no person, but what it
+// RETURNS becomes a durable proposal carrying the whole card. A narrowed message
+// reaching a review queue is the same contents in a different table.
+func TestANarrowedMessageStagesNoReviewEither(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	// A contact the card resembles without matching: same name, different
+	// address, so the dedupe answers review rather than update or create.
+	if _, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Petra Post", Source: "ui",
+		Emails: []PersonEmailInput{{Email: "petra.post@anderswo.example", EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("seeding the contact the card resembles: %v", err)
+	}
+
+	// The admit arm first, so the refusal below is known to be the audience and
+	// not a dedupe that never reaches review at all.
+	open := importMailedCard(ctx, t, e, seedSourceMessage(ctx, t, e, "workspace"))
+	if len(open) != 1 || open[0].Outcome != VCardNeedsReview {
+		t.Fatalf("a card resembling an existing contact answered %q on an open message, want "+
+			"needs_review — the refusal below would then prove nothing", outcomeOf(open))
+	}
+
+	narrowed := importMailedCard(ctx, t, e, seedSourceMessage(ctx, t, e, "participants"))
+	if len(narrowed) != 1 || narrowed[0].Outcome != VCardSkipped {
+		t.Errorf("a card from a message the workspace may not read answered %q, want skipped — "+
+			"a review carries the whole card into a durable proposal, so this arm leaks the "+
+			"same contents the write arms do", outcomeOf(narrowed))
+	}
+	if narrowed[0].PersonID != nil {
+		t.Errorf("the refused card still named the contact it resembles, which tells the reader " +
+			"that address belongs to somebody here")
+	}
+}
+
 // outcomeOf names what one import answered, for a failure message that says what
 // happened rather than that something did.
 func outcomeOf(results []VCardResult) string {
