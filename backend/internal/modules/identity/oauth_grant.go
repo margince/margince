@@ -108,7 +108,7 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 		return ids.Nil, "", err
 	}
 	auditCtx := actorCtx(ctx, Identity{UserID: in.UserID, WorkspaceID: in.WorkspaceID})
-	if err := supersedePriorGrants(auditCtx, tx, in.UserID, in.ClientID); err != nil {
+	if err := supersedePriorGrants(auditCtx, tx, in.ClientID); err != nil {
 		return ids.Nil, "", err
 	}
 	// oauth_grant.lent_passport_id and oauth_authorization_code.lent_passport_id
@@ -193,15 +193,20 @@ const deactivatedUserRevokeReason = "the human who consented was deactivated"
 // again from the same client and the earlier connection made way for it.
 const supersededRevokeReason = "superseded by a later consent from the same client"
 
-// supersedePriorGrants ends this human's earlier connections for the SAME
-// client registration (file header: why client_id, not product). The lock
-// story needs nothing new — issueGrant already holds app_user FOR UPDATE
-// (requireLiveConsentingUser) and revokeGrantTx takes the grant lock first,
-// so entering through it preserves the cascade's existing lock order.
-func supersedePriorGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID, clientID string) error {
+// supersedePriorGrants ends the REGISTRATION's earlier connection, whoever
+// consented to it — not only this human's own prior grant — because the file
+// header's invariant is one row per client REGISTRATION, and a client_id
+// re-authorized by a second human (a shared machine, a handed-off install)
+// is still one registration changing hands, not two connections coexisting.
+// The lock story needs nothing new — issueGrant already holds app_user FOR
+// UPDATE for the CONSENTING human (requireLiveConsentingUser), and
+// revokeGrantTx takes the grant lock first regardless of whose grant it is,
+// so entering through it preserves the cascade's existing lock order without
+// needing the prior human's own app_user row.
+func supersedePriorGrants(ctx context.Context, tx pgx.Tx, clientID string) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM oauth_grant
-		WHERE user_id = $1 AND client_id = $2 AND revoked_at IS NULL`, userID, clientID)
+		WHERE client_id = $1 AND revoked_at IS NULL`, clientID)
 	if err != nil {
 		return err
 	}

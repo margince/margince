@@ -292,9 +292,11 @@ func TestNarrowingOnTheScreenReachesTheToolSurface(t *testing.T) {
 	}
 	sawReadTool := false
 	for _, tool := range tools {
-		if toolRequiresScope(t, tool, "write") {
-			name, _ := tool["name"].(string)
-			t.Fatalf("a read-only connection was offered the write tool %q", name)
+		for _, excluded := range []string{"draft", "write", "send", "enrich"} {
+			if toolRequiresScope(t, tool, excluded) {
+				name, _ := tool["name"].(string)
+				t.Fatalf("a read-only connection was offered the %s-scoped tool %q", excluded, name)
+			}
 		}
 		if toolRequiresScope(t, tool, "read") {
 			sawReadTool = true
