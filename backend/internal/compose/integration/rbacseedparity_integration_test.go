@@ -22,10 +22,19 @@ package integration
 //
 // TWO PRE-STATES, because neither one alone answers the obligation:
 //
-//   - PER WRITE — today's matrix minus that write's own objects. It ISOLATES, so
-//     a failure names one migration. The cost is that the writes are never
-//     composed, and the state is modern apart from the objects removed, which is
-//     a state no installation was ever actually in.
+//   - PER WRITE — today's matrix minus that write's own objects, then that write
+//     and every LATER one replayed over it: the upgrade an installation
+//     predating this write receives. Each subtest names the write whose
+//     pre-state it built, so a failure still says where to start looking, and
+//     the state is modern apart from the objects removed, which is a state no
+//     installation was ever actually in.
+//
+//     It replays forward rather than in isolation because isolation stopped
+//     being answerable once two migrations wrote the same path: replaying the
+//     older of a narrow/widen pair alone lands on the value the newer one
+//     reverses, which no installation can reach. The cost is that a later
+//     migration's fault fails every earlier subtest too — the sequence is what
+//     is under test, and the earliest failing name is the one to read.
 //   - COMPOSED — the documents an installation bootstrapped AT THE BASELINE
 //     really held, with every write replayed over them in version order. That state is real, and it is the OLDEST one that can reach
 //     head at all, so this is the arm that models the obligation. The cost is
@@ -57,6 +66,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/migrations"
 )
 
@@ -180,9 +190,17 @@ func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
 //     it back onto the matrix.
 //   - it writes some other path (`{row_scope}`, say) — the prior value is
 //     knowable only by reading the migration's own predicate, which this gate
-//     does not do. The weaker claim it can still make is that replaying against
-//     an already-correct installation moves nothing, which catches a write that
-//     fires unconditionally.
+//     does not do.
+//
+// Each arm replays its own write AND every write after it, which is what an
+// upgrade from that point actually runs. In isolation it could not judge a value
+// a LATER migration supersedes: 1787449829 narrows the seeded manager to own
+// scope and 1788244324 widens it back to team, so replaying the older one alone
+// against a head-seeded database leaves own — a disagreement with the compiled
+// default that no real installation can reach, because migrations only ever run
+// forward. Replaying forward from each write keeps every migration judged and
+// asks of each the question an operator actually faces: an installation that
+// predates this write, brought to head, holds the matrix head seeds.
 func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 	seeded := readSeededDefaults(t)
 	writes := rolePermissionMigrations(t)
@@ -201,13 +219,17 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 	ctx := context.Background()
 	bootstrapInstallation(t, e)
 
-	for _, write := range writes {
+	for i, write := range writes {
 		t.Run(write.name, func(t *testing.T) {
 			rewindTo(ctx, t, e, write.objects)
-			for _, statement := range write.statements {
-				if _, err := e.Owner.Exec(ctx, statement); err != nil {
-					t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
-						write.name, err, statement)
+			// This write and every one after it, in the order dbmigrate applies
+			// them — the upgrade an installation predating this write receives.
+			for _, forward := range writes[i:] {
+				for _, statement := range forward.statements {
+					if _, err := e.Owner.Exec(ctx, statement); err != nil {
+						t.Fatalf("replaying a role.permissions write from %s: %v\n%s",
+							forward.name, err, statement)
+					}
 				}
 			}
 			assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), write.name)
@@ -267,6 +289,14 @@ func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
 	const via = "the composed replay from the baseline era"
 	assertSameMatrix(t, seeded, liveRoleDocuments(ctx, t, e.Owner), via)
 	assertControlRoleUntouched(ctx, t, e.Owner, via)
+	// The sweep runs once, from the arm that replays EVERY migration — the one
+	// whose documents therefore carry every marker any of them writes, so an
+	// entry that matched nothing here matched nothing anywhere worth counting.
+	// (Matching itself happens in every arm, through the shared
+	// assertNoUnmodelledKeys; what this asserts is that each entry was reached
+	// at all, because a marker still waived after its migration stopped writing
+	// one is ratification of code that is gone.)
+	provenanceKeys.AssertAllMatched(t)
 }
 
 // assertPreStateIsNotAlreadyTheAnswer refuses a pre-state that already equals
@@ -352,6 +382,27 @@ func decodeRoleDocument(t *testing.T, role string, raw json.RawMessage) roleDocu
 	return document
 }
 
+// provenanceKeys are document keys a MIGRATION writes to record that it made a
+// change, so its own down migration can tell a value it set from one an operator
+// had already chosen. They are not permissions, and no code reads them to decide
+// anything: only the reversal does.
+//
+// They are legitimately present on an UPGRADED installation and legitimately
+// absent from a fresh one, which is the one asymmetry this parity gate must
+// tolerate — seeding cannot write a marker naming a migration that never ran
+// there. Every other key stays judged.
+//
+// A WAIVER rather than prose, because this comparison reads it: a key listed
+// here and then no longer written by any migration fails as loudly as one that
+// was never named, so the list cannot quietly outlive its reason. Keyed by name
+// so a new marker fails here until somebody says the same thing about it, rather
+// than being waved through by a prefix rule.
+var provenanceKeys = gatekit.Waive(map[string]string{
+	"row_scope_set_by": "1788244324 widened the seeded Team Lead from own to team scope, and its down " +
+		"migration narrows only what it widened — matching on the current value alone cannot tell that " +
+		"from an operator's own choice",
+})
+
 // assertNoUnmodelledKeys names a document key roleDocument does not model, so a
 // whole-document difference that the per-part comparison cannot explain still
 // reports something actionable rather than reading as a spurious failure.
@@ -367,6 +418,9 @@ func assertNoUnmodelledKeys(t *testing.T, role string, raw json.RawMessage, via 
 	}
 	for key := range keys {
 		if key == "objects" || key == "row_scope" {
+			continue
+		}
+		if provenanceKeys.Waived(t, key) {
 			continue
 		}
 		t.Errorf("%s: role %q carries document key %q, which this comparison does not model: %s.\n"+
