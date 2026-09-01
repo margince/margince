@@ -38,12 +38,14 @@ func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, c
 		if outcome.Degraded {
 			return "", fmt.Errorf(
 				"aicert: task %s scenario %s run %d: candidate attempt served on a budget-degraded route — refusing to certify a demoted answer",
-				task, sc.Name, i+1)
+				task, sc.Name, i+1,
+			)
 		}
 		if outcome.JudgeDegraded {
 			return "", fmt.Errorf(
 				"aicert: task %s scenario %s run %d: judge attempt served on a budget-degraded route — refusing to trust a demoted grader",
-				task, sc.Name, i+1)
+				task, sc.Name, i+1,
+			)
 		}
 		if err := acc.addRun(task, sc, i, outcome); err != nil {
 			return "", err
@@ -138,7 +140,8 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if !aitasks.KnownOutcome(evaluated.Result) {
 		return runOutcome{}, fmt.Errorf(
 			"the case for site %s/%s evaluated to %q, which is not one of the outcomes a reply can have — a run counted under no outcome would leave the record's own totals unable to add up",
-			task, sc.Site, evaluated.Result)
+			task, sc.Site, evaluated.Result,
+		)
 	}
 	capsOK, capFailures := checkCaps(sc.Expect.Caps, pooled)
 	// A run passes when what happened is what the scenario said should happen.
@@ -302,7 +305,8 @@ func (r runCalls) servedUniformly() error {
 		if c.Provider != r.Provider || c.ServedModel != r.ServedModel {
 			return fmt.Errorf(
 				"call %d of %d was served by %s:%s, but call 1 was served by %s:%s — refusing to certify one run answered by two models",
-				i+1, len(r.Calls), c.Provider, c.ServedModel, r.Provider, r.ServedModel)
+				i+1, len(r.Calls), c.Provider, c.ServedModel, r.Provider, r.ServedModel,
+			)
 		}
 	}
 	return nil

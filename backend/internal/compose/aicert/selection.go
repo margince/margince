@@ -59,7 +59,8 @@ func ladderForTask(role string, binding ai.ProviderConfig, profile ai.Profile, t
 		// when it was the judge's binding that was incomplete.
 		return ai.RoutingConfig{}, fmt.Errorf(
 			"aicert: the %s binding %s:%s under profile %s: %w",
-			role, binding.Provider, binding.Model, profile, err)
+			role, binding.Provider, binding.Model, profile, err,
+		)
 	}
 	// The embed lane is bound to the same model because the ROUTER requires one,
 	// not because certification embeds anything: this lane drives chat tasks and

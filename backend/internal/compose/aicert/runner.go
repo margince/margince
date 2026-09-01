@@ -355,7 +355,8 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	if acc.identitySet && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
 		return fmt.Errorf(
 			"aicert: task %s scenario %s run %d: candidate served by %s:%s, but run 1 was served by %s:%s — refusing to certify a mixed run set",
-			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel)
+			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel,
+		)
 	}
 	acc.allResults = append(acc.allResults, outcome.RunResult)
 	acc.latencies = append(acc.latencies, outcome.LatencyMS)

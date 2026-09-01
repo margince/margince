@@ -109,5 +109,4 @@ func warnUnboundDegradeTargets(cfg RunnerConfig, log *slog.Logger) {
 		log.Warn("aicert: some tiers a task can degrade to are unbound in the supplied routing — those rungs will fail in production and this run does not measure them",
 			"unbound", strings.Join(unreachable, ", "))
 	}
-
 }
