@@ -2499,9 +2499,7 @@ describe("what the composer says it is answering", () => {
     );
 
     await fillSendableForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Send", exact: true }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /^Send$/ }));
 
     await waitFor(() => {
       // The reply path, not POST /emails — which would file under the body's
