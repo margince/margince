@@ -221,8 +221,10 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	// provenance is the whole question here — a mark stamped by hand would be a
 	// person's, which is the case that must NOT be replaced.
 	firstArgs, first := readTheAnchorsSiteFor(t, e, blob)
-	if orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, firstArgs); orgID.UUID.String() == "" {
-		t.Fatal("the first confirmation created no company")
+	created := confirmTheAnchorAsTheAPIDoes(t, e, engine, firstArgs)
+	if wearing, err := e.People.OrganizationLogoKey(human, created); err != nil || wearing != first {
+		t.Fatalf("after onboarding the company wears %q (%v), want the first read's mark at %q — "+
+			"this case has no replacement to observe otherwise", wearing, err, first)
 	}
 
 	// The second read, which is the settings card's refresh against a company
