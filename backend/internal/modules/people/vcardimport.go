@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -354,8 +355,21 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, personID ids.Perso
 		Entry: entry, Evidence: evidence, SourceRef: vcardSource,
 		Source: vcardSource, CapturedBy: by,
 	}
+	// A card's REV is written by whoever exported it, so it is attacker-supplied
+	// like every other field on the card — and unlike the others it decides
+	// what this card OUTRANKS. A REV in 2099 would win against every statement
+	// the contact ever makes afterwards, permanently, from one file somebody
+	// mailed in. A future date is therefore not read as a date: the import
+	// falls back to its own clock, which is exactly the answer a card with no
+	// REV already gets.
 	if entry.Revised != nil {
-		card.ObservedAt = *entry.Revised
+		var now time.Time
+		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
+			return fmt.Errorf("people: dating the card against the clock: %w", err)
+		}
+		if !entry.Revised.After(now) {
+			card.ObservedAt = *entry.Revised
+		}
 	}
 	applied, err := applyObservedCard(ctx, tx, personID, card)
 	if err != nil {

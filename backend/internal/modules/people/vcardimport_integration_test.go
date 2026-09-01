@@ -478,3 +478,48 @@ func livePhones(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.Pe
 	}
 	return out
 }
+
+// A card cannot date itself into the future to win forever.
+//
+// REV is written by whoever exported the card, so it is attacker-supplied like
+// every other field on it — and unlike the others it decides what the card
+// OUTRANKS. A card claiming 2099 would beat every statement the contact makes
+// afterwards, permanently, from one file somebody mailed in.
+func TestACardCannotDateItselfIntoTheFuture(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	// The person exists first, so the card takes the UPDATE path — the one that
+	// applies a card by its own date. A card that CREATES somebody states
+	// nothing this rule has to arbitrate, because there is no earlier answer.
+	incumbent, err := e.store.CreatePerson(ctx, CreatePersonInput{
+		FullName: "Future Card", Source: "manual",
+		Emails: []PersonEmailInput{{Email: "future@card.example", EmailType: emailTypeWork, IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seeding the incumbent: %v", err)
+	}
+	personID := ids.From[ids.PersonKind](ids.UUID(incumbent.Id))
+
+	results := importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Future Card\nTITLE:Time Traveller\nREV:20991231T235959Z\n"+
+			"EMAIL;TYPE=WORK:future@card.example\nEND:VCARD\n")
+	if len(results) != 1 || results[0].Outcome != VCardUpdated {
+		t.Fatalf("outcomes = %+v, want one updated", results)
+	}
+
+	// An ordinary statement made now must still win, which it cannot if the
+	// card's own date was taken at face value.
+	if !fillFromSignature(ctx, t, e, personID, SignatureField{
+		Name: fieldTitle, Value: "Head of Present", Evidence: "Head of Present", Confidence: 0.9,
+	}) {
+		t.Fatal("the signature wrote nothing — a future-dated card is outranking a statement made now")
+	}
+	after, err := e.store.GetPerson(ctx, personID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Title == nil || *after.Title != "Head of Present" {
+		t.Errorf("title = %v, want the statement made now to win over a card claiming 2099", after.Title)
+	}
+}
