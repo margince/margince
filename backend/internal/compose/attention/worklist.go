@@ -109,8 +109,13 @@ func (s *Service) Worklist(
 	// The same rule for the leads still owed a reply: read beside the day,
 	// under the ownership dial this read already resolved, so `mine` narrows
 	// in the store's own query rather than by dropping rows afterwards.
-	leads, leadsBounded, leadsErr := reader.owedLeads(ctx)
-	out := s.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads, leadsBounded)
+	leads, leadsRead, leadsBounded, leadsErr := reader.owedLeads(ctx)
+	// On the READER, not on s. The narrowing lives on the copy forOwner made,
+	// and projecting from the original left s.taskOwner zero — so keepOwnedBy
+	// never ran and a page headed with a rep's name was never narrowed to them
+	// at all. The lead lane made this visible: its rows are the first that
+	// keepOwnedBy has to keep deliberately rather than by carrying a deal.
+	out := reader.worklistFrom(ctx, day, resolved, filter, limit, waiting, leads, leadsRead, leadsBounded)
 	if waitingErr != nil {
 		out.SourcesUnavailable = append(out.SourcesUnavailable, *waitingErr)
 	}
@@ -158,7 +163,7 @@ func (s *Service) waitingCustomers(
 
 func (s *Service) worklistFrom(
 	ctx context.Context, day crmcontracts.Attention, scope, filter string, limit int,
-	waiting []WaitingCustomer, leads []OwedLead, leadsBounded bool,
+	waiting []WaitingCustomer, leads []OwedLead, leadsRead, leadsBounded bool,
 ) crmcontracts.Worklist {
 	if limit <= 0 {
 		limit = worklistPage
@@ -242,7 +247,14 @@ func (s *Service) worklistFrom(
 	// beside the assembled day rather than as one of its lanes, so the figure
 	// travels with the rows.
 	bounded := boundedSources(day)
-	bounded[sourceLeadResponse] = leadsBounded
+	// Recorded ONLY when the lane ran. reachOf emits a row for every key in
+	// this map, so writing false for a source that never read would publish a
+	// zero-valued reach entry — the page reporting a source as successfully
+	// read and empty, which is exactly the claim an untracked policy must not
+	// make.
+	if leadsRead {
+		bounded[sourceLeadResponse] = leadsBounded
+	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
 	// entirely — a rep narrowing to meetings would read "no tasks" rather than

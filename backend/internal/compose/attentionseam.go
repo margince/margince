@@ -443,5 +443,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The inbound leads still owed a first reply. The store answers the
 		// ordering and the state; this lane only ranks them against the rest of
 		// the day.
-		WithLeadResponses(attentionLeadResponses{store: people.NewStore(db)})
+		WithLeadResponses(attentionLeadResponses{
+			store:     people.NewStore(db),
+			teammates: newTeammatesSeam(pool),
+		})
 }

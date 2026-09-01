@@ -264,6 +264,15 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 			kept = append(kept, row)
 			continue
 		}
+		// The lead lane narrowed to this owner in its own query, exactly as the
+		// task lane did, so its rows are already theirs. Judging them by the
+		// deal arm below would drop every one — a lead row carries a lead
+		// subject and no deal — and a manager opening a rep's day would find
+		// the lane silently missing rather than empty.
+		if row.item.Source == sourceLeadResponse {
+			kept = append(kept, row)
+			continue
+		}
 		if row.item.Deal != nil && row.item.Deal.OwnerId != nil &&
 			ids.UUID(*row.item.Deal.OwnerId) == owner {
 			kept = append(kept, row)

@@ -23,7 +23,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-type attentionLeadResponses struct{ store *people.Store }
+type attentionLeadResponses struct {
+	store *people.Store
+	// teammates answers whether a lead's owner shares a live team with the
+	// reader. Required rather than optional: a lead is workspace-readable, so
+	// without this the team scope cannot be narrowed at all and would show the
+	// whole organization's inbound under a page headed `team`.
+	teammates attention.Teammates
+}
 
 // Owed reads the leads still waiting for their first reply.
 //
@@ -37,6 +44,12 @@ func (l attentionLeadResponses) Owed(
 	// Asked FIRST, and the answer is not a filter. With no target set no lead
 	// owes a reply at a stated time, so the lane is absent rather than empty —
 	// the difference between "nothing is late" and "nothing measures late".
+	//
+	// It is asked WITHOUT the lead grant, deliberately. Whether this
+	// installation measures first response is a property of the installation,
+	// not of any lead, so a reader who may not read leads still gets the honest
+	// answer "nothing measures this" rather than "a source was withheld from
+	// you". The grant is still required for the rows themselves, one call down.
 	tracked, err := l.store.FirstResponseTracked(ctx)
 	if err != nil {
 		return nil, false, err
@@ -68,15 +81,33 @@ func (l attentionLeadResponses) Owed(
 		named := ids.From[ids.UserKind](owner)
 		in.OwnerID = &named
 	case attention.TasksVisible:
-		// No narrowing of its own: the store's row-scope gate decides.
+		// NOT "no narrowing", and this is the trap the deal-bearing lanes do
+		// not have. A lead is an IDENTITY record, so its read predicate is TRUE
+		// for every seat holding the grant (auth.identityTables): the store
+		// hands back every lead in the workspace, and a page headed `team`
+		// would be the whole organization's inbound.
+		//
+		// The store's own dial cannot express it either — OwnerTeamID names ONE
+		// team and a reader may be in several — so the narrowing happens on the
+		// rows below, through the membership question the product already
+		// answers. An unbounded reader keeps the workspace, which is what `all`
+		// means.
 	}
 
 	rows, _, err := l.store.ListLeads(ctx, in)
 	if err != nil {
 		return nil, false, err
 	}
-	owed := make([]attention.OwedLead, 0, len(rows))
-	for _, row := range rows {
+	// The team narrowing, applied to the rows because no query dial fits it.
+	// Bounded by the page the store already cut, so this asks the membership
+	// question at most `limit` times rather than once per lead in the
+	// workspace.
+	keep, err := l.narrowToTeam(ctx, scope, rows)
+	if err != nil {
+		return nil, false, err
+	}
+	owed := make([]attention.OwedLead, 0, len(keep))
+	for _, row := range keep {
 		// A lead that has been answered, or that never owed a reply, is not
 		// this lane's work. The store ranks those last rather than dropping
 		// them, because the same queue answers other questions.
@@ -122,4 +153,65 @@ func deadlineOfLead(row crmcontracts.Lead) time.Time {
 		return time.Time{}
 	}
 	return *row.SlaDeadlineAt
+}
+
+// narrowToTeam keeps the leads a TEAM-scoped reader may call theirs.
+//
+// Only the wide scope needs it: mine, unassigned and a named owner were all
+// narrowed in the query, and an unbounded reader is entitled to the workspace.
+// The question is the one identity already answers for the named-owner path, so
+// the two agree by construction rather than by two copies of a rule.
+//
+// It fails CLOSED. Without the seam bound there is no way to tell a teammate's
+// lead from a stranger's, and answering with every lead would be the widening
+// this exists to prevent.
+func (l attentionLeadResponses) narrowToTeam(
+	ctx context.Context, scope attention.TaskScope, rows []crmcontracts.Lead,
+) ([]crmcontracts.Lead, error) {
+	if scope != attention.TasksVisible {
+		return rows, nil
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, nil
+	}
+	// An unbounded seat reads every row by policy, so `all` is the honest
+	// answer to a wide ask from one.
+	if actor.Permissions.RowScope == principal.RowScopeAll {
+		return rows, nil
+	}
+	if l.teammates == nil {
+		return nil, nil
+	}
+	// One answer per owner, not per row: an inbox of forty leads routed to the
+	// same rep asks once.
+	shares := map[ids.UUID]bool{}
+	kept := make([]crmcontracts.Lead, 0, len(rows))
+	for _, row := range rows {
+		owner := ownerOfLead(row)
+		// A lead nobody owns is nobody's teammate's either, and it stays: an
+		// unclaimed inbound is everybody's to pick up, which is what the
+		// unassigned scope exists for and what a team page should still show.
+		if owner.IsZero() {
+			kept = append(kept, row)
+			continue
+		}
+		if owner == actor.UserID {
+			kept = append(kept, row)
+			continue
+		}
+		mine, seen := shares[owner]
+		if !seen {
+			answer, err := l.teammates.SharesLiveTeamWithCaller(ctx, owner)
+			if err != nil {
+				return nil, err
+			}
+			shares[owner] = answer
+			mine = answer
+		}
+		if mine {
+			kept = append(kept, row)
+		}
+	}
+	return kept, nil
 }

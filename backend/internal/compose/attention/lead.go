@@ -173,24 +173,24 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 // measures overdue would be a number the product cannot stand behind.
 func (s *Service) owedLeads(
 	ctx context.Context,
-) ([]OwedLead, bool, *crmcontracts.WorklistSourceUnavailable) {
+) (rows []OwedLead, read, bounded bool, unavailable *crmcontracts.WorklistSourceUnavailable) {
 	if s.leads == nil {
-		return nil, false, nil
+		return nil, false, false, nil
 	}
-	rows, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
+	owed, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return nil, false, &crmcontracts.WorklistSourceUnavailable{
+		return nil, false, false, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
 		slog.ErrorContext(ctx, "the leads-owed-a-reply read failed", "error", err)
-		return nil, false, &crmcontracts.WorklistSourceUnavailable{
+		return nil, false, false, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	case !tracked:
-		return nil, false, nil
+		return nil, false, false, nil
 	default:
-		return rows, len(rows) >= leadResponseBound, nil
+		return owed, true, len(owed) >= leadResponseBound, nil
 	}
 }

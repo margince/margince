@@ -144,3 +144,42 @@ func TestAnUnassignedLeadNamesThatItAnswersToNobody(t *testing.T) {
 		t.Errorf("an ownerless lead said %v, wanted unassigned among them", got)
 	}
 }
+
+// A named owner's page keeps the lane. The lead lane narrowed to that person in
+// its own query, so the row is already theirs — judging it by the deal arm
+// would drop every one and the manager would find the lane silently missing
+// rather than empty.
+func TestANamedOwnersQueueKeepsTheirOwedLeads(t *testing.T) {
+	rep := ids.MustParse("01a05500-0000-7000-8000-00000000c0fe")
+	svc := leadLaneService(&stubLeads{tracked: true, rows: []OwedLead{
+		{ID: ids.NewV7(), Name: "their lead", DeadlineAt: readInstant.Add(-time.Hour),
+			State: "breached", OwnerID: rep},
+	}})
+
+	day, err := svc.Worklist(leadReader(), "", "", rep, 25)
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	rowFor(t, day, "their lead")
+}
+
+// With the target switched off the source must be ABSENT, and a reach row is
+// not absence: reachOf emits one for every bounded-source key, so recording the
+// lane unconditionally published a zero-valued entry that reads as "read, and
+// there was nothing".
+func TestAnUntrackedLanePublishesNoReachRow(t *testing.T) {
+	svc := leadLaneService(&stubLeads{tracked: false})
+
+	day, err := svc.Worklist(leadReader(), "", "", ids.UUID{}, 25)
+	if err != nil {
+		t.Fatalf("worklist: %v", err)
+	}
+
+	for _, reach := range day.Reach {
+		if reach.Source == sourceLeadResponse {
+			t.Fatalf("the lane published a reach row (considered=%d shown=%d) with nothing measuring first response",
+				reach.Considered, reach.Shown)
+		}
+	}
+}
