@@ -127,3 +127,50 @@ func TestTheSweepAttachesACompanysPeopleThatNoWriteReaches(t *testing.T) {
 		}
 	}
 }
+
+// A person the plant will REFUSE must not be offered, or the domain is returned
+// on every tick for ever.
+//
+// uq_rel_employment admits one live employment per (person, organization), so
+// somebody already holding a non-primary edge to this company has no
+// current-primary slot — which is what the selector asks about — and is still a
+// row the insert silently drops.
+func TestTheSweepSkipsADomainWhosePeopleThePlantWillRefuse(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	person, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "held@refuse.test", "Already Held", "refuse.test"))
+	if err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "Refuse GmbH",
+		Domains:     []OrgDomainInput{{Domain: "refuse.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the company: %v", err)
+	}
+
+	// A live employment to this same company that does NOT hold the primary
+	// slot: the index refuses a second, and the slot test alone would not see it.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
+			VALUES ('employment', $1, $2, false, 'manual', 'human:test')`,
+			person.PersonID, ids.UUID(org.Id))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	owed, err := e.store.DomainsOwedTheirPeople(ctx, 50)
+	if err != nil {
+		t.Fatalf("listing the domains owed their people: %v", err)
+	}
+	for _, d := range owed {
+		if d.OrganizationID.UUID == ids.UUID(org.Id) {
+			t.Error("the sweep offers a domain whose only unattached person the plant will refuse; " +
+				"the insert writes nothing and the domain comes back on every tick")
+		}
+	}
+}

@@ -914,6 +914,13 @@ export function CompanyIdentityLine({
   // WHICH side wrote last belongs to the daily brief rather than the header
   // (the brief's own detail line still names direction). The header states
   // only that the relationship is or is not live.
+  //
+  // The COPY says "either way" for that reason. Read as "last exchange" the
+  // number looked like it disagreed with the health card beside it, which
+  // counts inbound alone: a rep who wrote yesterday and has had nothing back
+  // for a month sees one day here and a month there, both true and apparently
+  // contradictory. Naming the fold is what makes them read as two answers to
+  // two questions.
   const inbound = view?.last_inbound_at;
   const outbound = view?.last_outbound_at;
   const lastExchange =

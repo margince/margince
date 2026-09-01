@@ -283,7 +283,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 	// same guarantee lockPersonForAttach gives the single-person writers — an
 	// archive in flight either commits first and drops the row out of this
 	// select, or waits and sweeps the edge this plants.
-	tag, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
 		SELECT 'employment', p.id, $1, true, $2, $3
 		FROM person p
@@ -303,12 +303,39 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 			SELECT 1 FROM relationship r
 			WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
 		FOR UPDATE OF p
-		ON CONFLICT DO NOTHING`,
+		ON CONFLICT DO NOTHING
+		RETURNING id, person_id`,
 		orgID, domainTriageSource(domain), by, domain)
 	if err != nil {
 		return 0, fmt.Errorf("people: planting the employment edges for %s: %w", domain, err)
 	}
-	return int(tag.RowsAffected()), nil
+	type planted struct {
+		edge   ids.UUID
+		person ids.PersonID
+	}
+	var made []planted
+	for rows.Next() {
+		var one planted
+		if err := rows.Scan(&one.edge, &one.person); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("people: planting the employment edges for %s: %w", domain, err)
+		}
+		made = append(made, one)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("people: planting the employment edges for %s: %w", domain, err)
+	}
+	// Each edge gets the write shape's other two rows, in this same transaction.
+	// An employer appearing on a contact with nobody having typed it is exactly
+	// the change the trail exists to explain, and the bus is how the surfaces
+	// that count a company's contacts learn to recount.
+	for _, one := range made {
+		if err := auditCapturedEmployment(ctx, tx, one.edge, one.person, orgID, relationshipOriginCapture); err != nil {
+			return 0, err
+		}
+	}
+	return len(made), nil
 }
 
 // bindTriageDossier attaches the triage read to the organization it produced.

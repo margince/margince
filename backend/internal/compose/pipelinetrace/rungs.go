@@ -149,7 +149,9 @@ func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 		return out
 	}
 	// A contact was intended and none is linked. This promises nothing about
-	// when: the link_reconcile sweep re-runs the resolver over link-less
+	// when: the link_reconcile sweep links a message the moment a person
+	// exists for its address — it repairs the LINK, it does not re-run the
+	// resolver, so a sender nobody was created for waits on that instead of
 	// activities, but a channel identity conflict stages a human review the
 	// resolver will never clear, so "tonight" would be false indefinitely for
 	// exactly those messages.

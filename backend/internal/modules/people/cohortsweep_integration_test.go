@@ -82,12 +82,13 @@ func TestTheSweepDrainsAContactWhoseParticipantRowPredatesAMerge(t *testing.T) {
 	}
 	stranded := e.seedCapturedMail(ctx, t, "retires@sweep.test", "from")
 
-	// The pre-merge shape, built by hand, because no current writer produces it:
-	// the source redirects, and BOTH its address and its participant rows stay
-	// on the source. That is what a database written before the merge repointed
-	// participants actually holds, and it is the shape that loops — the repair
-	// writes the link under the survivor while the selector, if it compared the
-	// raw id, would keep finding the source's own row.
+	// The pre-merge shape, built by hand because no current writer produces it
+	// any more: the source redirects and its ADDRESS moves to the survivor, as a
+	// merge does, while its participant row stays on the source — the half the
+	// merge used to leave behind. That is what a database written before that
+	// fix holds, and it is the shape that loops: the repair writes the link
+	// under the survivor, so a selector offering the retired id finds the same
+	// row on every pass.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx,
 			`UPDATE person SET merged_into_id = $2 WHERE id = $1`,

@@ -98,3 +98,46 @@ func TestTheCurrentPrimarySlotPredicateMirrorsItsIndex(t *testing.T) {
 func normalizedPredicate(sql string) string {
 	return strings.Join(strings.Fields(printedSQLNoise.ReplaceAllString(sql, "")), " ")
 }
+
+// liveEmploymentIndex is the OTHER unique index a plant has to satisfy: one
+// live employment per person per company, whatever the primary slot says.
+const liveEmploymentIndex = "uq_rel_employment"
+
+// LiveEmploymentSlotSQL mirrors that index, and this holds it there for the
+// reason the primary-slot mirror exists: a guard that asks a NARROWER question
+// than the index offers work the insert then drops on conflict, which is how a
+// sweep comes to return the same rows on every pass for ever.
+func TestTheLiveEmploymentSlotPredicateMirrorsItsIndex(t *testing.T) {
+	catalog, err := os.ReadFile(headCatalog)
+	if err != nil {
+		t.Fatalf("reading %s: %v", headCatalog, err)
+	}
+	var predicate string
+	for _, line := range strings.Split(string(catalog), "\n") {
+		if !strings.Contains(line, liveEmploymentIndex) || !strings.Contains(line, "CREATE UNIQUE INDEX") {
+			continue
+		}
+		match := indexPredicate.FindStringSubmatch(line)
+		if match == nil {
+			t.Fatalf("%s carries no WHERE clause in %s, so it is no longer a partial index and this "+
+				"helper has nothing to mirror:\n%s", liveEmploymentIndex, headCatalog, line)
+		}
+		predicate = match[1]
+	}
+	if predicate == "" {
+		t.Fatalf("%s names no %s, so either the index is gone or the catalog is not what it was: "+
+			"this helper mirrors a predicate that has to exist", headCatalog, liveEmploymentIndex)
+	}
+	if disjunction.MatchString(predicate) {
+		t.Fatalf("%s now carries an OR (%s), and this comparison strips parentheses — compare the "+
+			"predicates structurally before trusting it again", liveEmploymentIndex, predicate)
+	}
+	if want, got := normalizedPredicate(predicate), normalizedPredicate(LiveEmploymentSlotSQL("")); want != got {
+		t.Errorf("LiveEmploymentSlotSQL renders %q, but %s is %q.\n\n"+
+			"The helper IS that index's predicate. A guard narrower than the index offers a write the "+
+			"index refuses, and the caller that keeps offering it never drains.", got, liveEmploymentIndex, want)
+	}
+	if want, got := "held.", LiveEmploymentSlotSQL("held"); strings.Count(got, want) != 3 {
+		t.Errorf("LiveEmploymentSlotSQL(%q) = %q, want every one of the three columns qualified", "held", got)
+	}
+}

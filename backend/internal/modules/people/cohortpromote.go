@@ -210,7 +210,7 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 }
 
 // PeopleOwedACohortRepair lists contacts whose captured mail is not all on their
-// record yet, newest-arriving first, up to limit.
+// record yet, up to limit, ordered by id so a tick takes a stable slice.
 //
 // The two arms are the two halves the repair fixes, and each one asks its
 // question the same way the write does — including the guards. That symmetry is
@@ -311,7 +311,12 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 			  JOIN organization o ON o.id = od.organization_id
 			  JOIN person_email pe
 			    ON pe.archived_at IS NULL
-			   AND split_part(pe.email, '@', 2) = od.domain
+			    -- The SAME two arms the plant matches on, subdomain included. A
+			    -- selector narrower than the write leaves a backlog nothing ever
+			    -- offers; one wider offers work the write will not take, and the
+			    -- domain is returned on every tick for ever.
+			   AND (split_part(pe.email, '@', 2) = od.domain
+			        OR right(split_part(pe.email, '@', 2), length(od.domain) + 1) = '.' || od.domain)
 			  JOIN person p ON p.id = pe.person_id
 			 WHERE od.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL
@@ -319,6 +324,15 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship r
 			        WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
+			   -- And not a person the index will refuse anyway. uq_rel_employment
+			   -- admits ONE live employment per (person, organization), so
+			   -- somebody already holding a non-primary edge to this company is a
+			   -- row the plant's ON CONFLICT silently drops — offering them again
+			   -- is a domain that can never drain.
+			   AND NOT EXISTS (
+			       SELECT 1 FROM relationship held
+			        WHERE held.person_id = p.id AND held.organization_id = od.organization_id
+			          AND `+LiveEmploymentSlotSQL("held")+`)
 			 ORDER BY od.organization_id, od.domain
 			 LIMIT $1`, limit)
 		if err != nil {
@@ -354,7 +368,18 @@ type DomainBacklog struct {
 func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (int, error) {
 	var planted int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		// The company was live when the selector read it, in an earlier
+		// transaction. Re-check it here under its own lock: an archive or a
+		// merge in between would otherwise attach a domain's people to a record
+		// no read returns, which is the failure this whole sweep exists to
+		// repair rather than create.
+		live, err := organizationIsLive(ctx, tx, owed.OrganizationID)
+		if err != nil {
+			return err
+		}
+		if !live {
+			return nil
+		}
 		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.OrganizationID)
 		return err
 	})

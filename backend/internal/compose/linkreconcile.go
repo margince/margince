@@ -162,9 +162,14 @@ func (w *linkReconcileWorker) attachDomainBacklogs(sweepCtx context.Context, ws 
 }
 
 // systemContext binds the workspace and the maintenance principal the pass runs
-// under. The repair attaches mail the workspace already holds to a record it
-// already has and creates nothing, which is why a sweep with no human behind it
-// is the honest actor for it.
+// under.
+//
+// The mail half creates nothing — it attaches messages the workspace already
+// holds to records it already has. The company half DOES write: it plants the
+// employment edges a domain's people are owed, which is precisely the write no
+// human on this path may make, since a rep naming a company holds no authority
+// over contacts they cannot see. A sweep with no human behind it is the honest
+// actor for both.
 func (w *linkReconcileWorker) systemContext(ctx context.Context, ws ids.UUID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
 	return principal.WithActor(ctx, principal.Principal{

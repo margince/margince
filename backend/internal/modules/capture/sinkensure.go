@@ -83,7 +83,8 @@ func (s *Sink) WithEnsurer(ensurer CounterpartyEnsurer, transactional *Transacti
 // mail activity: the deterministic gates first (internal domain → skip
 // everything; free-mail → person only), then the resolver seam. Runs after
 // the capture transaction committed, and NEVER fails the capture — a fault
-// lands in system_log for the link_reconcile sweep (the link-less connector
+// lands in system_log, and the link_reconcile sweep links the message if a
+// person for that address turns up by any route (the link-less connector
 // activity is the retry marker).
 func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) {
 	if !decision.create {
