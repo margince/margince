@@ -66,7 +66,7 @@ func filterFor(ctx context.Context, t *testing.T, entityType string) (join strin
 	return joined, strings.Join(terms, " AND "), args
 }
 
-func TestOrganizationFilterWalksTheAccountsThreeLinks(t *testing.T) {
+func TestOrganizationFilterWalksTheAccountsFourArms(t *testing.T) {
 	join, where, args := filterFor(unscopedCtx(), t, "organization")
 
 	if join != "" {
@@ -76,7 +76,10 @@ func TestOrganizationFilterWalksTheAccountsThreeLinks(t *testing.T) {
 	if !strings.Contains(where, "EXISTS (") {
 		t.Fatalf("organization filter is not an EXISTS: %s", where)
 	}
-	for _, arm := range []string{"l.organization_id = $1", "d.organization_id = $1", "r.organization_id = $1"} {
+	for _, arm := range []string{
+		"l.organization_id = $1", "d.organization_id = $1", "r.organization_id = $1",
+		"emp.organization_id = $1",
+	} {
 		if !strings.Contains(where, arm) {
 			t.Errorf("organization filter misses the %q arm: %s", arm, where)
 		}
@@ -85,10 +88,41 @@ func TestOrganizationFilterWalksTheAccountsThreeLinks(t *testing.T) {
 		!strings.Contains(where, "r.ended_at IS NULL") {
 		t.Errorf("the employment arm must be live employment only: %s", where)
 	}
-	// One bind position, read by all three arms: an account id registered
-	// three times would silently mis-number every later placeholder.
+	// The participant arm reads employment the same way. A former colleague's
+	// company is one they left, whether they were linked or invited.
+	if !strings.Contains(where, "emp.kind = 'employment'") ||
+		!strings.Contains(where, "emp.ended_at IS NULL") {
+		t.Errorf("the participant arm must be live employment only: %s", where)
+	}
+	// Anchored on the activity in hand. Without it the arm asks "is anybody
+	// anywhere a participant who works here", which is true of the whole
+	// workspace at once.
+	if !strings.Contains(where, "ap.activity_id = a.id") {
+		t.Errorf("the participant arm is not anchored on the activity: %s", where)
+	}
+	// One bind position, read by all four arms: an account id registered
+	// four times would silently mis-number every later placeholder.
 	if len(args) != 1 {
 		t.Errorf("organization filter bound %d args, want 1 (the account id): %v", len(args), args)
+	}
+}
+
+// The reader's fourth arm is NOT the producer's. OrgReachSet is what a signal
+// is filed through, and somebody merely Cc'd on a message is weaker evidence
+// than somebody the message was filed against — filing against every Cc'd
+// person's employer would put claims on accounts that were never in the
+// conversation. The split is a ruling, so it is held rather than remembered.
+func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
+	set := OrgReachSet()
+	if strings.Contains(set, "activity_participant") {
+		t.Errorf("OrgReachSet reaches through participants, so a signal is now filed against "+
+			"the employer of everybody copied on a message:\n%s", set)
+	}
+	// And the reader's does, or this test is only describing an absence that
+	// was never a decision.
+	if !strings.Contains(OrgLinkedActivityExists(1), "activity_participant") {
+		t.Error("the timeline predicate no longer reaches through participants either, " +
+			"so the split above holds nothing apart")
 	}
 }
 

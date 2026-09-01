@@ -34,46 +34,49 @@ import (
 	"testing"
 )
 
-// accountReachArms names the two files that spell the arms, and the constant
-// each spells them into.
-var accountReachArms = []struct {
-	file string
-	// name is the constant each file spells the arms into.
-	name string
-}{
-	{file: "internal/modules/activities/orgscope.go", name: "orgArms"},
-	{file: "internal/modules/search/graphorgreach.go", name: "orgArms"},
+// accountReachFiles are the two files that spell the walk.
+var accountReachFiles = []string{
+	"internal/modules/activities/orgscope.go",
+	"internal/modules/search/graphorgreach.go",
 }
+
+// accountReachArms are the constants each of those files must spell, and spell
+// identically. EVERY constant, not just the first: the arms are split across
+// two of them because one is shared with a producer that stops short of the
+// last arm, and holding only the shared half equal would leave the arm that
+// split them free to drift — which is this gate's whole subject.
+var accountReachArms = []string{"orgArms", "participantEmployerArm"}
 
 func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 	t.Parallel()
-	texts := map[string]string{}
-	for _, spelling := range accountReachArms {
-		text, found := constText(t, spelling.file, spelling.name)
-		if !found {
-			t.Fatalf("%s no longer declares %s — the account-reach walk was renamed or moved, and "+
-				"this gate stopped comparing anything rather than failing",
-				spelling.file, spelling.name)
+	for _, arm := range accountReachArms {
+		texts := map[string]string{}
+		for _, file := range accountReachFiles {
+			text, found := constText(t, file, arm)
+			if !found {
+				t.Fatalf("%s no longer declares %s — the account-reach walk was renamed or moved, and "+
+					"this gate stopped comparing anything rather than failing", file, arm)
+			}
+			texts[file] = text
 		}
-		texts[spelling.file] = text
-	}
-	first := accountReachArms[0]
-	for _, other := range accountReachArms[1:] {
-		if normalizeSQL(texts[first.file]) != normalizeSQL(texts[other.file]) {
-			t.Errorf("the account-reach arms differ between %s and %s — one of them has gained or "+
-				"lost a condition, so the account's timeline and its context walk no longer agree "+
-				"about which activities belong to it:\n  %s: %s\n  %s: %s",
-				first.file, other.file,
-				first.file, normalizeSQL(texts[first.file]),
-				other.file, normalizeSQL(texts[other.file]))
+		first := accountReachFiles[0]
+		for _, other := range accountReachFiles[1:] {
+			if normalizeSQL(texts[first]) != normalizeSQL(texts[other]) {
+				t.Errorf("the %s arm differs between %s and %s — one of them has gained or "+
+					"lost a condition, so the account's timeline and its context walk no longer agree "+
+					"about which activities belong to it:\n  %s: %s\n  %s: %s",
+					arm, first, other,
+					first, normalizeSQL(texts[first]),
+					other, normalizeSQL(texts[other]))
+			}
 		}
-	}
-	// Both halves must actually SAY something. Two empty strings compare equal,
-	// and a gate that passes over nothing is the failure mode this whole file
-	// is about.
-	for file, text := range texts {
-		if strings.TrimSpace(text) == "" {
-			t.Errorf("%s spells the arms as an empty string, so the comparison above proved nothing", file)
+		// Both halves must actually SAY something. Two empty strings compare
+		// equal, and a gate that passes over nothing is the failure mode this
+		// whole file is about.
+		for file, text := range texts {
+			if strings.TrimSpace(text) == "" {
+				t.Errorf("%s spells %s as an empty string, so the comparison above proved nothing", file, arm)
+			}
 		}
 	}
 }
