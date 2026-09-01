@@ -75,7 +75,42 @@ func (h Reads) GetPersonGraph(w http.ResponseWriter, r *http.Request, id crmcont
 		httperr.Write(w, r, err)
 		return
 	}
+	// After the graph's transaction, not inside it: the introductions reader
+	// takes a connection of its own, and holding two per request is how a read
+	// path starves the pool under load. The routes are stamped on the way out
+	// and no earlier read depends on them.
+	if err := h.markAskedRoutes(ctx, personID, &out); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// markAskedRoutes greys out the routes the server would refuse.
+//
+// A refusal is survivable and leaves every route offerable: a caller with no
+// introduction grant has no asks of their own to collide with, and the ask
+// they cannot make is refused at the point they make it. Any other fault fails
+// the read, for the reason a missing group does — a graph that quietly claims
+// every door is open is worse than an error, because the rep acts on it.
+func (h Reads) markAskedRoutes(
+	ctx context.Context, personID ids.PersonID, out *crmcontracts.PersonGraph,
+) error {
+	if h.askedRoutes == nil || out.Routes == nil {
+		return nil
+	}
+	asked, err := h.askedRoutes.RouteStates(ctx, personID)
+	if isDenied(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	stampAvailability(*out.Routes, asked)
+	// The recommendation is the head of the list and shares its identity, so
+	// it carries the stamp the list gave it rather than a second lookup.
+	out.Route = chooseRoute(*out.Routes)
+	return nil
 }
 
 // buildPersonGraph assembles both groups inside one transaction, so the
