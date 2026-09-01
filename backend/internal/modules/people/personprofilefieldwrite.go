@@ -74,13 +74,20 @@ const (
 func (p personProfileFieldPrecedence) conflictClause() string {
 	switch p {
 	case replaceOnAcceptance:
+		// The undo buffer is CLEARED, not carried. A human choosing this value
+		// ends the question of what it replaced: offering the same undo again
+		// afterwards would put back a value the record has just been told is
+		// wrong, and offering it after a RESTORE would undo the undo.
 		return `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,
 		    source_ref = EXCLUDED.source_ref,
 		    confidence = EXCLUDED.confidence,
 		    source = EXCLUDED.source,
 		    captured_by = EXCLUDED.captured_by,
-		    observed_at = EXCLUDED.observed_at`
+		    observed_at = EXCLUDED.observed_at,
+		    superseded_value = NULL,
+		    superseded_captured_by = NULL,
+		    superseded_observed_at = NULL`
 	case supersedeOnNewerObservation:
 		return `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,

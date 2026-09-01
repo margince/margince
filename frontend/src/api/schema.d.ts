@@ -27567,14 +27567,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The field as it stands after the restore. */
-            200: {
+            /**
+             * @description Restored. No body: the field's own read overlays a human's verdict onto the
+             *     stored value, and answering with the row this write just made would serve the
+             *     value from under that overlay. Re-read `GET /people/{id}/profile-fields`.
+             */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["PersonProfileField"];
-                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

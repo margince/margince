@@ -1788,11 +1788,11 @@ paths:
         Answers 404 when the field has nothing to restore, which is the honest reply to an
         undo of something that never happened.
       responses:
-        '200':
-          description: The field as it stands after the restore.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PersonProfileField' }
+        '204':
+          description: |
+            Restored. No body: the field's own read overlays a human's verdict onto the
+            stored value, and answering with the row this write just made would serve the
+            value from under that overlay. Re-read `GET /people/{id}/profile-fields`.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
