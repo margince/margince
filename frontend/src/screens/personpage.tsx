@@ -38,6 +38,7 @@ import {
   PersonCommitmentsCard,
   PersonMattersCard,
 } from "./personcards";
+import { EnrichedFields } from "./personcorrections";
 import {
   PersonComposer,
   PersonMeetingBrief,
@@ -103,7 +104,14 @@ function composerIntentOf(
   t: ReturnType<typeof useT>,
 ): string {
   const key = COMPOSER_INTENT_KEYS[prefill?.intent ?? ""];
-  return key ? t(key) : "";
+  if (!key) {
+    return "";
+  }
+  // The promise itself rides in `subject`. Without it, a rung firing on one of
+  // several open commitments asks the composer to deliver "what we promised"
+  // and leaves the drafter to guess which.
+  const subject = prefill?.subject?.trim();
+  return subject ? `${t(key)}: ${subject}` : t(key);
 }
 
 /**
@@ -425,6 +433,9 @@ export function PersonPageV2({
                 directly. It renders on a thin record too: what you may send is
                 a live fact whether or not anyone has written to them yet. */}
             <ConsentSection personId={id} />
+            {/* The fields Margince read off a signature or a card, and the
+                one place a reader can confirm or correct them. */}
+            <EnrichedFields personId={id} view={view.data} />
           </div>
         )}
 

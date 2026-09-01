@@ -9,7 +9,14 @@
 //
 // Tables owned: activity, activity_link, activity_audience_member,
 // activity_retention_evidence, transcript_read, attachment_extraction,
-// deal_document_hide.
+// deal_document_hide, activity_sales_state, activity_reader_state.
+//
+// activity_sales_state and activity_reader_state hold what somebody decided
+// ABOUT a waiting message, and they are two tables because the decisions bind
+// differently. "Not sales" is a fact about the thread and holds for everybody;
+// "snoozed" and "not mine" belong to one reader, and applying either to a
+// colleague would take work off a queue whose owner never judged it. Neither
+// carries any of the message's content — the judgement, its author, its moment.
 //
 // transcript_read is the run record for reading a meeting transcript for
 // the next steps in it (S-E04.3): the POST answers 202 with its id and the

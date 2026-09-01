@@ -19,18 +19,31 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// introAskPerms is graphPerms plus the grants an ask needs, for the one test
+// that creates one.
+var introAskPerms = func() principal.Permissions {
+	p := graphPerms
+	objects := map[string]principal.ObjectGrant{"introduction": {Create: true, Read: true}}
+	for name, grant := range graphPerms.Objects {
+		objects[name] = grant
+	}
+	p.Objects = objects
+	return p
+}()
 
 // graphPerms is a bounded rep. The scope has to be team-level: an unbounded
 // admin short-circuits the very clauses these tests exist to prove.
@@ -52,7 +65,10 @@ func readGraph(ctx context.Context, t *testing.T, e *Env, personID ids.UUID) (in
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/people/"+personID.String()+"/graph", nil).WithContext(ctx)
-	network.NewReads(e.Pool, people.NewStore(e.DB())).GetPersonGraph(rec, req, crmcontracts.Id(personID))
+	// The introductions reader is wired the way compose wires it, so an open
+	// ask reaches the response through the real seam rather than through a
+	// handler assembled only in this file.
+	compose.NewPersonGraphReads(e.Pool, e.DB()).GetPersonGraph(rec, req, crmcontracts.Id(personID))
 
 	var out crmcontracts.PersonGraph
 	if rec.Code == http.StatusOK {
@@ -375,5 +391,44 @@ func TestPersonGraphAccountEdgesCarryCountsAndNoMessages(t *testing.T) {
 	}
 	if graph.Route.ThroughDisplayName == nil || *graph.Route.ThroughDisplayName != "Their Colleague" {
 		t.Error("the indirect route did not name who it goes through")
+	}
+}
+
+// A live ask reaches the tab as a route it cannot use.
+//
+// The claim is about the WIRING, which is why it drives the assembled handler
+// rather than the stamping function: the reader is the piece most easily left
+// out, and left out it stamps nothing, so every route reads `available`
+// exactly as it did before the seam existed and every other test still passes.
+//
+// The ask is created through the introductions store — the real writer — so
+// what the graph reads is a row the product actually produces.
+func TestPersonGraphMarksARouteThatAlreadyHasAnOpenAsk(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	seedExchange(t, e, e.Rep2, mine, "Q3 pricing")
+
+	asking := e.As(e.Rep1, []ids.UUID{e.Team1}, introAskPerms)
+	if _, err := introductions.NewStore(e.DB(), time.Now).Create(asking, introductions.NewRequest{
+		PersonID:       mine,
+		IntroducerUser: e.Rep2,
+		RouteType:      "direct",
+		InternalReason: "Anna reopened the retrofit conversation.",
+		DueAt:          time.Now().AddDate(0, 0, 7),
+	}); err != nil {
+		t.Fatalf("creating the ask: %v", err)
+	}
+
+	code, graph := readGraph(e.As(e.Rep1, []ids.UUID{e.Team1}, introAskPerms), t, e, mine)
+	if code != http.StatusOK {
+		t.Fatalf("graph → %d, want 200", code)
+	}
+	if graph.Routes == nil || len(*graph.Routes) == 0 {
+		t.Fatal("a direct relationship produced no route to stamp")
+	}
+	got := (*graph.Routes)[0].Availability
+	if got != crmcontracts.PersonGraphRouteAvailabilityAlreadyRequested {
+		t.Errorf("the route with a live ask reached the tab as %q; want already_requested — "+
+			"the rep would compose the whole ask and be refused by the guard index", got)
 	}
 }

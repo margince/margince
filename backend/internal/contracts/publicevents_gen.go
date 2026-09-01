@@ -30,6 +30,33 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityDispositionRecordedDisposition.
+const (
+	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
+	NotSales   PublicEventActivityDispositionRecordedDisposition = "not_sales"
+	PickedUp   PublicEventActivityDispositionRecordedDisposition = "picked_up"
+	SalesAgain PublicEventActivityDispositionRecordedDisposition = "sales_again"
+	Snoozed    PublicEventActivityDispositionRecordedDisposition = "snoozed"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityDispositionRecordedDisposition enum.
+func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
+	switch e {
+	case NotMine:
+		return true
+	case NotSales:
+		return true
+	case PickedUp:
+		return true
+	case SalesAgain:
+		return true
+	case Snoozed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventApprovalDecidedVerdict.
 const (
 	Approved PublicEventApprovalDecidedVerdict = "approved"
@@ -184,6 +211,7 @@ func (e PublicEventTeamChangedChange) Valid() bool {
 const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
+	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
@@ -297,6 +325,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityArchived:
 		return true
 	case ActivityCaptured:
+		return true
+	case ActivityDispositionRecorded:
 		return true
 	case ActivityUpdated:
 		return true
@@ -578,6 +608,17 @@ type PublicEventActivityChangedFields struct {
 
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
+
+// PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded — somebody decided what to do about a waiting message and the Worklist stopped showing it (activities/disposition.go). WHO it stopped showing it to is not on the wire, and the omission is deliberate: `not_sales` settles what the message is and holds for everybody, while `snoozed` and `not_mine` belong to the one reader who set them. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
+type PublicEventActivityDispositionRecorded struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Disposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+	Disposition PublicEventActivityDispositionRecordedDisposition `json:"disposition"`
+}
+
+// PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+type PublicEventActivityDispositionRecordedDisposition string
 
 // PublicEventActivityRelinkedRef The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 type PublicEventActivityRelinkedRef struct {
@@ -1910,6 +1951,12 @@ func (PublicEventActivityCaptured) EventType() string { return "activity.capture
 
 func (PublicEventActivityCaptured) EntityType() string { return "activity" }
 
+func (PublicEventActivityDispositionRecorded) EventType() string {
+	return "activity.disposition_recorded"
+}
+
+func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
+
 func (PublicEventActivityUpdated) EventType() string { return "activity.updated" }
 
 func (PublicEventActivityUpdated) EntityType() string { return "activity" }
@@ -2344,6 +2391,7 @@ func (PublicEventVoiceVersionChanged) EntityType() string { return "voice_profil
 var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
+	"activity.disposition_recorded":             1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.requested":                        1,

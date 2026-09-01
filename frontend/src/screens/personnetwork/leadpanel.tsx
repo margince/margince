@@ -34,7 +34,7 @@ export function LeadPanel({
   targetName: string;
   // Why the ask cannot be made, when it cannot. A panel that offered a button
   // answering 409 would be a control that exists to fail.
-  blocked: string | undefined;
+  blocked: string | null;
   onAsk: (route: RouteCandidate) => void;
 }>) {
   const t = useT();

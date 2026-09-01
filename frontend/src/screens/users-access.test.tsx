@@ -58,6 +58,14 @@ function backend(
     users?: RosterUser[];
     /** Answers one write with a problem document, to drive the refusal arms. */
     refuse?: (call: Call) => boolean;
+    /**
+     * The caller's own roles, off `/me` — admin by default, so the write
+     * assertions in this suite exercise the same seat they always have. A
+     * test naming `["ops"]` or `[]` here gets the read-only case, which is a
+     * different render entirely rather than the same one with fewer writes
+     * attempted.
+     */
+    me?: readonly string[];
   }>,
 ) {
   const calls: Call[] = [];
@@ -81,6 +89,18 @@ function backend(
             ? undefined
             : await request.clone().json(),
       });
+      if (path.endsWith("/me")) {
+        // `user` is required on MeResponse — useMe() treats a payload
+        // without it as an availability failure and never resolves `.data`,
+        // which would silently read every seat here as non-admin.
+        return new Response(
+          JSON.stringify({
+            user: { email: "you@acme.test" },
+            roles: opts.me ?? ["admin"],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
       if (opts.refuse?.(calls[calls.length - 1])) {
         return new Response(JSON.stringify({ detail: "the team was merged" }), {
           status: 409,
@@ -514,5 +534,45 @@ describe("TeamsCard membership", () => {
     );
 
     expect(await screen.findByText("the team was merged")).toBeTruthy();
+  });
+
+  // Team membership is admin surface, so a non-admin gets no membership
+  // control and no membership LIST: the roster handler only sends `team_ids`
+  // to an admin caller (`WithRoles: isAdmin`), so a read-only render built
+  // from an ops seat's own roster read would show nobody as a member of
+  // anything — a false statement, not an honest withholding. The card states
+  // why once, and the disclosure body says the same thing rather than
+  // fabricate a list.
+  it("withholds membership entirely from a seat that may not read or change it", async () => {
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+      me: ["ops"],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    await openTeam();
+
+    expect(
+      await screen.findByText(
+        `${en["users.teamsSub"]} ${en["users.teamsAdminOnly"]}`,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(en["users.teamMembersAdminOnly"])).toBeTruthy();
+    expect(screen.queryByText("Ada Inside")).toBeNull();
+    expect(screen.queryByText("Bo Outside")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
+
+    // No membership read fires either: there is nothing in it this seat
+    // would be shown, so there is nothing to walk the roster for.
+    expect(calls.some((call) => call.path.endsWith("/users"))).toBe(false);
+    expect(calls.some((call) => call.method === "PUT")).toBe(false);
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+    expect(calls.some((call) => call.method === "PATCH")).toBe(false);
   });
 });

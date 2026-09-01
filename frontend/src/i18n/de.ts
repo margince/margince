@@ -3077,8 +3077,6 @@ export const de = {
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
-  "agent.panel.finishedToday": "Heute abgeschlossen",
-  "agent.panel.stoppedEarly": "Warum es gestoppt hat",
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
@@ -5779,10 +5777,13 @@ export const de = {
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
+  "users.teamMembersAdminOnly":
+    "Die Mitgliedschaft ist nur für Admins sichtbar.",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt keinen Zugriff — Kunden, Kontakte, Leads und Deals dürfen hier ohnehin alle lesen.",
+  "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",
@@ -6255,6 +6256,8 @@ export const de = {
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
     "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",
+  "autonomy.noneDecidedYet":
+    "Darüber hast du noch nichts entschieden. Was in dieser Liste landet, hängt von den Datensätzen ab, die dir gehören, und von der Arbeit, die dein Team an dich weiterleitet. Ohne beides bleibt sie leer. Die Schalter entscheiden trotzdem, was passiert, sobald etwas auftaucht.",
   "autonomy.noRecord": "Darüber hast du noch nicht entschieden.",
   "autonomy.record":
     "Bisher: {clean} wie vorgeschlagen übernommen, {edited} nach einer Änderung, {rejected} abgelehnt.",
@@ -6494,9 +6497,6 @@ export const de = {
     "Einige Kolleginnen und Kollegen werden nicht angezeigt.",
   "person.graph.withheldAccount":
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
-  "person.graph.routeAlreadyAsked": "Bereits angefragt",
-  "person.graph.routeDeclined": "Zuvor abgelehnt",
-  "person.graph.routeUnavailable": "Nicht verfügbar",
   "person.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "person.intro.leadEyebrow": "Empfohlener Weg",
   "person.intro.leadRouteBadge": "Starker Weg",
@@ -6613,6 +6613,13 @@ export const de = {
   "person.intro.asksSub":
     "Die Anfragen, an denen Sie beteiligt sind, neueste zuerst.",
   "person.intro.answerAction": "Antworten",
+  "person.intro.completeIntroducedAction": "Als vorgestellt markieren",
+  "person.intro.completeNameDroppedAction": "Als Namen verwendet markieren",
+  "person.intro.completeFailed":
+    "Das Ergebnis konnte nicht gespeichert werden.",
+  "person.intro.withdrawAction": "Zurückziehen",
+  "person.intro.withdrawFailed":
+    "Die Anfrage konnte nicht zurückgezogen werden.",
   "person.intro.stateRequested": "Wartet auf Ihre Kollegin",
   "person.intro.stateAccepted": "Sie werden vorgestellt",
   "person.intro.stateNameDropApproved": "Sie dürfen den Namen nennen",
@@ -6748,6 +6755,7 @@ export const de = {
   "person.moment.rule.job_change": "Neue Stelle",
   "person.moment.rule.overdue_promise": "Zusage überfällig",
   "person.moment.rule.gone_quiet": "Still geworden",
+  "person.moment.rule.open_promise": "Offenes Versprechen",
   "person.moment.rule.role_change": "Rolle geändert",
   "person.moment.rule.public_signal": "Öffentlich gesagt",
   "person.moment.rule.missing_next_step": "Nichts geplant",
@@ -7352,6 +7360,38 @@ export const de = {
     "Unter den Quellen, die geantwortet haben, wartet nichts.",
   "worklist.partial": "{sources} — das ist nicht der ganze Tag.",
   "worklist.overdue": "Überfällig",
+  "worklist.pane.title": "Zu diesem Datensatz",
+  "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",
+  "worklist.pane.loading": "Datensatz wird gelesen…",
+  "worklist.pane.nothing": "Noch nichts erfasst.",
+  "worklist.pane.lastInbound": "Zuletzt geschrieben",
+  "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
+  "worklist.pane.never": "Nie",
+  "worklist.focus.title": "Das als Nächstes",
+  "worklist.focus.verb.decide": "Entscheiden",
+  "worklist.focus.verb.merge": "Paar prüfen",
+  "worklist.focus.verb.complete": "Erledigen",
+  "worklist.focus.verb.act": "Bearbeiten",
+  "worklist.focus.verb.acknowledge": "Zur Kenntnis nehmen",
+  "worklist.focus.verb.open": "Öffnen",
+  "worklist.focus.verb.snooze": "Öffnen",
+  "worklist.focus.verb.dismiss": "Öffnen",
+  "worklist.focus.verb.set_aside": "Öffnen",
+  "worklist.band.now": "Jetzt",
+  "worklist.band.build_pipeline": "Pipeline aufbauen",
+  "worklist.band.keep_momentum": "In Bewegung halten",
+  "worklist.band.review": "Prüfen",
+  "worklist.disposition.verb.snooze": "Später",
+  "worklist.disposition.verb.not_mine": "Nicht meins",
+  "worklist.disposition.verb.not_sales": "Kein Kunde",
+  "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
+  "worklist.disposition.done.not_mine":
+    "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
+  "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
+  "worklist.disposition.undo": "Rückgängig",
+  "worklist.disposition.undoFailed":
+    "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",
+  "worklist.disposition.failed": "Das konnte nicht abgelegt werden.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
   "worklist.scope.unassigned": "Ohne Zuständigkeit",
