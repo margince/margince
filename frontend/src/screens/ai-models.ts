@@ -73,7 +73,7 @@ export function useAiModelCatalogue() {
 // spelling out: `Number("")` is 0, not NaN, so an absent price would otherwise
 // render as US$0.00 — and free is the one thing this product is careful never
 // to say by accident.
-function unreadablePrice(price: string): boolean {
+export function unreadablePrice(price: string): boolean {
   return price.trim() === "" || !Number.isFinite(Number(price));
 }
 
@@ -135,10 +135,17 @@ export function suggestionsFor(
  * server already says so — a vendor it could not ask is a 200 carrying the
  * reason — and this only has to survive the transport failing too.
  */
-export function useAvailableModels(provider: string, enabled: boolean) {
+export function useAvailableModels(
+  provider: string,
+  tier: string,
+  enabled: boolean,
+) {
   return useQuery({
     enabled: enabled && provider !== "",
-    queryKey: ["ai-available-models", provider],
+    // The lane is part of the key, not just the request: two lanes on one vendor
+    // may be reached at two hosts, so their answers are two different lists and
+    // must not share a cache entry.
+    queryKey: ["ai-available-models", provider, tier],
     // A vendor's catalog does not change while somebody fills in a form, and
     // the call costs a round-trip on the operator's own credential.
     staleTime: 5 * 60 * 1000,
@@ -151,7 +158,7 @@ export function useAvailableModels(provider: string, enabled: boolean) {
       try {
         const { data, error } = await api.GET(
           "/ai/available-models/{provider}",
-          { params: { path: { provider } } },
+          { params: { path: { provider }, query: { tier } } },
         );
         if (error || !data) {
           return { provider, models: [], unavailable: "unreachable" };

@@ -10517,10 +10517,21 @@ paths:
         required: true
         schema: { type: string }
         description: The routing name of the vendor — the same string a binding uses.
+      - name: tier
+        in: query
+        required: false
+        schema: { type: string }
+        description: >-
+          The lane being edited, named as the routing document names it (`premium`, `embeddings`, …).
+          It selects WHICH stored binding supplies the host, for the installation that binds one
+          vendor at two — a broker on one lane and a self-hosted gateway on another, which the
+          routing validator permits. Omitted, or naming a lane bound to some other vendor, the host
+          falls back to any binding on this vendor and then to the adapter's own default.
     get:
       tags: [AI]
       operationId: listAvailableModels
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: What one vendor says it serves today (admin/ops).
       description: |
         Asks the VENDOR what it currently serves, so the routing form offers models that exist

@@ -575,7 +575,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   // to that section rather than to a page that also carries routing, provider
   // credentials, spend and the call trace.
   await page.goto("/#/settings/ai");
-  await page.getByRole("button", { name: "Automationen" }).click();
+  await page.getByRole("button", { name: "Automatisierungen" }).click();
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -613,7 +613,7 @@ test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, n
   // carry inputs with nothing to do with rule authoring, and counting those in
   // would say something else entirely.
   await page.goto("/#/settings/ai");
-  await page.getByRole("button", { name: "Automationen" }).click();
+  await page.getByRole("button", { name: "Automatisierungen" }).click();
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations

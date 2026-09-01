@@ -7215,7 +7215,10 @@ export interface paths {
     };
     "/ai/available-models/{provider}": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                tier?: string;
+            };
             header?: never;
             path: {
                 /** @description The routing name of the vendor — the same string a binding uses. */
@@ -38001,7 +38004,10 @@ export interface operations {
     };
     listAvailableModels: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                tier?: string;
+            };
             header?: never;
             path: {
                 /** @description The routing name of the vendor — the same string a binding uses. */

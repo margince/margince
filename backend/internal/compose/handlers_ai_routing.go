@@ -151,12 +151,24 @@ func optionalInt(v int) *int {
 // ollama is not running" into a failed request would take the settings page
 // down with it. Only the RBAC refusal is an error, because that one is about
 // the reader rather than about the vendor.
-func (h aiRoutingHandlers) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string) {
+func (h aiRoutingHandlers) ListAvailableModels(
+	w http.ResponseWriter,
+	r *http.Request,
+	provider string,
+	params crmcontracts.ListAvailableModelsParams,
+) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "ListAvailableModels")
 		return
 	}
-	available, err := h.store.ListAvailableModels(r.Context(), provider)
+	// The lane is optional, and an absent one is not a refusal: it only narrows
+	// WHICH stored binding supplies the host, and every installation that binds
+	// its vendors at one host each has nothing to narrow.
+	tier := ""
+	if params.Tier != nil {
+		tier = *params.Tier
+	}
+	available, err := h.store.ListAvailableModels(r.Context(), provider, tier)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

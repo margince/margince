@@ -30030,6 +30030,12 @@ type ListAiModelRatesParams struct {
 	ModelId  *string `form:"model_id,omitempty" json:"model_id,omitempty"`
 }
 
+// ListAvailableModelsParams defines parameters for ListAvailableModels.
+type ListAvailableModelsParams struct {
+	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
+}
+
 // ListAiCallsParams defines parameters for ListAiCalls.
 type ListAiCallsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -42576,7 +42582,7 @@ type ServerInterface interface {
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
-	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string)
+	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -44301,7 +44307,7 @@ func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.
 
 // What one vendor says it serves today (admin/ops).
 // (GET /ai/available-models/{provider})
-func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string) {
+func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -48781,8 +48787,24 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAvailableModelsParams
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAvailableModels(w, r, provider)
+		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

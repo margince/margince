@@ -58,7 +58,7 @@ func getListBody(
 	}
 	req.Header.Set("Accept", "application/json")
 	authorize(req)
-	resp, err := httpc.Do(req)
+	resp, err := noRedirect(httpc).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
 	}
@@ -83,6 +83,28 @@ func getListBody(
 // per-model metadata is comfortably under a megabyte; four is headroom, not an
 // invitation.
 const listBodyLimit = 4 << 20
+
+// noRedirect is the caller's client with redirects refused.
+//
+// Go strips the headers IT knows to be sensitive across a host change —
+// Authorization, Cookie — and it has never heard of `x-api-key` or
+// `x-goog-api-key`. Anthropic and Gemini authenticate with exactly those, so a
+// vendor answering 302 to another host would be handed the customer's own
+// credential by a client that believed it was being careful.
+//
+// Refused rather than stripped: a 3xx from a model vendor's list endpoint is not
+// a thing that happens in normal operation, and the caller already treats any
+// non-200 as "this vendor did not answer". A copy of the client rather than a
+// change to `newOutboundClient`, because that one also carries streaming
+// completions, where a redirect a vendor genuinely uses would become an outage —
+// a wider change than a review of this surface should make.
+func noRedirect(httpc *http.Client) *http.Client {
+	safe := *httpc
+	safe.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return &safe
+}
 
 // ---- anthropic ----
 
@@ -263,7 +285,12 @@ func (c *ollamaClient) ListModels(ctx context.Context) ([]model.Info, error) {
 			Name string `json:"name"`
 		} `json:"models"`
 	}
-	raw, err := getListBody(ctx, c.http, "ollama", c.baseURL+"/api/tags", func(*http.Request) {})
+	raw, err := getListBody(ctx, c.http, "ollama", c.baseURL+"/api/tags",
+		func(*http.Request) {
+			// Nothing to sign. A model runner the operator runs themselves takes
+			// no credential, which is the same reason this adapter's own post()
+			// sets no auth header either.
+		})
 	if err != nil {
 		return nil, err
 	}

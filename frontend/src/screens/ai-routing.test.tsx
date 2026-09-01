@@ -132,7 +132,11 @@ function backendFor(
         return jsonResponse(meFixture({ allow }));
       }
       if (req.url.includes("/ai/available-models/")) {
-        const provider = req.url.split("/ai/available-models/")[1];
+        // The lane rides along as a query parameter, so the provider is the
+        // path segment before it — the vendor is what this stub answers for.
+        const provider = req.url
+          .split("/ai/available-models/")[1]
+          .split("?")[0];
         return jsonResponse(
           VENDOR_MODELS[provider] ?? { provider, models: [] },
         );

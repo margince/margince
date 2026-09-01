@@ -73,14 +73,21 @@ type AvailableModels struct {
 
 // ListAvailableModels asks one vendor what it serves.
 //
-// The provider is named; the ENDPOINT is not. A caller passes a name from the
-// closed adapter vocabulary and the host comes from the stored binding or the
-// adapter's compiled default — never from the request. The AI outbound client
+// The provider and the LANE are named; the endpoint is not. Both are closed
+// vocabularies — the adapter names this build accepts, and the tiers the stored
+// document already binds — and the host is read from that document or from the
+// adapter's compiled default, never from the request. The AI outbound client
 // carries no egress allowlist, so accepting a URL here would let anyone holding
 // this grant point the server at an arbitrary host.
+//
+// The lane matters because one vendor may be bound at two hosts: a broker on one
+// tier and a self-hosted gateway on another is a configuration the routing
+// validator permits. Asked without it, this read answered for whichever host it
+// happened to find, which is not necessarily the one the lane being edited
+// points at.
 func (s *RoutingStore) ListAvailableModels(
 	ctx context.Context,
-	provider string,
+	provider, tier string,
 ) (AvailableModels, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return AvailableModels{}, err
@@ -98,7 +105,7 @@ func (s *RoutingStore) ListAvailableModels(
 		out.Unavailable = AvailabilityProfileForbids
 		return out, nil
 	}
-	client, err := SelectBrain(boundProviderConfig(cfg, provider), s.resolvedKeys(ctx))
+	client, err := SelectBrain(boundProviderConfig(cfg, provider, tier), s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
 		return out, nil
@@ -146,21 +153,31 @@ func unavailableFor(err error) ModelAvailability {
 // boundProviderConfig is the binding this installation would call `provider`
 // with, as far as an availability read needs it.
 //
-// The stored document is searched for a binding on this vendor so a broker
-// reached at a customer's own host is asked THERE; a vendor the routing does
-// not name yet falls back to the adapter's compiled default, which is what
-// makes the picker useful before anything is bound. No model id: this asks what
-// the vendor serves, not what one lane currently names.
+// The LANE decides, where the caller named one: a vendor bound at two hosts is
+// asked at the one the lane being edited points at, rather than at whichever the
+// map yielded. A lane that names a different vendor — the reader has just
+// re-pointed it and has not saved — falls through to the rest, because the
+// question is about the vendor.
 //
-// The tiers are walked in a FIXED order. Two lanes may name one vendor at two
-// hosts — a broker and a self-hosted gateway is the ordinary case — and Go
-// randomises map iteration, so ranging the map directly asked a different host
-// on each request and the picker's list changed under a reader who had touched
-// nothing. Which of two hosts wins is arbitrary; that the same one wins every
-// time is not.
-func boundProviderConfig(cfg RoutingConfig, provider string) ProviderConfig {
-	for _, tier := range sortedTiers(cfg.Tiers) {
-		binding := cfg.Tiers[tier]
+// Failing that, the tiers are walked in a FIXED order. Which of two hosts wins
+// is then arbitrary; that the same one wins every time is not, and Go randomises
+// map iteration, so ranging the map directly changed the picker's list under a
+// reader who had touched nothing.
+//
+// A vendor the routing does not name at all falls back to the adapter's compiled
+// default, which is what makes the picker useful before anything is bound. No
+// model id: this asks what the vendor serves, not what one lane names.
+func boundProviderConfig(cfg RoutingConfig, provider, tier string) ProviderConfig {
+	if binding, ok := cfg.Tiers[Tier(tier)]; ok &&
+		binding.Provider == provider && binding.BaseURL != "" {
+		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
+	}
+	if tier == string(LaneEmbeddings) &&
+		cfg.Embeddings.Provider == provider && cfg.Embeddings.BaseURL != "" {
+		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
+	}
+	for _, t := range sortedTiers(cfg.Tiers) {
+		binding := cfg.Tiers[t]
 		if binding.Provider == provider && binding.BaseURL != "" {
 			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
 		}

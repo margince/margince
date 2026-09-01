@@ -23,6 +23,7 @@ import {
   type ModelCatalogue,
   type ModelLane,
   offeredModels,
+  unreadablePrice,
   useAiModelCatalogue,
   useAvailableModels,
 } from "./ai-models";
@@ -142,6 +143,11 @@ export function AiRoutingCard({
     <QueryGate query={query}>
       {(routing) => (
         <RoutingForm
+          // The key the draft's own comment depends on. Without it the form
+          // initialises once and never re-syncs, so a document another role
+          // changed arrives behind an untouched form that now reports itself
+          // DIRTY — and Save writes the stale draft over the newer binding.
+          key={routingIdentity(routing)}
           routing={routing}
           canManage={canManage}
           onDirtyChange={onDirtyChange}
@@ -396,6 +402,7 @@ function AdapterFields<
 >({
   label,
   lane,
+  laneName,
   binding,
   catalogue,
   disabled,
@@ -403,6 +410,10 @@ function AdapterFields<
 }: Readonly<{
   label: string;
   lane: ModelLane;
+  // Which lane of the routing document this is, in the document's own words.
+  // `lane` above says chat-or-embeddings, which is what a model is FOR; this
+  // says which binding, which is what the host is read from.
+  laneName: string;
   binding: B;
   catalogue: ModelCatalogue;
   disabled: boolean;
@@ -411,8 +422,10 @@ function AdapterFields<
   const t = useT();
   const { locale } = useLocale();
   // Asked of the VENDOR, and only while these fields are open — this is a real
-  // round-trip on the installation's own credential, not a table read.
-  const available = useAvailableModels(binding.provider, true);
+  // round-trip on the installation's own credential, not a table read. The lane
+  // travels with it so an installation binding one vendor at two hosts is asked
+  // at the one THIS lane points at.
+  const available = useAvailableModels(binding.provider, laneName, true);
   return (
     <>
       <Field label={label}>
@@ -613,6 +626,7 @@ function LaneRow<
             <AdapterFields
               label={t("aiRouting.provider.label")}
               lane={lane}
+              laneName={name}
               binding={binding}
               catalogue={catalogue}
               disabled={disabled}
@@ -759,9 +773,24 @@ function priceLabel(
   if (!rate) {
     return "";
   }
+  // A row the sheet cannot state a price for prints NOTHING rather than
+  // reaching the formatter. `formatUsdPerMTok` hands the parsed number to
+  // `Intl.NumberFormat`'s `minimumFractionDigits`, and NaN there throws a
+  // RangeError — during render, on a card the whole settings page is composed
+  // from. The picker's own hint guards the same way for the same reason.
+  //
+  // The output side is only asked about where it MEANS something: an embedding
+  // lane has no output, so its price is a single figure and a blank second
+  // column there is the sheet being right rather than unreadable.
+  if (unreadablePrice(rate.input_per_mtok)) {
+    return "";
+  }
   const input = formatUsdPerMTok(rate.input_per_mtok, locale);
   if (lane === "embeddings") {
     return input;
+  }
+  if (unreadablePrice(rate.output_per_mtok)) {
+    return "";
   }
   return `${input} → ${formatUsdPerMTok(rate.output_per_mtok, locale)}`;
 }
@@ -812,4 +841,15 @@ function modelSourceNote(
     default:
       return t("aiRouting.models.unreachable");
   }
+}
+
+// The identity of the stored routing document, for the draft that starts from
+// it. Every binding it holds, so any change by another role produces a
+// different one and the form re-seeds from what is now stored.
+//
+// The document's own content rather than a version field: the wire carries no
+// version on this shape, and a key that cannot see a change is a key that does
+// not do its job.
+function routingIdentity(routing: Routing): string {
+  return JSON.stringify(routing);
 }

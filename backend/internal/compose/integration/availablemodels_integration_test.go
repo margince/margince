@@ -35,7 +35,7 @@ func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
 		t.Fatalf("storing the binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake")
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "")
 	if err != nil {
 		t.Fatalf("listing: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic")
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "")
 	if err != nil {
 		t.Fatalf("a refused vendor is a state, not an error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 
 	// And a LOCAL vendor is still askable under the same profile — the refusal
 	// is about egress, not about the surface being switched off.
-	local, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake")
+	local, err := store.ListAvailableModels(e.adminRoutingCtx(), "fake", "")
 	if err != nil {
 		t.Fatalf("listing a local vendor: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
 		t.Fatalf("storing the binding: %v", err)
 	}
 
-	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic")
+	got, err := store.ListAvailableModels(e.adminRoutingCtx(), "anthropic", "")
 	if err != nil {
 		t.Fatalf("an unkeyed vendor is a state, not an error: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if _, err := store.ListAvailableModels(ctx, "fake"); err == nil {
+	if _, err := store.ListAvailableModels(ctx, "fake", ""); err == nil {
 		t.Fatal("a seat without ai_routing:read was served the vendor list")
 	} else if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("want a permission denial, got %v", err)

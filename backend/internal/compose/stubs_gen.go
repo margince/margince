@@ -131,7 +131,7 @@ func (stubs) ProposeAiModelRateRefresh(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ProposeAiModelRateRefresh")
 }
 
-func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string, params crmcontracts.ListAvailableModelsParams) {
 	httperr.NotImplemented(w, r, "ListAvailableModels")
 }
 

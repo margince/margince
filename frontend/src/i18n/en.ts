@@ -5184,7 +5184,8 @@ export const en = {
 
   "auto.tier.runs": "runs",
   "auto.tier.approval": "approval",
-  "auto.sub": "Green runs on its own. Amber stages into the approval inbox.",
+  "auto.sub":
+    'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
   "auto.readOnly":
     "Read-only view — you do not have permission to change automations.",
   "auto.catalog": "Starter library",
@@ -6302,7 +6303,7 @@ export const en = {
   "aiRouting.lane.frontier": "The hardest reasoning, used sparingly",
   "aiRouting.lane.local_large": "Heavier work that must not leave your hosts",
   "aiRouting.lane.embeddings": "Search and retrieval across your records",
-  "aiRouting.lanes.title": "Chat lanes",
+  "aiRouting.lanes.title": "Routing lanes",
   "aiRouting.lanes.sub":
     "Cheapest first. A task picks a lane; the lane picks the model.",
   "aiRouting.priceSheet": "Price sheet",

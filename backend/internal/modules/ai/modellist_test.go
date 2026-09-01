@@ -345,7 +345,7 @@ func TestTheHostAskedIsStableAcrossReads(t *testing.T) {
 			TierFrontier:   {Provider: providerOpenAICompatible, BaseURL: "https://c.example"},
 		},
 	}
-	first := boundProviderConfig(cfg, providerOpenAICompatible).BaseURL
+	first := boundProviderConfig(cfg, providerOpenAICompatible, "").BaseURL
 	if first == "" {
 		t.Fatal("a bound vendor answered with no host")
 	}
@@ -353,8 +353,22 @@ func TestTheHostAskedIsStableAcrossReads(t *testing.T) {
 	// arbitrary and may change; that the same one wins every time is the
 	// property.
 	for range 32 {
-		if got := boundProviderConfig(cfg, providerOpenAICompatible).BaseURL; got != first {
+		if got := boundProviderConfig(cfg, providerOpenAICompatible, "").BaseURL; got != first {
 			t.Fatalf("the host moved between reads: %q then %q", first, got)
+		}
+	}
+
+	// And naming the lane is exact rather than stable-but-arbitrary: the picker
+	// opened on `premium` is answered for the host `premium` points at, which is
+	// the whole reason the lane travels with the request.
+	for tier, want := range map[Tier]string{
+		TierPremium:    "https://b.example",
+		TierCheapCloud: "https://a.example",
+		TierFrontier:   "https://c.example",
+	} {
+		got := boundProviderConfig(cfg, providerOpenAICompatible, string(tier)).BaseURL
+		if got != want {
+			t.Fatalf("lane %s was asked at %q, want its own %q", tier, got, want)
 		}
 	}
 }
@@ -365,7 +379,7 @@ func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {
 	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
 		TierPremium: {Provider: providerGemini, Model: "gemini-3.5-flash"},
 	}}
-	if got := boundProviderConfig(cfg, providerAnthropic); got.BaseURL != "" {
+	if got := boundProviderConfig(cfg, providerAnthropic, ""); got.BaseURL != "" {
 		t.Fatalf("an unbound vendor invented a host: %q", got.BaseURL)
 	}
 	// And the embeddings lane's host is found too — it binds separately, and a
@@ -373,7 +387,7 @@ func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {
 	cfg.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{
 		Provider: providerOpenAICompatible, BaseURL: "https://embed.example",
 	}}
-	if got := boundProviderConfig(cfg, providerOpenAICompatible); got.BaseURL != "https://embed.example" {
+	if got := boundProviderConfig(cfg, providerOpenAICompatible, ""); got.BaseURL != "https://embed.example" {
 		t.Fatalf("the embeddings host was not found: %q", got.BaseURL)
 	}
 }
@@ -393,5 +407,46 @@ func TestOllamaObeysTheListCap(t *testing.T) {
 	}
 	if len(models) != modelListLimit {
 		t.Fatalf("returned %d models, want the cap of %d", len(models), modelListLimit)
+	}
+}
+
+// A vendor's redirect must not carry the customer's credential to whatever host
+// answered it.
+//
+// Go strips the headers it KNOWS are sensitive across a host change —
+// Authorization, Cookie — and has never heard of `x-api-key`. Anthropic
+// authenticates with exactly that, so a client that followed the hop would hand
+// the key to the redirect target. Two servers, because one cannot show that the
+// second never saw it.
+func TestAListRedirectCarriesNoCredentialToTheNewHost(t *testing.T) {
+	var landedHeaders http.Header
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		landedHeaders = r.Header.Clone()
+		if err := json.NewEncoder(w).Encode(map[string]any{"data": []any{}}); err != nil {
+			t.Errorf("encoding fixture: %v", err)
+		}
+	}))
+	t.Cleanup(target.Close)
+
+	vendor := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL+"/v1/models", http.StatusFound)
+	}))
+	t.Cleanup(vendor.Close)
+
+	client, err := SelectBrain(
+		ProviderConfig{Provider: providerAnthropic, BaseURL: vendor.URL},
+		cloudKeyFor(providerAnthropic, "sk-must-not-travel"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The hop is refused, so the 302 IS the answer and the caller reads it as
+	// "this vendor did not answer" — which is the honest reading of a model
+	// list endpoint that will not serve one.
+	if _, err := client.(model.Lister).ListModels(context.Background()); err == nil {
+		t.Fatal("a redirect was followed instead of refused")
+	}
+	if landedHeaders != nil {
+		t.Fatalf("the redirect target was reached at all, with headers %v", landedHeaders)
 	}
 }

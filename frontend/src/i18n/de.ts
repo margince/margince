@@ -5120,7 +5120,7 @@ export const de = {
   "auto.tier.runs": "läuft",
   "auto.tier.approval": "Freigabe",
   "auto.sub":
-    "Grün läuft von selbst. Bernstein wandert in den Freigabe-Eingang.",
+    'Eine Regel mit "läuft" handelt selbstständig. Eine mit "Freigabe" wandert in den Freigabe-Eingang.',
   "auto.readOnly":
     "Nur-Lese-Ansicht — du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Starter-Bibliothek",
@@ -6231,7 +6231,7 @@ export const de = {
   "aiSettings.tabs": "Welcher Teil der KI-Einstellungen offen ist",
   "aiSettings.tab.routing": "Routing",
   "aiSettings.tab.providers": "Anbieter",
-  "aiSettings.tab.automations": "Automationen",
+  "aiSettings.tab.automations": "Automatisierungen",
   "aiSettings.tab.usage": "Verbrauch",
   "aiSettings.tab.logs": "Protokoll",
   "aiSettings.withheld": "Nicht für Sie einsehbar",
@@ -6260,7 +6260,7 @@ export const de = {
   "aiRouting.lane.local_large":
     "Schwerere Arbeit, die die eigenen Hosts nicht verlässt",
   "aiRouting.lane.embeddings": "Suche und Retrieval über die eigenen Daten",
-  "aiRouting.lanes.title": "Chat-Bahnen",
+  "aiRouting.lanes.title": "Routing-Bahnen",
   "aiRouting.lanes.sub":
     "Günstigste zuerst. Eine Aufgabe wählt die Bahn, die Bahn wählt das Modell.",
   "aiRouting.priceSheet": "Preisliste",

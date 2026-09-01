@@ -5077,7 +5077,8 @@ export const vi = {
 
   "auto.tier.runs": "tự chạy",
   "auto.tier.approval": "chờ duyệt",
-  "auto.sub": "Xanh tự chạy. Hổ phách chuyển vào hộp chờ duyệt.",
+  "auto.sub":
+    'Quy tắc gắn "tự chạy" tự hành động. Quy tắc gắn "chờ duyệt" chuyển vào hộp chờ duyệt.',
   "auto.readOnly": "Chế độ chỉ đọc — bạn không có quyền thay đổi tự động hoá.",
   "auto.catalog": "Thư viện khởi đầu",
   "auto.catalogSub": "tập hợp đóng các loại tự động hoá",
@@ -6199,7 +6200,7 @@ export const vi = {
   "aiRouting.lane.frontier": "Suy luận khó nhất, dùng dè dặt",
   "aiRouting.lane.local_large": "Việc nặng hơn, không được rời máy chủ của bạn",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
-  "aiRouting.lanes.title": "Làn chat",
+  "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.lanes.sub": "Rẻ nhất trước. Tác vụ chọn làn; làn chọn mô hình.",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
