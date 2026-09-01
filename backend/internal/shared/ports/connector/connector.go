@@ -78,8 +78,11 @@ type WatchResult struct {
 	//
 	// Opaque, and not "the provider's id": it has to carry whatever a renewal
 	// needs in order to know the stored subscription is still the right one to
-	// extend. The Graph connector packs the endpoint in beside the subscription
-	// id for that reason, and nothing outside the connector reads either half.
+	// extend. The Graph connector packs a DIGEST of the endpoint in beside the
+	// subscription id for that reason, and nothing outside the connector reads
+	// either half. A digest and not the endpoint itself: this column reaches
+	// every database reader and every backup, and a notification URL that
+	// carries an admission token is a credential.
 	//
 	// Empty where the provider has no such handle: a Gmail watch is addressed by
 	// the mailbox and the topic, and there is nothing to remember.

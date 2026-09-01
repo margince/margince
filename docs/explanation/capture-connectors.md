@@ -75,9 +75,15 @@ type-asserts and skips a connector that doesn't:
 
   The `Ref` is **opaque to everything outside the connector that minted it**, because it has to carry
   whatever a renewal needs to know the stored subscription is still the right one to extend — for Graph
-  that is the subscription id *and* the notification endpoint it was registered against. The registry's
-  half of the contract is to store it verbatim and to CLEAR it when the connection is rebound to a
-  different account, since a handle names a subscription in the mailbox it was made against.
+  that is the subscription id and a *digest* of the notification endpoint it was registered against. A
+  digest rather than the endpoint: Microsoft signs nothing on a change notification, so the operator
+  token in that URL is the only thing admitting one, and `watch_ref` is an ordinary column that reaches
+  every database reader and every backup.
+
+  The registry's half of the contract is to store it verbatim, to CLEAR it when the connection is
+  rebound to a different account (a handle names a subscription in the mailbox it was made against),
+  and to fence the write that stores it on the connection's `generation` — a renewal is a round trip,
+  and one that started before a rebind landed would otherwise put the previous mailbox's handle back.
 - **`Backfiller`** — bounded date-backward enumeration of a mailbox (`EstimateBackfill` +
   `BackfillPage`). A provider that can't page backward is not a `Backfiller`, and the backfill engine
   refuses honestly rather than pretending.

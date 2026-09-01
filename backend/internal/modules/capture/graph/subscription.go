@@ -32,6 +32,8 @@ package graph
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -170,8 +172,8 @@ func (c *Connector) Watch(ctx context.Context, auth connector.Auth, notification
 	return connector.WatchResult{ExpiresAt: sub.Expiration, Ref: encodeWatchRef(sub.ID, notificationURL)}, nil
 }
 
-// watchRef is what a renewal has to know: WHICH subscription, and the endpoint
-// it was registered to deliver to.
+// watchRef is what a renewal has to know: WHICH subscription, and whether the
+// endpoint it was registered to deliver to is still the one being asked about.
 //
 // The endpoint travels with the id because a renewal only ever extends a
 // deadline — it never re-states where the subscription points. EnsureSubscription
@@ -179,16 +181,33 @@ func (c *Connector) Watch(ctx context.Context, auth connector.Auth, notification
 // moved got a fresh subscription on the new endpoint for free. A renewal by id
 // has no such tell, and extending the old one would keep notifications flowing
 // to an endpoint nobody is serving while the new webhook stays poll-only.
+//
+// It travels as a FINGERPRINT rather than as the URL. Microsoft signs nothing on
+// a change notification, so the operator token in that URL is the only thing
+// admitting one — a credential, and this handle is stored in an ordinary column
+// that reaches every database reader and every backup. A digest answers the only
+// question a renewal asks of it, which is whether two endpoints are the same
+// one, and answers nothing else.
 type watchRef struct {
-	ID  string `json:"id"`
-	URL string `json:"url"`
+	ID string `json:"id"`
+	// Endpoint is the hex SHA-256 of the notification URL.
+	Endpoint string `json:"endpoint"`
+}
+
+// endpointFingerprint digests a notification URL. SHA-256 rather than a keyed
+// digest: there is no secret here to key it with that is not the URL itself, and
+// what this defends against is the URL sitting in a column at rest, not somebody
+// who can already run this code guessing at candidates.
+func endpointFingerprint(notificationURL string) string {
+	sum := sha256.Sum256([]byte(notificationURL))
+	return hex.EncodeToString(sum[:])
 }
 
 func encodeWatchRef(id, notificationURL string) string {
 	// Marshalling two strings cannot fail, and a handle is not worth failing a
 	// registration over in any case: an empty ref costs the next renewal a
 	// listing, which is what every renewal did before this existed.
-	b, err := json.Marshal(watchRef{ID: id, URL: notificationURL})
+	b, err := json.Marshal(watchRef{ID: id, Endpoint: endpointFingerprint(notificationURL)})
 	if err != nil {
 		return ""
 	}
@@ -197,8 +216,10 @@ func encodeWatchRef(id, notificationURL string) string {
 
 // decodeWatchRef reads a stored handle back. It reports whether the handle can
 // be used to renew AT notificationURL — false for anything unreadable, for a
-// handle with no id, and for one made against a different endpoint. Every false
-// means the same thing to the caller: go the long way round.
+// handle with no id, and for one whose endpoint is not this one. Every false
+// means the same thing to the caller: go the long way round. A handle in any
+// older shape (one carrying a URL, say) therefore costs one listing and heals
+// itself, rather than needing to be found and cleared.
 func decodeWatchRef(stored, notificationURL string) (string, bool) {
 	// One condition rather than a branch per reason: a handle is either usable
 	// here or it is not, and the caller does the same thing either way. The two
@@ -208,7 +229,7 @@ func decodeWatchRef(stored, notificationURL string) (string, bool) {
 	// purpose rather than by omission.
 	var ref watchRef
 	err := json.Unmarshal([]byte(stored), &ref)
-	if err != nil || ref.ID == "" || ref.URL != notificationURL {
+	if err != nil || ref.ID == "" || ref.Endpoint != endpointFingerprint(notificationURL) {
 		return "", false
 	}
 	return ref.ID, true
@@ -229,14 +250,9 @@ func decodeWatchRef(stored, notificationURL string) (string, bool) {
 func (c *Connector) RenewWatch(
 	ctx context.Context, auth connector.Auth, notificationURL, ref string,
 ) (connector.WatchResult, error) {
-	st, err := graphconn.Read(connectorName, auth)
-	if err != nil {
-		return connector.WatchResult{}, err
-	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
-	if err != nil {
-		return connector.WatchResult{}, err
-	}
+	// BEFORE the token: Watch refreshes one of its own, so deciding here first
+	// is the difference between one refresh and two on every fallback — and the
+	// fallback is the ordinary path for a first registration.
 	id, renewable := decodeWatchRef(ref, notificationURL)
 	if !renewable {
 		// A handle that does not name a subscription registered at THIS endpoint
@@ -244,6 +260,14 @@ func (c *Connector) RenewWatch(
 		// up what actually points at the endpoint, and registers when nothing
 		// does.
 		return c.Watch(ctx, auth, notificationURL)
+	}
+	st, err := graphconn.Read(connectorName, auth)
+	if err != nil {
+		return connector.WatchResult{}, err
+	}
+	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	if err != nil {
+		return connector.WatchResult{}, err
 	}
 	deadline := c.now().Add(maxSubscriptionMinutes * time.Minute).UTC()
 	sub, err := c.api.RenewSubscription(ctx, access, id, deadline)

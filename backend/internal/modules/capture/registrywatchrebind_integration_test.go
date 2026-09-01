@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -26,7 +27,15 @@ import (
 // can connect the same provider twice against two different accounts — which is
 // all a rebind is. Registered under its own provider name so it never disturbs
 // the gmail row the rest of the package's fixtures use.
-type rebindConnector struct{ label *string }
+type rebindConnector struct {
+	label *string
+	// duringRenewal runs inside RenewWatch, which is where a rebind that races
+	// an in-flight renewal has to happen for the race to be the one under test.
+	// A POINTER because the registry refuses a second registration under the
+	// same name, so the hook has to be installable after the connection the
+	// renewal is about already exists.
+	duringRenewal *func()
+}
 
 func (rebindConnector) Descriptor() connector.Descriptor {
 	return connector.Descriptor{Name: "graph", Version: "fixture"}
@@ -48,7 +57,31 @@ func (rebindConnector) HealthCheck(context.Context, connector.Auth) error { retu
 
 func (c rebindConnector) AccountLabel(connector.Auth) (string, error) { return *c.label, nil }
 
-var _ connector.AccountLabeler = rebindConnector{}
+func (rebindConnector) Watch(context.Context, connector.Auth, string) (connector.WatchResult, error) {
+	return connector.WatchResult{ExpiresAt: watchDeadline, Ref: "sub-registered-fresh"}, nil
+}
+
+// RenewWatch returns the handle it was given, which is what makes the stale
+// write visible: whatever the row held when the renewal started is what this
+// tries to put back.
+func (c rebindConnector) RenewWatch(
+	_ context.Context, _ connector.Auth, _, ref string,
+) (connector.WatchResult, error) {
+	if c.duringRenewal != nil && *c.duringRenewal != nil {
+		(*c.duringRenewal)()
+	}
+	return connector.WatchResult{ExpiresAt: watchDeadline, Ref: ref}, nil
+}
+
+// watchDeadline is any instant far enough out to be obviously not the one the
+// fixture seeded; the tests read the handle, not the deadline.
+var watchDeadline = time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
+
+var (
+	_ connector.AccountLabeler = rebindConnector{}
+	_ connector.Watcher        = rebindConnector{}
+	_ connector.WatchRenewer   = rebindConnector{}
+)
 
 // storedWatch reads back the handle and deadline the graph row holds.
 func storedWatch(ctx context.Context, t *testing.T) (ref *string, expires *time.Time) {
@@ -130,5 +163,60 @@ func TestReconnectingTheSameAccountKeepsTheStoredWatchHandle(t *testing.T) {
 	if ref == nil || *ref != "sub-in-the-first-mailbox" || expires == nil {
 		t.Errorf("watch_ref = %v, watch_expires_at = %v — a re-consent over the SAME mailbox "+
 			"dropped a live subscription, and the mailbox falls back to the poll until the next scan", ref, expires)
+	}
+}
+
+// connectionID reads back the id of the graph row, which is what
+// Registry.RenewWatch is addressed by.
+func connectionID(ctx context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	owner, _ := setupCaptureDB(t)
+	var id ids.UUID
+	if err := owner.QueryRow(ctx,
+		`SELECT id FROM capture_connection WHERE provider = 'graph'`).Scan(&id); err != nil {
+		t.Fatalf("reading the connection id: %v", err)
+	}
+	return id
+}
+
+// A RENEWAL THAT WAS IN FLIGHT WHEN THE REBIND LANDED WRITES NOTHING.
+//
+// Clearing the handle in the connect upsert is not enough on its own: the
+// connector call is a round trip, and a renewal that read the old handle before
+// the rebind committed would put it straight back afterwards — restoring a
+// subscription in a mailbox this row no longer points at, which is the failure
+// the clearing exists to prevent, arriving a moment later.
+func TestARenewalThatRacedARebindDoesNotRestoreTheOldHandle(t *testing.T) {
+	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	label := "first@example.test"
+	rebind := func() {
+		label = "second@example.test"
+		if _, err := reg.Connect(ctx, "graph", connector.Auth("token-2")); err != nil {
+			t.Errorf("the rebind inside the renewal: %v", err)
+		}
+	}
+	var hook func()
+	reg.Register(rebindConnector{label: &label, duringRenewal: &hook})
+	if _, err := reg.Connect(ctx, "graph", connector.Auth("token-1")); err != nil {
+		t.Fatalf("first connect: %v", err)
+	}
+	putWatch(ctx, t)
+	id := connectionID(ctx, t)
+
+	// Armed only now, so the rebind commits between this renewal's read of the
+	// handle and its write of the result, and not during the connect above.
+	hook = rebind
+	if err := reg.RenewWatch(ctx, id, "topic"); err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+
+	ref, expires := storedWatch(ctx, t)
+	if ref != nil {
+		t.Errorf("watch_ref = %q — a renewal that started before the rebind put the previous "+
+			"mailbox's subscription back, and the row now names one it does not own", *ref)
+	}
+	if expires != nil {
+		t.Errorf("watch_expires_at = %v — the renewal scan will leave this row alone until a "+
+			"deadline that belongs to another mailbox passes", *expires)
 	}
 }

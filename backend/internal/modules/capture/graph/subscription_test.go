@@ -10,6 +10,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -483,4 +484,71 @@ func TestAnUnreadableHandleFallsBackRatherThanFailing(t *testing.T) {
 			}
 		})
 	}
+}
+
+// THE STORED HANDLE DOES NOT CARRY THE NOTIFICATION URL.
+//
+// Microsoft signs nothing on a change notification, so the operator token in
+// that URL is the only thing admitting one. The handle is stored in an ordinary
+// column that reaches every database reader and every backup, and a credential
+// does not belong there — the digest answers the one question a renewal asks,
+// which is whether two endpoints are the same one.
+func TestAStoredHandleCarriesNoNotificationURL(t *testing.T) {
+	const url = "https://api.example/webhooks/graph?token=OPERATOR-SECRET"
+	stored := encodeWatchRef("sub-1", url)
+
+	for _, leak := range []string{url, "OPERATOR-SECRET", "api.example", "token="} {
+		if strings.Contains(stored, leak) {
+			t.Errorf("the stored handle %q carries %q — that column is not a place for the "+
+				"factor that admits a notification", stored, leak)
+		}
+	}
+	if id, ok := decodeWatchRef(stored, url); !ok || id != "sub-1" {
+		t.Errorf("decode = %q/%v, want the id back at the endpoint it was made for", id, ok)
+	}
+	if _, ok := decodeWatchRef(stored, url+"&extra=1"); ok {
+		t.Error("a handle made for one endpoint was accepted at another — a digest that does not " +
+			"discriminate is not doing the job the URL used to")
+	}
+}
+
+// AND A HANDLE IN THE SHAPE THAT CARRIED ONE is simply not renewable, so it
+// costs a listing and heals rather than needing to be found and cleared.
+func TestAHandleFromTheURLCarryingShapeIsNotRenewable(t *testing.T) {
+	const url = "https://api.example/webhooks/graph?token=t"
+	if _, ok := decodeWatchRef(`{"id":"sub-1","url":"`+url+`"}`, url); ok {
+		t.Error("a handle carrying a raw URL was accepted; it has no endpoint fingerprint, so the " +
+			"only safe reading is 'go the long way round'")
+	}
+}
+
+// A FALLBACK REFRESHES THE TOKEN ONCE, not twice: Watch refreshes one of its
+// own, and the fallback is the ordinary path for a first registration rather
+// than a rare one.
+func TestAFallbackDoesNotRefreshTheTokenTwice(t *testing.T) {
+	api := &fakeAPI{email: owner}
+	oauth := &countingOAuth{OAuth: &fakeOAuth{access: "access-1"}}
+	c := New(oauth, api)
+	c.now = func() time.Time { return pinned }
+
+	if _, err := c.RenewWatch(context.Background(), authBytes(t),
+		"https://api.example/webhooks/graph?token=t", ""); err != nil {
+		t.Fatalf("RenewWatch: %v", err)
+	}
+	if oauth.calls != 1 {
+		t.Errorf("refreshed the access token %d time(s), want one — a first registration is the "+
+			"ordinary case here, so a doubled refresh is doubled token traffic on every mailbox",
+			oauth.calls)
+	}
+}
+
+// countingOAuth counts access-token refreshes and does nothing else.
+type countingOAuth struct {
+	OAuth
+	calls int
+}
+
+func (o *countingOAuth) AccessToken(ctx context.Context, refresh string) (string, error) {
+	o.calls++
+	return o.OAuth.AccessToken(ctx, refresh)
 }
