@@ -29,7 +29,18 @@ const noticeKindLeadSLA = "lead_sla"
 // notice never impersonates anyone.
 type noticesNotifier struct{ store *notices.Store }
 
+// No dedupe key, and that is the honest answer here rather than an omission:
+// the Notifier seam is handed a recipient and two strings, and nothing in it
+// names the event the notice is about. An automation that re-delivers writes a
+// second line, which is the same behaviour it had before the key existed —
+// closing it means the seam carrying an identity, not this adapter inventing
+// one out of the words.
 func (n noticesNotifier) Notify(ctx context.Context, recipient ids.UUID, subject, body string) error {
-	_, err := n.store.Create(ctx, ids.From[ids.UserKind](recipient), noticeKindAutomation, subject, body)
+	_, err := n.store.Create(ctx, notices.NewNotice{
+		Recipient: ids.From[ids.UserKind](recipient),
+		Kind:      noticeKindAutomation,
+		Subject:   subject,
+		Body:      body,
+	})
 	return err
 }
