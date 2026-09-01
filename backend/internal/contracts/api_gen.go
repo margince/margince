@@ -6172,6 +6172,117 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingPlanReadiness.
+const (
+	MeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
+	MeetingPlanReadinessPrepared MeetingPlanReadiness = "prepared"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanReadiness enum.
+func (e MeetingPlanReadiness) Valid() bool {
+	switch e {
+	case MeetingPlanReadinessOutline:
+		return true
+	case MeetingPlanReadinessPrepared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTier.
+const (
+	MeetingPlanTierHigh   MeetingPlanTier = "high"
+	MeetingPlanTierLow    MeetingPlanTier = "low"
+	MeetingPlanTierMedium MeetingPlanTier = "medium"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTier enum.
+func (e MeetingPlanTier) Valid() bool {
+	switch e {
+	case MeetingPlanTierHigh:
+		return true
+	case MeetingPlanTierLow:
+		return true
+	case MeetingPlanTierMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanTypeValue.
+const (
+	MeetingPlanTypeCommercial        MeetingPlanTypeValue = "commercial"
+	MeetingPlanTypeDecision          MeetingPlanTypeValue = "decision"
+	MeetingPlanTypeDelivery          MeetingPlanTypeValue = "delivery"
+	MeetingPlanTypeDemo              MeetingPlanTypeValue = "demo"
+	MeetingPlanTypeFirstDiscovery    MeetingPlanTypeValue = "first_discovery"
+	MeetingPlanTypeFollowupDiscovery MeetingPlanTypeValue = "followup_discovery"
+	MeetingPlanTypeRelationship      MeetingPlanTypeValue = "relationship"
+	MeetingPlanTypeRenewalRisk       MeetingPlanTypeValue = "renewal_risk"
+	MeetingPlanTypeUnknown           MeetingPlanTypeValue = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanTypeValue enum.
+func (e MeetingPlanTypeValue) Valid() bool {
+	switch e {
+	case MeetingPlanTypeCommercial:
+		return true
+	case MeetingPlanTypeDecision:
+		return true
+	case MeetingPlanTypeDelivery:
+		return true
+	case MeetingPlanTypeDemo:
+		return true
+	case MeetingPlanTypeFirstDiscovery:
+		return true
+	case MeetingPlanTypeFollowupDiscovery:
+		return true
+	case MeetingPlanTypeRelationship:
+		return true
+	case MeetingPlanTypeRenewalRisk:
+		return true
+	case MeetingPlanTypeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPlanUnknownKind.
+const (
+	MeetingPlanUnknownAttendeesNotVisible      MeetingPlanUnknownKind = "attendees_not_visible"
+	MeetingPlanUnknownDecisionRouteNotCaptured MeetingPlanUnknownKind = "decision_route_not_captured"
+	MeetingPlanUnknownIntentNotCaptured        MeetingPlanUnknownKind = "intent_not_captured"
+	MeetingPlanUnknownNoCommitmentsCaptured    MeetingPlanUnknownKind = "no_commitments_captured"
+	MeetingPlanUnknownNoHistory                MeetingPlanUnknownKind = "no_history"
+	MeetingPlanUnknownNoOpenDeal               MeetingPlanUnknownKind = "no_open_deal"
+	MeetingPlanUnknownNoPriorMeeting           MeetingPlanUnknownKind = "no_prior_meeting"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPlanUnknownKind enum.
+func (e MeetingPlanUnknownKind) Valid() bool {
+	switch e {
+	case MeetingPlanUnknownAttendeesNotVisible:
+		return true
+	case MeetingPlanUnknownDecisionRouteNotCaptured:
+		return true
+	case MeetingPlanUnknownIntentNotCaptured:
+		return true
+	case MeetingPlanUnknownNoCommitmentsCaptured:
+		return true
+	case MeetingPlanUnknownNoHistory:
+		return true
+	case MeetingPlanUnknownNoOpenDeal:
+		return true
+	case MeetingPlanUnknownNoPriorMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefItemState.
 const (
 	MorningBriefItemStateActed     MorningBriefItemState = "acted"
@@ -21631,6 +21742,20 @@ type MeetingBrief struct {
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
 	Omitted *[]MeetingBriefOmission `json:"omitted,omitempty"`
 
+	// Plan The preparation plan: what to DO in the room, as against `sections`, which is what is
+	// KNOWN about it.
+	//
+	// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+	// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+	// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+	// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+	// is the difference between "nobody captured the decision route" and "the model forgot to
+	// mention it".
+	//
+	// Assessments and recommendations cite records the caller can open, or they are dropped
+	// whole — the same grounding rule every sentence in `sections` runs.
+	Plan *MeetingPlan `json:"plan,omitempty"`
+
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
 	// guessing. Present only when the request named a `project_id`.
@@ -21697,6 +21822,162 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
+// KNOWN about it.
+//
+// Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+// reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+// UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+// generated from the ABSENCE of a record, never from a writer leaving a field out, which
+// is the difference between "nobody captured the decision route" and "the model forgot to
+// mention it".
+//
+// Assessments and recommendations cite records the caller can open, or they are dropped
+// whole — the same grounding rule every sentence in `sections` runs.
+type MeetingPlan struct {
+	// AccountArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
+	AccountArc []MeetingPlanArcMoment `json:"account_arc"`
+
+	// Advance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+	Advance MeetingPlanAdvance `json:"advance"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
+	LikelyAsks  []MeetingPlanAsk `json:"likely_asks"`
+	MeetingType MeetingPlanType  `json:"meeting_type"`
+
+	// Objective The outcome to earn, and the reminder not to force it.
+	Objective *MeetingPlanObjective      `json:"objective,omitempty"`
+	Opening   *OrganizationBriefSentence `json:"opening,omitempty"`
+
+	// Questions What to ask them, ranked. Three is a plan a rep can hold; the cap is five.
+	Questions []MeetingPlanQuestion `json:"questions"`
+
+	// Readiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+	// with it.
+	//
+	// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+	// for. Useful, but not yet the thing a rep walks in holding.
+	// `prepared` — it also carries the risk with its response, at least two likely asks and at
+	// least three questions. A client leads with the plan at `prepared` and keeps the cited
+	// summary in front at `outline`, so a half-built plan never displaces what already worked.
+	Readiness MeetingPlanReadiness  `json:"readiness"`
+	Scenarios []MeetingPlanScenario `json:"scenarios"`
+
+	// TopRisk The one thing that can change this conversation, and what to do when it does.
+	TopRisk *MeetingPlanRisk `json:"top_risk,omitempty"`
+
+	// Unknowns What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked.
+	Unknowns []MeetingPlanUnknown `json:"unknowns"`
+}
+
+// MeetingPlanAdvance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
+type MeetingPlanAdvance struct {
+	Best     OrganizationBriefSentence `json:"best"`
+	Fallback OrganizationBriefSentence `json:"fallback"`
+	Minimum  OrganizationBriefSentence `json:"minimum"`
+}
+
+// MeetingPlanArcMoment One stretch of the relationship that still bears on today. A moment, not a message: it spans the conversations it was built from, and cites them.
+type MeetingPlanArcMoment struct {
+	From    time.Time                 `json:"from"`
+	Summary OrganizationBriefSentence `json:"summary"`
+	Title   string                    `json:"title"`
+	To      time.Time                 `json:"to"`
+}
+
+// MeetingPlanAsk defines model for MeetingPlanAsk.
+type MeetingPlanAsk struct {
+	Basis OrganizationBriefSentence `json:"basis"`
+
+	// Prepare How to answer it.
+	Prepare string `json:"prepare"`
+
+	// Question What they are likely to ask, in their own words where the record has them.
+	Question string `json:"question"`
+
+	// Relevance A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Relevance MeetingPlanTier `json:"relevance"`
+}
+
+// MeetingPlanObjective The outcome to earn, and the reminder not to force it.
+type MeetingPlanObjective struct {
+	// Caveat The one-line "do not force this" reminder. Fixed product copy keyed to the meeting type, not read from the records, which is why it carries no evidence of its own.
+	Caveat   string                    `json:"caveat"`
+	Sentence OrganizationBriefSentence `json:"sentence"`
+}
+
+// MeetingPlanQuestion One question to ask, with why it matters here and what the answer sounds like. Evidence is required: a question no record motivated is a question that would read the same on any account, which is the failure this whole shape exists to prevent.
+type MeetingPlanQuestion struct {
+	Ask       string                      `json:"ask"`
+	Evidence  []OrganizationBriefEvidence `json:"evidence"`
+	ListenFor string                      `json:"listen_for"`
+	Why       string                      `json:"why"`
+}
+
+// MeetingPlanReadiness How much of a preparation this plan actually is, so a surface can decide whether to lead
+// with it.
+//
+// `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+// for. Useful, but not yet the thing a rep walks in holding.
+// `prepared` — it also carries the risk with its response, at least two likely asks and at
+// least three questions. A client leads with the plan at `prepared` and keeps the cited
+// summary in front at `outline`, so a half-built plan never displaces what already worked.
+type MeetingPlanReadiness string
+
+// MeetingPlanResponse What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+type MeetingPlanResponse struct {
+	Avoid string `json:"avoid"`
+	Say   string `json:"say"`
+	Show  string `json:"show"`
+}
+
+// MeetingPlanRisk The one thing that can change this conversation, and what to do when it does.
+type MeetingPlanRisk struct {
+	// ResponsePlan What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+	ResponsePlan MeetingPlanResponse       `json:"response_plan"`
+	Text         OrganizationBriefSentence `json:"text"`
+}
+
+// MeetingPlanScenario What the meeting may turn into, and what to do if it does.
+type MeetingPlanScenario struct {
+	Evidence []OrganizationBriefEvidence `json:"evidence"`
+	Label    string                      `json:"label"`
+	Play     string                      `json:"play"`
+}
+
+// MeetingPlanTier A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+type MeetingPlanTier string
+
+// MeetingPlanType defines model for MeetingPlanType.
+type MeetingPlanType struct {
+	// Confidence A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+	Confidence MeetingPlanTier `json:"confidence"`
+
+	// Value What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+	Value MeetingPlanTypeValue `json:"value"`
+}
+
+// MeetingPlanTypeValue What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+type MeetingPlanTypeValue string
+
+// MeetingPlanUnknown defines model for MeetingPlanUnknown.
+type MeetingPlanUnknown struct {
+	// Kind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+	Kind MeetingPlanUnknownKind `json:"kind"`
+
+	// Question The question to ask in the room that would close this gap.
+	Question string `json:"question"`
+}
+
+// MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+type MeetingPlanUnknownKind string
 
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {

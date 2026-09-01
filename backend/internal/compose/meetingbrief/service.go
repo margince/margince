@@ -151,6 +151,13 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	// that asked the browser instead would be the single surface disagreeing
 	// with every other one.
 	sections, writtenBy := Write(ctx, s.lane, in, identity.BaseLanguageForPrompt(ctx, s.pool))
+	// The plan gets its OWN ranked set rather than the one the sections
+	// consumed. `take` marks a claim as spoken so no section repeats another,
+	// and the plan is not a tenth section: it is the same facts read for what
+	// to DO about them, so the promise the goal names is also the promise the
+	// objective aims at. Sharing one set would have the plan silently skip
+	// whatever the sections had already used.
+	plan := wirePlan(DeterministicPlan(in, rankClaims(in)), in)
 	var filed *ids.UUID
 	if in.Project != nil {
 		id, err := ids.Parse(in.Project.ID)
@@ -170,6 +177,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		Scope:       scope,
 		Sections:    wireSections(sections),
 		Omitted:     omissions(in),
+		Plan:        &plan,
 	}, filed, nil
 }
 
@@ -179,14 +187,38 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 // contract's field is optional, and an empty array on the wire invites a client
 // to render an empty "what you cannot see" heading.
 func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
-	if !in.RoomHidden {
+	var out []crmcontracts.MeetingBriefOmission
+	if in.RoomHidden {
+		out = append(out, crmcontracts.MeetingBriefOmission{
+			Source: "deal_room",
+			Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
+		})
+	}
+	// A history this caller may not read is the difference between a quiet
+	// account and one whose conversations are somebody else's. The arc is built
+	// from what is left, so without this line a thin arc reads as a thin
+	// relationship — which is exactly the wrong thing to walk into a room
+	// believing.
+	if withheld := withheldCount(in.History); withheld > 0 {
+		out = append(out, crmcontracts.MeetingBriefOmission{
+			Source: "activity_history",
+			Reason: fmt.Sprintf(
+				"%s in this account %s not yours to read, so the account arc is built from the rest.",
+				plural(withheld, "conversation"), isAre(withheld)),
+		})
+	}
+	if len(out) == 0 {
 		return nil
 	}
-	out := []crmcontracts.MeetingBriefOmission{{
-		Source: "deal_room",
-		Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
-	}}
 	return &out
+}
+
+// isAre keeps the omission sentence grammatical for one and for many.
+func isAre(count int) string {
+	if count == 1 {
+		return "is"
+	}
+	return "are"
 }
 
 // assembleInput gathers everything the brief is written from.
@@ -209,6 +241,8 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var lastSpoke *time.Time
 	var moves []DealMoveIn
 	var roomHidden bool
+	var history []HistoryIn
+	var excerpts []ExcerptIn
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -233,6 +267,20 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 			return err
 		}
 		earlier, err = s.readPriorMeetings(ctx, tx, loaded, scope, s.now().UTC())
+		if err != nil {
+			return err
+		}
+		// Both evidence passes run here, before the first-contact early return
+		// below: a room with no baseline still HAS a history — that is what
+		// "first contact with this reader" means, as against "first contact
+		// with this company" — and reading it after that return would leave the
+		// arc empty for exactly the caller who most needs the background.
+		history, err = s.readHistory(ctx, tx, loaded, scope, s.now().UTC())
+		if err != nil {
+			return err
+		}
+		excerpts, err = s.readExcerpts(ctx, tx,
+			excerptTargets(clusterThreads(threadsOf(history))))
 		if err != nil {
 			return err
 		}
@@ -261,6 +309,8 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in.LastSpokeAt = lastSpoke
 	in.DealMoves = moves
 	in.RoomHidden = roomHidden
+	in.History = history
+	in.Excerpts = excerpts
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a person nobody named would be a read of a

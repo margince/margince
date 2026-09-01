@@ -189,6 +189,36 @@ test("AC-meeting-brief-8: a failed read offers the reason and a retry", async ({
   ).toBeVisible();
 });
 
+test.describe("with a preparation plan", () => {
+  test("AC-meeting-brief-12: the outcome to earn leads, and the sections stay", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    const objective = await boxOf(page, ".panel-accent");
+    const close = await boxOf(page, ".mb-advance");
+    expect(objective.y).toBeLessThan(close.y);
+    // An outline plan ADDS to the brief. The watch-out a reader already had
+    // must still be on the page, not buried behind it.
+    await expect(page.locator(".callout-warn")).toBeVisible();
+  });
+
+  test("AC-meeting-brief-13: the three ways to close sit side by side", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    const legs = await page.locator(".mb-advance > *").all();
+    expect(legs).toHaveLength(3);
+    const boxes = await Promise.all(legs.map((leg) => leg.boundingBox()));
+    const [first, second, third] = boxes.map(
+      (box) => box as NonNullable<typeof box>,
+    );
+    // Same row: a close plan read as three stacked paragraphs is a list, and
+    // the point of the three is that a reader compares them at a glance.
+    expect(Math.abs(first.y - second.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(second.y - third.y)).toBeLessThanOrEqual(1);
+  });
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -202,6 +232,20 @@ test.describe("on a phone", () => {
     // from the sheet's edge reads as a rendering fault.
     const head = await boxOf(page, ".drawer-head");
     expect(head.x).toBe(drawer.x);
+    expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("AC-meeting-brief-14: the close plan stacks on a phone", async ({
+    page,
+  }) => {
+    await openBrief(page, { meetingBrief: "plan" });
+    const legs = await page.locator(".mb-advance > *").all();
+    const boxes = await Promise.all(legs.map((leg) => leg.boundingBox()));
+    const ys = boxes.map((box) => (box as NonNullable<typeof box>).y);
+    // Strictly increasing: three columns in 390px would be 110px each, which is
+    // a column of broken words rather than a plan.
+    expect(ys[1]).toBeGreaterThan(ys[0]);
+    expect(ys[2]).toBeGreaterThan(ys[1]);
     expect(await pageOverflow(page)).toEqual([]);
   });
 

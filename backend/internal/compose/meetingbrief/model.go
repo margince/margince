@@ -321,5 +321,15 @@ func knownRecords(in Input) map[Evidence]bool {
 	for _, earlier := range in.PriorMeetings {
 		known[Evidence{EntityType: citeActivity, EntityID: earlier.ID}] = true
 	}
+	// The account history the arc is built from. A conversation this caller may
+	// not READ is deliberately absent: it reached the input as a date and a
+	// count, and a citation pointing at it would send the reader to a record
+	// they cannot open.
+	for _, row := range in.History {
+		if row.Withheld {
+			continue
+		}
+		known[Evidence{EntityType: citeActivity, EntityID: row.ID}] = true
+	}
 	return known
 }

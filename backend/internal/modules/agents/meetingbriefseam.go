@@ -45,6 +45,9 @@ type MeetingBriefResult struct {
 	GeneratedAt string             `json:"generated_at"`
 	GeneratedBy string             `json:"generated_by"`
 	Sections    []MeetingBriefPart `json:"sections"`
+	// Plan is what to DO in the room, as against what is known about it. Nil
+	// for a brief assembled before the plan shipped.
+	Plan *MeetingPlanResult `json:"plan,omitempty"`
 }
 
 // MeetingBriefPart is one heading of the brief with its cited lines.

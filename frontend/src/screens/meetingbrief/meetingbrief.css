@@ -105,3 +105,138 @@
 .mb-risks .co-brief-cite {
   color: var(--textContent);
 }
+
+/* The outcome to earn, with its icon in a column of its own so a two-line
+   objective does not wrap under the mark. */
+.mb-objective {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+}
+
+.mb-objective > svg {
+  width: 20px;
+  height: 20px;
+  margin-top: var(--space-1);
+}
+
+/* The icon takes the tint of whichever lead the panel is drawing, so it never
+   claims a model wrote something a composition did. */
+.panel-ai .mb-objective > svg {
+  color: var(--aiText);
+}
+
+.panel-accent .mb-objective > svg {
+  color: var(--accentText);
+}
+
+.mb-caveat {
+  margin: var(--space-2) 0 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+/* The suggested opener, set apart as the quotation it is. Its rule and ground
+   follow the panel's own tint for the same reason the icon does. */
+.mb-open {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.panel-ai .mb-open {
+  border-inline-start: 2px solid var(--ai);
+  background: var(--aiLight);
+}
+
+.panel-accent .mb-open {
+  border-inline-start: 2px solid var(--accent);
+  background: var(--accentLight);
+}
+
+.mb-arc-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.mb-arc-row time {
+  color: var(--textMeta);
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+}
+
+.mb-arc-row strong {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--textPrimary);
+}
+
+/* The three ways to close. A container query rather than a viewport one: the
+   same drawer is 665px on a laptop and full-width on a phone, and a grid keyed
+   to the window would be three columns in both. */
+.mb-advance {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@container (min-width: 34rem) {
+  .mb-advance {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .mb-advance > * + * {
+    padding-inline-start: var(--space-4);
+    border-inline-start: 1px solid var(--borderSubtle);
+  }
+}
+
+.mb-unknown {
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+}
+
+.mb-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.mb-ask-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.mb-ask-head strong {
+  color: var(--textPrimary);
+}
+
+.mb-ask-prepare {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+/* The branch and what to do about it. A grid rather than a flex row so the
+   badges share one column and the plays line up beside them. */
+.mb-path-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: 100%;
+}
+
+.mb-path-row > span {
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
+}
+
+@container (max-width: 26rem) {
+  .mb-path-row {
+    grid-template-columns: 1fr;
+  }
+}

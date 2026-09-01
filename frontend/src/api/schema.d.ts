@@ -16607,6 +16607,8 @@ export interface components {
             sections: components["schemas"]["MeetingBriefSection"][];
             /** @description What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at. */
             omitted?: components["schemas"]["MeetingBriefOmission"][];
+            /** @description What to DO in the room, built over the same records as `sections`. Optional on the wire so a client written before it keeps rendering the cited summary; the server writes one on every read. */
+            plan?: components["schemas"]["MeetingPlan"];
         };
         /** @description One source this reader may not see, and what that costs the brief. */
         MeetingBriefOmission: {
@@ -16614,6 +16616,133 @@ export interface components {
             source: string;
             /** @description One sentence a reader can act on, naming what is missing and why. */
             reason: string;
+        };
+        /**
+         * @description The preparation plan: what to DO in the room, as against `sections`, which is what is
+         *     KNOWN about it.
+         *
+         *     Every item is one of four kinds of claim. A FACT restates a record. An ASSESSMENT is a
+         *     reading drawn from records, labelled as one. A RECOMMENDATION is a move to make. An
+         *     UNKNOWN is a gap in the record, and is the only kind carrying no evidence — it is
+         *     generated from the ABSENCE of a record, never from a writer leaving a field out, which
+         *     is the difference between "nobody captured the decision route" and "the model forgot to
+         *     mention it".
+         *
+         *     Assessments and recommendations cite records the caller can open, or they are dropped
+         *     whole — the same grounding rule every sentence in `sections` runs.
+         */
+        MeetingPlan: {
+            /** @description Which writer produced the plan. Independent of the brief's own: the plan can fall to its deterministic floor while the sections were written by a model, and the reverse. */
+            generated_by: components["schemas"]["WrittenBy"];
+            readiness: components["schemas"]["MeetingPlanReadiness"];
+            meeting_type: components["schemas"]["MeetingPlanType"];
+            objective?: components["schemas"]["MeetingPlanObjective"];
+            /** @description The suggested opener. Always a `recommendation`. */
+            opening?: components["schemas"]["OrganizationBriefSentence"];
+            top_risk?: components["schemas"]["MeetingPlanRisk"];
+            /** @description What the other side is likely to ask, each an assessment with the record behind it. */
+            likely_asks: components["schemas"]["MeetingPlanAsk"][];
+            /** @description What to ask them, ranked. Three is a plan a rep can hold; the cap is five. */
+            questions: components["schemas"]["MeetingPlanQuestion"][];
+            scenarios: components["schemas"]["MeetingPlanScenario"][];
+            /** @description The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it. */
+            account_arc: components["schemas"]["MeetingPlanArcMoment"][];
+            advance: components["schemas"]["MeetingPlanAdvance"];
+            /** @description What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked. */
+            unknowns: components["schemas"]["MeetingPlanUnknown"][];
+        };
+        /**
+         * @description How much of a preparation this plan actually is, so a surface can decide whether to lead
+         *     with it.
+         *
+         *     `outline` — the deterministic skeleton: what the meeting is, what happened, what to aim
+         *     for. Useful, but not yet the thing a rep walks in holding.
+         *     `prepared` — it also carries the risk with its response, at least two likely asks and at
+         *     least three questions. A client leads with the plan at `prepared` and keeps the cited
+         *     summary in front at `outline`, so a half-built plan never displaces what already worked.
+         * @enum {string}
+         */
+        MeetingPlanReadiness: "outline" | "prepared";
+        /**
+         * @description What kind of meeting this is, which decides what a good plan for it looks like. `unknown` is a first-class answer rather than a failure: it means the records do not say what this meeting is for, and the plan then opens by asking rather than by guessing.
+         * @enum {string}
+         */
+        MeetingPlanTypeValue: "relationship" | "first_discovery" | "followup_discovery" | "demo" | "commercial" | "decision" | "delivery" | "renewal_risk" | "unknown";
+        /**
+         * @description A three-step ordinal, for ranking. Never a probability: nothing here is measured finely enough to print one, and a number would claim a precision the evidence does not have.
+         * @enum {string}
+         */
+        MeetingPlanTier: "high" | "medium" | "low";
+        MeetingPlanType: {
+            value: components["schemas"]["MeetingPlanTypeValue"];
+            confidence: components["schemas"]["MeetingPlanTier"];
+        };
+        /** @description The outcome to earn, and the reminder not to force it. */
+        MeetingPlanObjective: {
+            /** @description One cited `recommendation`. */
+            sentence: components["schemas"]["OrganizationBriefSentence"];
+            /** @description The one-line "do not force this" reminder. Fixed product copy keyed to the meeting type, not read from the records, which is why it carries no evidence of its own. */
+            caveat: string;
+        };
+        /** @description The one thing that can change this conversation, and what to do when it does. */
+        MeetingPlanRisk: {
+            /** @description The risk, as an `assessment` citing the record it was read from. */
+            text: components["schemas"]["OrganizationBriefSentence"];
+            response_plan: components["schemas"]["MeetingPlanResponse"];
+        };
+        /** @description What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking. */
+        MeetingPlanResponse: {
+            say: string;
+            show: string;
+            avoid: string;
+        };
+        MeetingPlanAsk: {
+            /** @description What they are likely to ask, in their own words where the record has them. */
+            question: string;
+            /** @description Why we expect it — a `fact` or `assessment` citing the record. */
+            basis: components["schemas"]["OrganizationBriefSentence"];
+            relevance: components["schemas"]["MeetingPlanTier"];
+            /** @description How to answer it. */
+            prepare: string;
+        };
+        /** @description One question to ask, with why it matters here and what the answer sounds like. Evidence is required: a question no record motivated is a question that would read the same on any account, which is the failure this whole shape exists to prevent. */
+        MeetingPlanQuestion: {
+            ask: string;
+            why: string;
+            listen_for: string;
+            evidence: components["schemas"]["OrganizationBriefEvidence"][];
+        };
+        /** @description What the meeting may turn into, and what to do if it does. */
+        MeetingPlanScenario: {
+            label: string;
+            play: string;
+            evidence: components["schemas"]["OrganizationBriefEvidence"][];
+        };
+        /** @description One stretch of the relationship that still bears on today. A moment, not a message: it spans the conversations it was built from, and cites them. */
+        MeetingPlanArcMoment: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            title: string;
+            /** @description A `fact` citing the conversations the moment is made of. */
+            summary: components["schemas"]["OrganizationBriefSentence"];
+        };
+        /** @description How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing. */
+        MeetingPlanAdvance: {
+            minimum: components["schemas"]["OrganizationBriefSentence"];
+            best: components["schemas"]["OrganizationBriefSentence"];
+            fallback: components["schemas"]["OrganizationBriefSentence"];
+        };
+        /**
+         * @description Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
+         * @enum {string}
+         */
+        MeetingPlanUnknownKind: "intent_not_captured" | "no_open_deal" | "decision_route_not_captured" | "no_prior_meeting" | "no_commitments_captured" | "no_history" | "attendees_not_visible";
+        MeetingPlanUnknown: {
+            kind: components["schemas"]["MeetingPlanUnknownKind"];
+            /** @description The question to ask in the room that would close this gap. */
+            question: string;
         };
         /** @description One of the nine fixed sections, with its cited sentences. */
         MeetingBriefSection: {
