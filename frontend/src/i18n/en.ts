@@ -2967,9 +2967,9 @@ export const en = {
   "ai.tierAutoExecute": "Read & draft run instantly.",
   "ai.tierAutoExecuteDetail":
     "Lookups, summaries, drafts — visible, reversible, logged.",
-  "ai.tierConfirmationRequired": "Write & send wait for you.",
+  "ai.tierConfirmationRequired": "Sensitive changes wait for you.",
   "ai.tierConfirmationRequiredDetail":
-    "External sends and record changes stage into the inbox first.",
+    "New custom fields, webhook subscriptions and paid enrichment stage into the inbox first. Most record changes and sends run instantly, within the scopes you granted.",
   "ai.connect": "Connect an agent",
   "ai.connectDetail":
     "Point any MCP-capable agent at your organization and approve the access it asks for. There is nothing to set up first.",
@@ -6464,13 +6464,13 @@ export const en = {
   "consent.redirectsToLoopback":
     "That is an address on this computer, and this connection cannot prove which program is listening on it.",
   "consent.scopeNote.read": "sees what you can see",
-  "consent.scopeNote.draft": "prepares mail for your review",
+  "consent.scopeNote.draft": "prepares messages for your review",
   "consent.scopeNote.write": "creates, edits and archives records as you",
-  "consent.scopeNote.send": "sends mail as you, without asking first",
+  "consent.scopeNote.send": "sends messages as you, without asking first",
   "consent.scopeNote.enrich":
     "spends enrichment credits — each purchase still asks you first",
   "consent.ceiling":
-    "Never more than your own permissions. You can disconnect any time in Settings → AI & autonomy.",
+    "Never more than your own permissions. You can disconnect any time in Settings → Agents.",
   "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It will stay connected without asking again, renewing access until you revoke it.",

@@ -2930,9 +2930,9 @@ export const de = {
   "ai.tierAutoExecute": "Lesen & Entwerfen läuft sofort.",
   "ai.tierAutoExecuteDetail":
     "Nachschlagen, Zusammenfassen, Entwürfe — sichtbar, umkehrbar, protokolliert.",
-  "ai.tierConfirmationRequired": "Schreiben & Senden wartet auf dich.",
+  "ai.tierConfirmationRequired": "Sensible Änderungen warten auf dich.",
   "ai.tierConfirmationRequiredDetail":
-    "Externe Sendungen und Datenänderungen landen zuerst im Eingang.",
+    "Neue benutzerdefinierte Felder, Webhook-Abonnements und kostenpflichtige Anreicherung landen zuerst im Eingang. Die meisten Datensatzänderungen und Sendungen laufen sofort, innerhalb der von dir erteilten Berechtigungen.",
   "ai.connect": "Agent verbinden",
   "ai.connectDetail":
     "Verbinde einen MCP-fähigen Agenten mit deiner Organisation und bestätige den Zugriff, um den er bittet. Es gibt nichts vorab einzurichten.",
@@ -6422,7 +6422,7 @@ export const de = {
   "consent.redirectsToLoopback":
     "Das ist eine Adresse auf diesem Computer, und diese Verbindung kann nicht belegen, welches Programm dort lauscht.",
   "consent.scopeNote.read": "sieht, was du siehst",
-  "consent.scopeNote.draft": "bereitet Mails zu deiner Prüfung vor",
+  "consent.scopeNote.draft": "bereitet Nachrichten zu deiner Prüfung vor",
   "consent.scopeNote.write":
     "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
@@ -6430,7 +6430,7 @@ export const de = {
   "consent.scopeNote.enrich":
     "verbraucht Anreicherungs-Guthaben — jeder Kauf fragt dich weiterhin zuerst",
   "consent.ceiling":
-    "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit unter Einstellungen → KI & Autonomie trennen.",
+    "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit unter Einstellungen → Agenten trennen.",
   "consent.pickOne": "Wähle mindestens eine aus, oder verweigere den Zugriff.",
   "consent.offline":
     "Sie bleibt verbunden, ohne erneut zu fragen, und erneuert den Zugriff, bis du ihn widerrufst.",

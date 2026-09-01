@@ -2904,9 +2904,9 @@ export const vi = {
   "ai.tierAutoExecute": "Đọc và soạn nháp chạy ngay.",
   "ai.tierAutoExecuteDetail":
     "Tra cứu, tóm tắt, bản nháp — thấy được, đảo ngược được, có ghi nhật ký.",
-  "ai.tierConfirmationRequired": "Ghi và gửi thì chờ bạn.",
+  "ai.tierConfirmationRequired": "Các thay đổi nhạy cảm chờ bạn.",
   "ai.tierConfirmationRequiredDetail":
-    "Lượt gửi ra ngoài và thay đổi bản ghi được xếp vào hộp phê duyệt trước.",
+    "Trường tùy chỉnh mới, đăng ký webhook và làm giàu dữ liệu trả phí được xếp vào hộp phê duyệt trước. Hầu hết thay đổi bản ghi và tin nhắn gửi đi chạy ngay, trong phạm vi quyền bạn đã cấp.",
   "ai.connect": "Kết nối một Agent",
   "ai.connectDetail":
     "Trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn và cho phép quyền truy cập mà nó yêu cầu. Không cần chuẩn bị gì trước.",
@@ -6362,14 +6362,14 @@ export const vi = {
   "consent.redirectsToLoopback":
     "Đó là địa chỉ trên chính máy này, và kết nối này không thể chứng minh chương trình nào đang lắng nghe ở đó.",
   "consent.scopeNote.read": "xem những gì bạn xem được",
-  "consent.scopeNote.draft": "soạn thư để bạn xem lại",
+  "consent.scopeNote.draft": "soạn tin nhắn để bạn xem lại",
   "consent.scopeNote.write": "tạo, sửa và lưu trữ hồ sơ với danh nghĩa của bạn",
   "consent.scopeNote.send":
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
   "consent.scopeNote.enrich":
     "tiêu tốn tín dụng làm giàu dữ liệu — mỗi lần mua vẫn hỏi bạn trước",
   "consent.ceiling":
-    "Không bao giờ vượt quá quyền của chính bạn. Bạn có thể ngắt kết nối bất cứ lúc nào tại Cài đặt → AI & quyền tự chủ.",
+    "Không bao giờ vượt quá quyền của chính bạn. Bạn có thể ngắt kết nối bất cứ lúc nào tại Cài đặt → Tác nhân.",
   "consent.pickOne": "Chọn ít nhất một, hoặc từ chối.",
   "consent.offline":
     "Nó sẽ giữ kết nối mà không hỏi lại, tự gia hạn quyền truy cập cho đến khi bạn thu hồi.",
