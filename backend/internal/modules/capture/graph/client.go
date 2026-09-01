@@ -143,6 +143,22 @@ type API interface {
 	// the three would make every test double re-decide the renew-then-create
 	// order the real one exists to hold.
 	EnsureSubscription(ctx context.Context, accessToken, notificationURL, clientState string, deadline time.Time) (Subscription, error)
+	// RenewSubscription extends the subscription named by id and answers its
+	// new deadline. ErrSubscriptionGone when Microsoft no longer knows it,
+	// which is the caller's cue to fall back to EnsureSubscription.
+	//
+	// A SECOND seam beside EnsureSubscription rather than a flag on it, because
+	// the two answer different questions: Ensure asks "is there a subscription
+	// for this mailbox", which without a handle costs a paged listing, and this
+	// asks "extend THIS one", which is one call. A renewal that knows the id
+	// should not have to pay for the question it already has the answer to.
+	RenewSubscription(ctx context.Context, accessToken, id string, deadline time.Time) (Subscription, error)
+	// GetSubscription reads one subscription by id, so a renewal holding a
+	// handle can confirm it still points where the round means to deliver
+	// before extending it — asked of Microsoft rather than remembered, for the
+	// reason RenewWatch gives. ErrSubscriptionGone when Microsoft no longer
+	// knows it, same as a renewal.
+	GetSubscription(ctx context.Context, accessToken, id string) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
 	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
 	// EstimateAfter returns the provider-side count of messages received on
