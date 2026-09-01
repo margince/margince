@@ -1,0 +1,38 @@
+name: a_message_that_is_both_is_labelled_commitment
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The tie-break is stated in the prompt (captureclassify.go) and until now no
+# scenario made it fire: every existing case is cleanly one label or the other,
+# so a model that ignored the rule entirely still scored full marks.
+fixture:
+  - subject: 'Re: migration cutover'
+    body: |
+      I'll have the signed change request with you on Monday morning.
+
+      Can we also put half an hour in the diary for Wednesday after 2pm to walk
+      through the cutover plan? I'm free either side of lunch.
+expect:
+  outcome: accepted
+  answer: [commitment]
+  rubric: >
+    This message is genuinely BOTH: a promise with a date ("signed change
+    request on Monday morning") and a scheduling request with offered times
+    ("half an hour Wednesday after 2pm"). It exists to make the documented
+    tie-break fire — when a message is both, the label is "commitment".
+    "commitment" scores high. "meeting" is not a misreading of the content and
+    the scenario should say so: it is a correct observation about half the
+    message and the wrong answer, because the tie-break resolves it. It scores in
+    the middle rather than at the floor — a model that answered "meeting" here
+    read the mail correctly and applied the rule wrongly, which wants a different
+    fix from a model that cannot read the mail.
+    "noise" scores lowest: it drops both an obligation and a scheduling request
+    from a single message.
+    This is the only scenario in this site's corpus where the tie-break decides
+    the answer, so it is the only place a model that ignores that sentence of the
+    prompt can be seen doing it.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

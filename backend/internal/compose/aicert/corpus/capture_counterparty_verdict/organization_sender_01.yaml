@@ -1,0 +1,41 @@
+name: a_company_writing_as_itself_does_not_become_a_contact_named_after_it
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Helvetia Toolworks Ltd
+  email: helvetia@helvetia-toolworks.example
+  subject: "Quotation 2026-0442 - custom collet chucks"
+  body: |
+    Dear Sir or Madam,
+
+    Further to your enquiry of the 12th, please find quotation 2026-0442 for
+    240 collet chucks to custom specification. Price and lead time are set out
+    in the attachment; tolerances follow your drawing.
+
+    This quotation is firm for 30 days.
+
+    Helvetia Toolworks Ltd
+expect:
+  outcome: accepted
+  answer: organization_sender
+  rubric: >
+    A quote this business asked for, signed with the company name and nothing
+    else. There is no employee anywhere in it — no sender named in the
+    salutation, no signature block, no "on behalf of" — and the local part is the
+    company's own name rather than a function.
+    "organization_sender" scores high. "role_mailbox" is a near miss scoring
+    nearly as high: the effect is identical (the mail stays visible, no person is
+    created) and which of the two an address is can be genuinely unclear from one
+    message. "person" is the failure this scenario exists to catch and scores
+    zero above the floor — it is the precise defect the taxonomy was rewritten
+    for, a contact called "Helvetia Toolworks Ltd" appearing in the CRM as though
+    a human by that name had written. The prompt states this outright: a company
+    name with no human named anywhere is never "person".
+    "spam" and "newsletter" score zero from the other side: this is an invited
+    supplier answering a request for a quote, and hiding it loses the offer.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

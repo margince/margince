@@ -1,0 +1,58 @@
+name: an_administrator_agreeing_confirms_and_changes_nothing_further
+task: cold_start
+site: sitereadmessage
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# `confirmation` is the one conversational kind whose whole content is "yes,
+# that is right" — and the prompt requires it to carry NO proposed changes. That
+# makes it the kind most likely to be got wrong in the expensive direction: the
+# administrator has just said yes, which is exactly the moment a model reaches
+# for the profile and writes the other fields it can see evidence for.
+fixture:
+  message: Yes, that's right.
+  history:
+    - role: user
+      message: Is the legal name in the imprint the one we should use?
+    - role: assistant
+      message: The imprint names Acme Robotics GmbH, HRB 12345. Shall I use that as the legal name?
+  evidence:
+    - source_id: S1
+      kind: legal_entity
+      field: legal_identity
+      value: Acme Robotics GmbH · Werkstr. 1 · HRB 12345
+      evidence_quote: Acme Robotics GmbH, Werkstr. 1, HRB 12345
+      source_url: https://acme.example/imprint
+    - source_id: S2
+      kind: profile_field
+      field: offer_summary
+      value: Warehouse robotics
+      evidence_quote: We build warehouse robotics.
+      source_url: https://acme.example/product
+expect:
+  outcome: accepted
+  answer:
+    kind: confirmation
+  rubric: >
+    The administrator answers a yes/no question with "Yes, that's right." The
+    referent is unambiguous from the immediately preceding turn, so this is not a
+    clarification case — the reply should acknowledge and stop.
+    Score high only if the reply is classified "confirmation" AND proposes no
+    changes. Both halves are the point. The prompt states that confirmation must
+    carry no proposed changes, so a reply that acknowledges and then also
+    proposes the legal name is refused by the validator; it is not a near miss.
+    "correction" scores at the floor. It is the failure this scenario exists to
+    catch and it is a plausible one: the turn is about a field, evidence for that
+    field is in the dossier, and a model that treats agreement as authorization
+    writes it. The administrator authorized nothing here — they agreed with a
+    question — and the difference between agreeing and instructing is the whole
+    of what keeps this conversation from editing a profile on its own.
+    S2 is the second trap. An offer_summary with a clean verbatim quote sits in
+    the dossier untouched by this exchange, and a reply that sweeps it in while
+    the administrator is saying yes to something else scores at the floor for the
+    same reason.
+    "answer" and "status" score in the middle: wrong label on a reply whose
+    substance — acknowledge, change nothing — can still be right.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

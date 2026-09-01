@@ -1,0 +1,40 @@
+name: an_automated_invoice_notice_is_not_a_contact
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Ledgerly Billing
+  email: noreply@billing.ledgerly.example
+  subject: "Invoice R-2026-11487 for your subscription"
+  body: |
+    Your invoice R-2026-11487 for EUR 149.00 is now available.
+
+    Due 15 October 2026. The amount will be collected by direct debit.
+    Download the invoice: https://ledgerly.example/r/11487
+
+    This message was generated automatically. Please do not reply to it.
+expect:
+  outcome: accepted
+  answer: transactional
+  rubric: >
+    A service this business pays, sending the invoice for it. Every marker of an
+    automated sender is present: a noreply local part on a dedicated billing
+    subdomain, a document id, a due date, and a line saying the mail was
+    generated automatically and must not be answered.
+    "transactional" scores high. The distinction it carries is against
+    "newsletter": both are bulk automated mail and both create no contact, but
+    this one is a receipt for a real commercial relationship rather than
+    editorial or marketing — so "newsletter" is a near miss, right in effect and
+    imprecise in label, and scores in the middle. "spam" scores lower again:
+    the mail is neither unsolicited nor fraud, and calling a paid supplier's
+    invoice fraud is wrong even though it hides it either way.
+    "person" is the failure this scenario exists to catch and scores zero above
+    the floor: it mints a contact for a robot that has said it will not read a
+    reply. "role_mailbox" and "organization_sender" are also wrong — both would
+    file this as correspondence a colleague might answer — but they withhold the
+    record and so score above "person".
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

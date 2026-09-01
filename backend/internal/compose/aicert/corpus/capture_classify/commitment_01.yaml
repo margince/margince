@@ -1,0 +1,33 @@
+name: a_stated_promise_is_a_commitment
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - subject: 'Re: framework agreement - signature'
+    body: |
+      Understood. I'll get the countersigned agreement back to you by Friday
+      and I'll have finance release the first purchase order the same day.
+
+      Ute
+expect:
+  outcome: accepted
+  answer: [commitment]
+  rubric: >
+    The sender states two things they will personally do and when: return the
+    countersigned agreement by Friday, and have the purchase order released the
+    same day. That is a promise made by the person who can keep it, which is
+    exactly what "commitment" is for.
+    "commitment" scores high. "meeting" scores low — nothing here asks for or
+    offers time with anybody, and reading a delivery date as a scheduling request
+    is the confusion this label pair exists to keep apart. "noise" scores lowest:
+    a promise with a date is the single most actionable thing a mailbox can
+    contain, and dropping it is how a commitment silently stops being tracked.
+    Then score the confidence as a real judgement rather than a formality: this
+    message is about as unambiguous as the label gets, so a correct label hedged
+    below the 0.7 floor scores lower than the same label held confidently,
+    because it buys a second call on the next rung that it did not need.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

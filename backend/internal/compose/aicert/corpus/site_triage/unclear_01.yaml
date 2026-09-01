@@ -1,0 +1,47 @@
+name: a_holding_page_that_names_no_business_is_unclear_not_parked
+task: site_triage
+site: triage
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# `unclear` is the abstention of this site and the only kind with no scenario:
+# every other case here is decidable from the seed page, so nothing measured
+# whether the model will decline when the page genuinely does not say.
+fixture:
+  url: https://halvorsen-group.example
+  text: |
+    HALVORSEN GROUP
+
+    Website under construction.
+
+    For enquiries: post@halvorsen-group.example
+expect:
+  outcome: accepted
+  answer: unclear
+  rubric: >
+    A holding page with a name, a contact address and nothing else. It states no
+    services, no products, no legal entity, no people, and no indication whether
+    Halvorsen Group is a company, one person trading under a name, or a mailbox
+    vendor. The page simply does not answer the question, and saying so is the
+    right answer.
+    "unclear" scores high. This is the one case in this site's corpus where
+    abstention is correct, so a model that never abstains cannot be distinguished
+    from a good one anywhere else.
+    "company" is the failure this scenario exists to catch and scores low: a
+    business name in capitals plus a contact address is the thinnest possible
+    basis for creating an organization, and guessing here is how the CRM acquires
+    records nobody can trace to evidence. It is not the safe direction merely
+    because a company is the common case.
+    "parked" scores low for a different reason and the distinction is the point:
+    a parked domain is a REGISTRAR's placeholder offering the domain for sale,
+    and nothing here does that — the name is the occupant's own and the address
+    is on their own domain. Confusing the two would let a real business under
+    construction be filed as a domain for sale.
+    "personal" and "provider" score low: nothing on the page names a person or
+    offers addresses to the public.
+    Confidence matters as much as the label. "unclear" asserted at high
+    confidence is the honest answer here; the page is unambiguously
+    uninformative, which is different from the model being unsure.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

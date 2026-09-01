@@ -1,0 +1,44 @@
+name: asking_what_to_do_next_is_answered_as_a_recommendation
+task: cold_start
+site: acts
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  act: results
+  message: We've only got twenty minutes left today. What's worth doing first?
+  history:
+    - role: user
+      message: Where do we stand?
+    - role: assistant
+      message: The company profile is confirmed. Industry and registered address are still missing.
+  context:
+    company_confirmed: true
+    research_status: confirmed
+    remaining_required_fields:
+      - industry
+      - registered_address
+  locale: en
+expect:
+  outcome: accepted
+  answer: recommendation
+  rubric: >
+    The administrator asks what to prioritise, which is a request for advice
+    rather than for a recap — the distinction between this scenario and
+    acts_status_01, whose message asks what IS. The follow-up also depends on the
+    history: "first" only means anything against the two fields named in the
+    previous turn.
+    Score high only if the reply is classified "recommendation", advises on the
+    two fields the context actually carries, and proposes no changes — this act
+    recommends in prose and edits nothing, so a reply that recommends correctly
+    while populating proposed_changes is refused by the validator and is not a
+    lesser pass.
+    "status" and "answer" score in the middle: both are defensible labels for a
+    reply whose content is right. "off_topic" scores at the floor — the question
+    is squarely about onboarding, and a scope reminder here reads as the
+    assistant refusing to help with the thing it exists for.
+    A reply that invents a third outstanding field, or advises on something the
+    context does not mention, scores at the floor whatever its kind.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

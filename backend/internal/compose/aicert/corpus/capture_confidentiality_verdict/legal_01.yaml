@@ -1,0 +1,43 @@
+name: a_live_dispute_with_counsel_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: "FW: defect notice, Hill Street project - deadline set"
+  attachments:
+    - Solicitors_letter_20260828.pdf
+    - Deadline_calculation.xlsx
+  body: |
+    Hi Lars,
+
+    The other side has demanded remedial work by 12 September through their
+    solicitor, and threatens to have it done elsewhere at our cost after that.
+    Our own counsel thinks the deadline is too short and advises objecting in
+    writing, but the defect list in clause 3 is partly justified.
+
+    I'd suggest we agree internally how far we're willing to go before we
+    answer.
+expect:
+  outcome: accepted
+  answer: legal
+  rubric: >
+    A dispute in progress: a formal notice through the other side's solicitor, a
+    deadline, a threatened remedy at our cost, and our own counsel's advice on
+    how to answer. The thread also contains an admission — that part of the
+    defect list is justified — which is the sentence that makes this one worth
+    holding rather than merely awkward.
+    "legal" scores high. "explicitly_confidential" and "financial_corporate"
+    score in the middle: each holds the thread, which is the outcome that
+    matters, and the second is defensible once a claim carries a cost. "ordinary"
+    is the failure this scenario exists to catch and scores zero at any
+    confidence — it puts our own counsel's advice and our admission of a partly
+    valid claim in front of the whole company, and a dispute is exactly the
+    correspondence where a leak changes the outcome rather than merely
+    embarrassing somebody. The trap is that the thread reads like ordinary
+    project traffic: a project name, a date, a spreadsheet, a colleague asking to
+    align internally.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
