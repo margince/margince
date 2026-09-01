@@ -149,7 +149,13 @@ func intersect(permitted, allowed []provider.Category) []provider.Category {
 // swallows it exactly as it swallows a trigger the policy does not admit.
 var ErrNothingFreeToBuy = errors.New("integrations: this connection buys nothing an automatic run may take")
 
-// ErrCategoryNotPermitted reports that a run asked for a category the
-// connection does not carry. A caller's mistake, not a provider condition: the
-// HTTP surface answers 422, because retrying it unchanged buys nothing.
-var ErrCategoryNotPermitted = errors.New("integrations: this connection does not buy that category")
+// ErrCategoryNotPermitted reports that a run asked for a combination it may
+// not buy: a category the connection does not carry, a fallback without its
+// trigger, or one that needs an answer from another first. A caller's mistake,
+// not a provider condition, so the HTTP surface answers 422 — retrying it
+// unchanged buys nothing.
+//
+// The sentinel says only that the purchase is refused; each wrapping message
+// says WHICH of the three it was, and the handler passes that through. Stating
+// one of the three here would contradict the other two in the same sentence.
+var ErrCategoryNotPermitted = errors.New("integrations: that is not a purchase this run can make")
